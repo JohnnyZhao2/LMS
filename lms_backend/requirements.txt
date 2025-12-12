@@ -1,0 +1,29 @@
+# Core Django packages
+Django==4.2.7
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.0
+django-filter==23.5
+
+# Database
+psycopg2-binary==2.9.9  # For PostgreSQL
+PyMySQL==1.1.0          # For MySQL (pure Python)
+
+# CORS
+django-cors-headers==4.3.1
+
+# API Documentation
+drf-spectacular==0.26.5
+
+# Async tasks (optional - uncomment if needed)
+# celery==5.3.4
+# redis==5.0.1
+
+# Object Storage
+boto3==1.29.7
+
+# Utilities
+python-dotenv==1.0.0
+pytz==2023.3
+
+# Development
+django-extensions==3.2.3
