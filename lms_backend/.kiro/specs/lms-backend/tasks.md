@@ -134,7 +134,7 @@ This implementation plan breaks down the LMS backend API development into increm
   - **Property 27: Active quiz associations prevent deletion**
   - **Validates: Requirements 6.1-6.5**
 
-- [ ] 8. Implement Question and Quiz API endpoints
+- [x] 8. Implement Question and Quiz API endpoints
   - Create QuestionViewSet with CRUD operations
   - Create QuizViewSet with CRUD operations
   - Implement quiz question management endpoints (add, remove, reorder)
@@ -142,10 +142,9 @@ This implementation plan breaks down the LMS backend API development into increm
   - Implement permission checks
   - _Requirements: 5.1-5.5, 6.1-6.5_
 
-- [ ] 9. Implement Excel question import functionality
-  - Create Celery task for async question import
+- [x] 9. Implement Excel question import functionality
   - Implement Excel parser for question data
-  - Create import status tracking
+  - Implement synchronous import with progress tracking
   - Implement error handling and reporting
   - Create import API endpoint
   - _Requirements: 5.3, 5.4_
@@ -194,9 +193,10 @@ This implementation plan breaks down the LMS backend API development into increm
   - **Validates: Requirements 8.1-8.5**
 
 - [ ] 12. Implement automatic task status updates
-  - Create Celery periodic task for deadline checking
+  - Create Django management command for deadline checking
   - Implement logic to mark overdue tasks
   - Add task status update service
+  - Document cron job setup for periodic execution
   - _Requirements: 8.6_
 
 - [ ] 13. Implement Submission and Answer models
@@ -314,10 +314,10 @@ This implementation plan breaks down the LMS backend API development into increm
   - _Requirements: 13.4, 13.5_
 
 - [ ] 21. Implement external notification integration
-  - Create Celery task for external notification sending
   - Implement notification provider interface
   - Add configuration for external services
-  - Implement retry logic and error handling
+  - Implement synchronous notification sending with error handling
+  - Add retry logic for failed notifications
   - _Requirements: 13.6_
 
 - [ ] 22. Implement Department management API
@@ -422,28 +422,21 @@ This implementation plan breaks down the LMS backend API development into increm
   - **Property 88: Invalid JSON returns errors**
   - **Validates: Requirements 18.1-18.5**
 
-- [ ] 29. Set up Redis caching
-  - Install and configure Redis
+- [ ] 29. Implement database-level caching
+  - Use Django's database cache backend
   - Implement cache for frequently accessed data (roles, categories)
   - Implement cache for expensive queries (statistics)
   - Add cache invalidation logic
   - _Requirements: Performance optimization_
 
-- [ ] 30. Set up Celery for async tasks
-  - Install and configure Celery with Redis broker
-  - Create Celery app configuration
-  - Set up task queues
-  - Implement task monitoring
-  - _Requirements: 5.3, 8.6, 13.6_
-
-- [ ] 31. Implement object storage integration
+- [ ] 30. Implement object storage integration
   - Configure MinIO or cloud storage (S3/OSS)
   - Create file upload service
   - Implement file URL generation
   - Add file validation and size limits
   - _Requirements: 3.1, 5.3_
 
-- [ ] 32. Set up API documentation
+- [ ] 31. Set up API documentation
   - Install and configure drf-spectacular
   - Add schema generation
   - Configure OpenAPI settings
@@ -451,7 +444,7 @@ This implementation plan breaks down the LMS backend API development into increm
   - Generate API documentation UI
   - _Requirements: API documentation_
 
-- [ ] 33. Implement database initialization script
+- [ ] 32. Implement database initialization script
   - Create management command for initial data
   - Seed predefined roles (STUDENT, MENTOR, etc.)
   - Seed predefined departments
@@ -459,38 +452,38 @@ This implementation plan breaks down the LMS backend API development into increm
   - Create default admin user
   - _Requirements: 2.5, 4.1_
 
-- [ ] 34. Checkpoint - Ensure all tests pass
+- [ ] 33. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 35. Set up logging and monitoring
+- [ ] 34. Set up logging and monitoring
   - Configure structured logging
   - Add request/response logging middleware
   - Implement error logging
   - Add performance logging for slow queries
   - _Requirements: Deployment considerations_
 
-- [ ] 36. Implement rate limiting
+- [ ] 35. Implement rate limiting
   - Install django-ratelimit or similar
   - Configure rate limits per endpoint
   - Add rate limit headers to responses
   - Implement rate limit error handling
   - _Requirements: Security considerations_
 
-- [ ] 37. Configure CORS and security headers
+- [ ] 36. Configure CORS and security headers
   - Configure django-cors-headers
   - Set allowed origins
   - Configure security headers (CSP, HSTS, etc.)
   - Implement CSRF protection
   - _Requirements: Security considerations_
 
-- [ ] 38. Optimize database queries
+- [ ] 37. Optimize database queries
   - Add select_related and prefetch_related to all viewsets
   - Identify and fix N+1 query issues
   - Add database query logging in development
   - Review and optimize slow queries
   - _Requirements: Performance optimization_
 
-- [ ] 39. Write integration tests for critical workflows
+- [ ] 38. Write integration tests for critical workflows
   - Test complete learning task workflow
   - Test complete practice task workflow
   - Test complete exam task workflow
@@ -498,17 +491,17 @@ This implementation plan breaks down the LMS backend API development into increm
   - Test role switching workflow
   - _Requirements: All_
 
-- [ ] 40. Final checkpoint - Ensure all tests pass
+- [ ] 39. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 41. Create deployment configuration
+- [ ] 40. Create deployment configuration
   - Create Docker configuration
   - Create docker-compose for local development
   - Create environment variable templates
   - Document deployment steps
   - _Requirements: Deployment considerations_
 
-- [ ] 42. Write API usage documentation
+- [ ] 41. Write API usage documentation
   - Document authentication flow
   - Document common API workflows
   - Provide code examples for each endpoint

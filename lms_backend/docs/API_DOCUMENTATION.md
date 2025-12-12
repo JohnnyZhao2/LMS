@@ -2,12 +2,12 @@
 
 ## Base URL
 ```
-https://api.lms.example.com/api/v1
+http://localhost:8000/api
 ```
 
 ## Authentication
 
-All API requests require authentication using JWT tokens.
+所有API请求需要使用JWT tokens进行认证。
 
 ### Login
 ```http
@@ -24,15 +24,35 @@ Content-Type: application/json
 ```json
 {
   "success": true,
+  "message": "登录成功",
   "data": {
-    "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-    "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
     "user": {
       "id": 1,
-      "username": "john_doe",
-      "real_name": "John Doe",
-      "email": "john@example.com",
-      "roles": ["STUDENT", "MENTOR"]
+      "username": "admin",
+      "real_name": "系统管理员",
+      "employee_id": "EMP001",
+      "email": "admin@example.com",
+      "phone": null,
+      "department": null,
+      "mentor": null,
+      "join_date": null,
+      "is_active": true,
+      "is_staff": true,
+      "roles": [
+        {
+          "id": 5,
+          "name": "管理员",
+          "code": "ADMIN",
+          "assigned_at": "2024-12-12T10:00:00Z"
+        }
+      ],
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z",
+      "last_login": "2024-12-12T15:30:00Z"
+    },
+    "tokens": {
+      "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+      "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
     }
   }
 }
@@ -48,10 +68,64 @@ Content-Type: application/json
 }
 ```
 
+**Response:**
+```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
+
+### Logout
+```http
+POST /auth/logout/
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "登出成功",
+  "data": null
+}
+```
+
 ### Get Current User
 ```http
 GET /auth/me/
 Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "获取成功",
+  "data": {
+    "id": 1,
+    "username": "admin",
+    "real_name": "系统管理员",
+    "employee_id": "EMP001",
+    "email": "admin@example.com",
+    "phone": null,
+    "department": null,
+    "mentor": null,
+    "join_date": null,
+    "is_active": true,
+    "is_staff": true,
+    "roles": [
+      {
+        "id": 5,
+        "name": "管理员",
+        "code": "ADMIN",
+        "assigned_at": "2024-12-12T10:00:00Z"
+      }
+    ],
+    "created_at": "2024-12-12T10:00:00Z",
+    "updated_at": "2024-12-12T10:00:00Z",
+    "last_login": "2024-12-12T15:30:00Z"
+  }
+}
 ```
 
 ### Switch Role
@@ -62,6 +136,47 @@ Content-Type: application/json
 
 {
   "role_code": "MENTOR"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "已切换到导师角色",
+  "data": {
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "real_name": "系统管理员",
+      "employee_id": "EMP001",
+      "email": "admin@example.com",
+      "phone": null,
+      "department": null,
+      "mentor": null,
+      "join_date": null,
+      "is_active": true,
+      "is_staff": true,
+      "roles": [
+        {
+          "id": 2,
+          "name": "导师",
+          "code": "MENTOR",
+          "assigned_at": "2024-01-01T10:00:00Z"
+        },
+        {
+          "id": 5,
+          "name": "管理员",
+          "code": "ADMIN",
+          "assigned_at": "2024-12-12T10:00:00Z"
+        }
+      ],
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z",
+      "last_login": "2024-12-12T15:30:00Z"
+    },
+    "active_role": "MENTOR"
+  }
 }
 ```
 
@@ -76,42 +191,44 @@ Authorization: Bearer {access_token}
 ```
 
 **Query Parameters:**
-- `page` (optional): Page number (default: 1)
-- `page_size` (optional): Items per page (default: 20)
-- `department` (optional): Filter by department ID
-- `role` (optional): Filter by role code
+- `page` (optional): 页码 (default: 1)
+- `page_size` (optional): 每页数量 (default: 20)
+- `department` (optional): 按部门ID筛选
+- `is_active` (optional): 按激活状态筛选
+- `search` (optional): 搜索关键词（username, real_name, employee_id, email）
+- `ordering` (optional): 排序字段 (created_at, join_date)
 
 **Response:**
 ```json
 {
-  "success": true,
-  "data": {
-    "count": 100,
-    "next": "https://api.lms.example.com/api/v1/users/?page=2",
-    "previous": null,
-    "results": [
-      {
-        "id": 1,
-        "username": "john_doe",
-        "real_name": "John Doe",
-        "employee_id": "EMP001",
-        "email": "john@example.com",
-        "phone": "13800138000",
-        "department": {
-          "id": 1,
-          "name": "一室",
-          "code": "DEPT_ONE"
-        },
-        "mentor": {
+  "count": 10,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "username": "admin",
+      "real_name": "系统管理员",
+      "employee_id": "EMP001",
+      "email": "admin@example.com",
+      "phone": null,
+      "department": null,
+      "department_name": null,
+      "mentor": null,
+      "mentor_name": null,
+      "join_date": null,
+      "is_active": true,
+      "roles": [
+        {
           "id": 5,
-          "real_name": "Mentor Name"
-        },
-        "roles": ["STUDENT", "MENTOR"],
-        "join_date": "2024-01-01",
-        "is_active": true
-      }
-    ]
-  }
+          "name": "管理员",
+          "code": "ADMIN"
+        }
+      ],
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
 }
 ```
 
@@ -124,20 +241,107 @@ Content-Type: application/json
 {
   "username": "new_user",
   "password": "SecurePass123!",
-  "real_name": "New User",
+  "real_name": "新用户",
   "employee_id": "EMP002",
   "email": "newuser@example.com",
   "phone": "13900139000",
-  "department_id": 1,
-  "mentor_id": 5,
+  "department": 1,
+  "mentor": 5,
   "join_date": "2024-12-01"
 }
 ```
+
+**Response:**
+```json
+{
+  "id": 10,
+  "username": "new_user",
+  "real_name": "新用户",
+  "employee_id": "EMP002",
+  "email": "newuser@example.com",
+  "phone": "13900139000",
+  "department": 1,
+  "department_name": "一室",
+  "mentor": 5,
+  "mentor_name": "导师姓名",
+  "join_date": "2024-12-01",
+  "is_active": true,
+  "roles": [
+    {
+      "id": 1,
+      "name": "学员",
+      "code": "STUDENT"
+    }
+  ],
+  "created_at": "2024-12-13T10:00:00Z",
+  "updated_at": "2024-12-13T10:00:00Z"
+}
+```
+
+**Note:** 新创建的用户会自动分配"学员"角色
 
 ### Get User Detail
 ```http
 GET /users/{id}/
 Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "username": "admin",
+  "real_name": "系统管理员",
+  "employee_id": "EMP001",
+  "email": "admin@example.com",
+  "phone": null,
+  "department": {
+    "id": 1,
+    "name": "一室",
+    "code": "DEPT_ONE",
+    "manager": 5,
+    "manager_name": "室经理",
+    "description": "第一部门",
+    "created_at": "2024-12-12T10:00:00Z"
+  },
+  "mentor": {
+    "id": 5,
+    "username": "mentor1",
+    "real_name": "导师姓名",
+    "employee_id": "EMP005",
+    "email": "mentor@example.com",
+    "phone": "13800138000",
+    "department": 1,
+    "department_name": "一室",
+    "mentor": null,
+    "mentor_name": null,
+    "join_date": "2024-01-01",
+    "is_active": true,
+    "roles": [
+      {
+        "id": 2,
+        "name": "导师",
+        "code": "MENTOR"
+      }
+    ],
+    "created_at": "2024-01-01T10:00:00Z",
+    "updated_at": "2024-01-01T10:00:00Z"
+  },
+  "join_date": null,
+  "is_active": true,
+  "is_staff": true,
+  "roles": [
+    {
+      "id": 5,
+      "name": "管理员",
+      "code": "ADMIN",
+      "assigned_at": "2024-12-12T10:00:00Z"
+    }
+  ],
+  "created_at": "2024-12-12T10:00:00Z",
+  "updated_at": "2024-12-12T10:00:00Z",
+  "last_login": "2024-12-12T15:30:00Z"
+}
 ```
 
 ### Update User
@@ -147,9 +351,36 @@ Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-  "real_name": "Updated Name",
+  "real_name": "更新后的名字",
   "email": "updated@example.com",
-  "department_id": 2
+  "department": 2
+}
+```
+
+**Response:**
+```json
+{
+  "id": 10,
+  "username": "new_user",
+  "real_name": "更新后的名字",
+  "employee_id": "EMP002",
+  "email": "updated@example.com",
+  "phone": "13900139000",
+  "department": 2,
+  "department_name": "二室",
+  "mentor": 5,
+  "mentor_name": "导师姓名",
+  "join_date": "2024-12-01",
+  "is_active": true,
+  "roles": [
+    {
+      "id": 1,
+      "name": "学员",
+      "code": "STUDENT"
+    }
+  ],
+  "created_at": "2024-12-13T10:00:00Z",
+  "updated_at": "2024-12-13T10:30:00Z"
 }
 ```
 
@@ -160,915 +391,179 @@ Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-  "role_code": "MENTOR"
+  "role_id": 2
 }
-```
-
-### Set Mentor
-```http
-POST /users/{id}/set-mentor/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "mentor_id": 5
-}
-```
-
----
-
-## Knowledge
-
-### List Knowledge Documents
-```http
-GET /knowledge/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `page`, `page_size`: Pagination
-- `search`: Keyword search in title and content
-- `category`: Filter by category ID
-- `is_published`: Filter by published status
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 50,
-    "results": [
-      {
-        "id": 1,
-        "title": "数据库基础知识",
-        "summary": "介绍数据库的基本概念和操作...",
-        "categories": [
-          {
-            "id": 3,
-            "name": "数据库",
-            "level": 1
-          },
-          {
-            "id": 15,
-            "name": "重启",
-            "level": 3
-          }
-        ],
-        "view_count": 150,
-        "is_published": true,
-        "created_by": {
-          "id": 1,
-          "real_name": "Admin"
-        },
-        "updated_by": {
-          "id": 1,
-          "real_name": "Admin"
-        },
-        "created_at": "2024-11-01T10:00:00Z",
-        "updated_at": "2024-12-01T15:30:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Create Knowledge Document
-```http
-POST /knowledge/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "title": "新知识文档",
-  "content": "# 标题\n\n这是内容...",
-  "summary": "文档摘要",
-  "category_ids": [3, 15],
-  "file_url": "https://storage.example.com/files/doc.pdf",
-  "is_published": true
-}
-```
-
-### Get Knowledge Detail
-```http
-GET /knowledge/{id}/
-Authorization: Bearer {access_token}
 ```
 
 **Response:**
 ```json
 {
   "success": true,
+  "message": "分配角色：导师",
   "data": {
-    "id": 1,
-    "title": "数据库基础知识",
-    "content": "# 数据库基础\n\n## 什么是数据库...",
-    "summary": "介绍数据库的基本概念",
-    "categories": [...],
-    "file_url": "https://storage.example.com/files/db-basics.pdf",
-    "view_count": 150,
-    "is_published": true,
-    "created_by": {...},
-    "updated_by": {...},
-    "created_at": "2024-11-01T10:00:00Z",
-    "updated_at": "2024-12-01T15:30:00Z"
-  }
-}
-```
-
-### Update Knowledge Document
-```http
-PUT /knowledge/{id}/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "title": "更新后的标题",
-  "content": "更新后的内容",
-  "category_ids": [3, 15, 20]
-}
-```
-
-### Delete Knowledge Document (Soft Delete)
-```http
-DELETE /knowledge/{id}/
-Authorization: Bearer {access_token}
-```
-
-### List Knowledge Categories
-```http
-GET /knowledge/categories/?level=1
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `level`: Filter by category level (1, 2, or 3)
-- `parent_id`: Filter by parent category ID
-
----
-
-## Questions
-
-### List Questions
-```http
-GET /questions/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `type`: Filter by question type (SINGLE, MULTIPLE, JUDGE, ESSAY)
-- `difficulty`: Filter by difficulty (1-5)
-- `created_by`: Filter by creator ID
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 200,
-    "results": [
-      {
-        "id": 1,
-        "type": "SINGLE",
-        "content": "以下哪个是关系型数据库？",
-        "options": [
-          {"key": "A", "value": "MongoDB"},
-          {"key": "B", "value": "PostgreSQL"},
-          {"key": "C", "value": "Redis"},
-          {"key": "D", "value": "Elasticsearch"}
-        ],
-        "correct_answer": {"answer": "B"},
-        "analysis": "PostgreSQL是关系型数据库...",
-        "difficulty": 2,
-        "is_public": true,
-        "created_by": {
-          "id": 1,
-          "real_name": "Admin"
-        },
-        "created_at": "2024-11-01T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Create Question
-```http
-POST /questions/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "type": "MULTIPLE",
-  "content": "以下哪些是NoSQL数据库？（多选）",
-  "options": [
-    {"key": "A", "value": "MongoDB"},
-    {"key": "B", "value": "PostgreSQL"},
-    {"key": "C", "value": "Redis"},
-    {"key": "D", "value": "MySQL"}
-  ],
-  "correct_answer": {"answer": ["A", "C"]},
-  "analysis": "MongoDB和Redis都是NoSQL数据库",
-  "difficulty": 3,
-  "is_public": false
-}
-```
-
-### Import Questions from Excel
-```http
-POST /questions/import/
-Authorization: Bearer {access_token}
-Content-Type: multipart/form-data
-
-file: <excel_file>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "task_id": "abc123",
-    "status": "processing"
-  }
-}
-```
-
-### Check Import Status
-```http
-GET /questions/import/{task_id}/status/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "status": "completed",
-    "total": 100,
-    "success_count": 95,
-    "error_count": 5,
-    "errors": [
-      {
-        "row": 10,
-        "error": "Invalid question type"
-      }
-    ]
-  }
-}
-```
-
----
-
-## Quizzes
-
-### List Quizzes
-```http
-GET /quizzes/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `is_public`: Filter by public status
-- `created_by`: Filter by creator ID
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 30,
-    "results": [
-      {
-        "id": 1,
-        "title": "数据库基础测验",
-        "description": "测试数据库基础知识掌握情况",
-        "total_score": 100.00,
-        "pass_score": 60.00,
-        "question_count": 20,
-        "is_public": false,
-        "created_by": {
-          "id": 5,
-          "real_name": "Mentor Name"
-        },
-        "created_at": "2024-11-15T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Create Quiz
-```http
-POST /quizzes/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "title": "新测验",
-  "description": "测验描述",
-  "total_score": 100.00,
-  "pass_score": 60.00,
-  "is_public": false
-}
-```
-
-### Get Quiz Detail with Questions
-```http
-GET /quizzes/{id}/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "title": "数据库基础测验",
-    "description": "测试数据库基础知识",
-    "total_score": 100.00,
-    "pass_score": 60.00,
-    "questions": [
-      {
-        "id": 1,
-        "sort_order": 1,
-        "score": 5.00,
-        "question": {
-          "id": 10,
-          "type": "SINGLE",
-          "content": "题目内容...",
-          "options": [...]
+    "id": 10,
+    "username": "new_user",
+    "real_name": "新用户",
+    "employee_id": "EMP002",
+    "email": "newuser@example.com",
+    "phone": "13900139000",
+    "department": {
+      "id": 1,
+      "name": "一室",
+      "code": "DEPT_ONE",
+      "manager": 5,
+      "manager_name": "室经理",
+      "description": "第一部门",
+      "created_at": "2024-12-12T10:00:00Z"
+    },
+    "mentor": {
+      "id": 5,
+      "username": "mentor1",
+      "real_name": "导师姓名",
+      "employee_id": "EMP005",
+      "email": "mentor@example.com",
+      "phone": "13800138000",
+      "department": 1,
+      "department_name": "一室",
+      "mentor": null,
+      "mentor_name": null,
+      "join_date": "2024-01-01",
+      "is_active": true,
+      "roles": [
+        {
+          "id": 2,
+          "name": "导师",
+          "code": "MENTOR"
         }
+      ],
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    },
+    "join_date": "2024-12-01",
+    "is_active": true,
+    "is_staff": false,
+    "roles": [
+      {
+        "id": 1,
+        "name": "学员",
+        "code": "STUDENT",
+        "assigned_at": "2024-12-13T10:00:00Z"
+      },
+      {
+        "id": 2,
+        "name": "导师",
+        "code": "MENTOR",
+        "assigned_at": "2024-12-13T10:30:00Z"
       }
     ],
-    "is_public": false,
-    "created_by": {...},
-    "created_at": "2024-11-15T10:00:00Z"
+    "created_at": "2024-12-13T10:00:00Z",
+    "updated_at": "2024-12-13T10:30:00Z",
+    "last_login": null
   }
 }
 ```
 
-### Add Questions to Quiz
+### Remove Role from User
 ```http
-POST /quizzes/{id}/add-questions/
+POST /users/{id}/remove-role/
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-  "questions": [
-    {
-      "question_id": 10,
-      "score": 5.00,
-      "sort_order": 1
-    },
-    {
-      "question_id": 11,
-      "score": 10.00,
-      "sort_order": 2
-    }
-  ]
+  "role_id": 2
 }
 ```
-
-### Reorder Questions in Quiz
-```http
-PUT /quizzes/{id}/reorder-questions/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "question_orders": [
-    {"quiz_question_id": 1, "sort_order": 2},
-    {"quiz_question_id": 2, "sort_order": 1}
-  ]
-}
-```
-
----
-
-## Tasks
-
-### List Tasks
-```http
-GET /tasks/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `type`: Filter by task type (LEARNING, PRACTICE, EXAM)
-- `status`: Filter by task status (DRAFT, PUBLISHED, CLOSED)
-- `created_by`: Filter by creator ID
-
-### Get My Tasks (Student View)
-```http
-GET /tasks/my-tasks/?type=LEARNING&status=IN_PROGRESS
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `type`: Filter by task type
-- `status`: Filter by assignment status (NOT_STARTED, IN_PROGRESS, COMPLETED, OVERDUE)
 
 **Response:**
 ```json
 {
   "success": true,
+  "message": "已移除角色：导师",
   "data": {
-    "count": 15,
-    "results": [
+    "id": 10,
+    "username": "new_user",
+    "real_name": "新用户",
+    "employee_id": "EMP002",
+    "email": "newuser@example.com",
+    "phone": "13900139000",
+    "department": {
+      "id": 1,
+      "name": "一室",
+      "code": "DEPT_ONE",
+      "manager": 5,
+      "manager_name": "室经理",
+      "description": "第一部门",
+      "created_at": "2024-12-12T10:00:00Z"
+    },
+    "mentor": {
+      "id": 5,
+      "username": "mentor1",
+      "real_name": "导师姓名",
+      "employee_id": "EMP005",
+      "email": "mentor@example.com",
+      "phone": "13800138000",
+      "department": 1,
+      "department_name": "一室",
+      "mentor": null,
+      "mentor_name": null,
+      "join_date": "2024-01-01",
+      "is_active": true,
+      "roles": [
+        {
+          "id": 2,
+          "name": "导师",
+          "code": "MENTOR"
+        }
+      ],
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    },
+    "join_date": "2024-12-01",
+    "is_active": true,
+    "is_staff": false,
+    "roles": [
       {
         "id": 1,
-        "title": "数据库学习任务",
-        "description": "学习数据库基础知识",
-        "type": "LEARNING",
-        "deadline": "2024-12-31T23:59:59Z",
-        "assignment_status": "IN_PROGRESS",
-        "started_at": "2024-12-10T10:00:00Z",
-        "completed_at": null,
-        "knowledge_docs": [
-          {
-            "id": 1,
-            "title": "数据库基础",
-            "is_required": true
-          }
-        ],
-        "quizzes": [],
-        "created_by": {
-          "id": 5,
-          "real_name": "Mentor Name"
-        },
-        "created_at": "2024-12-01T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Create Task
-```http
-POST /tasks/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "title": "新学习任务",
-  "description": "任务描述",
-  "type": "LEARNING",
-  "deadline": "2024-12-31T23:59:59Z",
-  "knowledge_doc_ids": [1, 2, 3],
-  "assigned_user_ids": [10, 11, 12]
-}
-```
-
-**For Practice Task:**
-```json
-{
-  "title": "练习任务",
-  "description": "任务描述",
-  "type": "PRACTICE",
-  "deadline": "2024-12-31T23:59:59Z",
-  "quiz_ids": [1, 2],
-  "knowledge_doc_ids": [1],
-  "allow_retake": true,
-  "assigned_user_ids": [10, 11]
-}
-```
-
-**For Exam Task:**
-```json
-{
-  "title": "考试任务",
-  "description": "任务描述",
-  "type": "EXAM",
-  "start_time": "2024-12-20T09:00:00Z",
-  "deadline": "2024-12-20T11:00:00Z",
-  "quiz_ids": [1],
-  "allow_retake": false,
-  "anti_cheat_enabled": true,
-  "assigned_user_ids": [10, 11, 12]
-}
-```
-
-### Get Task Detail
-```http
-GET /tasks/{id}/
-Authorization: Bearer {access_token}
-```
-
-### Start Task
-```http
-POST /tasks/{id}/start/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "assignment_id": 123,
-    "status": "IN_PROGRESS",
-    "started_at": "2024-12-12T10:30:00Z"
-  }
-}
-```
-
-### Complete Learning Task
-```http
-POST /tasks/{id}/complete/
-Authorization: Bearer {access_token}
-```
-
----
-
-## Submissions
-
-### Create Submission (Start Quiz)
-```http
-POST /submissions/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "task_id": 1,
-  "quiz_id": 1
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 100,
-    "task_id": 1,
-    "quiz_id": 1,
-    "attempt_number": 1,
-    "status": "SUBMITTED",
-    "submitted_at": "2024-12-12T10:30:00Z"
-  }
-}
-```
-
-### Submit Answers
-```http
-POST /submissions/{id}/submit-answers/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "answers": [
-    {
-      "question_id": 10,
-      "user_answer": {"answer": "B"}
-    },
-    {
-      "question_id": 11,
-      "user_answer": {"answer": ["A", "C"]}
-    },
-    {
-      "question_id": 12,
-      "user_answer": {"answer": "学生的简答题答案"}
-    }
-  ],
-  "total_time": 1800
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "submission_id": 100,
-    "status": "GRADING",
-    "obtained_score": 45.00,
-    "correct_count": 9,
-    "message": "客观题已自动评分，主观题等待人工评分"
-  }
-}
-```
-
-### Get Submission Results
-```http
-GET /submissions/{id}/results/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": 100,
-    "task": {...},
-    "quiz": {...},
-    "attempt_number": 1,
-    "total_score": 100.00,
-    "obtained_score": 85.00,
-    "correct_count": 17,
-    "total_time": 1800,
-    "status": "GRADED",
-    "answers": [
-      {
-        "id": 1,
-        "question": {
-          "id": 10,
-          "type": "SINGLE",
-          "content": "题目内容",
-          "options": [...],
-          "correct_answer": {"answer": "B"},
-          "analysis": "解析内容"
-        },
-        "user_answer": {"answer": "B"},
-        "is_correct": true,
-        "score": 5.00
+        "name": "学员",
+        "code": "STUDENT",
+        "assigned_at": "2024-12-13T10:00:00Z"
       }
     ],
-    "submitted_at": "2024-12-12T10:30:00Z",
-    "graded_at": "2024-12-12T15:00:00Z"
-  }
-}
-```
-
-### Retake Quiz
-```http
-POST /submissions/{id}/retake/
-Authorization: Bearer {access_token}
-```
-
----
-
-## Grading
-
-### Get Pending Grading Queue
-```http
-GET /grading/pending/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 25,
-    "results": [
-      {
-        "answer_id": 500,
-        "submission_id": 100,
-        "student": {
-          "id": 10,
-          "real_name": "Student Name"
-        },
-        "task": {
-          "id": 1,
-          "title": "练习任务"
-        },
-        "question": {
-          "id": 12,
-          "type": "ESSAY",
-          "content": "简答题题目",
-          "correct_answer": {"answer": "参考答案"}
-        },
-        "user_answer": {"answer": "学生的答案"},
-        "max_score": 10.00,
-        "submitted_at": "2024-12-12T10:30:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Grade Answer
-```http
-POST /grading/{answer_id}/grade/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "score": 8.50,
-  "comment": "回答基本正确，但缺少部分要点"
-}
-```
-
-### Full Score Shortcut
-```http
-POST /grading/{answer_id}/full-score/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "comment": "回答完全正确"
-}
-```
-
-### Get Grading History
-```http
-GET /grading/history/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
----
-
-## Spot Checks
-
-### Create Spot Check
-```http
-POST /spot-checks/
-Authorization: Bearer {access_token}
-Content-Type: application/json
-
-{
-  "user_id": 10,
-  "topic": "数据库应急处理",
-  "score": 8,
-  "comment": "回答流畅，处理方案合理"
-}
-```
-
-### List Spot Checks
-```http
-GET /spot-checks/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `user_id`: Filter by student ID
-- `checked_by`: Filter by checker ID
-- `date_from`: Filter by date range start
-- `date_to`: Filter by date range end
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 50,
-    "results": [
-      {
-        "id": 1,
-        "user": {
-          "id": 10,
-          "real_name": "Student Name"
-        },
-        "topic": "数据库应急处理",
-        "score": 8,
-        "comment": "回答流畅，处理方案合理",
-        "checked_by": {
-          "id": 5,
-          "real_name": "Mentor Name"
-        },
-        "checked_at": "2024-12-12T14:00:00Z"
-      }
-    ]
+    "created_at": "2024-12-13T10:00:00Z",
+    "updated_at": "2024-12-13T10:30:00Z",
+    "last_login": null
   }
 }
 ```
 
 ---
 
-## Statistics
+## Roles
 
-### Get Dashboard Statistics
+### List Roles
 ```http
-GET /statistics/dashboard/
-Authorization: Bearer {access_token}
-```
-
-**Response (varies by role):**
-```json
-{
-  "success": true,
-  "data": {
-    "total_tasks": 50,
-    "completed_tasks": 35,
-    "completion_rate": 70.0,
-    "average_score": 82.5,
-    "total_learning_time": 12000,
-    "pending_grading_count": 5,
-    "overdue_tasks": 3
-  }
-}
-```
-
-### Get Student Statistics
-```http
-GET /statistics/students/?user_id=10
-Authorization: Bearer {access_token}
-```
-
-### Get Task Statistics
-```http
-GET /statistics/tasks/?task_id=1
+GET /roles/
 Authorization: Bearer {access_token}
 ```
 
 **Response:**
 ```json
-{
-  "success": true,
-  "data": {
-    "task_id": 1,
-    "title": "数据库学习任务",
-    "total_assigned": 20,
-    "completed_count": 15,
-    "in_progress_count": 3,
-    "not_started_count": 1,
-    "overdue_count": 1,
-    "completion_rate": 75.0,
-    "average_score": 85.5
+[
+  {
+    "id": 1,
+    "name": "学员",
+    "code": "STUDENT",
+    "description": "普通学员",
+    "created_at": "2024-12-12T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "name": "导师",
+    "code": "MENTOR",
+    "description": "导师角色",
+    "created_at": "2024-12-12T10:00:00Z"
   }
-}
-```
-
-### Get Knowledge Heat Map
-```http
-GET /statistics/knowledge-heat/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "knowledge_id": 1,
-      "title": "数据库基础",
-      "view_count": 150,
-      "unique_viewers": 45,
-      "average_duration": 1200
-    }
-  ]
-}
-```
-
----
-
-## Notifications
-
-### List Notifications
-```http
-GET /notifications/?page=1&page_size=20
-Authorization: Bearer {access_token}
-```
-
-**Query Parameters:**
-- `is_read`: Filter by read status (true/false)
-- `type`: Filter by notification type
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "count": 30,
-    "results": [
-      {
-        "id": 1,
-        "type": "TASK_ASSIGNED",
-        "title": "新任务分配",
-        "content": "你被分配了新的学习任务：数据库基础",
-        "related_task": {
-          "id": 1,
-          "title": "数据库基础"
-        },
-        "is_read": false,
-        "created_at": "2024-12-12T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### Mark Notification as Read
-```http
-POST /notifications/{id}/mark-read/
-Authorization: Bearer {access_token}
-```
-
-### Mark All as Read
-```http
-POST /notifications/mark-all-read/
-Authorization: Bearer {access_token}
-```
-
-### Get Unread Count
-```http
-GET /notifications/unread-count/
-Authorization: Bearer {access_token}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "unread_count": 5
-  }
-}
+]
 ```
 
 ---
@@ -1081,6 +576,25 @@ GET /departments/
 Authorization: Bearer {access_token}
 ```
 
+**Query Parameters:**
+- `search` (optional): 搜索关键词（name, code）
+- `ordering` (optional): 排序字段 (created_at)
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "一室",
+    "code": "DEPT_ONE",
+    "manager": 5,
+    "manager_name": "室经理",
+    "description": "第一部门",
+    "created_at": "2024-12-12T10:00:00Z"
+  }
+]
+```
+
 ### Create Department
 ```http
 POST /departments/
@@ -1090,238 +604,168 @@ Content-Type: application/json
 {
   "name": "三室",
   "code": "DEPT_THREE",
-  "manager_id": 8,
+  "manager": 8,
   "description": "第三部门"
 }
 ```
 
-### Get Department Employees
+**Response:**
+```json
+{
+  "id": 3,
+  "name": "三室",
+  "code": "DEPT_THREE",
+  "manager": 8,
+  "manager_name": "经理姓名",
+  "description": "第三部门",
+  "created_at": "2024-12-13T10:00:00Z"
+}
+```
+
+### Get Department Detail
 ```http
-GET /departments/{id}/employees/
+GET /departments/{id}/
 Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "一室",
+  "code": "DEPT_ONE",
+  "manager": 5,
+  "manager_name": "室经理",
+  "description": "第一部门",
+  "created_at": "2024-12-12T10:00:00Z"
+}
+```
+
+### Update Department
+```http
+PUT /departments/{id}/
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "name": "更新后的名称",
+  "manager": 10
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "更新后的名称",
+  "code": "DEPT_ONE",
+  "manager": 10,
+  "manager_name": "新经理姓名",
+  "description": "第一部门",
+  "created_at": "2024-12-12T10:00:00Z"
+}
 ```
 
 ---
 
-## Wrong Answers
+## Knowledge - 应急操作手册
 
-### Get My Wrong Answers
+### 操作类型 (Operation Types)
+
+#### List Operation Types
 ```http
-GET /wrong-answers/?page=1&page_size=20
+GET /knowledge/operation-types/
 Authorization: Bearer {access_token}
 ```
 
 **Query Parameters:**
-- `task_type`: Filter by task type (PRACTICE, EXAM)
-- `category_id`: Filter by knowledge category
+- `search` (optional): 搜索关键词（name, code）
+- `ordering` (optional): 排序字段 (sort_order, created_at)
 
 **Response:**
 ```json
-{
-  "success": true,
-  "data": {
-    "count": 15,
-    "results": [
-      {
-        "question_id": 10,
-        "question": {
-          "type": "SINGLE",
-          "content": "题目内容",
-          "options": [...],
-          "correct_answer": {"answer": "B"},
-          "analysis": "解析"
-        },
-        "wrong_count": 2,
-        "last_wrong_answer": {"answer": "A"},
-        "last_attempt_at": "2024-12-10T15:00:00Z"
-      }
-    ]
+[
+  {
+    "id": 1,
+    "name": "重启",
+    "code": "RESTART",
+    "description": "重启服务或系统",
+    "sort_order": 1,
+    "created_at": "2024-12-12T10:00:00Z"
   }
-}
+]
 ```
 
----
-
-## Error Responses
-
-All error responses follow this format:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Validation failed",
-    "details": {
-      "username": ["This field is required"],
-      "email": ["Enter a valid email address"]
-    }
-  }
-}
-```
-
-### Common Error Codes
-
-- `VALIDATION_ERROR` (400): Input validation failed
-- `AUTHENTICATION_FAILED` (401): Invalid or missing authentication token
-- `PERMISSION_DENIED` (403): Insufficient permissions
-- `NOT_FOUND` (404): Resource not found
-- `CONFLICT` (409): Resource conflict (e.g., duplicate username)
-- `INTERNAL_ERROR` (500): Server error
-
----
-
-## Rate Limiting
-
-API requests are rate-limited to prevent abuse:
-
-- **Authenticated requests**: 1000 requests per hour
-- **Login endpoint**: 10 requests per minute
-
-Rate limit headers are included in responses:
-```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 995
-X-RateLimit-Reset: 1702389600
-```
-
----
-
-## Pagination
-
-List endpoints support pagination with these parameters:
-
-- `page`: Page number (default: 1)
-- `page_size`: Items per page (default: 20, max: 100)
-
-Paginated responses include:
-```json
-{
-  "count": 100,
-  "next": "https://api.lms.example.com/api/v1/resource/?page=2",
-  "previous": null,
-  "results": [...]
-}
-```
-
----
-
-## Filtering and Ordering
-
-Most list endpoints support:
-
-- **Filtering**: Add query parameters matching field names
-- **Ordering**: Use `ordering` parameter (prefix with `-` for descending)
-
-Example:
+#### Create Operation Type (Admin only)
 ```http
-GET /tasks/?type=LEARNING&status=PUBLISHED&ordering=-created_at
-```
-
----
-
-**API Version:** v1.0  
-**Last Updated:** 2024-12-12
-
-
----
-
-## 应急操作手册管理 (Emergency Operation Manual)
-
-### 操作类型 API
-
-#### 1. 获取操作类型列表
-```http
-GET /api/knowledge/operation-types/
+POST /knowledge/operation-types/
 Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "name": "新操作",
+  "code": "NEW_OP",
+  "description": "新操作类型",
+  "sort_order": 10
+}
 ```
 
 **Response:**
 ```json
 {
-  "success": true,
-  "message": "获取成功",
-  "data": [
-    {
-      "id": 1,
-      "name": "重启",
-      "code": "RESTART",
-      "description": "重启服务或系统",
-      "sort_order": 1,
-      "created_at": "2024-12-12T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "name": "隔离",
-      "code": "ISOLATE",
-      "description": "隔离故障节点",
-      "sort_order": 2,
-      "created_at": "2024-12-12T10:00:00Z"
-    }
-  ]
+  "id": 7,
+  "name": "新操作",
+  "code": "NEW_OP",
+  "description": "新操作类型",
+  "sort_order": 10,
+  "created_at": "2024-12-13T10:00:00Z"
 }
 ```
 
 ---
 
-### 分类 API（条线和系统）
+### 分类 (Categories) - 条线和系统
 
-#### 1. 获取分类列表
+#### List Categories
 ```http
-GET /api/knowledge/categories/
+GET /knowledge/categories/
 Authorization: Bearer {access_token}
 ```
 
 **Query Parameters:**
 - `level` (optional): 筛选层级 (1=条线, 2=系统)
-- `parent` (optional): 筛选父分类ID（获取某条线下的系统）
+- `parent` (optional): 筛选父分类ID
 - `search` (optional): 搜索关键词（name, code）
 - `ordering` (optional): 排序字段 (level, sort_order, created_at)
 
 **Response:**
 ```json
 {
-  "success": true,
-  "message": "获取成功",
-  "data": {
-    "count": 7,
-    "results": [
-      {
-        "id": 1,
-        "name": "双云",
-        "code": "CLOUD",
-        "level": 1,
-        "level_display": "条线",
-        "parent": null,
-        "parent_name": null,
-        "description": "云平台相关",
-        "sort_order": 1,
-        "children_count": 2,
-        "created_at": "2024-12-12T10:00:00Z",
-        "updated_at": "2024-12-12T10:00:00Z"
-      },
-      {
-        "id": 3,
-        "name": "数据库",
-        "code": "DATABASE",
-        "level": 1,
-        "level_display": "条线",
-        "parent": null,
-        "parent_name": null,
-        "description": "数据库相关",
-        "sort_order": 3,
-        "children_count": 3,
-        "created_at": "2024-12-12T10:00:00Z",
-        "updated_at": "2024-12-12T10:00:00Z"
-      }
-    ]
-  }
+  "count": 7,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "双云",
+      "code": "CLOUD",
+      "level": 1,
+      "level_display": "条线",
+      "parent": null,
+      "parent_name": null,
+      "description": "云平台相关",
+      "sort_order": 1,
+      "children_count": 2,
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
 }
 ```
 
-#### 2. 获取分类树
+#### Get Category Tree
 ```http
-GET /api/knowledge/categories/tree/
+GET /knowledge/categories/tree/
 Authorization: Bearer {access_token}
 ```
 
@@ -1349,16 +793,6 @@ Authorization: Bearer {access_token}
           "description": null,
           "sort_order": 1,
           "children": []
-        },
-        {
-          "id": 14,
-          "name": "Redis缓存",
-          "code": "DB_REDIS",
-          "level": 2,
-          "level_display": "系统",
-          "description": null,
-          "sort_order": 2,
-          "children": []
         }
       ]
     }
@@ -1366,9 +800,9 @@ Authorization: Bearer {access_token}
 }
 ```
 
-#### 3. 获取子分类（获取条线下的系统）
+#### Get Child Categories
 ```http
-GET /api/knowledge/categories/children/?parent_id=3
+GET /knowledge/categories/children/?parent_id=3
 Authorization: Bearer {access_token}
 ```
 
@@ -1396,13 +830,82 @@ Authorization: Bearer {access_token}
 }
 ```
 
+#### Create Category (Admin only)
+```http
+POST /knowledge/categories/
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "name": "新条线",
+  "code": "NEW_LINE",
+  "level": 1,
+  "parent": null,
+  "description": "新条线描述",
+  "sort_order": 10
+}
+```
+
+**Response:**
+```json
+{
+  "id": 8,
+  "name": "新条线",
+  "code": "NEW_LINE",
+  "level": 1,
+  "level_display": "条线",
+  "parent": null,
+  "parent_name": null,
+  "description": "新条线描述",
+  "sort_order": 10,
+  "children_count": 0,
+  "created_at": "2024-12-13T10:00:00Z",
+  "updated_at": "2024-12-13T10:00:00Z"
+}
+```
+
+#### Delete Category (Admin only)
+```http
+DELETE /knowledge/categories/{id}/
+Authorization: Bearer {access_token}
+```
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "message": "删除成功",
+  "data": null
+}
+```
+
+**Error Response (有子分类):**
+```json
+{
+  "success": false,
+  "message": "该分类下有子分类，无法删除",
+  "data": null
+}
+```
+
+**Error Response (有关联手册):**
+```json
+{
+  "success": false,
+  "message": "该分类下有关联的应急操作手册，无法删除",
+  "data": null
+}
+```
+
+**Note:** 只能删除没有子分类且没有关联应急操作手册的分类
+
 ---
 
-### 应急操作手册 API
+### 应急操作手册 (Emergency Operation Manuals)
 
-#### 1. 获取手册列表
+#### List Manuals
 ```http
-GET /api/knowledge/
+GET /knowledge/
 Authorization: Bearer {access_token}
 ```
 
@@ -1410,9 +913,8 @@ Authorization: Bearer {access_token}
 - `status` (optional): 筛选状态 (DRAFT/PUBLISHED/ARCHIVED)
 - `line` (optional): 筛选条线ID
 - `system` (optional): 筛选系统ID
-- `operation_type` (optional): 筛选操作类型ID
 - `creator` (optional): 筛选创建人ID
-- `search` (optional): 搜索关键词（title, summary）
+- `search` (optional): 搜索关键词（title, content_scenario, content_solution）
 - `ordering` (optional): 排序字段 (created_at, updated_at, view_count)
 - `page` (optional): 页码
 - `page_size` (optional): 每页数量
@@ -1420,36 +922,32 @@ Authorization: Bearer {access_token}
 **Response:**
 ```json
 {
-  "success": true,
-  "message": "获取成功",
-  "data": {
-    "count": 3,
-    "next": null,
-    "previous": null,
-    "results": [
-      {
-        "id": 1,
-        "title": "MySQL数据库主从切换应急操作",
-        "summary": "MySQL主从架构发生故障时的应急切换操作手册",
-        "cover_image": null,
-        "line_name": "数据库",
-        "system_name": "MySQL数据库",
-        "operation_types_names": ["重启", "切换"],
-        "status": "PUBLISHED",
-        "status_display": "已发布",
-        "view_count": 0,
-        "creator_name": "系统管理员",
-        "created_at": "2024-12-12T10:00:00Z",
-        "updated_at": "2024-12-12T10:00:00Z"
-      }
-    ]
-  }
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "title": "MySQL数据库主从切换应急操作",
+      "summary": "MySQL主从架构发生故障时的应急切换操作手册",
+      "cover_image": null,
+      "line_name": "数据库",
+      "system_name": "MySQL数据库",
+      "operation_type_names": ["重启", "切换"],
+      "status": "PUBLISHED",
+      "status_display": "已发布",
+      "view_count": 0,
+      "creator_name": "系统管理员",
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
 }
 ```
 
-#### 2. 获取手册详情
+#### Get Manual Detail
 ```http
-GET /api/knowledge/1/
+GET /knowledge/{id}/
 Authorization: Bearer {access_token}
 ```
 
@@ -1466,18 +964,18 @@ Authorization: Bearer {access_token}
     "attachment_url": null,
     
     "content": {
-      "scenario": "主库出现故障，无法提供服务，需要将从库切换为主库",
-      "trigger": "1. 监控系统报警主库连接失败\n2. 确认主库确实无法访问\n3. 评估影响范围\n4. 决定执行主从切换",
-      "solution": "1. 停止应用写入\n2. 确认从库数据同步完成\n3. 提升从库为主库\n4. 修改应用配置指向新主库\n5. 重启应用服务",
-      "verification": "1. 检查新主库状态正常\n2. 验证应用可以正常读写\n3. 检查数据一致性\n4. 监控系统确认无报警",
-      "recovery": "1. 修复原主库故障\n2. 将原主库配置为从库\n3. 启动数据同步\n4. 确认同步正常"
+      "scenario": "主库出现故障，无法提供服务",
+      "trigger": "1. 监控系统报警\n2. 确认主库无法访问",
+      "solution": "1. 停止应用写入\n2. 提升从库为主库",
+      "verification": "1. 检查新主库状态\n2. 验证应用读写",
+      "recovery": "1. 修复原主库\n2. 配置为从库"
     },
     
-    "content_scenario": "主库出现故障，无法提供服务，需要将从库切换为主库",
-    "content_trigger": "1. 监控系统报警主库连接失败\n2. 确认主库确实无法访问\n3. 评估影响范围\n4. 决定执行主从切换",
-    "content_solution": "1. 停止应用写入\n2. 确认从库数据同步完成\n3. 提升从库为主库\n4. 修改应用配置指向新主库\n5. 重启应用服务",
-    "content_verification": "1. 检查新主库状态正常\n2. 验证应用可以正常读写\n3. 检查数据一致性\n4. 监控系统确认无报警",
-    "content_recovery": "1. 修复原主库故障\n2. 将原主库配置为从库\n3. 启动数据同步\n4. 确认同步正常",
+    "content_scenario": "主库出现故障，无法提供服务",
+    "content_trigger": "1. 监控系统报警\n2. 确认主库无法访问",
+    "content_solution": "1. 停止应用写入\n2. 提升从库为主库",
+    "content_verification": "1. 检查新主库状态\n2. 验证应用读写",
+    "content_recovery": "1. 修复原主库\n2. 配置为从库",
     
     "line": 3,
     "line_name": "数据库",
@@ -1491,14 +989,6 @@ Authorization: Bearer {access_token}
         "code": "RESTART",
         "description": "重启服务或系统",
         "sort_order": 1,
-        "created_at": "2024-12-12T10:00:00Z"
-      },
-      {
-        "id": 5,
-        "name": "切换",
-        "code": "SWITCH",
-        "description": "切换到备用系统",
-        "sort_order": 5,
         "created_at": "2024-12-12T10:00:00Z"
       }
     ],
@@ -1525,21 +1015,102 @@ Authorization: Bearer {access_token}
 }
 ```
 
-#### 3. 按条线筛选
+#### Search Manuals
 ```http
-GET /api/knowledge/by-line/?line_id=3
+GET /knowledge/search/?keyword=数据库
 Authorization: Bearer {access_token}
 ```
 
-#### 4. 按系统筛选
+**Response:**
+```json
+{
+  "success": true,
+  "message": "搜索成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "MySQL数据库主从切换应急操作",
+      "summary": "MySQL主从架构发生故障时的应急切换操作手册",
+      "cover_image": null,
+      "line_name": "数据库",
+      "system_name": "MySQL数据库",
+      "operation_type_names": ["重启", "切换"],
+      "status": "PUBLISHED",
+      "status_display": "已发布",
+      "view_count": 0,
+      "creator_name": "系统管理员",
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Filter by Line
 ```http
-GET /api/knowledge/by-system/?system_id=13
+GET /knowledge/by-line/?line_id=3
 Authorization: Bearer {access_token}
 ```
 
-#### 5. 创建手册（管理角色）
+**Response:**
+```json
+{
+  "success": true,
+  "message": "获取成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "MySQL数据库主从切换应急操作",
+      "summary": "MySQL主从架构发生故障时的应急切换操作手册",
+      "cover_image": null,
+      "line_name": "数据库",
+      "system_name": "MySQL数据库",
+      "operation_type_names": ["重启", "切换"],
+      "status": "PUBLISHED",
+      "status_display": "已发布",
+      "view_count": 0,
+      "creator_name": "系统管理员",
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Filter by System
 ```http
-POST /api/knowledge/
+GET /knowledge/by-system/?system_id=13
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "获取成功",
+  "data": [
+    {
+      "id": 1,
+      "title": "MySQL数据库主从切换应急操作",
+      "summary": "MySQL主从架构发生故障时的应急切换操作手册",
+      "cover_image": null,
+      "line_name": "数据库",
+      "system_name": "MySQL数据库",
+      "operation_type_names": ["重启", "切换"],
+      "status": "PUBLISHED",
+      "status_display": "已发布",
+      "view_count": 0,
+      "creator_name": "系统管理员",
+      "created_at": "2024-12-12T10:00:00Z",
+      "updated_at": "2024-12-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Create Manual (Management roles only)
+```http
+POST /knowledge/
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
@@ -1553,57 +1124,172 @@ Content-Type: application/json
   "content_recovery": "恢复方案",
   "line": 3,
   "system": 13,
-  "operation_types": [1, 5],
+  "operation_type_ids": [1, 5],
   "deliverer": 2,
-  "creator_team": 1,
-  "executors": [3, 4],
+  "executor_ids": [3, 4],
   "emergency_platform": "数据库管理平台",
   "status": "DRAFT"
 }
 ```
 
-#### 6. 更新手册（管理角色）
+**Required Fields (必填字段):**
+- `title`: 标题
+- `content_scenario`: 故障场景
+- `content_trigger`: 触发流程
+- `content_solution`: 解决方案
+- `content_verification`: 验证方案
+- `content_recovery`: 恢复方案
+- `line`: 所属条线ID
+- `system`: 所属系统ID
+
+**Optional Fields (可选字段):**
+- `summary`: 摘要
+- `cover_image`: 封面图片URL
+- `attachment_url`: 附件链接
+- `operation_type_ids`: 操作类型ID列表
+- `deliverer`: 场景交付人ID
+- `executor_ids`: 可执行人ID列表
+- `emergency_platform`: 应急平台
+- `status`: 状态 (DRAFT/PUBLISHED/ARCHIVED，默认DRAFT)
+
+**Auto-filled Fields (自动填充):**
+- `creator`: 创建人（从当前登录用户获取）
+- `creator_team`: 创建人所属团队（从当前登录用户的部门获取）
+- `modifier`: 修改人（更新时自动设置）
+
+#### Update Manual (Management roles only)
 ```http
-PUT /api/knowledge/1/
+PUT /knowledge/{id}/
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
   "title": "更新后的标题",
   "content_solution": "更新后的解决方案",
-  "operation_types": [1, 2, 5]
+  "operation_type_ids": [1, 2, 5]
 }
 ```
 
-#### 7. 发布手册（管理角色）
+**Note:** 
+- 支持部分更新（PATCH）或完整更新（PUT）
+- 所有字段都是可选的，只更新提供的字段
+- `operation_type_ids`: 操作类型ID列表（写入时使用）
+- `executor_ids`: 可执行人ID列表（写入时使用）
+- `modifier`: 修改人会自动从当前登录用户获取
+
+#### Publish Manual (Management roles only)
 ```http
-POST /api/knowledge/1/publish/
+POST /knowledge/{id}/publish/
 Authorization: Bearer {access_token}
 ```
 
-#### 8. 归档手册（管理角色）
+**Response:**
+```json
+{
+  "success": true,
+  "message": "发布成功",
+  "data": {...}
+}
+```
+
+#### Archive Manual (Management roles only)
 ```http
-POST /api/knowledge/1/archive/
+POST /knowledge/{id}/archive/
 Authorization: Bearer {access_token}
 ```
 
-#### 9. 删除手册（软删除，管理角色）
+#### Delete Manual (Soft delete, Management roles only)
 ```http
-DELETE /api/knowledge/1/
+DELETE /knowledge/{id}/
 Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "删除成功",
+  "data": null
+}
 ```
 
 ---
 
-## 测试数据初始化
+## Error Responses
 
-### 初始化应急操作手册数据
+所有错误响应遵循以下格式：
+
+```json
+{
+  "success": false,
+  "message": "错误信息",
+  "data": null
+}
+```
+
+### Common HTTP Status Codes
+
+- `200 OK`: 请求成功
+- `400 Bad Request`: 请求参数错误或验证失败
+- `401 Unauthorized`: 未认证或token无效
+- `403 Forbidden`: 权限不足
+- `404 Not Found`: 资源不存在
+- `500 Internal Server Error`: 服务器错误
+
+---
+
+## Permission System
+
+### Role Hierarchy
+
+1. **STUDENT (学员)**: 基础角色，只能查看分配给自己的内容
+2. **MENTOR (导师)**: 可以管理自己的学员
+3. **DEPT_MANAGER (室经理)**: 可以管理本部门员工
+4. **TEAM_MANAGER (团队经理)**: 可以管理所有部门
+5. **ADMIN (管理员)**: 完全权限
+
+### Permission Rules
+
+#### Users
+- **查看**: 根据角色过滤（学员只能看自己，导师看自己的学员，室经理看本部门，团队经理和管理员看所有）
+- **创建/更新/删除**: 管理员
+
+#### Departments
+- **查看**: 根据角色过滤
+- **创建/更新/删除**: 管理员和团队经理
+
+#### Knowledge Categories & Operation Types
+- **查看**: 所有认证用户
+- **创建/更新/删除**: 仅管理员
+
+#### Knowledge (应急操作手册)
+- **查看**: 所有认证用户（非管理员只能看已发布且未删除的）
+- **创建/更新/删除/发布/归档**: 管理角色（导师、室经理、团队经理、管理员）
+- **管理员特权**: 可以看到所有手册（包括草稿和已删除的）
+
+---
+
+## Data Initialization
+
+### Initialize Test Data
+
 ```bash
+# 激活虚拟环境
 conda activate lms
+
+# 初始化角色数据
+python manage.py init_roles
+
+# 创建测试用户
+python manage.py create_test_user
+
+# 初始化应急操作手册数据
 python manage.py init_knowledge_data
 ```
 
 这将创建：
+- 5个系统角色（学员、导师、室经理、团队经理、管理员）
+- 1个测试管理员用户（username: admin, password: admin123）
 - 6个操作类型（重启、隔离、停止、回滚、切换、修复）
 - 7个条线（双云、网络、数据库、应用、应急、规章制度、其他）
 - 10个系统（AWS云平台、阿里云平台、防火墙、MySQL数据库、Redis缓存等）
@@ -1611,15 +1297,17 @@ python manage.py init_knowledge_data
 
 ---
 
-## 权限说明
+## API Version
 
-### 分类和操作类型
-- **查看**: 所有认证用户
-- **创建/更新/删除**: 仅管理员
-
-### 应急操作手册
-- **查看**: 所有认证用户（非管理员只能看已发布且未删除的）
-- **创建/更新/删除/发布/归档**: 管理角色（导师、室经理、团队经理、管理员）
-- **管理员特权**: 可以看到所有手册（包括草稿和已删除的）
+**Version:** v1.0  
+**Last Updated:** 2024-12-12
 
 ---
+
+## Notes
+
+1. 本API文档仅包含**已实现**的功能
+2. 题库、测验、任务、答题、评分等功能尚未实现
+3. 所有时间字段使用ISO 8601格式（UTC时区）
+4. 所有列表接口支持分页，默认每页20条
+5. JWT token有效期：access token 1小时，refresh token 7天

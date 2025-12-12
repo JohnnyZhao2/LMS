@@ -18,8 +18,7 @@ urlpatterns = [
     # API endpoints
     path('api/', include('apps.users.urls')),
     path('api/knowledge/', include('apps.knowledge.urls')),
-    # path('api/questions/', include('apps.questions.urls')),
-    # path('api/', include('apps.quizzes.urls')),
+    path('api/', include('apps.questions.urls')),
     # path('api/', include('apps.tasks.urls')),
     # path('api/', include('apps.submissions.urls')),
     # path('api/', include('apps.grading.urls')),
