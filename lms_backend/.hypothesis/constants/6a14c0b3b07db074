@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/questions/migrations/0001_question_models.py
+# hypothesis_version: 6.141.1
+
+[1.0, '%(class)s_created', '-created_at', 'EASY', 'HARD', 'ID', 'MEDIUM', 'MULTIPLE_CHOICE', 'Question', 'SHORT_ANSWER', 'SINGLE_CHOICE', 'TRUE_FALSE', 'answer', 'content', 'created_at', 'created_by', 'db_table', 'deleted_at', 'difficulty', 'explanation', 'id', 'is_deleted', 'lms_question', 'options', 'ordering', 'question_type', 'score', 'tags', 'updated_at', 'verbose_name', 'verbose_name_plural', '中等', '分值', '创建时间', '创建者', '删除时间', '判断题', '单选题', '困难', '多选题', '是否删除', '更新时间', '标签', '答案', '简单', '简答题', '解析', '选项', '难度等级', '题目', '题目内容', '题目类型']

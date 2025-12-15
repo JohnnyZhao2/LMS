@@ -5,6 +5,7 @@ Implements task creation and management endpoints.
 
 Requirements:
 - 7.1, 7.2, 7.3, 7.4, 7.5: Learning task management
+- 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7: Learning task execution
 - 9.1, 9.2, 9.3, 9.4, 9.5: Practice task management
 - 11.1, 11.2, 11.3, 11.4, 11.5, 11.6: Exam task management
 - 20.1, 20.2, 20.3: Admin task management
@@ -13,12 +14,17 @@ Properties:
 - Property 17: 导师任务学员范围限制
 - Property 18: 室经理任务学员范围限制
 - Property 19: 任务分配记录完整性
+- Property 20: 知识学习完成记录
+- Property 21: 学习任务自动完成
+- Property 22: 知识浏览不影响任务
+- Property 23: 任务逾期状态标记
 """
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from django.utils import timezone
 
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.permissions import (
@@ -27,13 +33,17 @@ from apps.users.permissions import (
     filter_queryset_by_data_scope,
 )
 
-from .models import Task, TaskAssignment
+from .models import Task, TaskAssignment, TaskKnowledge, KnowledgeLearningProgress
 from .serializers import (
     TaskListSerializer,
     TaskDetailSerializer,
     LearningTaskCreateSerializer,
     PracticeTaskCreateSerializer,
     ExamTaskCreateSerializer,
+    StudentAssignmentListSerializer,
+    StudentLearningTaskDetailSerializer,
+    CompleteKnowledgeLearningSerializer,
+    KnowledgeLearningProgressSerializer,
 )
 
 
@@ -381,3 +391,297 @@ class TaskCloseView(APIView):
         
         serializer = TaskDetailSerializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class StudentAssignmentListView(APIView):
+    """
+    Student's task assignment list endpoint.
+    
+    Returns tasks assigned to the current student.
+    
+    Requirements:
+    - 8.1: 学员查看学习任务详情时展示任务标题、介绍、分配人、截止时间、整体进度和知识文档列表
+    - 17.1: 学员访问任务中心时展示任务列表，支持按类型和状态筛选
+    - 17.2: 学员查看任务列表时展示任务标题、类型、状态、截止时间和进度
+    
+    Properties:
+    - Property 23: 任务逾期状态标记
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取我的任务列表',
+        description='''
+        获取当前学员的任务分配列表。
+        
+        支持筛选：
+        - task_type: 任务类型（LEARNING/PRACTICE/EXAM）
+        - status: 任务状态（IN_PROGRESS/COMPLETED/OVERDUE/PENDING_EXAM）
+        
+        Requirements: 8.1, 17.1, 17.2
+        ''',
+        parameters=[
+            OpenApiParameter(name='task_type', type=str, description='任务类型（LEARNING/PRACTICE/EXAM）'),
+            OpenApiParameter(name='status', type=str, description='任务状态（IN_PROGRESS/COMPLETED/OVERDUE/PENDING_EXAM）'),
+        ],
+        responses={200: StudentAssignmentListSerializer(many=True)},
+        tags=['学员任务执行']
+    )
+    def get(self, request):
+        # Get assignments for current user
+        queryset = TaskAssignment.objects.filter(
+            assignee=request.user,
+            task__is_deleted=False
+        ).select_related(
+            'task', 'task__created_by'
+        ).prefetch_related(
+            'task__task_knowledge__knowledge',
+            'task__task_quizzes__quiz',
+            'knowledge_progress'
+        )
+        
+        # Apply filters
+        task_type = request.query_params.get('task_type')
+        if task_type:
+            queryset = queryset.filter(task__task_type=task_type)
+        
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Check and update overdue status for each assignment
+        # Property 23: 任务逾期状态标记
+        now = timezone.now()
+        for assignment in queryset:
+            if assignment.status not in ['COMPLETED', 'OVERDUE'] and assignment.task.deadline < now:
+                assignment.mark_overdue()
+        
+        queryset = queryset.order_by('-task__created_at')
+        serializer = StudentAssignmentListSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class StudentLearningTaskDetailView(APIView):
+    """
+    Student's learning task detail endpoint.
+    
+    Returns detailed information about a learning task assignment including
+    knowledge items and their learning progress.
+    
+    Requirements:
+    - 8.1: 学员查看学习任务详情时展示任务标题、介绍、分配人、截止时间、整体进度和知识文档列表
+    - 8.2: 学员进入未完成的知识子任务时展示知识内容和「我已学习掌握」按钮
+    - 8.4: 学员查看已完成的知识子任务时展示知识内容（只读）和完成时间
+    
+    Properties:
+    - Property 23: 任务逾期状态标记
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_assignment(self, task_id, user):
+        """Get task assignment for the user."""
+        try:
+            assignment = TaskAssignment.objects.select_related(
+                'task', 'task__created_by'
+            ).prefetch_related(
+                'task__task_knowledge__knowledge',
+                'knowledge_progress__task_knowledge__knowledge'
+            ).get(
+                task_id=task_id,
+                assignee=user,
+                task__is_deleted=False
+            )
+            
+            # Check and update overdue status
+            # Property 23: 任务逾期状态标记
+            assignment.check_and_update_overdue()
+            
+            return assignment
+        except TaskAssignment.DoesNotExist:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='任务不存在或未分配给您'
+            )
+    
+    @extend_schema(
+        summary='获取学习任务详情',
+        description='''
+        获取学员的学习任务详情，包括：
+        - 任务基本信息（标题、介绍、分配人、截止时间）
+        - 整体进度
+        - 知识文档列表及学习状态
+        
+        Requirements: 8.1, 8.2, 8.4
+        ''',
+        responses={
+            200: StudentLearningTaskDetailSerializer,
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['学员任务执行']
+    )
+    def get(self, request, task_id):
+        assignment = self.get_assignment(task_id, request.user)
+        
+        # Verify it's a learning task
+        if assignment.task.task_type != 'LEARNING':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='此接口仅支持学习任务'
+            )
+        
+        # Ensure knowledge progress records exist for all task knowledge items
+        self._ensure_knowledge_progress(assignment)
+        
+        serializer = StudentLearningTaskDetailSerializer(assignment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def _ensure_knowledge_progress(self, assignment):
+        """
+        Ensure KnowledgeLearningProgress records exist for all task knowledge items.
+        
+        This creates progress records lazily when the student first views the task.
+        """
+        task_knowledge_items = assignment.task.task_knowledge.all()
+        existing_progress = set(
+            assignment.knowledge_progress.values_list('task_knowledge_id', flat=True)
+        )
+        
+        for tk in task_knowledge_items:
+            if tk.id not in existing_progress:
+                KnowledgeLearningProgress.objects.create(
+                    assignment=assignment,
+                    task_knowledge=tk,
+                    is_completed=False
+                )
+
+
+class CompleteKnowledgeLearningView(APIView):
+    """
+    Complete knowledge learning endpoint.
+    
+    Marks a knowledge item as learned within a learning task.
+    
+    Requirements:
+    - 8.3: 学员点击「我已学习掌握」时记录完成状态和完成时间
+    - 8.5: 所有知识子任务完成时将学习任务状态变为「已完成」
+    
+    Properties:
+    - Property 20: 知识学习完成记录
+    - Property 21: 学习任务自动完成
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get_assignment(self, task_id, user):
+        """Get task assignment for the user."""
+        try:
+            return TaskAssignment.objects.select_related(
+                'task'
+            ).prefetch_related(
+                'task__task_knowledge',
+                'knowledge_progress'
+            ).get(
+                task_id=task_id,
+                assignee=user,
+                task__is_deleted=False
+            )
+        except TaskAssignment.DoesNotExist:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='任务不存在或未分配给您'
+            )
+    
+    @extend_schema(
+        summary='完成知识学习',
+        description='''
+        标记知识文档为已学习。
+        
+        - 记录完成状态和完成时间
+        - 当所有知识都完成时，自动将任务状态设为已完成
+        
+        Requirements: 8.3, 8.5
+        Properties: 20, 21
+        ''',
+        request=CompleteKnowledgeLearningSerializer,
+        responses={
+            200: KnowledgeLearningProgressSerializer,
+            400: OpenApiResponse(description='参数错误'),
+            404: OpenApiResponse(description='任务或知识不存在'),
+        },
+        tags=['学员任务执行']
+    )
+    def post(self, request, task_id):
+        assignment = self.get_assignment(task_id, request.user)
+        
+        # Verify it's a learning task
+        if assignment.task.task_type != 'LEARNING':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='此接口仅支持学习任务'
+            )
+        
+        # Check and update overdue status first
+        # Property 23: 任务逾期状态标记
+        assignment.check_and_update_overdue()
+        
+        # Check if task is already completed or overdue
+        if assignment.status == 'COMPLETED':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='任务已完成'
+            )
+        
+        if assignment.status == 'OVERDUE':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='任务已逾期，无法继续学习'
+            )
+        
+        # Validate request data
+        serializer = CompleteKnowledgeLearningSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        knowledge_id = serializer.validated_data['knowledge_id']
+        
+        # Find the task knowledge item
+        try:
+            task_knowledge = TaskKnowledge.objects.get(
+                task=assignment.task,
+                knowledge_id=knowledge_id
+            )
+        except TaskKnowledge.DoesNotExist:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='该知识文档不在此任务中'
+            )
+        
+        # Get or create progress record
+        progress, created = KnowledgeLearningProgress.objects.get_or_create(
+            assignment=assignment,
+            task_knowledge=task_knowledge,
+            defaults={'is_completed': False}
+        )
+        
+        # Check if already completed
+        if progress.is_completed:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='该知识已标记为已学习'
+            )
+        
+        # Mark as completed
+        # Property 20: 知识学习完成记录
+        # Property 21: 学习任务自动完成 (handled in mark_completed method)
+        progress.mark_completed()
+        
+        # Refresh to get updated data
+        progress.refresh_from_db()
+        assignment.refresh_from_db()
+        
+        response_serializer = KnowledgeLearningProgressSerializer(progress)
+        response_data = response_serializer.data
+        
+        # Include task completion status in response
+        response_data['task_status'] = assignment.status
+        response_data['task_completed'] = assignment.status == 'COMPLETED'
+        
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/core/exceptions.py
+# hypothesis_version: 6.141.1
+
+[401, 403, 404, 'AUTH_INVALID_ROLE', 'AUTH_USER_INACTIVE', 'ERROR', 'EXAM_NOT_IN_WINDOW', 'Error', 'INVALID_OPERATION', 'PERMISSION_DENIED', 'RESOURCE_NOT_FOUND', 'RESOURCE_REFERENCED', 'USER_HAS_DATA', 'code', 'data', 'detail', 'details', 'message']

@@ -609,7 +609,7 @@ class UserManagementService:
         # For now, we'll check if the models exist
         try:
             from apps.tasks.models import TaskAssignment
-            if TaskAssignment.objects.filter(user_id=user_id).exists():
+            if TaskAssignment.objects.filter(assignee_id=user_id).exists():
                 return False
         except ImportError:
             pass

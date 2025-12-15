@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/spot_checks/migrations/0001_spot_check_models.py
+# hypothesis_version: 6.141.1
+
+[100, '-checked_at', 'ID', 'SpotCheck', 'checked_at', 'checker', 'comment', 'content', 'created_at', 'db_table', 'id', 'lms_spot_check', 'ordering', 'score', 'spot_checks_created', 'spot_checks_received', 'student', 'updated_at', 'verbose_name', 'verbose_name_plural', '创建时间', '抽查人', '抽查内容', '抽查时间', '抽查记录', '更新时间', '被抽查学员', '评分', '评语']

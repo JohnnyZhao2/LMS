@@ -2,8 +2,10 @@
 Factory Boy factories for generating test data.
 """
 import factory
+from datetime import timedelta
 from factory.django import DjangoModelFactory
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from apps.users.models import Department, Role, UserRole
 
@@ -38,6 +40,7 @@ class UserFactory(DjangoModelFactory):
     
     class Meta:
         model = User
+        skip_postgeneration_save = True
     
     username = factory.Sequence(lambda n: f'user{n}')
     employee_id = factory.Sequence(lambda n: f'EMP{n:06d}')
@@ -46,6 +49,12 @@ class UserFactory(DjangoModelFactory):
     password = factory.PostGenerationMethodCall('set_password', 'testpass123')
     is_active = True
     department = factory.SubFactory(DepartmentFactory)
+    
+    @classmethod
+    def _after_postgeneration(cls, instance, create, results=None):
+        """Save instance after postgeneration hooks."""
+        if create:
+            instance.save()
 
 
 class UserRoleFactory(DjangoModelFactory):
@@ -199,7 +208,7 @@ class TaskFactory(DjangoModelFactory):
     title = factory.Sequence(lambda n: f'任务{n}')
     description = factory.LazyAttribute(lambda obj: f'{obj.title}的描述')
     task_type = 'LEARNING'
-    deadline = factory.LazyFunction(lambda: __import__('django.utils.timezone', fromlist=['timezone']).timezone.now() + __import__('datetime').timedelta(days=7))
+    deadline = factory.LazyFunction(lambda: timezone.now() + timedelta(days=7))
     created_by = factory.SubFactory(UserFactory)
     is_deleted = False
 
@@ -217,7 +226,7 @@ class PracticeTaskFactory(TaskFactory):
 class ExamTaskFactory(TaskFactory):
     """Factory for creating exam Task instances."""
     task_type = 'EXAM'
-    start_time = factory.LazyFunction(lambda: __import__('django.utils.timezone', fromlist=['timezone']).timezone.now())
+    start_time = factory.LazyFunction(lambda: timezone.now())
     duration = 60  # 60 minutes
     pass_score = 60.0
 
@@ -255,6 +264,108 @@ class TaskQuizFactory(DjangoModelFactory):
     order = factory.Sequence(lambda n: n + 1)
 
 
-# Additional factories will be added as models are implemented
-# - SubmissionFactory (task 9.1)
-# - SpotCheckFactory (task 10.1)
+from apps.submissions.models import Submission, Answer
+
+
+class SubmissionFactory(DjangoModelFactory):
+    """Factory for creating Submission instances."""
+    
+    class Meta:
+        model = Submission
+    
+    task_assignment = factory.SubFactory(TaskAssignmentFactory)
+    quiz = factory.SubFactory(QuizFactory)
+    user = factory.LazyAttribute(lambda obj: obj.task_assignment.assignee)
+    attempt_number = 1
+    status = 'GRADED'
+    total_score = factory.LazyFunction(lambda: __import__('decimal').Decimal('100.00'))
+    obtained_score = factory.LazyFunction(lambda: __import__('decimal').Decimal('85.00'))
+    submitted_at = factory.LazyFunction(lambda: __import__('django.utils', fromlist=['timezone']).timezone.now())
+
+
+class AnswerFactory(DjangoModelFactory):
+    """Factory for creating Answer instances."""
+    
+    class Meta:
+        model = Answer
+    
+    submission = factory.SubFactory(SubmissionFactory)
+    question = factory.SubFactory(QuestionFactory)
+    user_answer = 'A'
+    is_correct = True
+    obtained_score = factory.LazyFunction(lambda: __import__('decimal').Decimal('1.00'))
+
+
+class WrongAnswerFactory(AnswerFactory):
+    """Factory for creating wrong Answer instances."""
+    
+    is_correct = False
+    obtained_score = factory.LazyFunction(lambda: __import__('decimal').Decimal('0.00'))
+
+
+from apps.spot_checks.models import SpotCheck
+
+
+class SpotCheckFactory(DjangoModelFactory):
+    """Factory for creating SpotCheck instances."""
+    
+    class Meta:
+        model = SpotCheck
+    
+    student = factory.SubFactory(UserFactory)
+    checker = factory.SubFactory(UserFactory)
+    content = factory.Sequence(lambda n: f'抽查内容{n}')
+    score = factory.LazyFunction(lambda: __import__('decimal').Decimal('85.00'))
+    comment = factory.Sequence(lambda n: f'评语{n}')
+    checked_at = factory.LazyFunction(lambda: __import__('django.utils', fromlist=['timezone']).timezone.now())
+
+
+from apps.notifications.models import Notification
+
+
+class NotificationFactory(DjangoModelFactory):
+    """Factory for creating Notification instances."""
+    
+    class Meta:
+        model = Notification
+    
+    recipient = factory.SubFactory(UserFactory)
+    notification_type = 'TASK_ASSIGNED'
+    title = factory.Sequence(lambda n: f'通知标题{n}')
+    content = factory.Sequence(lambda n: f'通知内容{n}')
+    is_read = False
+    task = None
+    submission = None
+    spot_check = None
+
+
+class TaskAssignedNotificationFactory(NotificationFactory):
+    """Factory for creating task assigned Notification instances."""
+    
+    notification_type = 'TASK_ASSIGNED'
+    title = '您有新的学习任务'
+    task = factory.SubFactory(TaskFactory)
+
+
+class DeadlineReminderNotificationFactory(NotificationFactory):
+    """Factory for creating deadline reminder Notification instances."""
+    
+    notification_type = 'DEADLINE_REMINDER'
+    title = '任务即将截止'
+    task = factory.SubFactory(TaskFactory)
+
+
+class GradingCompletedNotificationFactory(NotificationFactory):
+    """Factory for creating grading completed Notification instances."""
+    
+    notification_type = 'GRADING_COMPLETED'
+    title = '考试评分完成'
+    submission = factory.SubFactory(SubmissionFactory)
+
+
+class SpotCheckNotificationFactory(NotificationFactory):
+    """Factory for creating spot check Notification instances."""
+    
+    notification_type = 'SPOT_CHECK'
+    title = '抽查记录'
+    spot_check = factory.SubFactory(SpotCheckFactory)

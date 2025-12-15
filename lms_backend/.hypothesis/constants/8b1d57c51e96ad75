@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/urls_grading.py
+# hypothesis_version: 6.141.1
+
+['<int:pk>/', '<int:pk>/grade/', 'batch-grade', 'grade-answer', 'grading-detail', 'grading-list', 'pending/']

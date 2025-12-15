@@ -1,6 +1,15 @@
 """
-SpotChecks URLs - placeholder for task 10.2
+SpotChecks URLs.
+
+Requirements: 14.1, 14.2, 14.3, 14.4
 """
 from django.urls import path
 
-urlpatterns = []
+from .views import SpotCheckListCreateView, SpotCheckDetailView
+
+app_name = 'spot_checks'
+
+urlpatterns = [
+    path('', SpotCheckListCreateView.as_view(), name='spot-check-list-create'),
+    path('<int:pk>/', SpotCheckDetailView.as_view(), name='spot-check-detail'),
+]

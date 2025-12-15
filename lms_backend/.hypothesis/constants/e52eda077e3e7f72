@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/models.py
+# hypothesis_version: 6.141.1
+
+['-created_at', '0', 'COMPLETED', 'EXAM', 'GRADED', 'GRADING', 'IN_PROGRESS', 'MULTIPLE_CHOICE', 'PRACTICE', 'SHORT_ANSWER', 'SINGLE_CHOICE', 'SUBMITTED', 'TRUE_FALSE', 'answers', 'graded_answers', 'is_correct', 'lms_answer', 'lms_submission', 'obtained_score', 'question', 'questions.Question', 'quiz_id', 'quizzes.Quiz', 'score', 'submission', 'submissions', 'tasks.TaskAssignment', 'total', 'users.User', '任务分配', '剩余时间（秒）', '只能完成待评分状态的记录', '只能提交答题中的记录', '客观题不需要人工评分', '已提交', '已评分', '开始时间', '待评分', '得分', '提交时间', '是否正确', '状态', '用户答案', '答案记录', '答题中', '答题次数', '答题用户', '答题记录', '获得分数', '评分人', '评分时间', '评语', '试卷', '试卷总分', '还有未评分的主观题', '题目']

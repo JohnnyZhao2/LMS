@@ -5,7 +5,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,9 +25,11 @@ urlpatterns = [
     path('api/spot-checks/', include('apps.spot_checks.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
-    # API documentation
+    # API documentation - OpenAPI 3.0
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema.yaml', SpectacularAPIView.as_view(renderer_classes=[]), name='schema-yaml'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
 
 if settings.DEBUG:

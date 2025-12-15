@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/quizzes/apps.py
+# hypothesis_version: 6.141.1
+
+['apps.quizzes', '试卷']

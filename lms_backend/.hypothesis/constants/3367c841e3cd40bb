@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/models.py
+# hypothesis_version: 6.141.1
+
+['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'STUDENT', 'TEAM_MANAGER', 'UserRole', 'assigned_roles', 'code', 'description', 'employee_id', 'lms_department', 'lms_role', 'lms_user', 'lms_user_role', 'members', 'mentees', 'mentor', 'name', 'role', 'role_users', 'self', 'user', 'user_roles', 'users', '不能将自己设为导师', '分配者', '团队经理', '学员', '学员角色不可移除', '室经理', '导师', '工号', '所属部门', '用户', '用户角色', '真实姓名', '管理员', '系统默认角色', '角色', '角色代码', '角色名称', '角色描述', '邮箱', '部门', '部门代码', '部门名称', '部门描述']

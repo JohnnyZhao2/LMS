@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/quizzes/models.py
+# hypothesis_version: 6.141.1
+
+[200, '-created_at', 'QuizQuestion', 'SHORT_ANSWER', 'lms_quiz', 'lms_quiz_question', 'max_order', 'order', 'question', 'question__score', 'question_quizzes', 'questions.Question', 'quiz', 'quiz_questions', 'quizzes', 'total', '试卷', '试卷名称', '试卷描述', '试卷题目', '该试卷已被任务引用，无法删除', '顺序', '题目']

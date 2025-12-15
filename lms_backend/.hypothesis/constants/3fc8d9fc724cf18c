@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/quizzes/migrations/0001_quiz_models.py
+# hypothesis_version: 6.141.1
+
+[200, '%(class)s_created', '-created_at', 'ID', 'Quiz', 'QuizQuestion', '__first__', 'created_at', 'created_by', 'db_table', 'deleted_at', 'description', 'id', 'is_deleted', 'lms_quiz', 'lms_quiz_question', 'order', 'ordering', 'question', 'question_quizzes', 'questions', 'questions.question', 'quiz', 'quiz_questions', 'quizzes', 'quizzes.QuizQuestion', 'quizzes.quiz', 'title', 'unique_together', 'updated_at', 'verbose_name', 'verbose_name_plural', '创建时间', '创建者', '删除时间', '是否删除', '更新时间', '试卷', '试卷名称', '试卷描述', '试卷题目', '顺序', '题目']

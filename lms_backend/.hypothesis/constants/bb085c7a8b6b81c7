@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/views_exam.py
+# hypothesis_version: 6.141.1
+
+[200, 201, 400, 404, 'IN_PROGRESS', 'answers__question', 'quiz', 'request', '任务不存在', '参数错误', '参数错误或不在考试时间窗口内', '开始考试', '提交考试', '查看考试结果', '此接口仅支持考试任务', '此答卷已提交', '答题记录不存在', '考试尚未提交', '考试答题']

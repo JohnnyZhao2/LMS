@@ -57,3 +57,6 @@ celerybeat.pid
 
 # Logs
 logs/*.log
+
+# Generated files
+openapi-schema.yaml

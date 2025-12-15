@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/spot_checks/serializers.py
+# hypothesis_version: 6.141.1
+
+['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'checked_at', 'checker', 'checker.real_name', 'checker_name', 'comment', 'content', 'created_at', 'current_role', 'id', 'request', 'score', 'student', 'student.employee_id', 'student.real_name', 'student_department', 'student_employee_id', 'student_name', 'updated_at', '只能为名下学员创建抽查记录', '只能为本室学员创建抽查记录', '您未分配部门，无法创建抽查记录', '抽查时间不能是未来时间', '无权创建抽查记录', '无法验证用户权限']

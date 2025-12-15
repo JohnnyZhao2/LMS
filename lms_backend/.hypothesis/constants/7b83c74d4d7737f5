@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/knowledge/models.py
+# hypothesis_version: 6.141.1
+
+[100, 200, '-updated_at', 'EMERGENCY', 'OTHER', 'category', 'category_relations', 'children', 'code', 'content', 'fault_scenario', 'knowledge', 'knowledge_items', 'knowledge_relations', 'knowledge_updated', 'lms_knowledge', 'parent', 'self', 'solution', 'sort_order', 'users.User', 'view_count', '其他类型', '其他类型知识必须填写正文内容', '分类', '分类代码', '分类名称', '分类描述', '分类最多支持两级', '应急类', '应急类知识必须填写故障场景', '应急类知识必须填写解决方案', '恢复方案', '所属分类', '排序顺序', '摘要', '操作类型标签', '故障场景', '是否主分类', '最后更新者', '标题', '正文内容', '父分类', '知识分类', '知识分类关联', '知识文档', '知识类型', '解决方案', '触发流程', '该知识文档已被任务引用，无法删除', '阅读次数', '验证方案']

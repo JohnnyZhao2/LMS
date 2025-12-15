@@ -173,6 +173,31 @@ class IsAdminOrMentorOrDeptManager(BasePermission):
         )
 
 
+class IsMentorOrDeptManager(BasePermission):
+    """
+    Permission class for mentor or department manager users.
+    
+    Used for grading and spot check endpoints.
+    
+    Requirements: 13.1, 14.2, 14.3
+    """
+    message = '只有导师或室经理可以执行此操作'
+    
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        
+        # Check current_role if set (from JWT token), otherwise check user roles
+        if hasattr(request.user, 'current_role'):
+            return request.user.current_role in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
+        
+        return (
+            request.user.is_admin or
+            request.user.is_mentor or 
+            request.user.is_dept_manager
+        )
+
+
 class IsOwnerOrAdmin(BasePermission):
     """
     Permission class that allows access to resource owners or admins.

@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/urls/users.py
+# hypothesis_version: 6.141.1
+
+['<int:pk>/', '<int:pk>/activate/', '<int:pk>/deactivate/', 'department-members/', 'mentees/', 'user-activate', 'user-assign-mentor', 'user-assign-roles', 'user-deactivate', 'user-detail', 'user-list-create', 'user-mentees']

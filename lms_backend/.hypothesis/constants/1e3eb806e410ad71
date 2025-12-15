@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/views_grading.py
+# hypothesis_version: 6.141.1
+
+[200, 400, 403, 404, '-submitted_at', 'ADMIN', 'DEPT_MANAGER', 'GRADING', 'MENTOR', 'answer_id', 'answers__graded_by', 'answers__question', 'errors', 'grades', 'message', 'quiz', 'request', 'submission', 'user', '参数错误', '待评分列表', '待评分详情', '批量评分', '无权访问此答题记录', '无权评分此答题记录', '无权限', '此答卷不在待评分状态', '答题记录不存在', '评分', '评分管理', '请提供评分数据', '部分评分失败']

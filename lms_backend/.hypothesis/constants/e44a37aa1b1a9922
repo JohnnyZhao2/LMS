@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/notifications/models.py
+# hypothesis_version: 6.141.1
+
+[200, '-created_at', 'DEADLINE_REMINDER', 'GRADING_COMPLETED', 'SPOT_CHECK', 'TASK_ASSIGNED', 'is_read', 'is_sent_to_robot', 'lms_notification', 'notification_type', 'notifications', 'read_at', 'recipient', 'sent_to_robot_at', 'tasks.Task', 'users.User', '任务分配', '关联任务', '关联抽查记录', '关联答题记录', '已读时间', '截止提醒', '抽查通知', '接收用户', '是否已发送到机器人', '是否已读', '机器人发送时间', '评分完成', '通知', '通知内容', '通知标题', '通知类型']

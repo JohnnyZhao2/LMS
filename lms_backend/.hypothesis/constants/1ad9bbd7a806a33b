@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/notifications/views.py
+# hypothesis_version: 6.141.1
+
+['count', 'get', 'message', 'post', 'read-all', 'retrieve', 'spot_check', 'submission', 'task', 'unread-count', 'unread_count']

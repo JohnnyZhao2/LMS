@@ -22,7 +22,7 @@ from apps.users.permissions import (
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 
-from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
@@ -489,3 +489,214 @@ class ExamTaskCreateSerializer(BaseTaskCreateSerializer):
             )
         
         return task
+
+
+
+class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
+    """
+    Serializer for KnowledgeLearningProgress model.
+    
+    Requirements:
+    - 8.3: 记录完成状态和完成时间
+    - 8.4: 展示完成时间
+    
+    Properties:
+    - Property 20: 知识学习完成记录
+    """
+    knowledge_id = serializers.IntegerField(source='task_knowledge.knowledge.id', read_only=True)
+    knowledge_title = serializers.CharField(source='task_knowledge.knowledge.title', read_only=True)
+    knowledge_type = serializers.CharField(source='task_knowledge.knowledge.knowledge_type', read_only=True)
+    order = serializers.IntegerField(source='task_knowledge.order', read_only=True)
+    
+    class Meta:
+        model = KnowledgeLearningProgress
+        fields = [
+            'id', 'knowledge_id', 'knowledge_title', 'knowledge_type', 'order',
+            'is_completed', 'completed_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['is_completed', 'completed_at', 'created_at', 'updated_at']
+
+
+class StudentAssignmentListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for student's task assignment list.
+    
+    Requirements:
+    - 17.2: 展示任务标题、类型、状态、截止时间和进度
+    
+    Properties:
+    - Property 23: 任务逾期状态标记
+    """
+    task_id = serializers.IntegerField(source='task.id', read_only=True)
+    task_title = serializers.CharField(source='task.title', read_only=True)
+    task_description = serializers.CharField(source='task.description', read_only=True)
+    task_type = serializers.CharField(source='task.task_type', read_only=True)
+    task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
+    deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    # Progress information
+    progress = serializers.SerializerMethodField()
+    
+    # Exam-specific fields
+    start_time = serializers.DateTimeField(source='task.start_time', read_only=True)
+    duration = serializers.IntegerField(source='task.duration', read_only=True)
+    pass_score = serializers.DecimalField(
+        source='task.pass_score', max_digits=5, decimal_places=2, read_only=True
+    )
+    
+    class Meta:
+        model = TaskAssignment
+        fields = [
+            'id', 'task_id', 'task_title', 'task_description',
+            'task_type', 'task_type_display', 'deadline',
+            'created_by_name', 'status', 'status_display',
+            'progress', 'score', 'completed_at',
+            'start_time', 'duration', 'pass_score',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_progress(self, obj):
+        """
+        Calculate progress based on task type.
+        
+        For learning tasks: completed knowledge / total knowledge
+        For practice tasks: completed quizzes / total quizzes
+        For exam tasks: 0 or 100 based on completion
+        """
+        task = obj.task
+        
+        if task.task_type == 'LEARNING':
+            total = task.task_knowledge.count()
+            if total == 0:
+                return {'completed': 0, 'total': 0, 'percentage': 0}
+            completed = obj.knowledge_progress.filter(is_completed=True).count()
+            return {
+                'completed': completed,
+                'total': total,
+                'percentage': round(completed / total * 100, 1)
+            }
+        elif task.task_type == 'PRACTICE':
+            total = task.task_quizzes.count()
+            if total == 0:
+                return {'completed': 0, 'total': 0, 'percentage': 0}
+            # For practice, we'd need to check submissions - simplified for now
+            completed = 0  # Will be implemented with submissions module
+            return {
+                'completed': completed,
+                'total': total,
+                'percentage': round(completed / total * 100, 1) if total > 0 else 0
+            }
+        else:  # EXAM
+            return {
+                'completed': 1 if obj.status == 'COMPLETED' else 0,
+                'total': 1,
+                'percentage': 100 if obj.status == 'COMPLETED' else 0
+            }
+
+
+class StudentLearningTaskDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for student's learning task detail view.
+    
+    Requirements:
+    - 8.1: 展示任务标题、介绍、分配人、截止时间、整体进度和知识文档列表
+    - 8.2: 展示知识内容和「我已学习掌握」按钮状态
+    - 8.4: 展示已完成的知识子任务的完成时间
+    
+    Properties:
+    - Property 20: 知识学习完成记录
+    - Property 21: 学习任务自动完成
+    """
+    task_id = serializers.IntegerField(source='task.id', read_only=True)
+    task_title = serializers.CharField(source='task.title', read_only=True)
+    task_description = serializers.CharField(source='task.description', read_only=True)
+    task_type = serializers.CharField(source='task.task_type', read_only=True)
+    task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
+    deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
+    # Progress information
+    progress = serializers.SerializerMethodField()
+    
+    # Knowledge items with learning progress
+    knowledge_items = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TaskAssignment
+        fields = [
+            'id', 'task_id', 'task_title', 'task_description',
+            'task_type', 'task_type_display', 'deadline',
+            'created_by_name', 'status', 'status_display',
+            'progress', 'completed_at', 'knowledge_items',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_progress(self, obj):
+        """Calculate learning progress."""
+        total = obj.task.task_knowledge.count()
+        if total == 0:
+            return {'completed': 0, 'total': 0, 'percentage': 0}
+        completed = obj.knowledge_progress.filter(is_completed=True).count()
+        return {
+            'completed': completed,
+            'total': total,
+            'percentage': round(completed / total * 100, 1)
+        }
+    
+    def get_knowledge_items(self, obj):
+        """
+        Get knowledge items with their learning progress.
+        
+        Requirements:
+        - 8.2: 展示知识内容和学习状态
+        - 8.4: 展示完成时间
+        """
+        task_knowledge_items = obj.task.task_knowledge.select_related('knowledge').all()
+        progress_map = {
+            p.task_knowledge_id: p
+            for p in obj.knowledge_progress.all()
+        }
+        
+        result = []
+        for tk in task_knowledge_items:
+            progress = progress_map.get(tk.id)
+            knowledge = tk.knowledge
+            
+            item = {
+                'id': tk.id,
+                'knowledge_id': knowledge.id,
+                'title': knowledge.title,
+                'knowledge_type': knowledge.knowledge_type,
+                'knowledge_type_display': knowledge.get_knowledge_type_display(),
+                'summary': knowledge.summary,
+                'order': tk.order,
+                'is_completed': progress.is_completed if progress else False,
+                'completed_at': progress.completed_at if progress else None,
+            }
+            result.append(item)
+        
+        return sorted(result, key=lambda x: x['order'])
+
+
+class CompleteKnowledgeLearningSerializer(serializers.Serializer):
+    """
+    Serializer for completing knowledge learning.
+    
+    Requirements:
+    - 8.3: 学员点击「我已学习掌握」时记录完成状态和完成时间
+    
+    Properties:
+    - Property 20: 知识学习完成记录
+    """
+    knowledge_id = serializers.IntegerField(
+        help_text='要标记为已学习的知识文档ID'
+    )
+    
+    def validate_knowledge_id(self, value):
+        """Validate that the knowledge ID exists."""
+        if not Knowledge.objects.filter(id=value, is_deleted=False).exists():
+            raise serializers.ValidationError('知识文档不存在')
+        return value

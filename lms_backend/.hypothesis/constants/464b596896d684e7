@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/serializers.py
+# hypothesis_version: 6.141.1
+
+['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'STUDENT', 'TEAM_MANAGER', 'code', 'created_at', 'department', 'department_id', 'email', 'employee_id', 'id', 'is_active', 'mentees_count', 'mentor', 'name', 'password', 'real_name', 'roles', 'updated_at', 'username', '临时密码', '刷新令牌', '刷新令牌（可选，用于黑名单）', '可用角色列表', '团队经理', '学员', '室经理', '密码', '导师', '导师不存在', '导师用户ID，传入null解除绑定', '当前密码', '当前生效角色', '指定的导师已被停用', '指定的用户不是导师', '提示信息', '新密码', '新的刷新令牌', '新的访问令牌', '用户信息', '用户名', '管理员', '要切换到的角色代码', '要重置密码的用户ID', '访问令牌', '该工号已存在', '该用户名已存在', '部门ID', '部门不存在']

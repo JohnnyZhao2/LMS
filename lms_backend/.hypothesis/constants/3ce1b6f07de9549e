@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/core/mixins.py
+# hypothesis_version: 6.141.1
+
+['%(class)s_created', 'ADMIN', 'DEPT_MANAGER', 'MENTOR', 'STUDENT', 'TEAM_MANAGER', 'assignee', 'current_role', 'deleted_at', 'department_id', 'is_deleted', 'mentor', 'user', 'users.User', '创建时间', '创建者', '删除时间', '是否删除', '更新时间']

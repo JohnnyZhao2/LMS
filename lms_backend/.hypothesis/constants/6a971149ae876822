@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/notifications/serializers.py
+# hypothesis_version: 6.141.1
+
+['content', 'created_at', 'id', 'is_read', 'notification_type', 'read_at', 'spot_check.id', 'spot_check_id', 'submission.id', 'submission_id', 'task.id', 'task.task_type', 'task.title', 'task_id', 'task_title', 'task_type', 'title']

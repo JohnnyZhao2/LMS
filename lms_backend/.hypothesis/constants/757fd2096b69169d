@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/urls/auth.py
+# hypothesis_version: 6.141.1
+
+['auth-change-password', 'auth-login', 'auth-logout', 'auth-refresh', 'auth-reset-password', 'auth-switch-role', 'change-password/', 'login/', 'logout/', 'refresh/', 'reset-password/', 'switch-role/']

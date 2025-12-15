@@ -123,9 +123,68 @@ SIMPLE_JWT = {
 # drf-spectacular settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'LMS API',
-    'DESCRIPTION': '学习管理系统 API 文档',
+    'DESCRIPTION': '''
+# 学习管理系统 (LMS) API 文档
+
+企业级学习管理系统后端 API，实现"学、练、考、评"的能力闭环。
+
+## 核心功能模块
+
+- **用户认证** - JWT 认证、角色切换
+- **用户管理** - 用户 CRUD、角色分配、师徒关系
+- **知识文档** - 知识库管理、分类管理
+- **题库管理** - 题目 CRUD、批量导入
+- **试卷管理** - 试卷 CRUD、题目关联
+- **任务管理** - 学习/练习/考试任务
+- **答题评分** - 答题提交、自动评分、人工评分
+- **抽查管理** - 线下抽查记录
+- **统计分析** - 仪表盘、数据看板
+- **通知服务** - 任务通知、截止提醒
+
+## 角色权限
+
+- **学员 (STUDENT)** - 执行任务、查看知识
+- **导师 (MENTOR)** - 管理名下学员、创建任务
+- **室经理 (DEPT_MANAGER)** - 管理本室人员
+- **管理员 (ADMIN)** - 全平台管理
+- **团队经理 (TEAM_MANAGER)** - 只读数据分析
+''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    # Schema configuration
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
+    'SORT_OPERATION_PARAMETERS': True,
+    # Tags configuration
+    'TAGS': [
+        {'name': '认证', 'description': '用户登录、登出、角色切换'},
+        {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
+        {'name': '知识文档', 'description': '知识库管理、分类管理'},
+        {'name': '题库', 'description': '题目管理、批量导入'},
+        {'name': '试卷', 'description': '试卷管理、题目关联'},
+        {'name': '任务', 'description': '学习/练习/考试任务管理'},
+        {'name': '答题', 'description': '答题提交、答案保存'},
+        {'name': '评分', 'description': '待评分列表、主观题评分'},
+        {'name': '抽查', 'description': '抽查记录管理'},
+        {'name': '统计分析', 'description': '仪表盘、数据看板'},
+        {'name': '通知', 'description': '通知列表、已读标记'},
+    ],
+    # Security configuration
+    'SECURITY': [{'Bearer': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'JWT 认证，格式: Bearer <token>',
+            }
+        }
+    },
+    # Response configuration
+    'POSTPROCESSING_HOOKS': [],
+    'PREPROCESSING_HOOKS': [],
 }
 
 # CORS settings

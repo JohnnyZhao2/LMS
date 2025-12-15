@@ -556,3 +556,410 @@ class TestTaskListView:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.json()) >= 1
         assert response.json()[0]['title'] == '学员任务'
+
+
+
+class TestStudentAssignmentListView:
+    """
+    Tests for student assignment list endpoint.
+    
+    Requirements:
+    - 8.1: 学员查看学习任务详情时展示任务标题、介绍、分配人、截止时间、整体进度和知识文档列表
+    - 17.1: 学员访问任务中心时展示任务列表，支持按类型和状态筛选
+    - 17.2: 学员查看任务列表时展示任务标题、类型、状态、截止时间和进度
+    """
+    
+    def test_student_can_view_assigned_tasks(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """Test student can view their assigned tasks."""
+        # Create task as mentor
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        mentor_client.post('/api/tasks/learning/', {
+            'title': '学员学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        
+        # Student views their assignments
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get('/api/tasks/my-assignments/')
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert len(data) >= 1
+        
+        # Verify response structure
+        assignment = data[0]
+        assert 'task_id' in assignment
+        assert 'task_title' in assignment
+        assert 'task_type' in assignment
+        assert 'status' in assignment
+        assert 'deadline' in assignment
+        assert 'progress' in assignment
+    
+    def test_student_can_filter_by_task_type(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """Test student can filter assignments by task type."""
+        # Create learning task
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        
+        # Filter by LEARNING type
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get('/api/tasks/my-assignments/?task_type=LEARNING')
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        for assignment in data:
+            assert assignment['task_type'] == 'LEARNING'
+    
+    def test_student_can_filter_by_status(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """Test student can filter assignments by status."""
+        # Create task
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        
+        # Filter by IN_PROGRESS status
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get('/api/tasks/my-assignments/?status=IN_PROGRESS')
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        for assignment in data:
+            assert assignment['status'] == 'IN_PROGRESS'
+
+
+class TestStudentLearningTaskDetailView:
+    """
+    Tests for student learning task detail endpoint.
+    
+    Requirements:
+    - 8.1: 学员查看学习任务详情时展示任务标题、介绍、分配人、截止时间、整体进度和知识文档列表
+    - 8.2: 学员进入未完成的知识子任务时展示知识内容和「我已学习掌握」按钮
+    - 8.4: 学员查看已完成的知识子任务时展示知识内容（只读）和完成时间
+    """
+    
+    def test_student_can_view_learning_task_detail(
+        self, mentor_user, student_in_dept1, knowledge_1, knowledge_2
+    ):
+        """Test student can view learning task detail with knowledge items."""
+        # Create task
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务详情测试',
+            'description': '这是任务描述',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id, knowledge_2.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        # Student views task detail
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get(f'/api/tasks/{task_id}/learning-detail/')
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        
+        # Verify response structure (Requirements 8.1)
+        assert data['task_title'] == '学习任务详情测试'
+        assert data['task_description'] == '这是任务描述'
+        assert 'created_by_name' in data
+        assert 'deadline' in data
+        assert 'progress' in data
+        assert 'knowledge_items' in data
+        
+        # Verify knowledge items
+        assert len(data['knowledge_items']) == 2
+        for item in data['knowledge_items']:
+            assert 'knowledge_id' in item
+            assert 'title' in item
+            assert 'is_completed' in item
+            assert item['is_completed'] is False  # Initially not completed
+    
+    def test_student_cannot_view_non_learning_task(
+        self, admin_user, student_in_dept1
+    ):
+        """Test student cannot use learning detail endpoint for non-learning tasks."""
+        from apps.quizzes.models import Quiz
+        
+        # Create a quiz first
+        quiz = Quiz.objects.create(
+            title='测试试卷',
+            description='测试',
+            created_by=admin_user
+        )
+        
+        # Create practice task
+        admin_client = get_authenticated_client(admin_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = admin_client.post('/api/tasks/practice/', {
+            'title': '练习任务',
+            'deadline': deadline.isoformat(),
+            'quiz_ids': [quiz.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        # Student tries to view as learning task
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get(f'/api/tasks/{task_id}/learning-detail/')
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    
+    def test_student_cannot_view_unassigned_task(
+        self, mentor_user, student_in_dept1, student_in_dept1_no_mentor, knowledge_1
+    ):
+        """Test student cannot view task not assigned to them."""
+        # Create task for another student
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        
+        # Assign mentor to student_in_dept1_no_mentor temporarily
+        student_in_dept1_no_mentor.mentor = mentor_user
+        student_in_dept1_no_mentor.save()
+        
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '其他学员任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1_no_mentor.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        # student_in_dept1 tries to view
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get(f'/api/tasks/{task_id}/learning-detail/')
+        
+        # Should return 404 (not found) or 400 (bad request) - task not assigned to this student
+        assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_400_BAD_REQUEST]
+
+
+class TestCompleteKnowledgeLearning:
+    """
+    Tests for completing knowledge learning.
+    
+    Requirements:
+    - 8.3: 学员点击「我已学习掌握」时记录完成状态和完成时间
+    - 8.5: 所有知识子任务完成时将学习任务状态变为「已完成」
+    
+    Properties:
+    - Property 20: 知识学习完成记录
+    - Property 21: 学习任务自动完成
+    """
+    
+    def test_student_can_complete_knowledge_learning(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """
+        Test student can mark knowledge as learned.
+        
+        Requirements: 8.3
+        Property 20: 知识学习完成记录
+        """
+        # Create task
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        # Student completes knowledge learning
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_1.id
+        }, format='json')
+        
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        
+        # Verify completion recorded (Property 20)
+        assert data['is_completed'] is True
+        assert data['completed_at'] is not None
+    
+    def test_task_auto_completes_when_all_knowledge_completed(
+        self, mentor_user, student_in_dept1, knowledge_1, knowledge_2
+    ):
+        """
+        Test task auto-completes when all knowledge items are completed.
+        
+        Requirements: 8.5
+        Property 21: 学习任务自动完成
+        """
+        # Create task with multiple knowledge items
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id, knowledge_2.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        student_client = get_authenticated_client(student_in_dept1)
+        
+        # Complete first knowledge - task should still be in progress
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_1.id
+        }, format='json')
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['task_completed'] is False
+        
+        # Complete second knowledge - task should auto-complete
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_2.id
+        }, format='json')
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['task_completed'] is True
+        assert response.json()['task_status'] == 'COMPLETED'
+        
+        # Verify in database
+        assignment = TaskAssignment.objects.get(task_id=task_id, assignee=student_in_dept1)
+        assert assignment.status == 'COMPLETED'
+        assert assignment.completed_at is not None
+    
+    def test_cannot_complete_same_knowledge_twice(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """Test student cannot mark same knowledge as completed twice."""
+        # Create task
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        student_client = get_authenticated_client(student_in_dept1)
+        
+        # Complete first time
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_1.id
+        }, format='json')
+        assert response.status_code == status.HTTP_200_OK
+        
+        # Try to complete again
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_1.id
+        }, format='json')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    
+    def test_cannot_complete_knowledge_not_in_task(
+        self, mentor_user, admin_user, student_in_dept1, knowledge_1, knowledge_2
+    ):
+        """Test student cannot complete knowledge not in the task."""
+        # Create task with only knowledge_1
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() + timedelta(days=7)
+        response = mentor_client.post('/api/tasks/learning/', {
+            'title': '学习任务',
+            'deadline': deadline.isoformat(),
+            'knowledge_ids': [knowledge_1.id],
+            'assignee_ids': [student_in_dept1.id]
+        }, format='json')
+        task_id = response.json()['id']
+        
+        # Try to complete knowledge_2 which is not in the task
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.post(f'/api/tasks/{task_id}/complete-knowledge/', {
+            'knowledge_id': knowledge_2.id
+        }, format='json')
+        
+        # Should return 404 (not found) or 400 (bad request) - knowledge not in task
+        assert response.status_code in [status.HTTP_404_NOT_FOUND, status.HTTP_400_BAD_REQUEST]
+
+
+class TestOverdueTaskStatus:
+    """
+    Tests for overdue task status marking.
+    
+    Requirements:
+    - 8.7: 任务截止时间已过且未完成时将任务状态标记为「已逾期」
+    
+    Property 23: 任务逾期状态标记
+    """
+    
+    def test_overdue_task_marked_when_viewing_assignments(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """
+        Test overdue tasks are marked when student views assignments.
+        
+        Property 23: 任务逾期状态标记
+        """
+        # Create task with past deadline
+        mentor_client = get_authenticated_client(mentor_user)
+        deadline = timezone.now() - timedelta(days=1)  # Past deadline
+        
+        # We need to create the task directly to bypass validation
+        task = Task.objects.create(
+            title='过期任务',
+            task_type='LEARNING',
+            deadline=deadline,
+            created_by=mentor_user
+        )
+        TaskKnowledge.objects.create(task=task, knowledge=knowledge_1, order=1)
+        TaskAssignment.objects.create(task=task, assignee=student_in_dept1, status='IN_PROGRESS')
+        
+        # Student views assignments - should trigger overdue check
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.get('/api/tasks/my-assignments/')
+        
+        assert response.status_code == status.HTTP_200_OK
+        
+        # Find the overdue task
+        overdue_task = next(
+            (a for a in response.json() if a['task_id'] == task.id),
+            None
+        )
+        assert overdue_task is not None
+        assert overdue_task['status'] == 'OVERDUE'
+    
+    def test_cannot_complete_knowledge_on_overdue_task(
+        self, mentor_user, student_in_dept1, knowledge_1
+    ):
+        """Test student cannot complete knowledge on overdue task."""
+        # Create task with past deadline
+        task = Task.objects.create(
+            title='过期任务',
+            task_type='LEARNING',
+            deadline=timezone.now() - timedelta(days=1),
+            created_by=mentor_user
+        )
+        TaskKnowledge.objects.create(task=task, knowledge=knowledge_1, order=1)
+        TaskAssignment.objects.create(task=task, assignee=student_in_dept1, status='OVERDUE')
+        
+        # Try to complete knowledge
+        student_client = get_authenticated_client(student_in_dept1)
+        response = student_client.post(f'/api/tasks/{task.id}/complete-knowledge/', {
+            'knowledge_id': knowledge_1.id
+        }, format='json')
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST

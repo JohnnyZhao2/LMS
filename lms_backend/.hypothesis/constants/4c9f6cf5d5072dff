@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/permissions.py
+# hypothesis_version: 6.141.1
+
+['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'STUDENT', 'TEAM_MANAGER', 'assignee', 'created_by', 'creator', 'current_role', 'department_id', 'id', 'mentor', 'owner', 'student', 'user', '只有团队经理可以执行此操作', '只有室经理可以执行此操作', '只有导师可以执行此操作', '只有导师或室经理可以执行此操作', '只有管理员、导师或室经理可以执行此操作', '只有管理员可以执行此操作', '只有资源创建者或管理员可以执行此操作', '团队经理只有只读权限', '无权为该学员分配任务', '无权为该学员创建抽查记录', '无权访问该学员数据', '请先登录']
