@@ -65,7 +65,7 @@
     - 实现 IsAdmin、IsMentor、IsDeptManager、IsTeamManager 权限类
     - 实现 IsOwnerOrAdmin 权限类（资源所有权控制）
     - _Requirements: 22.1, 22.2, 22.3, 22.4, 22.5_
-  - [ ] 3.2 实现数据范围过滤
+  - [x] 3.2 实现数据范围过滤
     - 实现导师数据范围过滤（仅名下学员）
     - 实现室经理数据范围过滤（仅本室成员）
     - 实现管理员全平台数据访问
@@ -77,7 +77,7 @@
     - **Property 40: 无权限请求拒绝**
     - **Property 41: 团队经理只读访问**
     - **Validates: Requirements 22.1, 22.2, 22.3, 22.5, 21.3**
-  - [ ] 3.4 Checkpoint - 确保所有测试通过
+  - [x] 3.4 Checkpoint - 确保所有测试通过
     - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. 知识文档模块

@@ -472,6 +472,36 @@ class CanCreateSpotCheck(BasePermission):
 
 # Utility functions for data scope filtering
 
+def get_current_role(user):
+    """
+    Get the current active role of a user.
+    
+    Args:
+        user: The user object
+        
+    Returns:
+        Role code string or None
+    """
+    if not user or not user.is_authenticated:
+        return None
+    
+    # Check current_role if set (from JWT token)
+    if hasattr(user, 'current_role') and user.current_role:
+        return user.current_role
+    
+    # Determine role from user's roles with priority
+    if user.is_admin:
+        return 'ADMIN'
+    if user.is_dept_manager:
+        return 'DEPT_MANAGER'
+    if user.is_mentor:
+        return 'MENTOR'
+    if user.is_team_manager:
+        return 'TEAM_MANAGER'
+    
+    return 'STUDENT'
+
+
 def get_accessible_students(user, current_role=None):
     """
     Get queryset of students accessible to the given user based on their role.
@@ -489,25 +519,17 @@ def get_accessible_students(user, current_role=None):
     from apps.users.models import User
     
     if not current_role:
-        if hasattr(user, 'current_role'):
-            current_role = user.current_role
-        else:
-            if user.is_admin:
-                current_role = 'ADMIN'
-            elif user.is_dept_manager:
-                current_role = 'DEPT_MANAGER'
-            elif user.is_mentor:
-                current_role = 'MENTOR'
+        current_role = get_current_role(user)
     
-    # Admin can access all students
+    # Admin can access all students (Property 39)
     if current_role == 'ADMIN':
         return User.objects.filter(is_active=True)
     
-    # Mentor can only access their mentees
+    # Mentor can only access their mentees (Property 37)
     if current_role == 'MENTOR':
         return User.objects.filter(mentor=user, is_active=True)
     
-    # Department manager can only access department members
+    # Department manager can only access department members (Property 38)
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
             return User.objects.filter(
@@ -520,6 +542,25 @@ def get_accessible_students(user, current_role=None):
     return User.objects.none()
 
 
+def get_accessible_student_ids(user, current_role=None):
+    """
+    Get set of student IDs accessible to the given user.
+    
+    This is a convenience function for validation purposes.
+    
+    Args:
+        user: The requesting user
+        current_role: The current active role (optional)
+    
+    Returns:
+        Set of user IDs that the user can access
+    
+    Requirements: 22.1, 22.2, 22.3
+    Properties: 37, 38, 39
+    """
+    return set(get_accessible_students(user, current_role).values_list('id', flat=True))
+
+
 def filter_queryset_by_data_scope(queryset, user, student_field='user'):
     """
     Filter a queryset based on the user's data access scope.
@@ -527,7 +568,8 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user'):
     Args:
         queryset: The queryset to filter
         user: The requesting user
-        student_field: The field name that references the student User
+        student_field: The field name that references the student User.
+                       If None, assumes the queryset is directly on User model.
     
     Returns:
         Filtered queryset
@@ -535,33 +577,99 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user'):
     Requirements: 22.1, 22.2, 22.3
     Properties: 37, 38, 39
     """
-    # Get current role
-    current_role = None
-    if hasattr(user, 'current_role'):
-        current_role = user.current_role
-    else:
-        if user.is_admin:
-            current_role = 'ADMIN'
-        elif user.is_dept_manager:
-            current_role = 'DEPT_MANAGER'
-        elif user.is_mentor:
-            current_role = 'MENTOR'
+    current_role = get_current_role(user)
     
-    # Admin can access all data
+    # Admin can access all data (Property 39)
     if current_role == 'ADMIN':
         return queryset
     
-    # Mentor can only access their mentees' data
+    # Mentor can only access their mentees' data (Property 37)
     if current_role == 'MENTOR':
-        filter_kwargs = {f'{student_field}__mentor': user}
+        if student_field:
+            filter_kwargs = {f'{student_field}__mentor': user}
+        else:
+            # Direct User queryset
+            filter_kwargs = {'mentor': user}
         return queryset.filter(**filter_kwargs)
     
-    # Department manager can only access department members' data
+    # Department manager can only access department members' data (Property 38)
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
-            filter_kwargs = {f'{student_field}__department_id': user.department_id}
+            if student_field:
+                filter_kwargs = {f'{student_field}__department_id': user.department_id}
+            else:
+                # Direct User queryset
+                filter_kwargs = {'department_id': user.department_id}
             return queryset.filter(**filter_kwargs)
         return queryset.none()
     
     # Default: no access
     return queryset.none()
+
+
+def is_student_in_scope(user, student_id, current_role=None):
+    """
+    Check if a specific student is within the user's data access scope.
+    
+    Args:
+        user: The requesting user
+        student_id: The ID of the student to check
+        current_role: The current active role (optional)
+    
+    Returns:
+        True if the student is accessible, False otherwise
+    
+    Requirements: 22.1, 22.2, 22.3
+    Properties: 37, 38, 39
+    """
+    from apps.users.models import User
+    
+    if not current_role:
+        current_role = get_current_role(user)
+    
+    # Admin can access all students (Property 39)
+    if current_role == 'ADMIN':
+        return User.objects.filter(pk=student_id, is_active=True).exists()
+    
+    # Mentor can only access their mentees (Property 37)
+    if current_role == 'MENTOR':
+        return User.objects.filter(pk=student_id, mentor=user, is_active=True).exists()
+    
+    # Department manager can only access department members (Property 38)
+    if current_role == 'DEPT_MANAGER':
+        if user.department_id:
+            return User.objects.filter(
+                pk=student_id,
+                department_id=user.department_id,
+                is_active=True
+            ).exclude(pk=user.pk).exists()
+        return False
+    
+    return False
+
+
+def validate_students_in_scope(user, student_ids, current_role=None):
+    """
+    Validate that all student IDs are within the user's data access scope.
+    
+    Args:
+        user: The requesting user
+        student_ids: List/set of student IDs to validate
+        current_role: The current active role (optional)
+    
+    Returns:
+        Tuple of (is_valid, invalid_ids)
+        - is_valid: True if all students are in scope
+        - invalid_ids: List of student IDs that are not in scope
+    
+    Requirements: 22.1, 22.2, 22.3
+    Properties: 37, 38, 39
+    """
+    if not student_ids:
+        return True, []
+    
+    accessible_ids = get_accessible_student_ids(user, current_role)
+    student_id_set = set(student_ids)
+    invalid_ids = student_id_set - accessible_ids
+    
+    return len(invalid_ids) == 0, list(invalid_ids)

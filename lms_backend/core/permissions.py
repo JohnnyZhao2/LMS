@@ -20,11 +20,16 @@ from apps.users.permissions import (
     CanAccessMenteeData,
     CanCreateTaskForStudents,
     CanCreateSpotCheck,
+    get_current_role,
     get_accessible_students,
+    get_accessible_student_ids,
     filter_queryset_by_data_scope,
+    is_student_in_scope,
+    validate_students_in_scope,
 )
 
 __all__ = [
+    # Permission classes
     'IsAuthenticated',
     'IsAdmin',
     'IsMentor',
@@ -36,6 +41,11 @@ __all__ = [
     'CanAccessMenteeData',
     'CanCreateTaskForStudents',
     'CanCreateSpotCheck',
+    # Utility functions for data scope filtering
+    'get_current_role',
     'get_accessible_students',
+    'get_accessible_student_ids',
     'filter_queryset_by_data_scope',
+    'is_student_in_scope',
+    'validate_students_in_scope',
 ]
