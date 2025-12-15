@@ -187,7 +187,74 @@ class QuizQuestionFactory(DjangoModelFactory):
     order = factory.Sequence(lambda n: n + 1)
 
 
+from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+
+
+class TaskFactory(DjangoModelFactory):
+    """Factory for creating Task instances."""
+    
+    class Meta:
+        model = Task
+    
+    title = factory.Sequence(lambda n: f'任务{n}')
+    description = factory.LazyAttribute(lambda obj: f'{obj.title}的描述')
+    task_type = 'LEARNING'
+    deadline = factory.LazyFunction(lambda: __import__('django.utils.timezone', fromlist=['timezone']).timezone.now() + __import__('datetime').timedelta(days=7))
+    created_by = factory.SubFactory(UserFactory)
+    is_deleted = False
+
+
+class LearningTaskFactory(TaskFactory):
+    """Factory for creating learning Task instances."""
+    task_type = 'LEARNING'
+
+
+class PracticeTaskFactory(TaskFactory):
+    """Factory for creating practice Task instances."""
+    task_type = 'PRACTICE'
+
+
+class ExamTaskFactory(TaskFactory):
+    """Factory for creating exam Task instances."""
+    task_type = 'EXAM'
+    start_time = factory.LazyFunction(lambda: __import__('django.utils.timezone', fromlist=['timezone']).timezone.now())
+    duration = 60  # 60 minutes
+    pass_score = 60.0
+
+
+class TaskAssignmentFactory(DjangoModelFactory):
+    """Factory for creating TaskAssignment instances."""
+    
+    class Meta:
+        model = TaskAssignment
+    
+    task = factory.SubFactory(TaskFactory)
+    assignee = factory.SubFactory(UserFactory)
+    status = 'IN_PROGRESS'
+
+
+class TaskKnowledgeFactory(DjangoModelFactory):
+    """Factory for creating TaskKnowledge instances."""
+    
+    class Meta:
+        model = TaskKnowledge
+    
+    task = factory.SubFactory(TaskFactory)
+    knowledge = factory.SubFactory(KnowledgeFactory)
+    order = factory.Sequence(lambda n: n + 1)
+
+
+class TaskQuizFactory(DjangoModelFactory):
+    """Factory for creating TaskQuiz instances."""
+    
+    class Meta:
+        model = TaskQuiz
+    
+    task = factory.SubFactory(TaskFactory)
+    quiz = factory.SubFactory(QuizFactory)
+    order = factory.Sequence(lambda n: n + 1)
+
+
 # Additional factories will be added as models are implemented
-# - TaskFactory (task 7.1)
 # - SubmissionFactory (task 9.1)
 # - SpotCheckFactory (task 10.1)

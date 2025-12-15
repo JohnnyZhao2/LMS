@@ -39,6 +39,9 @@ class ErrorCodes:
     
     # Permission errors
     PERMISSION_DENIED = 'PERMISSION_DENIED'
+    
+    # General errors
+    INVALID_OPERATION = 'INVALID_OPERATION'
 
 
 def custom_exception_handler(exc, context):

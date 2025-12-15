@@ -134,12 +134,12 @@
     - **Validates: Requirements 6.5, 6.6, 6.7, 6.8**
 
 - [ ] 7. 任务模块
-  - [ ] 7.1 实现任务模型
+  - [x] 7.1 实现任务模型
     - 创建 `apps/tasks/models.py`，定义 Task、TaskAssignment、TaskKnowledge、TaskQuiz 模型
     - 实现任务类型（LEARNING/PRACTICE/EXAM）
     - 实现任务状态（进行中/已完成/已逾期/待考试）
     - _Requirements: 7.1, 9.1, 11.1_
-  - [ ] 7.2 实现学习任务 API
+  - [x] 7.2 实现学习任务 API
     - 创建学习任务端点
     - 实现学员范围验证（导师/室经理/管理员）
     - 实现任务分配记录创建
@@ -149,12 +149,12 @@
     - **Property 18: 室经理任务学员范围限制**
     - **Property 19: 任务分配记录完整性**
     - **Validates: Requirements 7.2, 7.3, 9.2, 9.3, 11.3, 11.4, 7.5, 9.5, 11.6**
-  - [ ] 7.4 实现练习任务 API
+  - [x] 7.4 实现练习任务 API
     - 创建练习任务端点
     - 实现试卷和知识文档关联
     - 实现学员范围验证
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
-  - [ ] 7.5 实现考试任务 API
+  - [x] 7.5 实现考试任务 API
     - 创建考试任务端点
     - 实现考试规则设置（时间窗口、时长、及格分数）
     - 实现唯一试卷验证
@@ -162,12 +162,12 @@
   - [ ]* 7.6 编写考试任务属性测试
     - **Property 27: 考试任务唯一试卷**
     - **Validates: Requirements 11.1**
-  - [ ] 7.7 实现任务管理 API
+  - [x] 7.7 实现任务管理 API
     - 实现任务列表查询（支持角色数据范围过滤）
     - 实现任务详情查询
     - 实现强制结束任务端点
     - _Requirements: 7.6, 20.1, 20.2, 20.3_
-  - [ ] 7.8 Checkpoint - 确保所有测试通过
+  - [x] 7.8 Checkpoint - 确保所有测试通过
     - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. 任务执行模块
