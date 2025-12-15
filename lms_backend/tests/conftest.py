@@ -119,8 +119,9 @@ def authenticated_client(api_client, create_user):
 
 
 @pytest.fixture
-def admin_user(db, create_user):
-    """Create an admin user."""
+def admin_user(db, create_user, admin_role):
+    """Create an admin user with ADMIN role."""
+    from apps.users.models import UserRole
     user = create_user(
         username='admin',
         password='adminpass123',
@@ -128,6 +129,8 @@ def admin_user(db, create_user):
         is_staff=True,
         is_superuser=True
     )
+    # Assign admin role
+    UserRole.objects.get_or_create(user=user, role=admin_role)
     return user
 
 

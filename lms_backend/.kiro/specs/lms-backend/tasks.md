@@ -80,13 +80,13 @@
   - [x] 3.4 Checkpoint - 确保所有测试通过
     - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. 知识文档模块
-  - [ ] 4.1 实现知识模型
+- [x] 4. 知识文档模块
+  - [x] 4.1 实现知识模型
     - 创建 `apps/knowledge/models.py`，定义 Knowledge、KnowledgeCategory、KnowledgeCategoryRelation 模型
     - 实现知识类型（EMERGENCY/OTHER）
     - 实现结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
     - _Requirements: 4.1, 4.2, 4.3_
-  - [ ] 4.2 实现知识管理 API
+  - [x] 4.2 实现知识管理 API
     - 创建 `apps/knowledge/views.py`、`apps/knowledge/serializers.py`
     - 实现知识 CRUD 端点
     - 实现分类管理端点
@@ -97,12 +97,12 @@
     - **Validates: Requirements 4.5**
 
 - [ ] 5. 题库模块
-  - [ ] 5.1 实现题目模型
+  - [x] 5.1 实现题目模型
     - 创建 `apps/questions/models.py`，定义 Question 模型
     - 实现题目类型（单选/多选/判断/简答）
     - 实现题目内容、答案、解析字段
     - _Requirements: 5.1_
-  - [ ] 5.2 实现题目管理 API
+  - [x] 5.2 实现题目管理 API
     - 创建 `apps/questions/views.py`、`apps/questions/serializers.py`
     - 实现题目 CRUD 端点
     - 实现所有权控制（仅创建者或管理员可编辑/删除）
@@ -113,15 +113,15 @@
     - **Property 13: 被引用题目删除保护**
     - **Property 15: 题目所有权编辑控制**
     - **Validates: Requirements 5.3, 5.4, 5.5, 5.7**
-  - [ ] 5.4 Checkpoint - 确保所有测试通过
+  - [x] 5.4 Checkpoint - 确保所有测试通过
     - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. 试卷模块
-  - [ ] 6.1 实现试卷模型
+  - [x] 6.1 实现试卷模型
     - 创建 `apps/quizzes/models.py`，定义 Quiz、QuizQuestion 模型
     - 实现试卷与题目的多对多关系
     - _Requirements: 6.1, 6.2_
-  - [ ] 6.2 实现试卷管理 API
+  - [x] 6.2 实现试卷管理 API
     - 创建 `apps/quizzes/views.py`、`apps/quizzes/serializers.py`
     - 实现试卷 CRUD 端点
     - 实现添加题目端点（支持选择已有题目或新建题目）

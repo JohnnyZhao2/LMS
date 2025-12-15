@@ -1,6 +1,21 @@
 """
-Questions URLs - placeholder for task 5.2
+URL configuration for questions app.
+
+Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
 from django.urls import path
 
-urlpatterns = []
+from .views import (
+    QuestionListCreateView,
+    QuestionDetailView,
+    QuestionImportView,
+)
+
+urlpatterns = [
+    # Question CRUD
+    path('', QuestionListCreateView.as_view(), name='question-list-create'),
+    path('<int:pk>/', QuestionDetailView.as_view(), name='question-detail'),
+    
+    # Bulk import
+    path('import/', QuestionImportView.as_view(), name='question-import'),
+]
