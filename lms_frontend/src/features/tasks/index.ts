@@ -9,7 +9,10 @@ export { PracticeTaskPage } from './PracticeTaskPage';
 export { ExamTaskPage } from './ExamTaskPage';
 export { PracticeRunner } from './PracticeRunner';
 export { ExamRunner } from './ExamRunner';
-export { TaskWizard } from './TaskWizard';
+export { TaskManagement } from './TaskManagement';
+
+// Task Wizard Components
+export { TaskWizard } from './components/TaskWizard';
 
 // Components
 export * from './components';

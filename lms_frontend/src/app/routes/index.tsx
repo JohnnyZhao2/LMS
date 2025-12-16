@@ -18,6 +18,7 @@ import { Dashboard } from '@/features/dashboard/Dashboard';
 // Student pages
 import { KnowledgeCenter } from '@/features/knowledge/KnowledgeCenter';
 import { KnowledgeReader } from '@/features/knowledge/KnowledgeReader';
+import { KnowledgeManagement } from '@/features/knowledge/KnowledgeManagement';
 import { TaskCenter } from '@/features/tasks/TaskCenter';
 import { LearningTaskPage } from '@/features/tasks/LearningTaskPage';
 import { PracticeTaskPage } from '@/features/tasks/PracticeTaskPage';
@@ -27,18 +28,26 @@ import { ExamRunner } from '@/features/tasks/ExamRunner';
 
 // Mentor/Manager pages
 import { TestCenter } from '@/features/test-center/TestCenter';
-import { TaskWizard } from '@/features/tasks/TaskWizard';
+import { QuestionManagement } from '@/features/test-center/QuestionManagement';
+import { QuizManagement } from '@/features/test-center/QuizManagement';
+import { TaskManagement } from '@/features/tasks/TaskManagement';
 
 // Admin pages
-import { UserDirectory } from '@/features/user-mgmt/components/UserDirectory';
+import { UserDirectory, OrganizationView, MentorshipView } from '@/features/user-mgmt';
 
 // Team Manager pages
-import { SquadronView } from '@/features/team/components/SquadronView';
+import { TeamDashboard } from '@/features/team';
 
 // Analytics
-import { AnalyticsDashboard } from '@/features/analytics/components/AnalyticsDashboard';
+import { AnalyticsDashboard, PersonalCenter } from '@/features/analytics/components';
 import { ReportsView } from '@/features/reports/components/ReportsView';
 import { OperationsView } from '@/features/ops/components/OperationsView';
+
+// Grading
+import { GradingCenter } from '@/features/grading';
+
+// Spot Checks
+import { SpotCheckCenter } from '@/features/spot-checks';
 
 // 403 Forbidden page
 function ForbiddenPage() {
@@ -183,7 +192,7 @@ export function AppRoutes() {
           path="personal"
           element={
             <RoleGuard allowedRoles={STUDENT_ROLES}>
-              <AnalyticsDashboard />
+              <PersonalCenter />
             </RoleGuard>
           }
         />
@@ -197,45 +206,65 @@ export function AppRoutes() {
             </RoleGuard>
           }
         />
+        {/* Requirements: 12.1 - Question management */}
         <Route
-          path="task-management"
+          path="test-center/questions"
           element={
             <RoleGuard allowedRoles={MENTOR_ROLES}>
-              <TaskWizard />
+              <QuestionManagement />
             </RoleGuard>
           }
         />
+        {/* Requirements: 13.1 - Quiz management */}
+        <Route
+          path="test-center/quizzes"
+          element={
+            <RoleGuard allowedRoles={MENTOR_ROLES}>
+              <QuizManagement />
+            </RoleGuard>
+          }
+        />
+        {/* Task creation is handled via modal in TaskManagement page */}
         <Route
           path="tasks/create"
-          element={
-            <RoleGuard allowedRoles={MENTOR_ROLES}>
-              <TaskWizard />
-            </RoleGuard>
-          }
+          element={<Navigate to="/task-management" replace />}
         />
+        {/* Requirements: 15.1 - Grading center for mentors/managers */}
         <Route
           path="grading"
           element={
             <RoleGuard allowedRoles={[ROLE_CODES.MENTOR, ROLE_CODES.DEPT_MANAGER]}>
-              <ReportsView />
+              <GradingCenter />
             </RoleGuard>
           }
         />
+        {/* Requirements: 16.1 - Spot check center for mentors/managers */}
         <Route
           path="spot-checks"
           element={
             <RoleGuard allowedRoles={[ROLE_CODES.MENTOR, ROLE_CODES.DEPT_MANAGER]}>
-              <OperationsView />
+              <SpotCheckCenter />
+            </RoleGuard>
+          }
+        />
+
+        {/* Requirements: 14.1 - Task management for mentors/managers/admin */}
+        <Route
+          path="task-management"
+          element={
+            <RoleGuard allowedRoles={MENTOR_ROLES}>
+              <TaskManagement />
             </RoleGuard>
           }
         />
 
         {/* Admin Routes */}
+        {/* Requirements: 17.1 - Knowledge management for admin */}
         <Route
           path="knowledge-management"
           element={
             <RoleGuard allowedRoles={ADMIN_ROLES}>
-              <KnowledgeCenter />
+              <KnowledgeManagement />
             </RoleGuard>
           }
         />
@@ -251,7 +280,7 @@ export function AppRoutes() {
           path="organization"
           element={
             <RoleGuard allowedRoles={ADMIN_ROLES}>
-              <UserDirectory />
+              <OrganizationView />
             </RoleGuard>
           }
         />
@@ -259,17 +288,17 @@ export function AppRoutes() {
           path="mentorship"
           element={
             <RoleGuard allowedRoles={ADMIN_ROLES}>
-              <UserDirectory />
+              <MentorshipView />
             </RoleGuard>
           }
         />
 
-        {/* Team Manager Routes */}
+        {/* Team Manager Routes - Requirements: 20.1, 20.4 */}
         <Route
           path="team-dashboard"
           element={
             <RoleGuard allowedRoles={TEAM_MANAGER_ROLES}>
-              <SquadronView />
+              <TeamDashboard />
             </RoleGuard>
           }
         />

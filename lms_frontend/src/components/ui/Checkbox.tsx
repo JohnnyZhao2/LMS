@@ -12,7 +12,8 @@ export interface CheckboxProps
 
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     ({ className, label, error, id, disabled, checked, ...props }, ref) => {
-        const checkboxId = id || React.useId()
+        const generatedId = React.useId()
+        const checkboxId = id || generatedId
         const errorId = `${checkboxId}-error`
 
         return (

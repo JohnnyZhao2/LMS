@@ -240,3 +240,113 @@ export const MOCK_ASSIGNMENTS: TaskAssignment[] = MOCK_TASKS.map((task, index) =
   progress: index === 3 ? 100 : index === 0 ? 33 : index === 1 ? 45 : 0,
   completed_at: index === 3 ? '2025-12-09T15:30:00Z' : undefined,
 }));
+
+
+// ============================================
+// Mock Personal Center Data
+// ============================================
+
+import type { 
+  PersonalProfile,
+  ScoreRecord,
+  WrongAnswerRecord,
+  PersonalCenterData,
+} from '@/features/analytics/api/personal';
+
+export const MOCK_PERSONAL_PROFILE: PersonalProfile = {
+  id: 2,
+  username: 'student_li',
+  real_name: '李学员',
+  employee_id: 'STU001',
+  department: {
+    id: 1,
+    name: '技术运维室',
+  },
+  mentor: MOCK_USER,
+  created_at: '2024-06-15T08:00:00Z',
+};
+
+export const MOCK_SCORE_RECORDS: ScoreRecord[] = [
+  {
+    id: 1,
+    task: { id: 2, title: '网络隔离演练 - Q4', type: 'PRACTICE' },
+    quiz: { id: 1, title: '网络隔离标准流程测试', total_score: 100 },
+    attempt_number: 1,
+    obtained_score: 85,
+    total_score: 100,
+    submitted_at: '2025-12-15T14:30:00Z',
+    is_passed: true,
+  },
+  {
+    id: 2,
+    task: { id: 2, title: '网络隔离演练 - Q4', type: 'PRACTICE' },
+    quiz: { id: 1, title: '网络隔离标准流程测试', total_score: 100 },
+    attempt_number: 2,
+    obtained_score: 92,
+    total_score: 100,
+    submitted_at: '2025-12-16T10:15:00Z',
+    is_passed: true,
+  },
+  {
+    id: 3,
+    task: { id: 5, title: 'Q3 季度考核', type: 'EXAM' },
+    quiz: { id: 3, title: '综合能力评估', total_score: 100 },
+    attempt_number: 1,
+    obtained_score: 78,
+    total_score: 100,
+    submitted_at: '2025-09-30T16:00:00Z',
+    is_passed: true,
+  },
+  {
+    id: 4,
+    task: { id: 6, title: 'Redis 缓存策略练习', type: 'PRACTICE' },
+    quiz: { id: 4, title: 'Redis 基础测试', total_score: 50 },
+    attempt_number: 1,
+    obtained_score: 35,
+    total_score: 50,
+    submitted_at: '2025-11-20T11:30:00Z',
+    is_passed: true,
+  },
+];
+
+export const MOCK_WRONG_ANSWERS: WrongAnswerRecord[] = [
+  {
+    id: 1,
+    question: MOCK_QUESTIONS[0],
+    user_answer: 'A',
+    correct_answer: 'B',
+    task_title: '网络隔离演练 - Q4',
+    quiz_title: '网络隔离标准流程测试',
+    submitted_at: '2025-12-15T14:30:00Z',
+  },
+  {
+    id: 2,
+    question: MOCK_QUESTIONS[1],
+    user_answer: ['A'],
+    correct_answer: ['A', 'C'],
+    task_title: '网络隔离演练 - Q4',
+    quiz_title: '网络隔离标准流程测试',
+    submitted_at: '2025-12-15T14:30:00Z',
+  },
+  {
+    id: 3,
+    question: MOCK_QUESTIONS[2],
+    user_answer: 'A',
+    correct_answer: 'B',
+    task_title: 'Redis 缓存策略练习',
+    quiz_title: 'Redis 基础测试',
+    submitted_at: '2025-11-20T11:30:00Z',
+  },
+];
+
+export const MOCK_PERSONAL_CENTER_DATA: PersonalCenterData = {
+  profile: MOCK_PERSONAL_PROFILE,
+  score_summary: {
+    total_submissions: 4,
+    average_score: 82.5,
+    pass_rate: 1.0,
+    best_score: 92,
+  },
+  recent_scores: MOCK_SCORE_RECORDS,
+  wrong_answer_count: 3,
+};

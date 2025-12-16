@@ -325,75 +325,75 @@
   - 确保所有测试通过，询问用户是否有问题
 
 
-- [ ] 16. 实现答题界面
-  - [ ] 16.1 创建 QuestionCard 题目卡片
+- [x] 16. 实现答题界面
+  - [x] 16.1 创建 QuestionCard 题目卡片
     - 支持单选、多选、判断、简答四种题型
     - 实现答案选择/输入交互
     - _Requirements: 8.5_
 
-  - [ ] 16.2 创建 PracticeRunner 练习答题界面
+  - [x] 16.2 创建 PracticeRunner 练习答题界面
     - 展示试卷题目列表
     - 实现答案保存和提交
     - 展示自动判分结果和解析
     - _Requirements: 8.4, 8.5, 8.6_
 
-  - [ ] 16.3 创建 ExamRunner 考试答题界面
+  - [x] 16.3 创建 ExamRunner 考试答题界面
     - 展示试卷题目和倒计时
     - 实现自动提交和手动提交
     - _Requirements: 9.5, 9.6, 9.7_
 
-- [ ] 17. 实现个人中心
-  - [ ] 17.1 创建个人中心 API
+- [x] 17. 实现个人中心
+  - [x] 17.1 创建个人中心 API
     - 创建 src/features/analytics/api/personal.ts
     - 实现获取个人信息、历史成绩、错题本 API
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 17.2 创建 PersonalProfile 个人信息组件
+  - [x] 17.2 创建 PersonalProfile 个人信息组件
     - 展示姓名、团队、导师信息
     - _Requirements: 10.1_
 
-  - [ ] 17.3 创建 ScoreHistory 历史成绩组件
+  - [x] 17.3 创建 ScoreHistory 历史成绩组件
     - 展示练习和考试成绩列表
     - 实现导出功能
     - _Requirements: 10.2, 10.4_
 
-  - [ ] 17.4 创建 WrongAnswers 错题本组件
+  - [x] 17.4 创建 WrongAnswers 错题本组件
     - 展示答错的题目列表
     - _Requirements: 10.3_
 
-  - [ ] 17.5 创建 PersonalCenter 页面
+  - [x] 17.5 创建 PersonalCenter 页面
     - 组合个人信息、历史成绩、错题本
     - _Requirements: 10.1_
 
-- [ ] 18. Checkpoint - 确保学员功能完整
+- [x] 18. Checkpoint - 确保学员功能完整
   - 确保所有测试通过，询问用户是否有问题
 
 
 ## Phase 6: 导师/室经理功能模块
 
-- [ ] 19. 实现导师仪表盘
-  - [ ] 19.1 创建导师仪表盘 API
+- [x] 19. 实现导师仪表盘
+  - [x] 19.1 创建导师仪表盘 API
     - 实现获取所辖学员统计数据 API
     - _Requirements: 11.1, 11.2, 11.3_
 
-  - [ ] 19.2 创建 MentorDashboard 组件
+  - [x] 19.2 创建 MentorDashboard 组件
     - 展示完成率和平均分统计
     - 展示待评分考试数量
     - 实现快捷入口（新建任务、测试中心、抽查）
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-- [ ] 20. 实现测试中心 - 题目管理
-  - [ ] 20.1 创建题目 API
+- [x] 20. 实现测试中心 - 题目管理
+  - [x] 20.1 创建题目 API
     - 创建 src/features/test-center/api/questions.ts
     - 实现题目 CRUD API
     - _Requirements: 12.1, 12.2_
 
-  - [ ] 20.2 创建 QuestionForm 题目表单
+  - [x] 20.2 创建 QuestionForm 题目表单
     - 支持四种题型的创建和编辑
     - 实现选项、答案、解析输入
     - _Requirements: 12.3, 12.4_
 
-  - [ ] 20.3 创建 QuestionList 题目列表
+  - [x] 20.3 创建 QuestionList 题目列表
     - 展示题目列表，支持搜索和筛选
     - 根据所有权控制编辑/删除按钮显示
     - 实现多选和快速组卷功能
@@ -403,32 +403,32 @@
     - **Property 15: 题目所有权编辑控制**
     - **Validates: Requirements 12.5, 12.6**
 
-  - [ ] 20.5 创建 QuickPublish 快速发布弹窗
+  - [x] 20.5 创建 QuickPublish 快速发布弹窗
     - 实现试卷名称输入和任务类型选择
     - 跳转到任务创建流程
     - _Requirements: 12.9, 12.10_
 
-  - [ ] 20.6 创建 QuestionManagement 页面
+  - [x] 20.6 创建 QuestionManagement 页面
     - 组合列表、表单、快速发布
     - _Requirements: 12.1_
 
-- [ ] 21. 实现测试中心 - 试卷管理
-  - [ ] 21.1 创建试卷 API
+- [x] 21. 实现测试中心 - 试卷管理
+  - [x] 21.1 创建试卷 API
     - 创建 src/features/test-center/api/quizzes.ts
     - 实现试卷 CRUD API
     - _Requirements: 13.1, 13.2_
 
-  - [ ] 21.2 创建 QuestionPicker 题目选择器
+  - [x] 21.2 创建 QuestionPicker 题目选择器
     - 从题库选择已有题目
     - 支持搜索和筛选
     - _Requirements: 13.3_
 
-  - [ ] 21.3 创建 QuizBuilder 试卷构建器
+  - [x] 21.3 创建 QuizBuilder 试卷构建器
     - 组合题目选择和新建题目
     - 支持题目排序和分值设置
     - _Requirements: 13.2, 13.3, 13.4_
 
-  - [ ] 21.4 创建 QuizList 试卷列表
+  - [x] 21.4 创建 QuizList 试卷列表
     - 展示试卷列表，支持搜索
     - 根据所有权控制编辑/删除按钮显示
     - 实现多选和快速发布功能
@@ -442,33 +442,33 @@
     - **Property 18: 快速发布任务类型限制**
     - **Validates: Requirements 13.11, 13.12**
 
-  - [ ] 21.7 创建 QuizManagement 页面
+  - [x] 21.7 创建 QuizManagement 页面
     - 组合列表、构建器、快速发布
     - _Requirements: 13.1_
 
-- [ ] 22. Checkpoint - 确保测试中心功能正常
+- [x] 22. Checkpoint - 确保测试中心功能正常
   - 确保所有测试通过，询问用户是否有问题
 
 
-- [ ] 23. 实现任务管理
-  - [ ] 23.1 创建任务管理 API
+- [x] 23. 实现任务管理
+  - [x] 23.1 创建任务管理 API
     - 实现创建学习/练习/考试任务 API
     - 实现获取可分配学员列表 API
     - _Requirements: 14.1_
 
-  - [ ] 23.2 创建 StepBasicInfo 基本信息步骤
+  - [x] 23.2 创建 StepBasicInfo 基本信息步骤
     - 实现任务类型选择
     - 实现标题、描述、截止日期输入
     - 考试任务额外输入开始时间、时长、及格分数
     - _Requirements: 14.2, 14.3, 14.4_
 
-  - [ ] 23.3 创建 StepResources 资源选择步骤
+  - [x] 23.3 创建 StepResources 资源选择步骤
     - 学习任务：知识文档多选
     - 练习任务：试卷多选 + 知识文档可选
     - 考试任务：试卷单选
     - _Requirements: 14.5, 14.6, 14.7, 14.8_
 
-  - [ ] 23.4 创建 StepAssignees 学员选择步骤
+  - [x] 23.4 创建 StepAssignees 学员选择步骤
     - 根据当前角色过滤可选学员
     - 支持全选和批量选择
     - _Requirements: 14.9, 14.10, 14.11, 14.12_
@@ -477,43 +477,43 @@
     - **Property 17: 学员选择范围限制**
     - **Validates: Requirements 14.10, 14.11, 14.12**
 
-  - [ ] 23.6 创建 TaskWizard 任务创建向导
+  - [x] 23.6 创建 TaskWizard 任务创建向导
     - 组合三个步骤组件
     - 实现步骤导航和数据传递
     - _Requirements: 14.2, 14.5, 14.9, 14.13_
 
-  - [ ] 23.7 创建 TaskManagement 页面
+  - [x] 23.7 创建 TaskManagement 页面
     - 展示任务列表
     - 集成任务创建向导
     - 管理员显示强制结束按钮
     - _Requirements: 14.1, 14.14_
 
-- [ ] 24. 实现评分中心
-  - [ ] 24.1 创建评分 API
+- [x] 24. 实现评分中心
+  - [x] 24.1 创建评分 API
     - 创建 src/features/grading/api/grading.ts
     - 实现获取待评分列表、提交评分 API
     - _Requirements: 15.1_
 
-  - [ ] 24.2 创建 PendingList 待评分列表
+  - [x] 24.2 创建 PendingList 待评分列表
     - 展示待评分考试列表
     - _Requirements: 15.1_
 
-  - [ ] 24.3 创建 GradingDetail 评分详情
+  - [x] 24.3 创建 GradingDetail 评分详情
     - 展示学员答案
     - 实现分数和评语输入
     - _Requirements: 15.2, 15.3_
 
-  - [ ] 24.4 创建 GradingCenter 页面
+  - [x] 24.4 创建 GradingCenter 页面
     - 组合列表和详情
     - _Requirements: 15.1, 15.4_
 
-- [ ] 25. 实现抽查中心
-  - [ ] 25.1 创建抽查 API
+- [x] 25. 实现抽查中心
+  - [x] 25.1 创建抽查 API
     - 创建 src/features/spot-checks/api/spot-checks.ts
     - 实现抽查记录 CRUD API
     - _Requirements: 16.1_
 
-  - [ ] 25.2 创建 SpotCheckForm 抽查表单
+  - [x] 25.2 创建 SpotCheckForm 抽查表单
     - 实现学员选择（根据角色过滤）
     - 实现内容、评分、评语输入
     - _Requirements: 16.2, 16.3, 16.4, 16.5_
@@ -522,49 +522,49 @@
     - **Property 19: 抽查学员范围限制**
     - **Validates: Requirements 16.4, 16.5**
 
-  - [ ] 25.4 创建 SpotCheckList 抽查列表
+  - [x] 25.4 创建 SpotCheckList 抽查列表
     - 展示抽查记录（按时间倒序）
     - _Requirements: 16.1_
 
-  - [ ] 25.5 创建 SpotCheckCenter 页面
+  - [x] 25.5 创建 SpotCheckCenter 页面
     - 组合列表和表单
     - _Requirements: 16.1_
 
-- [ ] 26. Checkpoint - 确保导师功能完整
+- [x] 26. Checkpoint - 确保导师功能完整
   - 确保所有测试通过，询问用户是否有问题
 
 
 ## Phase 7: 管理员功能模块
 
-- [ ] 27. 实现知识库管理
-  - [ ] 27.1 创建知识管理 API
+- [x] 27. 实现知识库管理
+  - [x] 27.1 创建知识管理 API
     - 扩展 knowledge API 支持 CRUD 操作
     - _Requirements: 17.1_
 
-  - [ ] 27.2 创建 KnowledgeForm 知识表单
+  - [x] 27.2 创建 KnowledgeForm 知识表单
     - 实现知识类型选择
     - 应急类：结构化字段表单
     - 其他类型：Markdown 编辑器
     - 实现分类标签设置
     - _Requirements: 17.2, 17.3, 17.4, 17.5_
 
-  - [ ] 27.3 创建 KnowledgeManagement 页面
+  - [x] 27.3 创建 KnowledgeManagement 页面
     - 展示知识列表，支持搜索和分类筛选
     - 集成知识表单（创建/编辑）
     - 实现删除确认
     - _Requirements: 17.1, 17.6, 17.7_
 
-- [ ] 28. 实现用户管理
-  - [ ] 28.1 创建用户管理 API
+- [x] 28. 实现用户管理
+  - [x] 28.1 创建用户管理 API
     - 创建 src/features/user-mgmt/api/users.ts
     - 实现用户 CRUD、停用/启用、重置密码 API
     - _Requirements: 18.1_
 
-  - [ ] 28.2 创建 UserForm 用户表单
+  - [x] 28.2 创建 UserForm 用户表单
     - 实现基础信息输入
     - _Requirements: 18.2, 18.3_
 
-  - [ ] 28.3 创建 RoleSelector 角色选择器
+  - [x] 28.3 创建 RoleSelector 角色选择器
     - 实现角色多选
     - 学员角色始终选中且不可取消
     - _Requirements: 18.7_
@@ -573,68 +573,68 @@
     - **Property 21: 学员角色不可移除**
     - **Validates: Requirements 18.7**
 
-  - [ ] 28.5 创建 UserList 用户列表
+  - [x] 28.5 创建 UserList 用户列表
     - 展示用户列表
     - 实现停用/启用、重置密码操作
     - _Requirements: 18.1, 18.4, 18.5, 18.6_
 
-  - [ ] 28.6 创建 UserDirectory 页面
+  - [x] 28.6 创建 UserDirectory 页面
     - 组合列表和表单
     - _Requirements: 18.1_
 
-- [ ] 29. 实现组织架构管理
-  - [ ] 29.1 创建组织架构 API
+- [x] 29. 实现组织架构管理
+  - [x] 29.1 创建组织架构 API
     - 实现获取室列表、成员列表 API
     - 实现调整所属室、指定室经理 API
     - _Requirements: 19.1_
 
-  - [ ] 29.2 创建 DepartmentTree 组织架构树
+  - [x] 29.2 创建 DepartmentTree 组织架构树
     - 展示室列表和成员
     - 实现调整所属室功能
     - 实现指定室经理功能
     - _Requirements: 19.1, 19.2, 19.3_
 
-  - [ ] 29.3 创建 OrganizationView 页面
+  - [x] 29.3 创建 OrganizationView 页面
     - 展示组织架构树
     - _Requirements: 19.1_
 
-- [ ] 30. 实现师徒关系管理
-  - [ ] 30.1 创建师徒关系 API
+- [x] 30. 实现师徒关系管理
+  - [x] 30.1 创建师徒关系 API
     - 实现获取导师列表、学员列表 API
     - 实现指定/解除导师 API
     - _Requirements: 19.4_
 
-  - [ ] 30.2 创建 MentorshipList 师徒关系列表
+  - [x] 30.2 创建 MentorshipList 师徒关系列表
     - 展示导师和其学员
     - 实现指定/解除导师功能
     - _Requirements: 19.4, 19.5, 19.6_
 
-  - [ ] 30.3 创建 MentorshipView 页面
+  - [x] 30.3 创建 MentorshipView 页面
     - 展示师徒关系列表
     - _Requirements: 19.4_
 
-- [ ] 31. Checkpoint - 确保管理员功能完整
+- [x] 31. Checkpoint - 确保管理员功能完整
   - 确保所有测试通过，询问用户是否有问题
 
 
 ## Phase 8: 团队经理功能模块
 
-- [ ] 32. 实现团队数据看板
-  - [ ] 32.1 创建团队数据 API
+- [x] 32. 实现团队数据看板
+  - [x] 32.1 创建团队数据 API
     - 创建 src/features/team/api/team.ts
     - 实现获取团队概览、知识热度 API
     - _Requirements: 20.1, 20.3_
 
-  - [ ] 32.2 创建 TeamOverview 团队概览组件
+  - [x] 32.2 创建 TeamOverview 团队概览组件
     - 展示各室完成率对比图表
     - 展示各室成绩对比图表
     - _Requirements: 20.1, 20.2_
 
-  - [ ] 32.3 创建 KnowledgeHeat 知识热度组件
+  - [x] 32.3 创建 KnowledgeHeat 知识热度组件
     - 展示知识文档阅读统计排行
     - _Requirements: 20.3_
 
-  - [ ] 32.4 创建 TeamDashboard 页面
+  - [x] 32.4 创建 TeamDashboard 页面
     - 组合团队概览和知识热度
     - 确保所有操作按钮隐藏（只读视图）
     - _Requirements: 20.1, 20.4_
@@ -643,33 +643,33 @@
     - **Property 20: 团队经理只读视图**
     - **Validates: Requirements 20.4**
 
-- [ ] 33. Checkpoint - 确保团队经理功能完整
+- [x] 33. Checkpoint - 确保团队经理功能完整
   - 确保所有测试通过，询问用户是否有问题
 
 ## Phase 9: 响应式设计与优化
 
-- [ ] 34. 实现响应式布局
-  - [ ] 34.1 优化 Sidebar 响应式
+- [x] 34. 实现响应式布局
+  - [x] 34.1 优化 Sidebar 响应式
     - 桌面：完整侧边栏
     - 平板：可折叠侧边栏
     - 移动：抽屉式侧边栏或底部导航
     - _Requirements: 22.1, 22.2, 22.3_
 
-  - [ ] 34.2 优化表格响应式
+  - [x] 34.2 优化表格响应式
     - 小屏幕下使用卡片列表替代表格
     - _Requirements: 22.4_
 
-  - [ ] 34.3 优化表单响应式
+  - [x] 34.3 优化表单响应式
     - 调整表单布局适应不同屏幕
     - _Requirements: 22.4_
 
-- [ ] 35. 实现加载状态和错误处理
-  - [ ] 35.1 创建全局错误边界
+- [x] 35. 实现加载状态和错误处理
+  - [x] 35.1 创建全局错误边界
     - 捕获未处理的错误
     - 展示友好的错误页面
     - _Requirements: 23.3_
 
-  - [ ] 35.2 优化 API 请求状态展示
+  - [x] 35.2 优化 API 请求状态展示
     - 统一加载指示器样式
     - 统一错误提示样式
     - _Requirements: 23.1, 23.2, 23.3_
@@ -678,6 +678,6 @@
     - **Property 3: 令牌自动刷新**
     - **Validates: Requirements 1.6**
 
-- [ ] 36. Final Checkpoint - 确保所有功能完整
+- [x] 36. Final Checkpoint - 确保所有功能完整
   - 确保所有测试通过，询问用户是否有问题
 

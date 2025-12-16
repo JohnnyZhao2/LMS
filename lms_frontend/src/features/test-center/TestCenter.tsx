@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
-import { Search, Plus, FileText, Database, Settings } from "lucide-react";
+import { Search, Plus, FileText, Database, Settings, ArrowRight } from "lucide-react";
 import { MOCK_PAPER, MOCK_QUESTIONS } from "@/testing/mocks";
-import { Question } from "@/types/domain";
+// Question type is used implicitly through MOCK_QUESTIONS
 
 export function TestCenter() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'PAPERS' | 'QUESTIONS'>('PAPERS');
 
     return (
@@ -45,9 +47,35 @@ export function TestCenter() {
                                 : 'Master library of validated technical questions.'}
                         </CardDescription>
                     </div>
-                    <Button className="gap-2" onClick={() => alert("Create wizard starting...")}>
-                        <Plus size={16} /> Create New {activeTab === 'PAPERS' ? 'Paper' : 'Question'}
-                    </Button>
+                    <div className="flex gap-2">
+                        {activeTab === 'QUESTIONS' && (
+                            <Button 
+                                variant="secondary" 
+                                className="gap-2" 
+                                onClick={() => navigate('/test-center/questions')}
+                            >
+                                管理题库 <ArrowRight size={16} />
+                            </Button>
+                        )}
+                        {activeTab === 'PAPERS' && (
+                            <Button 
+                                variant="secondary" 
+                                className="gap-2" 
+                                onClick={() => navigate('/test-center/quizzes')}
+                            >
+                                管理试卷 <ArrowRight size={16} />
+                            </Button>
+                        )}
+                        <Button className="gap-2" onClick={() => {
+                            if (activeTab === 'QUESTIONS') {
+                                navigate('/test-center/questions');
+                            } else {
+                                navigate('/test-center/quizzes');
+                            }
+                        }}>
+                            <Plus size={16} /> Create New {activeTab === 'PAPERS' ? 'Paper' : 'Question'}
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="flex gap-4 mb-6">
@@ -80,7 +108,7 @@ export function TestCenter() {
                                 <div className="mt-4 flex items-center gap-4 text-xs text-text-muted font-mono border-t border-white/5 pt-3">
                                     <span>ID: {MOCK_PAPER.id}</span>
                                     <span>•</span>
-                                    <span>Total Points: {MOCK_PAPER.totalPoints}</span>
+                                    <span>Total Points: {MOCK_PAPER.total_score}</span>
                                     <div className="flex-1"></div>
                                     <Button size="sm" variant="ghost" className="h-7 text-xs hover:text-white">Edit</Button>
                                     <Button size="sm" variant="secondary" className="h-7 text-xs">Analytics</Button>
@@ -89,38 +117,48 @@ export function TestCenter() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(MOCK_QUESTIONS as (Question & { domain: string; status: string })[]).map((q) => (
-                                <div key={q.id} className="p-4 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <Badge variant={q.status === 'VERIFIED' ? 'secondary' : 'outline'} className="text-[10px]">
-                                            {q.status}
-                                        </Badge>
-                                        <span className="text-xs text-text-muted font-mono">{q.domain}</span>
-                                    </div>
-                                    <h3 className="text-sm font-semibold text-white mb-2 line-clamp-2">{q.text}</h3>
+                            {MOCK_QUESTIONS.map((q) => {
+                                const isCorrectOption = (optKey: string) => {
+                                    if (Array.isArray(q.answer)) {
+                                        return q.answer.includes(optKey);
+                                    }
+                                    return q.answer === optKey;
+                                };
+                                return (
+                                    <div key={q.id} className="p-4 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <Badge variant="secondary" className="text-[10px]">
+                                                {q.type}
+                                            </Badge>
+                                            <span className="text-xs text-text-muted font-mono">{q.type}</span>
+                                        </div>
+                                        <h3 className="text-sm font-semibold text-white mb-2 line-clamp-2">{q.content}</h3>
 
-                                    <div className="flex flex-col gap-1 mb-3">
-                                        {q.options.slice(0, 2).map((opt, i) => (
-                                            <div key={i} className="flex items-center gap-2 text-xs text-text-muted">
-                                                <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${opt.isCorrect ? 'border-primary bg-primary/20' : 'border-white/20'}`}>
-                                                    {opt.isCorrect && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                                                </div>
-                                                <span className="truncate">{opt.text}</span>
+                                        {q.options && (
+                                            <div className="flex flex-col gap-1 mb-3">
+                                                {q.options.slice(0, 2).map((opt, i) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs text-text-muted">
+                                                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${isCorrectOption(opt.key) ? 'border-primary bg-primary/20' : 'border-white/20'}`}>
+                                                            {isCorrectOption(opt.key) && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                                        </div>
+                                                        <span className="truncate">{opt.content}</span>
+                                                    </div>
+                                                ))}
+                                                {q.options.length > 2 && <div className="text-xs text-text-muted italic">+ {q.options.length - 2} more options</div>}
                                             </div>
-                                        ))}
-                                        {q.options.length > 2 && <div className="text-xs text-text-muted italic">+ {q.options.length - 2} more options</div>}
-                                    </div>
+                                        )}
 
-                                    <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-auto">
-                                        <div className="text-xs text-text-muted font-mono">ID: {q.id}</div>
-                                        <div className="flex gap-2">
-                                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                                                <Settings size={12} />
-                                            </Button>
+                                        <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-auto">
+                                            <div className="text-xs text-text-muted font-mono">ID: {q.id}</div>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                                    <Settings size={12} />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>

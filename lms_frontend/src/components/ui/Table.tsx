@@ -59,6 +59,15 @@ export interface TableProps<T> {
     className?: string
     /** On row click */
     onRowClick?: (record: T, index: number) => void
+    /** 
+     * Enable responsive card view on mobile 
+     * Requirements: 22.4
+     */
+    responsive?: boolean
+    /** Custom card render function for mobile view */
+    renderCard?: (record: T, index: number) => React.ReactNode
+    /** Columns to show as primary info in mobile card (first 2 by default) */
+    mobileColumns?: string[]
 }
 
 function Table<T extends object>({
@@ -71,6 +80,9 @@ function Table<T extends object>({
     emptyText = "暂无数据",
     className,
     onRowClick,
+    responsive = true,
+    renderCard,
+    mobileColumns,
 }: TableProps<T>) {
     const getRowKeyValue = React.useCallback((record: T, index: number): React.Key => {
         if (typeof rowKey === 'function') {
@@ -128,9 +140,144 @@ function Table<T extends object>({
         }
     }
 
+    // Get columns to display in mobile card view
+    const getMobileDisplayColumns = () => {
+        if (mobileColumns) {
+            return columns.filter(col => mobileColumns.includes(col.key))
+        }
+        // Default: show first 3 columns
+        return columns.slice(0, 3)
+    }
+
+    // Render mobile card for a record
+    const renderMobileCard = (record: T, index: number) => {
+        if (renderCard) {
+            return renderCard(record, index)
+        }
+
+        const key = getRowKeyValue(record, index)
+        const isSelected = rowSelection?.selectedRowKeys.includes(key)
+        const displayColumns = getMobileDisplayColumns()
+        const remainingColumns = columns.filter(col => !displayColumns.find(dc => dc.key === col.key))
+
+        return (
+            <div
+                key={key}
+                className={cn(
+                    "p-4 rounded-lg border border-border bg-card transition-colors",
+                    "hover:bg-white/5",
+                    isSelected && "bg-primary/5 border-primary/30",
+                    onRowClick && "cursor-pointer"
+                )}
+                onClick={() => onRowClick?.(record, index)}
+            >
+                {/* Selection checkbox/radio */}
+                {rowSelection && (
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/5" onClick={(e) => e.stopPropagation()}>
+                        {rowSelection.type === 'checkbox' ? (
+                            <Checkbox
+                                checked={isSelected}
+                                onChange={() => handleSelectRow(record, index)}
+                            />
+                        ) : (
+                            <input
+                                type="radio"
+                                checked={isSelected}
+                                onChange={() => handleSelectRow(record, index)}
+                                className="h-4 w-4 text-primary"
+                            />
+                        )}
+                        <span className="text-xs text-text-muted">选择此项</span>
+                    </div>
+                )}
+
+                {/* Primary columns */}
+                <div className="space-y-2">
+                    {displayColumns.map((column, colIndex) => {
+                        const value = getCellValue(record, column)
+                        return (
+                            <div key={column.key} className={colIndex === 0 ? "font-medium text-text-primary" : ""}>
+                                {colIndex > 0 && (
+                                    <span className="text-xs text-text-muted mr-2">{column.title}:</span>
+                                )}
+                                <span className={colIndex === 0 ? "text-base" : "text-sm text-text-secondary"}>
+                                    {column.render 
+                                        ? column.render(value, record, index)
+                                        : String(value ?? '-')
+                                    }
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* Remaining columns in a grid */}
+                {remainingColumns.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/5 grid grid-cols-2 gap-2">
+                        {remainingColumns.map((column) => {
+                            const value = getCellValue(record, column)
+                            return (
+                                <div key={column.key} className="text-sm">
+                                    <span className="text-text-muted text-xs block">{column.title}</span>
+                                    <span className="text-text-secondary">
+                                        {column.render 
+                                            ? column.render(value, record, index)
+                                            : String(value ?? '-')
+                                        }
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Mobile card list view - rendered inline to avoid component-in-render issue
+    const mobileCardListContent = (
+        <div className="space-y-3 md:hidden">
+            {/* Select all for mobile */}
+            {rowSelection && rowSelection.type === 'checkbox' && dataSource.length > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-background-secondary border border-border">
+                    <Checkbox
+                        checked={isAllSelected}
+                        onChange={handleSelectAll}
+                        className={cn(isSomeSelected && !isAllSelected && "opacity-50")}
+                    />
+                    <span className="text-sm text-text-secondary">
+                        {isAllSelected ? '取消全选' : '全选'}
+                    </span>
+                </div>
+            )}
+
+            {loading ? (
+                <div className="p-8 text-center text-text-muted">
+                    <div className="flex items-center justify-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        加载中...
+                    </div>
+                </div>
+            ) : dataSource.length === 0 ? (
+                <div className="p-8 text-center text-text-muted rounded-lg border border-border bg-card">
+                    {emptyText}
+                </div>
+            ) : (
+                dataSource.map((record, index) => renderMobileCard(record, index))
+            )}
+        </div>
+    )
+
     return (
         <div className={cn("w-full", className)}>
-            <div className="relative overflow-x-auto rounded-lg border border-border">
+            {/* Mobile card view - Requirements: 22.4 */}
+            {responsive && mobileCardListContent}
+
+            {/* Desktop table view */}
+            <div className={cn(
+                "relative overflow-x-auto rounded-lg border border-border",
+                responsive && "hidden md:block"
+            )}>
                 <table className="w-full text-sm">
                     <thead className="bg-background-secondary text-text-secondary">
                         <tr>

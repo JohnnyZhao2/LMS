@@ -9,8 +9,9 @@ import { Header } from '@/components/layout/Header';
 
 /**
  * Main layout component
- * - Uses top navigation bar (Header) for menu
- * - Responsive layout for all screen sizes
+ * - Uses top navigation bar (Header) for navigation, user info and role switching
+ * - Desktop: Full navigation in header
+ * - Mobile: Drawer-style navigation menu
  */
 export function MainLayout() {
   return (
@@ -22,12 +23,12 @@ export function MainLayout() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black_70%,transparent_100%)]" />
       </div>
       
-      {/* Header with navigation */}
+      {/* Header with navigation, user info and role switching */}
       <Header />
       
       {/* Main content area */}
       <main className="relative z-10 pt-16 min-h-screen">
-        <div className="container mx-auto px-4 py-6 lg:px-6 lg:py-8">
+        <div className="px-4 py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>

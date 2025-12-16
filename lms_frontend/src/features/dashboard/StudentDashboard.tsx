@@ -4,8 +4,8 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4
  */
 
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Spinner } from "@/components/ui/Spinner";
+import { ErrorState } from "@/components/ui/ErrorState";
 import {
   ArrowRight,
   CheckCircle2,
@@ -27,8 +29,45 @@ import {
   FileText,
   ClipboardCheck,
 } from "lucide-react";
-import { MOCK_TASKS, MOCK_KNOWLEDGE } from "@/testing/mocks";
+import { api } from "@/lib/api";
+import { API_ENDPOINTS } from "@/config/api";
 import type { TaskType } from "@/types/domain";
+
+// Dashboard API response types
+interface PendingTask {
+  id: number;
+  task_id: number;
+  task_title: string;
+  task_type: string;
+  deadline: string;
+  status: string;
+  progress: number;
+}
+
+interface LatestKnowledge {
+  id: number;
+  title: string;
+  summary: string;
+  updated_at: string;
+}
+
+interface TaskSummary {
+  learning: number;
+  practice: number;
+  exam: number;
+  total: number;
+}
+
+interface StudentDashboardData {
+  pending_tasks: PendingTask[];
+  latest_knowledge: LatestKnowledge[];
+  task_summary: TaskSummary;
+}
+
+// Fetch dashboard data
+async function fetchStudentDashboard(): Promise<StudentDashboardData> {
+  return api.get<StudentDashboardData>(API_ENDPOINTS.dashboard.student);
+}
 
 /**
  * Get task type badge variant
@@ -97,39 +136,43 @@ function isDeadlineApproaching(deadline: string): boolean {
 export function StudentDashboard() {
   const navigate = useNavigate();
 
-  // Use mock data for now (will be replaced with API call when backend is ready)
-  const dashboardData = useMemo(() => {
-    // Calculate pending tasks by type
-    const activeTasks = MOCK_TASKS.filter((t) => t.status === "ACTIVE");
-    const pendingTasks = {
-      learning: activeTasks.filter((t) => t.type === "LEARNING").length,
-      practice: activeTasks.filter((t) => t.type === "PRACTICE").length,
-      exam: activeTasks.filter((t) => t.type === "EXAM").length,
-    };
+  // Fetch dashboard data from API
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['student-dashboard'],
+    queryFn: fetchStudentDashboard,
+  });
 
-    // Convert tasks to dashboard format with progress
-    const recentTasks = MOCK_TASKS.slice(0, 5).map((task, index) => ({
-      id: task.id,
-      title: task.title,
-      type: task.type,
-      deadline: task.deadline,
-      progress: index === 3 ? 100 : index === 0 ? 33 : index === 1 ? 45 : 0,
-    }));
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
-    // Get latest knowledge
-    const latestKnowledge = MOCK_KNOWLEDGE.slice(0, 3).map((k) => ({
-      id: k.id,
-      title: k.title,
-      summary: k.summary,
-      updated_at: k.updated_at,
-    }));
+  // Error state
+  if (error) {
+    return (
+      <ErrorState
+        title="加载失败"
+        message="无法加载仪表盘数据"
+        onRetry={refetch}
+      />
+    );
+  }
 
-    return { pendingTasks, recentTasks, latestKnowledge };
-  }, []);
-
-  const { pendingTasks, recentTasks, latestKnowledge } = dashboardData;
-  const totalPending =
-    pendingTasks.learning + pendingTasks.practice + pendingTasks.exam;
+  // Transform API data
+  const pendingTasks = data?.task_summary || { learning: 0, practice: 0, exam: 0, total: 0 };
+  const recentTasks = (data?.pending_tasks || []).map(task => ({
+    id: task.id,
+    title: task.task_title,
+    type: task.task_type as TaskType,
+    deadline: task.deadline,
+    progress: task.progress,
+  }));
+  const latestKnowledge = data?.latest_knowledge || [];
+  const totalPending = pendingTasks.total || (pendingTasks.learning + pendingTasks.practice + pendingTasks.exam);
 
   // Calculate completion rate from recent tasks
   const completedTasks = recentTasks.filter((t) => t.progress === 100).length;

@@ -46,7 +46,8 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
     }, ref) => {
         const [isOpen, setIsOpen] = React.useState(false)
         const containerRef = React.useRef<HTMLDivElement>(null)
-        const selectId = id || React.useId()
+        const generatedId = React.useId()
+        const selectId = id || generatedId
         const errorId = `${selectId}-error`
 
         // Normalize value to array for easier handling

@@ -1,17 +1,17 @@
 /**
  * Header Component
  * Top navigation bar with navigation menu, user info, role switcher, and logout
- * Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 3.5
+ * Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 3.5, 22.3
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Bell, LogOut, ChevronDown, User, Settings, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore, useUser, useCurrentRole, useAvailableRoles } from '@/stores/auth';
-import { getMenuItemsForRole, ROLE_NAMES, ROLE_DEFAULT_ROUTES, shouldShowRoleSwitcher, type RoleCode, type MenuItem } from '@/config/roles';
+import { getMenuItemsForRole, ROLE_NAMES, ROLE_DEFAULT_ROUTES, shouldShowRoleSwitcher, type RoleCode } from '@/config/roles';
 
 interface HeaderProps {
   className?: string;
@@ -19,13 +19,13 @@ interface HeaderProps {
 
 /**
  * Header navigation component
- * - Displays navigation menu based on current role
+ * - Displays navigation menu based on current role in top bar
  * - Shows role switcher for users with multiple roles
  * - Provides logout functionality
  */
 export function Header({ className }: HeaderProps) {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useUser();
   const currentRole = useCurrentRole();
   const availableRoles = useAvailableRoles();
@@ -33,7 +33,7 @@ export function Header({ className }: HeaderProps) {
   
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const roleSwitcherRef = useRef<HTMLDivElement>(null);
   
@@ -43,6 +43,11 @@ export function Header({ className }: HeaderProps) {
   // Get role codes from available roles
   const roleCodes = availableRoles.map(r => r.code);
   const canSwitchRoles = shouldShowRoleSwitcher(roleCodes);
+  
+  // Check if a path is active
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
   
   // Close menus when clicking outside
   useEffect(() => {
@@ -61,7 +66,7 @@ export function Header({ className }: HeaderProps) {
   
   // Close mobile menu on route change
   useEffect(() => {
-    setShowMobileMenu(false);
+    setMobileMenuOpen(false);
   }, [location.pathname]);
   
   const handleLogout = () => {
@@ -81,28 +86,6 @@ export function Header({ className }: HeaderProps) {
     }
   };
   
-  const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
-  };
-  
-  const renderNavItem = (item: MenuItem) => {
-    const Icon = item.icon;
-    const active = isActive(item.path);
-    
-    return (
-      <Link key={item.key} to={item.path}>
-        <Button
-          variant={active ? 'secondary' : 'ghost'}
-          size="sm"
-          className={cn('gap-2', active && 'bg-white/10 text-white')}
-        >
-          <Icon size={16} />
-          <span className="hidden md:inline">{item.label}</span>
-        </Button>
-      </Link>
-    );
-  };
-  
   return (
     <>
       <header
@@ -112,28 +95,46 @@ export function Header({ className }: HeaderProps) {
           className
         )}
       >
-        <div className="container mx-auto h-full px-4 flex items-center justify-between">
-          {/* Left section: Logo */}
-          <div className="flex items-center gap-3">
+        <div className="h-full px-4 lg:px-6 flex items-center justify-between">
+          {/* Left section: Logo + Navigation */}
+          <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
               <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center font-bold text-black font-heading">
                 L
               </div>
               <span className="font-heading font-bold text-lg tracking-tight text-white hidden sm:block">
                 LMS <span className="text-primary">Ops</span>
               </span>
-              <Badge variant="outline" className="ml-2 text-[10px] hidden lg:flex border-white/10">
+              <Badge variant="outline" className="ml-1 text-[10px] hidden xl:flex border-white/10">
                 BETA 2.0
               </Badge>
             </Link>
+            
+            {/* Desktop Navigation Menu */}
+            <nav className="hidden lg:flex items-center gap-1">
+              {menuItems.map(item => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.path}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                    )}
+                  >
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
-          
-          {/* Center section: Navigation menu (desktop) */}
-          {/* Requirements: 3.1, 3.2, 3.3, 3.4, 3.5 */}
-          <nav className="hidden md:flex items-center gap-1">
-            {menuItems.map(item => renderNavItem(item))}
-          </nav>
           
           {/* Right section: Role switcher, notifications, user menu */}
           <div className="flex items-center gap-2">
@@ -202,7 +203,7 @@ export function Header({ className }: HeaderProps) {
                 className="flex items-center gap-3 pl-2 hover:opacity-80 transition-opacity"
               >
                 {/* User info */}
-                <div className="text-right hidden lg:block">
+                <div className="text-right hidden xl:block">
                   <div className="text-xs font-bold text-white">
                     {user?.name || '用户'}
                   </div>
@@ -267,29 +268,30 @@ export function Header({ className }: HeaderProps) {
             </div>
             
             {/* Mobile menu toggle */}
+            {/* Requirements: 22.3 */}
             <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
-              aria-label={showMobileMenu ? '关闭菜单' : '打开菜单'}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
+              aria-label="打开菜单"
             >
-              {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
       </header>
       
-      {/* Mobile menu overlay */}
-      {showMobileMenu && (
-        <div className="fixed inset-0 z-40 md:hidden">
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <>
           {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowMobileMenu(false)}
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
           />
           
-          {/* Mobile menu panel */}
-          <div className="absolute top-16 left-0 right-0 bg-background-secondary border-b border-white/10 animate-slide-up">
-            {/* Navigation items */}
+          {/* Drawer */}
+          <div className="fixed top-16 left-0 right-0 z-50 lg:hidden bg-background-secondary border-b border-white/5 max-h-[calc(100vh-4rem)] overflow-y-auto">
+            {/* Navigation */}
             <nav className="p-4 space-y-1">
               {menuItems.map(item => {
                 const Icon = item.icon;
@@ -299,6 +301,7 @@ export function Header({ className }: HeaderProps) {
                   <Link
                     key={item.key}
                     to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                       active
@@ -321,7 +324,10 @@ export function Header({ className }: HeaderProps) {
                   {availableRoles.map(role => (
                     <button
                       key={role.code}
-                      onClick={() => handleRoleSwitch(role.code)}
+                      onClick={() => {
+                        handleRoleSwitch(role.code as RoleCode);
+                        setMobileMenuOpen(false);
+                      }}
                       disabled={role.code === currentRole || isLoading}
                       className={cn(
                         'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
@@ -338,7 +344,7 @@ export function Header({ className }: HeaderProps) {
             )}
             
             {/* User section (mobile) */}
-            <div className="px-4 py-3 border-t border-white/5">
+            <div className="px-4 py-3 border-t border-white/5 sm:hidden">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center text-sm font-bold">
                   {user?.name?.slice(0, 2) || 'U'}
@@ -356,13 +362,17 @@ export function Header({ className }: HeaderProps) {
               <div className="space-y-1">
                 <Link
                   to="/personal"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
                 >
                   <User size={16} />
                   个人中心
                 </Link>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
                   className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-status-error hover:bg-status-error/10 transition-colors"
                 >
                   <LogOut size={16} />
@@ -371,7 +381,7 @@ export function Header({ className }: HeaderProps) {
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

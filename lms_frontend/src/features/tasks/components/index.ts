@@ -8,3 +8,7 @@ export { LearningTaskDetail } from './LearningTaskDetail';
 export { PracticeTaskDetail } from './PracticeTaskDetail';
 export { ExamTaskDetail } from './ExamTaskDetail';
 export { QuestionCard } from './QuestionCard';
+
+// Task Wizard
+export { TaskWizard, StepBasicInfo, StepResources, StepAssignees } from './TaskWizard';
+export type { BasicInfoData, ResourcesData, AssigneesData } from './TaskWizard';
