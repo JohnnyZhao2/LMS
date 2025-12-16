@@ -439,6 +439,7 @@ class UserDeactivateView(APIView):
     - 2.3: 停用用户，该用户无法登录且不出现在人员选择器中
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = UserDetailSerializer
     
     @extend_schema(
         summary='停用用户',
@@ -471,6 +472,7 @@ class UserActivateView(APIView):
     - 2.4: 启用已停用用户，恢复登录能力和选择器可见性
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = UserDetailSerializer
     
     @extend_schema(
         summary='启用用户',

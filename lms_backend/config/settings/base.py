@@ -158,16 +158,31 @@ SPECTACULAR_SETTINGS = {
     'SORT_OPERATION_PARAMETERS': True,
     # Tags configuration
     'TAGS': [
+        # 认证与用户
         {'name': '认证', 'description': '用户登录、登出、角色切换'},
         {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
-        {'name': '知识文档', 'description': '知识库管理、分类管理'},
-        {'name': '题库', 'description': '题目管理、批量导入'},
-        {'name': '试卷', 'description': '试卷管理、题目关联'},
-        {'name': '任务', 'description': '学习/练习/考试任务管理'},
-        {'name': '答题', 'description': '答题提交、答案保存'},
-        {'name': '评分', 'description': '待评分列表、主观题评分'},
-        {'name': '抽查', 'description': '抽查记录管理'},
-        {'name': '统计分析', 'description': '仪表盘、数据看板'},
+        # 内容管理
+        {'name': '知识管理', 'description': '知识库管理、分类管理'},
+        {'name': '题库管理', 'description': '题目管理、批量导入'},
+        {'name': '试卷管理', 'description': '试卷管理、题目关联'},
+        # 任务管理
+        {'name': '任务管理', 'description': '学习/练习/考试任务创建与管理'},
+        {'name': '学员任务执行', 'description': '学员查看和执行分配的任务'},
+        # 答题与评分
+        {'name': '练习答题', 'description': '练习任务答题提交'},
+        {'name': '考试答题', 'description': '考试任务答题提交'},
+        {'name': '评分管理', 'description': '待评分列表、主观题评分'},
+        # 抽查
+        {'name': '抽查管理', 'description': '线下抽查记录管理'},
+        # 学员端
+        {'name': '学员仪表盘', 'description': '学员首页待办任务和最新知识'},
+        {'name': '学员知识中心', 'description': '学员浏览知识文档'},
+        {'name': '学员任务中心', 'description': '学员任务列表和筛选'},
+        {'name': '学员个人中心', 'description': '个人信息、历史成绩、错题本'},
+        # 管理端
+        {'name': '导师/室经理仪表盘', 'description': '导师和室经理的统计数据'},
+        {'name': '团队经理数据看板', 'description': '团队经理只读数据分析'},
+        # 通知
         {'name': '通知', 'description': '通知列表、已读标记'},
     ],
     # Security configuration

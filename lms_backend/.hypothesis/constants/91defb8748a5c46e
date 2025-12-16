@@ -1,0 +1,4 @@
+# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/tasks/views.py
+# hypothesis_version: 6.141.1
+
+[200, 201, 400, 403, 404, '-created_at', '-task__created_at', '1', 'ADMIN', 'COMPLETED', 'DEPT_MANAGER', 'LEARNING', 'MENTOR', 'OVERDUE', 'created_by', 'is_closed', 'is_completed', 'knowledge_id', 'knowledge_progress', 'request', 'status', 'task', 'task__created_by', 'task__task_knowledge', 'task_completed', 'task_id', 'task_knowledge_id', 'task_quizzes__quiz', 'task_status', 'task_type', 'true', 'yes', '任务不存在', '任务不存在或未分配给您', '任务已完成', '任务已经结束', '任务已逾期，无法继续学习', '任务或知识不存在', '任务管理', '创建学习任务', '创建练习任务', '创建考试任务', '参数错误', '参数错误或学员超出权限范围', '只有管理员可以强制结束任务', '学员任务执行', '完成知识学习', '强制结束任务', '无权访问此任务', '无权限', '是否已结束', '此接口仅支持学习任务', '获取任务列表', '获取任务详情', '获取学习任务详情', '获取我的任务列表', '获取指定任务的详细信息', '该知识已标记为已学习', '该知识文档不在此任务中']

@@ -261,6 +261,7 @@ class BatchGradeView(APIView):
     - 13.4: 所有主观题评分完成时计算最终成绩并将考试状态设为"已完成"
     """
     permission_classes = [IsAuthenticated, IsMentorOrDeptManager]
+    serializer_class = GradingDetailSerializer
     
     def get_submission(self, pk, user):
         """Get submission and verify access permission."""

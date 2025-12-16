@@ -10,7 +10,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, inline_serializer
+from rest_framework import serializers as drf_serializers
 
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
@@ -427,6 +428,11 @@ class KnowledgeDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ViewCountResponseSerializer(drf_serializers.Serializer):
+    """Serializer for view count response."""
+    view_count = drf_serializers.IntegerField()
+
+
 class KnowledgeIncrementViewCountView(APIView):
     """
     Increment knowledge view count endpoint.
@@ -434,12 +440,13 @@ class KnowledgeIncrementViewCountView(APIView):
     Used when a user views a knowledge document.
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = ViewCountResponseSerializer
     
     @extend_schema(
         summary='增加知识阅读次数',
         description='记录知识文档被阅读',
         responses={
-            200: OpenApiResponse(description='阅读次数已更新'),
+            200: ViewCountResponseSerializer,
             404: OpenApiResponse(description='知识文档不存在'),
         },
         tags=['知识管理']

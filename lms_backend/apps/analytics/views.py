@@ -51,6 +51,16 @@ class StudentDashboardView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    @extend_schema(
+        summary='获取学员仪表盘数据',
+        description='获取学员仪表盘数据，包括待办任务、最新知识和任务统计',
+        parameters=[
+            OpenApiParameter(name='pending_limit', type=int, description='待办任务数量限制（默认10）'),
+            OpenApiParameter(name='knowledge_limit', type=int, description='最新知识数量限制（默认5）'),
+        ],
+        responses={200: StudentDashboardSerializer},
+        tags=['学员仪表盘']
+    )
     def get(self, request):
         """
         Get student dashboard data.

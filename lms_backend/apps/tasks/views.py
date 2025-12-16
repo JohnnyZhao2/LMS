@@ -336,6 +336,7 @@ class TaskCloseView(APIView):
     - 20.3: 管理员强制结束任务时将任务状态设为已结束
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = TaskDetailSerializer
     
     def get_object(self, pk):
         """Get task by ID."""

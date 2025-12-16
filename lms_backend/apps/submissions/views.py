@@ -157,6 +157,7 @@ class SubmitPracticeView(APIView):
     - Property 30: 客观题自动评分
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = PracticeResultSerializer
     
     def get_submission(self, pk, user):
         """Get submission and verify ownership."""

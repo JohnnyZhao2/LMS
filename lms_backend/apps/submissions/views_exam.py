@@ -96,6 +96,7 @@ class SubmitExamView(APIView):
     - Property 32: 纯客观题直接完成
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = SubmissionDetailSerializer
     
     def get_submission(self, pk, user):
         """Get submission and verify ownership."""
