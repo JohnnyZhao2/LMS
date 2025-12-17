@@ -9,8 +9,9 @@ import { useMemo } from 'react';
 import { LearningTaskDetail } from './components/LearningTaskDetail';
 import { Spinner } from '@/components/ui/Spinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useTaskAssignmentDetail, useCompleteKnowledgeLearning } from './api/tasks';
-import type { TaskAssignmentDetail } from './api/tasks';
+import { useTaskAssignmentDetail } from './api/get-task-assignment-detail';
+import { useCompleteKnowledgeLearning } from './api/complete-knowledge-learning';
+import type { TaskAssignmentDetail } from './api/types';
 import type { TaskType, TaskAssignmentStatus, Knowledge, KnowledgeLearningProgress, KnowledgeType } from '@/types/domain';
 
 // ============================================

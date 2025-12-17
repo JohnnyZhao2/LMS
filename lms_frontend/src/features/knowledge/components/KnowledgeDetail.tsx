@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useKnowledgeDetail } from '../api/knowledge';
+import { useKnowledgeDetail } from '../api/get-knowledge-detail';
 import type { Knowledge, EmergencyContent } from '@/types/domain';
 import { 
   ArrowLeft, 

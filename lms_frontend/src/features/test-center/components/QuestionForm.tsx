@@ -11,12 +11,9 @@ import type { SelectOption } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { 
-  useCreateQuestion, 
-  useUpdateQuestion,
-  type QuestionCreateRequest,
-  type QuestionUpdateRequest,
-} from '../api/questions';
+import { useCreateQuestion } from '../api/questions/create-question';
+import { useUpdateQuestion } from '../api/questions/update-question';
+import type { QuestionCreateRequest, QuestionUpdateRequest } from '../api/questions/types';
 import type { Question, QuestionType } from '@/types/domain';
 import { Plus, Trash2, Circle, ListChecks, ToggleLeft, FileText } from 'lucide-react';
 

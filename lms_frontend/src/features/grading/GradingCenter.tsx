@@ -8,7 +8,7 @@
 import * as React from 'react';
 import { PendingList } from './components/PendingList';
 import { GradingDetail } from './components/GradingDetail';
-import type { PendingGradingItem } from './api/grading';
+import type { PendingGradingItem } from './api/types';
 import { FileCheck } from 'lucide-react';
 
 export const GradingCenter: React.FC = () => {

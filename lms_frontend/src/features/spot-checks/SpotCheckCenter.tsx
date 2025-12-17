@@ -8,7 +8,7 @@ import * as React from 'react';
 import { SpotCheckList } from './components/SpotCheckList';
 import { SpotCheckForm } from './components/SpotCheckForm';
 import { Button } from '@/components/ui/Button';
-import type { SpotCheckListItem } from './api/spot-checks';
+import type { SpotCheckListItem } from './api/types';
 import { ClipboardCheck, Plus } from 'lucide-react';
 
 export const SpotCheckCenter: React.FC = () => {

@@ -13,11 +13,9 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useGradingDetail,
-  useSubmitGrading,
-  type GradeAnswerRequest,
-} from '../api/grading';
+import { useGradingDetail } from '../api/get-grading-detail';
+import { useSubmitGrading } from '../api/submit-grading';
+import type { GradeAnswerRequest } from '../api/types';
 import type { Answer, QuestionType } from '@/types/domain';
 import { 
   User,

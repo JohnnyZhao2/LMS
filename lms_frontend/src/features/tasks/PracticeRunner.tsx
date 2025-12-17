@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ArrowLeft, ArrowRight, RotateCcw, Award, CheckCircle2, Circle, XCircle, ListChecks } from "lucide-react";
-import { useStartPracticeQuiz } from "./api/tasks";
+import { useStartPracticeQuiz } from "./api/start-practice-quiz";
 import type { QuizQuestion, Question, Submission } from "@/types/domain";
 import { cn } from "@/utils/cn";
 

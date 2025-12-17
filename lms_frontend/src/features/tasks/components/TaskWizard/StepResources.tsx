@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { BookOpen, FileQuestion, Search, Check, X } from 'lucide-react';
-import { useAvailableKnowledge, useAvailableQuizzes } from '../../api/task-management';
+import { useAvailableKnowledge, useAvailableQuizzes } from '../../api/management/get-available-resources';
 import type { TaskType, Knowledge, Quiz } from '@/types/domain';
 
 export interface ResourcesData {

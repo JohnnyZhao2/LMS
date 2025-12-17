@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Users, Search, Check, X, UserCheck } from 'lucide-react';
-import { useAssignableStudents, type AssignableStudent } from '../../api/task-management';
+import { useAssignableStudents } from '../../api/management/get-assignable-students';
+import type { AssignableStudent } from '../../api/management/types';
 import { useCurrentRole } from '@/stores/auth';
 
 export interface AssigneesData {

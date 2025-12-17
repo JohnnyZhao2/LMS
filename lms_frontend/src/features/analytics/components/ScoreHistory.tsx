@@ -20,8 +20,8 @@ import {
   Target,
   Calendar
 } from 'lucide-react';
-import type { ScoreRecord, ScoreHistoryParams } from '../api/personal';
-import { exportScoreHistory } from '../api/personal';
+import type { ScoreRecord, ScoreHistoryParams } from '../api/types';
+import { exportScoreHistory } from '../api/export-score-history';
 
 interface ScoreHistoryProps {
   records: ScoreRecord[];

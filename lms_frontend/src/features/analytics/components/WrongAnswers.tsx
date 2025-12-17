@@ -17,7 +17,7 @@ import {
   BookOpen,
   Calendar
 } from 'lucide-react';
-import type { WrongAnswerRecord, WrongAnswersParams } from '../api/personal';
+import type { WrongAnswerRecord, WrongAnswersParams } from '../api/types';
 import type { QuestionType } from '@/types/domain';
 
 interface WrongAnswersProps {

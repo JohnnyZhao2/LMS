@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TaskList } from './components/TaskList';
 import { CheckSquare } from 'lucide-react';
-import { useTaskAssignments } from './api/tasks';
+import { useTaskAssignments } from './api/get-task-assignments';
 import type { TaskAssignment, TaskType, TaskAssignmentStatus } from '@/types/domain';
 
 // ============================================

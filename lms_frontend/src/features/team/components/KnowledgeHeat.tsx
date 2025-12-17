@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useKnowledgeHeat, type KnowledgeHeatItem } from "../api/team";
+import { useKnowledgeHeat } from "../api/get-knowledge-heat";
+import type { KnowledgeHeatItem } from "../api/types";
 import { Flame, Eye, CheckCircle2, BookOpen, TrendingUp } from "lucide-react";
 
 /**

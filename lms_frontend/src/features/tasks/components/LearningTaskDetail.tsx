@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { KnowledgeLearningProgress } from '@/types/domain';
-import type { TaskAssignmentDetail } from '../api/tasks';
+import type { TaskAssignmentDetail } from '../api/types';
 
 // ============================================
 // Types

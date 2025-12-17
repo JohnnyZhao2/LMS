@@ -12,12 +12,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useQuizzes, 
-  useDeleteQuiz,
-  canEditQuiz,
-  type QuizListParams,
-} from '../api/quizzes';
+import { useQuizzes } from '../api/quizzes/get-quizzes';
+import { useDeleteQuiz } from '../api/quizzes/delete-quiz';
+import { canEditQuiz } from '../api/quizzes/utils';
+import type { QuizListParams } from '../api/quizzes/types';
 import { useAuthStore } from '@/stores/auth';
 import type { Quiz } from '@/types/domain';
 import { 

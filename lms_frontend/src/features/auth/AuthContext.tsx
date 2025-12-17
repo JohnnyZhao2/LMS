@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useAuthStore } from '@/stores/auth';
-import { authApi } from './api/auth';
+import { logout as logoutApi } from './api/logout';
 import { tokenStorage } from '@/lib/api';
 import type { User, Role, RoleCode } from '@/types/domain';
 import type { LoginRequest } from '@/types/api';
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = tokenStorage.getRefreshToken();
       if (refreshToken) {
         // Try to invalidate tokens on server
-        await authApi.logout({ refresh_token: refreshToken });
+        await logoutApi({ refresh_token: refreshToken });
       }
     } catch {
       // Ignore logout API errors - we'll clear local state anyway

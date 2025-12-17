@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Table, type TableColumn } from '@/components/ui/Table';
 import { CategoryFilterPills, type CategoryFilterValue } from './components/CategoryFilter';
 import { KnowledgeForm } from './components/KnowledgeForm';
-import { useAdminKnowledgeList, useDeleteKnowledge } from './api/knowledge';
+import { useAdminKnowledgeList } from './api/get-admin-knowledge-list';
+import { useDeleteKnowledge } from './api/delete-knowledge';
 import type { Knowledge } from '@/types/domain';
 import type { KnowledgeFilterParams } from '@/types/api';
 import { 
