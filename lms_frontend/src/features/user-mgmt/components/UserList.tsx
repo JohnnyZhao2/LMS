@@ -24,15 +24,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ROLE_NAMES, type RoleCode } from '@/config/roles';
-import { 
-  useUserList, 
-  useDeactivateUser, 
-  useActivateUser, 
-  useResetPassword,
-  useAssignRoles,
-  type UserListItem,
-  type UserListParams,
-} from '../api/users';
+import { useUserList } from '../api/users/get-user-list';
+import { useDeactivateUser, useActivateUser } from '../api/users/toggle-user-status';
+import { useResetPassword } from '../api/users/reset-password';
+import { useAssignRoles } from '../api/users/assign-roles';
+import type { UserListItem, UserListParams } from '../api/users/types';
 import { RoleSelector } from './RoleSelector';
 
 export interface Department {

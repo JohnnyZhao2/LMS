@@ -25,7 +25,9 @@ import {
   StopCircle,
   Eye
 } from 'lucide-react';
-import { useTaskList, useForceCloseTask, type TaskListParams, type TaskListItem } from './api/task-management';
+import { useTaskList } from './api/management/get-task-list';
+import { useForceCloseTask } from './api/management/force-close-task';
+import type { TaskListParams, TaskListItem } from './api/management/types';
 import { TaskWizard } from './components/TaskWizard';
 import { useCurrentRole } from '@/stores/auth';
 import type { TaskType } from '@/types/domain';

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import type { Question, TaskType } from '@/types/domain';
 import { FileText, BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
-import { getQuestionTypeLabel } from '../api/questions';
+import { getQuestionTypeLabel } from '../api/questions/utils';
 
 export interface QuickPublishProps {
   /** Whether the modal is open */

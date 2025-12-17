@@ -25,14 +25,11 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useDepartments, 
-  useDepartmentMembersById,
-  useUpdateUserDepartment,
-  useSetDepartmentManager,
-  type Department,
-  type DepartmentMember
-} from '../api/organization';
+import { useDepartments } from '../api/organization/get-departments';
+import { useDepartmentMembersById } from '../api/organization/get-department-members';
+import { useUpdateUserDepartment } from '../api/organization/update-user-department';
+import { useSetDepartmentManager } from '../api/organization/set-department-manager';
+import type { Department, DepartmentMember } from '../api/organization/types';
 
 interface DepartmentTreeProps {
   className?: string;

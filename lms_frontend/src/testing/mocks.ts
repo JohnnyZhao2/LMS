@@ -251,7 +251,7 @@ import type {
   ScoreRecord,
   WrongAnswerRecord,
   PersonalCenterData,
-} from '@/features/analytics/api/personal';
+} from '@/features/analytics/api/types';
 
 export const MOCK_PERSONAL_PROFILE: PersonalProfile = {
   id: 2,

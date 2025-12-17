@@ -33,21 +33,22 @@ import { QuizManagement } from '@/features/test-center/QuizManagement';
 import { TaskManagement } from '@/features/tasks/TaskManagement';
 
 // Admin pages
-import { UserDirectory, OrganizationView, MentorshipView } from '@/features/user-mgmt';
+import { UserDirectory } from '@/features/user-mgmt/UserDirectory';
+import { OrganizationView } from '@/features/user-mgmt/OrganizationView';
+import { MentorshipView } from '@/features/user-mgmt/MentorshipView';
 
 // Team Manager pages
-import { TeamDashboard } from '@/features/team';
+import { TeamDashboard } from '@/features/team/components/TeamDashboard';
 
 // Analytics
-import { AnalyticsDashboard, PersonalCenter } from '@/features/analytics/components';
-import { ReportsView } from '@/features/reports/components/ReportsView';
-import { OperationsView } from '@/features/ops/components/OperationsView';
+import { AnalyticsDashboard } from '@/features/analytics/components/AnalyticsDashboard';
+import { PersonalCenter } from '@/features/analytics/components/PersonalCenter';
 
 // Grading
-import { GradingCenter } from '@/features/grading';
+import { GradingCenter } from '@/features/grading/GradingCenter';
 
 // Spot Checks
-import { SpotCheckCenter } from '@/features/spot-checks';
+import { SpotCheckCenter } from '@/features/spot-checks/SpotCheckCenter';
 
 // 403 Forbidden page
 function ForbiddenPage() {
@@ -303,10 +304,10 @@ export function AppRoutes() {
           }
         />
 
-        {/* Legacy routes for compatibility */}
+        {/* Legacy routes - redirect to new paths */}
         <Route path="team" element={<Navigate to="/team-dashboard" replace />} />
-        <Route path="reports" element={<ReportsView />} />
-        <Route path="ops" element={<OperationsView />} />
+        <Route path="reports" element={<Navigate to="/grading" replace />} />
+        <Route path="ops" element={<Navigate to="/spot-checks" replace />} />
         <Route path="analytics" element={<AnalyticsDashboard />} />
 
         {/* Error pages */}

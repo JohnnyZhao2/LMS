@@ -13,14 +13,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useQuestions, 
-  useDeleteQuestion,
-  canEditQuestion,
-  getQuestionTypeLabel,
-  getQuestionTypeBadgeVariant,
-  type QuestionListParams,
-} from '../api/questions';
+import { useQuestions } from '../api/questions/get-questions';
+import { useDeleteQuestion } from '../api/questions/delete-question';
+import { canEditQuestion, getQuestionTypeLabel, getQuestionTypeBadgeVariant } from '../api/questions/utils';
+import type { QuestionListParams } from '../api/questions/types';
 import { useAuthStore } from '@/stores/auth';
 import type { Question, QuestionType } from '@/types/domain';
 import { 

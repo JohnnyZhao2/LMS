@@ -23,7 +23,7 @@ import {
   GraduationCap,
   ClipboardCheck,
 } from "lucide-react";
-import { useMentorDashboard } from "./api/dashboard";
+import { useMentorDashboard } from "./api/get-mentor-dashboard";
 
 /**
  * Format date for display

@@ -20,7 +20,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ArrowLeft, ArrowRight, Clock, ListChecks, AlertTriangle, Send, Circle } from "lucide-react";
-import { useStartExam, useSubmitExamAnswers } from "./api/tasks";
+import { useStartExam } from "./api/start-exam";
+import { useSubmitExamAnswers } from "./api/submit-exam-answers";
 import type { QuizQuestion, Question, Submission } from "@/types/domain";
 import { cn } from "@/utils/cn";
 

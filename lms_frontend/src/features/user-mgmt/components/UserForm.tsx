@@ -11,7 +11,9 @@ import { Input } from '@/components/ui/Input';
 import { Select, type SelectOption } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { FormGrid, FormField } from '@/components/ui/FormLayout';
-import { useCreateUser, useUpdateUser, type UserCreateRequest, type UserUpdateRequest, type UserListItem } from '../api/users';
+import { useCreateUser } from '../api/users/create-user';
+import { useUpdateUser } from '../api/users/update-user';
+import type { UserCreateRequest, UserUpdateRequest, UserListItem } from '../api/users/types';
 
 export interface Department {
   id: number;

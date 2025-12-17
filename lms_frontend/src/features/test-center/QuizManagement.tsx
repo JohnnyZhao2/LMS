@@ -8,7 +8,8 @@ import * as React from 'react';
 import { QuizList } from './components/QuizList';
 import { QuizBuilder, type QuizFormData } from './components/QuizBuilder';
 import { QuizQuickPublish } from './components/QuizQuickPublish';
-import { useCreateQuiz, useUpdateQuiz } from './api/quizzes';
+import { useCreateQuiz } from './api/quizzes/create-quiz';
+import { useUpdateQuiz } from './api/quizzes/update-quiz';
 import type { Quiz } from '@/types/domain';
 
 export function QuizManagement() {

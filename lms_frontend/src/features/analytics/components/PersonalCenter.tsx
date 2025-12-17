@@ -9,13 +9,10 @@ import { User } from 'lucide-react';
 import { PersonalProfile } from './PersonalProfile';
 import { ScoreHistory } from './ScoreHistory';
 import { WrongAnswers } from './WrongAnswers';
-import {
-  usePersonalProfile,
-  useScoreHistory,
-  useWrongAnswers,
-  type ScoreHistoryParams,
-  type WrongAnswersParams,
-} from '../api/personal';
+import { usePersonalProfile } from '../api/get-personal-profile';
+import { useScoreHistory } from '../api/get-score-history';
+import { useWrongAnswers } from '../api/get-wrong-answers';
+import type { ScoreHistoryParams, WrongAnswersParams } from '../api/types';
 import { ErrorState } from '@/components/ui/ErrorState';
 
 /**

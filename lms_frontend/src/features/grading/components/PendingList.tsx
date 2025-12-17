@@ -11,11 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  usePendingGradingList,
-  type PendingGradingItem,
-  type GradingFilterParams,
-} from '../api/grading';
+import { usePendingGradingList } from '../api/get-pending-grading-list';
+import type { PendingGradingItem, GradingFilterParams } from '../api/types';
 import { 
   Search, 
   FileCheck,

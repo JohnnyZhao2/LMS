@@ -6,7 +6,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { User, Building2, Users, BadgeCheck, Calendar } from 'lucide-react';
-import type { PersonalProfile as PersonalProfileType } from '../api/personal';
+import type { PersonalProfile as PersonalProfileType } from '../api/types';
 
 interface PersonalProfileProps {
   profile: PersonalProfileType;

@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useTeamOverview, type DepartmentStats } from "../api/team";
+import { useTeamOverview } from "../api/get-team-overview";
+import type { DepartmentStats } from "../api/types";
 import { BarChart3, TrendingUp, Users, Target } from "lucide-react";
 
 /**

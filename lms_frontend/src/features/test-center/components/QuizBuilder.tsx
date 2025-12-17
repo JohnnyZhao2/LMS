@@ -13,12 +13,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { QuestionPicker } from './QuestionPicker';
 import { QuestionForm } from './QuestionForm';
-import { 
-  getQuestionTypeLabel,
-  getQuestionTypeBadgeVariant,
-} from '../api/questions';
+import { getQuestionTypeLabel, getQuestionTypeBadgeVariant } from '../api/questions/utils';
 import type { Question, Quiz } from '@/types/domain';
-import type { QuizQuestionInput } from '../api/quizzes';
+import type { QuizQuestionInput } from '../api/quizzes/types';
 import { 
   Plus, 
   Trash2, 

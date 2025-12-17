@@ -9,8 +9,8 @@ import { useMemo } from 'react';
 import { ExamTaskDetail } from './components/ExamTaskDetail';
 import { Spinner } from '@/components/ui/Spinner';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { useTaskAssignmentDetail } from './api/tasks';
-import type { TaskAssignmentDetail } from './api/tasks';
+import { useTaskAssignmentDetail } from './api/get-task-assignment-detail';
+import type { TaskAssignmentDetail } from './api/types';
 import type { TaskType, TaskAssignmentStatus, Quiz, QuizProgress } from '@/types/domain';
 
 // ============================================

@@ -5,8 +5,9 @@
  */
 
 import * as React from 'react';
-import { UserList, UserForm } from './components';
-import type { UserListItem } from './api/users';
+import { UserList } from './components/UserList';
+import { UserForm } from './components/UserForm';
+import type { UserListItem } from './api/users/types';
 
 // Mock departments - in real app, this would come from an API
 const MOCK_DEPARTMENTS = [

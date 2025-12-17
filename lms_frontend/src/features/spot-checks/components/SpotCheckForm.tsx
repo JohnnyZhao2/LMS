@@ -14,8 +14,10 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useMentees, useDepartmentMembers } from '@/features/user-mgmt/api/users';
-import { useCreateSpotCheck, type CreateSpotCheckRequest } from '../api/spot-checks';
+import { useMentees } from '@/features/user-mgmt/api/users/get-mentees';
+import { useDepartmentMembers } from '@/features/user-mgmt/api/users/get-department-members';
+import { useCreateSpotCheck } from '../api/create-spot-check';
+import type { CreateSpotCheckRequest } from '../api/types';
 import { ROLE_CODES } from '@/config/roles';
 import { ClipboardCheck, User, FileText, Star, MessageSquare, AlertCircle } from 'lucide-react';
 

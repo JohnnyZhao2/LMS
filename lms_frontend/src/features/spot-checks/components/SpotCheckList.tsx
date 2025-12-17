@@ -11,11 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useSpotCheckList,
-  type SpotCheckListItem,
-  type SpotCheckFilterParams,
-} from '../api/spot-checks';
+import { useSpotCheckList } from '../api/get-spot-check-list';
+import type { SpotCheckListItem, SpotCheckFilterParams } from '../api/types';
 import { 
   Search, 
   ClipboardList,

@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { CategoryFilterPills, type CategoryFilterValue } from './CategoryFilter';
 import { KnowledgeCard } from './KnowledgeCard';
-import { useKnowledgeList } from '../api/knowledge';
+import { useKnowledgeList } from '../api/get-knowledge-list';
 import type { KnowledgeFilterParams } from '@/types/api';
 import { Search, Filter, Grid, List, RefreshCw } from 'lucide-react';
 

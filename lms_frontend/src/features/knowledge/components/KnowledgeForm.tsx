@@ -13,13 +13,10 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { FormGrid, FormField } from '@/components/ui/FormLayout';
-import { 
-  useCreateKnowledge, 
-  useUpdateKnowledge, 
-  useKnowledgeCategories,
-  type KnowledgeCreateRequest, 
-  type KnowledgeUpdateRequest 
-} from '../api/knowledge';
+import { useCreateKnowledge } from '../api/create-knowledge';
+import { useUpdateKnowledge } from '../api/update-knowledge';
+import { useKnowledgeCategories } from '../api/get-knowledge-categories';
+import type { KnowledgeCreateRequest, KnowledgeUpdateRequest } from '../api/types';
 import type { Knowledge, KnowledgeType, EmergencyContent } from '@/types/domain';
 import { AlertTriangle, BookOpen, X, Plus } from 'lucide-react';
 

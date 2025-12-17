@@ -12,7 +12,8 @@ import { ArrowRight, ArrowLeft, Check, Save } from 'lucide-react';
 import { StepBasicInfo, type BasicInfoData } from './StepBasicInfo';
 import { StepResources, type ResourcesData } from './StepResources';
 import { StepAssignees, type AssigneesData } from './StepAssignees';
-import { useCreateTask, type TaskCreateRequest } from '../../api/task-management';
+import { useCreateTask } from '../../api/management/create-task';
+import type { TaskCreateRequest } from '../../api/management/types';
 import type { TaskType } from '@/types/domain';
 
 type WizardStep = 'BASIC' | 'RESOURCES' | 'ASSIGNEES' | 'REVIEW';

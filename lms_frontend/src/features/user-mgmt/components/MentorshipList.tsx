@@ -26,16 +26,12 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { 
-  useMentors, 
-  useMentorMentees,
-  useStudentsWithoutMentor,
-  useAssignMentorToStudent,
-  useRemoveMentorFromStudent,
-  type MentorWithMentees,
-  type Mentee,
-  type StudentWithoutMentor
-} from '../api/mentorship';
+import { useMentors } from '../api/mentorship/get-mentors';
+import { useMentorMentees } from '../api/mentorship/get-mentor-mentees';
+import { useStudentsWithoutMentor } from '../api/mentorship/get-students-without-mentor';
+import { useAssignMentorToStudent } from '../api/mentorship/assign-mentor';
+import { useRemoveMentorFromStudent } from '../api/mentorship/remove-mentor';
+import type { MentorWithMentees, Mentee, StudentWithoutMentor } from '../api/mentorship/types';
 
 interface MentorshipListProps {
   className?: string;
