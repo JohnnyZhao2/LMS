@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/utils/cn"
 
-export type CardVariant = 'default' | 'glass' | 'bland'
+export type CardVariant = 'default' | 'glass' | 'bland' | 'gradient'
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
     /** Card style variant */
@@ -13,9 +13,10 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles: Record<CardVariant, string> = {
-    default: "bg-card text-card-foreground border border-border shadow-lg",
+    default: "bg-card text-card-foreground border border-white/10 shadow-lg",
     glass: "glass-panel text-card-foreground backdrop-blur-sm bg-white/5",
-    bland: "bg-transparent border-none shadow-none"
+    bland: "bg-transparent border-none shadow-none",
+    gradient: "bg-gradient-to-br from-card to-background-secondary border border-white/10 shadow-lg relative overflow-hidden"
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -26,15 +27,16 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
                 role={clickable ? "button" : undefined}
                 tabIndex={clickable ? 0 : undefined}
                 className={cn(
-                    "rounded-xl transition-all duration-200",
+                    "rounded-xl transition-all duration-300",
                     variantStyles[variant],
-                    hoverable && "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]",
+                    hoverable && "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)] hover:-translate-y-1",
                     clickable && [
                         "cursor-pointer",
-                        "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]",
+                        "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)] hover:-translate-y-1",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         "active:scale-[0.99]"
                     ],
+                    variant === 'gradient' && "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity",
                     className
                 )}
                 {...props}
@@ -50,7 +52,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <div
         ref={ref}
-        className={cn("flex flex-col space-y-1.5 p-6", className)}
+        className={cn("flex flex-col space-y-1.5 p-6 relative z-10", className)}
         {...props}
     />
 ))
@@ -87,7 +89,7 @@ const CardContent = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+    <div ref={ref} className={cn("p-6 pt-0 relative z-10", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -97,7 +99,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <div
         ref={ref}
-        className={cn("flex items-center p-6 pt-0", className)}
+        className={cn("flex items-center p-6 pt-0 relative z-10", className)}
         {...props}
     />
 ))

@@ -2,7 +2,7 @@ import * as React from "react"
 import { cn } from "@/utils/cn"
 import { Loader2 } from "lucide-react"
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'glow'
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 export interface ButtonProps
@@ -18,11 +18,12 @@ export interface ButtonProps
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-    primary: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_0_15px_rgba(0,229,255,0.3)] border border-transparent",
-    secondary: "bg-secondary text-secondary-foreground hover:bg-background-tertiary border border-border",
-    danger: "bg-destructive text-destructive-foreground hover:bg-red-600 border border-transparent",
+    primary: "bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_0_15px_rgba(0,229,255,0.3)] hover:shadow-[0_0_25px_rgba(0,229,255,0.5)] border border-transparent",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-background-tertiary border border-white/10 hover:border-white/20",
+    danger: "bg-destructive text-destructive-foreground hover:bg-red-600 border border-transparent shadow-[0_0_15px_rgba(248,113,113,0.3)]",
     ghost: "bg-transparent text-text-secondary hover:text-text-primary hover:bg-white/5 border border-transparent",
-    outline: "bg-transparent border border-primary text-primary hover:bg-primary/10",
+    outline: "bg-transparent border border-primary text-primary hover:bg-primary/10 shadow-[0_0_10px_rgba(0,229,255,0.1)]",
+    glow: "bg-background text-primary border border-primary shadow-[0_0_20px_rgba(0,229,255,0.5)] hover:shadow-[0_0_30px_rgba(0,229,255,0.7)] hover:bg-primary/5"
 }
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -49,7 +50,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         return (
             <button
                 className={cn(
-                    "inline-flex items-center justify-center rounded-md font-medium transition-all",
+                    "inline-flex items-center justify-center rounded-md font-medium transition-all duration-200",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     "disabled:pointer-events-none disabled:opacity-50",
                     "active:scale-[0.98]",
