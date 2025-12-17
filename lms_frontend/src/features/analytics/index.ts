@@ -1,26 +1,10 @@
 /**
  * Analytics feature exports
+ * 
+ * Note: API functions should be imported directly from specific files, e.g.:
+ * import { usePersonalProfile } from '@/features/analytics/api/get-personal-profile';
+ * import type { PersonalProfile } from '@/features/analytics/api/types';
  */
-
-// API exports
-export {
-  personalKeys,
-  fetchPersonalProfile,
-  fetchScoreHistory,
-  fetchWrongAnswers,
-  exportScoreHistory,
-  usePersonalProfile,
-  useScoreHistory,
-  useWrongAnswers,
-  type PersonalProfile,
-  type ScoreRecord,
-  type ScoreHistoryResponse,
-  type WrongAnswerRecord,
-  type WrongAnswersResponse,
-  type PersonalCenterData,
-  type ScoreHistoryParams,
-  type WrongAnswersParams,
-} from './api';
 
 // Component exports
 export {
