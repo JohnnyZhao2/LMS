@@ -110,7 +110,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                             return (
                                 <span 
                                     key={val}
-                                    className="inline-flex items-center gap-1 bg-primary/20 text-primary text-xs px-2 py-0.5 rounded border border-primary/20"
+                                    className="inline-flex items-center gap-1 bg-primary/20 text-primary text-xs px-2 py-0.5 rounded"
                                 >
                                     {option?.label || val}
                                     <X 
@@ -148,13 +148,12 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                         aria-describedby={error ? errorId : undefined}
                         tabIndex={disabled ? -1 : 0}
                         className={cn(
-                            "flex min-h-10 w-full items-center justify-between rounded-md border bg-background-secondary/50 px-3 py-2 text-sm",
-                            "ring-offset-background transition-all duration-200 cursor-pointer",
+                            "flex min-h-10 w-full items-center justify-between rounded-md border bg-background-secondary px-3 py-2 text-sm",
+                            "ring-offset-background transition-colors cursor-pointer",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            "hover:bg-background-secondary hover:border-primary/30",
                             disabled && "cursor-not-allowed opacity-50",
-                            error ? "border-destructive" : "border-white/10",
-                            isOpen && "ring-2 ring-ring ring-offset-2 bg-background-secondary border-primary/50"
+                            error ? "border-destructive" : "border-input",
+                            isOpen && "ring-2 ring-ring ring-offset-2"
                         )}
                         onClick={() => !disabled && setIsOpen(!isOpen)}
                         onKeyDown={handleKeyDown}
@@ -163,8 +162,8 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                             {getDisplayValue()}
                         </div>
                         <ChevronDown className={cn(
-                            "h-4 w-4 text-text-muted transition-transform duration-200",
-                            isOpen && "rotate-180 text-primary"
+                            "h-4 w-4 text-text-muted transition-transform",
+                            isOpen && "rotate-180"
                         )} />
                     </div>
 
@@ -172,7 +171,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                         <div 
                             role="listbox"
                             aria-multiselectable={multiple}
-                            className="absolute z-50 mt-1 w-full rounded-md border border-white/10 bg-background-secondary shadow-xl max-h-60 overflow-auto animate-scale-in origin-top"
+                            className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background-secondary shadow-lg max-h-60 overflow-auto"
                         >
                             {options.length === 0 ? (
                                 <div className="px-3 py-2 text-sm text-text-muted">
@@ -188,7 +187,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                                             aria-selected={isSelected}
                                             aria-disabled={option.disabled}
                                             className={cn(
-                                                "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors duration-150",
+                                                "flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors",
                                                 "hover:bg-white/5",
                                                 isSelected && "bg-primary/10 text-primary",
                                                 option.disabled && "cursor-not-allowed opacity-50"
@@ -197,8 +196,8 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                                         >
                                             {multiple && (
                                                 <div className={cn(
-                                                    "h-4 w-4 rounded border flex items-center justify-center transition-colors",
-                                                    isSelected ? "bg-primary border-primary" : "border-white/20"
+                                                    "h-4 w-4 rounded border flex items-center justify-center",
+                                                    isSelected ? "bg-primary border-primary" : "border-input"
                                                 )}>
                                                     {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
                                                 </div>
@@ -214,7 +213,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     )}
                 </div>
                 {error && (
-                    <p id={errorId} className="mt-1.5 text-xs text-destructive animate-fade-in-up">
+                    <p id={errorId} className="mt-1.5 text-xs text-destructive">
                         {error}
                     </p>
                 )}
