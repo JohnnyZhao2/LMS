@@ -13,8 +13,8 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles: Record<CardVariant, string> = {
-    default: "bg-card text-card-foreground border border-border shadow-lg",
-    glass: "glass-panel text-card-foreground backdrop-blur-sm bg-white/5",
+    default: "bg-background-secondary/40 backdrop-blur-md border border-white/5 shadow-xl supports-[backdrop-filter]:bg-background-secondary/20",
+    glass: "glass-panel bg-white/5 hover:bg-white/10 transition-colors",
     bland: "bg-transparent border-none shadow-none"
 }
 
@@ -26,14 +26,14 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
                 role={clickable ? "button" : undefined}
                 tabIndex={clickable ? 0 : undefined}
                 className={cn(
-                    "rounded-xl transition-all duration-200",
+                    "rounded-2xl transition-all duration-300",
                     variantStyles[variant],
-                    hoverable && "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]",
+                    hoverable && "hover:border-primary/30 hover:shadow-[0_0_30px_rgba(176,38,255,0.15)] hover:-translate-y-1",
                     clickable && [
                         "cursor-pointer",
-                        "hover:border-primary/50 hover:shadow-[0_0_20px_rgba(0,229,255,0.15)]",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                        "active:scale-[0.99]"
+                        "hover:border-primary/40 hover:shadow-[0_0_30px_rgba(176,38,255,0.2)] hover:-translate-y-1",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "active:scale-[0.98]"
                     ],
                     className
                 )}

@@ -40,54 +40,53 @@ interface MobileSidebarProps {
 
 // Desktop/Tablet Sidebar Component
 function DesktopSidebar({ className, collapsed, menuItems, isActive, toggleSidebar }: DesktopSidebarProps) {
-  const renderMenuItem = (item: MenuItem) => {
-    const Icon = item.icon;
-    const active = isActive(item.path);
-    
-    return (
-      <Link
-        key={item.key}
-        to={item.path}
-        className={cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
-          'hover:bg-white/5',
-          active
-            ? 'bg-primary/10 text-primary border-l-2 border-primary'
-            : 'text-text-secondary hover:text-text-primary',
-          collapsed && 'justify-center px-2'
-        )}
-        title={collapsed ? item.label : undefined}
-      >
-        <Icon size={20} className="flex-shrink-0" />
-        {!collapsed && (
-          <span className="font-medium truncate">{item.label}</span>
-        )}
-      </Link>
-    );
-  };
-
   return (
     <aside
       className={cn(
         'hidden md:flex flex-col fixed left-0 top-16 bottom-0 z-30',
-        'bg-background-secondary/80 backdrop-blur-md border-r border-white/5',
+        'bg-background/60 backdrop-blur-xl border-r border-white/10 supports-[backdrop-filter]:bg-background/40',
         'transition-all duration-300 ease-in-out',
-        collapsed ? 'w-16' : 'w-60',
+        collapsed ? 'w-16' : 'w-64',
         className
       )}
     >
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {menuItems.map(item => renderMenuItem(item))}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto custom-scrollbar">
+        {menuItems.map(item => {
+           const Icon = item.icon;
+           const active = isActive(item.path);
+           
+           return (
+             <Link
+               key={item.key}
+               to={item.path}
+               className={cn(
+                 'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative overflow-hidden',
+                 'hover:bg-white/5',
+                 active
+                   ? 'bg-primary/20 text-white shadow-[0_0_15px_rgba(176,38,255,0.2)]'
+                   : 'text-text-secondary hover:text-white',
+                 collapsed && 'justify-center px-2'
+               )}
+               title={collapsed ? item.label : undefined}
+             >
+               {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full shadow-[0_0_10px_#B026FF]" />}
+               <Icon size={20} className={cn("flex-shrink-0 transition-transform duration-300", active && "scale-110 text-primary")} />
+               {!collapsed && (
+                 <span className="font-medium truncate z-10">{item.label}</span>
+               )}
+             </Link>
+           );
+        })}
       </nav>
       
       {/* Collapse toggle button */}
-      <div className="p-3 border-t border-white/5">
+      <div className="p-3 border-t border-white/10">
         <button
           onClick={toggleSidebar}
           className={cn(
-            'flex items-center gap-2 w-full px-3 py-2 rounded-lg',
-            'text-text-muted hover:text-text-primary hover:bg-white/5',
+            'flex items-center gap-2 w-full px-3 py-2 rounded-xl',
+            'text-text-muted hover:text-white hover:bg-white/5',
             'transition-colors',
             collapsed && 'justify-center px-2'
           )}
@@ -126,7 +125,7 @@ function MobileSidebar({
       {/* Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setMobileSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -136,15 +135,15 @@ function MobileSidebar({
       <aside
         className={cn(
           'fixed left-0 top-0 bottom-0 z-50 w-72 md:hidden',
-          'bg-background-secondary border-r border-white/5',
+          'bg-background/90 backdrop-blur-2xl border-r border-white/10',
           'transform transition-transform duration-300 ease-in-out',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-white/5">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center font-bold text-black font-heading">
+            <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-black font-heading shadow-[0_0_15px_rgba(176,38,255,0.4)]">
               L
             </div>
             <span className="font-heading font-bold text-lg tracking-tight text-white">
@@ -153,7 +152,7 @@ function MobileSidebar({
           </div>
           <button
             onClick={() => setMobileSidebarOpen(false)}
-            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
+            className="p-2 rounded-lg text-text-muted hover:text-white hover:bg-white/5 transition-colors"
             aria-label="关闭菜单"
           >
             <X size={20} />
@@ -161,7 +160,7 @@ function MobileSidebar({
         </div>
         
         {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto flex-1">
+        <nav className="p-4 space-y-1 overflow-y-auto flex-1 custom-scrollbar">
           {menuItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -171,14 +170,15 @@ function MobileSidebar({
                 key={item.key}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                  'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors relative overflow-hidden',
                   active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                    ? 'bg-primary/20 text-white shadow-[0_0_15px_rgba(176,38,255,0.2)]'
+                    : 'text-text-secondary hover:text-white hover:bg-white/5'
                 )}
               >
-                <Icon size={20} />
-                <span className="font-medium">{item.label}</span>
+                {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full shadow-[0_0_10px_#B026FF]" />}
+                <Icon size={20} className={cn("transition-transform duration-300", active && "scale-110 text-primary")} />
+                <span className="font-medium z-10">{item.label}</span>
               </Link>
             );
           })}
@@ -186,7 +186,7 @@ function MobileSidebar({
         
         {/* Role switcher (mobile) */}
         {canSwitchRoles && currentRole && (
-          <div className="px-4 py-3 border-t border-white/5">
+          <div className="px-4 py-3 border-t border-white/10">
             <div className="text-xs text-text-muted mb-2">切换角色</div>
             <div className="flex flex-wrap gap-2">
               {availableRoles.map(role => (
@@ -197,8 +197,8 @@ function MobileSidebar({
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
                     role.code === currentRole
-                      ? 'bg-primary/20 text-primary border border-primary/30'
-                      : 'bg-white/5 text-text-secondary hover:text-text-primary'
+                      ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(176,38,255,0.2)]'
+                      : 'bg-white/5 text-text-secondary hover:text-white'
                   )}
                 >
                   {role.name}
@@ -209,13 +209,13 @@ function MobileSidebar({
         )}
         
         {/* User section (mobile) */}
-        <div className="px-4 py-3 border-t border-white/5">
+        <div className="px-4 py-3 border-t border-white/10">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center text-sm font-bold">
+            <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center text-sm font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]">
               {user?.name?.slice(0, 2) || 'U'}
             </div>
             <div>
-              <div className="text-sm font-medium text-text-primary">
+              <div className="text-sm font-medium text-white">
                 {user?.name}
               </div>
               <div className="text-xs text-text-muted">
@@ -227,7 +227,7 @@ function MobileSidebar({
           <div className="space-y-1">
             <Link
               to="/personal"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
             >
               <User size={16} />
               个人中心

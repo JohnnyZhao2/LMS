@@ -91,7 +91,7 @@ export function Header({ className }: HeaderProps) {
       <header
         className={cn(
           'fixed top-0 left-0 right-0 z-50 h-16',
-          'bg-background/80 backdrop-blur-md border-b border-white/5',
+          'bg-background/60 backdrop-blur-xl border-b border-white/10 shadow-lg supports-[backdrop-filter]:bg-background/40',
           className
         )}
       >
@@ -99,12 +99,12 @@ export function Header({ className }: HeaderProps) {
           {/* Left section: Logo + Navigation */}
           <div className="flex items-center gap-6">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center font-bold text-black font-heading">
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0 group">
+              <div className="w-8 h-8 rounded bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-black font-heading shadow-[0_0_15px_rgba(176,38,255,0.4)] group-hover:shadow-[0_0_25px_rgba(176,38,255,0.6)] transition-all duration-300">
                 L
               </div>
-              <span className="font-heading font-bold text-lg tracking-tight text-white hidden sm:block">
-                LMS <span className="text-primary">Ops</span>
+              <span className="font-heading font-bold text-lg tracking-tight text-white hidden sm:block group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-primary transition-all duration-300">
+                LMS <span className="text-primary group-hover:text-secondary transition-colors duration-300">Ops</span>
               </span>
               <Badge variant="outline" className="ml-1 text-[10px] hidden xl:flex border-white/10">
                 BETA 2.0
