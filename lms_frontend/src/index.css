@@ -1,94 +1,107 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 11 16 27;
-    /* #0B101B */
-    --foreground: 241 245 249;
-    /* #F1F5F9 */
+    /* Luminous Void Theme Variables for compatibility */
+    --background: 3 0 20; /* #030014 */
+    --foreground: 255 255 255; /* #FFFFFF */
 
-    --card: 19 27 44;
-    /* #131B2C */
-    --card-foreground: 241 245 249;
+    --card: 15 5 41; /* #0F0529 */
+    --card-foreground: 255 255 255;
 
-    --popover: 19 27 44;
-    --popover-foreground: 241 245 249;
+    --popover: 15 5 41;
+    --popover-foreground: 255 255 255;
 
-    --primary: 0 229 255;
-    /* #00E5FF */
-    --primary-foreground: 11 16 27;
+    --primary: 176 38 255; /* #B026FF */
+    --primary-foreground: 255 255 255;
 
-    --secondary: 28 37 59;
-    /* #1C253B */
-    --secondary-foreground: 241 245 249;
+    --secondary: 0 240 255; /* #00F0FF */
+    --secondary-foreground: 3 0 20;
 
-    --muted: 100 116 139;
-    /* #64748B */
-    --muted-foreground: 148 163 184;
+    --muted: 123 117 148; /* #7B7594 */
+    --muted-foreground: 180 176 196;
 
-    --accent: 255 193 7;
-    /* #FFC107 */
-    --accent-foreground: 11 16 27;
+    --accent: 204 255 0; /* #CCFF00 */
+    --accent-foreground: 3 0 20;
 
-    --destructive: 248 113 113;
-    /* #F87171 */
-    --destructive-foreground: 241 245 249;
+    --destructive: 255 46 95; /* #FF2E5F */
+    --destructive-foreground: 255 255 255;
 
-    --border: 28 37 59;
-    /* #1C253B */
-    --input: 28 37 59;
-    --ring: 0 229 255;
+    --border: 45 21 85; /* Dark purple border */
+    --input: 26 11 59;
+    --ring: 176 38 255;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   body {
-    @apply bg-background text-text-primary font-body antialiased selection:bg-primary selection:text-background;
+    @apply bg-background text-text-primary font-body antialiased selection:bg-primary selection:text-white;
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(176, 38, 255, 0.15), transparent 40%), 
+      radial-gradient(circle at 85% 30%, rgba(0, 240, 255, 0.15), transparent 40%);
+    background-attachment: fixed;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-heading tracking-tight;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-wide text-white;
   }
+  
+  h1 { @apply font-bold; }
+  h2 { @apply font-semibold; }
 
-  /* Custom scrollbar for Webkit */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-background-secondary;
+    @apply bg-background;
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: theme('colors.secondary');
+    background: linear-gradient(to bottom, #B026FF, #00F0FF);
     border-radius: 9999px;
+  }
 
-    &:hover {
-      background-color: theme('colors.text.muted');
-    }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #C566FF, #66F5FF);
   }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(176, 38, 255, 0.5);
   }
 
   .glass-panel {
-    @apply bg-background-secondary/80 backdrop-blur-md border border-white/5;
+    @apply bg-background-glass backdrop-blur-xl border border-white/10 shadow-lg;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/5 hover:border-white/20 transition-all duration-300;
   }
 
   .neon-border {
-    @apply border border-primary/50 shadow-[0_0_10px_rgba(0, 229, 255, 0.2)];
+    @apply border border-primary/50 shadow-[0_0_15px_rgba(176,38,255,0.3)];
+  }
+  
+  .neon-border-secondary {
+    @apply border border-secondary/50 shadow-[0_0_15px_rgba(0,240,255,0.3)];
+  }
+
+  /* Animated background mesh */
+  .mesh-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 50%, #1a0b3b 0%, #030014 100%);
   }
 }
