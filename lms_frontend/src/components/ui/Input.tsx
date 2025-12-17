@@ -29,10 +29,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     id={inputId}
                     type={type}
                     className={cn(
-                        "flex h-10 w-full rounded-md border bg-background-secondary px-3 py-2 text-sm text-text-primary",
-                        "ring-offset-background transition-colors",
+                        "flex h-10 w-full rounded-md border border-white/10 bg-background-secondary/50 px-3 py-2 text-sm text-text-primary",
+                        "ring-offset-background transition-all duration-200",
                         "file:border-0 file:bg-transparent file:text-sm file:font-medium",
                         "placeholder:text-text-muted",
+                        "focus:bg-background-secondary focus:border-primary/50",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                         "disabled:cursor-not-allowed disabled:opacity-50",
                         error 
@@ -46,7 +47,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                     {...props}
                 />
                 {error && (
-                    <p id={errorId} className="mt-1.5 text-xs text-destructive">
+                    <p id={errorId} className="mt-1.5 text-xs text-destructive animate-fade-in-up">
                         {error}
                     </p>
                 )}
