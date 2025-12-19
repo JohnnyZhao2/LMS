@@ -1,4 +1,8 @@
-# React 项目结构规范
+## 全局原则
+
+**No backward compatibility** - Break old formats freely
+
+> **重要说明**：编写代码时，如果发现已有代码存在设计问题或冗余，应该直接重构或重写，而不是为了兼容旧代码而增加冗余。优先考虑代码质量和架构清晰度，而不是向后兼容性。
 
 ## 总体结构
 ```
@@ -159,3 +163,23 @@ export const config = {
 - 组件嵌套不超过 2 层 (`list/` → `list-item/` ✅，再嵌套 ❌)
 - 使用 ESLint 和 Prettier 统一代码风格
 - 删除功能时直接删除对应的 feature 文件夹即可
+
+## 前端设计美学规范
+
+<frontend_aesthetics>
+You tend to converge toward generic, "on distribution" outputs. In frontend design,this creates what users call the "AI slop" aesthetic. Avoid this: make creative,distinctive frontends that surprise and delight. 
+
+Focus on:
+- Typography: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics.
+- Color & Theme: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics for inspiration.
+- Motion: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions.
+- Backgrounds: Create atmosphere and depth rather than defaulting to solid colors. Layer CSS gradients, use geometric patterns, or add contextual effects that match the overall aesthetic.
+
+Avoid generic AI-generated aesthetics:
+- Overused font families (Inter, Roboto, Arial, system fonts)
+- Clichéd color schemes (particularly purple gradients on white backgrounds)
+- Predictable layouts and component patterns
+- Cookie-cutter design that lacks context-specific character
+
+Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
+</frontend_aesthetics>
