@@ -277,6 +277,41 @@ class TestKnowledgeListCreateAPI:
         response = authenticated_user_client.post('/api/knowledge/', data)
         
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+    
+    def test_admin_list_prefers_draft_version(self, authenticated_admin_client, admin_user):
+        """管理员列表应优先返回草稿版本。"""
+        published = KnowledgeFactory(created_by=admin_user, status='PUBLISHED', title='已发布文档')
+        draft = KnowledgeFactory(
+            created_by=admin_user,
+            status='DRAFT',
+            title='草稿文档',
+            published_version=published,
+        )
+        
+        response = authenticated_admin_client.get('/api/knowledge/')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]['id'] == draft.id
+        assert response.data[0]['status'] == 'DRAFT'
+        assert response.data[0]['title'] == '草稿文档'
+    
+    def test_admin_can_filter_only_published(self, authenticated_admin_client, admin_user):
+        """管理员按 status=PUBLISHED 筛选时仍然看到已发布版本。"""
+        published = KnowledgeFactory(created_by=admin_user, status='PUBLISHED', title='上线文档')
+        KnowledgeFactory(
+            created_by=admin_user,
+            status='DRAFT',
+            title='上线文档草稿',
+            published_version=published,
+        )
+        
+        response = authenticated_admin_client.get('/api/knowledge/?status=PUBLISHED')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]['id'] == published.id
+        assert response.data[0]['status'] == 'PUBLISHED'
 
 
 @pytest.mark.django_db

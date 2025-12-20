@@ -323,12 +323,17 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """
         发布知识文档
         
-        如果存在已发布版本，则更新它；否则创建新的已发布版本。
+        - 如果当前是草稿且有关联的已发布版本：更新已发布版本，然后删除草稿
+        - 如果当前是新草稿（无已发布版本）：直接将状态改为已发布
+        - 如果当前已是已发布状态：直接返回
+        
+        发布后草稿会被删除，只保留已发布版本。
+        当用户再次编辑已发布的知识时，才会创建新的草稿。
         """
         if self.status == 'PUBLISHED':
             return self
         
-        # 如果存在已发布版本，更新它
+        # 如果存在已发布版本，更新它并删除草稿
         if self.published_version:
             published = self.published_version
             # 更新所有字段
@@ -352,33 +357,27 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             published.operation_tags.set(self.operation_tags.all())
             
             published.save()
+            
+            # 发布成功后软删除草稿
+            self.soft_delete()
+            
             return published
         else:
-            # 创建新的已发布版本
-            published = Knowledge.objects.create(
-                title=self.title,
-                knowledge_type=self.knowledge_type,
-                fault_scenario=self.fault_scenario,
-                trigger_process=self.trigger_process,
-                solution=self.solution,
-                verification_plan=self.verification_plan,
-                recovery_plan=self.recovery_plan,
-                content=self.content,
-                status='PUBLISHED',
-                created_by=self.created_by,
-                updated_by=self.updated_by,
-            )
-            
-            # 设置条线类型关系
-            if self.line_type:
-                published.set_line_type(self.line_type)
-            
-            # 设置系统标签和操作标签
-            published.system_tags.set(self.system_tags.all())
-            published.operation_tags.set(self.operation_tags.all())
-            
-            # 关联草稿和已发布版本
-            self.published_version = published
+            # 新草稿：直接将状态改为已发布（不创建新记录）
+            self.status = 'PUBLISHED'
             self.save()
-            
-            return published
+            return self
+    
+    def unpublish(self):
+        """
+        取消发布知识文档
+        
+        将已发布状态改为草稿状态。
+        注意：如果知识已被任务引用，应该在调用此方法前检查。
+        """
+        if self.status == 'DRAFT':
+            return self
+        
+        self.status = 'DRAFT'
+        self.save()
+        return self

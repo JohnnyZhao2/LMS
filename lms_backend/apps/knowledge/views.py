@@ -47,7 +47,7 @@ class KnowledgeListCreateView(APIView):
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
             OpenApiParameter(name='status', type=str, description='发布状态（DRAFT/PUBLISHED），仅管理员可用'),
-            OpenApiParameter(name='include_drafts', type=bool, description='是否包含草稿（仅管理员可用，默认false）'),
+            OpenApiParameter(name='include_drafts', type=bool, description='是否包含草稿（仅管理员可用，默认true，草稿优先）'),
         ],
         responses={200: KnowledgeListSerializer(many=True)},
         tags=['知识管理']
@@ -61,25 +61,43 @@ class KnowledgeListCreateView(APIView):
             'system_tags', 'operation_tags'
         )
         
-        # 权限过滤：普通用户只能看到已发布的知识，管理员可以看到所有
-        # 管理员可以通过 include_drafts 参数控制是否包含草稿
-        # 注意：如果草稿有关联的已发布版本，应该显示已发布版本而不是草稿
+        # 权限过滤：普通用户只能看到已发布的知识
+        # 管理员默认看到“草稿优先”视图：如果存在草稿，则展示草稿而不是对应的已发布版本
+        status_param = request.query_params.get('status')
+        include_drafts_param = request.query_params.get('include_drafts')
+        
         if not request.user.is_admin:
-            # 非管理员：只能看到已发布的知识
             queryset = queryset.filter(status='PUBLISHED')
         else:
-            # 管理员：默认只显示已发布的知识，可以通过参数控制
-            include_drafts = request.query_params.get('include_drafts', 'false').lower() == 'true'
-            if not include_drafts:
-                # 只显示已发布的知识，或者没有关联已发布版本的草稿
+            if include_drafts_param is None:
+                include_drafts = True
+            else:
+                include_drafts = include_drafts_param.lower() == 'true'
+            
+            if status_param in ['DRAFT', 'PUBLISHED']:
+                queryset = queryset.filter(status=status_param)
+            elif include_drafts:
+                # 草稿优先视图：显示草稿，或没有未删除草稿的已发布版本
+                # 找出有未删除草稿的已发布版本 ID
+                published_ids_with_active_draft = Knowledge.objects.filter(
+                    status='DRAFT',
+                    is_deleted=False,
+                    published_version__isnull=False
+                ).values_list('published_version_id', flat=True)
+                
+                queryset = queryset.filter(
+                    models.Q(status='DRAFT') |
+                    models.Q(status='PUBLISHED')
+                ).exclude(
+                    # 排除有未删除草稿的已发布版本
+                    id__in=published_ids_with_active_draft
+                )
+            else:
+                # 已发布优先视图：显示已发布版本，或没有已发布版本的草稿
                 queryset = queryset.filter(
                     models.Q(status='PUBLISHED') |
                     models.Q(status='DRAFT', published_version__isnull=True)
                 )
-            # 如果指定了 status 参数，按指定状态筛选
-            status_param = request.query_params.get('status')
-            if status_param in ['DRAFT', 'PUBLISHED']:
-                queryset = queryset.filter(status=status_param)
         
         # Filter by knowledge type
         knowledge_type = request.query_params.get('knowledge_type')
@@ -323,7 +341,8 @@ class KnowledgePublishView(APIView):
         Publish knowledge document.
         
         将知识文档状态从草稿改为已发布。
-        如果草稿有关联的已发布版本，将草稿内容更新到已发布版本。
+        - 新草稿：直接将状态改为已发布
+        - 有关联已发布版本的草稿：更新已发布版本，删除草稿
         """
         # Check admin permission
         if not request.user.is_admin:
@@ -346,29 +365,19 @@ class KnowledgePublishView(APIView):
         
         # 更新 updated_by
         knowledge.updated_by = request.user
+        knowledge.save(update_fields=['updated_by'])
         
-        # 发布知识（如果有关联的已发布版本，会更新已发布版本）
-        knowledge.publish()
+        # 发布知识，返回已发布版本
+        published = knowledge.publish()
         
-        # 如果草稿有关联的已发布版本，返回已发布版本；否则返回当前记录
-        if knowledge.published_version:
-            published = knowledge.published_version
-            # 重新加载已发布版本（包含更新后的内容）
-            published = Knowledge.objects.select_related(
-                'created_by', 'updated_by'
-            ).prefetch_related(
-                'system_tags', 'operation_tags'
-            ).get(pk=published.pk, is_deleted=False)
-            response_serializer = KnowledgeDetailSerializer(published)
-        else:
-            # 重新加载当前记录（状态已更新为已发布）
-            knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by'
-            ).prefetch_related(
-                'system_tags', 'operation_tags'
-            ).get(pk=knowledge.pk, is_deleted=False)
-            response_serializer = KnowledgeDetailSerializer(knowledge)
+        # 重新加载已发布版本（包含更新后的内容和关联）
+        published = Knowledge.objects.select_related(
+            'created_by', 'updated_by'
+        ).prefetch_related(
+            'system_tags', 'operation_tags'
+        ).get(pk=published.pk, is_deleted=False)
         
+        response_serializer = KnowledgeDetailSerializer(published)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 

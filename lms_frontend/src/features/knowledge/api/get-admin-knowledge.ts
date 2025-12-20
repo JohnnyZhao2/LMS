@@ -29,6 +29,7 @@ export const useAdminKnowledgeList = (params: GetKnowledgeListParams = {}) => {
       if (system_tag_id) searchParams.set('system_tag_id', String(system_tag_id));
       if (operation_tag_id) searchParams.set('operation_tag_id', String(operation_tag_id));
       if (search) searchParams.set('search', search);
+      searchParams.set('include_drafts', 'true');
 
       const queryString = searchParams.toString();
       return apiClient.get<KnowledgeListItem[]>(`/knowledge/${queryString ? `?${queryString}` : ''}`);
