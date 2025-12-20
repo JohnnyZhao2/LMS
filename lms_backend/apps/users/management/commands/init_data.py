@@ -59,10 +59,9 @@ class Command(BaseCommand):
         dept = Department.objects.filter(code='DEPT1').first()
         
         admin, created = User.objects.get_or_create(
-            username='admin',
+            employee_id='ADMIN001',
             defaults={
-                'employee_id': 'ADMIN001',
-                'real_name': '系统管理员',
+                'username': '系统管理员',  # username 字段存储显示名称
                 'department': dept,
                 'is_staff': True,
                 'is_superuser': True,
@@ -72,7 +71,7 @@ class Command(BaseCommand):
         if created:
             admin.set_password('admin123')
             admin.save()
-            self.stdout.write(f"  管理员账号: 创建 (用户名: admin, 密码: admin123)")
+            self.stdout.write(f"  管理员账号: 创建 (工号: ADMIN001, 密码: admin123)")
         else:
             self.stdout.write(f"  管理员账号: 已存在")
         

@@ -148,7 +148,7 @@ class TestProperty37MentorDataScopeRestriction:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -163,7 +163,7 @@ class TestProperty37MentorDataScopeRestriction:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    real_name=f'学员{i}',
+                    username=f'学员{i}',
                     department=dept,
                     mentor=mentor,
                 )
@@ -176,7 +176,7 @@ class TestProperty37MentorDataScopeRestriction:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    real_name=f'其他学员{i}',
+                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,  # No mentor
                 )
@@ -231,7 +231,7 @@ class TestProperty37MentorDataScopeRestriction:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -246,7 +246,7 @@ class TestProperty37MentorDataScopeRestriction:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    real_name=f'学员{i}',
+                    username=f'学员{i}',
                     department=dept,
                     mentor=mentor,
                 )
@@ -258,7 +258,7 @@ class TestProperty37MentorDataScopeRestriction:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    real_name=f'其他学员{i}',
+                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,
                 )
@@ -319,7 +319,7 @@ class TestProperty38DeptManagerDataScopeRestriction:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            real_name='室经理',
+            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -334,7 +334,7 @@ class TestProperty38DeptManagerDataScopeRestriction:
                     username=f'dept1_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D1M_{unique_suffix}_{i}',
-                    real_name=f'一室成员{i}',
+                    username=f'一室成员{i}',
                     department=dept1,
                 )
                 created_users.append(member)
@@ -346,7 +346,7 @@ class TestProperty38DeptManagerDataScopeRestriction:
                     username=f'dept2_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D2M_{unique_suffix}_{i}',
-                    real_name=f'二室成员{i}',
+                    username=f'二室成员{i}',
                     department=dept2,
                 )
                 created_users.append(other)
@@ -393,7 +393,7 @@ class TestProperty38DeptManagerDataScopeRestriction:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            real_name='室经理',
+            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -408,7 +408,7 @@ class TestProperty38DeptManagerDataScopeRestriction:
                     username=f'dept2_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D2M_{unique_suffix}_{i}',
-                    real_name=f'二室成员{i}',
+                    username=f'二室成员{i}',
                     department=dept2,
                 )
                 created_users.append(other)
@@ -470,7 +470,7 @@ class TestProperty39AdminFullPlatformAccess:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -480,7 +480,7 @@ class TestProperty39AdminFullPlatformAccess:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -495,7 +495,7 @@ class TestProperty39AdminFullPlatformAccess:
                     username=f'dept1_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D1M_{unique_suffix}_{i}',
-                    real_name=f'一室成员{i}',
+                    username=f'一室成员{i}',
                     department=dept1,
                 )
                 created_users.append(member)
@@ -507,7 +507,7 @@ class TestProperty39AdminFullPlatformAccess:
                     username=f'dept2_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D2M_{unique_suffix}_{i}',
-                    real_name=f'二室成员{i}',
+                    username=f'二室成员{i}',
                     department=dept2,
                 )
                 created_users.append(member)
@@ -519,7 +519,7 @@ class TestProperty39AdminFullPlatformAccess:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    real_name=f'学员{i}',
+                    username=f'学员{i}',
                     department=dept1,
                     mentor=mentor,
                 )
@@ -577,7 +577,7 @@ class TestProperty39AdminFullPlatformAccess:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -592,7 +592,7 @@ class TestProperty39AdminFullPlatformAccess:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    real_name=f'学员{i}',
+                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)
@@ -651,7 +651,7 @@ class TestProperty40UnauthorizedRequestRejection:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -666,7 +666,7 @@ class TestProperty40UnauthorizedRequestRejection:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    real_name=f'其他学员{i}',
+                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,
                 )
@@ -716,7 +716,7 @@ class TestProperty40UnauthorizedRequestRejection:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            real_name='室经理',
+            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -731,7 +731,7 @@ class TestProperty40UnauthorizedRequestRejection:
                     username=f'dept2_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D2M_{unique_suffix}_{i}',
-                    real_name=f'二室成员{i}',
+                    username=f'二室成员{i}',
                     department=dept2,
                 )
                 created_users.append(other)
@@ -776,7 +776,7 @@ class TestProperty40UnauthorizedRequestRejection:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         student.current_role = 'STUDENT'
@@ -786,7 +786,7 @@ class TestProperty40UnauthorizedRequestRejection:
             username=f'other_student_{unique_suffix}',
             password='testpass123',
             employee_id=f'OSTU_{unique_suffix}',
-            real_name='其他学员',
+            username='其他学员',
             department=dept,
         )
         
@@ -840,7 +840,7 @@ class TestProperty41TeamManagerReadOnlyAccess:
             username=f'teammgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'TM_{unique_suffix}',
-            real_name='团队经理',
+            username='团队经理',
             department=dept,
         )
         UserRole.objects.get_or_create(user=team_manager, role=setup_roles['TEAM_MANAGER'])
@@ -892,7 +892,7 @@ class TestProperty41TeamManagerReadOnlyAccess:
             username=f'teammgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'TM_{unique_suffix}',
-            real_name='团队经理',
+            username='团队经理',
             department=dept,
         )
         UserRole.objects.get_or_create(user=team_manager, role=setup_roles['TEAM_MANAGER'])
@@ -952,7 +952,7 @@ class TestProperty41TeamManagerReadOnlyAccess:
             username=f'teammgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'TM_{unique_suffix}',
-            real_name='团队经理',
+            username='团队经理',
             department=dept,
         )
         UserRole.objects.get_or_create(user=team_manager, role=setup_roles['TEAM_MANAGER'])

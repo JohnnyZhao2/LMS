@@ -46,6 +46,7 @@ class QuestionListCreateView(APIView):
             OpenApiParameter(name='tag', type=str, description='标签'),
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
+            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
         ],
         responses={200: QuestionListSerializer(many=True)},
         tags=['题库管理']
@@ -70,11 +71,6 @@ class QuestionListCreateView(APIView):
         if difficulty:
             queryset = queryset.filter(difficulty=difficulty)
         
-        # Filter by tag
-        tag = request.query_params.get('tag')
-        if tag:
-            queryset = queryset.filter(tags__contains=[tag])
-        
         # Filter by creator
         created_by = request.query_params.get('created_by')
         if created_by:
@@ -85,9 +81,38 @@ class QuestionListCreateView(APIView):
         if search:
             queryset = queryset.filter(content__icontains=search)
         
-        queryset = queryset.order_by('-created_at')
-        serializer = QuestionListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Filter by line_type (通过ResourceLineType关系表)
+        line_type_id = request.query_params.get('line_type_id')
+        if line_type_id:
+            from django.contrib.contenttypes.models import ContentType
+            from apps.knowledge.models import ResourceLineType
+            question_content_type = ContentType.objects.get_for_model(Question)
+            queryset = queryset.filter(
+                id__in=ResourceLineType.objects.filter(
+                    content_type=question_content_type,
+                    line_type_id=line_type_id
+                ).values_list('object_id', flat=True)
+            )
+        
+        queryset = queryset.select_related('created_by').order_by('-created_at')
+        
+        # 分页处理
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        total_count = queryset.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        questions = queryset[start:end]
+        serializer = QuestionListSerializer(questions, many=True)
+        
+        return Response({
+            'count': total_count,
+            'results': serializer.data,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_count + page_size - 1) // page_size
+        }, status=status.HTTP_200_OK)
     
     @extend_schema(
         summary='创建题目',
@@ -436,11 +461,6 @@ class QuestionImportView(APIView):
         difficulty_str = str(row[9]).strip() if len(row) > 9 and row[9] else '中等'
         difficulty = difficulty_map.get(difficulty_str, 'MEDIUM')
         
-        # Parse tags
-        tags = []
-        if len(row) > 10 and row[10]:
-            tags = [t.strip() for t in str(row[10]).replace('，', ',').split(',') if t.strip()]
-        
         return {
             'content': str(content),
             'question_type': question_type,
@@ -449,5 +469,4 @@ class QuestionImportView(APIView):
             'explanation': explanation,
             'score': score,
             'difficulty': difficulty,
-            'tags': tags,
         }

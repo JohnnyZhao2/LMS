@@ -130,7 +130,7 @@ class Notification(TimestampMixin, models.Model):
         ]
     
     def __str__(self):
-        return f"{self.recipient.real_name} - {self.title}"
+        return f"{self.recipient.username} - {self.title}"
     
     def mark_as_read(self):
         """标记为已读"""

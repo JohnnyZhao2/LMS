@@ -1,29 +1,33 @@
 """
 Knowledge URLs.
 
-API endpoints for knowledge document and category management.
+API endpoints for knowledge document management.
 
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
 """
 from django.urls import path
 
 from .views import (
-    KnowledgeCategoryListCreateView,
-    KnowledgeCategoryDetailView,
-    KnowledgeCategoryTreeView,
     KnowledgeListCreateView,
     KnowledgeDetailView,
+    KnowledgePublishView,
+    KnowledgeUnpublishView,
     KnowledgeIncrementViewCountView,
+    TagListView,
+    TagCreateView,
+    TagDetailView,
 )
 
 urlpatterns = [
-    # Knowledge Category endpoints
-    path('categories/', KnowledgeCategoryListCreateView.as_view(), name='category-list-create'),
-    path('categories/tree/', KnowledgeCategoryTreeView.as_view(), name='category-tree'),
-    path('categories/<int:pk>/', KnowledgeCategoryDetailView.as_view(), name='category-detail'),
-    
     # Knowledge endpoints
     path('', KnowledgeListCreateView.as_view(), name='knowledge-list-create'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),
+    path('<int:pk>/publish/', KnowledgePublishView.as_view(), name='knowledge-publish'),
+    path('<int:pk>/unpublish/', KnowledgeUnpublishView.as_view(), name='knowledge-unpublish'),
     path('<int:pk>/view/', KnowledgeIncrementViewCountView.as_view(), name='knowledge-view'),
+    
+    # Tag management endpoints
+    path('tags/', TagListView.as_view(), name='tag-list'),
+    path('tags/create/', TagCreateView.as_view(), name='tag-create'),
+    path('tags/<int:pk>/', TagDetailView.as_view(), name='tag-detail'),
 ]

@@ -33,7 +33,7 @@ def setup_user_management(db):
     # Create admin user
     admin = User.objects.create_user(
         username='admin', password='admin123', employee_id='ADMIN001',
-        real_name='管理员', department=dept1
+        username='管理员', department=dept1
     )
     UserRole.objects.create(user=admin, role=admin_role)
     
@@ -80,7 +80,7 @@ class TestUserManagementFlow:
             'username': 'mentor1',
             'password': 'mentor123',
             'employee_id': 'MENTOR001',
-            'real_name': '导师一',
+            'username': '导师一',
             'department_id': data['dept1'].id,
         }, format='json')
         assert mentor_resp.status_code == status.HTTP_201_CREATED
@@ -106,7 +106,7 @@ class TestUserManagementFlow:
             'username': 'student1',
             'password': 'student123',
             'employee_id': 'STU001',
-            'real_name': '学员一',
+            'username': '学员一',
             'department_id': data['dept1'].id,
         }, format='json')
         assert student_resp.status_code == status.HTTP_201_CREATED
@@ -171,7 +171,7 @@ class TestUserManagementFlow:
             'username': 'multiuser',
             'password': 'multi123',
             'employee_id': 'MULTI001',
-            'real_name': '多角色用户',
+            'username': '多角色用户',
             'department_id': data['dept1'].id,
         }, format='json')
         user_id = user_resp.json()['id']
@@ -225,7 +225,7 @@ class TestUserManagementFlow:
             'username': 'mentor1',
             'password': 'mentor123',
             'employee_id': 'MENTOR001',
-            'real_name': '导师一',
+            'username': '导师一',
             'department_id': data['dept1'].id,
         }, format='json')
         mentor1_id = mentor1_resp.json()['id']
@@ -239,7 +239,7 @@ class TestUserManagementFlow:
             'username': 'mentor2',
             'password': 'mentor123',
             'employee_id': 'MENTOR002',
-            'real_name': '导师二',
+            'username': '导师二',
             'department_id': data['dept1'].id,
         }, format='json')
         mentor2_id = mentor2_resp.json()['id']
@@ -254,7 +254,7 @@ class TestUserManagementFlow:
             'username': 'student1',
             'password': 'student123',
             'employee_id': 'STU001',
-            'real_name': '学员一',
+            'username': '学员一',
             'department_id': data['dept1'].id,
         }, format='json')
         student_id = student_resp.json()['id']
@@ -292,7 +292,7 @@ class TestUserManagementFlow:
             'username': 'user1',
             'password': 'user123',
             'employee_id': 'USER001',
-            'real_name': '用户一',
+            'username': '用户一',
             'department_id': data['dept1'].id,
         }, format='json')
         user1_id = user1_resp.json()['id']
@@ -301,7 +301,7 @@ class TestUserManagementFlow:
             'username': 'user2',
             'password': 'user123',
             'employee_id': 'USER002',
-            'real_name': '用户二',
+            'username': '用户二',
             'department_id': data['dept1'].id,
         }, format='json')
         user2_id = user2_resp.json()['id']

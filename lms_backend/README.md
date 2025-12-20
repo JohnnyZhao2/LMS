@@ -85,7 +85,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/ \
   "user": {
     "id": 1,
     "username": "admin",
-    "real_name": "系统管理员",
+    "username": "系统管理员",
     "roles": ["STUDENT", "ADMIN"]
   }
 }
@@ -309,11 +309,42 @@ python -m pytest tests/ --cov=apps --cov-report=html
 └── manage.py
 ```
 
+## 管理命令
+
+### 初始化数据
+
+```bash
+# 初始化基础数据（部门、角色、管理员账号）
+python manage.py init_data --settings=config.settings.development
+```
+
+### 重置管理员密码
+
+如果忘记了管理员密码，可以使用以下命令重置：
+
+```bash
+# 使用默认密码 admin123
+python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.settings.development
+
+# 指定新密码
+python manage.py reset_admin_password --employee-id ADMIN001 --password your_new_password --settings=config.settings.development
+```
+
 ## 常见问题
 
 ### Q: 如何创建测试数据？
 
 运行 `init_data` 命令会创建基础数据。如需更多测试数据，可以通过 Swagger UI 手动创建，或编写数据填充脚本。
+
+### Q: 忘记了管理员密码怎么办？
+
+使用 `reset_admin_password` 管理命令重置密码：
+
+```bash
+python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.settings.development
+```
+
+默认新密码为 `admin123`，也可以使用 `--password` 参数指定新密码。
 
 ### Q: Token 过期时间？
 

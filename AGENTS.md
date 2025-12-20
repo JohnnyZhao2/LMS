@@ -1,10 +1,26 @@
 ## 全局原则
-
+执行之前先输出大致计划与我确认之后方可执行
 **No backward compatibility** - Break old formats freely
 
 > **重要说明**：编写代码时，如果发现已有代码存在设计问题或冗余，应该直接重构或重写，而不是为了兼容旧代码而增加冗余。优先考虑代码质量和架构清晰度，而不是向后兼容性。
 
-## 总体结构
+**数据库字段变更时同步更新模型文件**
+
+> **重要说明**：当修改数据库字段结构时，必须同步更新 Django 模型文件 (`models.py`)，确保模型定义与数据库结构完全一致。更新模型文件时包括：
+> - 更新字段定义和类型
+> - 更新模型文档字符串中的字段说明
+> - 检查 `REQUIRED_FIELDS`、`USERNAME_FIELD` 等配置
+> - 同时更新相关的序列化器、视图、服务层和前端代码
+
+**字段依赖清查必做**
+
+> **重要说明**：凡是新增、重命名或删除字段，必须立刻执行一次全局 `rg`/`codebase_search`，逐项更新所有引用（序列化器、服务层、权限、前端类型/组件、文档）。未完成全局清查前不得提交变更，避免残留旧字段名导致接口返回空值。
+
+**数据库操作优先使用 MCP**
+
+> **重要说明**：在本地开发时，数据库操作（如添加/删除列、修改数据、查询等）优先使用 MCP 工具 `mcp_DBHub_execute_sql` 直接执行 SQL，而不是写 Django 迁移脚本。这样更快更直接。Django 迁移文件仍需保留用于团队协作和生产部署，但本地验证和调试时直接用 MCP。
+
+## 前端总体结构
 ```
 src/
 ├── app/                 # 应用层配置
@@ -183,3 +199,314 @@ Avoid generic AI-generated aesthetics:
 
 Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
 </frontend_aesthetics>
+
+---
+
+## 后端总体结构
+
+### 技术栈
+
+- **Web 框架**: Django 4.2+ / Django REST Framework 3.14+
+- **数据库**: MySQL 8.0+
+- **认证**: JWT (djangorestframework-simplejwt)
+- **文件存储**: 用于存储图片、文件附件、用户头像等静态资源
+- **API 文档**: drf-spectacular (OpenAPI 3.0)
+
+### 核心设计原则
+
+1. **资源与任务分离**：知识文档、题目、试卷作为资源先行创建，任务作为分配动作后续发布
+2. **基于角色的访问控制（RBAC）**：五种角色（学员、导师、室经理、管理员、团队经理）具有不同的数据访问范围
+3. **数据范围隔离**：导师仅访问名下学员数据，室经理访问本室数据，管理员访问全平台数据
+4. **软删除策略**：关键业务数据支持软删除，保留历史记录
+
+### Django 应用结构
+
+```
+lms_backend/
+├── config/                    # 项目配置
+│   ├── settings/
+│   │   ├── base.py           # 基础配置
+│   │   ├── development.py    # 开发环境
+│   │   └── production.py     # 生产环境
+│   ├── urls.py               # 根路由
+│   └── wsgi.py
+│
+├── apps/                      # 业务应用
+│   ├── users/                # 用户与权限
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   ├── permissions.py
+│   │   └── services.py
+│   │
+│   ├── knowledge/            # 知识库
+│   ├── questions/            # 题库
+│   ├── quizzes/              # 试卷
+│   ├── tasks/                # 任务
+│   ├── submissions/          # 答题与评分
+│   ├── spot_checks/          # 抽查
+│   ├── notifications/        # 通知
+│   └── analytics/            # 统计分析
+│
+├── core/                      # 核心模块
+│   ├── permissions.py        # 通用权限类
+│   ├── pagination.py         # 分页配置
+│   ├── exceptions.py         # 异常处理
+│   ├── mixins.py             # 通用 Mixin
+│   └── utils.py              # 工具函数
+│
+└── tests/                     # 测试
+    ├── conftest.py
+    ├── factories.py
+    ├── unit/                  # 单元测试
+    └── properties/            # 属性测试
+```
+
+### 应用模块组织规范
+
+每个业务应用（app）应包含以下文件：
+
+- `models.py` - 数据模型定义
+- `serializers.py` - 序列化器（DRF）
+- `views.py` - 视图（API 端点）
+- `urls.py` - URL 路由配置
+- `permissions.py` - 权限类（如需要）
+- `services.py` - 业务逻辑服务层（如需要）
+
+## API 设计规范
+
+### URL 命名规范
+
+- 使用复数形式：`/api/knowledge/` 而不是 `/api/knowledges/`
+- 使用连字符分隔：`/api/spot-checks/` 而不是 `/api/spot_checks/`
+- 嵌套资源使用路径参数：`/api/knowledge/{id}/` 而不是查询参数
+
+### HTTP 方法使用
+
+| 方法 | 用途 | 示例 |
+|------|------|------|
+| GET | 获取资源（列表或详情） | `GET /api/knowledge/` |
+| POST | 创建资源 | `POST /api/knowledge/` |
+| PATCH | 部分更新资源 | `PATCH /api/knowledge/{id}/` |
+| PUT | 完整更新资源（较少使用） | `PUT /api/knowledge/{id}/` |
+| DELETE | 删除资源 | `DELETE /api/knowledge/{id}/` |
+
+### 错误处理规范
+
+#### HTTP 状态码
+
+| 状态码 | 场景 |
+|--------|------|
+| 200 | 请求成功 |
+| 201 | 资源创建成功 |
+| 400 | 请求参数错误、业务规则违反（如删除被引用资源） |
+| 401 | 未认证或认证失败 |
+| 403 | 无权限访问 |
+| 404 | 资源不存在 |
+| 500 | 服务器内部错误 |
+
+#### 错误响应格式
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "人类可读的错误信息",
+  "details": {
+    "field_name": ["具体错误说明"]
+  }
+}
+```
+
+#### 业务错误码
+
+| 错误码 | 描述 |
+|--------|------|
+| AUTH_INVALID_CREDENTIALS | 用户名或密码错误 |
+| AUTH_USER_INACTIVE | 用户已被停用 |
+| AUTH_INVALID_ROLE | 无效的角色切换 |
+| USER_HAS_DATA | 用户已有关联数据，无法删除 |
+| RESOURCE_REFERENCED | 资源被引用，无法删除 |
+| TASK_INVALID_ASSIGNEES | 任务分配的学员超出权限范围 |
+| EXAM_NOT_IN_WINDOW | 当前时间不在考试时间窗口内 |
+| EXAM_ALREADY_SUBMITTED | 考试已提交，无法重复作答 |
+| PERMISSION_DENIED | 无权执行此操作 |
+
+### 序列化器规范
+
+- 使用不同的序列化器区分列表和详情视图
+- 创建和更新使用不同的序列化器（如需要）
+- 在序列化器中实现业务验证逻辑
+- 使用 `read_only` 和 `write_only` 字段明确字段用途
+
+```python
+# ✅ 正确：区分列表和详情序列化器
+class KnowledgeListSerializer(serializers.ModelSerializer):
+    """列表视图序列化器，只包含必要字段"""
+    class Meta:
+        model = Knowledge
+        fields = ['id', 'title', 'line_type', 'created_at']
+
+class KnowledgeDetailSerializer(serializers.ModelSerializer):
+    """详情视图序列化器，包含完整字段"""
+    class Meta:
+        model = Knowledge
+        fields = '__all__'
+```
+
+### 权限控制规范
+
+- 使用 DRF 的权限类进行权限控制
+- 通用权限类放在 `core/permissions.py`
+- 应用特定权限类放在对应应用的 `permissions.py`
+- 使用 `DataScopeMixin` 实现数据范围隔离
+
+```python
+# ✅ 正确：使用权限类
+class KnowledgeListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        # 检查管理员权限
+        if not request.user.is_admin:
+            raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, ...)
+```
+
+## 数据模型规范
+
+### 模型字段命名
+
+- 使用下划线命名：`created_at` 而不是 `createdAt`
+- 外键字段使用 `_id` 后缀：`user_id`（Django 自动处理）
+- 布尔字段使用 `is_` 前缀：`is_active`, `is_deleted`
+- 时间字段使用 `_at` 后缀：`created_at`, `updated_at`
+
+### 通用 Mixin
+
+使用 `core/mixins.py` 中的通用 Mixin：
+
+- `TimestampMixin` - 提供 `created_at` 和 `updated_at` 字段
+- `SoftDeleteMixin` - 提供软删除功能（`is_deleted` 字段）
+- `CreatorMixin` - 提供 `created_by` 字段
+
+```python
+# ✅ 正确：使用通用 Mixin
+class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+    title = models.CharField(max_length=200)
+    # created_at, updated_at, is_deleted, created_by 自动包含
+```
+
+### 模型文档字符串
+
+每个模型必须包含详细的文档字符串，说明：
+- 模型的用途
+- 字段的含义
+- 关联关系
+- 业务规则
+
+```python
+class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+    """
+    知识文档模型
+    
+    知识类型:
+    - EMERGENCY: 应急类知识
+    - OTHER: 其他类型知识
+    
+    条线类型（固定类别）:
+    - CLOUD: 双云
+    - DATABASE: 数据库
+    - NETWORK: 网络
+    - APPLICATION: 应用
+    - EMERGENCY: 应急
+    - REGULATION: 规章制度
+    - OTHER: 其他
+    
+    Requirements:
+    - 4.1: 创建知识文档时要求指定知识类型
+    - 4.2, 4.3: 统一使用 content 字段存储正文内容
+    """
+```
+
+## 测试规范
+
+### 测试框架
+
+- **单元测试**: pytest + pytest-django
+- **属性测试**: hypothesis
+- **API 测试**: pytest + Django REST Framework 测试客户端
+- **覆盖率**: pytest-cov
+
+### 双重测试方法
+
+本项目采用单元测试和属性测试相结合的方法：
+
+1. **单元测试**：验证具体示例和边界情况
+   - 特定输入的预期输出
+   - 错误条件处理
+   - 集成点验证
+
+2. **属性测试**：验证跨所有输入的通用属性
+   - 使用 hypothesis 库生成随机测试数据
+   - 每个属性测试运行至少 100 次迭代
+   - 测试注释必须引用设计文档中的正确性属性
+
+### 属性测试标注格式
+
+每个属性测试必须使用以下格式标注：
+
+```python
+# **Feature: lms-backend, Property 5: 新用户默认学员角色**
+@given(user_data=user_data_strategy())
+def test_new_user_has_student_role(user_data):
+    """
+    Validates: Requirements 2.1
+    """
+    # 测试实现
+```
+
+### 测试目录结构
+
+```
+tests/
+├── conftest.py              # 共享 fixtures
+├── factories.py             # 测试数据工厂
+├── strategies.py            # hypothesis 策略
+├── unit/                    # 单元测试
+│   ├── test_users.py
+│   ├── test_knowledge.py
+│   └── ...
+└── properties/              # 属性测试
+    ├── test_auth_properties.py
+    ├── test_user_properties.py
+    └── ...
+```
+
+### 关键测试场景
+
+1. **认证测试**
+   - 有效/无效凭证登录
+   - 停用用户登录拒绝
+   - 角色切换权限生效
+
+2. **权限测试**
+   - 各角色数据访问范围
+   - 资源所有权控制
+   - 无权限请求拒绝
+
+3. **业务规则测试**
+   - 资源引用保护
+   - 任务状态自动转换
+   - 考试时间窗口控制
+
+4. **数据完整性测试**
+   - 任务分配记录完整性
+   - 师徒关系唯一性
+   - 学员角色不可移除
+
+## 代码组织最佳实践
+
+- 业务逻辑优先放在 `services.py`，视图层保持简洁
+- 使用 DRF 的 `ViewSet` 或 `APIView`，根据复杂度选择
+- 复杂查询使用 `select_related` 和 `prefetch_related` 优化
+- 使用 Django 的 `F()` 和 `Q()` 进行数据库操作
+- 避免在视图中直接操作数据库，使用模型方法或服务层

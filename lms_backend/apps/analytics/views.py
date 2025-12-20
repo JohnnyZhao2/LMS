@@ -17,13 +17,12 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 
 from core.exceptions import BusinessError, ErrorCodes
 from apps.tasks.models import TaskAssignment
-from apps.knowledge.models import Knowledge, KnowledgeCategory
+from apps.knowledge.models import Knowledge
 from django.db.models import Sum
 from .serializers import (
     StudentPendingTaskSerializer,
     LatestKnowledgeSerializer,
     StudentDashboardSerializer,
-    StudentKnowledgeCategorySerializer,
     StudentKnowledgeListSerializer,
     StudentKnowledgeDetailSerializer,
     StudentTaskCenterListSerializer,
@@ -169,86 +168,6 @@ class StudentDashboardView(APIView):
 # Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6
 
 
-class StudentKnowledgeCategoryListView(APIView):
-    """
-    Student knowledge center - category list endpoint.
-    
-    GET /api/analytics/knowledge-center/categories/
-    
-    Returns primary (level 1) categories for filtering.
-    
-    Requirements:
-    - 16.1: 支持一级筛选（领域大类）和二级筛选（系统对象）
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取知识中心一级分类列表',
-        description='获取知识中心的一级分类（领域大类）列表，用于筛选',
-        responses={200: StudentKnowledgeCategorySerializer(many=True)},
-        tags=['学员知识中心']
-    )
-    def get(self, request):
-        """Get primary categories for knowledge center filtering."""
-        # Get only primary categories (level 1)
-        categories = KnowledgeCategory.objects.filter(
-            parent__isnull=True
-        ).order_by('sort_order', 'code')
-        
-        serializer = StudentKnowledgeCategorySerializer(categories, many=True)
-        return Response(serializer.data)
-
-
-class StudentKnowledgeSecondaryCategoryView(APIView):
-    """
-    Student knowledge center - secondary category endpoint.
-    
-    GET /api/analytics/knowledge-center/categories/<primary_id>/children/
-    
-    Returns secondary (level 2) categories for a given primary category.
-    
-    Requirements:
-    - 16.2: 学员选择一级分类时动态加载对应的二级分类选项
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取知识中心二级分类列表',
-        description='根据一级分类ID获取对应的二级分类（系统对象）列表',
-        responses={
-            200: StudentKnowledgeCategorySerializer(many=True),
-            404: OpenApiResponse(description='一级分类不存在')
-        },
-        tags=['学员知识中心']
-    )
-    def get(self, request, primary_id):
-        """
-        Get secondary categories for a primary category.
-        
-        Requirements:
-        - 16.2: 学员选择一级分类时动态加载对应的二级分类选项
-        """
-        # Verify primary category exists
-        try:
-            primary_category = KnowledgeCategory.objects.get(
-                pk=primary_id,
-                parent__isnull=True
-            )
-        except KnowledgeCategory.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='一级分类不存在'
-            )
-        
-        # Get secondary categories (children of primary)
-        categories = KnowledgeCategory.objects.filter(
-            parent=primary_category
-        ).order_by('sort_order', 'code')
-        
-        serializer = StudentKnowledgeCategorySerializer(categories, many=True)
-        return Response(serializer.data)
-
-
 class StudentKnowledgeListView(APIView):
     """
     Student knowledge center - knowledge list endpoint.
@@ -265,17 +184,17 @@ class StudentKnowledgeListView(APIView):
     
     @extend_schema(
         summary='获取知识中心知识列表',
-        description='获取知识文档列表，支持按一级分类和二级分类筛选',
+        description='获取知识文档列表，支持按条线类型和系统标签筛选',
         parameters=[
             OpenApiParameter(
-                name='primary_category_id',
-                type=int,
-                description='一级分类ID（领域大类）'
+                name='line_type',
+                type=str,
+                description='条线类型（CLOUD/DATABASE/NETWORK/APPLICATION/EMERGENCY/REGULATION/OTHER）'
             ),
             OpenApiParameter(
-                name='secondary_category_id',
-                type=int,
-                description='二级分类ID（系统对象）'
+                name='system_tag',
+                type=str,
+                description='系统标签'
             ),
             OpenApiParameter(
                 name='knowledge_type',
@@ -285,7 +204,7 @@ class StudentKnowledgeListView(APIView):
             OpenApiParameter(
                 name='search',
                 type=str,
-                description='搜索关键词（标题或摘要）'
+                description='搜索关键词（标题或内容）'
             ),
             OpenApiParameter(
                 name='page',
@@ -306,50 +225,59 @@ class StudentKnowledgeListView(APIView):
         Get knowledge list for student knowledge center.
         
         Requirements:
-        - 16.1: 展示知识文档列表，支持一级筛选（领域大类）和二级筛选（系统对象）
-        - 16.3: 以卡片形式展示操作标签、标题、摘要、修改人和修改时间
+        - 16.1: 展示知识文档列表，支持按条线类型和系统标签筛选
+        - 16.3: 以卡片形式展示操作标签、标题、内容缩略、修改人和修改时间
         """
         queryset = Knowledge.objects.filter(
             is_deleted=False
         ).select_related(
             'created_by', 'updated_by'
-        ).prefetch_related(
-            'category_relations__category'
         )
         
-        # Filter by primary category (level 1)
-        # Requirements 16.1: 支持一级筛选（领域大类）
-        primary_category_id = request.query_params.get('primary_category_id')
-        if primary_category_id:
-            # Include knowledge in primary category or its children
-            queryset = queryset.filter(
-                Q(category_relations__category_id=primary_category_id) |
-                Q(category_relations__category__parent_id=primary_category_id)
-            )
+        # Filter by line type (通过ResourceLineType关系表)
+        line_type = request.query_params.get('line_type')
+        if line_type:
+            from django.contrib.contenttypes.models import ContentType
+            from apps.knowledge.models import ResourceLineType, Tag
+            # 如果 line_type 是名称，先查找对应的 Tag
+            try:
+                if isinstance(line_type, str) and not line_type.isdigit():
+                    tag = Tag.objects.get(name=line_type, tag_type='LINE', is_active=True)
+                    line_type_id = tag.id
+                else:
+                    line_type_id = int(line_type)
+                
+                knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
+                queryset = queryset.filter(
+                    id__in=ResourceLineType.objects.filter(
+                        content_type=knowledge_content_type,
+                        line_type_id=line_type_id
+                    ).values_list('object_id', flat=True)
+                )
+            except (Tag.DoesNotExist, ValueError):
+                # 如果找不到对应的条线类型，返回空结果
+                queryset = queryset.none()
         
-        # Filter by secondary category (level 2)
-        # Requirements 16.1: 支持二级筛选（系统对象）
-        secondary_category_id = request.query_params.get('secondary_category_id')
-        if secondary_category_id:
-            queryset = queryset.filter(
-                category_relations__category_id=secondary_category_id
-            )
+        # Filter by system tag
+        system_tag = request.query_params.get('system_tag')
+        if system_tag:
+            queryset = queryset.filter(system_tags__contains=[system_tag])
         
         # Filter by knowledge type
         knowledge_type = request.query_params.get('knowledge_type')
         if knowledge_type:
             queryset = queryset.filter(knowledge_type=knowledge_type)
         
-        # Search by title or summary
+        # Search by title or content
         search = request.query_params.get('search')
         if search:
             queryset = queryset.filter(
                 Q(title__icontains=search) |
-                Q(summary__icontains=search)
+                Q(content__icontains=search)
             )
         
-        # Remove duplicates and order by updated_at
-        queryset = queryset.distinct().order_by('-updated_at')
+        # Order by updated_at
+        queryset = queryset.order_by('-updated_at')
         
         # Pagination
         page = int(request.query_params.get('page', 1))
@@ -407,8 +335,6 @@ class StudentKnowledgeDetailView(APIView):
         try:
             knowledge = Knowledge.objects.select_related(
                 'created_by', 'updated_by'
-            ).prefetch_related(
-                'category_relations__category'
             ).get(pk=pk, is_deleted=False)
         except Knowledge.DoesNotExist:
             raise BusinessError(
@@ -1272,7 +1198,7 @@ class MentorDashboardView(APIView):
             student_stats.append({
                 'id': student.id,
                 'employee_id': student.employee_id,
-                'real_name': student.real_name,
+                'username': student.username,
                 'department_name': student.department.name if student.department else None,
                 'total_tasks': total_tasks,
                 'completed_tasks': completed_tasks,
@@ -1574,21 +1500,21 @@ class TeamManagerOverviewView(APIView):
             is_deleted=False
         ).select_related(
             'created_by'
-        ).prefetch_related(
-            'category_relations__category'
         ).order_by('-view_count')[:limit]
         
         heat_data = []
         for knowledge in knowledge_list:
+            line_type = knowledge.line_type
             heat_data.append({
                 'id': knowledge.id,
                 'title': knowledge.title,
                 'knowledge_type': knowledge.knowledge_type,
                 'knowledge_type_display': knowledge.get_knowledge_type_display(),
+                'line_type': line_type.id if line_type else None,
+                'line_type_display': line_type.name if line_type else None,
+                'system_tags': [tag.name for tag in knowledge.system_tags.all()],
                 'view_count': knowledge.view_count,
-                'primary_category_name': knowledge.primary_category.name if knowledge.primary_category else None,
-                'secondary_category_name': knowledge.secondary_category.name if knowledge.secondary_category else None,
-                'created_by_name': knowledge.created_by.real_name if knowledge.created_by else None,
+                'created_by_name': knowledge.created_by.username if knowledge.created_by else None,
                 'created_at': knowledge.created_at,
                 'updated_at': knowledge.updated_at
             })
@@ -1669,20 +1595,16 @@ class KnowledgeHeatView(APIView):
             is_deleted=False
         ).select_related(
             'created_by'
-        ).prefetch_related(
-            'category_relations__category'
         )
         
         # Filter by knowledge type
         if knowledge_type:
             queryset = queryset.filter(knowledge_type=knowledge_type)
         
-        # Filter by category
+        # Filter by category (deprecated, kept for backward compatibility)
         if category_id:
-            queryset = queryset.filter(
-                Q(category_relations__category_id=category_id) |
-                Q(category_relations__category__parent_id=category_id)
-            ).distinct()
+            # This filter is no longer meaningful without category system
+            pass
         
         # Order by view count and limit
         queryset = queryset.order_by('-view_count')[:limit]
@@ -1690,15 +1612,17 @@ class KnowledgeHeatView(APIView):
         # Build response data
         heat_data = []
         for knowledge in queryset:
+            line_type = knowledge.line_type
             heat_data.append({
                 'id': knowledge.id,
                 'title': knowledge.title,
                 'knowledge_type': knowledge.knowledge_type,
                 'knowledge_type_display': knowledge.get_knowledge_type_display(),
+                'line_type': line_type.id if line_type else None,
+                'line_type_display': line_type.name if line_type else None,
+                'system_tags': [tag.name for tag in knowledge.system_tags.all()],
                 'view_count': knowledge.view_count,
-                'primary_category_name': knowledge.primary_category.name if knowledge.primary_category else None,
-                'secondary_category_name': knowledge.secondary_category.name if knowledge.secondary_category else None,
-                'created_by_name': knowledge.created_by.real_name if knowledge.created_by else None,
+                'created_by_name': knowledge.created_by.username if knowledge.created_by else None,
                 'created_at': knowledge.created_at,
                 'updated_at': knowledge.updated_at
             })

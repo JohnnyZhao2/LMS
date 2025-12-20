@@ -276,7 +276,7 @@ class TaskAssignment(TimestampMixin, models.Model):
         ordering = ['task', '-created_at']
     
     def __str__(self):
-        return f"{self.task.title} - {self.assignee.real_name}"
+        return f"{self.task.title} - {self.assignee.username}"
     
     def save(self, *args, **kwargs):
         """

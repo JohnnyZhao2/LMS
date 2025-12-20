@@ -8,6 +8,7 @@ Endpoints:
 - POST /api/auth/switch-role/ - Switch user role
 - POST /api/auth/reset-password/ - Admin reset user password
 - POST /api/auth/change-password/ - User change own password
+- GET /api/auth/me/ - Get current user info
 
 Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
 """
@@ -18,6 +19,7 @@ from apps.users.views import (
     LogoutView,
     RefreshTokenView,
     SwitchRoleView,
+    MeView,
     ResetPasswordView,
     ChangePasswordView,
 )
@@ -27,6 +29,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
     path('switch-role/', SwitchRoleView.as_view(), name='auth-switch-role'),
+    path('me/', MeView.as_view(), name='auth-me'),
     path('reset-password/', ResetPasswordView.as_view(), name='auth-reset-password'),
     path('change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
 ]

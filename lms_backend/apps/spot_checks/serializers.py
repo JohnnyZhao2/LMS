@@ -18,9 +18,9 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
     Requirements: 14.4
     Property 36: 抽查记录时间排序
     """
-    student_name = serializers.CharField(source='student.real_name', read_only=True)
+    student_name = serializers.CharField(source='student.username', read_only=True)
     student_employee_id = serializers.CharField(source='student.employee_id', read_only=True)
-    checker_name = serializers.CharField(source='checker.real_name', read_only=True)
+    checker_name = serializers.CharField(source='checker.username', read_only=True)
     
     class Meta:
         model = SpotCheck
@@ -38,14 +38,14 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
     
     Requirements: 14.1
     """
-    student_name = serializers.CharField(source='student.real_name', read_only=True)
+    student_name = serializers.CharField(source='student.username', read_only=True)
     student_employee_id = serializers.CharField(source='student.employee_id', read_only=True)
     student_department = serializers.CharField(
         source='student.department.name', 
         read_only=True,
         allow_null=True
     )
-    checker_name = serializers.CharField(source='checker.real_name', read_only=True)
+    checker_name = serializers.CharField(source='checker.username', read_only=True)
     
     class Meta:
         model = SpotCheck

@@ -13,8 +13,6 @@ from django.urls import path
 
 from .views import (
     StudentDashboardView,
-    StudentKnowledgeCategoryListView,
-    StudentKnowledgeSecondaryCategoryView,
     StudentKnowledgeListView,
     StudentKnowledgeDetailView,
     StudentTaskCenterListView,
@@ -45,8 +43,6 @@ urlpatterns = [
     # Student knowledge center
     # Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6
     path('knowledge-center/', StudentKnowledgeListView.as_view(), name='student-knowledge-list'),
-    path('knowledge-center/categories/', StudentKnowledgeCategoryListView.as_view(), name='student-knowledge-categories'),
-    path('knowledge-center/categories/<int:primary_id>/children/', StudentKnowledgeSecondaryCategoryView.as_view(), name='student-knowledge-secondary-categories'),
     path('knowledge-center/<int:pk>/', StudentKnowledgeDetailView.as_view(), name='student-knowledge-detail'),
     
     # Student task center

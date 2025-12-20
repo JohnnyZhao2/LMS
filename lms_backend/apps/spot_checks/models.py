@@ -75,4 +75,4 @@ class SpotCheck(TimestampMixin, models.Model):
         ordering = ['-checked_at']
     
     def __str__(self):
-        return f"{self.student.real_name} - {self.checked_at.strftime('%Y-%m-%d')}"
+        return f"{self.student.username} - {self.checked_at.strftime('%Y-%m-%d')}"

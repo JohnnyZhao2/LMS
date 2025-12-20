@@ -135,7 +135,7 @@ class Submission(TimestampMixin, models.Model):
         # 练习任务可以有多次提交，通过 attempt_number 区分
     
     def __str__(self):
-        return f"{self.user.real_name} - {self.quiz.title} (第{self.attempt_number}次)"
+        return f"{self.user.username} - {self.quiz.title} (第{self.attempt_number}次)"
     
     def save(self, *args, **kwargs):
         """保存时自动设置用户和总分"""

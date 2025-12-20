@@ -31,7 +31,7 @@ class TestStudentProfileAPI:
         
         assert response.status_code == status.HTTP_200_OK
         assert response.data['id'] == user.id
-        assert response.data['real_name'] == user.real_name
+        assert response.data['username'] == user.username
         assert response.data['employee_id'] == user.employee_id
         assert response.data['username'] == user.username
     
@@ -61,7 +61,7 @@ class TestStudentProfileAPI:
         from apps.users.models import UserRole
         
         user = authenticated_client.user
-        mentor = create_user(username='mentor_user', real_name='导师张三')
+        mentor = create_user(username='mentor_user', username='导师张三')
         UserRole.objects.get_or_create(user=mentor, role=mentor_role)
         
         # Assign mentor to user
@@ -72,7 +72,7 @@ class TestStudentProfileAPI:
         
         assert response.status_code == status.HTTP_200_OK
         assert response.data['mentor_id'] == mentor.id
-        assert response.data['mentor_name'] == mentor.real_name
+        assert response.data['mentor_name'] == mentor.username
     
     def test_student_profile_includes_roles(self, authenticated_client):
         """

@@ -8,6 +8,7 @@ Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.contenttypes.models import ContentType
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -93,12 +94,39 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='难度等级'
     )
     
-    # 标签（用于分类和搜索）
-    tags = models.JSONField(
-        default=list,
-        blank=True,
-        verbose_name='标签'
-    )
+    # 条线类型通过ResourceLineType关联（多态关系）
+    # 使用property提供便捷访问
+    @property
+    def line_type(self):
+        """获取条线类型（单选）"""
+        from apps.knowledge.models import ResourceLineType
+        relation = ResourceLineType.objects.filter(
+            content_type=ContentType.objects.get_for_model(self),
+            object_id=self.id
+        ).first()
+        return relation.line_type if relation else None
+    
+    def set_line_type(self, line_type):
+        """设置条线类型"""
+        from apps.knowledge.models import ResourceLineType
+        from django.core.exceptions import ValidationError
+        
+        if line_type and line_type.tag_type != 'LINE':
+            raise ValidationError('只能设置条线类型标签')
+        
+        # 删除旧的关系
+        ResourceLineType.objects.filter(
+            content_type=ContentType.objects.get_for_model(self),
+            object_id=self.id
+        ).delete()
+        
+        # 创建新关系
+        if line_type:
+            ResourceLineType.objects.create(
+                content_type=ContentType.objects.get_for_model(self),
+                object_id=self.id,
+                line_type=line_type
+            )
     
     class Meta:
         db_table = 'lms_question'

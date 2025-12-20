@@ -34,7 +34,7 @@ class QuizListSerializer(serializers.ModelSerializer):
     
     Requirements: 6.4 - 导师或室经理查看试卷列表时展示所有试卷
     """
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -54,7 +54,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     
     Requirements: 6.1, 6.2
     """
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -77,66 +77,6 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         return QuizQuestionSerializer(quiz_questions, many=True).data
 
 
-class QuizCreateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating quizzes.
-    
-    Requirements:
-    - 6.1: 创建试卷时存储试卷名称、描述，并记录创建者
-    """
-    
-    class Meta:
-        model = Quiz
-        fields = ['title', 'description']
-    
-    def create(self, validated_data):
-        """Create quiz with creator from context."""
-        validated_data['created_by'] = self.context['request'].user
-        return Quiz.objects.create(**validated_data)
-
-
-class QuizUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating quizzes.
-    
-    Requirements:
-    - 6.5: 导师或室经理仅允许编辑自己创建的试卷
-    - 6.7: 管理员允许编辑所有试卷
-    """
-    
-    class Meta:
-        model = Quiz
-        fields = ['title', 'description']
-
-
-
-class AddExistingQuestionSerializer(serializers.Serializer):
-    """
-    Serializer for adding existing questions to a quiz.
-    
-    Requirements:
-    - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目
-    """
-    question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        min_length=1,
-        help_text='要添加的题目ID列表'
-    )
-    
-    def validate_question_ids(self, value):
-        """Validate that all question IDs exist and are not deleted."""
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
-
-
 class AddNewQuestionSerializer(serializers.Serializer):
     """
     Serializer for adding a new question to a quiz.
@@ -155,7 +95,7 @@ class AddNewQuestionSerializer(serializers.Serializer):
         choices=Question.DIFFICULTY_CHOICES,
         default='MEDIUM'
     )
-    tags = serializers.JSONField(required=False, default=list)
+    line_type_id = serializers.IntegerField(required=False, allow_null=True)
     
     def validate(self, attrs):
         """Validate question data based on question type."""
@@ -215,6 +155,120 @@ class AddNewQuestionSerializer(serializers.Serializer):
                 })
         
         return attrs
+
+
+class QuizCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating quizzes.
+    
+    Requirements:
+    - 6.1: 创建试卷时存储试卷名称、描述，并记录创建者
+    - 6.2: 创建试卷时可同时添加已有题目或新建题目
+    - 6.3: 在创建试卷时新建的题目纳入题库，题目作者为当前用户
+    """
+    existing_question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text='要添加的已有题目ID列表'
+    )
+    new_questions = AddNewQuestionSerializer(
+        many=True,
+        required=False,
+        default=list,
+        help_text='要新建的题目列表'
+    )
+    
+    class Meta:
+        model = Quiz
+        fields = ['title', 'description', 'existing_question_ids', 'new_questions']
+    
+    def validate_existing_question_ids(self, value):
+        """Validate that all question IDs exist and are not deleted."""
+        if not value:
+            return value
+        
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=value,
+                is_deleted=False
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
+    
+    def create(self, validated_data):
+        """Create quiz with creator and questions from context."""
+        existing_question_ids = validated_data.pop('existing_question_ids', [])
+        new_questions_data = validated_data.pop('new_questions', [])
+        
+        validated_data['created_by'] = self.context['request'].user
+        quiz = Quiz.objects.create(**validated_data)
+        
+        # Add existing questions
+        for question_id in existing_question_ids:
+            question = Question.objects.get(pk=question_id)
+            quiz.add_question(question)
+        
+        # Create and add new questions
+        for question_data in new_questions_data:
+            line_type_id = question_data.pop('line_type_id', None)
+            question = Question.objects.create(
+                created_by=self.context['request'].user,
+                **question_data
+            )
+            # Set line_type if provided
+            if line_type_id:
+                from apps.knowledge.models import Tag
+                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
+                question.set_line_type(line_type)
+            quiz.add_question(question)
+        
+        return quiz
+
+
+class QuizUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating quizzes.
+    
+    Requirements:
+    - 6.5: 导师或室经理仅允许编辑自己创建的试卷
+    - 6.7: 管理员允许编辑所有试卷
+    """
+    
+    class Meta:
+        model = Quiz
+        fields = ['title', 'description']
+
+
+
+class AddExistingQuestionSerializer(serializers.Serializer):
+    """
+    Serializer for adding existing questions to a quiz.
+    
+    Requirements:
+    - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目
+    """
+    question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        min_length=1,
+        help_text='要添加的题目ID列表'
+    )
+    
+    def validate_question_ids(self, value):
+        """Validate that all question IDs exist and are not deleted."""
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=value,
+                is_deleted=False
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
 
 
 class AddQuestionsSerializer(serializers.Serializer):

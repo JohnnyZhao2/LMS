@@ -19,7 +19,7 @@ def admin_user_with_role(db, department):
         username='admin_test',
         password='adminpass123',
         employee_id='ADMIN001',
-        real_name='管理员',
+        username='管理员',
         department=department,
         is_active=True
     )
@@ -48,7 +48,7 @@ def mentor_user(db, department):
         username='mentor_test',
         password='mentorpass123',
         employee_id='MENTOR001',
-        real_name='导师',
+        username='导师',
         department=department,
         is_active=True
     )
@@ -67,7 +67,7 @@ def dept_manager_user(db, department):
         username='dept_manager_test',
         password='deptpass123',
         employee_id='DEPTMGR001',
-        real_name='室经理',
+        username='室经理',
         department=department,
         is_active=True
     )
@@ -106,7 +106,7 @@ class TestUserListCreateAPI:
             'username': 'newuser',
             'password': 'newpass123',
             'employee_id': 'NEW001',
-            'real_name': '新用户',
+            'username': '新用户',
             'email': 'new@example.com',
             'department_id': department.id
         }
@@ -115,7 +115,7 @@ class TestUserListCreateAPI:
         
         assert response.status_code == status.HTTP_201_CREATED
         assert response.data['username'] == 'newuser'
-        assert response.data['real_name'] == '新用户'
+        assert response.data['username'] == '新用户'
         
         # Verify user has student role by default
         user = User.objects.get(username='newuser')
@@ -127,7 +127,7 @@ class TestUserListCreateAPI:
             'username': 'newuser',
             'password': 'newpass123',
             'employee_id': 'NEW001',
-            'real_name': '新用户'
+            'username': '新用户'
         }
         
         response = authenticated_client.post('/api/users/', data, format='json')
@@ -153,18 +153,18 @@ class TestUserDetailAPI:
         user = create_user(username='testuser')
         
         data = {
-            'real_name': '更新后的名字',
+            'username': '更新后的名字',
             'email': 'updated@example.com'
         }
         
         response = admin_client.patch(f'/api/users/{user.id}/', data, format='json')
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data['real_name'] == '更新后的名字'
+        assert response.data['username'] == '更新后的名字'
         
         # Verify in database
         user.refresh_from_db()
-        assert user.real_name == '更新后的名字'
+        assert user.username == '更新后的名字'
 
 
 class TestUserActivationAPI:

@@ -42,10 +42,8 @@ class UserFactory(DjangoModelFactory):
         model = User
         skip_postgeneration_save = True
     
-    username = factory.Sequence(lambda n: f'user{n}')
+    username = factory.Sequence(lambda n: f'用户{n}')
     employee_id = factory.Sequence(lambda n: f'EMP{n:06d}')
-    real_name = factory.Sequence(lambda n: f'用户{n}')
-    email = factory.LazyAttribute(lambda obj: f'{obj.username}@example.com')
     password = factory.PostGenerationMethodCall('set_password', 'testpass123')
     is_active = True
     department = factory.SubFactory(DepartmentFactory)

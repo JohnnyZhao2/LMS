@@ -56,7 +56,7 @@ def valid_employee_id_strategy(draw):
 
 
 @st.composite
-def valid_real_name_strategy(draw):
+def valid_username_strategy(draw):
     """Generate valid real names: 1-50 chars."""
     return draw(st.text(
         alphabet='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ中文测试用户',
@@ -129,7 +129,7 @@ class TestProperty5NewUserDefaultStudentRole:
     @given(
         username=valid_username_strategy(),
         employee_id=valid_employee_id_strategy(),
-        real_name=valid_real_name_strategy(),
+        username=valid_username_strategy(),
     )
     def test_new_user_has_student_role(
         self, 
@@ -137,7 +137,7 @@ class TestProperty5NewUserDefaultStudentRole:
         setup_department,
         username, 
         employee_id, 
-        real_name
+        username
     ):
         """
         **Feature: lms-backend, Property 5: 新用户默认学员角色**
@@ -162,7 +162,7 @@ class TestProperty5NewUserDefaultStudentRole:
             username=unique_username,
             password='testpass123',
             employee_id=unique_employee_id,
-            real_name=real_name,
+            username=username,
             department=setup_department,
         )
         
@@ -212,7 +212,7 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
         )
         
@@ -221,7 +221,7 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'admin_{unique_suffix}',
             password='adminpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -270,7 +270,7 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
         )
         
@@ -306,14 +306,14 @@ class TestProperty6UserInfoUpdateConsistency:
     @pytest.mark.django_db(transaction=True)
     @settings(**HYPOTHESIS_SETTINGS)
     @given(
-        new_real_name=valid_real_name_strategy(),
+        new_username=valid_username_strategy(),
         new_employee_id=valid_employee_id_strategy(),
     )
     def test_user_info_update_reflects_in_database(
         self,
         setup_roles,
         setup_department,
-        new_real_name,
+        new_username,
         new_employee_id
     ):
         """
@@ -332,20 +332,20 @@ class TestProperty6UserInfoUpdateConsistency:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='原始姓名',
+            username='原始姓名',
             department=setup_department,
         )
         
         try:
             # Generate unique values for update
-            unique_real_name = f"{new_real_name}_{unique_suffix}"
+            unique_username = f"{new_username}_{unique_suffix}"
             unique_employee_id = f"{new_employee_id}_{unique_suffix}"
             
             # Ensure the new employee_id doesn't conflict
             assume(not User.objects.filter(employee_id=unique_employee_id).exclude(pk=user.pk).exists())
             
             # Update user info
-            user.real_name = unique_real_name
+            user.username = unique_username
             user.employee_id = unique_employee_id
             user.save()
             
@@ -353,14 +353,14 @@ class TestProperty6UserInfoUpdateConsistency:
             user.refresh_from_db()
             
             # Property assertion: database should reflect updated values
-            assert user.real_name == unique_real_name, \
-                f"real_name not updated: expected {unique_real_name}, got {user.real_name}"
+            assert user.username == unique_username, \
+                f"username not updated: expected {unique_username}, got {user.username}"
             assert user.employee_id == unique_employee_id, \
                 f"employee_id not updated: expected {unique_employee_id}, got {user.employee_id}"
             
             # Verify by querying directly
             db_user = User.objects.get(pk=user.pk)
-            assert db_user.real_name == unique_real_name
+            assert db_user.username == unique_username
             assert db_user.employee_id == unique_employee_id
         finally:
             # Cleanup
@@ -397,7 +397,7 @@ class TestProperty6UserInfoUpdateConsistency:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
         )
         
@@ -454,7 +454,7 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -502,7 +502,7 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
             is_active=False,
         )
@@ -551,7 +551,7 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -601,7 +601,7 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password=password,
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -649,7 +649,7 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password=password,
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
             is_active=False,
         )
@@ -709,7 +709,7 @@ class TestProperty8UserDeleteProtection:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
         )
         
@@ -718,7 +718,7 @@ class TestProperty8UserDeleteProtection:
             username=f'creator_{unique_suffix}',
             password='testpass123',
             employee_id=f'CRE_{unique_suffix}',
-            real_name='任务创建者',
+            username='任务创建者',
             department=setup_department,
         )
         
@@ -782,7 +782,7 @@ class TestProperty8UserDeleteProtection:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=setup_department,
         )
         
@@ -791,7 +791,7 @@ class TestProperty8UserDeleteProtection:
             username=f'checker_{unique_suffix}',
             password='testpass123',
             employee_id=f'CHK_{unique_suffix}',
-            real_name='检查者',
+            username='检查者',
             department=setup_department,
         )
         
@@ -846,7 +846,7 @@ class TestProperty8UserDeleteProtection:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            real_name='测试用户',
+            username='测试用户',
             department=setup_department,
         )
         
@@ -894,7 +894,7 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -904,7 +904,7 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'old_manager_{unique_suffix}',
             password='testpass123',
             employee_id=f'OLD_{unique_suffix}',
-            real_name='原室经理',
+            username='原室经理',
             department=setup_department,
         )
         
@@ -913,7 +913,7 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'new_manager_{unique_suffix}',
             password='testpass123',
             employee_id=f'NEW_{unique_suffix}',
-            real_name='新室经理',
+            username='新室经理',
             department=setup_department,
         )
         
@@ -988,7 +988,7 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -1000,7 +1000,7 @@ class TestProperty11DeptManagerPermissionTransfer:
                 username=f'manager_{unique_suffix}_{i}',
                 password='testpass123',
                 employee_id=f'MGR_{unique_suffix}_{i}',
-                real_name=f'经理{i}',
+                username=f'经理{i}',
                 department=setup_department,
             )
             managers.append(manager)
@@ -1077,7 +1077,7 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=setup_department,
         )
         
@@ -1088,7 +1088,7 @@ class TestProperty10MentorRelationshipUniqueness:
                 username=f'mentor_{unique_suffix}_{i}',
                 password='testpass123',
                 employee_id=f'MEN_{unique_suffix}_{i}',
-                real_name=f'导师{i}',
+                username=f'导师{i}',
                 department=setup_department,
             )
             UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -1155,7 +1155,7 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=setup_department,
         )
         
@@ -1164,7 +1164,7 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'mentor1_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN1_{unique_suffix}',
-            real_name='导师1',
+            username='导师1',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=mentor1, role=setup_roles['MENTOR'])
@@ -1173,7 +1173,7 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'mentor2_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN2_{unique_suffix}',
-            real_name='导师2',
+            username='导师2',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=mentor2, role=setup_roles['MENTOR'])

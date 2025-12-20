@@ -30,12 +30,12 @@ class AuthenticationService:
     """
     
     @staticmethod
-    def login(username: str, password: str) -> Dict[str, Any]:
+    def login(employee_id: str, password: str) -> Dict[str, Any]:
         """
         Authenticate user and generate JWT tokens.
         
         Args:
-            username: User's username
+            employee_id: User's employee ID
             password: User's password
             
         Returns:
@@ -58,7 +58,7 @@ class AuthenticationService:
         # We need to do this separately because Django's authenticate()
         # returns None for both invalid credentials AND inactive users
         try:
-            user_obj = User.objects.get(username=username)
+            user_obj = User.objects.get(employee_id=employee_id)
             if not user_obj.is_active:
                 raise BusinessError(
                     code=ErrorCodes.AUTH_USER_INACTIVE,
@@ -68,14 +68,19 @@ class AuthenticationService:
             # User doesn't exist - will be caught by authenticate below
             pass
         
-        # Authenticate user
-        user = authenticate(username=username, password=password)
+        # Authenticate user using employee_id as username
+        user = authenticate(username=employee_id, password=password)
         
         if user is None:
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
-                message='用户名或密码错误'
+                message='工号或密码错误'
             )
+        
+        # Update last_login timestamp
+        from django.utils import timezone
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
         
         # Generate JWT tokens
         tokens = AuthenticationService._generate_tokens(user)
@@ -200,7 +205,7 @@ class AuthenticationService:
         
         # Add custom claims
         refresh['employee_id'] = user.employee_id
-        refresh['real_name'] = user.real_name
+        refresh['username'] = user.username  # username 字段存储显示名称
         refresh['roles'] = user.role_codes
         
         if current_role:
@@ -273,10 +278,8 @@ class AuthenticationService:
         """
         return {
             'id': user.id,
-            'username': user.username,
             'employee_id': user.employee_id,
-            'real_name': user.real_name,
-            'email': user.email,
+            'username': user.username,  # username 字段存储显示名称
             'department': {
                 'id': user.department.id,
                 'name': user.department.name,
@@ -284,7 +287,7 @@ class AuthenticationService:
             } if user.department else None,
             'mentor': {
                 'id': user.mentor.id,
-                'real_name': user.mentor.real_name,
+                'username': user.mentor.username,
                 'employee_id': user.mentor.employee_id,
             } if user.mentor else None,
             'is_active': user.is_active,
@@ -314,21 +317,6 @@ class UserService:
         except User.DoesNotExist:
             return None
     
-    @staticmethod
-    def get_user_by_username(username: str) -> Optional[User]:
-        """
-        Get user by username.
-        
-        Args:
-            username: The username
-            
-        Returns:
-            User instance or None
-        """
-        try:
-            return User.objects.get(username=username)
-        except User.DoesNotExist:
-            return None
     
     @staticmethod
     def get_user_by_employee_id(employee_id: str) -> Optional[User]:
@@ -391,7 +379,7 @@ class UserManagementService:
             The deactivated user
             
         Raises:
-            BusinessError: If user not found
+            BusinessError: If user not found or user is admin
             
         Requirements:
         - 2.3: 停用用户，该用户无法登录且不出现在人员选择器中
@@ -407,7 +395,15 @@ class UserManagementService:
                 message='用户不存在'
             )
         
+        # 防止停用超级用户（Django 的 is_superuser）
+        if user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='不能停用超级用户账号'
+            )
+        
         user.is_active = False
+        # Django 的 auto_now=True 会自动更新 updated_at
         user.save()
         return user
     
@@ -440,6 +436,7 @@ class UserManagementService:
             )
         
         user.is_active = True
+        # Django 的 auto_now=True 会自动更新 updated_at
         user.save()
         return user
     
@@ -510,6 +507,10 @@ class UserManagementService:
                 defaults={'assigned_by': assigned_by}
             )
         
+        # Django 的 auto_now=True 会自动更新 updated_at
+        # 注意：如果使用 update_fields，需要包含 updated_at，或者不使用 update_fields
+        user.save()
+        
         # Refresh user from database
         user.refresh_from_db()
         return user
@@ -579,6 +580,7 @@ class UserManagementService:
             # Assign new mentor (automatically replaces old one due to FK)
             user.mentor = mentor
         
+        # Django 的 auto_now=True 会自动更新 updated_at
         user.save()
         return user
     

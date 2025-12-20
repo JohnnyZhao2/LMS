@@ -43,7 +43,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     )
     correct_answer = serializers.JSONField(source='question.answer', read_only=True)
     explanation = serializers.CharField(source='question.explanation', read_only=True)
-    graded_by_name = serializers.CharField(source='graded_by.real_name', read_only=True)
+    graded_by_name = serializers.CharField(source='graded_by.username', read_only=True)
     
     class Meta:
         model = Answer
@@ -63,7 +63,7 @@ class AnswerSerializer(serializers.ModelSerializer):
 class SubmissionListSerializer(serializers.ModelSerializer):
     """Serializer for submission list view."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.real_name', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -83,7 +83,7 @@ class SubmissionListSerializer(serializers.ModelSerializer):
 class SubmissionDetailSerializer(serializers.ModelSerializer):
     """Serializer for submission detail view."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.real_name', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -429,7 +429,7 @@ class GradingListSerializer(serializers.ModelSerializer):
     - 13.1: 导师/室经理查看评分中心时展示所辖学员的待评分考试列表
     """
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.real_name', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
     user_employee_id = serializers.CharField(source='user.employee_id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     ungraded_count = serializers.SerializerMethodField()
@@ -455,7 +455,7 @@ class GradingDetailSerializer(serializers.ModelSerializer):
     - 13.2: 评分人查看待评分考试时展示学员答案和评分输入界面
     """
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.real_name', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     answers = AnswerSerializer(many=True, read_only=True)
     ungraded_count = serializers.SerializerMethodField()

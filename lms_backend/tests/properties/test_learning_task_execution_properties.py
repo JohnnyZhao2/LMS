@@ -120,7 +120,7 @@ class TestProperty20KnowledgeLearningCompletionRecord:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -130,7 +130,7 @@ class TestProperty20KnowledgeLearningCompletionRecord:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -253,7 +253,7 @@ class TestProperty21LearningTaskAutoCompletion:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -263,7 +263,7 @@ class TestProperty21LearningTaskAutoCompletion:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -381,7 +381,7 @@ class TestProperty22KnowledgeBrowsingDoesNotAffectTask:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -391,7 +391,7 @@ class TestProperty22KnowledgeBrowsingDoesNotAffectTask:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -491,7 +491,7 @@ class TestProperty22KnowledgeBrowsingDoesNotAffectTask:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -501,7 +501,7 @@ class TestProperty22KnowledgeBrowsingDoesNotAffectTask:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -624,7 +624,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -634,7 +634,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -730,7 +730,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -740,7 +740,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -841,7 +841,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -851,7 +851,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         
@@ -945,7 +945,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            real_name='管理员',
+            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -955,7 +955,7 @@ class TestProperty23TaskOverdueStatusMarking:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
         )
         

@@ -12,7 +12,7 @@ import re
 from rest_framework import serializers
 
 from apps.tasks.models import TaskAssignment
-from apps.knowledge.models import Knowledge, KnowledgeCategory
+from apps.knowledge.models import Knowledge
 
 
 class StudentPendingTaskSerializer(serializers.ModelSerializer):
@@ -28,7 +28,7 @@ class StudentPendingTaskSerializer(serializers.ModelSerializer):
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
-    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     progress = serializers.SerializerMethodField()
     
@@ -92,24 +92,29 @@ class LatestKnowledgeSerializer(serializers.ModelSerializer):
     Requirements:
     - 15.2: 展示最新发布的知识文档
     """
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.SerializerMethodField()
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
+    content_preview = serializers.SerializerMethodField()
     
     class Meta:
         model = Knowledge
         fields = [
             'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'operation_tags',
+            'content_preview', 'operation_tags',
             'created_by_name', 'updated_by_name',
             'created_at', 'updated_at'
         ]
     
+    def get_content_preview(self, obj):
+        """Get content preview from Knowledge model property."""
+        return obj.content_preview
+    
     def get_updated_by_name(self, obj):
         """Get name of last updater."""
         if obj.updated_by:
-            return obj.updated_by.real_name
-        return obj.created_by.real_name
+            return obj.updated_by.username
+        return obj.created_by.username if obj.created_by else None
 
 
 class StudentDashboardSerializer(serializers.Serializer):
@@ -128,27 +133,7 @@ class StudentDashboardSerializer(serializers.Serializer):
 
 # ============ Student Knowledge Center Serializers ============
 # Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6
-
-class StudentKnowledgeCategorySerializer(serializers.ModelSerializer):
-    """
-    Serializer for knowledge categories in student knowledge center.
-    
-    Requirements:
-    - 16.1: 支持一级筛选（领域大类）和二级筛选（系统对象）
-    - 16.2: 动态加载对应的二级分类选项
-    """
-    level = serializers.ReadOnlyField()
-    knowledge_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = KnowledgeCategory
-        fields = ['id', 'name', 'code', 'description', 'level', 'knowledge_count']
-    
-    def get_knowledge_count(self, obj):
-        """Get count of knowledge documents in this category."""
-        return obj.knowledge_relations.filter(
-            knowledge__is_deleted=False
-        ).count()
+# Note: 已改用条线类型和系统标签进行分类，不再使用 KnowledgeCategory
 
 
 class StudentKnowledgeListSerializer(serializers.ModelSerializer):
@@ -159,38 +144,33 @@ class StudentKnowledgeListSerializer(serializers.ModelSerializer):
     - 16.3: 以卡片形式展示操作标签、标题、摘要、修改人和修改时间
     """
     updated_by_name = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     knowledge_type_display = serializers.CharField(
         source='get_knowledge_type_display', read_only=True
     )
-    primary_category_name = serializers.SerializerMethodField()
-    secondary_category_name = serializers.SerializerMethodField()
+    line_type_display = serializers.CharField(
+        source='get_line_type_display', read_only=True
+    )
+    content_preview = serializers.SerializerMethodField()
     
     class Meta:
         model = Knowledge
         fields = [
             'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'operation_tags',
-            'primary_category_name', 'secondary_category_name',
-            'updated_by_name', 'updated_at'
+            'content_preview', 'operation_tags',
+            'line_type', 'line_type_display',
+            'updated_by_name', 'created_by_name', 'updated_at'
         ]
+    
+    def get_content_preview(self, obj):
+        """Get content preview from Knowledge model property."""
+        return obj.content_preview
     
     def get_updated_by_name(self, obj):
         """Get name of last updater (修改人)."""
         if obj.updated_by:
-            return obj.updated_by.real_name
-        return obj.created_by.real_name if obj.created_by else None
-    
-    def get_primary_category_name(self, obj):
-        """Get primary category name."""
-        if obj.primary_category:
-            return obj.primary_category.name
-        return None
-    
-    def get_secondary_category_name(self, obj):
-        """Get secondary category name."""
-        if obj.secondary_category:
-            return obj.secondary_category.name
-        return None
+            return obj.updated_by.username
+        return obj.created_by.username if obj.created_by else None
 
 
 class StudentKnowledgeDetailSerializer(serializers.ModelSerializer):
@@ -203,26 +183,27 @@ class StudentKnowledgeDetailSerializer(serializers.ModelSerializer):
     - 16.6: 在右侧展示自动生成的内容目录
     """
     updated_by_name = serializers.SerializerMethodField()
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     knowledge_type_display = serializers.CharField(
         source='get_knowledge_type_display', read_only=True
     )
-    primary_category_name = serializers.SerializerMethodField()
-    secondary_category_name = serializers.SerializerMethodField()
+    line_type_display = serializers.CharField(
+        source='get_line_type_display', read_only=True
+    )
     table_of_contents = serializers.SerializerMethodField()
-    structured_content = serializers.SerializerMethodField()
     
     class Meta:
         model = Knowledge
         fields = [
             'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'content', 'operation_tags',
-            # Structured fields for EMERGENCY type
+            'line_type', 'line_type_display',
+            # 应急类知识的结构化字段
             'fault_scenario', 'trigger_process', 'solution',
             'verification_plan', 'recovery_plan',
+            # 其他类型知识的正文内容
+            'content', 'operation_tags',
             # Computed fields
-            'structured_content', 'table_of_contents',
-            'primary_category_name', 'secondary_category_name',
+            'table_of_contents',
             'created_by_name', 'updated_by_name',
             'view_count', 'created_at', 'updated_at'
         ]
@@ -230,53 +211,8 @@ class StudentKnowledgeDetailSerializer(serializers.ModelSerializer):
     def get_updated_by_name(self, obj):
         """Get name of last updater."""
         if obj.updated_by:
-            return obj.updated_by.real_name
-        return obj.created_by.real_name if obj.created_by else None
-    
-    def get_primary_category_name(self, obj):
-        """Get primary category name."""
-        if obj.primary_category:
-            return obj.primary_category.name
-        return None
-    
-    def get_secondary_category_name(self, obj):
-        """Get secondary category name."""
-        if obj.secondary_category:
-            return obj.secondary_category.name
-        return None
-    
-    def get_structured_content(self, obj):
-        """
-        Get structured content for EMERGENCY type knowledge.
-        
-        Requirements:
-        - 16.4: 应急类知识按结构化字段顺序展示已填写内容
-        
-        Returns list of sections with title and content, only including
-        sections that have content.
-        """
-        if obj.knowledge_type != 'EMERGENCY':
-            return None
-        
-        sections = []
-        field_mapping = [
-            ('fault_scenario', '故障场景'),
-            ('trigger_process', '触发流程'),
-            ('solution', '解决方案'),
-            ('verification_plan', '验证方案'),
-            ('recovery_plan', '恢复方案'),
-        ]
-        
-        for field_name, title in field_mapping:
-            content = getattr(obj, field_name, '')
-            if content and content.strip():
-                sections.append({
-                    'field': field_name,
-                    'title': title,
-                    'content': content
-                })
-        
-        return sections
+            return obj.updated_by.username
+        return obj.created_by.username if obj.created_by else None
     
     def get_table_of_contents(self, obj):
         """
@@ -365,7 +301,7 @@ class StudentTaskCenterListSerializer(serializers.ModelSerializer):
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
-    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     progress = serializers.SerializerMethodField()
     
@@ -451,12 +387,11 @@ class StudentProfileSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     username = serializers.CharField(read_only=True)
     employee_id = serializers.CharField(read_only=True)
-    real_name = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True)
     department_id = serializers.IntegerField(source='department.id', read_only=True, allow_null=True)
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
     mentor_id = serializers.IntegerField(source='mentor.id', read_only=True, allow_null=True)
-    mentor_name = serializers.CharField(source='mentor.real_name', read_only=True, allow_null=True)
+    mentor_name = serializers.CharField(source='mentor.username', read_only=True, allow_null=True)
     roles = serializers.SerializerMethodField()
     date_joined = serializers.DateTimeField(read_only=True)
     
@@ -570,7 +505,7 @@ class MentorStudentStatSerializer(serializers.Serializer):
     """
     id = serializers.IntegerField(read_only=True)
     employee_id = serializers.CharField(read_only=True)
-    real_name = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
     
     # Task statistics
@@ -678,9 +613,9 @@ class KnowledgeHeatSerializer(serializers.Serializer):
     title = serializers.CharField(read_only=True)
     knowledge_type = serializers.CharField(read_only=True)
     knowledge_type_display = serializers.CharField(read_only=True)
+    line_type = serializers.CharField(read_only=True)
+    line_type_display = serializers.CharField(read_only=True)
     view_count = serializers.IntegerField(read_only=True)
-    primary_category_name = serializers.CharField(read_only=True, allow_null=True)
-    secondary_category_name = serializers.CharField(read_only=True, allow_null=True)
     created_by_name = serializers.CharField(read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)

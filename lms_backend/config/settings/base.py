@@ -80,7 +80,9 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True
-USE_TZ = True
+# 设置为 False 以便数据库直接存储本地时间（Asia/Shanghai）
+# 注意：这会失去时区支持，但数据库中的时间会直接显示为本地时间
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'

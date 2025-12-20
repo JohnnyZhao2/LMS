@@ -83,7 +83,7 @@ def setup_admin_user(db, setup_department, setup_roles):
         username='question_admin_user',
         defaults={
             'employee_id': 'Q_ADMIN_001',
-            'real_name': '题目管理员',
+            'username': '题目管理员',
             'department': setup_department,
         }
     )
@@ -102,7 +102,7 @@ def setup_mentor_user(db, setup_department, setup_roles):
         username='question_mentor_user',
         defaults={
             'employee_id': 'Q_MENTOR_001',
-            'real_name': '题目导师',
+            'username': '题目导师',
             'department': setup_department,
         }
     )
@@ -121,7 +121,7 @@ def setup_another_mentor_user(db, setup_department, setup_roles):
         username='question_mentor_user2',
         defaults={
             'employee_id': 'Q_MENTOR_002',
-            'real_name': '另一个导师',
+            'username': '另一个导师',
             'department': setup_department,
         }
     )

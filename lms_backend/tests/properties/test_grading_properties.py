@@ -174,7 +174,7 @@ class TestProperty33GradingCompletionStatusTransition:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -184,7 +184,7 @@ class TestProperty33GradingCompletionStatusTransition:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -368,7 +368,7 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -378,7 +378,7 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -522,7 +522,7 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -532,7 +532,7 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
             mentor=mentor,
         )

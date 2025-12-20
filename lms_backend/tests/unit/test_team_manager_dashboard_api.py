@@ -46,7 +46,7 @@ class TestTeamManagerOverviewAPI:
         # Create team manager
         self.team_manager = UserFactory(
             username='team_manager',
-            real_name='团队经理',
+            username='团队经理',
             department=self.dept1
         )
         self.team_manager.roles.add(self.student_role, self.team_manager_role)
@@ -55,7 +55,7 @@ class TestTeamManagerOverviewAPI:
         # Create admin
         self.admin = UserFactory(
             username='admin',
-            real_name='管理员',
+            username='管理员',
             department=self.dept1
         )
         self.admin.roles.add(self.student_role, self.admin_role)
@@ -64,14 +64,14 @@ class TestTeamManagerOverviewAPI:
         # Create students in different departments
         self.student1 = UserFactory(
             username='student1',
-            real_name='学员1',
+            username='学员1',
             department=self.dept1
         )
         self.student1.roles.add(self.student_role)
         
         self.student2 = UserFactory(
             username='student2',
-            real_name='学员2',
+            username='学员2',
             department=self.dept2
         )
         self.student2.roles.add(self.student_role)
@@ -206,7 +206,7 @@ class TestKnowledgeHeatAPI:
         # Create team manager
         self.team_manager = UserFactory(
             username='team_manager',
-            real_name='团队经理',
+            username='团队经理',
             department=self.dept
         )
         self.team_manager.roles.add(self.student_role, self.team_manager_role)
@@ -215,7 +215,7 @@ class TestKnowledgeHeatAPI:
         # Create student
         self.student = UserFactory(
             username='student',
-            real_name='学员',
+            username='学员',
             department=self.dept
         )
         self.student.roles.add(self.student_role)
@@ -223,7 +223,7 @@ class TestKnowledgeHeatAPI:
         # Create admin for knowledge creation
         self.admin = UserFactory(
             username='admin',
-            real_name='管理员',
+            username='管理员',
             department=self.dept
         )
         self.admin.roles.add(self.student_role, self.admin_role)
@@ -413,7 +413,7 @@ class TestTeamManagerReadOnlyAccess:
         # Create team manager
         self.team_manager = UserFactory(
             username='team_manager',
-            real_name='团队经理',
+            username='团队经理',
             department=self.dept
         )
         self.team_manager.roles.add(self.student_role, self.team_manager_role)

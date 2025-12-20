@@ -116,7 +116,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -133,7 +133,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    real_name=f'学员{i}',
+                    username=f'学员{i}',
                     department=dept,
                     mentor=mentor,
                 )
@@ -146,7 +146,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    real_name=f'其他学员{i}',
+                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,
                 )
@@ -232,7 +232,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            real_name='室经理',
+            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -249,7 +249,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'dept1_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D1M_{unique_suffix}_{i}',
-                    real_name=f'一室成员{i}',
+                    username=f'一室成员{i}',
                     department=dept1,
                 )
                 created_users.append(member)
@@ -261,7 +261,7 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'dept2_member_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'D2M_{unique_suffix}_{i}',
-                    real_name=f'二室成员{i}',
+                    username=f'二室成员{i}',
                     department=dept2,
                 )
                 created_users.append(other)
@@ -360,7 +360,7 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -370,7 +370,7 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentee_{unique_suffix}',
             password='testpass123',
             employee_id=f'MTE_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -442,7 +442,7 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            real_name='导师',
+            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -452,7 +452,7 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentee_{unique_suffix}',
             password='testpass123',
             employee_id=f'MTE_{unique_suffix}',
-            real_name='学员',
+            username='学员',
             department=dept,
             mentor=mentor,
         )

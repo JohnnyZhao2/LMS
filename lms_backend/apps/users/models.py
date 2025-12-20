@@ -9,11 +9,44 @@ Implements:
 
 Requirements: 2.1, 3.4
 """
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
 
 from core.mixins import TimestampMixin
+
+
+class UserManager(BaseUserManager):
+    """自定义 User Manager，支持使用 employee_id 作为用户名字段"""
+    
+    def create_user(self, employee_id, username, password=None, **extra_fields):
+        """创建普通用户"""
+        if not employee_id:
+            raise ValueError('工号必须提供')
+        if not username:
+            raise ValueError('姓名必须提供')
+        
+        user = self.model(employee_id=employee_id, username=username, **extra_fields)
+        if password:
+            user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, employee_id, username, password=None, **extra_fields):
+        """创建超级用户"""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('超级用户必须 is_staff=True')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('超级用户必须 is_superuser=True')
+        
+        return self.create_user(employee_id, username, password, **extra_fields)
+    
+    def get_by_natural_key(self, employee_id):
+        """通过自然键（employee_id）获取用户"""
+        return self.get(employee_id=employee_id)
 
 
 class Department(TimestampMixin, models.Model):
@@ -73,118 +106,59 @@ class Role(TimestampMixin, models.Model):
         return self.name
 
 
-class User(AbstractUser, TimestampMixin):
+class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     """
-    自定义用户模型
+    用户模型
     
-    基础字段:
-    - employee_id: 工号
-    - real_name: 真实姓名
-    - department: 所属部门
-    - mentor: 导师（师徒关系）
-    
-    Requirements:
-    - 2.1: 创建用户时存储基础信息并默认分配学员角色
-    - 3.4: 为学员指定导师建立师徒绑定关系
-    - 3.6: 一个学员同时只能绑定一个导师
+    继承的字段（来自基类）:
+    - created_at: 创建时间（来自 TimestampMixin，auto_now_add=True）
+    - updated_at: 更新时间（来自 TimestampMixin，auto_now=True）
+    - last_login: 最后登录时间（来自 AbstractBaseUser，nullable）
+    - password: 密码（来自 AbstractBaseUser）
+    - id: 主键（自动生成）
     """
-    employee_id = models.CharField(
-        max_length=20, 
-        unique=True, 
-        verbose_name='工号'
-    )
-    real_name = models.CharField(
-        max_length=50, 
-        verbose_name='真实姓名'
-    )
-    department = models.ForeignKey(
-        Department,
-        on_delete=models.PROTECT,
-        related_name='members',
-        null=True,
-        blank=True,
-        verbose_name='所属部门'
-    )
-    mentor = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='mentees',
-        verbose_name='导师'
-    )
-    roles = models.ManyToManyField(
-        Role,
-        through='UserRole',
-        through_fields=('user', 'role'),
-        related_name='users',
-        verbose_name='角色'
-    )
+    employee_id = models.CharField(max_length=100, unique=True)
+    username = models.CharField(max_length=150, unique=True)
+    mentor = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='mentees')
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='members')
+    roles = models.ManyToManyField(Role, through='UserRole', through_fields=('user', 'role'), related_name='users')
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    USERNAME_FIELD = 'employee_id'
+    REQUIRED_FIELDS = ['username']
     
-    # Override AbstractUser fields to make email optional
-    email = models.EmailField(blank=True, default='', verbose_name='邮箱')
-    
+    objects = UserManager()
+
     class Meta:
         db_table = 'lms_user'
-        verbose_name = '用户'
-        verbose_name_plural = '用户'
         ordering = ['employee_id']
-    
+
     def __str__(self):
-        return f"{self.real_name}({self.employee_id})"
-    
-    def clean(self):
-        """
-        验证师徒关系:
-        - 不能自己做自己的导师
-        - 导师必须具有 MENTOR 角色
-        """
-        super().clean()
-        if self.mentor:
-            if self.mentor == self:
-                raise ValidationError({'mentor': '不能将自己设为导师'})
-    
+        return self.username
+
     def has_role(self, role_code: str) -> bool:
         """检查用户是否拥有指定角色"""
         return self.roles.filter(code=role_code).exists()
-    
+
     @property
     def is_admin(self) -> bool:
         """是否为管理员"""
         return self.has_role('ADMIN')
-    
+
     @property
     def is_mentor(self) -> bool:
         """是否为导师"""
         return self.has_role('MENTOR')
-    
-    @property
-    def is_dept_manager(self) -> bool:
-        """是否为室经理"""
-        return self.has_role('DEPT_MANAGER')
-    
-    @property
-    def is_team_manager(self) -> bool:
-        """是否为团队经理"""
-        return self.has_role('TEAM_MANAGER')
-    
+
     @property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""
         return list(self.roles.values_list('code', flat=True))
-    
+
     def get_mentees(self):
-        """获取名下学员（仅当用户是导师时有意义）"""
+        """获取名下学员"""
         return User.objects.filter(mentor=self, is_active=True)
-    
-    def get_department_members(self):
-        """获取本室成员（仅当用户是室经理时有意义）"""
-        if self.department:
-            return User.objects.filter(
-                department=self.department, 
-                is_active=True
-            ).exclude(pk=self.pk)
-        return User.objects.none()
 
 
 class UserRole(TimestampMixin, models.Model):
@@ -227,7 +201,7 @@ class UserRole(TimestampMixin, models.Model):
         ordering = ['user', 'role']
     
     def __str__(self):
-        return f"{self.user.real_name} - {self.role.name}"
+        return f"{self.user.username} - {self.role.name}"
     
     def clean(self):
         """

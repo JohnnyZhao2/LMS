@@ -259,7 +259,7 @@ class TestStudentKnowledgeListAPI:
         
         Requirements: 16.3 - 以卡片形式展示操作标签、标题、摘要、修改人和修改时间
         """
-        creator = create_user(username='creator', real_name='创建者')
+        creator = create_user(username='creator', username='创建者')
         Knowledge.objects.create(
             title='测试知识',
             knowledge_type='OTHER',

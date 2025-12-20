@@ -33,19 +33,19 @@ def setup_resource_protection(db):
     
     admin = User.objects.create_user(
         username='admin', password='admin123', employee_id='ADMIN001',
-        real_name='管理员', department=dept
+        username='管理员', department=dept
     )
     UserRole.objects.create(user=admin, role=admin_role)
     
     mentor = User.objects.create_user(
         username='mentor', password='mentor123', employee_id='MENTOR001',
-        real_name='导师', department=dept
+        username='导师', department=dept
     )
     UserRole.objects.create(user=mentor, role=mentor_role)
     
     student = User.objects.create_user(
         username='student', password='student123', employee_id='STU001',
-        real_name='学员', department=dept, mentor=mentor
+        username='学员', department=dept, mentor=mentor
     )
     
     return {'dept': dept, 'admin': admin, 'mentor': mentor, 'student': student}

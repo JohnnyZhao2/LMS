@@ -94,7 +94,7 @@ def setup_admin_user(db, setup_department, setup_roles):
         username='quiz_admin_user',
         defaults={
             'employee_id': 'QZ_ADMIN_001',
-            'real_name': '试卷管理员',
+            'username': '试卷管理员',
             'department': setup_department,
         }
     )
@@ -113,7 +113,7 @@ def setup_mentor_user(db, setup_department, setup_roles):
         username='quiz_mentor_user',
         defaults={
             'employee_id': 'QZ_MENTOR_001',
-            'real_name': '试卷导师',
+            'username': '试卷导师',
             'department': setup_department,
         }
     )
@@ -132,7 +132,7 @@ def setup_another_mentor_user(db, setup_department, setup_roles):
         username='quiz_mentor_user2',
         defaults={
             'employee_id': 'QZ_MENTOR_002',
-            'real_name': '另一个试卷导师',
+            'username': '另一个试卷导师',
             'department': setup_department,
         }
     )

@@ -82,7 +82,7 @@ def admin_user(db, department_1, admin_role):
         username='admin',
         password='adminpass123',
         employee_id='ADMIN001',
-        real_name='管理员',
+        username='管理员',
         department=department_1,
         is_active=True
     )
@@ -97,7 +97,7 @@ def mentor_user(db, department_1, mentor_role):
         username='mentor',
         password='mentorpass123',
         employee_id='MENTOR001',
-        real_name='导师',
+        username='导师',
         department=department_1,
         is_active=True
     )
@@ -112,7 +112,7 @@ def dept_manager_user(db, department_1, dept_manager_role):
         username='dept_manager',
         password='deptpass123',
         employee_id='DEPTMGR001',
-        real_name='室经理',
+        username='室经理',
         department=department_1,
         is_active=True
     )
@@ -127,7 +127,7 @@ def student_user(db, department_1):
         username='student',
         password='studentpass123',
         employee_id='STU001',
-        real_name='学员',
+        username='学员',
         department=department_1,
         is_active=True
     )
@@ -140,7 +140,7 @@ def mentee_1(db, department_1, mentor_user):
         username='mentee1',
         password='menteepass123',
         employee_id='MENTEE001',
-        real_name='学员1',
+        username='学员1',
         department=department_1,
         mentor=mentor_user,
         is_active=True
@@ -155,7 +155,7 @@ def mentee_2(db, department_1, mentor_user):
         username='mentee2',
         password='menteepass123',
         employee_id='MENTEE002',
-        real_name='学员2',
+        username='学员2',
         department=department_1,
         mentor=mentor_user,
         is_active=True
@@ -170,7 +170,7 @@ def dept1_member(db, department_1):
         username='dept1_member',
         password='memberpass123',
         employee_id='DEPT1MEM001',
-        real_name='一室成员',
+        username='一室成员',
         department=department_1,
         is_active=True
     )
@@ -183,7 +183,7 @@ def dept2_member(db, department_2):
         username='dept2_member',
         password='memberpass123',
         employee_id='DEPT2MEM001',
-        real_name='二室成员',
+        username='二室成员',
         department=department_2,
         is_active=True
     )

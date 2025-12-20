@@ -23,7 +23,7 @@ def user_data_strategy(draw):
         'username': draw(username_strategy),
         'email': draw(email_strategy),
         'password': draw(password_strategy),
-        'real_name': draw(st.text(min_size=1, max_size=50)),
+        'username': draw(st.text(min_size=1, max_size=50)),
         'employee_id': draw(st.text(
             alphabet=st.characters(whitelist_categories=('N',)),
             min_size=5,

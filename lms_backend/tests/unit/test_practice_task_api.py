@@ -83,7 +83,7 @@ def mentor_user(db, department_1, mentor_role):
         username='mentor1',
         password='testpass123',
         employee_id='MENTOR001',
-        real_name='导师一',
+        username='导师一',
         department=department_1
     )
     UserRole.objects.get_or_create(user=user, role=mentor_role)
@@ -97,7 +97,7 @@ def dept_manager_user(db, department_1, dept_manager_role):
         username='deptmgr1',
         password='testpass123',
         employee_id='DEPTMGR001',
-        real_name='室经理一',
+        username='室经理一',
         department=department_1
     )
     UserRole.objects.get_or_create(user=user, role=dept_manager_role)
@@ -111,7 +111,7 @@ def admin_user(db, department_1, admin_role):
         username='admin1',
         password='testpass123',
         employee_id='ADMIN001',
-        real_name='管理员一',
+        username='管理员一',
         department=department_1
     )
     UserRole.objects.get_or_create(user=user, role=admin_role)
@@ -125,7 +125,7 @@ def student_in_dept1(db, department_1, mentor_user):
         username='student1',
         password='testpass123',
         employee_id='STU001',
-        real_name='学员一',
+        username='学员一',
         department=department_1,
         mentor=mentor_user
     )
@@ -139,7 +139,7 @@ def student_in_dept1_no_mentor(db, department_1):
         username='student2',
         password='testpass123',
         employee_id='STU002',
-        real_name='学员二',
+        username='学员二',
         department=department_1
     )
     return user
@@ -152,7 +152,7 @@ def student_in_dept2(db, department_2):
         username='student3',
         password='testpass123',
         employee_id='STU003',
-        real_name='学员三',
+        username='学员三',
         department=department_2
     )
     return user

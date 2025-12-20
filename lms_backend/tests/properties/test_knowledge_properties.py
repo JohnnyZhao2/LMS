@@ -79,7 +79,7 @@ def setup_user(db, setup_department):
         username='knowledge_test_user',
         defaults={
             'employee_id': 'KNOW_TEST_001',
-            'real_name': '知识测试用户',
+            'username': '知识测试用户',
             'department': setup_department,
         }
     )

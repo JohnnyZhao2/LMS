@@ -27,7 +27,7 @@ from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLear
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
     """Serializer for TaskAssignment model."""
-    assignee_name = serializers.CharField(source='assignee.real_name', read_only=True)
+    assignee_name = serializers.CharField(source='assignee.username', read_only=True)
     assignee_employee_id = serializers.CharField(source='assignee.employee_id', read_only=True)
     
     class Meta:
@@ -67,7 +67,7 @@ class TaskQuizSerializer(serializers.ModelSerializer):
 
 class TaskListSerializer(serializers.ModelSerializer):
     """Serializer for task list view."""
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
     knowledge_count = serializers.ReadOnlyField()
     quiz_count = serializers.ReadOnlyField()
@@ -86,7 +86,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 
 class TaskDetailSerializer(serializers.ModelSerializer):
     """Serializer for task detail view."""
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
@@ -202,19 +202,40 @@ class LearningTaskCreateSerializer(BaseTaskCreateSerializer):
     )
     
     def validate_knowledge_ids(self, value):
-        """Validate that all knowledge IDs exist and are not deleted."""
+        """
+        Validate that all knowledge IDs exist, are not deleted, and are published.
+        
+        只允许选择已发布的知识文档用于任务分配。
+        """
         if not value:
             raise serializers.ValidationError('请至少选择一个知识文档')
         
-        existing_ids = set(
-            Knowledge.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
+        # 查询已发布且未删除的知识文档
+        published_knowledge = Knowledge.objects.filter(
+            id__in=value,
+            is_deleted=False,
+            status='PUBLISHED'
         )
-        invalid_ids = set(value) - existing_ids
+        published_ids = set(published_knowledge.values_list('id', flat=True))
+        
+        invalid_ids = set(value) - published_ids
         if invalid_ids:
-            raise serializers.ValidationError(f'知识文档不存在: {list(invalid_ids)}')
+            # 检查是草稿还是不存在
+            draft_knowledge = Knowledge.objects.filter(
+                id__in=invalid_ids,
+                is_deleted=False,
+                status='DRAFT'
+            )
+            draft_ids = set(draft_knowledge.values_list('id', flat=True))
+            not_found_ids = invalid_ids - draft_ids
+            
+            errors = []
+            if draft_ids:
+                errors.append(f'以下知识文档为草稿状态，无法用于任务分配: {list(draft_ids)}')
+            if not_found_ids:
+                errors.append(f'知识文档不存在: {list(not_found_ids)}')
+            
+            raise serializers.ValidationError('; '.join(errors) if errors else '知识文档不可用')
         
         return value
     
@@ -309,19 +330,40 @@ class PracticeTaskCreateSerializer(BaseTaskCreateSerializer):
         return value
     
     def validate_knowledge_ids(self, value):
-        """Validate that all knowledge IDs exist and are not deleted (optional field)."""
+        """
+        Validate that all knowledge IDs exist, are not deleted, and are published (optional field).
+        
+        只允许选择已发布的知识文档用于任务分配。
+        """
         if not value:
             return value
         
-        existing_ids = set(
-            Knowledge.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
+        # 查询已发布且未删除的知识文档
+        published_knowledge = Knowledge.objects.filter(
+            id__in=value,
+            is_deleted=False,
+            status='PUBLISHED'
         )
-        invalid_ids = set(value) - existing_ids
+        published_ids = set(published_knowledge.values_list('id', flat=True))
+        
+        invalid_ids = set(value) - published_ids
         if invalid_ids:
-            raise serializers.ValidationError(f'知识文档不存在: {list(invalid_ids)}')
+            # 检查是草稿还是不存在
+            draft_knowledge = Knowledge.objects.filter(
+                id__in=invalid_ids,
+                is_deleted=False,
+                status='DRAFT'
+            )
+            draft_ids = set(draft_knowledge.values_list('id', flat=True))
+            not_found_ids = invalid_ids - draft_ids
+            
+            errors = []
+            if draft_ids:
+                errors.append(f'以下知识文档为草稿状态，无法用于任务分配: {list(draft_ids)}')
+            if not_found_ids:
+                errors.append(f'知识文档不存在: {list(not_found_ids)}')
+            
+            raise serializers.ValidationError('; '.join(errors) if errors else '知识文档不可用')
         
         return value
     
@@ -533,7 +575,7 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
-    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     # Progress information
@@ -615,7 +657,7 @@ class StudentLearningTaskDetailSerializer(serializers.ModelSerializer):
     task_type = serializers.CharField(source='task.task_type', read_only=True)
     task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
-    created_by_name = serializers.CharField(source='task.created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     # Progress information

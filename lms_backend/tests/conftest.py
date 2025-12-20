@@ -75,33 +75,31 @@ def create_user(db, department, student_role):
     def _create_user(
         username=None,
         password='testpass123',
-        email=None,
         is_active=True,
         employee_id=None,
-        real_name=None,
         **kwargs
     ):
         counter[0] += 1
-        if username is None:
-            username = f'testuser{counter[0]}'
-        if email is None:
-            email = f'{username}@example.com'
         if employee_id is None:
             employee_id = f'EMP{counter[0]:06d}'
-        if real_name is None:
-            real_name = f'测试用户{counter[0]}'
+        if username is None:
+            username = f'测试用户{counter[0]}'
         
         # Set default department if not provided
         if 'department' not in kwargs:
             kwargs['department'] = department
+        
+        # Remove fields that don't exist in the model
+        kwargs.pop('email', None)
+        kwargs.pop('first_name', None)
+        kwargs.pop('last_name', None)
+        kwargs.pop('date_joined', None)
             
         user = User.objects.create_user(
-            username=username,
+            username=username,  # username 字段存储显示名称
             password=password,
-            email=email,
-            is_active=is_active,
             employee_id=employee_id,
-            real_name=real_name,
+            is_active=is_active,
             **kwargs
         )
         return user
@@ -123,9 +121,8 @@ def admin_user(db, create_user, admin_role):
     """Create an admin user with ADMIN role."""
     from apps.users.models import UserRole
     user = create_user(
-        username='admin',
+        username='管理员',
         password='adminpass123',
-        email='admin@example.com',
         is_staff=True,
         is_superuser=True
     )

@@ -12,6 +12,9 @@ Endpoints:
 - POST /api/users/{id}/assign-mentor/ - Assign mentor to user (admin only)
 - GET /api/users/mentees/ - Get mentees for current mentor
 - GET /api/users/department-members/ - Get department members for current dept manager
+- GET /api/users/mentors/ - Get all mentors list (admin only)
+- GET /api/users/roles/ - Get all roles list (admin only)
+- GET /api/users/departments/ - Get all departments list (admin only)
 
 Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.4, 3.5, 3.6
 """
@@ -26,6 +29,9 @@ from apps.users.views import (
     UserAssignMentorView,
     MenteesListView,
     DepartmentMembersListView,
+    MentorsListView,
+    RolesListView,
+    DepartmentsListView,
 )
 
 urlpatterns = [
@@ -37,4 +43,7 @@ urlpatterns = [
     path('<int:pk>/assign-mentor/', UserAssignMentorView.as_view(), name='user-assign-mentor'),
     path('mentees/', MenteesListView.as_view(), name='user-mentees'),
     path('department-members/', DepartmentMembersListView.as_view(), name='user-department-members'),
+    path('mentors/', MentorsListView.as_view(), name='user-mentors'),
+    path('roles/', RolesListView.as_view(), name='user-roles'),
+    path('departments/', DepartmentsListView.as_view(), name='user-departments'),
 ]

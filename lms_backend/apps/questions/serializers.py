@@ -5,6 +5,7 @@ Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
 from rest_framework import serializers
 
+from apps.knowledge.serializers import TagSimpleSerializer
 from .models import Question
 
 
@@ -14,17 +15,18 @@ class QuestionListSerializer(serializers.ModelSerializer):
     
     Requirements: 5.2
     """
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     difficulty_display = serializers.CharField(source='get_difficulty_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
+    line_type = TagSimpleSerializer(read_only=True)
     
     class Meta:
         model = Question
         fields = [
             'id', 'content', 'question_type', 'question_type_display',
-            'difficulty', 'difficulty_display', 'score', 'tags',
-            'is_objective', 'created_by', 'created_by_name',
+            'difficulty', 'difficulty_display', 'score',
+            'is_objective', 'line_type', 'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
 
@@ -35,19 +37,20 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
     
     Requirements: 5.1, 5.2
     """
-    created_by_name = serializers.CharField(source='created_by.real_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     difficulty_display = serializers.CharField(source='get_difficulty_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     is_subjective = serializers.ReadOnlyField()
+    line_type = TagSimpleSerializer(read_only=True)
     
     class Meta:
         model = Question
         fields = [
             'id', 'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation', 'score',
-            'difficulty', 'difficulty_display', 'tags',
-            'is_objective', 'is_subjective',
+            'difficulty', 'difficulty_display',
+            'is_objective', 'is_subjective', 'line_type',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
@@ -60,13 +63,26 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     Requirements:
     - 5.1: 创建题目时存储题目内容、类型、答案和解析，并记录创建者
     """
+    line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     
     class Meta:
         model = Question
         fields = [
             'content', 'question_type', 'options', 'answer',
-            'explanation', 'score', 'difficulty', 'tags'
+            'explanation', 'score', 'difficulty', 'line_type_id'
         ]
+    
+    def validate_line_type_id(self, value):
+        """Validate line_type_id exists and is a LINE type tag."""
+        if value is None:
+            return value
+        
+        from apps.knowledge.models import Tag
+        try:
+            tag = Tag.objects.get(id=value, tag_type='LINE', is_active=True)
+            return value
+        except Tag.DoesNotExist:
+            raise serializers.ValidationError('无效的条线类型ID')
     
     def validate(self, attrs):
         """
@@ -131,8 +147,19 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """Create question with creator from context."""
+        from apps.knowledge.models import Tag
+        
+        line_type_id = validated_data.pop('line_type_id', None)
         validated_data['created_by'] = self.context['request'].user
-        return Question.objects.create(**validated_data)
+        
+        question = Question.objects.create(**validated_data)
+        
+        # 设置条线类型关系
+        if line_type_id:
+            line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
+            question.set_line_type(line_type)
+        
+        return question
 
 
 class QuestionUpdateSerializer(serializers.ModelSerializer):
@@ -143,13 +170,26 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
     - 5.3: 导师或室经理仅允许编辑自己创建的题目
     - 5.5: 管理员允许编辑所有题目
     """
+    line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     
     class Meta:
         model = Question
         fields = [
             'content', 'options', 'answer', 'explanation',
-            'score', 'difficulty', 'tags'
+            'score', 'difficulty', 'line_type_id'
         ]
+    
+    def validate_line_type_id(self, value):
+        """Validate line_type_id exists and is a LINE type tag."""
+        if value is None:
+            return value
+        
+        from apps.knowledge.models import Tag
+        try:
+            tag = Tag.objects.get(id=value, tag_type='LINE', is_active=True)
+            return value
+        except Tag.DoesNotExist:
+            raise serializers.ValidationError('无效的条线类型ID')
     
     def validate(self, attrs):
         """
@@ -212,6 +252,22 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
                 })
         
         return attrs
+    
+    def update(self, instance, validated_data):
+        """Update question with line_type handling."""
+        from apps.knowledge.models import Tag
+        
+        line_type_id = validated_data.pop('line_type_id', None)
+        
+        # 更新条线类型关系
+        if line_type_id is not None:
+            if line_type_id:
+                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
+                instance.set_line_type(line_type)
+            else:
+                instance.set_line_type(None)
+        
+        return super().update(instance, validated_data)
 
 
 class QuestionImportSerializer(serializers.Serializer):
@@ -244,4 +300,3 @@ class QuestionImportItemSerializer(serializers.Serializer):
         choices=Question.DIFFICULTY_CHOICES,
         default='MEDIUM'
     )
-    tags = serializers.JSONField(required=False, default=list)

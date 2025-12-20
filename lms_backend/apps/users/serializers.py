@@ -5,6 +5,7 @@ Requirements: 1.1, 1.2, 1.3, 1.4, 1.6
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from drf_spectacular.utils import extend_schema_field
 
 from .models import User, Role, Department
 
@@ -30,7 +31,7 @@ class MentorSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'real_name', 'employee_id']
+        fields = ['id', 'username', 'employee_id']
 
 
 class UserInfoSerializer(serializers.ModelSerializer):
@@ -45,8 +46,8 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'employee_id', 'real_name',
-            'email', 'department', 'mentor', 'is_active'
+            'id', 'employee_id', 'username',
+            'department', 'mentor', 'is_active'
         ]
 
 
@@ -58,9 +59,9 @@ class LoginRequestSerializer(serializers.Serializer):
     
     Requirements: 1.1
     """
-    username = serializers.CharField(
+    employee_id = serializers.CharField(
         required=True,
-        help_text='用户名'
+        help_text='工号'
     )
     password = serializers.CharField(
         required=True,
@@ -192,9 +193,9 @@ class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'employee_id', 'real_name',
-            'email', 'department', 'mentor', 'roles', 'is_active',
-            'created_at', 'updated_at'
+            'id', 'employee_id', 'username',
+            'department', 'mentor', 'roles', 'is_active', 'is_superuser',
+            'last_login', 'created_at', 'updated_at'
         ]
 
 
@@ -212,11 +213,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'employee_id', 'real_name',
-            'email', 'department', 'mentor', 'roles', 'is_active',
-            'mentees_count', 'created_at', 'updated_at'
+            'id', 'employee_id', 'username',
+            'department', 'mentor', 'roles', 'is_active', 'is_superuser',
+            'last_login', 'mentees_count', 'created_at', 'updated_at'
         ]
     
+    @extend_schema_field(serializers.IntegerField())
     def get_mentees_count(self, obj):
         """Get count of mentees for this user."""
         return obj.mentees.filter(is_active=True).count()
@@ -235,17 +237,27 @@ class UserCreateSerializer(serializers.ModelSerializer):
         help_text='密码'
     )
     department_id = serializers.IntegerField(
+        required=True,
+        help_text='部门ID'
+    )
+    mentor_id = serializers.IntegerField(
         required=False,
         allow_null=True,
-        help_text='部门ID'
+        help_text='导师ID（可选）'
     )
     
     class Meta:
         model = User
         fields = [
-            'username', 'password', 'employee_id', 'real_name',
-            'email', 'department_id'
+            'password', 'employee_id', 'username',
+            'department_id', 'mentor_id'
         ]
+    
+    def validate_username(self, value):
+        """Validate username (display name)."""
+        if not value or not value.strip():
+            raise serializers.ValidationError('姓名不能为空')
+        return value.strip()
     
     def validate_employee_id(self, value):
         """Validate employee_id is unique."""
@@ -253,31 +265,71 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('该工号已存在')
         return value
     
-    def validate_username(self, value):
-        """Validate username is unique."""
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('该用户名已存在')
-        return value
-    
     def validate_department_id(self, value):
         """Validate department exists."""
+        if not Department.objects.filter(id=value).exists():
+            raise serializers.ValidationError('部门不存在')
+        return value
+    
+    def validate_mentor_id(self, value):
+        """Validate mentor exists and has MENTOR role."""
         if value is not None:
-            if not Department.objects.filter(id=value).exists():
-                raise serializers.ValidationError('部门不存在')
+            try:
+                mentor = User.objects.get(pk=value)
+                if not mentor.has_role('MENTOR'):
+                    raise serializers.ValidationError('指定的用户不是导师')
+                if not mentor.is_active:
+                    raise serializers.ValidationError('指定的导师已被停用')
+            except User.DoesNotExist:
+                raise serializers.ValidationError('导师不存在')
         return value
     
     def create(self, validated_data):
-        """Create user with password hashing."""
-        department_id = validated_data.pop('department_id', None)
+        """
+        创建用户并设置密码。
+        
+        直接创建 User 对象而不是使用 create_user() 方法，因为：
+        1. 更直观，只传递实际存在的字段
+        2. 避免 UserManager 传递 email 等不存在的字段
+        3. 手动调用 set_password() 确保密码正确哈希
+        
+        Args:
+            validated_data: 已验证的数据字典
+        
+        Returns:
+            User: 创建的用户对象
+        """
+        # 提取特殊字段
+        department_id = validated_data.pop('department_id')
         password = validated_data.pop('password')
+        employee_id = validated_data.pop('employee_id')
+        username = validated_data.pop('username')
+        mentor_id = validated_data.pop('mentor_id', None)
         
-        if department_id:
-            validated_data['department_id'] = department_id
+        # 设置部门
+        validated_data['department_id'] = department_id
         
-        user = User.objects.create_user(
-            password=password,
+        # 直接创建 User 对象（不传递不存在的字段）
+        user = User(
+            username=username,
+            employee_id=employee_id,
             **validated_data
         )
+        
+        # 手动设置密码（会自动哈希）
+        user.set_password(password)
+        user.save()
+        
+        # 如果提供了导师ID，设置导师
+        if mentor_id is not None:
+            try:
+                mentor = User.objects.get(pk=mentor_id)
+                user.mentor = mentor
+                user.save()
+            except User.DoesNotExist:
+                # 验证阶段已经检查过，这里理论上不会发生
+                pass
+        
         return user
 
 
@@ -293,12 +345,34 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text='部门ID'
     )
+    employee_id = serializers.CharField(
+        required=False,
+        help_text='工号'
+    )
     
     class Meta:
         model = User
         fields = [
-            'real_name', 'email', 'department_id'
+            'username', 'employee_id', 'department_id'
         ]
+    
+    def validate_username(self, value):
+        """Validate username (display name)."""
+        if not value or not value.strip():
+            raise serializers.ValidationError('姓名不能为空')
+        return value.strip()
+    
+    def validate_employee_id(self, value):
+        """Validate employee_id is unique (excluding current user)."""
+        if value:
+            # 在 update 方法中，self.instance 是当前用户对象
+            # 检查时排除当前用户
+            queryset = User.objects.filter(employee_id=value)
+            if self.instance:
+                queryset = queryset.exclude(pk=self.instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError('该工号已存在')
+        return value
     
     def validate_department_id(self, value):
         """Validate department exists."""
@@ -309,14 +383,25 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         """Update user information."""
+        from django.utils import timezone
+        
         department_id = validated_data.pop('department_id', None)
+        username = validated_data.pop('username', None)  # username 用于存储显示名称
+        employee_id = validated_data.pop('employee_id', None)  # employee_id 可以更新
         
         if department_id is not None:
             instance.department_id = department_id
         
+        if username is not None:
+            instance.username = username
+        
+        if employee_id is not None:
+            instance.employee_id = employee_id
+        
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
+        # 保存时，Django 的 auto_now=True 会自动更新 updated_at
         instance.save()
         return instance
 
@@ -376,8 +461,8 @@ class MenteeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'employee_id', 'real_name',
-            'email', 'department', 'is_active'
+            'id', 'employee_id', 'username',
+            'department', 'is_active'
         ]
 
 
@@ -389,6 +474,6 @@ class DepartmentMemberListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'employee_id', 'real_name',
-            'email', 'mentor', 'roles', 'is_active'
+            'id', 'employee_id', 'username',
+            'mentor', 'roles', 'is_active'
         ]

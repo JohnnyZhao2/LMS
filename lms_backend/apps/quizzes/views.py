@@ -311,10 +311,16 @@ class QuizAddQuestionsView(APIView):
         
         # Create and add new questions
         for question_data in new_questions_data:
+            line_type_id = question_data.pop('line_type_id', None)
             question = Question.objects.create(
                 created_by=request.user,
                 **question_data
             )
+            # Set line_type if provided
+            if line_type_id:
+                from apps.knowledge.models import Tag
+                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
+                question.set_line_type(line_type)
             quiz.add_question(question)
         
         response_serializer = QuizDetailSerializer(quiz)
@@ -444,3 +450,88 @@ class QuizReorderQuestionsView(APIView):
         
         response_serializer = QuizDetailSerializer(quiz)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class QuizCreateFromQuestionsView(APIView):
+    """
+    Create a quiz from selected questions endpoint.
+    
+    Allows users to select multiple questions and create a quiz with them.
+    """
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    
+    @extend_schema(
+        summary='从题目创建试卷',
+        description='选择多个题目一键创建试卷',
+        request={
+            'type': 'object',
+            'properties': {
+                'title': {'type': 'string', 'description': '试卷名称'},
+                'description': {'type': 'string', 'description': '试卷描述'},
+                'question_ids': {
+                    'type': 'array',
+                    'items': {'type': 'integer'},
+                    'description': '题目ID列表'
+                }
+            },
+            'required': ['title', 'question_ids']
+        },
+        responses={
+            201: QuizDetailSerializer,
+            400: OpenApiResponse(description='参数错误'),
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['试卷管理']
+    )
+    def post(self, request):
+        """
+        Create a quiz from selected questions.
+        
+        Requirements:
+        - 6.1: 创建试卷时存储试卷名称、描述，并记录创建者
+        - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目
+        """
+        title = request.data.get('title')
+        description = request.data.get('description', '')
+        question_ids = request.data.get('question_ids', [])
+        
+        if not title:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_INPUT,
+                message='试卷名称不能为空'
+            )
+        
+        if not question_ids:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_INPUT,
+                message='必须选择至少一道题目'
+            )
+        
+        # Validate all questions exist
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=question_ids,
+                is_deleted=False
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(question_ids) - existing_ids
+        if invalid_ids:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_INPUT,
+                message=f'题目不存在: {list(invalid_ids)}'
+            )
+        
+        # Create quiz
+        quiz = Quiz.objects.create(
+            title=title,
+            description=description,
+            created_by=request.user
+        )
+        
+        # Add questions to quiz
+        for question_id in question_ids:
+            question = Question.objects.get(pk=question_id)
+            quiz.add_question(question)
+        
+        response_serializer = QuizDetailSerializer(quiz)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)

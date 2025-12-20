@@ -49,8 +49,11 @@ from .serializers import (
     AssignMentorSerializer,
     MenteeListSerializer,
     DepartmentMemberListSerializer,
+    MentorSerializer,
+    RoleSerializer,
+    DepartmentSerializer,
 )
-from .models import User
+from .models import User, Role, Department
 
 
 class LoginView(APIView):
@@ -79,7 +82,7 @@ class LoginView(APIView):
         serializer.is_valid(raise_exception=True)
         
         result = AuthenticationService.login(
-            username=serializer.validated_data['username'],
+            employee_id=serializer.validated_data['employee_id'],
             password=serializer.validated_data['password']
         )
         
@@ -176,6 +179,39 @@ class SwitchRoleView(APIView):
         
         return Response(result, status=status.HTTP_200_OK)
 
+
+
+class MeView(APIView):
+    """
+    获取当前登录用户信息。
+    
+    用于页面刷新时同步最新的用户信息和角色列表。
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取当前用户信息',
+        description='获取当前登录用户的最新信息和角色列表',
+        responses={
+            200: LoginResponseSerializer,
+            401: OpenApiResponse(description='未登录'),
+        },
+        tags=['认证']
+    )
+    def get(self, request):
+        user = request.user
+        available_roles = AuthenticationService._get_user_roles(user)
+        
+        # 获取当前角色（从 JWT token 中）
+        current_role = getattr(request.user, 'current_role', None)
+        if not current_role:
+            current_role = AuthenticationService._get_default_role(available_roles)
+        
+        return Response({
+            'user': AuthenticationService._get_user_info(user),
+            'available_roles': available_roles,
+            'current_role': current_role,
+        }, status=status.HTTP_200_OK)
 
 
 class ResetPasswordView(APIView):
@@ -327,7 +363,7 @@ class UserListCreateView(APIView):
         search = request.query_params.get('search')
         if search:
             queryset = queryset.filter(
-                models.Q(real_name__icontains=search) |
+                models.Q(username__icontains=search) |
                 models.Q(employee_id__icontains=search)
             )
         
@@ -635,4 +671,107 @@ class DepartmentMembersListView(APIView):
         
         members = request.user.get_department_members()
         serializer = DepartmentMemberListSerializer(members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MentorsListView(APIView):
+    """
+    List all mentors (users with MENTOR role).
+    
+    This endpoint is used to get a list of all available mentors
+    for assigning to students.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取导师列表',
+        description='获取所有具有导师角色的用户列表，用于指定导师',
+        responses={
+            200: MentorSerializer(many=True),
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['用户管理']
+    )
+    def get(self, request):
+        # Check admin permission
+        if not request.user.is_admin:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以查看导师列表'
+            )
+        
+        # Get all users with MENTOR role who are active
+        # Use distinct() to avoid duplicates from the many-to-many relationship
+        mentors = User.objects.filter(
+            roles__code='MENTOR',
+            is_active=True
+        ).distinct().order_by('username')
+        
+        serializer = MentorSerializer(mentors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DepartmentsListView(APIView):
+    """
+    List all departments.
+    
+    This endpoint is used to get a list of all departments
+    for user creation and editing.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取部门列表',
+        description='获取所有可用的部门列表，用于创建和编辑用户',
+        responses={
+            200: DepartmentSerializer(many=True),
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['用户管理']
+    )
+    def get(self, request):
+        # Check admin permission
+        if not request.user.is_admin:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以查看部门列表'
+            )
+        
+        # Get all departments
+        departments = Department.objects.all().order_by('code')
+        
+        serializer = DepartmentSerializer(departments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RolesListView(APIView):
+    """
+    List all available roles.
+    
+    This endpoint is used to get a list of all roles for role assignment.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取角色列表',
+        description='获取所有可用的角色列表，用于分配角色',
+        responses={
+            200: RoleSerializer(many=True),
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['用户管理']
+    )
+    def get(self, request):
+        # Check admin permission
+        if not request.user.is_admin:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以查看角色列表'
+            )
+        
+        # Get all roles, exclude STUDENT role as it's automatically assigned
+        # STUDENT role should not appear in the assignment dropdown
+        roles = Role.objects.exclude(code='STUDENT').order_by('code')
+        
+        serializer = RoleSerializer(roles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
