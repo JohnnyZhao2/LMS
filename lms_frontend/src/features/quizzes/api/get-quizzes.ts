@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { QuizDetail, PaginatedResponse } from '@/types/api';
+import type { QuizDetail, QuizListItem, PaginatedResponse } from '@/types/api';
 
 /**
  * 获取试卷列表
@@ -9,7 +9,7 @@ export const useQuizzes = (page = 1, pageSize = 20) => {
   return useQuery({
     queryKey: ['quizzes', page, pageSize],
     queryFn: () =>
-      apiClient.get<PaginatedResponse<QuizDetail>>(`/quizzes/?page=${page}&page_size=${pageSize}`),
+      apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/?page=${page}&page_size=${pageSize}`),
   });
 };
 

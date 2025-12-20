@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '../api/get-quizzes';
 import { useDeleteQuiz } from '../api/create-quiz';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import type { QuizDetail } from '@/types/api';
+import type { QuizListItem } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from 'dayjs';
 
@@ -26,7 +26,7 @@ export const QuizList: React.FC = () => {
    * - 管理员可以编辑/删除任何试卷
    * - 导师/室经理只能编辑/删除自己创建的试卷
    */
-  const canEdit = (record: QuizDetail): boolean => {
+  const canEdit = (record: QuizListItem): boolean => {
     if (currentRole === 'ADMIN') return true;
     return record.created_by === user?.id;
   };
@@ -55,7 +55,7 @@ export const QuizList: React.FC = () => {
     {
       title: '题目数量',
       key: 'questions_count',
-      render: (_: unknown, record: QuizDetail) => record.questions?.length || 0,
+      render: (_: unknown, record: QuizListItem) => record.question_count || 0,
     },
     {
       title: '总分',
@@ -76,7 +76,7 @@ export const QuizList: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_: unknown, record: QuizDetail) => (
+      render: (_: unknown, record: QuizListItem) => (
         <Space>
           {canEdit(record) && (
             <>

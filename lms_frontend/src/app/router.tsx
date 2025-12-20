@@ -14,10 +14,9 @@ import { QuizPlayer } from '@/features/submissions/components/quiz-player';
 import { AnswerReview } from '@/features/submissions/components/answer-review';
 import { GradingList } from '@/features/grading/components/grading-list';
 import { GradingForm } from '@/features/grading/components/grading-form';
-import { QuizList } from '@/features/quizzes/components/quiz-list';
-import { QuestionList } from '@/features/questions/components/question-list';
 import { QuestionForm } from '@/features/questions/components/question-form';
 import { QuizForm } from '@/features/quizzes/components/quiz-form';
+import { TestCenter } from '@/features/test-center';
 import { SpotCheckList } from '@/features/spot-checks/components/spot-check-list';
 import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
 import { UserList } from '@/features/users/components/user-list';
@@ -185,22 +184,12 @@ export const AppRouter: React.FC = () => {
         }
       />
 
-      {/* 试卷管理 */}
+      {/* 测试中心 - 统一页面 */}
       <Route
-        path={ROUTES.QUIZZES}
+        path={ROUTES.TEST_CENTER}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuizList />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* 测试中心 - 题目管理 */}
-      <Route
-        path={ROUTES.TEST_CENTER_QUESTIONS}
-        element={
-          <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuestionList />
+            <TestCenter />
           </ProtectedRoute>
         }
       />
@@ -220,16 +209,6 @@ export const AppRouter: React.FC = () => {
           </ProtectedRoute>
         }
       />
-
-      {/* 测试中心 - 试卷管理 */}
-      <Route
-        path={ROUTES.TEST_CENTER_QUIZZES}
-        element={
-          <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuizList />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path={`${ROUTES.TEST_CENTER_QUIZZES}/create`}
         element={
@@ -243,16 +222,6 @@ export const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
             <QuizForm />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* 题库管理（管理员旧路由，保持兼容） */}
-      <Route
-        path={ROUTES.QUESTIONS}
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <QuestionList />
           </ProtectedRoute>
         }
       />

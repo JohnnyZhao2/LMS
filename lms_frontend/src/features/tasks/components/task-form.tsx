@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Form, Input, Select, DatePicker, InputNumber, Button, Card, Transfer, message, Typography } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Form, Input, Select, DatePicker, InputNumber, Button, Card, Transfer, message, Typography, Alert } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCreateTask } from '../api/create-task';
 import { useAssignableUsers } from '../api/get-assignable-users';
 import type { TaskType, TaskCreateRequest } from '@/types/api';
@@ -13,15 +13,44 @@ const { Option } = Select;
 
 /**
  * 任务创建表单组件
+ * 
+ * 支持从 URL 参数预设：
+ * - quiz_id: 单个试卷 ID
+ * - quiz_ids: 多个试卷 ID（逗号分隔）
+ * - task_type: 任务类型（PRACTICE/EXAM）
  */
 export const TaskForm: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const createTask = useCreateTask();
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
-  const [taskType, setTaskType] = useState<TaskType>('LEARNING');
+  // 从 URL 参数获取预设值
+  const presetQuizId = searchParams.get('quiz_id');
+  const presetQuizIds = searchParams.get('quiz_ids');
+  const presetTaskType = searchParams.get('task_type') as TaskType | null;
+  
+  // 解析试卷 IDs
+  const quizIds: number[] = presetQuizId 
+    ? [Number(presetQuizId)]
+    : presetQuizIds 
+      ? presetQuizIds.split(',').map(Number)
+      : [];
+
+  // 是否从测试中心跳转过来
+  const isFromTestCenter = quizIds.length > 0;
+
+  const [taskType, setTaskType] = useState<TaskType>(presetTaskType || 'LEARNING');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+
+  // 初始化表单
+  useEffect(() => {
+    if (presetTaskType) {
+      form.setFieldValue('task_type', presetTaskType);
+      setTaskType(presetTaskType);
+    }
+  }, [presetTaskType, form]);
 
   const handleSubmit = async (values: Omit<TaskCreateRequest, 'assignee_ids'>) => {
     if (selectedUserIds.length === 0) {
@@ -34,6 +63,7 @@ export const TaskForm: React.FC = () => {
         ...values,
         deadline: dayjs(values.deadline).toISOString(),
         start_time: values.start_time ? dayjs(values.start_time).toISOString() : undefined,
+        quiz_ids: isFromTestCenter ? quizIds : values.quiz_ids,
         assignee_ids: selectedUserIds,
       });
       message.success('任务创建成功');
@@ -53,19 +83,31 @@ export const TaskForm: React.FC = () => {
     <div>
       <Title level={2}>新建任务</Title>
       <Card>
+        {isFromTestCenter && (
+          <Alert
+            message={`已选择 ${quizIds.length} 份试卷`}
+            description={`任务类型：${presetTaskType === 'PRACTICE' ? '练习任务' : presetTaskType === 'EXAM' ? '考试任务' : '未知'}`}
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ task_type: 'LEARNING' }}
+          initialValues={{ task_type: presetTaskType || 'LEARNING' }}
         >
           <Form.Item
             name="task_type"
             label="任务类型"
             rules={[{ required: true, message: '请选择任务类型' }]}
           >
-            <Select onChange={(value) => setTaskType(value)}>
-              <Option value="LEARNING">学习任务</Option>
+            <Select 
+              onChange={(value) => setTaskType(value)}
+              disabled={isFromTestCenter}
+            >
+              <Option value="LEARNING" disabled={isFromTestCenter}>学习任务</Option>
               <Option value="PRACTICE">练习任务</Option>
               <Option value="EXAM">考试任务</Option>
             </Select>

@@ -539,8 +539,25 @@ export interface QuizQuestion {
   question: number;
   question_content: string;
   question_type: QuestionType;
+  question_type_display: string;
   order: number;
   score: string;
+}
+
+/**
+ * 试卷列表项
+ */
+export interface QuizListItem {
+  id: number;
+  title: string;
+  description?: string;
+  question_count: number;
+  total_score: string;
+  has_subjective_questions: boolean;
+  created_by?: number;
+  created_by_name?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -551,7 +568,11 @@ export interface QuizDetail {
   title: string;
   description?: string;
   questions: QuizQuestion[];
+  question_count?: number;
   total_score: string;
+  has_subjective_questions?: boolean;
+  objective_question_count?: number;
+  subjective_question_count?: number;
   created_by?: number;
   created_by_name?: string;
   created_at: string;

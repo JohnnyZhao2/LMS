@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from apps.questions.models import Question
 
@@ -44,13 +45,15 @@ class QuizListCreateView(APIView):
         parameters=[
             OpenApiParameter(name='search', type=str, description='搜索试卷标题'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
+            OpenApiParameter(name='page', type=int, description='页码'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
         responses={200: QuizListSerializer(many=True)},
         tags=['试卷管理']
     )
     def get(self, request):
         """
-        Get quiz list.
+        Get quiz list with pagination.
         
         Requirements: 6.4 - 导师或室经理查看试卷列表时展示所有试卷
         """
@@ -69,6 +72,14 @@ class QuizListCreateView(APIView):
             queryset = queryset.filter(created_by_id=created_by)
         
         queryset = queryset.order_by('-created_at')
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QuizListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
         serializer = QuizListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     

@@ -60,16 +60,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
             key: '/test-center',
             icon: <QuestionCircleOutlined />,
             label: '测试中心',
-            children: [
-              {
-                key: '/test-center/questions',
-                label: '题目管理',
-              },
-              {
-                key: '/test-center/quizzes',
-                label: '试卷管理',
-              },
-            ],
           },
           {
             key: '/tasks',
@@ -100,16 +90,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
             key: '/test-center',
             icon: <QuestionCircleOutlined />,
             label: '测试中心',
-            children: [
-              {
-                key: '/test-center/questions',
-                label: '题目管理',
-              },
-              {
-                key: '/test-center/quizzes',
-                label: '试卷管理',
-              },
-            ],
           },
           {
             key: '/tasks',

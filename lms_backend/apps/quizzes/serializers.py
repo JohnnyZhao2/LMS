@@ -20,12 +20,17 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
     Serializer for quiz-question relationship.
     
     Shows question details with order in the quiz.
+    Returns flattened structure for frontend compatibility.
     """
-    question = QuestionDetailSerializer(read_only=True)
+    question = serializers.IntegerField(source='question.id', read_only=True)
+    question_content = serializers.CharField(source='question.content', read_only=True)
+    question_type = serializers.CharField(source='question.question_type', read_only=True)
+    question_type_display = serializers.CharField(source='question.get_question_type_display', read_only=True)
+    score = serializers.DecimalField(source='question.score', max_digits=5, decimal_places=2, read_only=True)
     
     class Meta:
         model = QuizQuestion
-        fields = ['id', 'question', 'order']
+        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order']
 
 
 class QuizListSerializer(serializers.ModelSerializer):
@@ -233,14 +238,72 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
     
+    Extends basic metadata updates with question list synchronization so
+    that the frontend can submit the完整题目顺序。
+    
     Requirements:
+    - 6.2: 允许调整试卷包含的题目
     - 6.5: 导师或室经理仅允许编辑自己创建的试卷
     - 6.7: 管理员允许编辑所有试卷
     """
+    existing_question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        help_text='新的题目 ID 顺序列表'
+    )
     
     class Meta:
         model = Quiz
-        fields = ['title', 'description']
+        fields = ['title', 'description', 'existing_question_ids']
+    
+    def validate_existing_question_ids(self, value):
+        """Validate provided question ids."""
+        if value is None:
+            return value
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=value,
+                is_deleted=False
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
+    
+    def update(self, instance, validated_data):
+        """Update quiz info and synchronize question ordering."""
+        question_ids = validated_data.pop('existing_question_ids', None)
+        quiz = super().update(instance, validated_data)
+        
+        if question_ids is not None:
+            current_relations = {
+                qq.question_id: qq
+                for qq in quiz.quiz_questions.all()
+            }
+            new_id_set = set(question_ids)
+            
+            # Remove questions that are no longer present
+            to_remove = [qid for qid in current_relations.keys() if qid not in new_id_set]
+            if to_remove:
+                QuizQuestion.objects.filter(
+                    quiz=quiz,
+                    question_id__in=to_remove
+                ).delete()
+            
+            # Recreate ordering / add missing questions
+            for order, question_id in enumerate(question_ids, start=1):
+                relation = current_relations.get(question_id)
+                if relation:
+                    if relation.order != order:
+                        relation.order = order
+                        relation.save(update_fields=['order'])
+                else:
+                    question = Question.objects.get(pk=question_id)
+                    quiz.add_question(question, order=order)
+        
+        return quiz
 
 
 
