@@ -8,10 +8,13 @@ Implements:
 
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
 """
+import uuid
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils import timezone
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -156,11 +159,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         ('OTHER', '其他类型'),
     ]
     
-    STATUS_CHOICES = [
-        ('DRAFT', '草稿'),
-        ('PUBLISHED', '已发布'),
-    ]
-    
     title = models.CharField(max_length=200, verbose_name='标题')
     knowledge_type = models.CharField(
         max_length=20,
@@ -169,10 +167,42 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     )
     status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
+        choices=[
+            ('DRAFT', '草稿'),
+            ('PUBLISHED', '已发布'),
+        ],
         default='DRAFT',
         verbose_name='发布状态',
         help_text='草稿状态仅创建者和管理员可见，已发布状态可用于任务分配'
+    )
+    resource_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        verbose_name='资源标识'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='版本号',
+        help_text='同一资源的累积版本序号'
+    )
+    source_version = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='derived_versions',
+        verbose_name='来源版本',
+        help_text='从该已发布版本衍生出来的草稿'
+    )
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='发布时间'
+    )
+    is_current = models.BooleanField(
+        default=False,
+        verbose_name='是否当前最新发布版本'
     )
     
     # 条线类型通过ResourceLineType关联（多态关系）
@@ -246,22 +276,17 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     # 阅读统计
     view_count = models.PositiveIntegerField(default=0, verbose_name='阅读次数')
     
-    # 关联已发布版本（用于草稿关联其对应的已发布版本）
-    published_version = models.OneToOneField(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='draft_version',
-        verbose_name='已发布版本',
-        help_text='草稿关联的已发布版本'
-    )
-    
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
         verbose_name_plural = '知识文档'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['resource_uuid', 'version_number'],
+                name='uniq_knowledge_resource_version'
+            )
+        ]
     
     def __str__(self):
         return self.title
@@ -319,6 +344,38 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             raise ValidationError('该知识文档已被任务引用，无法删除')
         super().delete(*args, **kwargs)
     
+    @classmethod
+    def next_version_number(cls, resource_uuid):
+        """
+        获取指定资源的下一个版本号。
+        """
+        if not resource_uuid:
+            return 1
+        aggregate = cls.objects.filter(
+            resource_uuid=resource_uuid,
+            is_deleted=False
+        ).aggregate(
+            max_version=models.Max('version_number')
+        )
+        max_version = aggregate['max_version'] or 0
+        return max_version + 1
+    
+    def _compute_next_version_number(self):
+        """
+        计算下一个可用版本号。
+        """
+        return self.next_version_number(self.resource_uuid)
+    
+    def ensure_version_number(self):
+        """
+        确保当前实例拥有正确的版本号。
+        """
+        if not self.version_number or Knowledge.objects.filter(
+            resource_uuid=self.resource_uuid,
+            version_number=self.version_number
+        ).exclude(pk=self.pk).exists():
+            self.version_number = self._compute_next_version_number()
+    
     def publish(self):
         """
         发布知识文档
@@ -333,40 +390,48 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         if self.status == 'PUBLISHED':
             return self
         
-        # 如果存在已发布版本，更新它并删除草稿
-        if self.published_version:
-            published = self.published_version
-            # 更新所有字段
-            published.title = self.title
-            published.knowledge_type = self.knowledge_type
-            published.fault_scenario = self.fault_scenario
-            published.trigger_process = self.trigger_process
-            published.solution = self.solution
-            published.verification_plan = self.verification_plan
-            published.recovery_plan = self.recovery_plan
-            published.content = self.content
-            published.status = 'PUBLISHED'
-            published.updated_by = self.updated_by
-            
-            # 更新条线类型关系
-            if self.line_type:
-                published.set_line_type(self.line_type)
-            
-            # 更新系统标签和操作标签
-            published.system_tags.set(self.system_tags.all())
-            published.operation_tags.set(self.operation_tags.all())
-            
-            published.save()
-            
-            # 发布成功后软删除草稿
-            self.soft_delete()
-            
-            return published
-        else:
-            # 新草稿：直接将状态改为已发布（不创建新记录）
-            self.status = 'PUBLISHED'
-            self.save()
-            return self
+        if not self.resource_uuid:
+            self.resource_uuid = uuid.uuid4()
+        
+        self.ensure_version_number()
+        self.status = 'PUBLISHED'
+        self.is_current = True
+        self.published_at = timezone.now()
+        self.save()
+        
+        Knowledge.objects.filter(
+            resource_uuid=self.resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=self.pk).update(is_current=False)
+        return self
+    
+    def clone_as_draft(self, user):
+        """
+        基于当前已发布版本创建新的草稿版本。
+        """
+        draft = Knowledge.objects.create(
+            title=self.title,
+            knowledge_type=self.knowledge_type,
+            fault_scenario=self.fault_scenario,
+            trigger_process=self.trigger_process,
+            solution=self.solution,
+            verification_plan=self.verification_plan,
+            recovery_plan=self.recovery_plan,
+            content=self.content,
+            status='DRAFT',
+            created_by=user,
+            updated_by=user,
+            resource_uuid=self.resource_uuid,
+            version_number=self.next_version_number(self.resource_uuid),
+            source_version=self,
+            is_current=False
+        )
+        
+        if self.line_type:
+            draft.set_line_type(self.line_type)
+        draft.system_tags.set(self.system_tags.all())
+        draft.operation_tags.set(self.operation_tags.all())
+        return draft
     
     def unpublish(self):
         """
@@ -379,5 +444,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             return self
         
         self.status = 'DRAFT'
-        self.save()
+        self.is_current = False
+        self.published_at = None
+        self.save(update_fields=['status', 'is_current', 'published_at'])
         return self

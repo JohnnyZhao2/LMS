@@ -41,28 +41,51 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
 
 class TaskKnowledgeSerializer(serializers.ModelSerializer):
     """Serializer for TaskKnowledge model."""
-    knowledge_title = serializers.CharField(source='knowledge.title', read_only=True)
-    knowledge_type = serializers.CharField(source='knowledge.knowledge_type', read_only=True)
+    knowledge_title = serializers.SerializerMethodField()
+    knowledge_type = serializers.SerializerMethodField()
+    knowledge_type_display = serializers.SerializerMethodField()
+    resource_uuid = serializers.UUIDField(read_only=True)
+    version_number = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = TaskKnowledge
-        fields = ['id', 'knowledge', 'knowledge_title', 'knowledge_type', 'order']
-        read_only_fields = ['order']
+        fields = [
+            'id', 'knowledge', 'knowledge_title', 'knowledge_type', 'knowledge_type_display',
+            'resource_uuid', 'version_number', 'snapshot', 'order'
+        ]
+        read_only_fields = ['order', 'snapshot']
+    
+    def get_knowledge_title(self, obj):
+        return obj.snapshot.get('title')
+    
+    def get_knowledge_type(self, obj):
+        return obj.snapshot.get('knowledge_type')
+    
+    def get_knowledge_type_display(self, obj):
+        return obj.snapshot.get('knowledge_type_display')
 
 
 class TaskQuizSerializer(serializers.ModelSerializer):
     """Serializer for TaskQuiz model."""
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
+    quiz_title = serializers.SerializerMethodField()
     question_count = serializers.SerializerMethodField()
+    resource_uuid = serializers.UUIDField(read_only=True)
+    version_number = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = TaskQuiz
-        fields = ['id', 'quiz', 'quiz_title', 'question_count', 'order']
-        read_only_fields = ['order']
+        fields = [
+            'id', 'quiz', 'quiz_title', 'question_count',
+            'resource_uuid', 'version_number', 'snapshot', 'order'
+        ]
+        read_only_fields = ['order', 'snapshot']
+    
+    def get_quiz_title(self, obj):
+        return obj.snapshot.get('title')
     
     def get_question_count(self, obj):
         """Get the number of questions in the quiz."""
-        return obj.quiz.quiz_questions.count()
+        return obj.snapshot.get('question_count') or len(obj.snapshot.get('questions', []))
 
 
 class TaskListSerializer(serializers.ModelSerializer):
@@ -264,12 +287,24 @@ class LearningTaskCreateSerializer(BaseTaskCreateSerializer):
             created_by=request.user
         )
         
+        knowledge_queryset = Knowledge.objects.filter(
+            id__in=knowledge_ids,
+            is_deleted=False,
+            status='PUBLISHED'
+        ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+        knowledge_map = {k.id: k for k in knowledge_queryset}
         # Create knowledge associations
         for order, knowledge_id in enumerate(knowledge_ids, start=1):
+            knowledge = knowledge_map.get(knowledge_id)
+            if not knowledge:
+                continue
             TaskKnowledge.objects.create(
                 task=task,
-                knowledge_id=knowledge_id,
-                order=order
+                knowledge=knowledge,
+                order=order,
+                resource_uuid=knowledge.resource_uuid,
+                version_number=knowledge.version_number,
+                snapshot=TaskKnowledge.build_snapshot(knowledge)
             )
         
         # Create assignments for each student
@@ -320,7 +355,8 @@ class PracticeTaskCreateSerializer(BaseTaskCreateSerializer):
         existing_ids = set(
             Quiz.objects.filter(
                 id__in=value,
-                is_deleted=False
+                is_deleted=False,
+                status='PUBLISHED'
             ).values_list('id', flat=True)
         )
         invalid_ids = set(value) - existing_ids
@@ -393,20 +429,45 @@ class PracticeTaskCreateSerializer(BaseTaskCreateSerializer):
             created_by=request.user
         )
         
+        quiz_queryset = Quiz.objects.filter(
+            id__in=quiz_ids,
+            is_deleted=False,
+            status='PUBLISHED'
+        )
+        quiz_map = {q.id: q for q in quiz_queryset}
+        
         # Create quiz associations
         for order, quiz_id in enumerate(quiz_ids, start=1):
+            quiz = quiz_map.get(quiz_id)
+            if not quiz:
+                continue
             TaskQuiz.objects.create(
                 task=task,
-                quiz_id=quiz_id,
-                order=order
+                quiz=quiz,
+                order=order,
+                resource_uuid=quiz.resource_uuid,
+                version_number=quiz.version_number,
+                snapshot=TaskQuiz.build_snapshot(quiz)
             )
         
         # Create knowledge associations (optional)
+        knowledge_queryset = Knowledge.objects.filter(
+            id__in=knowledge_ids,
+            is_deleted=False,
+            status='PUBLISHED'
+        ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+        knowledge_map = {k.id: k for k in knowledge_queryset}
         for order, knowledge_id in enumerate(knowledge_ids, start=1):
+            knowledge = knowledge_map.get(knowledge_id)
+            if not knowledge:
+                continue
             TaskKnowledge.objects.create(
                 task=task,
-                knowledge_id=knowledge_id,
-                order=order
+                knowledge=knowledge,
+                order=order,
+                resource_uuid=knowledge.resource_uuid,
+                version_number=knowledge.version_number,
+                snapshot=TaskKnowledge.build_snapshot(knowledge)
             )
         
         # Create assignments for each student
@@ -463,7 +524,7 @@ class ExamTaskCreateSerializer(BaseTaskCreateSerializer):
         
         Property 27: 考试任务唯一试卷 - 只允许选择一个试卷
         """
-        if not Quiz.objects.filter(id=value, is_deleted=False).exists():
+        if not Quiz.objects.filter(id=value, is_deleted=False, status='PUBLISHED').exists():
             raise serializers.ValidationError('试卷不存在')
         return value
     
@@ -513,11 +574,15 @@ class ExamTaskCreateSerializer(BaseTaskCreateSerializer):
             created_by=request.user
         )
         
+        quiz = Quiz.objects.get(pk=quiz_id)
         # Create single quiz association (Property 27: 考试任务唯一试卷)
         TaskQuiz.objects.create(
             task=task,
-            quiz_id=quiz_id,
-            order=1
+            quiz=quiz,
+            order=1,
+            resource_uuid=quiz.resource_uuid,
+            version_number=quiz.version_number,
+            snapshot=TaskQuiz.build_snapshot(quiz)
         )
         
         # Create assignments for each student
@@ -545,9 +610,9 @@ class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
     Properties:
     - Property 20: 知识学习完成记录
     """
-    knowledge_id = serializers.IntegerField(source='task_knowledge.knowledge.id', read_only=True)
-    knowledge_title = serializers.CharField(source='task_knowledge.knowledge.title', read_only=True)
-    knowledge_type = serializers.CharField(source='task_knowledge.knowledge.knowledge_type', read_only=True)
+    knowledge_id = serializers.SerializerMethodField()
+    knowledge_title = serializers.SerializerMethodField()
+    knowledge_type = serializers.SerializerMethodField()
     order = serializers.IntegerField(source='task_knowledge.order', read_only=True)
     
     class Meta:
@@ -557,6 +622,15 @@ class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
             'is_completed', 'completed_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['is_completed', 'completed_at', 'created_at', 'updated_at']
+    
+    def get_knowledge_id(self, obj):
+        return obj.task_knowledge.snapshot.get('id')
+    
+    def get_knowledge_title(self, obj):
+        return obj.task_knowledge.snapshot.get('title')
+    
+    def get_knowledge_type(self, obj):
+        return obj.task_knowledge.snapshot.get('knowledge_type')
 
 
 class StudentAssignmentListSerializer(serializers.ModelSerializer):
@@ -705,15 +779,15 @@ class StudentLearningTaskDetailSerializer(serializers.ModelSerializer):
         result = []
         for tk in task_knowledge_items:
             progress = progress_map.get(tk.id)
-            knowledge = tk.knowledge
+            snapshot = tk.snapshot
             
             item = {
                 'id': tk.id,
-                'knowledge_id': knowledge.id,
-                'title': knowledge.title,
-                'knowledge_type': knowledge.knowledge_type,
-                'knowledge_type_display': knowledge.get_knowledge_type_display(),
-                'summary': knowledge.summary,
+                'knowledge_id': snapshot.get('id'),
+                'title': snapshot.get('title'),
+                'knowledge_type': snapshot.get('knowledge_type'),
+                'knowledge_type_display': snapshot.get('knowledge_type_display'),
+                'summary': snapshot.get('summary'),
                 'order': tk.order,
                 'is_completed': progress.is_completed if progress else False,
                 'completed_at': progress.completed_at if progress else None,

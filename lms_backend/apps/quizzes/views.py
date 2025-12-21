@@ -8,6 +8,7 @@ Properties:
 - Property 14: 被引用试卷删除保护
 - Property 16: 试卷所有权编辑控制
 """
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -70,6 +71,14 @@ class QuizListCreateView(APIView):
         created_by = request.query_params.get('created_by')
         if created_by:
             queryset = queryset.filter(created_by_id=created_by)
+        
+        status_param = request.query_params.get('status')
+        if status_param in ['DRAFT', 'PUBLISHED']:
+            queryset = queryset.filter(status=status_param)
+            if status_param == 'PUBLISHED':
+                queryset = queryset.filter(is_current=True)
+        else:
+            queryset = queryset.filter(status='PUBLISHED', is_current=True)
         
         queryset = queryset.order_by('-created_at')
         
@@ -308,6 +317,7 @@ class QuizAddQuestionsView(APIView):
         
         existing_question_ids = serializer.validated_data.get('existing_question_ids', [])
         new_questions_data = serializer.validated_data.get('new_questions', [])
+        quiz = quiz.clone_new_version()
         
         # Get existing questions that are already in the quiz
         existing_quiz_question_ids = set(
@@ -323,10 +333,15 @@ class QuizAddQuestionsView(APIView):
         # Create and add new questions
         for question_data in new_questions_data:
             line_type_id = question_data.pop('line_type_id', None)
-            question = Question.objects.create(
-                created_by=request.user,
-                **question_data
-            )
+            question_attrs = {
+                'created_by': request.user,
+                'status': 'PUBLISHED',
+                'is_current': True,
+                'published_at': timezone.now(),
+                'version_number': Question.next_version_number(question_data.get('resource_uuid')),
+                **question_data,
+            }
+            question = Question.objects.create(**question_attrs)
             # Set line_type if provided
             if line_type_id:
                 from apps.knowledge.models import Tag
@@ -392,6 +407,7 @@ class QuizRemoveQuestionsView(APIView):
         
         question_ids = serializer.validated_data['question_ids']
         
+        quiz = quiz.clone_new_version()
         # Remove questions from quiz
         QuizQuestion.objects.filter(
             quiz=quiz,
@@ -456,6 +472,7 @@ class QuizReorderQuestionsView(APIView):
         
         question_ids = serializer.validated_data['question_ids']
         
+        quiz = quiz.clone_new_version()
         # Reorder questions
         quiz.reorder_questions(question_ids)
         
@@ -536,7 +553,11 @@ class QuizCreateFromQuestionsView(APIView):
         quiz = Quiz.objects.create(
             title=title,
             description=description,
-            created_by=request.user
+            created_by=request.user,
+            status='PUBLISHED',
+            is_current=True,
+            published_at=timezone.now(),
+            version_number=Quiz.next_version_number(None)
         )
         
         # Add questions to quiz

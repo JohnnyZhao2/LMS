@@ -56,7 +56,7 @@ class KnowledgeListCreateView(APIView):
         queryset = Knowledge.objects.filter(
             is_deleted=False
         ).select_related(
-            'created_by', 'updated_by'
+            'created_by', 'updated_by', 'source_version'
         ).prefetch_related(
             'system_tags', 'operation_tags'
         )
@@ -67,7 +67,7 @@ class KnowledgeListCreateView(APIView):
         include_drafts_param = request.query_params.get('include_drafts')
         
         if not request.user.is_admin:
-            queryset = queryset.filter(status='PUBLISHED')
+            queryset = queryset.filter(status='PUBLISHED', is_current=True)
         else:
             if include_drafts_param is None:
                 include_drafts = True
@@ -76,28 +76,15 @@ class KnowledgeListCreateView(APIView):
             
             if status_param in ['DRAFT', 'PUBLISHED']:
                 queryset = queryset.filter(status=status_param)
+                if status_param == 'PUBLISHED':
+                    queryset = queryset.filter(is_current=True)
             elif include_drafts:
-                # 草稿优先视图：显示草稿，或没有未删除草稿的已发布版本
-                # 找出有未删除草稿的已发布版本 ID
-                published_ids_with_active_draft = Knowledge.objects.filter(
-                    status='DRAFT',
-                    is_deleted=False,
-                    published_version__isnull=False
-                ).values_list('published_version_id', flat=True)
-                
                 queryset = queryset.filter(
                     models.Q(status='DRAFT') |
-                    models.Q(status='PUBLISHED')
-                ).exclude(
-                    # 排除有未删除草稿的已发布版本
-                    id__in=published_ids_with_active_draft
+                    models.Q(status='PUBLISHED', is_current=True)
                 )
             else:
-                # 已发布优先视图：显示已发布版本，或没有已发布版本的草稿
-                queryset = queryset.filter(
-                    models.Q(status='PUBLISHED') |
-                    models.Q(status='DRAFT', published_version__isnull=True)
-                )
+                queryset = queryset.filter(status='PUBLISHED', is_current=True)
         
         # Filter by knowledge type
         knowledge_type = request.query_params.get('knowledge_type')
@@ -190,7 +177,7 @@ class KnowledgeDetailView(APIView):
         """
         try:
             knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by', 'published_version'
+                'created_by', 'updated_by', 'source_version'
             ).prefetch_related(
                 'system_tags', 'operation_tags'
             ).get(pk=pk, is_deleted=False)
@@ -198,11 +185,11 @@ class KnowledgeDetailView(APIView):
             # 如果是已发布的知识，检查是否有关联的草稿
             if knowledge.status == 'PUBLISHED':
                 draft = Knowledge.objects.filter(
-                    published_version=knowledge,
+                    source_version=knowledge,
                     status='DRAFT',
                     is_deleted=False
                 ).select_related(
-                    'created_by', 'updated_by', 'published_version'
+                    'created_by', 'updated_by', 'source_version'
                 ).prefetch_related(
                     'system_tags', 'operation_tags'
                 ).first()
@@ -353,7 +340,7 @@ class KnowledgePublishView(APIView):
         
         try:
             knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by', 'published_version'
+                'created_by', 'updated_by', 'source_version'
             ).prefetch_related(
                 'system_tags', 'operation_tags'
             ).get(pk=pk, is_deleted=False)

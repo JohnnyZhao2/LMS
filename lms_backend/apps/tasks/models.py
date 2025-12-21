@@ -9,6 +9,8 @@ Implements:
 
 Requirements: 7.1, 9.1, 11.1
 """
+import uuid
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -360,6 +362,19 @@ class TaskKnowledge(TimestampMixin, models.Model):
         related_name='knowledge_tasks',
         verbose_name='知识文档'
     )
+    resource_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name='知识资源ID'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='知识版本号'
+    )
+    snapshot = models.JSONField(
+        default=dict,
+        verbose_name='知识快照'
+    )
     order = models.PositiveIntegerField(
         default=1,
         verbose_name='顺序'
@@ -373,10 +388,18 @@ class TaskKnowledge(TimestampMixin, models.Model):
         ordering = ['task', 'order']
     
     def __str__(self):
-        return f"{self.task.title} - {self.knowledge.title}"
+        title = self.snapshot.get('title') or self.knowledge.title
+        return f"{self.task.title} - {title}"
     
     def save(self, *args, **kwargs):
         """保存时自动设置顺序号"""
+        if self.knowledge:
+            if not self.resource_uuid:
+                self.resource_uuid = self.knowledge.resource_uuid
+            if not self.version_number:
+                self.version_number = self.knowledge.version_number
+            if not self.snapshot:
+                self.snapshot = self.build_snapshot(self.knowledge)
         if not self.order:
             max_order = TaskKnowledge.objects.filter(
                 task=self.task
@@ -385,6 +408,52 @@ class TaskKnowledge(TimestampMixin, models.Model):
             )['max_order']
             self.order = (max_order or 0) + 1
         super().save(*args, **kwargs)
+    
+    @staticmethod
+    def _extract_summary(snapshot_source):
+        if snapshot_source.knowledge_type == 'OTHER':
+            text = snapshot_source.content or ''
+        else:
+            parts = [
+                snapshot_source.fault_scenario,
+                snapshot_source.trigger_process,
+                snapshot_source.solution,
+                snapshot_source.verification_plan,
+                snapshot_source.recovery_plan,
+            ]
+            text = next((p for p in parts if p), '')
+        return text[:160] if text else ''
+    
+    @staticmethod
+    def build_snapshot(knowledge):
+        line_type = knowledge.line_type
+        return {
+            'id': knowledge.id,
+            'resource_uuid': str(knowledge.resource_uuid),
+            'version_number': knowledge.version_number,
+            'title': knowledge.title,
+            'knowledge_type': knowledge.knowledge_type,
+            'knowledge_type_display': knowledge.get_knowledge_type_display(),
+            'summary': TaskKnowledge._extract_summary(knowledge),
+            'content': knowledge.content,
+            'fault_scenario': knowledge.fault_scenario,
+            'trigger_process': knowledge.trigger_process,
+            'solution': knowledge.solution,
+            'verification_plan': knowledge.verification_plan,
+            'recovery_plan': knowledge.recovery_plan,
+            'line_type': {
+                'id': line_type.id,
+                'name': line_type.name,
+            } if line_type else None,
+            'system_tags': [
+                {'id': tag.id, 'name': tag.name}
+                for tag in knowledge.system_tags.all()
+            ],
+            'operation_tags': [
+                {'id': tag.id, 'name': tag.name}
+                for tag in knowledge.operation_tags.all()
+            ],
+        }
 
 
 class TaskQuiz(TimestampMixin, models.Model):
@@ -413,6 +482,19 @@ class TaskQuiz(TimestampMixin, models.Model):
         related_name='quiz_tasks',
         verbose_name='试卷'
     )
+    resource_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name='试卷资源ID'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='试卷版本号'
+    )
+    snapshot = models.JSONField(
+        default=dict,
+        verbose_name='试卷快照'
+    )
     order = models.PositiveIntegerField(
         default=1,
         verbose_name='顺序'
@@ -426,10 +508,18 @@ class TaskQuiz(TimestampMixin, models.Model):
         ordering = ['task', 'order']
     
     def __str__(self):
-        return f"{self.task.title} - {self.quiz.title}"
+        title = self.snapshot.get('title') or self.quiz.title
+        return f"{self.task.title} - {title}"
     
     def save(self, *args, **kwargs):
         """保存时自动设置顺序号"""
+        if self.quiz:
+            if not self.resource_uuid:
+                self.resource_uuid = self.quiz.resource_uuid
+            if not self.version_number:
+                self.version_number = self.quiz.version_number
+            if not self.snapshot:
+                self.snapshot = self.build_snapshot(self.quiz)
         if not self.order:
             max_order = TaskQuiz.objects.filter(
                 task=self.task
@@ -450,6 +540,35 @@ class TaskQuiz(TimestampMixin, models.Model):
             existing_count = TaskQuiz.objects.filter(task=self.task).exclude(pk=self.pk).count()
             if existing_count >= 1:
                 raise ValidationError('考试任务只能关联一个试卷')
+    
+    @staticmethod
+    def build_snapshot(quiz):
+        questions = []
+        for relation in quiz.get_ordered_questions():
+            question = relation.question
+            questions.append({
+                'id': question.id,
+                'resource_uuid': str(question.resource_uuid),
+                'version_number': question.version_number,
+                'content': question.content,
+                'question_type': question.question_type,
+                'options': question.options,
+                'answer': question.answer,
+                'explanation': question.explanation,
+                'score': float(question.score),
+                'order': relation.order,
+            })
+        return {
+            'id': quiz.id,
+            'resource_uuid': str(quiz.resource_uuid),
+            'version_number': quiz.version_number,
+            'title': quiz.title,
+            'description': quiz.description,
+            'question_count': quiz.question_count,
+            'total_score': float(quiz.total_score) if quiz.total_score else 0,
+            'has_subjective_questions': quiz.has_subjective_questions,
+            'questions': questions,
+        }
 
 
 class KnowledgeLearningProgress(TimestampMixin, models.Model):
@@ -497,7 +616,8 @@ class KnowledgeLearningProgress(TimestampMixin, models.Model):
     
     def __str__(self):
         status = '已完成' if self.is_completed else '未完成'
-        return f"{self.assignment} - {self.task_knowledge.knowledge.title} ({status})"
+        title = self.task_knowledge.snapshot.get('title') or self.task_knowledge.knowledge.title
+        return f"{self.assignment} - {title} ({status})"
     
     def mark_completed(self):
         """

@@ -9,6 +9,7 @@ Properties:
 - Property 15: 题目所有权编辑控制
 """
 from django.db import models
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -75,6 +76,14 @@ class QuestionListCreateView(APIView):
         created_by = request.query_params.get('created_by')
         if created_by:
             queryset = queryset.filter(created_by_id=created_by)
+        
+        status_param = request.query_params.get('status')
+        if status_param in ['DRAFT', 'PUBLISHED']:
+            queryset = queryset.filter(status=status_param)
+            if status_param == 'PUBLISHED':
+                queryset = queryset.filter(is_current=True)
+        else:
+            queryset = queryset.filter(status='PUBLISHED', is_current=True)
         
         # Search by content
         search = request.query_params.get('search')
@@ -353,6 +362,10 @@ class QuestionImportView(APIView):
         created_questions = []
         for data in questions_data:
             data['created_by'] = request.user
+            data['status'] = 'PUBLISHED'
+            data['is_current'] = True
+            data['published_at'] = timezone.now()
+            data.setdefault('version_number', Question.next_version_number(data.get('resource_uuid')))
             question = Question.objects.create(**data)
             created_questions.append(question)
         

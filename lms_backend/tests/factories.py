@@ -94,6 +94,10 @@ class KnowledgeFactory(DjangoModelFactory):
     content = factory.LazyAttribute(lambda obj: f'{obj.title}的正文内容')
     created_by = factory.SubFactory(UserFactory)
     is_deleted = False
+    status = 'PUBLISHED'
+    is_current = True
+    published_at = factory.LazyFunction(timezone.now)
+    version_number = 1
 
 
 class EmergencyKnowledgeFactory(KnowledgeFactory):
@@ -143,6 +147,10 @@ class QuestionFactory(DjangoModelFactory):
     tags = factory.LazyAttribute(lambda obj: ['测试'])
     created_by = factory.SubFactory(UserFactory)
     is_deleted = False
+    status = 'PUBLISHED'
+    is_current = True
+    published_at = factory.LazyFunction(timezone.now)
+    version_number = 1
 
 
 class MultipleChoiceQuestionFactory(QuestionFactory):
@@ -181,6 +189,10 @@ class QuizFactory(DjangoModelFactory):
     description = factory.LazyAttribute(lambda obj: f'{obj.title}的描述')
     created_by = factory.SubFactory(UserFactory)
     is_deleted = False
+    status = 'PUBLISHED'
+    is_current = True
+    published_at = factory.LazyFunction(timezone.now)
+    version_number = 1
 
 
 class QuizQuestionFactory(DjangoModelFactory):

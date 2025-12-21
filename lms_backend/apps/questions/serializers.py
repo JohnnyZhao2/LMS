@@ -3,6 +3,7 @@ Serializers for question management.
 
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.knowledge.serializers import TagSimpleSerializer
@@ -24,9 +25,12 @@ class QuestionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = [
-            'id', 'content', 'question_type', 'question_type_display',
+            'id', 'resource_uuid', 'version_number',
+            'content', 'question_type', 'question_type_display',
             'difficulty', 'difficulty_display', 'score',
-            'is_objective', 'line_type', 'created_by', 'created_by_name',
+            'is_objective', 'line_type',
+            'status', 'is_current', 'published_at',
+            'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
 
@@ -47,10 +51,12 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = [
-            'id', 'content', 'question_type', 'question_type_display',
+            'id', 'resource_uuid', 'version_number',
+            'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation', 'score',
             'difficulty', 'difficulty_display',
             'is_objective', 'is_subjective', 'line_type',
+            'status', 'is_current', 'published_at',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
@@ -151,6 +157,13 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         
         line_type_id = validated_data.pop('line_type_id', None)
         validated_data['created_by'] = self.context['request'].user
+        validated_data.setdefault('status', 'PUBLISHED')
+        validated_data.setdefault('is_current', True)
+        validated_data.setdefault('published_at', timezone.now())
+        validated_data.setdefault(
+            'version_number',
+            Question.next_version_number(validated_data.get('resource_uuid'))
+        )
         
         question = Question.objects.create(**validated_data)
         
@@ -258,6 +271,7 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         from apps.knowledge.models import Tag
         
         line_type_id = validated_data.pop('line_type_id', None)
+        instance = instance.clone_new_version()
         
         # 更新条线类型关系
         if line_type_id is not None:

@@ -278,32 +278,49 @@ class TestKnowledgeListCreateAPI:
         
         assert response.status_code == status.HTTP_400_BAD_REQUEST
     
-    def test_admin_list_prefers_draft_version(self, authenticated_admin_client, admin_user):
-        """管理员列表应优先返回草稿版本。"""
-        published = KnowledgeFactory(created_by=admin_user, status='PUBLISHED', title='已发布文档')
+    def test_admin_list_includes_draft_and_published_versions(self, authenticated_admin_client, admin_user):
+        """管理员在默认视图下能同时看到草稿与当前发布版本。"""
+        published = KnowledgeFactory(
+            created_by=admin_user,
+            status='PUBLISHED',
+            is_current=True,
+            title='已发布文档',
+            version_number=1,
+        )
         draft = KnowledgeFactory(
             created_by=admin_user,
             status='DRAFT',
+            is_current=False,
             title='草稿文档',
-            published_version=published,
+            resource_uuid=published.resource_uuid,
+            version_number=2,
+            source_version=published,
         )
         
         response = authenticated_admin_client.get('/api/knowledge/')
         
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        assert response.data[0]['id'] == draft.id
-        assert response.data[0]['status'] == 'DRAFT'
-        assert response.data[0]['title'] == '草稿文档'
+        returned_ids = {item['id'] for item in response.data}
+        assert published.id in returned_ids
+        assert draft.id in returned_ids
     
     def test_admin_can_filter_only_published(self, authenticated_admin_client, admin_user):
         """管理员按 status=PUBLISHED 筛选时仍然看到已发布版本。"""
-        published = KnowledgeFactory(created_by=admin_user, status='PUBLISHED', title='上线文档')
+        published = KnowledgeFactory(
+            created_by=admin_user,
+            status='PUBLISHED',
+            is_current=True,
+            title='上线文档',
+            version_number=1,
+        )
         KnowledgeFactory(
             created_by=admin_user,
             status='DRAFT',
+            is_current=False,
             title='上线文档草稿',
-            published_version=published,
+            resource_uuid=published.resource_uuid,
+            version_number=2,
+            source_version=published,
         )
         
         response = authenticated_admin_client.get('/api/knowledge/?status=PUBLISHED')

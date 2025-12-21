@@ -318,9 +318,9 @@ class TestQuizReorderQuestions:
         )
         
         assert response.status_code == status.HTTP_200_OK
-        
+        updated_quiz = Quiz.objects.get(id=response.data['id'])
         # Verify new order
-        quiz_questions = list(quiz.get_ordered_questions())
+        quiz_questions = list(updated_quiz.get_ordered_questions())
         assert quiz_questions[0].question_id == q3.id
         assert quiz_questions[1].question_id == q1.id
         assert quiz_questions[2].question_id == q2.id

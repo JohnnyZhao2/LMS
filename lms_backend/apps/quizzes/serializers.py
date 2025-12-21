@@ -8,6 +8,7 @@ Properties:
 - Property 14: 被引用试卷删除保护
 - Property 16: 试卷所有权编辑控制
 """
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.questions.models import Question
@@ -47,8 +48,11 @@ class QuizListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = [
-            'id', 'title', 'description', 'question_count', 'total_score',
-            'has_subjective_questions', 'created_by', 'created_by_name',
+            'id', 'resource_uuid', 'version_number',
+            'title', 'description', 'question_count', 'total_score',
+            'has_subjective_questions',
+            'status', 'is_current', 'published_at',
+            'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
 
@@ -70,9 +74,11 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = [
-            'id', 'title', 'description', 'question_count', 'total_score',
+            'id', 'resource_uuid', 'version_number',
+            'title', 'description', 'question_count', 'total_score',
             'has_subjective_questions', 'objective_question_count',
             'subjective_question_count', 'questions',
+            'status', 'is_current', 'published_at',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
     
@@ -210,6 +216,13 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         new_questions_data = validated_data.pop('new_questions', [])
         
         validated_data['created_by'] = self.context['request'].user
+        validated_data.setdefault('status', 'PUBLISHED')
+        validated_data.setdefault('is_current', True)
+        validated_data.setdefault('published_at', timezone.now())
+        validated_data.setdefault(
+            'version_number',
+            Quiz.next_version_number(validated_data.get('resource_uuid'))
+        )
         quiz = Quiz.objects.create(**validated_data)
         
         # Add existing questions
@@ -220,10 +233,15 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         # Create and add new questions
         for question_data in new_questions_data:
             line_type_id = question_data.pop('line_type_id', None)
-            question = Question.objects.create(
-                created_by=self.context['request'].user,
-                **question_data
-            )
+            question_attrs = {
+                'created_by': self.context['request'].user,
+                'status': 'PUBLISHED',
+                'is_current': True,
+                'published_at': timezone.now(),
+                'version_number': Question.next_version_number(question_data.get('resource_uuid')),
+                **question_data,
+            }
+            question = Question.objects.create(**question_attrs)
             # Set line_type if provided
             if line_type_id:
                 from apps.knowledge.models import Tag
@@ -275,6 +293,7 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update quiz info and synchronize question ordering."""
         question_ids = validated_data.pop('existing_question_ids', None)
+        instance = instance.clone_new_version()
         quiz = super().update(instance, validated_data)
         
         if question_ids is not None:

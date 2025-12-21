@@ -49,7 +49,7 @@ export const QuestionForm: React.FC = () => {
         await createQuestion.mutateAsync(submitData);
         message.success('创建成功');
       }
-      navigate('/test-center/questions');
+      navigate('/test-center?tab=questions');
     } catch (error) {
       showApiError(error, isEdit ? '更新失败' : '创建失败');
     }
@@ -146,7 +146,7 @@ export const QuestionForm: React.FC = () => {
               <Button type="primary" htmlType="submit" loading={createQuestion.isPending || updateQuestion.isPending}>
                 {isEdit ? '更新' : '创建'}
               </Button>
-              <Button onClick={() => navigate('/test-center/questions')}>取消</Button>
+              <Button onClick={() => navigate('/test-center?tab=questions')}>取消</Button>
             </Space>
           </Form.Item>
         </Form>

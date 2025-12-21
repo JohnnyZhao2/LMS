@@ -50,8 +50,9 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Knowledge
         fields = [
-            'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'status', 'status_display',
+            'id', 'resource_uuid', 'version_number',
+            'title', 'knowledge_type', 'knowledge_type_display',
+            'status', 'status_display', 'is_current', 'published_at',
             'line_type', 'system_tags', 'operation_tags',
             'view_count', 'content_preview',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
@@ -73,13 +74,14 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    published_version_id = serializers.IntegerField(source='published_version.id', read_only=True, allow_null=True)
+    source_version_id = serializers.IntegerField(source='source_version.id', read_only=True, allow_null=True)
     
     class Meta:
         model = Knowledge
         fields = [
-            'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'status', 'status_display',
+            'id', 'resource_uuid', 'version_number',
+            'title', 'knowledge_type', 'knowledge_type_display',
+            'status', 'status_display', 'is_current', 'published_at',
             'line_type', 'system_tags', 'operation_tags',
             # 应急类知识结构化字段
             'fault_scenario', 'trigger_process', 'solution',
@@ -88,7 +90,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'content',
             # 元数据
             'view_count',
-            'published_version_id',
+            'source_version_id',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]
@@ -196,6 +198,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         validated_data['updated_by'] = user
         # 新建知识默认保存为草稿
         validated_data.setdefault('status', 'DRAFT')
+        validated_data.setdefault('is_current', False)
+        validated_data.setdefault('version_number', Knowledge.next_version_number(validated_data.get('resource_uuid')))
         
         knowledge = Knowledge.objects.create(**validated_data)
         
@@ -320,47 +324,17 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         
         # 如果当前是已发布状态，需要创建或更新草稿而不是直接修改原记录
         if instance.status == 'PUBLISHED':
-            # 检查是否已存在关联的草稿
             existing_draft = Knowledge.objects.filter(
-                published_version=instance,
+                source_version=instance,
                 status='DRAFT',
                 is_deleted=False
             ).first()
             
             if existing_draft:
-                # 如果已存在草稿，更新草稿记录
                 instance = existing_draft
                 instance.updated_by = user
             else:
-                # 创建新的草稿记录（基于原记录）
-                draft_data = {
-                    'title': instance.title,
-                    'knowledge_type': instance.knowledge_type,
-                    'fault_scenario': instance.fault_scenario,
-                    'trigger_process': instance.trigger_process,
-                    'solution': instance.solution,
-                    'verification_plan': instance.verification_plan,
-                    'recovery_plan': instance.recovery_plan,
-                    'content': instance.content,
-                    'status': 'DRAFT',
-                    'created_by': instance.created_by,
-                    'updated_by': user,
-                    'published_version': instance,  # 关联已发布版本
-                }
-                
-                # 创建新草稿记录
-                draft_instance = Knowledge.objects.create(**draft_data)
-                
-                # 设置条线类型关系
-                if instance.line_type:
-                    draft_instance.set_line_type(instance.line_type)
-                
-                # 复制多对多关系
-                draft_instance.system_tags.set(instance.system_tags.all())
-                draft_instance.operation_tags.set(instance.operation_tags.all())
-                
-                # 使用新草稿记录继续处理更新
-                instance = draft_instance
+                instance = instance.clone_as_draft(user)
         
         # 处理条线类型
         line_type_id = validated_data.pop('line_type_id', None)

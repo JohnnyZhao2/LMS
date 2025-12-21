@@ -6,9 +6,12 @@ Implements:
 
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
+import uuid
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -39,6 +42,10 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         ('MULTIPLE_CHOICE', '多选题'),
         ('TRUE_FALSE', '判断题'),
         ('SHORT_ANSWER', '简答题'),
+    ]
+    STATUS_CHOICES = [
+        ('DRAFT', '草稿'),
+        ('PUBLISHED', '已发布'),
     ]
     
     # 题目内容
@@ -93,6 +100,39 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default='MEDIUM',
         verbose_name='难度等级'
     )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PUBLISHED',
+        verbose_name='发布状态'
+    )
+    resource_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        verbose_name='资源标识'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='版本号'
+    )
+    source_version = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='question_versions',
+        verbose_name='来源版本'
+    )
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='发布时间'
+    )
+    is_current = models.BooleanField(
+        default=True,
+        verbose_name='是否当前版本'
+    )
     
     # 条线类型通过ResourceLineType关联（多态关系）
     # 使用property提供便捷访问
@@ -133,6 +173,12 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name = '题目'
         verbose_name_plural = '题目'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['resource_uuid', 'version_number'],
+                name='uniq_question_resource_version'
+            )
+        ]
     
     def __str__(self):
         # 截取题目内容前 50 个字符
@@ -181,16 +227,21 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     
     def is_referenced_by_quiz(self):
         """
-        检查题目是否被试卷引用
+        检查题目是否被未删除的试卷引用
         
         Requirements: 5.7
         Property 13: 被引用题目删除保护
+        
+        Note: 只检查未被软删除的试卷，已删除的试卷不阻止题目删除
         """
         # 延迟导入避免循环依赖
-        # QuizQuestion 模型将在 quizzes app 中定义
         try:
             from apps.quizzes.models import QuizQuestion
-            return QuizQuestion.objects.filter(question=self).exists()
+            # 只检查未被软删除的试卷的引用
+            return QuizQuestion.objects.filter(
+                question=self,
+                quiz__is_deleted=False  # 排除已软删除的试卷
+            ).exists()
         except ImportError:
             # quizzes app 尚未实现
             return False
@@ -205,6 +256,47 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         if self.is_referenced_by_quiz():
             raise ValidationError('该题目已被试卷引用，无法删除')
         super().delete(*args, **kwargs)
+    
+    @classmethod
+    def next_version_number(cls, resource_uuid):
+        if not resource_uuid:
+            return 1
+        aggregate = cls.objects.filter(
+            resource_uuid=resource_uuid,
+            is_deleted=False
+        ).aggregate(
+            max_version=models.Max('version_number')
+        )
+        max_version = aggregate['max_version'] or 0
+        return max_version + 1
+    
+    def clone_new_version(self):
+        """
+        创建当前题目的新版本，保持历史版本只读。
+        """
+        new_question = Question.objects.create(
+            content=self.content,
+            question_type=self.question_type,
+            options=self.options,
+            answer=self.answer,
+            explanation=self.explanation,
+            score=self.score,
+            difficulty=self.difficulty,
+            created_by=self.created_by,
+            status='PUBLISHED',
+            resource_uuid=self.resource_uuid,
+            version_number=self.next_version_number(self.resource_uuid),
+            source_version=self,
+            published_at=timezone.now(),
+            is_current=True
+        )
+        if self.line_type:
+            new_question.set_line_type(self.line_type)
+        Question.objects.filter(
+            resource_uuid=self.resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=new_question.pk).update(is_current=False)
+        return new_question
     
     @property
     def is_objective(self):

@@ -335,3 +335,15 @@
 3. IF API 请求失败 THEN LMS 前端 SHALL 展示明确的错误信息
 4. IF 网络连接断开 THEN LMS 前端 SHALL 展示网络错误提示
 5. WHEN 表单提交失败 THEN LMS 前端 SHALL 在对应字段展示验证错误信息
+
+### Requirement 24: 资源版本管理与任务快照
+
+**User Story:** 作为内容治理者，我希望知识、题目、试卷的历史版本可追溯，并且任务始终绑定不可变快照，以保证所有已发布任务与学员结果不受后续编辑影响。
+
+#### Acceptance Criteria
+
+1. WHEN 管理员发布知识/题目/试卷 THEN LMS 后端 SHALL 生成新的资源版本（包含 `resource_uuid`、`version_number`、`published_at`、`is_current` 字段），历史版本保留且只读。
+2. WHEN 管理员编辑已发布资源 THEN LMS 后端 SHALL 创建新的草稿/版本记录，禁止直接覆盖原有已发布记录。
+3. WHEN 任务创建者选择知识或试卷资源 THEN LMS 后端 SHALL 强制绑定具体版本，并在 `TaskKnowledge`/`TaskQuiz` 中落库不可变 JSON 快照（含标题、正文/题目结构、标签、分值等内容类字段）。
+4. IF 资源存在新的发布版本 AND 历史任务引用旧版本 THEN LMS 后端/前端 SHALL 继续显示旧版本快照，不允许通过任务回溯到母版。
+5. WHEN 查询任务详情或学员学习进度 THEN LMS 前端 SHALL 仅展示快照内容，不再依赖可变资源表，确保历史结果可重现。

@@ -7,8 +7,11 @@ Implements:
 
 Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
 """
+import uuid
+
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -44,6 +47,11 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='试卷描述'
     )
     
+    STATUS_CHOICES = [
+        ('DRAFT', '草稿'),
+        ('PUBLISHED', '已发布'),
+    ]
+    
     # 题目（通过 QuizQuestion 中间表关联）
     questions = models.ManyToManyField(
         'questions.Question',
@@ -53,11 +61,51 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='题目'
     )
     
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PUBLISHED',
+        verbose_name='发布状态'
+    )
+    resource_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        db_index=True,
+        verbose_name='资源标识'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='版本号'
+    )
+    source_version = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quiz_versions',
+        verbose_name='来源版本'
+    )
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='发布时间'
+    )
+    is_current = models.BooleanField(
+        default=True,
+        verbose_name='是否当前版本'
+    )
+    
     class Meta:
         db_table = 'lms_quiz'
         verbose_name = '试卷'
         verbose_name_plural = '试卷'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['resource_uuid', 'version_number'],
+                name='uniq_quiz_resource_version'
+            )
+        ]
     
     def __str__(self):
         return self.title
@@ -151,6 +199,46 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         if self.is_referenced_by_task():
             raise ValidationError('该试卷已被任务引用，无法删除')
         super().delete(*args, **kwargs)
+    
+    @classmethod
+    def next_version_number(cls, resource_uuid):
+        if not resource_uuid:
+            return 1
+        aggregate = cls.objects.filter(
+            resource_uuid=resource_uuid,
+            is_deleted=False
+        ).aggregate(
+            max_version=models.Max('version_number')
+        )
+        max_version = aggregate['max_version'] or 0
+        return max_version + 1
+    
+    def clone_new_version(self):
+        """
+        创建当前试卷的新版本，复制现有题目顺序。
+        """
+        new_quiz = Quiz.objects.create(
+            title=self.title,
+            description=self.description,
+            created_by=self.created_by,
+            status='PUBLISHED',
+            resource_uuid=self.resource_uuid,
+            version_number=self.next_version_number(self.resource_uuid),
+            source_version=self,
+            published_at=timezone.now(),
+            is_current=True
+        )
+        for relation in self.get_ordered_questions():
+            QuizQuestion.objects.create(
+                quiz=new_quiz,
+                question=relation.question,
+                order=relation.order
+            )
+        Quiz.objects.filter(
+            resource_uuid=self.resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=new_quiz.pk).update(is_current=False)
+        return new_quiz
     
     def add_question(self, question, order=None):
         """
