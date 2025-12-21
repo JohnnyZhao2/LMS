@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Row, Col, Button, Typography, Modal, message, Spin, Empty, Input, Checkbox, Dropdown } from 'antd';
+import { Row, Col, Button, Typography, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Select, Tag, Tooltip } from 'antd';
 import { PlusOutlined, DatabaseOutlined, EditOutlined, DeleteOutlined, EllipsisOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
@@ -61,7 +61,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onEdit, onDelete, o
     <div className={styles.card} onClick={() => onView(item.id)}>
       {/* 标签 */}
       <div className={styles.cardHeader}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {!isPublished && (
             <span style={{ 
               fontSize: '12px', 
@@ -77,6 +77,17 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onEdit, onDelete, o
             <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
               {firstOperationTag}
             </span>
+          )}
+          <Tag color="geekblue" style={{ borderRadius: 12 }}>
+            V{item.version_number}
+          </Tag>
+          {isPublished && item.is_current && (
+            <Tag color="green" style={{ borderRadius: 12 }}>当前版本</Tag>
+          )}
+          {isPublished && !item.is_current && (
+            <Tooltip title="此版本已被新版本取代，但仍可查看历史内容">
+              <Tag color="orange" style={{ borderRadius: 12 }}>历史版本</Tag>
+            </Tooltip>
           )}
         </div>
         <Dropdown
@@ -113,12 +124,22 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onEdit, onDelete, o
 
       {/* 底部信息 */}
       <div className={styles.cardFooter}>
-        <span className={styles.lineType}>
-          {item.updated_by_name || item.created_by_name || '-'}
-        </span>
-        <span className={styles.updateTime}>
-          {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
-        </span>
+        <div>
+          <span className={styles.lineType}>
+            {item.updated_by_name || item.created_by_name || '-'}
+          </span>
+          <span className={styles.updateTime}>
+            {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
+          </span>
+        </div>
+        <div className={styles.versionMeta}>
+          <span>
+            发布于：{item.published_at ? dayjs(item.published_at).format('YYYY-MM-DD HH:mm') : '未发布'}
+          </span>
+          <span>
+            资源ID：{item.resource_uuid.slice(0, 8)}…
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -128,6 +149,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onEdit, onDelete, o
  * 管理员知识库列表组件
  * 采用卡片式布局
  */
+type KnowledgeStatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT';
+
 export const AdminKnowledgeList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
@@ -136,6 +159,7 @@ export const AdminKnowledgeList: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingKnowledgeId, setEditingKnowledgeId] = useState<number | undefined>();
   const [defaultKnowledgeType, setDefaultKnowledgeType] = useState<KnowledgeType>('OTHER');
+  const [statusFilter, setStatusFilter] = useState<KnowledgeStatusFilter>('ALL');
   
   const navigate = useNavigate();
   
@@ -151,6 +175,7 @@ export const AdminKnowledgeList: React.FC = () => {
     line_type_id: selectedLineTypeId,
     system_tag_id: selectedSystemTagIds[0],
     operation_tag_id: selectedOperationTagIds[0],
+    status: statusFilter === 'ALL' ? undefined : (statusFilter as 'PUBLISHED' | 'DRAFT'),
   });
   const deleteKnowledge = useDeleteKnowledge();
   const publishKnowledge = usePublishKnowledge();
@@ -385,6 +410,16 @@ export const AdminKnowledgeList: React.FC = () => {
               allowClear
               onSearch={setSearch}
               className={styles.searchInput}
+            />
+            <Select
+              value={statusFilter}
+              options={[
+                { label: '全部状态', value: 'ALL' },
+                { label: '仅已发布', value: 'PUBLISHED' },
+                { label: '仅草稿', value: 'DRAFT' },
+              ]}
+              onChange={(value: KnowledgeStatusFilter) => setStatusFilter(value)}
+              className={styles.statusSelect}
             />
             <span className={styles.resultCount}>
               共 {data?.length || 0} 篇知识文档

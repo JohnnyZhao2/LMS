@@ -6,6 +6,7 @@ Implements knowledge document management endpoints.
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
 """
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,7 +17,7 @@ from rest_framework import serializers as drf_serializers
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.permissions import IsAdmin
 
-from .models import Knowledge, Tag
+from .models import Knowledge, Tag, ResourceLineType
 from .serializers import (
     KnowledgeListSerializer,
     KnowledgeDetailSerializer,
@@ -504,17 +505,25 @@ class TagListView(APIView):
         # 级联筛选：根据条线类型获取该条线下知识使用的标签
         if line_type_id and tag_type in ['SYSTEM', 'OPERATION']:
             # 查询该条线下的所有知识
+            knowledge_ids = ResourceLineType.objects.filter(
+                content_type=ContentType.objects.get_for_model(Knowledge),
+                line_type_id=line_type_id
+            ).values_list('object_id', flat=True)
             knowledge_qs = Knowledge.objects.filter(
                 is_deleted=False,
-                line_type_id=line_type_id
+                id__in=knowledge_ids
             )
             
             if tag_type == 'SYSTEM':
                 # 获取这些知识使用的系统标签
-                tag_ids = knowledge_qs.values_list('system_tags__id', flat=True).distinct()
+                tag_ids = knowledge_qs.filter(
+                    system_tags__isnull=False
+                ).values_list('system_tags__id', flat=True).distinct()
             else:  # OPERATION
                 # 获取这些知识使用的操作标签
-                tag_ids = knowledge_qs.values_list('operation_tags__id', flat=True).distinct()
+                tag_ids = knowledge_qs.filter(
+                    operation_tags__isnull=False
+                ).values_list('operation_tags__id', flat=True).distinct()
             
             queryset = Tag.objects.filter(id__in=tag_ids, tag_type=tag_type)
         else:

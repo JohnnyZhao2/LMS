@@ -272,11 +272,15 @@ export interface LatestKnowledge {
  */
 export interface KnowledgeListItem {
   id: number;
+  resource_uuid: string;
+  version_number: number;
   title: string;
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
   status: KnowledgeStatus;
   status_display: string;
+  is_current: boolean;
+  published_at?: string;
   line_type?: SimpleTag | null;
   content_preview?: string;
   system_tags: SimpleTag[];
@@ -295,11 +299,15 @@ export interface KnowledgeListItem {
  */
 export interface KnowledgeDetail {
   id: number;
+  resource_uuid: string;
+  version_number: number;
   title: string;
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
   status: KnowledgeStatus;
   status_display: string;
+  is_current: boolean;
+  published_at?: string;
   line_type?: SimpleTag | null;
   // 应急类知识结构化字段
   fault_scenario?: string;
@@ -320,6 +328,52 @@ export interface KnowledgeDetail {
   view_count: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface KnowledgeSnapshot {
+  id: number;
+  resource_uuid: string;
+  version_number: number;
+  title: string;
+  knowledge_type: KnowledgeType;
+  knowledge_type_display?: string;
+  summary?: string;
+  content?: string;
+  fault_scenario?: string;
+  trigger_process?: string;
+  solution?: string;
+  verification_plan?: string;
+  recovery_plan?: string;
+  line_type?: SimpleTag | null;
+  system_tags?: SimpleTag[];
+  operation_tags?: SimpleTag[];
+}
+
+export interface QuizQuestionSnapshot {
+  id: number;
+  resource_uuid: string;
+  version_number: number;
+  order: number;
+  question_type: string;
+  score: number;
+  content: string;
+  options?: Array<{ key: string; value: string }>;
+  answer?: unknown;
+  explanation?: string;
+}
+
+export interface QuizSnapshot {
+  id: number;
+  resource_uuid: string;
+  version_number: number;
+  title: string;
+  description?: string;
+  question_count: number;
+  total_score: number;
+  has_subjective_questions: boolean;
+  objective_question_count: number;
+  subjective_question_count: number;
+  questions: QuizQuestionSnapshot[];
 }
 
 /**
@@ -389,6 +443,9 @@ export interface TaskKnowledge {
   knowledge_title: string;
   knowledge_type: string;
   order: number;
+  resource_uuid: string;
+  version_number: number;
+  snapshot: KnowledgeSnapshot;
 }
 
 /**
@@ -399,6 +456,9 @@ export interface TaskQuiz {
   quiz: number;
   quiz_title: string;
   order: number;
+  resource_uuid: string;
+  version_number: number;
+  snapshot: QuizSnapshot;
 }
 
 /**

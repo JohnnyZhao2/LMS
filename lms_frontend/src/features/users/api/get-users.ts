@@ -2,6 +2,29 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { UserList, Mentor, Role, Department } from '@/types/api';
 
+const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
+const allowedDepartmentCodes = new Set(allowedDepartmentOrder);
+const departmentDisplayNameMap: Record<string, string> = {
+  DEPT1: '一室',
+  DEPT2: '二室',
+};
+
+/**
+ * 仅保留需求定义的一室/二室，并强制其显示名称
+ * @param departments 原始部门列表
+ * @returns 只包含一室/二室且顺序固定的部门列表
+ */
+const normalizeDepartments = (departments: Department[]) =>
+  departments
+    .filter((dept) => allowedDepartmentCodes.has(dept.code))
+    .map((dept) => ({
+      ...dept,
+      name: departmentDisplayNameMap[dept.code] ?? dept.name,
+    }))
+    .sort(
+      (a, b) => allowedDepartmentOrder.indexOf(a.code) - allowedDepartmentOrder.indexOf(b.code),
+    );
+
 interface GetUsersParams {
   departmentId?: number;
   isActive?: boolean;
@@ -91,6 +114,7 @@ export const useDepartments = () => {
   return useQuery({
     queryKey: ['departments'],
     queryFn: () => apiClient.get<Department[]>('/users/departments/'),
+    select: normalizeDepartments,
   });
 };
 

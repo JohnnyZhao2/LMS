@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { KnowledgeListItem, KnowledgeDetail, KnowledgeType } from '@/types/api';
+import type { KnowledgeListItem, KnowledgeDetail, KnowledgeType, KnowledgeStatus } from '@/types/api';
 
 /**
  * 获取知识列表参数
@@ -11,6 +11,7 @@ interface GetKnowledgeListParams {
   system_tag_id?: number;
   operation_tag_id?: number;
   search?: string;
+  status?: KnowledgeStatus;
 }
 
 /**
@@ -18,10 +19,10 @@ interface GetKnowledgeListParams {
  * @param params - 筛选参数
  */
 export const useAdminKnowledgeList = (params: GetKnowledgeListParams = {}) => {
-  const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search } = params;
+  const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search, status } = params;
 
   return useQuery({
-    queryKey: ['admin-knowledge-list', knowledge_type, line_type_id, system_tag_id, operation_tag_id, search],
+    queryKey: ['admin-knowledge-list', knowledge_type, line_type_id, system_tag_id, operation_tag_id, search, status],
     queryFn: () => {
       const searchParams = new URLSearchParams();
       if (knowledge_type) searchParams.set('knowledge_type', knowledge_type);
@@ -29,6 +30,7 @@ export const useAdminKnowledgeList = (params: GetKnowledgeListParams = {}) => {
       if (system_tag_id) searchParams.set('system_tag_id', String(system_tag_id));
       if (operation_tag_id) searchParams.set('operation_tag_id', String(operation_tag_id));
       if (search) searchParams.set('search', search);
+      if (status) searchParams.set('status', status);
       searchParams.set('include_drafts', 'true');
 
       const queryString = searchParams.toString();
