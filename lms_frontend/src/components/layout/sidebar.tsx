@@ -7,7 +7,7 @@ const { Sider } = Layout;
 
 /**
  * 侧边栏组件
- * 应用毛玻璃效果，宽度 280px
+ * 应用毛玻璃效果，宽度 250px
  */
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <Sider
-      width={280}
+      width={250}
       style={{
         position: 'fixed',
         left: 0,

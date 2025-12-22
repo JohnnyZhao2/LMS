@@ -12,6 +12,7 @@ from .views import (
     KnowledgeDetailView,
     KnowledgePublishView,
     KnowledgeUnpublishView,
+    KnowledgeStatsView,
     KnowledgeIncrementViewCountView,
     TagListView,
     TagCreateView,
@@ -21,6 +22,7 @@ from .views import (
 urlpatterns = [
     # Knowledge endpoints
     path('', KnowledgeListCreateView.as_view(), name='knowledge-list-create'),
+    path('stats/', KnowledgeStatsView.as_view(), name='knowledge-stats'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),
     path('<int:pk>/publish/', KnowledgePublishView.as_view(), name='knowledge-publish'),
     path('<int:pk>/unpublish/', KnowledgeUnpublishView.as_view(), name='knowledge-unpublish'),

@@ -15,6 +15,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 from rest_framework import serializers as drf_serializers
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import IsAdmin
 
 from .models import Knowledge, Tag, ResourceLineType
@@ -23,6 +24,7 @@ from .serializers import (
     KnowledgeDetailSerializer,
     KnowledgeCreateSerializer,
     KnowledgeUpdateSerializer,
+    KnowledgeStatsSerializer,
     TagSerializer,
     TagSimpleSerializer,
 )
@@ -49,6 +51,8 @@ class KnowledgeListCreateView(APIView):
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
             OpenApiParameter(name='status', type=str, description='发布状态（DRAFT/PUBLISHED），仅管理员可用'),
             OpenApiParameter(name='include_drafts', type=bool, description='是否包含草稿（仅管理员可用，默认true，草稿优先）'),
+            OpenApiParameter(name='page', type=int, description='页码（默认1）'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
         ],
         responses={200: KnowledgeListSerializer(many=True)},
         tags=['知识管理']
@@ -124,6 +128,14 @@ class KnowledgeListCreateView(APIView):
             )
         
         queryset = queryset.distinct().order_by('-updated_at')
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = KnowledgeListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
         serializer = KnowledgeListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -427,6 +439,100 @@ class KnowledgeUnpublishView(APIView):
         
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class KnowledgeStatsView(APIView):
+    """
+    知识统计端点
+    
+    返回知识文档的统计数据（总文档数、已发布数、应急类型数）。
+    支持与列表接口相同的筛选参数，统计数据基于筛选后的结果。
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取知识统计',
+        description='获取知识文档的统计数据（总文档数、已发布数、应急类型数）。支持条线类型、知识类型和系统标签筛选。普通用户只能看到已发布的知识，管理员可以看到所有（包括草稿）',
+        parameters=[
+            OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
+            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
+            OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
+            OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
+        ],
+        responses={200: KnowledgeStatsSerializer},
+        tags=['知识管理']
+    )
+    def get(self, request):
+        """
+        获取知识统计
+        
+        使用与列表接口相同的筛选逻辑，但只返回统计数据而不是列表数据。
+        """
+        queryset = Knowledge.objects.filter(
+            is_deleted=False
+        )
+        
+        # 权限过滤：普通用户只能看到已发布的知识
+        # 管理员默认看到所有（包括草稿）
+        if not request.user.is_admin:
+            queryset = queryset.filter(status='PUBLISHED', is_current=True)
+        else:
+            # 管理员：包含草稿和已发布
+            queryset = queryset.filter(
+                models.Q(status='DRAFT') |
+                models.Q(status='PUBLISHED', is_current=True)
+            )
+        
+        # Filter by knowledge type
+        knowledge_type = request.query_params.get('knowledge_type')
+        if knowledge_type:
+            queryset = queryset.filter(knowledge_type=knowledge_type)
+        
+        # Filter by line type ID (通过ResourceLineType关系表)
+        line_type_id = request.query_params.get('line_type_id')
+        if line_type_id:
+            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
+            queryset = queryset.filter(
+                id__in=ResourceLineType.objects.filter(
+                    content_type=knowledge_content_type,
+                    line_type_id=line_type_id
+                ).values_list('object_id', flat=True)
+            )
+        
+        # Filter by system tag ID
+        system_tag_id = request.query_params.get('system_tag_id')
+        if system_tag_id:
+            queryset = queryset.filter(system_tags__id=system_tag_id)
+        
+        # Filter by operation tag ID
+        operation_tag_id = request.query_params.get('operation_tag_id')
+        if operation_tag_id:
+            queryset = queryset.filter(operation_tags__id=operation_tag_id)
+        
+        # Search by title or content
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(title__icontains=search) |
+                models.Q(content__icontains=search)
+            )
+        
+        queryset = queryset.distinct()
+        
+        # 计算统计数据
+        total = queryset.count()
+        published = queryset.filter(status='PUBLISHED', is_current=True).count()
+        emergency = queryset.filter(knowledge_type='EMERGENCY').count()
+        
+        stats = {
+            'total': total,
+            'published': published,
+            'emergency': emergency,
+        }
+        
+        serializer = KnowledgeStatsSerializer(stats)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class KnowledgeIncrementViewCountView(APIView):

@@ -33,6 +33,7 @@ export const useUpdateKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
@@ -52,6 +53,7 @@ export const useDeleteKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
     },
   });
 };
@@ -68,6 +70,7 @@ export const usePublishKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-detail', id] });
     },
@@ -86,6 +89,7 @@ export const useUnpublishKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-detail', id] });
     },

@@ -384,3 +384,14 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         
         instance.save()
         return instance
+
+
+class KnowledgeStatsSerializer(serializers.Serializer):
+    """
+    知识统计序列化器
+    
+    返回知识文档的统计数据。
+    """
+    total = serializers.IntegerField(help_text='总文档数')
+    published = serializers.IntegerField(help_text='已发布数')
+    emergency = serializers.IntegerField(help_text='应急类型文档数')

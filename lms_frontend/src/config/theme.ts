@@ -159,7 +159,7 @@ export const transitions = {
 export const layout = {
   containerMaxWidth: 1280,
   contentMaxWidth: 960,
-  sidebarWidth: 280,
+  sidebarWidth: 250,
   headerHeight: 64,
   gridGap: 24,
   sectionSpacing: 48,

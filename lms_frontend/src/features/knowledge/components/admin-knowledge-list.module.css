@@ -1,4 +1,4 @@
-/* 知识库管理页面样式 - 基于新设计系统 */
+/* 知识库管理页面样式 - 双栏布局 */
 
 .container {
   margin: calc(-1 * var(--spacing-6));
@@ -6,119 +6,75 @@
   min-height: calc(100vh - var(--header-height) - 48px);
 }
 
-/* 头部样式 */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-8);
-  padding-bottom: var(--spacing-6);
-  border-bottom: 1px solid var(--color-gray-200);
-}
-
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
-.headerIcon {
-  font-size: 28px;
-  color: var(--color-primary-500);
-  padding: var(--spacing-3);
-  background: var(--color-primary-50);
-  border-radius: var(--radius-lg);
-}
-
-.headerInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.headerTitle {
-  color: var(--color-gray-900) !important;
-  margin: 0 !important;
-  font-weight: 700 !important;
-  font-size: var(--font-size-2xl) !important;
-}
-
-.headerSubtitle {
-  color: var(--color-gray-600);
-  font-size: var(--font-size-base);
-}
-
-.headerRight {
-  display: flex;
-  gap: var(--spacing-3);
-  flex-shrink: 0;
-}
-
-.emergencyBtn {
-  background: linear-gradient(135deg, var(--color-error-500) 0%, var(--color-pink-500) 100%) !important;
-  border: none !important;
-  height: 44px !important;
-  padding: 0 var(--spacing-6) !important;
-  font-weight: 600 !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: 0 4px 14px rgba(255, 61, 113, 0.3) !important;
-  transition: all var(--transition-fast) !important;
-}
-
-.emergencyBtn:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(255, 61, 113, 0.4) !important;
-}
-
-.normalBtn {
-  background: var(--color-white) !important;
-  border: 1px solid var(--color-gray-200) !important;
-  height: 44px !important;
-  padding: 0 var(--spacing-6) !important;
-  font-weight: 600 !important;
-  border-radius: var(--radius-lg) !important;
-  color: var(--color-gray-700) !important;
-  transition: all var(--transition-fast) !important;
-}
-
-.normalBtn:hover {
-  background: var(--color-gray-50) !important;
-  border-color: var(--color-gray-300) !important;
-  transform: translateY(-1px) !important;
-  box-shadow: var(--shadow-md) !important;
-}
-
-/* 主内容区域 */
+/* 主内容区域 - 双栏布局 */
 .mainContent {
   display: flex;
   gap: var(--spacing-6);
   align-items: flex-start;
 }
 
-/* 侧边栏样式 */
+/* 左侧侧边栏样式 */
 .sidebar {
-  width: 260px;
+  width: 280px;
   flex-shrink: 0;
   background: var(--color-white);
   border-radius: var(--radius-xl);
-  padding: var(--spacing-5);
   border: 1px solid var(--color-gray-100);
   box-shadow: var(--shadow-sm);
   height: fit-content;
   position: sticky;
   top: calc(var(--header-height) + var(--spacing-6));
+  display: flex;
+  flex-direction: column;
 }
 
-/* 内容区头部 */
+/* 侧边栏头部 - 新建按钮 */
+.sidebarHeader {
+  padding: var(--spacing-5);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.createButton {
+  height: 44px !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* 侧边栏内容 - 筛选区域 */
+.sidebarContent {
+  padding: var(--spacing-5);
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 右侧内容区头部 - 状态筛选、搜索、统计 */
 .contentHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: var(--spacing-6);
   gap: var(--spacing-4);
+  flex-wrap: wrap;
 }
 
+/* 状态筛选 Tabs */
+.statusTabs {
+  flex-shrink: 0;
+}
+
+.statusTabs :global(.ant-tabs-nav) {
+  margin: 0;
+}
+
+.statusTabs :global(.ant-tabs-tab) {
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-base);
+}
+
+/* 搜索框 */
 .searchInput {
+  flex: 1;
+  min-width: 300px;
   max-width: 400px;
 }
 
@@ -152,25 +108,28 @@
   background: transparent;
 }
 
-.resultCount {
-  color: var(--color-gray-500);
+/* 统计数据 */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  flex-shrink: 0;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-gray-700);
   font-size: var(--font-size-sm);
   white-space: nowrap;
 }
 
-.statusSelect {
-  min-width: 140px;
-}
-
-.statusSelect :global(.ant-select-selector) {
-  background: var(--color-white) !important;
-  border: 1px solid var(--color-gray-200) !important;
-  border-radius: var(--radius-lg) !important;
-  height: 40px !important;
-}
-
-.statusSelect :global(.ant-select-selection-item) {
-  line-height: 38px !important;
+.statDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 .filterSection {
@@ -289,6 +248,23 @@
   flex-shrink: 0;
 }
 
+.actionButton {
+  color: var(--color-gray-400);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.actionButton:hover {
+  color: var(--color-gray-700);
+  background: var(--color-gray-100);
+}
+
 .typeTag {
   display: inline-block;
   padding: 4px 10px;
@@ -312,21 +288,6 @@
   border-color: var(--color-primary-500);
 }
 
-.moreBtn {
-  color: var(--color-gray-400);
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-}
-
-.moreBtn:hover {
-  color: var(--color-gray-600);
-  background: var(--color-gray-100);
-}
 
 .cardBody {
   flex: 1;
@@ -414,6 +375,14 @@
   .tagCheckbox {
     margin-right: 0;
   }
+
+  .contentHeader {
+    flex-wrap: wrap;
+  }
+
+  .searchInput {
+    min-width: 200px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -422,27 +391,19 @@
     margin: calc(-1 * var(--spacing-4));
   }
 
-  .header {
-    flex-direction: column;
-    gap: var(--spacing-4);
-  }
-
-  .headerRight {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .emergencyBtn,
-  .normalBtn {
-    width: 100%;
-  }
-
   .contentHeader {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--spacing-3);
   }
 
   .searchInput {
     max-width: 100%;
+    min-width: 100%;
+  }
+
+  .stats {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
