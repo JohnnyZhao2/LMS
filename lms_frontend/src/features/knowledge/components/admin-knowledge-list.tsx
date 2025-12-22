@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Row, Col, Button, Typography, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Select, Tag, Tooltip } from 'antd';
-import { PlusOutlined, DatabaseOutlined, EditOutlined, DeleteOutlined, EllipsisOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Row, Col, Button, Typography, Modal, message, Spin, Empty, Input, Checkbox, Select, Tag } from 'antd';
+import { PlusOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
-import { useDeleteKnowledge, usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
 import { KnowledgeFormModal } from './knowledge-form-modal';
 import type { KnowledgeListItem, KnowledgeType, Tag as TagType } from '@/types/api';
-import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
 import styles from './admin-knowledge-list.module.css';
@@ -20,126 +18,56 @@ const { Search } = Input;
  */
 interface KnowledgeCardProps {
   item: KnowledgeListItem;
-  onEdit: (id: number) => void;
-  onDelete: (item: KnowledgeListItem) => void;
   onView: (id: number) => void;
-  onPublish?: (id: number) => void;
-  onUnpublish?: (id: number) => void;
 }
 
-const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onEdit, onDelete, onView, onPublish, onUnpublish }) => {
+const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView }) => {
   const isEmergency = item.knowledge_type === 'EMERGENCY';
   const isPublished = item.status === 'PUBLISHED';
   // 获取第一个操作标签作为顶部标签
   const firstOperationTag = item.operation_tags && item.operation_tags.length > 0 
     ? item.operation_tags[0].name 
     : null;
-  
-  const menuItems = [
-    { key: 'edit', label: '编辑', icon: <EditOutlined /> },
-    { 
-      key: isPublished ? 'unpublish' : 'publish', 
-      label: isPublished ? '取消发布' : '发布', 
-      icon: isPublished ? <StopOutlined /> : <CheckCircleOutlined /> 
-    },
-    { key: 'delete', label: '删除', icon: <DeleteOutlined />, danger: true },
-  ];
-
-  const handleMenuClick = (key: string) => {
-    if (key === 'edit') {
-      onEdit(item.id);
-    } else if (key === 'publish' && onPublish) {
-      onPublish(item.id);
-    } else if (key === 'unpublish' && onUnpublish) {
-      onUnpublish(item.id);
-    } else if (key === 'delete') {
-      onDelete(item);
-    }
-  };
 
   return (
     <div className={styles.card} onClick={() => onView(item.id)}>
-      {/* 标签 */}
+      {/* 顶部：左上角操作标签，右上角文档类型 */}
       <div className={styles.cardHeader}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {!isPublished && (
-            <span style={{ 
-              fontSize: '12px', 
-              color: '#999', 
-              background: '#f5f5f5', 
-              padding: '2px 8px', 
-              borderRadius: '4px' 
-            }}>
-              草稿
-            </span>
-          )}
+        <div className={styles.cardHeaderLeft}>
           {firstOperationTag && (
             <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
               {firstOperationTag}
             </span>
           )}
-          <Tag color="geekblue" style={{ borderRadius: 12 }}>
-            V{item.version_number}
-          </Tag>
-          {isPublished && item.is_current && (
-            <Tag color="green" style={{ borderRadius: 12 }}>当前版本</Tag>
-          )}
-          {isPublished && !item.is_current && (
-            <Tooltip title="此版本已被新版本取代，但仍可查看历史内容">
-              <Tag color="orange" style={{ borderRadius: 12 }}>历史版本</Tag>
-            </Tooltip>
+        </div>
+        <div className={styles.cardHeaderRight}>
+          {!isPublished && (
+            <Tag color="default" style={{ borderRadius: 12, margin: 0 }}>
+              草稿
+            </Tag>
           )}
         </div>
-        <Dropdown
-          menu={{
-            items: menuItems,
-            onClick: ({ key, domEvent }) => {
-              domEvent.stopPropagation();
-              handleMenuClick(key);
-            },
-          }}
-          trigger={['click']}
-        >
-          <Button
-            type="text"
-            icon={<EllipsisOutlined />}
-            className={styles.moreBtn}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </Dropdown>
       </div>
 
-      {/* 标题 */}
-      <h3 className={styles.cardTitle}>{item.title}</h3>
-
-      {/* 分隔线 */}
-      <div className={styles.cardDivider} />
-
-      {/* 内容预览 */}
-      {item.content_preview && (
-        <div className={styles.cardPreview} title={item.content_preview}>
-          {item.content_preview}
+      {/* 主体内容：标题 + 知识内容缩略 */}
+      <div className={styles.cardBody}>
+        <h3 className={styles.cardTitle}>{item.title}</h3>
+        <div className={styles.cardPreview} title={item.content_preview || ''}>
+          {item.content_preview || '暂无内容预览'}
         </div>
-      )}
+      </div>
 
-      {/* 底部信息 */}
+      {/* 底部信息：姓名、时间、阅读次数 */}
       <div className={styles.cardFooter}>
-        <div>
-          <span className={styles.lineType}>
-            {item.updated_by_name || item.created_by_name || '-'}
-          </span>
-          <span className={styles.updateTime}>
-            {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
-          </span>
-        </div>
-        <div className={styles.versionMeta}>
-          <span>
-            发布于：{item.published_at ? dayjs(item.published_at).format('YYYY-MM-DD HH:mm') : '未发布'}
-          </span>
-          <span>
-            资源ID：{item.resource_uuid.slice(0, 8)}…
-          </span>
-        </div>
+        <span className={styles.footerItem}>
+          {item.updated_by_name || item.created_by_name || '-'}
+        </span>
+        <span className={styles.footerItem}>
+          {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
+        </span>
+        <span className={styles.footerItem}>
+          阅读 {item.view_count || 0} 次
+        </span>
       </div>
     </div>
   );
@@ -177,9 +105,6 @@ export const AdminKnowledgeList: React.FC = () => {
     operation_tag_id: selectedOperationTagIds[0],
     status: statusFilter === 'ALL' ? undefined : (statusFilter as 'PUBLISHED' | 'DRAFT'),
   });
-  const deleteKnowledge = useDeleteKnowledge();
-  const publishKnowledge = usePublishKnowledge();
-  const unpublishKnowledge = useUnpublishKnowledge();
 
   /**
    * 处理条线类型选择
@@ -217,35 +142,6 @@ export const AdminKnowledgeList: React.FC = () => {
   };
 
   /**
-   * 处理删除知识
-   */
-  const handleDelete = (record: KnowledgeListItem) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除知识文档「${record.title}」吗？此操作不可撤销。`,
-      okText: '删除',
-      okType: 'danger',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await deleteKnowledge.mutateAsync(record.id);
-          message.success('删除成功');
-        } catch (error) {
-          showApiError(error, '删除失败');
-        }
-      },
-    });
-  };
-
-  /**
-   * 打开编辑弹窗
-   */
-  const handleEdit = (id: number) => {
-    setEditingKnowledgeId(id);
-    setFormModalOpen(true);
-  };
-
-  /**
    * 打开新建弹窗（应急类）
    */
   const handleCreateEmergency = () => {
@@ -268,40 +164,6 @@ export const AdminKnowledgeList: React.FC = () => {
    */
   const handleView = (id: number) => {
     navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}`);
-  };
-
-  /**
-   * 发布知识
-   */
-  const handlePublish = async (id: number) => {
-    try {
-      await publishKnowledge.mutateAsync(id);
-      message.success('发布成功');
-      refetch();
-    } catch (error) {
-      showApiError(error, '发布失败');
-    }
-  };
-
-  /**
-   * 取消发布知识
-   */
-  const handleUnpublish = async (id: number) => {
-    Modal.confirm({
-      title: '确认取消发布',
-      content: '取消发布后，该知识将变为草稿状态，无法用于任务分配。确定要取消发布吗？',
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await unpublishKnowledge.mutateAsync(id);
-          message.success('取消发布成功');
-          refetch();
-        } catch (error) {
-          showApiError(error, '取消发布失败');
-        }
-      },
-    });
   };
 
   return (
@@ -432,11 +294,7 @@ export const AdminKnowledgeList: React.FC = () => {
                   <Col key={item.id} xs={24} sm={12} lg={8} xxl={6}>
                     <KnowledgeCard
                       item={item}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
                       onView={handleView}
-                      onPublish={handlePublish}
-                      onUnpublish={handleUnpublish}
                     />
                   </Col>
                 ))}

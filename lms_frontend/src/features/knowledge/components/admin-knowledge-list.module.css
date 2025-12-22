@@ -272,7 +272,21 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.cardHeaderLeft {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cardHeaderRight {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .typeTag {
@@ -314,6 +328,11 @@
   background: var(--color-gray-100);
 }
 
+.cardBody {
+  flex: 1;
+  margin-bottom: var(--spacing-4);
+}
+
 .cardTitle {
   color: var(--color-gray-900);
   font-size: var(--font-size-lg);
@@ -325,14 +344,6 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 44px;
-}
-
-.cardDivider {
-  width: 40px;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%);
-  border-radius: var(--radius-full);
-  margin: 0 0 var(--spacing-3) 0;
 }
 
 .cardPreview {
@@ -350,38 +361,18 @@
 
 .cardFooter {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-3);
   margin-top: auto;
-  gap: var(--spacing-2);
   padding-top: var(--spacing-3);
   border-top: 1px solid var(--color-gray-100);
+  flex-wrap: wrap;
 }
 
-.lineType {
+.footerItem {
   color: var(--color-gray-500);
   font-size: var(--font-size-xs);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.updateTime {
-  color: var(--color-gray-400);
-  font-size: var(--font-size-xs);
-  white-space: nowrap;
-}
-
-.versionMeta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
-  text-align: right;
-  min-width: 120px;
 }
 
 /* 空状态 */

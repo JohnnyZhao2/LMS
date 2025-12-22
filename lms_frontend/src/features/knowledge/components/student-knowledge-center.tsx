@@ -4,6 +4,7 @@ import { DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useStudentKnowledgeList } from '../api/get-student-knowledge-list';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
+import { useIncrementViewCount } from '../api/increment-view-count';
 import type { KnowledgeListItem, Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
@@ -77,6 +78,7 @@ export const StudentKnowledgeCenter: React.FC = () => {
   const [selectedOperationTagIds, setSelectedOperationTagIds] = useState<number[]>([]);
   
   const navigate = useNavigate();
+  const incrementViewCount = useIncrementViewCount();
   
   // 获取条线类型标签
   const { data: lineTypeTags = [] } = useLineTypeTags();
@@ -130,8 +132,17 @@ export const StudentKnowledgeCenter: React.FC = () => {
 
   /**
    * 查看详情
+   * 点击知识卡片时，先记录阅读次数，再跳转到详情页
    */
   const handleView = (id: number) => {
+    // 记录阅读次数（点击一次计数一次）
+    incrementViewCount.mutate(id, {
+      onSuccess: () => {
+        // 更新列表数据中的阅读次数
+        refetch();
+      },
+    });
+    // 跳转到详情页
     navigate(`${ROUTES.KNOWLEDGE}/${id}`);
   };
 

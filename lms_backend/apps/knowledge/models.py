@@ -448,3 +448,46 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         self.published_at = None
         self.save(update_fields=['status', 'is_current', 'published_at'])
         return self
+    
+    def increment_view_count(self):
+        """
+        增加知识文档的阅读次数
+        
+        使用原子操作确保并发安全，每次调用增加1次计数。
+        用于记录学员点击查看知识文档的次数。
+        
+        Returns:
+            int: 更新后的阅读次数
+        """
+        from django.db.models import F
+        # 使用原子操作更新计数
+        Knowledge.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
+        # 刷新对象以获取最新值
+        self.refresh_from_db()
+        return self.view_count
+    
+    @property
+    def content_preview(self):
+        """
+        生成内容预览（用于列表显示）
+        
+        对于应急类知识：从结构化字段中提取关键信息
+        对于其他类型知识：从 content 字段中提取前150个字符
+        """
+        if self.knowledge_type == 'EMERGENCY':
+            # 应急类知识：优先显示故障场景，如果没有则显示解决方案
+            preview_text = self.fault_scenario.strip() or self.solution.strip()
+            if not preview_text:
+                preview_text = self.trigger_process.strip() or self.verification_plan.strip() or self.recovery_plan.strip()
+        else:
+            # 其他类型知识：从 content 字段提取
+            preview_text = self.content.strip()
+        
+        # 限制长度并去除换行
+        if preview_text:
+            preview_text = preview_text.replace('\n', ' ').replace('\r', ' ')
+            if len(preview_text) > 150:
+                return preview_text[:150] + '...'
+            return preview_text
+        
+        return ''

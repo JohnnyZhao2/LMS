@@ -19,23 +19,24 @@ export const useIncrementViewCount = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      return apiClient.post<IncrementViewCountResponse>(`/knowledge/${id}/view/`);
+      const response = await apiClient.post<IncrementViewCountResponse>(`/knowledge/${id}/view/`);
+      return { id, view_count: response.view_count };
     },
-    onSuccess: (data, id) => {
-      // 更新知识详情和列表中的阅读次数
+    onSuccess: (result, id) => {
+      // 更新知识详情中的阅读次数
       queryClient.setQueryData(['student-knowledge-detail', id], (old: any) => {
         if (old) {
-          return { ...old, view_count: data.view_count };
+          return { ...old, view_count: result.view_count };
         }
         return old;
       });
       queryClient.setQueryData(['admin-knowledge-detail', id], (old: any) => {
         if (old) {
-          return { ...old, view_count: data.view_count };
+          return { ...old, view_count: result.view_count };
         }
         return old;
       });
-      // 更新列表中的阅读次数（需要遍历所有相关查询）
+      // 更新列表中的阅读次数
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
     },

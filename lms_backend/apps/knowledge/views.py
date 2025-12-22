@@ -448,6 +448,12 @@ class KnowledgeIncrementViewCountView(APIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
+        """
+        增加知识文档阅读次数
+        
+        每次调用此接口时，阅读次数增加1。
+        普通用户只能对已发布的知识进行计数，管理员可以对所有知识进行计数。
+        """
         try:
             knowledge = Knowledge.objects.get(pk=pk, is_deleted=False)
         except Knowledge.DoesNotExist:
@@ -456,9 +462,17 @@ class KnowledgeIncrementViewCountView(APIView):
                 message='知识文档不存在'
             )
         
-        knowledge.increment_view_count()
+        # 权限检查：普通用户只能对已发布的知识进行计数
+        if not request.user.is_admin and knowledge.status != 'PUBLISHED':
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权访问该知识文档'
+            )
+        
+        # 增加阅读次数（原子操作）
+        view_count = knowledge.increment_view_count()
         return Response(
-            {'view_count': knowledge.view_count},
+            {'view_count': view_count},
             status=status.HTTP_200_OK
         )
 

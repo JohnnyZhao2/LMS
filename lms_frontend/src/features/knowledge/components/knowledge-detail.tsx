@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Typography, Tag, Spin, Button, Divider } from 'antd';
-import { ArrowLeftOutlined, EyeOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
+import { Typography, Tag, Spin, Button, Divider, Modal, message, Space } from 'antd';
+import { ArrowLeftOutlined, EyeOutlined, CalendarOutlined, UserOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
-import { useIncrementViewCount } from '../api/increment-view-count';
-import { Card, PageHeader, StatusBadge } from '@/components/ui';
-import type { KnowledgeDetail } from '@/types/api';
+import { useDeleteKnowledge, usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
+import { KnowledgeFormModal } from './knowledge-form-modal';
+import { Card, StatusBadge } from '@/components/ui';
+import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
+import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 
 const { Title, Text } = Typography;
@@ -17,7 +19,9 @@ const { Title, Text } = Typography;
  * 
  * 支持管理员和学员两种视图：
  * - 管理员视图：显示完整信息，包括状态、编辑功能等
- * - 学员视图：只显示已发布的知识，查看时自动记录阅读次数
+ * - 学员视图：只显示已发布的知识
+ * 
+ * 注意：阅读次数在点击知识卡片时记录，不在详情页面记录
  */
 export const KnowledgeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,18 +33,13 @@ export const KnowledgeDetail: React.FC = () => {
   const studentQuery = useStudentKnowledgeDetail(Number(id));
   const adminQuery = useAdminKnowledgeDetail(Number(id));
   
-  const { data, isLoading } = isAdminRoute ? adminQuery : studentQuery;
-  const incrementViewCount = useIncrementViewCount();
-
-  // 学员查看时，自动记录阅读次数
-  useEffect(() => {
-    if (!isAdminRoute && id && data && !isLoading) {
-      const timer = setTimeout(() => {
-        incrementViewCount.mutate(Number(id));
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [id, data, isLoading, isAdminRoute, incrementViewCount]);
+  const { data, isLoading, refetch } = isAdminRoute ? adminQuery : studentQuery;
+  
+  // 操作相关状态
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const deleteKnowledge = useDeleteKnowledge();
+  const publishKnowledge = usePublishKnowledge();
+  const unpublishKnowledge = useUnpublishKnowledge();
 
   if (isLoading) {
     return (
@@ -58,7 +57,71 @@ export const KnowledgeDetail: React.FC = () => {
     );
   }
 
-  const knowledge = data as KnowledgeDetail;
+  const knowledge = data as KnowledgeDetailType;
+  const isPublished = knowledge.status === 'PUBLISHED';
+  
+  /**
+   * 处理编辑
+   */
+  const handleEdit = () => {
+    setFormModalOpen(true);
+  };
+  
+  /**
+   * 处理删除
+   */
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除知识文档「${knowledge.title}」吗？此操作不可撤销。`,
+      okText: '删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await deleteKnowledge.mutateAsync(Number(id));
+          message.success('删除成功');
+          navigate(ROUTES.ADMIN_KNOWLEDGE);
+        } catch (error) {
+          showApiError(error, '删除失败');
+        }
+      },
+    });
+  };
+  
+  /**
+   * 处理发布
+   */
+  const handlePublish = async () => {
+    try {
+      await publishKnowledge.mutateAsync(Number(id));
+      message.success('发布成功');
+      refetch?.();
+    } catch (error) {
+      showApiError(error, '发布失败');
+    }
+  };
+  
+  /**
+   * 处理取消发布
+   */
+  const handleUnpublish = () => {
+    Modal.confirm({
+      title: '确认取消发布',
+      content: '取消发布后，该知识将变为草稿状态，无法用于任务分配。确定要取消发布吗？',
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await unpublishKnowledge.mutateAsync(Number(id));
+          message.success('取消发布成功');
+          refetch?.();
+        } catch (error) {
+          showApiError(error, '取消发布失败');
+        }
+      },
+    });
+  };
   
   // 获取内容（应急类知识需要手动组合结构化字段）
   const getContent = () => {
@@ -94,22 +157,59 @@ export const KnowledgeDetail: React.FC = () => {
       <Card>
         {/* 标题区 */}
         <div style={{ marginBottom: 'var(--spacing-6)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-            <StatusBadge
-              status={knowledge.knowledge_type === 'EMERGENCY' ? 'error' : 'info'}
-              text={knowledge.knowledge_type_display}
-            />
-            {knowledge.line_type && (
-              <Tag style={{ margin: 0, borderRadius: 'var(--radius-sm)' }}>
-                {knowledge.line_type.name}
-              </Tag>
-            )}
-            {isAdminRoute && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', flexWrap: 'wrap' }}>
               <StatusBadge
-                status={knowledge.status === 'PUBLISHED' ? 'success' : 'default'}
-                text={knowledge.status_display}
-                showIcon={false}
+                status={knowledge.knowledge_type === 'EMERGENCY' ? 'error' : 'info'}
+                text={knowledge.knowledge_type_display}
               />
+              {knowledge.line_type && (
+                <Tag style={{ margin: 0, borderRadius: 'var(--radius-sm)' }}>
+                  {knowledge.line_type.name}
+                </Tag>
+              )}
+              {isAdminRoute && (
+                <StatusBadge
+                  status={knowledge.status === 'PUBLISHED' ? 'success' : 'default'}
+                  text={knowledge.status_display}
+                  showIcon={false}
+                />
+              )}
+            </div>
+            
+            {/* 操作按钮（仅管理员可见） */}
+            {isAdminRoute && (
+              <Space>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                >
+                  编辑
+                </Button>
+                {isPublished ? (
+                  <Button
+                    icon={<StopOutlined />}
+                    onClick={handleUnpublish}
+                  >
+                    取消发布
+                  </Button>
+                ) : (
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={handlePublish}
+                  >
+                    发布
+                  </Button>
+                )}
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={handleDelete}
+                >
+                  删除
+                </Button>
+              </Space>
             )}
           </div>
           
@@ -306,6 +406,21 @@ export const KnowledgeDetail: React.FC = () => {
           }
         `}</style>
       </Card>
+      
+      {/* 编辑表单弹窗（仅管理员可见） */}
+      {isAdminRoute && (
+        <KnowledgeFormModal
+          open={formModalOpen}
+          knowledgeId={Number(id)}
+          onClose={() => {
+            setFormModalOpen(false);
+          }}
+          onSuccess={() => {
+            setFormModalOpen(false);
+            refetch?.();
+          }}
+        />
+      )}
     </div>
   );
 };
