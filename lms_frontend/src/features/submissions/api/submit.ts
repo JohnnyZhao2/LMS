@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api-client';
 import type { SubmissionDetail } from '@/types/api';
 
 interface SubmitParams {
-  assignmentId: number;
+  submissionId: number;
   type: 'practice' | 'exam';
 }
 
@@ -14,8 +14,8 @@ export const useSubmit = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ assignmentId, type }: SubmitParams) =>
-      apiClient.post<SubmissionDetail>(`/submissions/${type}/${assignmentId}/submit/`),
+    mutationFn: ({ submissionId, type }: SubmitParams) =>
+      apiClient.post<SubmissionDetail>(`/submissions/${submissionId}/submit-${type}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
     },

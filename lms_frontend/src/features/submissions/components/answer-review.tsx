@@ -14,11 +14,18 @@ interface AnswerReviewProps {
  */
 export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   const [searchParams] = useSearchParams();
-  const assignmentId = Number(searchParams.get('assignment'));
+  const submissionParam = searchParams.get('submission');
+  const parsedSubmissionId = submissionParam ? Number(submissionParam) : undefined;
+  const submissionId = Number.isNaN(parsedSubmissionId ?? NaN) ? undefined : parsedSubmissionId;
+  const isPractice = type === 'practice';
 
-  const { data, isLoading } = type === 'practice' 
-    ? usePracticeResult(assignmentId)
-    : useExamResult(assignmentId);
+  const practiceResultQuery = usePracticeResult(submissionId, { enabled: isPractice });
+  const examResultQuery = useExamResult(submissionId, { enabled: !isPractice });
+  const { data, isLoading } = isPractice ? practiceResultQuery : examResultQuery;
+
+  if (!submissionId) {
+    return <div>缺少有效的 submission 参数</div>;
+  }
 
   if (isLoading) {
     return <Spin />;
@@ -48,13 +55,12 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
       </Card>
 
       <Card title="答题详情">
-        {data.answers.map((answer, index) => (
+        {data.answers.map((answer) => (
           <QuestionCard
             key={answer.id}
-            index={index}
             answer={answer}
             userAnswer={answer.user_answer}
-            onAnswerChange={() => {}}
+            onAnswerChange={() => undefined}
             disabled
             showResult
           />

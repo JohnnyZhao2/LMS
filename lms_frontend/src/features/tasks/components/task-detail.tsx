@@ -212,7 +212,7 @@ export const TaskDetail: React.FC = () => {
       return;
     }
     const basePath = task.task_type === 'EXAM' ? '/exam' : '/quiz';
-    navigate(`${basePath}/${quizId}?assignment=${myAssignment.id}`);
+    navigate(`${basePath}/${quizId}?assignment=${myAssignment.id}&task=${taskId}`);
   };
 
   const renderTagList = (tags?: KnowledgeSnapshot['system_tags']) => {

@@ -772,12 +772,21 @@ export interface Answer {
   question: number;
   question_content: string;
   question_type: QuestionType;
+  question_type_display?: string;
+  question_options?: Record<string, string> | Array<{ key?: string; value?: string }>;
+  question_score?: string;
+  score?: string;
   user_answer?: Record<string, unknown>;
   correct_answer?: Record<string, unknown>;
   is_correct?: boolean;
-  score?: string;
   obtained_score?: string;
   explanation?: string;
+  graded_by?: number;
+  graded_by_name?: string;
+  graded_at?: string;
+  comment?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 /**
@@ -785,7 +794,7 @@ export interface Answer {
  */
 export interface SaveAnswerRequest {
   question_id: number;
-  user_answer?: Record<string, unknown> | null;
+  user_answer?: unknown;
 }
 
 /**

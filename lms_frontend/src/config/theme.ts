@@ -229,7 +229,7 @@ export const appTheme: ThemeConfig = {
     motionDurationSlow: '0.3s',
     motionEaseInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
     motionEaseOut: 'cubic-bezier(0, 0, 0.2, 1)',
-    motionEaseIn: 'cubic-bezier(0.4, 0, 1, 1)',
+    motionEaseInQuint: 'cubic-bezier(0.4, 0, 1, 1)',
     
     // Sizes
     sizeStep: 4,
@@ -379,7 +379,7 @@ export const appTheme: ThemeConfig = {
     
     // Breadcrumb
     Breadcrumb: {
-      separatorMarginInline: spacing[2],
+      separatorMargin: spacing[2],
       itemColor: colors.neutral.gray600,
       lastItemColor: colors.neutral.gray900,
       linkColor: colors.primary.blue[500],
@@ -416,11 +416,6 @@ export const appTheme: ThemeConfig = {
     DatePicker: {
       borderRadius: borderRadius.md,
       controlHeight: 40,
-    },
-    
-    // TimePicker
-    TimePicker: {
-      borderRadius: borderRadius.md,
     },
     
     // Slider
@@ -557,7 +552,7 @@ export const taskTypeColors = {
   EXAM: {
     background: colors.secondary.red[50],
     color: colors.secondary.red[600],
-    border: colors.secondary.red[200],
+    border: colors.secondary.red[100],
   },
 } as const;
 

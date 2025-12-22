@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { Button, Row, Col, Typography, Modal, message, Spin, Affix, Progress } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
   SendOutlined,
   CheckCircleFilled,
-  ClockCircleOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useStartPractice } from '../api/start-practice';
@@ -16,6 +15,7 @@ import { useSubmit } from '../api/submit';
 import { QuestionCard } from './question-card';
 import { Timer } from './timer';
 import { Card, StatusBadge } from '@/components/ui';
+import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';
 
 const { Text, Title } = Typography;
@@ -29,54 +29,70 @@ interface QuizPlayerProps {
  * 全新设计，更现代、更沉浸
  */
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
+  const { id: quizIdStr } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const assignmentId = Number(searchParams.get('assignment'));
+  const assignmentId = Number(searchParams.get('assignment') ?? NaN);
+  const quizId = Number(quizIdStr ?? NaN);
 
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, Record<string, unknown>>>({});
+  const [answers, setAnswers] = useState<Record<number, unknown>>({});
 
-  const startPractice = useStartPractice();
-  const startExam = useStartExam();
-  const saveAnswer = useSaveAnswer();
-  const submit = useSubmit();
+  const { mutateAsync: startPracticeMutation } = useStartPractice();
+  const { mutateAsync: startExamMutation } = useStartExam();
+  const { mutateAsync: saveAnswerMutation } = useSaveAnswer();
+  const { mutateAsync: submitMutation, isPending: isSubmitPending } = useSubmit();
+
+  const startAttemptKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const key = `${assignmentId}-${quizId}-${type}`;
+    if (startAttemptKeyRef.current === key) {
+      return;
+    }
+    
     const start = async () => {
       try {
         const result = type === 'practice' 
-          ? await startPractice.mutateAsync(assignmentId)
-          : await startExam.mutateAsync(assignmentId);
+          ? await startPracticeMutation({ assignmentId, quizId })
+          : await startExamMutation({ assignmentId });
         setSubmission(result);
         
         // 初始化已有答案
-        const existingAnswers: Record<number, Record<string, unknown>> = {};
+        const existingAnswers: Record<number, unknown> = {};
         result.answers.forEach((a) => {
-          if (a.user_answer) {
+          if (a.user_answer !== null && a.user_answer !== undefined) {
             existingAnswers[a.question] = a.user_answer;
           }
         });
         setAnswers(existingAnswers);
       } catch (error) {
-        message.error('开始答题失败');
+        console.error('开始答题失败:', error);
+        showApiError(error, '开始答题失败');
         navigate(-1);
       }
     };
     
-    if (assignmentId) {
-      start();
+    if (!Number.isFinite(assignmentId) || (type === 'practice' && !Number.isFinite(quizId))) {
+      message.error('缺少必要的任务参数');
+      navigate(-1);
+      return;
     }
-  }, [assignmentId, type]);
+    startAttemptKeyRef.current = key;
+    start();
+  }, [assignmentId, navigate, quizId, startExamMutation, startPracticeMutation, type]);
 
-  const handleAnswerChange = async (questionId: number, value: Record<string, unknown>) => {
+  const handleAnswerChange = async (questionId: number, value: unknown) => {
+    if (!submission) {
+      return;
+    }
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
     
     // 自动保存
     try {
-      await saveAnswer.mutateAsync({
-        assignmentId,
-        type,
+      await saveAnswerMutation({
+        submissionId: submission.id,
         data: { question_id: questionId, user_answer: value },
       });
     } catch (error) {
@@ -107,12 +123,16 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
       cancelText: '继续答题',
       okButtonProps: { danger: type === 'exam' },
       onOk: async () => {
+        if (!submission) {
+          return;
+        }
         try {
-          await submit.mutateAsync({ assignmentId, type });
+          await submitMutation({ submissionId: submission.id, type });
           message.success('提交成功');
           navigate(`/tasks`);
         } catch (error) {
-          message.error('提交失败');
+          console.error('提交答卷失败:', error);
+          showApiError(error, '提交失败');
         }
       },
     });
@@ -124,7 +144,10 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
       content: '考试时间已结束，系统将自动提交',
       okText: '查看结果',
       onOk: async () => {
-        await submit.mutateAsync({ assignmentId, type });
+        if (!submission) {
+          return;
+        }
+        await submitMutation({ submissionId: submission.id, type });
         navigate(`/tasks`);
       },
     });
@@ -331,7 +354,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
               </div>
               {currentQuestion && (
                 <Text style={{ color: isExam ? 'rgba(255, 255, 255, 0.6)' : 'var(--color-gray-500)' }}>
-                  分值：{currentQuestion.score} 分
+                  分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                 </Text>
               )}
             </div>
@@ -340,7 +363,6 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
             {currentQuestion && (
               <div style={{ color: isExam ? 'white' : undefined }}>
                 <QuestionCard
-                  index={currentIndex}
                   answer={currentQuestion}
                   userAnswer={answers[currentQuestion.question]}
                   onAnswerChange={(value) => handleAnswerChange(currentQuestion.question, value)}
@@ -403,7 +425,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
                     size="large"
                     danger={isExam}
                     onClick={handleSubmit}
-                    loading={submit.isPending}
+                    loading={isSubmitPending}
                     icon={<SendOutlined />}
                     style={{
                       height: 48,

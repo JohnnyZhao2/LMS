@@ -5,11 +5,15 @@ import type { Answer } from '@/types/api';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+type OptionItem = { key: string; label: string };
+
+const hasValueProp = (data: unknown): data is { value?: unknown } =>
+  typeof data === 'object' && data !== null && 'value' in data;
+
 interface QuestionCardProps {
-  index: number;
   answer: Answer;
-  userAnswer?: Record<string, unknown> | null;
-  onAnswerChange: (value: Record<string, unknown>) => void;
+  userAnswer?: unknown;
+  onAnswerChange: (value: unknown) => void;
   disabled?: boolean;
   showResult?: boolean;
   isDarkMode?: boolean;
@@ -20,7 +24,6 @@ interface QuestionCardProps {
  * 支持明暗模式
  */
 export const QuestionCard: React.FC<QuestionCardProps> = ({
-  index,
   answer,
   userAnswer,
   onAnswerChange,
@@ -29,9 +32,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   isDarkMode = false,
 }) => {
   const textColor = isDarkMode ? 'white' : 'var(--color-gray-900)';
+  const questionScore = (answer.question_score as string | number | undefined) ?? answer.score;
   const secondaryColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'var(--color-gray-600)';
   const optionBg = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'var(--color-gray-50)';
-  const optionHoverBg = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-gray-100)';
   const optionBorder = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-gray-200)';
 
   const optionStyle: React.CSSProperties = {
@@ -46,51 +49,149 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     cursor: disabled ? 'not-allowed' : 'pointer',
   };
 
+  const normalizeOptions = (): OptionItem[] => {
+    if (!answer.question_options) {
+      return [];
+    }
+    if (Array.isArray(answer.question_options)) {
+      return answer.question_options
+        .filter((opt): opt is { key?: string; value?: string } => !!opt)
+        .map((opt, index) => ({
+          key: opt.key ?? String.fromCharCode(65 + index),
+          label: opt.value ?? '',
+        }));
+    }
+    return Object.entries(answer.question_options).map(([key, value]) => ({
+      key,
+      label: typeof value === 'string' ? value : String(value ?? ''),
+    }));
+  };
+
+  const optionItems = normalizeOptions();
+
+  const getSingleChoiceValue = (): string | undefined => {
+    if (userAnswer == null) {
+      return undefined;
+    }
+    if (typeof userAnswer === 'string') {
+      return userAnswer;
+    }
+    if (Array.isArray(userAnswer) && userAnswer.length > 0) {
+      return userAnswer[0] as string;
+    }
+    if (hasValueProp(userAnswer)) {
+      const val = userAnswer.value;
+      if (typeof val === 'string') {
+        return val;
+      }
+    }
+    return undefined;
+  };
+
+  const getMultipleChoiceValue = (): string[] => {
+    if (userAnswer == null) {
+      return [];
+    }
+    if (Array.isArray(userAnswer)) {
+      return userAnswer as string[];
+    }
+    if (hasValueProp(userAnswer)) {
+      const val = userAnswer.value;
+      if (Array.isArray(val)) {
+        return val as string[];
+      }
+    }
+    if (typeof userAnswer === 'string') {
+      return [userAnswer];
+    }
+    return [];
+  };
+
+  const getTrueFalseValue = (): 'TRUE' | 'FALSE' | undefined => {
+    if (userAnswer == null) {
+      return undefined;
+    }
+    if (typeof userAnswer === 'string') {
+      return userAnswer as 'TRUE' | 'FALSE';
+    }
+    if (typeof userAnswer === 'boolean') {
+      return userAnswer ? 'TRUE' : 'FALSE';
+    }
+    if (hasValueProp(userAnswer)) {
+      const val = userAnswer.value;
+      if (typeof val === 'string') {
+        return val as 'TRUE' | 'FALSE';
+      }
+      if (typeof val === 'boolean') {
+        return val ? 'TRUE' : 'FALSE';
+      }
+    }
+    return undefined;
+  };
+
+  const getShortAnswerValue = (): string => {
+    if (userAnswer == null) {
+      return '';
+    }
+    if (typeof userAnswer === 'string') {
+      return userAnswer;
+    }
+    if (hasValueProp(userAnswer)) {
+      const val = userAnswer.value;
+      if (typeof val === 'string') {
+        return val;
+      }
+    }
+    return '';
+  };
+
   const renderQuestion = () => {
-    const options = (answer as { options?: { A?: string; B?: string; C?: string; D?: string } }).options;
 
     switch (answer.question_type) {
-      case 'SINGLE_CHOICE':
+      case 'SINGLE_CHOICE': {
+        const singleValue = getSingleChoiceValue();
         return (
           <Radio.Group
-            value={userAnswer?.value}
-            onChange={(e) => onAnswerChange({ value: e.target.value })}
+            value={singleValue}
+            onChange={(e) => onAnswerChange(e.target.value)}
             disabled={disabled}
             style={{ width: '100%' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
-              {options &&
-                Object.entries(options).map(([key, value]) => (
+              {optionItems.map(({ key, label }) => (
                   <label
                     key={key}
                     style={{
                       ...optionStyle,
-                      borderColor: userAnswer?.value === key ? 'var(--color-primary-500)' : optionBorder,
-                      background: userAnswer?.value === key ? (isDarkMode ? 'rgba(77, 108, 255, 0.15)' : 'var(--color-primary-50)') : optionBg,
+                      borderColor: singleValue === key ? 'var(--color-primary-500)' : optionBorder,
+                      background: singleValue === key
+                        ? (isDarkMode ? 'rgba(77, 108, 255, 0.15)' : 'var(--color-primary-50)')
+                        : optionBg,
                     }}
                   >
                     <Radio value={key} style={{ color: textColor }}>
                       <span style={{ color: textColor, fontWeight: 500 }}>{key}.</span>{' '}
-                      <span style={{ color: textColor }}>{value}</span>
+                      <span style={{ color: textColor }}>{label}</span>
                     </Radio>
                   </label>
                 ))}
             </div>
           </Radio.Group>
         );
+      }
 
-      case 'MULTIPLE_CHOICE':
+      case 'MULTIPLE_CHOICE': {
+        const multipleValue = getMultipleChoiceValue();
         return (
           <Checkbox.Group
-            value={(userAnswer?.value as string[]) || []}
-            onChange={(values) => onAnswerChange({ value: values })}
+            value={multipleValue}
+            onChange={(values) => onAnswerChange(values)}
             disabled={disabled}
             style={{ width: '100%' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
-              {options &&
-                Object.entries(options).map(([key, value]) => {
-                  const isSelected = ((userAnswer?.value as string[]) || []).includes(key);
+              {optionItems.map(({ key, label }) => {
+                  const isSelected = multipleValue.includes(key);
                   return (
                     <label
                       key={key}
@@ -102,7 +203,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     >
                       <Checkbox value={key} style={{ color: textColor }}>
                         <span style={{ color: textColor, fontWeight: 500 }}>{key}.</span>{' '}
-                        <span style={{ color: textColor }}>{value}</span>
+                        <span style={{ color: textColor }}>{label}</span>
                       </Checkbox>
                     </label>
                   );
@@ -110,12 +211,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </div>
           </Checkbox.Group>
         );
+      }
 
       case 'TRUE_FALSE':
         return (
           <Radio.Group
-            value={userAnswer?.value}
-            onChange={(e) => onAnswerChange({ value: e.target.value })}
+            value={getTrueFalseValue()}
+            onChange={(e) => onAnswerChange(e.target.value)}
             disabled={disabled}
             style={{ width: '100%' }}
           >
@@ -125,11 +227,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   ...optionStyle,
                   flex: 1,
                   justifyContent: 'center',
-                  borderColor: userAnswer?.value === true ? 'var(--color-success-500)' : optionBorder,
-                  background: userAnswer?.value === true ? (isDarkMode ? 'rgba(16, 183, 89, 0.15)' : 'var(--color-success-50)') : optionBg,
+                  borderColor: getTrueFalseValue() === 'TRUE' ? 'var(--color-success-500)' : optionBorder,
+                  background: getTrueFalseValue() === 'TRUE'
+                    ? (isDarkMode ? 'rgba(16, 183, 89, 0.15)' : 'var(--color-success-50)')
+                    : optionBg,
                 }}
               >
-                <Radio value={true}>
+                <Radio value="TRUE">
                   <span style={{ color: textColor, fontWeight: 500 }}>✓ 正确</span>
                 </Radio>
               </label>
@@ -138,11 +242,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   ...optionStyle,
                   flex: 1,
                   justifyContent: 'center',
-                  borderColor: userAnswer?.value === false ? 'var(--color-error-500)' : optionBorder,
-                  background: userAnswer?.value === false ? (isDarkMode ? 'rgba(255, 61, 113, 0.15)' : 'var(--color-error-50)') : optionBg,
+                  borderColor: getTrueFalseValue() === 'FALSE' ? 'var(--color-error-500)' : optionBorder,
+                  background: getTrueFalseValue() === 'FALSE'
+                    ? (isDarkMode ? 'rgba(255, 61, 113, 0.15)' : 'var(--color-error-50)')
+                    : optionBg,
                 }}
               >
-                <Radio value={false}>
+                <Radio value="FALSE">
                   <span style={{ color: textColor, fontWeight: 500 }}>✗ 错误</span>
                 </Radio>
               </label>
@@ -153,8 +259,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       case 'SHORT_ANSWER':
         return (
           <TextArea
-            value={(userAnswer?.value as string) || ''}
-            onChange={(e) => onAnswerChange({ value: e.target.value })}
+            value={getShortAnswerValue()}
+            onChange={(e) => onAnswerChange(e.target.value)}
             rows={6}
             placeholder="请在此输入您的答案..."
             disabled={disabled}
@@ -222,7 +328,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               {answer.is_correct ? '回答正确' : '回答错误'}
             </Text>
             <Text style={{ color: secondaryColor, marginLeft: 'auto' }}>
-              得分: {answer.obtained_score || 0}/{answer.score}
+              得分: {answer.obtained_score || 0}/{questionScore ?? '--'}
             </Text>
           </div>
           {answer.explanation && (

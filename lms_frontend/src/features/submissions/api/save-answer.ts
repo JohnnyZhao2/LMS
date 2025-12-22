@@ -3,8 +3,7 @@ import { apiClient } from '@/lib/api-client';
 import type { SaveAnswerRequest } from '@/types/api';
 
 interface SaveAnswerParams {
-  assignmentId: number;
-  type: 'practice' | 'exam';
+  submissionId: number;
   data: SaveAnswerRequest;
 }
 
@@ -15,10 +14,10 @@ export const useSaveAnswer = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ assignmentId, type, data }: SaveAnswerParams) =>
-      apiClient.post(`/submissions/${type}/${assignmentId}/save-answer/`, data),
+    mutationFn: ({ submissionId, data }: SaveAnswerParams) =>
+      apiClient.post(`/submissions/${submissionId}/save-answer/`, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['submission', variables.assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ['submission', variables.submissionId] });
     },
   });
 };
