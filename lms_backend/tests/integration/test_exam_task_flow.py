@@ -136,11 +136,12 @@ class TestCompleteExamTaskFlow:
         
         # Verify initial status is PENDING_EXAM
         assignment = TaskAssignment.objects.get(task_id=task_id, assignee=data['student'])
+        assignment_id = assignment.id
         assert assignment.status == 'PENDING_EXAM'
         
         # Step 4: Student starts exam (Property 28: 考试时间窗口控制)
         start_resp = student_client.post('/api/submissions/exam/start/', {
-            'task_id': task_id
+            'assignment_id': assignment_id
         }, format='json')
         assert start_resp.status_code == status.HTTP_201_CREATED
         submission_id = start_resp.json()['id']
@@ -246,10 +247,12 @@ class TestCompleteExamTaskFlow:
             'assignee_ids': [data['student'].id]
         }, format='json')
         task_id = task_resp.json()['id']
+        assignment = TaskAssignment.objects.get(task_id=task_id, assignee=data['student'])
+        assignment_id = assignment.id
         
         # Student takes exam
         start_resp = student_client.post('/api/submissions/exam/start/', {
-            'task_id': task_id
+            'assignment_id': assignment_id
         }, format='json')
         assert start_resp.status_code == status.HTTP_201_CREATED
         submission_id = start_resp.json()['id']
@@ -317,10 +320,12 @@ class TestCompleteExamTaskFlow:
             'assignee_ids': [data['student'].id]
         }, format='json')
         task_id = task_resp.json()['id']
+        assignment = TaskAssignment.objects.get(task_id=task_id, assignee=data['student'])
+        assignment_id = assignment.id
         
         # First submission
         start_resp = student_client.post('/api/submissions/exam/start/', {
-            'task_id': task_id
+            'assignment_id': assignment_id
         }, format='json')
         submission_id = start_resp.json()['id']
         
@@ -334,7 +339,7 @@ class TestCompleteExamTaskFlow:
         # Try to start again - should return existing submission or fail
         # The API may return 200 with existing submission or 400
         start2_resp = student_client.post('/api/submissions/exam/start/', {
-            'task_id': task_id
+            'assignment_id': assignment_id
         }, format='json')
         # If it returns 200, it should be the same submission (already submitted)
         # The key is that student cannot create a new submission

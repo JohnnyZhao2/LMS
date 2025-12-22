@@ -115,32 +115,32 @@ class StartPracticeSerializer(serializers.Serializer):
     - Property 24: 练习允许多次提交
     - Property 26: 已完成练习仍可继续
     """
-    task_id = serializers.IntegerField(help_text='任务ID')
+    assignment_id = serializers.IntegerField(help_text='任务分配ID')
     quiz_id = serializers.IntegerField(help_text='试卷ID')
     
     def validate(self, attrs):
         """Validate that the task and quiz are valid for practice."""
         request = self.context.get('request')
         user = request.user
-        task_id = attrs['task_id']
+        assignment_id = attrs['assignment_id']
         quiz_id = attrs['quiz_id']
         
         # Check task assignment exists
         try:
             assignment = TaskAssignment.objects.select_related('task').get(
-                task_id=task_id,
+                id=assignment_id,
                 assignee=user,
                 task__is_deleted=False
             )
         except TaskAssignment.DoesNotExist:
-            raise serializers.ValidationError({'task_id': '任务不存在或未分配给您'})
+            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
         
         # Check it's a practice task
         if assignment.task.task_type != 'PRACTICE':
-            raise serializers.ValidationError({'task_id': '此接口仅支持练习任务'})
+            raise serializers.ValidationError({'assignment_id': '此接口仅支持练习任务'})
         
         # Check quiz is part of the task
-        if not TaskQuiz.objects.filter(task_id=task_id, quiz_id=quiz_id).exists():
+        if not TaskQuiz.objects.filter(task_id=assignment.task_id, quiz_id=quiz_id).exists():
             raise serializers.ValidationError({'quiz_id': '该试卷不在此任务中'})
         
         # Check quiz exists
@@ -301,36 +301,36 @@ class StartExamSerializer(serializers.Serializer):
     - Property 28: 考试时间窗口控制
     - Property 29: 考试单次提交限制
     """
-    task_id = serializers.IntegerField(help_text='任务ID')
+    assignment_id = serializers.IntegerField(help_text='任务分配ID')
     
     def validate(self, attrs):
         """Validate that the exam can be started."""
         request = self.context.get('request')
         user = request.user
-        task_id = attrs['task_id']
+        assignment_id = attrs['assignment_id']
         
         # Check task assignment exists
         try:
             assignment = TaskAssignment.objects.select_related('task').get(
-                task_id=task_id,
+                id=assignment_id,
                 assignee=user,
                 task__is_deleted=False
             )
         except TaskAssignment.DoesNotExist:
-            raise serializers.ValidationError({'task_id': '任务不存在或未分配给您'})
+            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
         
         task = assignment.task
         
         # Check it's an exam task
         if task.task_type != 'EXAM':
-            raise serializers.ValidationError({'task_id': '此接口仅支持考试任务'})
+            raise serializers.ValidationError({'assignment_id': '此接口仅支持考试任务'})
         
         # Property 28: 考试时间窗口控制
         now = timezone.now()
         if now < task.start_time:
-            raise serializers.ValidationError({'task_id': '考试尚未开始'})
+            raise serializers.ValidationError({'assignment_id': '考试尚未开始'})
         if now > task.deadline:
-            raise serializers.ValidationError({'task_id': '考试已结束'})
+            raise serializers.ValidationError({'assignment_id': '考试已结束'})
         
         # Property 29: 考试单次提交限制
         existing_submission = Submission.objects.filter(
@@ -338,7 +338,7 @@ class StartExamSerializer(serializers.Serializer):
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
         ).first()
         if existing_submission:
-            raise serializers.ValidationError({'task_id': '您已提交过此考试，无法重新作答'})
+            raise serializers.ValidationError({'assignment_id': '您已提交过此考试，无法重新作答'})
         
         # Check for in-progress submission
         in_progress = Submission.objects.filter(

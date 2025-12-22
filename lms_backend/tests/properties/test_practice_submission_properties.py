@@ -226,7 +226,7 @@ class TestProperty24PracticeAllowsMultipleSubmissions:
                 # Start practice
                 response = student_client.post(
                     '/api/submissions/practice/start/',
-                    {'task_id': task.id, 'quiz_id': quiz.id},
+                    {'assignment_id': assignment.id, 'quiz_id': quiz.id},
                     format='json'
                 )
                 assert response.status_code == 201, f"Start practice failed: {response.data}"

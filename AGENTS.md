@@ -1,5 +1,4 @@
 ## 全局原则
-执行之前先输出大致计划与我确认之后方可执行
 **No backward compatibility** - Break old formats freely
 
 > **重要说明**：编写代码时，如果发现已有代码存在设计问题或冗余，应该直接重构或重写，而不是为了兼容旧代码而增加冗余。优先考虑代码质量和架构清晰度，而不是向后兼容性。
@@ -179,26 +178,6 @@ export const config = {
 - 组件嵌套不超过 2 层 (`list/` → `list-item/` ✅，再嵌套 ❌)
 - 使用 ESLint 和 Prettier 统一代码风格
 - 删除功能时直接删除对应的 feature 文件夹即可
-
-## 前端设计美学规范
-
-<frontend_aesthetics>
-You tend to converge toward generic, "on distribution" outputs. In frontend design,this creates what users call the "AI slop" aesthetic. Avoid this: make creative,distinctive frontends that surprise and delight. 
-
-Focus on:
-- Typography: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics.
-- Color & Theme: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Draw from IDE themes and cultural aesthetics for inspiration.
-- Motion: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions.
-- Backgrounds: Create atmosphere and depth rather than defaulting to solid colors. Layer CSS gradients, use geometric patterns, or add contextual effects that match the overall aesthetic.
-
-Avoid generic AI-generated aesthetics:
-- Overused font families (Inter, Roboto, Arial, system fonts)
-- Clichéd color schemes (particularly purple gradients on white backgrounds)
-- Predictable layouts and component patterns
-- Cookie-cutter design that lacks context-specific character
-
-Interpret creatively and make unexpected choices that feel genuinely designed for the context. Vary between light and dark themes, different fonts, different aesthetics. You still tend to converge on common choices (Space Grotesk, for example) across generations. Avoid this: it is critical that you think outside the box!
-</frontend_aesthetics>
 
 ---
 
@@ -427,43 +406,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
 ```
 
-## 测试规范
-
-### 测试框架
-
-- **单元测试**: pytest + pytest-django
-- **属性测试**: hypothesis
-- **API 测试**: pytest + Django REST Framework 测试客户端
-- **覆盖率**: pytest-cov
-
-### 双重测试方法
-
-本项目采用单元测试和属性测试相结合的方法：
-
-1. **单元测试**：验证具体示例和边界情况
-   - 特定输入的预期输出
-   - 错误条件处理
-   - 集成点验证
-
-2. **属性测试**：验证跨所有输入的通用属性
-   - 使用 hypothesis 库生成随机测试数据
-   - 每个属性测试运行至少 100 次迭代
-   - 测试注释必须引用设计文档中的正确性属性
-
-### 属性测试标注格式
-
-每个属性测试必须使用以下格式标注：
-
-```python
-# **Feature: lms-backend, Property 5: 新用户默认学员角色**
-@given(user_data=user_data_strategy())
-def test_new_user_has_student_role(user_data):
-    """
-    Validates: Requirements 2.1
-    """
-    # 测试实现
-```
-
 ### 测试目录结构
 
 ```
@@ -480,29 +422,6 @@ tests/
     ├── test_user_properties.py
     └── ...
 ```
-
-### 关键测试场景
-
-1. **认证测试**
-   - 有效/无效凭证登录
-   - 停用用户登录拒绝
-   - 角色切换权限生效
-
-2. **权限测试**
-   - 各角色数据访问范围
-   - 资源所有权控制
-   - 无权限请求拒绝
-
-3. **业务规则测试**
-   - 资源引用保护
-   - 任务状态自动转换
-   - 考试时间窗口控制
-
-4. **数据完整性测试**
-   - 任务分配记录完整性
-   - 师徒关系唯一性
-   - 学员角色不可移除
-
 ## 代码组织最佳实践
 
 - 业务逻辑优先放在 `services.py`，视图层保持简洁

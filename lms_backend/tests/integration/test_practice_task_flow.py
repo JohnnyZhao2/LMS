@@ -164,10 +164,12 @@ class TestCompletePracticeTaskFlow:
         }, format='json')
         assert task_resp.status_code == status.HTTP_201_CREATED
         task_id = task_resp.json()['id']
+        assignment = TaskAssignment.objects.get(task_id=task_id, assignee=data['student'])
+        assignment_id = assignment.id
         
         # Step 4: Student starts practice
         start_resp = student_client.post('/api/submissions/practice/start/', {
-            'task_id': task_id,
+            'assignment_id': assignment_id,
             'quiz_id': quiz_id
         }, format='json')
         assert start_resp.status_code == status.HTTP_201_CREATED
@@ -206,12 +208,12 @@ class TestCompletePracticeTaskFlow:
         assert result['total_score'] is not None
         
         # Verify task auto-completed (Property 25)
-        assignment = TaskAssignment.objects.get(task_id=task_id, assignee=data['student'])
+        assignment.refresh_from_db()
         assert assignment.status == 'COMPLETED'
         
         # Step 7: Student can practice again (Property 24, 26)
         start2_resp = student_client.post('/api/submissions/practice/start/', {
-            'task_id': task_id,
+            'assignment_id': assignment_id,
             'quiz_id': quiz_id
         }, format='json')
         assert start2_resp.status_code == status.HTTP_201_CREATED
