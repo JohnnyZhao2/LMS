@@ -11,6 +11,7 @@ Requirements:
 from django.urls import path
 
 from .views import (
+    AssignableUserListView,
     LearningTaskCreateView,
     PracticeTaskCreateView,
     ExamTaskCreateView,
@@ -38,6 +39,9 @@ urlpatterns = [
     
     # Exam task creation
     path('exam/', ExamTaskCreateView.as_view(), name='exam-task-create'),
+    
+    # Assignable students
+    path('assignable-users/', AssignableUserListView.as_view(), name='assignable-user-list'),
     
     # Student task execution (Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7)
     path('my-assignments/', StudentAssignmentListView.as_view(), name='student-assignment-list'),

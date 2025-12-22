@@ -1,15 +1,49 @@
-import { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, InputNumber, Button, Card, Transfer, message, Typography, Alert } from 'antd';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  InputNumber,
+  Button,
+  Card,
+  Transfer,
+  message,
+  Typography,
+  Alert,
+  Tag,
+  Space,
+} from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCreateTask } from '../api/create-task';
 import { useAssignableUsers } from '../api/get-assignable-users';
-import type { TaskType, TaskCreateRequest } from '@/types/api';
+import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
+import type {
+  ExamTaskCreateRequest,
+  LearningTaskCreateRequest,
+  PracticeTaskCreateRequest,
+  TaskType,
+} from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
+import type { Dayjs } from 'dayjs';
 
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+
+interface TaskFormValues {
+  task_type: TaskType;
+  title: string;
+  description?: string;
+  deadline: Dayjs;
+  start_time?: Dayjs;
+  duration?: number;
+  pass_score?: number;
+  knowledge_ids?: number[];
+  quiz_ids?: number[];
+  quiz_id?: number;
+}
 
 /**
  * 任务创建表单组件
@@ -20,7 +54,7 @@ const { Option } = Select;
  * - task_type: 任务类型（PRACTICE/EXAM）
  */
 export const TaskForm: React.FC = () => {
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<TaskFormValues>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const createTask = useCreateTask();
@@ -43,6 +77,35 @@ export const TaskForm: React.FC = () => {
 
   const [taskType, setTaskType] = useState<TaskType>(presetTaskType || 'LEARNING');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [knowledgeSearch, setKnowledgeSearch] = useState('');
+  const [quizSearch, setQuizSearch] = useState('');
+
+  const knowledgeQuery = useTaskKnowledgeOptions({
+    search: knowledgeSearch,
+    enabled: taskType !== 'EXAM',
+  });
+  const quizQuery = useTaskQuizOptions({
+    search: quizSearch,
+    enabled: !isFromTestCenter && taskType !== 'LEARNING',
+  });
+
+  const knowledgeOptions = useMemo(
+    () =>
+      (knowledgeQuery.data ?? []).map((item) => ({
+        label: item.title,
+        value: item.id,
+      })),
+    [knowledgeQuery.data]
+  );
+
+  const quizOptions = useMemo(
+    () =>
+      (quizQuery.data?.results ?? []).map((quiz) => ({
+        label: `${quiz.title}（${quiz.question_count}题）`,
+        value: quiz.id,
+      })),
+    [quizQuery.data]
+  );
 
   // 初始化表单
   useEffect(() => {
@@ -52,20 +115,79 @@ export const TaskForm: React.FC = () => {
     }
   }, [presetTaskType, form]);
 
-  const handleSubmit = async (values: Omit<TaskCreateRequest, 'assignee_ids'>) => {
+  // 清理不同任务类型下的动态字段，避免数据串联
+  useEffect(() => {
+    form.setFieldsValue({
+      knowledge_ids: [],
+      quiz_ids: [],
+      quiz_id: undefined,
+      start_time: undefined,
+      duration: undefined,
+      pass_score: undefined,
+    });
+  }, [taskType, form]);
+
+  const handleSubmit = async (values: TaskFormValues) => {
     if (selectedUserIds.length === 0) {
       message.error('请选择学员');
       return;
     }
 
     try {
-      await createTask.mutateAsync({
-        ...values,
-        deadline: dayjs(values.deadline).toISOString(),
-        start_time: values.start_time ? dayjs(values.start_time).toISOString() : undefined,
-        quiz_ids: isFromTestCenter ? quizIds : values.quiz_ids,
-        assignee_ids: selectedUserIds,
-      });
+      const deadline = dayjs(values.deadline).toISOString();
+
+      if (taskType === 'LEARNING') {
+        const knowledgeIds = values.knowledge_ids ?? [];
+        if (knowledgeIds.length === 0) {
+          message.error('请选择知识文档');
+          return;
+        }
+        const payload: LearningTaskCreateRequest = {
+          title: values.title,
+          description: values.description,
+          deadline,
+          knowledge_ids: knowledgeIds,
+          assignee_ids: selectedUserIds,
+        };
+        await createTask.mutateAsync({ type: 'LEARNING', data: payload });
+      } else if (taskType === 'PRACTICE') {
+        const quizIdsPayload = isFromTestCenter ? quizIds : values.quiz_ids;
+        if (!quizIdsPayload || quizIdsPayload.length === 0) {
+          message.error('请选择试卷');
+          return;
+        }
+        const payload: PracticeTaskCreateRequest = {
+          title: values.title,
+          description: values.description,
+          deadline,
+          quiz_ids: quizIdsPayload,
+          knowledge_ids: values.knowledge_ids ?? [],
+          assignee_ids: selectedUserIds,
+        };
+        await createTask.mutateAsync({ type: 'PRACTICE', data: payload });
+      } else {
+        const quizId = isFromTestCenter ? quizIds[0] : values.quiz_id;
+        if (!quizId) {
+          message.error('请选择试卷');
+          return;
+        }
+        if (!values.start_time || !values.duration || values.pass_score === undefined) {
+          message.error('请完整填写考试信息');
+          return;
+        }
+        const payload: ExamTaskCreateRequest = {
+          title: values.title,
+          description: values.description,
+          deadline,
+          start_time: dayjs(values.start_time).toISOString(),
+          duration: values.duration,
+          pass_score: values.pass_score,
+          quiz_id: quizId,
+          assignee_ids: selectedUserIds,
+        };
+        await createTask.mutateAsync({ type: 'EXAM', data: payload });
+      }
+
       message.success('任务创建成功');
       navigate('/tasks');
     } catch (error) {
@@ -86,7 +208,15 @@ export const TaskForm: React.FC = () => {
         {isFromTestCenter && (
           <Alert
             message={`已选择 ${quizIds.length} 份试卷`}
-            description={`任务类型：${presetTaskType === 'PRACTICE' ? '练习任务' : presetTaskType === 'EXAM' ? '考试任务' : '未知'}`}
+            description={
+              <Space size={[4, 4]} wrap>
+                {quizIds.map((qid) => (
+                  <Tag key={qid} color="blue">
+                    试卷 #{qid}
+                  </Tag>
+                ))}
+              </Space>
+            }
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
@@ -96,7 +226,11 @@ export const TaskForm: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ task_type: presetTaskType || 'LEARNING' }}
+          initialValues={{
+            task_type: presetTaskType || 'LEARNING',
+            knowledge_ids: [],
+            quiz_ids: [],
+          }}
         >
           <Form.Item
             name="task_type"
@@ -133,15 +267,87 @@ export const TaskForm: React.FC = () => {
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
 
+          {taskType !== 'EXAM' && (
+            <Form.Item
+              name="knowledge_ids"
+              label={taskType === 'LEARNING' ? '知识文档' : '关联知识文档（可选）'}
+              rules={
+                taskType === 'LEARNING'
+                  ? [{ required: true, message: '请选择知识文档' }]
+                  : undefined
+              }
+            >
+              <Select
+                mode="multiple"
+                placeholder="搜索并选择知识文档"
+                options={knowledgeOptions}
+                loading={knowledgeQuery.isLoading}
+                showSearch
+                filterOption={false}
+                onSearch={setKnowledgeSearch}
+                allowClear
+              />
+            </Form.Item>
+          )}
+
+          {taskType === 'PRACTICE' && !isFromTestCenter && (
+            <Form.Item
+              name="quiz_ids"
+              label="选择试卷"
+              rules={[{ required: true, message: '请选择试卷' }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="请选择试卷"
+                options={quizOptions}
+                loading={quizQuery.isLoading}
+                showSearch
+                filterOption={false}
+                onSearch={setQuizSearch}
+                allowClear
+              />
+            </Form.Item>
+          )}
+
+          {taskType === 'EXAM' && !isFromTestCenter && (
+            <Form.Item
+              name="quiz_id"
+              label="选择试卷"
+              rules={[{ required: true, message: '请选择试卷' }]}
+            >
+              <Select
+                placeholder="请选择试卷"
+                options={quizOptions}
+                loading={quizQuery.isLoading}
+                showSearch
+                filterOption={false}
+                onSearch={setQuizSearch}
+                allowClear
+              />
+            </Form.Item>
+          )}
+
           {taskType === 'EXAM' && (
             <>
-              <Form.Item name="start_time" label="考试开始时间">
+              <Form.Item
+                name="start_time"
+                label="考试开始时间"
+                rules={[{ required: true, message: '请选择考试开始时间' }]}
+              >
                 <DatePicker showTime style={{ width: '100%' }} />
               </Form.Item>
-              <Form.Item name="duration" label="考试时长（分钟）">
+              <Form.Item
+                name="duration"
+                label="考试时长（分钟）"
+                rules={[{ required: true, message: '请输入考试时长' }]}
+              >
                 <InputNumber min={1} style={{ width: '100%' }} />
               </Form.Item>
-              <Form.Item name="pass_score" label="及格分数">
+              <Form.Item
+                name="pass_score"
+                label="及格分数"
+                rules={[{ required: true, message: '请输入及格分数' }]}
+              >
                 <InputNumber min={0} style={{ width: '100%' }} />
               </Form.Item>
             </>

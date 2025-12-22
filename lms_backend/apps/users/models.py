@@ -150,6 +150,16 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     def is_mentor(self) -> bool:
         """是否为导师"""
         return self.has_role('MENTOR')
+    
+    @property
+    def is_dept_manager(self) -> bool:
+        """是否为室经理"""
+        return self.has_role('DEPT_MANAGER')
+    
+    @property
+    def is_team_manager(self) -> bool:
+        """是否为团队经理"""
+        return self.has_role('TEAM_MANAGER')
 
     @property
     def role_codes(self) -> list:

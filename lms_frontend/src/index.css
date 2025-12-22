@@ -1,28 +1,671 @@
-* {
+/**
+ * LMS 全局样式
+ * 基于 design.json + REFACTOR_AND_DESIGN.md 规范
+ */
+
+/* ============================================
+   Google Fonts - Outfit (现代无衬线字体)
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* ============================================
+   CSS Variables (设计令牌)
+   ============================================ */
+:root {
+  /* Primary Colors */
+  --color-primary-50: #E8EEFF;
+  --color-primary-100: #C7D7FF;
+  --color-primary-200: #9AB8FF;
+  --color-primary-300: #6B94FF;
+  --color-primary-400: #4D7CFF;
+  --color-primary-500: #4D6CFF;
+  --color-primary-600: #3D5FE6;
+  --color-primary-700: #2F4AC7;
+
+  /* Success/Green */
+  --color-success-50: #E6F9F0;
+  --color-success-100: #B8EDCE;
+  --color-success-500: #10B759;
+  --color-success-600: #0DA34F;
+
+  /* Warning/Yellow */
+  --color-warning-50: #FFFBEB;
+  --color-warning-100: #FFF4C7;
+  --color-warning-300: #FFE577;
+  --color-warning-500: #F5C200;
+
+  /* Error/Red */
+  --color-error-50: #FFE9ED;
+  --color-error-100: #FFC9D3;
+  --color-error-500: #FF3D71;
+  --color-error-600: #E6355F;
+
+  /* Accent Colors */
+  --color-purple-500: #9B00FF;
+  --color-pink-500: #FF3D8F;
+  --color-cyan-500: #00C7E6;
+  --color-orange-500: #FF8C52;
+
+  /* Neutral Colors */
+  --color-white: #FFFFFF;
+  --color-gray-50: #F8F9FA;
+  --color-gray-100: #F1F3F5;
+  --color-gray-200: #E9ECEF;
+  --color-gray-300: #DEE2E6;
+  --color-gray-400: #CED4DA;
+  --color-gray-500: #ADB5BD;
+  --color-gray-600: #868E96;
+  --color-gray-700: #495057;
+  --color-gray-800: #343A40;
+  --color-gray-900: #212529;
+
+  /* Typography */
+  --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 30px;
+  --font-size-5xl: 36px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.6;
+
+  /* Spacing */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Border Radius */
+  --radius-none: 0px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+  --shadow-glow-primary: 0 0 20px rgba(77, 108, 255, 0.3);
+  --shadow-glow-success: 0 0 20px rgba(16, 183, 89, 0.3);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Layout */
+  --sidebar-width: 280px;
+  --header-height: 64px;
+  --container-max-width: 1280px;
+  --content-max-width: 960px;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-blur: blur(12px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Reset & Base Styles
+   ============================================ */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-:root {
-  font-family: "PingFang SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #1a1a1a;
-  background-color: #f5f5f5;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+html {
+  font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  margin: 0;
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-gray-900);
   min-width: 320px;
   min-height: 100vh;
+  
+  /* 氛围背景 - 渐变光晕 */
+  background-color: var(--color-gray-50);
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(77, 108, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 61, 143, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(16, 183, 89, 0.04) 0%, transparent 50%);
+  background-attachment: fixed;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* ============================================
+   Typography Utilities
+   ============================================ */
+.text-primary { color: var(--color-primary-500); }
+.text-success { color: var(--color-success-500); }
+.text-warning { color: var(--color-warning-500); }
+.text-error { color: var(--color-error-500); }
+.text-secondary { color: var(--color-gray-600); }
+.text-muted { color: var(--color-gray-500); }
+
+/* ============================================
+   Animation Keyframes
+   ============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   Animation Utility Classes
+   ============================================ */
+.animate-fadeIn {
+  animation: fadeIn var(--transition-base) ease-out forwards;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp var(--transition-slow) ease-out forwards;
+}
+
+.animate-fadeInDown {
+  animation: fadeInDown var(--transition-slow) ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn var(--transition-base) ease-out forwards;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft var(--transition-slow) ease-out forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight var(--transition-slow) ease-out forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* Initial state for staggered animations */
+.stagger-item {
+  opacity: 0;
+}
+
+/* ============================================
+   Glassmorphism Utilities
+   ============================================ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+}
+
+.glass-dark {
+  background: rgba(33, 37, 41, 0.85);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Card Enhancements
+   ============================================ */
+.card-hover {
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   Button Enhancements
+   ============================================ */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-400);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) var(--color-gray-100);
+}
+
+/* ============================================
+   Selection Styling
+   ============================================ */
+::selection {
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+/* ============================================
+   Focus Ring Styling
+   ============================================ */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Link Styling
+   ============================================ */
+a {
+  color: var(--color-primary-500);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-400);
+}
+
+/* ============================================
+   Status Indicator Dot
+   ============================================ */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+
+.status-dot-success { background: var(--color-success-500); }
+.status-dot-warning { background: var(--color-warning-500); }
+.status-dot-error { background: var(--color-error-500); }
+.status-dot-info { background: var(--color-primary-500); }
+
+/* ============================================
+   Gradient Text
+   ============================================ */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Ant Design Overrides
+   ============================================ */
+
+/* 全局取消 Ant Design 的默认阴影 */
+.ant-btn {
+  transition: all var(--transition-fast);
+}
+
+.ant-btn:active {
+  transform: scale(0.97);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(77, 108, 255, 0.25);
+}
+
+/* Card 样式优化 */
+.ant-card {
+  border: none !important;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.ant-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Modal 样式优化 */
+.ant-modal-content {
+  border-radius: var(--radius-xl) !important;
+  overflow: hidden;
+}
+
+/* Drawer 样式优化 */
+.ant-drawer-content {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Table 样式优化 */
+.ant-table-wrapper {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Menu 样式优化 */
+.ant-menu-item {
+  transition: all var(--transition-fast) !important;
+}
+
+.ant-menu-item:hover {
+  transform: translateX(4px);
+}
+
+/* Empty 样式优化 */
+.ant-empty-description {
+  color: var(--color-gray-500);
+}
+
+/* Message 样式优化 */
+.ant-message-notice-content {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Notification 样式优化 */
+.ant-notification-notice {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Dropdown 样式优化 */
+.ant-dropdown-menu {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+  padding: var(--spacing-2) !important;
+}
+
+.ant-dropdown-menu-item {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Popover 样式优化 */
+.ant-popover-inner {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Tag 样式优化 */
+.ant-tag {
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-weight-medium);
+}
+
+/* Badge 样式优化 */
+.ant-badge-status-dot {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+/* Tabs 样式优化 */
+.ant-tabs-tab {
+  transition: all var(--transition-fast) !important;
+}
+
+.ant-tabs-tab:hover {
+  color: var(--color-primary-500) !important;
+}
+
+/* Form 样式优化 */
+.ant-form-item-label > label {
+  font-weight: var(--font-weight-medium) !important;
+}
+
+/* Pagination 样式优化 */
+.ant-pagination-item {
+  border-radius: var(--radius-md) !important;
+}
+
+.ant-pagination-item-active {
+  border-color: var(--color-primary-500) !important;
+}
+
+/* Progress 样式优化 */
+.ant-progress-inner {
+  border-radius: var(--radius-full) !important;
+}
+
+/* Input 样式优化 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  box-shadow: 0 0 0 3px rgba(77, 108, 255, 0.1) !important;
+}
+
+/* Select 样式优化 */
+.ant-select-focused .ant-select-selector {
+  box-shadow: 0 0 0 3px rgba(77, 108, 255, 0.1) !important;
+}
+
+/* DatePicker 样式优化 */
+.ant-picker-focused {
+  box-shadow: 0 0 0 3px rgba(77, 108, 255, 0.1) !important;
+}
+
+/* Skeleton 样式优化 - Shimmer 效果 */
+.ant-skeleton-element .ant-skeleton-avatar,
+.ant-skeleton-element .ant-skeleton-button,
+.ant-skeleton-element .ant-skeleton-input,
+.ant-skeleton-element .ant-skeleton-image,
+.ant-skeleton-content .ant-skeleton-title,
+.ant-skeleton-content .ant-skeleton-paragraph > li {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-100) 25%,
+    var(--color-gray-200) 50%,
+    var(--color-gray-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   Page Layout Utilities
+   ============================================ */
+.page-container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-6);
+}
+
+.page-header {
+  margin-bottom: var(--spacing-6);
+}
+
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-900);
+  margin-bottom: var(--spacing-2);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--color-gray-600);
+}
+
+/* ============================================
+   Grid Utilities
+   ============================================ */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-6);
+}
+
+/* ============================================
+   Responsive Utilities
+   ============================================ */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0px;
+  }
+  
+  .page-container {
+    padding: var(--spacing-4);
+  }
+  
+  .page-title {
+    font-size: var(--font-size-2xl);
+  }
 }
