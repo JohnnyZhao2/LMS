@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Tabs, Typography } from 'antd';
-import { FileTextOutlined, FormOutlined } from '@ant-design/icons';
+import { FileTextOutlined, FormOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QuestionTab } from './question-tab';
 import { QuizTab } from './quiz-tab';
+import { PageHeader } from '@/components/ui';
 
-const { Title } = Typography;
+const { Text } = Typography;
 
 /**
  * 测试中心统一页面
@@ -41,7 +42,7 @@ export const TestCenter: React.FC = () => {
     {
       key: 'questions',
       label: (
-        <span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
           <FormOutlined />
           题目管理
         </span>
@@ -51,7 +52,7 @@ export const TestCenter: React.FC = () => {
     {
       key: 'quizzes',
       label: (
-        <span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
           <FileTextOutlined />
           试卷管理
         </span>
@@ -61,15 +62,31 @@ export const TestCenter: React.FC = () => {
   ];
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: 24 }}>测试中心</Title>
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        items={tabItems}
-        size="large"
+    <div className="animate-fadeIn">
+      <PageHeader
+        title="测试中心"
+        subtitle="管理题库和试卷，创建练习和考试"
+        icon={<ExperimentOutlined />}
       />
+
+      <div
+        style={{
+          background: 'var(--color-white)',
+          borderRadius: 'var(--radius-xl)',
+          padding: 'var(--spacing-6)',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <Tabs
+          activeKey={activeTab}
+          onChange={handleTabChange}
+          items={tabItems}
+          size="large"
+          tabBarStyle={{
+            marginBottom: 'var(--spacing-6)',
+          }}
+        />
+      </div>
     </div>
   );
 };
-

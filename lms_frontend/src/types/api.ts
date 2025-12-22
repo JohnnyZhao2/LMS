@@ -485,18 +485,84 @@ export interface TaskDetail {
 }
 
 /**
- * 创建任务请求
+ * 学员学习任务进度
  */
-export interface TaskCreateRequest {
+export interface LearningTaskProgress {
+  completed: number;
+  total: number;
+  percentage: number;
+}
+
+/**
+ * 学员学习任务知识项
+ */
+export interface LearningTaskKnowledgeItem {
+  id: number;
+  knowledge_id: number;
+  title?: string;
+  knowledge_type: string;
+  knowledge_type_display?: string;
+  summary?: string;
+  order: number;
+  is_completed: boolean;
+  completed_at?: string | null;
+}
+
+/**
+ * 学员学习任务详情
+ */
+export interface StudentLearningTaskDetail {
+  id: number;
+  task_id: number;
+  task_title: string;
+  task_description?: string;
+  task_type: TaskType;
+  task_type_display: string;
+  deadline: string;
+  created_by_name: string;
+  status: TaskStatus;
+  status_display: string;
+  progress: LearningTaskProgress;
+  completed_at?: string;
+  knowledge_items: LearningTaskKnowledgeItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 创建学习任务请求
+ */
+export interface LearningTaskCreateRequest {
   title: string;
   description?: string;
-  task_type: TaskType;
   deadline: string;
-  start_time?: string;
-  duration?: number;
-  pass_score?: string;
+  knowledge_ids: number[];
+  assignee_ids: number[];
+}
+
+/**
+ * 创建练习任务请求
+ */
+export interface PracticeTaskCreateRequest {
+  title: string;
+  description?: string;
+  deadline: string;
+  quiz_ids: number[];
   knowledge_ids?: number[];
-  quiz_ids?: number[];
+  assignee_ids: number[];
+}
+
+/**
+ * 创建考试任务请求
+ */
+export interface ExamTaskCreateRequest {
+  title: string;
+  description?: string;
+  deadline: string;
+  start_time: string;
+  duration: number;
+  pass_score: number | string;
+  quiz_id: number;
   assignee_ids: number[];
 }
 
@@ -515,18 +581,58 @@ export interface StudentPendingTask {
 /**
  * 学员任务中心列表项
  */
-export interface StudentTaskCenterList {
+export interface TaskProgress {
+  completed: number;
+  total: number;
+  percentage: number;
+}
+
+export interface StudentTaskCenterItem {
+  id: number;
+  task_id: number;
+  task_title: string;
+  task_description?: string;
+  task_type: TaskType;
+  task_type_display: string;
+  deadline: string;
+  status: TaskStatus;
+  status_display: string;
+  progress: TaskProgress;
+  created_by_name: string;
+  start_time?: string;
+  duration?: number;
+  pass_score?: string;
+  score?: string;
+  completed_at?: string;
+  created_at: string;
+}
+
+export interface StudentTaskCenterResponse {
+  results: StudentTaskCenterItem[];
+  count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface TaskListItem {
   id: number;
   title: string;
   description?: string;
   task_type: TaskType;
   task_type_display: string;
   deadline: string;
-  status: TaskStatus;
-  status_display: string;
-  completed_count: number;
-  total_count: number;
+  start_time?: string;
+  duration?: number;
+  pass_score?: string;
+  is_closed: boolean;
+  closed_at?: string;
+  knowledge_count: number;
+  quiz_count: number;
+  assignee_count: number;
   created_by_name: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // ==================== 仪表盘相关 ====================

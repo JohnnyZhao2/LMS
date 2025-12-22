@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
-import { Card, Typography, Tag, Spin } from 'antd';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Typography, Tag, Spin, Button, Divider } from 'antd';
+import { ArrowLeftOutlined, EyeOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useIncrementViewCount } from '../api/increment-view-count';
+import { Card, PageHeader, StatusBadge } from '@/components/ui';
 import type { KnowledgeDetail } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
@@ -20,6 +22,7 @@ const { Title, Text } = Typography;
 export const KnowledgeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // 根据路由判断使用哪个 API
   const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
@@ -32,7 +35,6 @@ export const KnowledgeDetail: React.FC = () => {
   // 学员查看时，自动记录阅读次数
   useEffect(() => {
     if (!isAdminRoute && id && data && !isLoading) {
-      // 延迟调用，避免影响页面加载
       const timer = setTimeout(() => {
         incrementViewCount.mutate(Number(id));
       }, 1000);
@@ -41,11 +43,19 @@ export const KnowledgeDetail: React.FC = () => {
   }, [id, data, isLoading, isAdminRoute, incrementViewCount]);
 
   if (isLoading) {
-    return <Spin />;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
   if (!data) {
-    return <div>知识文档不存在</div>;
+    return (
+      <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <Text type="secondary">知识文档不存在</Text>
+      </div>
+    );
   }
 
   const knowledge = data as KnowledgeDetail;
@@ -54,111 +64,248 @@ export const KnowledgeDetail: React.FC = () => {
   const getContent = () => {
     if (knowledge.knowledge_type === 'EMERGENCY') {
       const parts = [];
-      if (knowledge.fault_scenario) parts.push(`<h3>故障场景</h3><p>${knowledge.fault_scenario}</p>`);
-      if (knowledge.trigger_process) parts.push(`<h3>触发流程</h3><p>${knowledge.trigger_process}</p>`);
-      if (knowledge.solution) parts.push(`<h3>解决方案</h3><p>${knowledge.solution}</p>`);
-      if (knowledge.verification_plan) parts.push(`<h3>验证方案</h3><p>${knowledge.verification_plan}</p>`);
-      if (knowledge.recovery_plan) parts.push(`<h3>恢复方案</h3><p>${knowledge.recovery_plan}</p>`);
+      if (knowledge.fault_scenario) parts.push(`<h3>故障场景</h3><div class="content-section">${knowledge.fault_scenario}</div>`);
+      if (knowledge.trigger_process) parts.push(`<h3>触发流程</h3><div class="content-section">${knowledge.trigger_process}</div>`);
+      if (knowledge.solution) parts.push(`<h3>解决方案</h3><div class="content-section">${knowledge.solution}</div>`);
+      if (knowledge.verification_plan) parts.push(`<h3>验证方案</h3><div class="content-section">${knowledge.verification_plan}</div>`);
+      if (knowledge.recovery_plan) parts.push(`<h3>恢复方案</h3><div class="content-section">${knowledge.recovery_plan}</div>`);
       return parts.join('');
     }
     return knowledge.content || '';
   };
 
   return (
-    <div style={{ padding: '24px', background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)', minHeight: 'calc(100vh - 64px)', margin: '-24px' }}>
-      <Card style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
-        <Title level={2} style={{ color: '#ffffff', marginBottom: '16px' }}>
-          {knowledge.title}
-        </Title>
-        
-        {/* 标签和元信息 */}
-        <div style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-          <Tag color={knowledge.knowledge_type === 'EMERGENCY' ? 'red' : 'blue'}>
-            {knowledge.knowledge_type_display}
-          </Tag>
-          {knowledge.line_type && (
-            <Tag color="default">{knowledge.line_type.name}</Tag>
-          )}
-          {knowledge.operation_tags?.map((tag) => (
-            <Tag key={tag.id}>{tag.name}</Tag>
-          ))}
-          {knowledge.system_tags?.map((tag) => (
-            <Tag key={tag.id} color="purple">{tag.name}</Tag>
-          ))}
-        </div>
-
-        {/* 元数据信息 */}
-        <div style={{ marginBottom: '24px', padding: '12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
-          {knowledge.created_by_name && (
-            <span>创建人：{knowledge.created_by_name}</span>
-          )}
-          {knowledge.updated_by_name && (
-            <span>更新人：{knowledge.updated_by_name}</span>
-          )}
-          <span>阅读次数：{knowledge.view_count}</span>
-          <span>更新时间：{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
-          {isAdminRoute && (
-            <Tag color={knowledge.status === 'PUBLISHED' ? 'green' : 'default'}>
-              {knowledge.status_display}
-            </Tag>
-          )}
-        </div>
-
-        {/* 内容 */}
-        <div
+    <div className="animate-fadeIn">
+      {/* 返回按钮 */}
+      <div style={{ marginBottom: 'var(--spacing-4)' }}>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(-1)}
           style={{
-            color: 'rgba(255, 255, 255, 0.9)',
-            lineHeight: '1.8',
-            fontSize: '15px',
+            color: 'var(--color-gray-600)',
+            fontWeight: 500,
           }}
+        >
+          返回列表
+        </Button>
+      </div>
+
+      <Card>
+        {/* 标题区 */}
+        <div style={{ marginBottom: 'var(--spacing-6)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap' }}>
+            <StatusBadge
+              status={knowledge.knowledge_type === 'EMERGENCY' ? 'error' : 'info'}
+              text={knowledge.knowledge_type_display}
+            />
+            {knowledge.line_type && (
+              <Tag style={{ margin: 0, borderRadius: 'var(--radius-sm)' }}>
+                {knowledge.line_type.name}
+              </Tag>
+            )}
+            {isAdminRoute && (
+              <StatusBadge
+                status={knowledge.status === 'PUBLISHED' ? 'success' : 'default'}
+                text={knowledge.status_display}
+                showIcon={false}
+              />
+            )}
+          </div>
+          
+          <Title
+            level={2}
+            style={{
+              margin: 0,
+              marginBottom: 'var(--spacing-4)',
+              fontSize: 'var(--font-size-3xl)',
+              fontWeight: 700,
+              color: 'var(--color-gray-900)',
+            }}
+          >
+            {knowledge.title}
+          </Title>
+
+          {/* 标签 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-4)' }}>
+            {knowledge.operation_tags?.map((tag) => (
+              <Tag
+                key={tag.id}
+                style={{
+                  margin: 0,
+                  background: 'var(--color-primary-50)',
+                  color: 'var(--color-primary-600)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {tag.name}
+              </Tag>
+            ))}
+            {knowledge.system_tags?.map((tag) => (
+              <Tag
+                key={tag.id}
+                style={{
+                  margin: 0,
+                  background: 'rgba(155, 0, 255, 0.1)',
+                  color: 'var(--color-purple-500)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {tag.name}
+              </Tag>
+            ))}
+          </div>
+
+          {/* 元信息 */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 'var(--spacing-6)',
+              flexWrap: 'wrap',
+              padding: 'var(--spacing-4)',
+              background: 'var(--color-gray-50)',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--color-gray-600)',
+            }}
+          >
+            {knowledge.created_by_name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+                <UserOutlined />
+                <span>创建人：{knowledge.created_by_name}</span>
+              </div>
+            )}
+            {knowledge.updated_by_name && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+                <UserOutlined />
+                <span>更新人：{knowledge.updated_by_name}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <EyeOutlined />
+              <span>阅读次数：{knowledge.view_count}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <CalendarOutlined />
+              <span>更新时间：{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+            </div>
+          </div>
+        </div>
+
+        <Divider style={{ margin: 'var(--spacing-6) 0' }} />
+
+        {/* 内容区 */}
+        <div
           className="knowledge-content"
           dangerouslySetInnerHTML={{
             __html: getContent(),
           }}
         />
+
         <style>{`
+          .knowledge-content {
+            color: var(--color-gray-800);
+            line-height: 1.8;
+            font-size: var(--font-size-base);
+          }
           .knowledge-content h3 {
-            color: #ffffff;
-            font-size: 18px;
+            color: var(--color-gray-900);
+            font-size: var(--font-size-xl);
             font-weight: 600;
-            margin: 24px 0 12px 0;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin: var(--spacing-8) 0 var(--spacing-4) 0;
+            padding-bottom: var(--spacing-2);
+            border-bottom: 2px solid var(--color-primary-100);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-2);
+          }
+          .knowledge-content h3::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%);
+            border-radius: 2px;
+          }
+          .knowledge-content .content-section {
+            padding: var(--spacing-4);
+            background: var(--color-gray-50);
+            border-radius: var(--radius-lg);
+            margin-bottom: var(--spacing-4);
           }
           .knowledge-content p {
-            margin: 12px 0;
-            color: rgba(255, 255, 255, 0.8);
+            margin: var(--spacing-3) 0;
+            color: var(--color-gray-700);
           }
           .knowledge-content ul,
           .knowledge-content ol {
-            margin: 12px 0;
-            padding-left: 24px;
-            color: rgba(255, 255, 255, 0.8);
+            margin: var(--spacing-3) 0;
+            padding-left: var(--spacing-6);
+            color: var(--color-gray-700);
           }
           .knowledge-content li {
-            margin: 8px 0;
+            margin: var(--spacing-2) 0;
           }
           .knowledge-content code {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--color-primary-50);
+            color: var(--color-primary-700);
             padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono);
+            font-size: var(--font-size-sm);
           }
           .knowledge-content pre {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 16px;
-            border-radius: 8px;
+            background: var(--color-gray-900);
+            color: var(--color-gray-100);
+            padding: var(--spacing-5);
+            border-radius: var(--radius-lg);
             overflow-x: auto;
-            margin: 16px 0;
+            margin: var(--spacing-4) 0;
           }
           .knowledge-content pre code {
             background: transparent;
+            color: inherit;
             padding: 0;
+          }
+          .knowledge-content a {
+            color: var(--color-primary-500);
+            text-decoration: underline;
+          }
+          .knowledge-content a:hover {
+            color: var(--color-primary-600);
+          }
+          .knowledge-content blockquote {
+            margin: var(--spacing-4) 0;
+            padding: var(--spacing-4) var(--spacing-5);
+            border-left: 4px solid var(--color-primary-500);
+            background: var(--color-primary-50);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            color: var(--color-gray-700);
+          }
+          .knowledge-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-4) 0;
+          }
+          .knowledge-content th,
+          .knowledge-content td {
+            padding: var(--spacing-3) var(--spacing-4);
+            border: 1px solid var(--color-gray-200);
+            text-align: left;
+          }
+          .knowledge-content th {
+            background: var(--color-gray-50);
+            font-weight: 600;
+          }
+          .knowledge-content img {
+            max-width: 100%;
+            border-radius: var(--radius-lg);
+            margin: var(--spacing-4) 0;
           }
         `}</style>
       </Card>
     </div>
   );
 };
-

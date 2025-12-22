@@ -24,6 +24,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from django.db.models import Q
 from django.utils import timezone
 
 from core.exceptions import BusinessError, ErrorCodes
@@ -31,7 +32,9 @@ from apps.users.permissions import (
     IsAdminOrMentorOrDeptManager,
     get_current_role,
     filter_queryset_by_data_scope,
+    get_accessible_students,
 )
+from apps.users.serializers import UserListSerializer
 
 from .models import Task, TaskAssignment, TaskKnowledge, KnowledgeLearningProgress
 from .serializers import (
@@ -45,6 +48,69 @@ from .serializers import (
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
 )
+
+
+class AssignableUserListView(APIView):
+    """
+    List students that the current user can assign tasks to.
+    
+    Requirements:
+    - 7.2: 导师仅能选择名下学员
+    - 7.3: 室经理仅能选择本室学员
+    - 7.4: 管理员可选择任意学员
+    """
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    
+    @extend_schema(
+        summary='获取可分配学员列表',
+        description='''
+        根据当前用户的角色和数据范围返回可分配的学员列表。
+        
+        - 管理员：全平台所有学员
+        - 导师：仅名下学员
+        - 室经理：仅本室学员
+        ''',
+        parameters=[
+            OpenApiParameter(
+                name='search',
+                type=str,
+                description='按姓名或工号搜索'
+            ),
+            OpenApiParameter(
+                name='department_id',
+                type=int,
+                description='按部门筛选'
+            ),
+        ],
+        responses={200: UserListSerializer(many=True)},
+        tags=['任务管理']
+    )
+    def get(self, request):
+        current_role = get_current_role(request.user)
+        queryset = get_accessible_students(request.user, current_role).filter(
+            roles__code='STUDENT'
+        ).select_related(
+            'department', 'mentor'
+        ).prefetch_related('roles').distinct()
+        
+        department_id = request.query_params.get('department_id')
+        if department_id:
+            try:
+                queryset = queryset.filter(department_id=int(department_id))
+            except (TypeError, ValueError):
+                pass
+        
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search) |
+                Q(employee_id__icontains=search)
+            )
+        
+        queryset = queryset.order_by('username', 'employee_id')
+        
+        serializer = UserListSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class LearningTaskCreateView(APIView):

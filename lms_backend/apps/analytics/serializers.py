@@ -68,7 +68,7 @@ class StudentPendingTaskSerializer(serializers.ModelSerializer):
             from apps.submissions.models import Submission
             completed_quiz_ids = set(
                 Submission.objects.filter(
-                    assignment=obj
+                    task_assignment=obj
                 ).values_list('quiz_id', flat=True).distinct()
             )
             completed = len(completed_quiz_ids)
@@ -356,7 +356,7 @@ class StudentTaskCenterListSerializer(serializers.ModelSerializer):
             from apps.submissions.models import Submission
             completed_quiz_ids = set(
                 Submission.objects.filter(
-                    assignment=obj
+                    task_assignment=obj
                 ).values_list('quiz_id', flat=True).distinct()
             )
             completed = len(completed_quiz_ids)

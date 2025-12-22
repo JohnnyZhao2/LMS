@@ -7,6 +7,7 @@ const { Sider } = Layout;
 
 /**
  * 侧边栏组件
+ * 应用毛玻璃效果，宽度 280px
  */
 export const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -20,19 +21,39 @@ export const Sidebar: React.FC = () => {
 
   return (
     <Sider
-      width={200}
+      width={280}
       style={{
-        background: '#fff',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.06)',
+        position: 'fixed',
+        left: 0,
+        top: 'var(--header-height)',
+        bottom: 0,
+        height: 'calc(100vh - var(--header-height))',
+        background: 'var(--glass-bg)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.3)',
+        zIndex: 100,
+        overflow: 'auto',
       }}
     >
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={handleMenuClick}
-        style={{ height: '100%', borderRight: 0 }}
-      />
+      <div
+        style={{
+          padding: 'var(--spacing-4) var(--spacing-3)',
+          height: '100%',
+        }}
+      >
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            fontWeight: 500,
+          }}
+        />
+      </div>
     </Sider>
   );
 };
