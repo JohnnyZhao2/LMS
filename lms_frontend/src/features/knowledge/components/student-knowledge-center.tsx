@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Row, Col, Typography, Spin, Empty, Input, Checkbox } from 'antd';
-import { DatabaseOutlined } from '@ant-design/icons';
+import { Row, Col, Typography, Spin, Empty, Input, Checkbox, Pagination } from 'antd';
+import { DatabaseOutlined, EyeOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useStudentKnowledgeList } from '../api/get-student-knowledge-list';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
@@ -38,30 +38,43 @@ const StudentKnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView }) =>
               {firstOperationTag}
             </span>
           )}
+          {item.line_type?.name && (
+            <span className={styles.unpublishedTag} style={{ background: 'var(--color-gray-50)', color: 'var(--color-gray-500)' }}>
+              {item.line_type.name}
+            </span>
+          )}
+        </div>
+        <div className={styles.footerRight} style={{ color: 'var(--color-gray-300)' }}>
+          <EyeOutlined />
+          <span>{item.view_count || 0}</span>
         </div>
       </div>
 
       {/* 标题 */}
-      <h3 className={styles.cardTitle}>{item.title}</h3>
-
-      {/* 分隔线 */}
-      <div className={styles.cardDivider} />
-
-      {/* 内容预览 */}
-      {item.content_preview && (
-        <div className={styles.cardPreview} title={item.content_preview}>
-          {item.content_preview}
-        </div>
-      )}
+      <div className={styles.cardBody}>
+        <h3 className={styles.cardTitle}>{item.title}</h3>
+        {/* 内容预览 */}
+        {item.content_preview && (
+          <div className={styles.cardPreview} title={item.content_preview}>
+            {item.content_preview}
+          </div>
+        )}
+      </div>
 
       {/* 底部信息 */}
       <div className={styles.cardFooter}>
-        <span className={styles.lineType}>
-          {item.updated_by_name || item.created_by_name || '-'}
-        </span>
-        <span className={styles.updateTime}>
-          {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
-        </span>
+        <div className={styles.footerLeft}>
+          <div className={styles.footerItem}>
+            <div className={styles.userAvatar}>
+              {(item.updated_by_name || item.created_by_name || '?').charAt(0)}
+            </div>
+            <span>{item.updated_by_name || item.created_by_name || '-'}</span>
+          </div>
+        </div>
+        <div className={styles.footerItem}>
+          <ClockCircleOutlined />
+          <span>{item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}</span>
+        </div>
       </div>
     </div>
   );
@@ -69,13 +82,15 @@ const StudentKnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView }) =>
 
 /**
  * 学员知识中心组件
- * 采用卡片式布局，支持筛选和搜索
+ * 采用卡片式布局，支持筛选、搜索和分页
  */
 export const StudentKnowledgeCenter: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
   const [selectedSystemTagIds, setSelectedSystemTagIds] = useState<number[]>([]);
   const [selectedOperationTagIds, setSelectedOperationTagIds] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   
   const navigate = useNavigate();
   const incrementViewCount = useIncrementViewCount();
@@ -92,8 +107,17 @@ export const StudentKnowledgeCenter: React.FC = () => {
     line_type_id: selectedLineTypeId,
     system_tag_id: selectedSystemTagIds[0],
     operation_tag_id: selectedOperationTagIds[0],
-    status: 'PUBLISHED',
+    page,
+    pageSize,
   });
+
+  /**
+   * 处理分页变化
+   */
+  const handlePageChange = (newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    setPageSize(newPageSize);
+  };
 
   /**
    * 处理条线类型选择
@@ -106,6 +130,7 @@ export const StudentKnowledgeCenter: React.FC = () => {
     }
     setSelectedSystemTagIds([]);
     setSelectedOperationTagIds([]);
+    setPage(1); // 重置到第一页
   };
 
   /**
@@ -117,6 +142,7 @@ export const StudentKnowledgeCenter: React.FC = () => {
     } else {
       setSelectedSystemTagIds(selectedSystemTagIds.filter(id => id !== tagId));
     }
+    setPage(1); // 重置到第一页
   };
 
   /**
@@ -128,6 +154,7 @@ export const StudentKnowledgeCenter: React.FC = () => {
     } else {
       setSelectedOperationTagIds(selectedOperationTagIds.filter(id => id !== tagId));
     }
+    setPage(1); // 重置到第一页
   };
 
   /**
@@ -232,25 +259,43 @@ export const StudentKnowledgeCenter: React.FC = () => {
             <Search
               placeholder="搜索知识标题或内容..."
               allowClear
-              onSearch={setSearch}
+              onSearch={(value) => {
+                setSearch(value);
+                setPage(1); // 重置到第一页
+              }}
               className={styles.searchInput}
+              size="large"
             />
             <span className={styles.resultCount}>
-              共 {data?.length || 0} 篇知识文档
+              共 {data?.count || 0} 篇知识文档
             </span>
           </div>
           <Spin spinning={isLoading}>
-            {data && data.length > 0 ? (
-              <Row gutter={[24, 24]}>
-                {data.map((item) => (
-                  <Col key={item.id} xs={24} sm={12} lg={8} xxl={6}>
-                    <StudentKnowledgeCard
-                      item={item}
-                      onView={handleView}
-                    />
-                  </Col>
-                ))}
-              </Row>
+            {data?.results && data.results.length > 0 ? (
+              <>
+                <Row gutter={[24, 24]}>
+                  {data.results.map((item) => (
+                    <Col key={item.id} xs={24} sm={12} lg={8} xxl={6}>
+                      <StudentKnowledgeCard
+                        item={item}
+                        onView={handleView}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
+                  <Pagination
+                    current={page}
+                    total={data.count || 0}
+                    pageSize={pageSize}
+                    showSizeChanger
+                    showTotal={(total) => `共 ${total} 条`}
+                    onChange={handlePageChange}
+                    onShowSizeChange={handlePageChange}
+                    pageSizeOptions={[12, 20, 40, 60]}
+                  />
+                </div>
+              </>
             ) : (
               <Empty
                 description="暂无知识文档"

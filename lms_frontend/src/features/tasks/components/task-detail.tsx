@@ -231,7 +231,7 @@ export const TaskDetail: React.FC = () => {
     return (
       <Space size={[4, 8]} wrap>
         {tags.map((tag) => (
-          <Tag key={`${tag.id ?? tag.name}`} style={{ margin: 0, borderRadius: 'var(--radius-sm)' }}>
+          <Tag key={`${tag.id ?? tag.name}`} style={{ margin: 0, borderRadius: 'var(--radius-full)' }}>
             {tag.name}
           </Tag>
         ))}
@@ -474,7 +474,7 @@ export const TaskDetail: React.FC = () => {
               if (shouldFetchLearningDetail && isStudent) {
                 if (item.isCompleted) {
                   actions.push(
-                    <Tag key="completed" color="success" style={{ borderRadius: 'var(--radius-sm)' }}>
+                    <Tag key="completed" color="success" style={{ borderRadius: 'var(--radius-full)' }}>
                       已完成
                     </Tag>
                   );
@@ -511,7 +511,7 @@ export const TaskDetail: React.FC = () => {
                       <Space size={8}>
                         <Text strong>{item.title}</Text>
                         {item.version && (
-                          <Tag color="geekblue" style={{ borderRadius: 'var(--radius-sm)' }}>
+                          <Tag color="geekblue" style={{ borderRadius: 'var(--radius-full)' }}>
                             V{item.version}
                           </Tag>
                         )}
@@ -616,7 +616,7 @@ export const TaskDetail: React.FC = () => {
                   title={
                     <Space size={8}>
                       <Text strong>{item.snapshot.title || item.quiz_title}</Text>
-                      <Tag color="geekblue" style={{ borderRadius: 'var(--radius-sm)' }}>
+                      <Tag color="geekblue" style={{ borderRadius: 'var(--radius-full)' }}>
                         V{item.version_number}
                       </Tag>
                     </Space>

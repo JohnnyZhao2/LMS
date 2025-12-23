@@ -1,9 +1,11 @@
-import { Card, Tag, Typography } from 'antd';
+import { Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import type { StudentKnowledgeList } from '@/types/api';
 import dayjs from '@/lib/dayjs';
+import styles from './admin-knowledge-list.module.css';
+import { EyeOutlined, ClockCircleOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface KnowledgeCardProps {
   knowledge: StudentKnowledgeList;
@@ -14,33 +16,52 @@ interface KnowledgeCardProps {
  */
 export const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ knowledge }) => {
   const navigate = useNavigate();
+  const isEmergency = knowledge.knowledge_type === 'EMERGENCY';
 
   return (
-    <Card
-      hoverable
+    <div
+      className={styles.card}
       onClick={() => navigate(`/knowledge/${knowledge.id}`)}
-      style={{ height: '100%' }}
     >
-      <div style={{ marginBottom: 8 }}>
-        {knowledge.operation_tags &&
-          Object.entries(knowledge.operation_tags).map(([key, value]) => (
-            <Tag key={key} color="blue">
-              {String(value)}
-            </Tag>
-          ))}
+      <div className={styles.cardHeader}>
+        <div className={styles.cardHeaderLeft}>
+          <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
+            {knowledge.knowledge_type_display}
+          </span>
+          {knowledge.primary_category_name && (
+            <span className={styles.unpublishedTag}>
+              {knowledge.primary_category_name}
+            </span>
+          )}
+        </div>
+        <div className={styles.footerRight} style={{ color: 'var(--color-gray-300)' }}>
+          <EyeOutlined />
+          <span>{knowledge.view_count || 0}</span>
+        </div>
       </div>
-      <Title level={5} ellipsis={{ rows: 2 }}>
-        {knowledge.title}
-      </Title>
-      <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-        {knowledge.summary}
-      </Text>
-      <div style={{ marginTop: 16, fontSize: 12, color: '#999' }}>
-        <Text type="secondary">
-          {knowledge.updated_by_name || knowledge.created_by_name || '-'} · {dayjs(knowledge.updated_at).format('YYYY-MM-DD')}
-        </Text>
+
+      <div className={styles.cardBody}>
+        <h3 className={styles.cardTitle}>{knowledge.title}</h3>
+        <div className={styles.cardPreview} title={knowledge.summary || ''}>
+          {knowledge.summary || '暂无简介'}
+        </div>
       </div>
-    </Card>
+
+      <div className={styles.cardFooter}>
+        <div className={styles.footerLeft}>
+          <div className={styles.footerItem}>
+            <div className={styles.userAvatar}>
+              {(knowledge.updated_by_name || knowledge.created_by_name || '?').charAt(0)}
+            </div>
+            <span>{knowledge.updated_by_name || knowledge.created_by_name || '-'}</span>
+          </div>
+        </div>
+        <div className={styles.footerItem}>
+          <ClockCircleOutlined />
+          <span>{knowledge.updated_at ? dayjs(knowledge.updated_at).format('YYYY-MM-DD') : '-'}</span>
+        </div>
+      </div>
+    </div>
   );
 };
 

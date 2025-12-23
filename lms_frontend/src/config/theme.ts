@@ -498,28 +498,28 @@ export const appTheme: ThemeConfig = {
 export const statusBadgeStyles = {
   success: {
     background: colors.primary.green[50],
-    color: colors.primary.green[500],
-    border: `1px solid ${colors.primary.green[500]}`,
+    color: colors.primary.green[600],
+    border: 'none',
   },
   warning: {
     background: colors.secondary.yellow[50],
-    color: '#8B7000', // Dark yellow for readability
+    color: '#8B7000',
     border: 'none',
   },
   error: {
     background: colors.secondary.red[50],
-    color: colors.secondary.red[500],
-    border: `1px solid ${colors.secondary.red[500]}`,
+    color: colors.secondary.red[600],
+    border: 'none',
   },
   info: {
     background: colors.primary.blue[50],
     color: colors.primary.blue[600],
-    border: `1px solid ${colors.primary.blue[500]}`,
+    border: 'none',
   },
   open: {
     background: colors.secondary.orange[50],
-    color: colors.secondary.orange[500],
-    border: `1px solid ${colors.secondary.orange[500]}`,
+    color: colors.secondary.orange[600],
+    border: 'none',
   },
   pending: {
     background: colors.secondary.yellow[50],

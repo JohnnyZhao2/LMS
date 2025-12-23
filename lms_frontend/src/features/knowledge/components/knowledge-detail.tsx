@@ -164,7 +164,7 @@ export const KnowledgeDetail: React.FC = () => {
                 text={knowledge.knowledge_type_display}
               />
               {knowledge.line_type && (
-                <Tag style={{ margin: 0, borderRadius: 'var(--radius-sm)' }}>
+                <Tag style={{ margin: 0, borderRadius: 'var(--radius-full)' }}>
                   {knowledge.line_type.name}
                 </Tag>
               )}
@@ -236,7 +236,7 @@ export const KnowledgeDetail: React.FC = () => {
                   background: 'var(--color-primary-50)',
                   color: 'var(--color-primary-600)',
                   border: 'none',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--radius-full)',
                 }}
               >
                 {tag.name}
@@ -250,7 +250,7 @@ export const KnowledgeDetail: React.FC = () => {
                   background: 'rgba(155, 0, 255, 0.1)',
                   color: 'var(--color-purple-500)',
                   border: 'none',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: 'var(--radius-full)',
                 }}
               >
                 {tag.name}

@@ -116,7 +116,7 @@ export const UserList: React.FC = () => {
               key={role.code}
               style={{
                 margin: 0,
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--radius-full)',
                 background: 'var(--color-primary-50)',
                 color: 'var(--color-primary-600)',
                 border: 'none',

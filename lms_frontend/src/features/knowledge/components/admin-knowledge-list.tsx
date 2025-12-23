@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Row, Col, Button, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Tabs, Pagination } from 'antd';
-import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined, EyeOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
@@ -102,24 +102,24 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
 
   return (
     <div className={getCardClassName()}>
-      {/* 顶部：左上角状态标签和操作标签，右上角操作菜单 */}
+      {/* 顶部：左上角操作标签，右上角操作菜单 */}
       <div className={styles.cardHeader}>
         <div className={styles.cardHeaderLeft}>
-          {/* 修订中状态标签 */}
-          {isRevising && (
-            <span className={styles.revisingTag}>
-              <SyncOutlined spin style={{ marginRight: 4 }} />
-              修订中
-            </span>
-          )}
-          {/* 操作标签 */}
+          {/* 仅保留核心的操作标签，减少视觉疲劳 */}
           {firstOperationTag && (
             <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
               {firstOperationTag}
             </span>
           )}
+          {/* 修订中和草稿状态通过卡片整体样式表达，不再使用文字标签 */}
         </div>
         <div className={styles.cardHeaderRight}>
+          {isRevising && (
+            <span className={styles.revisingTag}>
+              <SyncOutlined spin style={{ marginRight: 6, fontSize: 12 }} />
+              修订中
+            </span>
+          )}
           <Dropdown
             menu={{ items: menuItems, onClick: handleMenuClick }}
             trigger={['click']}
@@ -145,15 +145,22 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
 
       {/* 底部信息：姓名、时间、阅读次数 */}
       <div className={styles.cardFooter} onClick={() => onView(item.id)}>
-        <span className={styles.footerItem}>
-          {item.updated_by_name || item.created_by_name || '-'}
-        </span>
-        <span className={styles.footerItem}>
-          {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
-        </span>
-        <span className={styles.footerItem}>
-          阅读 {item.view_count || 0} 次
-        </span>
+        <div className={styles.footerLeft}>
+          <div className={styles.footerItem}>
+            <div className={styles.userAvatar}>
+              {(item.updated_by_name || item.created_by_name || '?').charAt(0)}
+            </div>
+            <span>{item.updated_by_name || item.created_by_name || '-'}</span>
+          </div>
+          <div className={styles.footerItem}>
+            <CalendarOutlined />
+            <span>{item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}</span>
+          </div>
+        </div>
+        <div className={styles.footerRight}>
+          <EyeOutlined />
+          <span>{item.view_count || 0}</span>
+        </div>
       </div>
     </div>
   );

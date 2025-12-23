@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { KnowledgeListItem, KnowledgeType, KnowledgeStatus } from '@/types/api';
+import type { KnowledgeListItem, KnowledgeType, PaginatedResponse } from '@/types/api';
 
 /**
  * 获取学员知识列表参数
@@ -16,8 +16,10 @@ interface GetStudentKnowledgeListParams {
   operation_tag_id?: number;
   /** 搜索关键词 */
   search?: string;
-  /** 发布状态（默认只展示已发布） */
-  status?: KnowledgeStatus;
+  /** 页码 */
+  page?: number;
+  /** 每页数量 */
+  pageSize?: number;
 }
 
 /**
@@ -33,7 +35,8 @@ export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = 
     system_tag_id,
     operation_tag_id,
     search,
-    status = 'PUBLISHED',
+    page = 1,
+    pageSize = 20,
   } = params;
 
   return useQuery({
@@ -44,7 +47,8 @@ export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = 
       system_tag_id,
       operation_tag_id,
       search,
-      status,
+      page,
+      pageSize,
     ],
     queryFn: () => {
       const searchParams = new URLSearchParams();
@@ -53,10 +57,11 @@ export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = 
       if (system_tag_id) searchParams.set('system_tag_id', String(system_tag_id));
       if (operation_tag_id) searchParams.set('operation_tag_id', String(operation_tag_id));
       if (search) searchParams.set('search', search);
-      if (status) searchParams.set('status', status);
+      searchParams.set('page', String(page));
+      searchParams.set('page_size', String(pageSize));
 
       const queryString = searchParams.toString();
-      return apiClient.get<KnowledgeListItem[]>(`/knowledge/${queryString ? `?${queryString}` : ''}`);
+      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge/${queryString ? `?${queryString}` : ''}`);
     },
   });
 };

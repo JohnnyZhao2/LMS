@@ -29,8 +29,8 @@ export type StatusType =
 const statusStyles: Record<StatusType, { bg: string; color: string; border: string }> = {
   success: {
     bg: 'var(--color-success-50)',
-    color: 'var(--color-success-500)',
-    border: '1px solid var(--color-success-500)',
+    color: 'var(--color-success-600)',
+    border: 'none',
   },
   warning: {
     bg: 'var(--color-warning-50)',
@@ -39,13 +39,13 @@ const statusStyles: Record<StatusType, { bg: string; color: string; border: stri
   },
   error: {
     bg: 'var(--color-error-50)',
-    color: 'var(--color-error-500)',
-    border: '1px solid var(--color-error-500)',
+    color: 'var(--color-error-600)',
+    border: 'none',
   },
   info: {
     bg: 'var(--color-primary-50)',
     color: 'var(--color-primary-600)',
-    border: '1px solid var(--color-primary-500)',
+    border: 'none',
   },
   pending: {
     bg: 'var(--color-warning-50)',
@@ -54,18 +54,18 @@ const statusStyles: Record<StatusType, { bg: string; color: string; border: stri
   },
   open: {
     bg: '#FFF4ED',
-    color: 'var(--color-orange-500)',
-    border: '1px solid var(--color-orange-500)',
+    color: 'var(--color-orange-600)',
+    border: 'none',
   },
   closed: {
     bg: 'var(--color-error-50)',
-    color: 'var(--color-error-500)',
-    border: '1px solid var(--color-error-500)',
+    color: 'var(--color-error-600)',
+    border: 'none',
   },
   processing: {
     bg: 'var(--color-primary-50)',
     color: 'var(--color-primary-600)',
-    border: '1px solid var(--color-primary-500)',
+    border: 'none',
   },
   default: {
     bg: 'var(--color-gray-100)',
@@ -145,9 +145,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         gap: currentSize.gap,
         padding: currentSize.padding,
         fontSize: currentSize.fontSize,
-        fontWeight: 600,
+        fontWeight: 500,
         lineHeight: 1,
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: 'var(--radius-full)',
         background: styles.bg,
         color: styles.color,
         border: styles.border,
