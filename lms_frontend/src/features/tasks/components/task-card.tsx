@@ -1,4 +1,4 @@
-import { Typography, Progress, Tag } from 'antd';
+import { Typography, Progress, Tag, Dropdown, Button, Modal, message } from 'antd';
 import {
   ClockCircleOutlined,
   UserOutlined,
@@ -10,13 +10,23 @@ import {
   TeamOutlined,
   DeploymentUnitOutlined,
   FieldTimeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  MoreOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Card, StatusBadge } from '@/components/ui';
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
+import { useDeleteTask } from '../api/delete-task';
+import { useCloseTask } from '../api/close-task';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 type TaskCardProps =
   | {
@@ -87,6 +97,12 @@ const statusConfig = {
  */
 export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
   const navigate = useNavigate();
+  const { user, currentRole } = useAuth();
+  const deleteTask = useDeleteTask();
+  const closeTask = useCloseTask();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  
   const isStudentView = variant === 'student';
   const studentTask = isStudentView ? (task as StudentTaskCenterItem) : null;
   const managerTask = !isStudentView ? (task as TaskListItem) : null;
@@ -112,32 +128,163 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
   const isTaskClosed = isStudentView ? studentTask!.status === 'COMPLETED' : managerClosed;
   const isUrgent = !isTaskClosed && dayjs(task.deadline).diff(dayjs(), 'day') <= 1;
 
+  // 检查是否有权限操作任务（管理员或创建者）
+  // 对于 manager 视图，显示操作按钮；对于学生视图，不显示
+  const isAdmin = currentRole === 'ADMIN';
+  const isCreator = managerTask?.created_by === user?.id;
+  const canEditTask = !isStudentView && (isAdmin || isCreator);
+
+  /**
+   * 处理编辑
+   */
+  const handleEdit = () => {
+    navigate(`/tasks/${targetTaskId}/edit`);
+  };
+
+  /**
+   * 处理关闭任务
+   */
+  const handleCloseClick = () => {
+    setCloseModalOpen(true);
+  };
+
+  /**
+   * 确认关闭任务
+   */
+  const handleClose = async () => {
+    try {
+      await closeTask.mutateAsync(targetTaskId);
+      message.success('任务已关闭');
+      setCloseModalOpen(false);
+    } catch (error) {
+      showApiError(error, '关闭任务失败');
+    }
+  };
+
+  /**
+   * 处理删除
+   */
+  const handleDeleteClick = () => {
+    setDeleteModalOpen(true);
+  };
+
+  /**
+   * 确认删除任务
+   */
+  const handleDelete = async () => {
+    try {
+      await deleteTask.mutateAsync(targetTaskId);
+      message.success('任务已删除');
+      setDeleteModalOpen(false);
+    } catch (error) {
+      showApiError(error, '删除失败');
+    }
+  };
+
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'edit',
+      label: '修改',
+      icon: <EditOutlined />,
+      onClick: handleEdit,
+      disabled: managerClosed, // 已关闭的任务无法修改
+    },
+    ...(isAdmin && !managerClosed
+      ? [
+          {
+            key: 'close',
+            label: '关闭任务',
+            icon: <StopOutlined />,
+            onClick: handleCloseClick,
+          },
+        ]
+      : []),
+    {
+      key: 'delete',
+      label: '删除',
+      icon: <DeleteOutlined />,
+      danger: true,
+      onClick: handleDeleteClick,
+    },
+  ];
+
   return (
-    <Card
-      hoverable
-      onClick={() => navigate(`/tasks/${targetTaskId}`)}
-      style={{ height: '100%', cursor: 'pointer' }}
-    >
-      {/* 顶部类型标识 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-4)' }}>
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 'var(--radius-lg)',
-            background: typeConfig.gradient,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: 20,
-            boxShadow: `0 4px 12px ${typeConfig.color}40`,
-          }}
-        >
-          {typeConfig.icon}
+    <>
+      <Card
+        hoverable
+        onClick={() => navigate(`/tasks/${targetTaskId}`)}
+        style={{ height: '100%', cursor: 'pointer', position: 'relative' }}
+      >
+        {/* 操作按钮 - 仅在管理员/导师视图且有权限时显示 */}
+        {canEditTask && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 100,
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Dropdown 
+              menu={{ items: menuItems }} 
+              trigger={['click']} 
+              placement="bottomRight"
+              getPopupContainer={(trigger) => trigger.parentElement || document.body}
+            >
+              <Button
+                type="text"
+                icon={<MoreOutlined />}
+                size="small"
+                style={{
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  background: 'white',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                  color: 'var(--color-gray-700)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--color-gray-50)';
+                  e.currentTarget.style.color = 'var(--color-gray-900)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.color = 'var(--color-gray-700)';
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              />
+            </Dropdown>
+          </div>
+        )}
+
+        {/* 顶部类型标识 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-4)' }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 'var(--radius-lg)',
+              background: typeConfig.gradient,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: 20,
+              boxShadow: `0 4px 12px ${typeConfig.color}40`,
+            }}
+          >
+            {typeConfig.icon}
+          </div>
+          <StatusBadge status={stConfig.status} text={statusLabel} size="small" />
         </div>
-        <StatusBadge status={stConfig.status} text={statusLabel} size="small" />
-      </div>
 
       {/* 标题和描述 */}
       <Text
@@ -154,9 +301,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
       </Text>
       
         {description && (
-        <Text
+        <Paragraph
           type="secondary"
-          ellipsis={{ rows: 2 }}
+          ellipsis={{ rows: 2, tooltip: description }}
           style={{
             display: 'block',
             marginBottom: 'var(--spacing-4)',
@@ -165,7 +312,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
           }}
         >
           {description}
-        </Text>
+        </Paragraph>
       )}
 
       {/* 进度条 */}
@@ -274,5 +421,32 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
         </div>
       )}
     </Card>
+
+    {/* 关闭任务确认弹窗 */}
+    <Modal
+      open={closeModalOpen}
+      title="确认关闭任务"
+      onOk={handleClose}
+      onCancel={() => setCloseModalOpen(false)}
+      okText="关闭任务"
+      cancelText="取消"
+      okButtonProps={{ loading: closeTask.isPending }}
+    >
+      <p>确定要关闭任务「{title}」吗？关闭后未完成的分配记录将标记为已逾期。</p>
+    </Modal>
+
+    {/* 删除确认弹窗 */}
+    <Modal
+      open={deleteModalOpen}
+      title="确认删除"
+      onOk={handleDelete}
+      onCancel={() => setDeleteModalOpen(false)}
+      okText="删除"
+      cancelText="取消"
+      okButtonProps={{ danger: true, loading: deleteTask.isPending }}
+    >
+      <p>确定要删除任务「{title}」吗？此操作不可恢复。</p>
+    </Modal>
+    </>
   );
 };

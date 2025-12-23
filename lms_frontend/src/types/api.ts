@@ -630,6 +630,7 @@ export interface TaskListItem {
   knowledge_count: number;
   quiz_count: number;
   assignee_count: number;
+  created_by?: number;
   created_by_name: string;
   created_at: string;
   updated_at: string;

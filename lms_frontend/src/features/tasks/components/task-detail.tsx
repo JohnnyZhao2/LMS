@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Typography, Tag, Spin, List, Descriptions, message, Modal, Space, Divider } from 'antd';
+import { Button, Typography, Tag, Spin, List, Descriptions, message, Modal, Space, Divider, Dropdown } from 'antd';
 import {
   CheckCircleOutlined,
   PlayCircleOutlined,
@@ -10,6 +10,8 @@ import {
   ClockCircleOutlined,
   UserOutlined,
   CalendarOutlined,
+  EditOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import { useCompleteLearning } from '../api/complete-learning';
@@ -186,6 +188,13 @@ export const TaskDetail: React.FC = () => {
       ? assignmentStatusLabelMap[myAssignment.status]
       : myAssignment?.status;
 
+  // 检查是否有编辑权限（管理员或创建者，且任务未关闭）
+  // 注意：TaskDetail 中没有 created_by 字段，需要通过其他方式判断
+  // 这里假设只有管理员、导师和室经理可以编辑，且任务未关闭
+  const isAdmin = currentRole === 'ADMIN';
+  const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
+  const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
+
   const handleCompleteLearning = async (knowledgeId?: number) => {
     if (!knowledgeId) {
       message.warning('无法获取知识文档信息');
@@ -265,7 +274,51 @@ export const TaskDetail: React.FC = () => {
       </div>
 
       {/* 任务信息卡片 */}
-      <Card style={{ marginBottom: 'var(--spacing-6)' }}>
+      <Card style={{ marginBottom: 'var(--spacing-6)', position: 'relative' }}>
+        {/* 编辑按钮 - 仅在有权限时显示 */}
+        {canEditTask && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 10,
+            }}
+          >
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'edit',
+                    label: '编辑任务',
+                    icon: <EditOutlined />,
+                    onClick: () => navigate(`/tasks/${taskId}/edit`),
+                  },
+                ],
+              }}
+              trigger={['click']}
+              placement="bottomRight"
+            >
+              <Button
+                type="text"
+                icon={<MoreOutlined />}
+                size="small"
+                style={{
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  background: 'white',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                }}
+              />
+            </Dropdown>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-5)' }}>
           {/* 类型图标 */}
           <div
@@ -292,6 +345,11 @@ export const TaskDetail: React.FC = () => {
                 status={task.task_type === 'EXAM' ? 'error' : task.task_type === 'PRACTICE' ? 'info' : 'success'}
                 text={task.task_type_display}
               />
+              {task.is_closed && (
+                <Tag color="default" icon={<CheckCircleOutlined />}>
+                  已关闭
+                </Tag>
+              )}
             </div>
             
             <Title level={3} style={{ margin: 0, marginBottom: 'var(--spacing-3)' }}>

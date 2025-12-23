@@ -395,3 +395,4 @@ class KnowledgeStatsSerializer(serializers.Serializer):
     total = serializers.IntegerField(help_text='总文档数')
     published = serializers.IntegerField(help_text='已发布数')
     emergency = serializers.IntegerField(help_text='应急类型文档数')
+    monthly_new = serializers.IntegerField(help_text='本月新增文档数')

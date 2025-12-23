@@ -43,6 +43,7 @@ from .serializers import (
     LearningTaskCreateSerializer,
     PracticeTaskCreateSerializer,
     ExamTaskCreateSerializer,
+    TaskUpdateSerializer,
     StudentAssignmentListSerializer,
     StudentLearningTaskDetailSerializer,
     CompleteKnowledgeLearningSerializer,
@@ -336,7 +337,10 @@ class TaskListView(APIView):
 
 class TaskDetailView(APIView):
     """
-    Task detail endpoint.
+    Task detail, update, and delete endpoint.
+    
+    支持任务的查询、更新和删除操作。
+    管理员可以操作所有任务，导师只能操作自己创建的任务。
     """
     permission_classes = [IsAuthenticated]
     
@@ -356,6 +360,53 @@ class TaskDetailView(APIView):
                 message='任务不存在'
             )
     
+    def check_edit_permission(self, task, user):
+        """
+        检查用户是否有编辑任务的权限。
+        
+        管理员可以编辑所有任务，导师只能编辑自己创建的任务。
+        """
+        current_role = get_current_role(user)
+        if current_role == 'ADMIN':
+            return True  # Admin can edit all tasks
+        elif current_role in ['MENTOR', 'DEPT_MANAGER']:
+            # Can only edit tasks they created
+            if task.created_by != user:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权操作此任务'
+                )
+            return True
+        else:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员和导师可以操作任务'
+            )
+    
+    def check_read_permission(self, task, user):
+        """
+        检查用户是否有查看任务的权限。
+        """
+        current_role = get_current_role(user)
+        if current_role == 'ADMIN':
+            return True  # Admin can access all tasks
+        elif current_role in ['MENTOR', 'DEPT_MANAGER']:
+            # Can access tasks they created
+            if task.created_by != user:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权访问此任务'
+                )
+            return True
+        else:
+            # Students can only access tasks assigned to them
+            if not task.assignments.filter(assignee=user).exists():
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权访问此任务'
+                )
+            return True
+    
     @extend_schema(
         summary='获取任务详情',
         description='获取指定任务的详细信息',
@@ -367,28 +418,82 @@ class TaskDetailView(APIView):
     )
     def get(self, request, pk):
         task = self.get_object(pk)
-        
-        # Check access permission
-        current_role = get_current_role(request.user)
-        if current_role == 'ADMIN':
-            pass  # Admin can access all tasks
-        elif current_role in ['MENTOR', 'DEPT_MANAGER']:
-            # Can access tasks they created
-            if task.created_by != request.user:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问此任务'
-                )
-        else:
-            # Students can only access tasks assigned to them
-            if not task.assignments.filter(assignee=request.user).exists():
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问此任务'
-                )
+        self.check_read_permission(task, request.user)
         
         serializer = TaskDetailSerializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @extend_schema(
+        summary='更新任务',
+        description='''
+        更新任务信息。
+        
+        权限要求：
+        - 管理员：可以更新所有任务
+        - 导师：只能更新自己创建的任务
+        
+        注意：已关闭的任务无法修改。
+        ''',
+        request=TaskUpdateSerializer,
+        responses={
+            200: TaskDetailSerializer,
+            400: OpenApiResponse(description='参数错误或任务已关闭'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['任务管理']
+    )
+    def patch(self, request, pk):
+        """部分更新任务信息"""
+        task = self.get_object(pk)
+        self.check_edit_permission(task, request.user)
+        
+        # 检查任务是否已关闭
+        if task.is_closed:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='任务已关闭，无法修改'
+            )
+        
+        serializer = TaskUpdateSerializer(
+            task,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        updated_task = serializer.save()
+        
+        response_serializer = TaskDetailSerializer(updated_task)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+    
+    @extend_schema(
+        summary='删除任务',
+        description='''
+        删除任务（软删除）。
+        
+        权限要求：
+        - 管理员：可以删除所有任务
+        - 导师：只能删除自己创建的任务
+        
+        注意：已删除的任务无法恢复。
+        ''',
+        responses={
+            204: OpenApiResponse(description='删除成功'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['任务管理']
+    )
+    def delete(self, request, pk):
+        """删除任务（软删除）"""
+        task = self.get_object(pk)
+        self.check_edit_permission(task, request.user)
+        
+        # 软删除任务
+        task.is_deleted = True
+        task.save(update_fields=['is_deleted'])
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TaskCloseView(APIView):

@@ -3,7 +3,7 @@ import {
   Table, Card, Button, Space, Modal, message, Radio, Form, Tag 
 } from 'antd';
 import { 
-  PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined 
+  EditOutlined, DeleteOutlined, SendOutlined 
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '@/features/quizzes/api/get-quizzes';
@@ -15,19 +15,20 @@ import dayjs from 'dayjs';
 
 interface QuizTabProps {
   onQuickPublish: (quizIds: number[], taskType: 'PRACTICE' | 'EXAM') => void;
+  search?: string;
 }
 
 /**
  * 试卷管理标签页
  * 支持多选和快速发布功能
  */
-export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish }) => {
+export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' }) => {
   const [page, setPage] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [quickPublishModalVisible, setQuickPublishModalVisible] = useState(false);
   const [form] = Form.useForm();
 
-  const { data, isLoading } = useQuizzes(page);
+  const { data, isLoading } = useQuizzes({ page, search: search || undefined });
   const deleteQuiz = useDeleteQuiz();
   const navigate = useNavigate();
   const { user, currentRole } = useAuth();
@@ -156,28 +157,19 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish }) => {
   };
 
   return (
-    <Card>
+    <Card style={{ height: '100%' }}>
       {/* 工具栏 */}
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Space>
-          {selectedRowKeys.length > 0 && (
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={() => setQuickPublishModalVisible(true)}
-            >
-              快速发布 ({selectedRowKeys.length})
-            </Button>
-          )}
-        </Space>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={() => navigate('/test-center/quizzes/create')}
-        >
-          新建试卷
-        </Button>
-      </div>
+      {selectedRowKeys.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={() => setQuickPublishModalVisible(true)}
+          >
+            快速发布 ({selectedRowKeys.length})
+          </Button>
+        </div>
+      )}
 
       {/* 试卷表格 */}
       <Table

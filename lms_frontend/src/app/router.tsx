@@ -124,6 +124,14 @@ export const AppRouter: React.FC = () => {
         }
       />
       <Route
+        path={`${ROUTES.TASKS}/:id/edit`}
+        element={
+          <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+            <TaskForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path={`${ROUTES.TASKS}/:id`}
         element={
           <ProtectedRoute>

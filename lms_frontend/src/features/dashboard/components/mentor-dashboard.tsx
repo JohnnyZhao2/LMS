@@ -1,4 +1,4 @@
-import { Row, Col, Typography, Button, Skeleton } from 'antd';
+import { Row, Col, Typography, Button, Skeleton, Space } from 'antd';
 import {
   UserOutlined,
   CheckCircleOutlined,
@@ -9,12 +9,14 @@ import {
   TrophyOutlined,
   TeamOutlined,
   BarChartOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Card, PageHeader, StaggeredList } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
 
 const { Text, Title } = Typography;
 
@@ -107,10 +109,12 @@ const quickActions = [
  */
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
+  const { data: knowledgeStats, isLoading: knowledgeStatsLoading } = useKnowledgeStats();
   const navigate = useNavigate();
   const { user, availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
+  const isAdmin = currentRole === 'ADMIN';
 
   return (
     <div>
@@ -232,6 +236,47 @@ export const MentorDashboard: React.FC = () => {
           </Col>
         ))}
       </Row>
+
+      {/* 知识库资产统计（仅管理员） */}
+      {isAdmin && (
+        <div style={{ marginBottom: 'var(--spacing-6)' }}>
+          <Text strong style={{ fontSize: 'var(--font-size-lg)', display: 'block', marginBottom: 'var(--spacing-4)' }}>
+            知识库资产
+          </Text>
+          <Card>
+            {knowledgeStatsLoading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <Space size="large" style={{ fontSize: '14px' }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                    文档总数
+                  </Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-text-primary)' }}>
+                    {knowledgeStats?.total || 0}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                    应急类总数
+                  </Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-error-500)' }}>
+                    {knowledgeStats?.emergency || 0}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                    本月新增
+                  </Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-success-500)' }}>
+                    {knowledgeStats?.monthly_new || 0}
+                  </Text>
+                </div>
+              </Space>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* 快捷操作 */}
       <div style={{ marginBottom: 'var(--spacing-6)' }}>

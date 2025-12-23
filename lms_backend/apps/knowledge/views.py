@@ -525,10 +525,18 @@ class KnowledgeStatsView(APIView):
         published = queryset.filter(status='PUBLISHED', is_current=True).count()
         emergency = queryset.filter(knowledge_type='EMERGENCY').count()
         
+        # 计算本月新增（基于 created_at）
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_new = queryset.filter(created_at__gte=first_day_of_month).count()
+        
         stats = {
             'total': total,
             'published': published,
             'emergency': emergency,
+            'monthly_new': monthly_new,
         }
         
         serializer = KnowledgeStatsSerializer(stats)

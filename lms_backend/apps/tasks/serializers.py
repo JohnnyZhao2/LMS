@@ -90,6 +90,7 @@ class TaskQuizSerializer(serializers.ModelSerializer):
 
 class TaskListSerializer(serializers.ModelSerializer):
     """Serializer for task list view."""
+    created_by = serializers.IntegerField(source='created_by.id', read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     task_type_display = serializers.CharField(source='get_task_type_display', read_only=True)
     knowledge_count = serializers.ReadOnlyField()
@@ -103,7 +104,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'deadline', 'start_time', 'duration', 'pass_score',
             'is_closed', 'closed_at',
             'knowledge_count', 'quiz_count', 'assignee_count',
-            'created_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
 
 
@@ -816,3 +817,300 @@ class CompleteKnowledgeLearningSerializer(serializers.Serializer):
         if not Knowledge.objects.filter(id=value, is_deleted=False).exists():
             raise serializers.ValidationError('知识文档不存在')
         return value
+
+
+class TaskUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating tasks.
+    
+    允许更新任务的标题、描述、截止时间等基本信息，以及关联的知识文档、试卷和学员。
+    管理员和导师可以更新自己创建的任务。
+    """
+    title = serializers.CharField(max_length=200, required=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    deadline = serializers.DateTimeField(required=False)
+    
+    # 考试任务专用字段
+    start_time = serializers.DateTimeField(required=False, allow_null=True)
+    duration = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    pass_score = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        allow_null=True
+    )
+    
+    # 关联资源字段
+    knowledge_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        help_text='知识文档ID列表'
+    )
+    quiz_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        help_text='试卷ID列表（练习任务）'
+    )
+    quiz_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text='试卷ID（考试任务，只能选择一个）'
+    )
+    assignee_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        help_text='学员ID列表'
+    )
+    
+    class Meta:
+        model = Task
+        fields = [
+            'title', 'description', 'deadline',
+            'start_time', 'duration', 'pass_score',
+            'knowledge_ids', 'quiz_ids', 'quiz_id', 'assignee_ids'
+        ]
+    
+    def validate_knowledge_ids(self, value):
+        """验证知识文档ID"""
+        if value is None:
+            return value
+        
+        if not value:
+            # 学习任务必须至少有一个知识文档
+            instance = self.instance
+            if instance and instance.task_type == 'LEARNING':
+                raise serializers.ValidationError('学习任务必须至少选择一个知识文档')
+            return value
+        
+        # 查询已发布且未删除的知识文档
+        published_knowledge = Knowledge.objects.filter(
+            id__in=value,
+            is_deleted=False,
+            status='PUBLISHED'
+        )
+        published_ids = set(published_knowledge.values_list('id', flat=True))
+        
+        invalid_ids = set(value) - published_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'以下知识文档不可用: {list(invalid_ids)}')
+        
+        return value
+    
+    def validate_quiz_ids(self, value):
+        """验证试卷ID列表（练习任务）"""
+        if value is None:
+            return value
+        
+        instance = self.instance
+        if instance and instance.task_type == 'PRACTICE':
+            if not value:
+                raise serializers.ValidationError('练习任务必须至少选择一个试卷')
+        
+        if value:
+            existing_ids = set(
+                Quiz.objects.filter(
+                    id__in=value,
+                    is_deleted=False,
+                    status='PUBLISHED'
+                ).values_list('id', flat=True)
+            )
+            invalid_ids = set(value) - existing_ids
+            if invalid_ids:
+                raise serializers.ValidationError(f'以下试卷不存在: {list(invalid_ids)}')
+        
+        return value
+    
+    def validate_quiz_id(self, value):
+        """验证试卷ID（考试任务）"""
+        instance = self.instance
+        if instance and instance.task_type == 'EXAM':
+            if value is None:
+                raise serializers.ValidationError('考试任务必须选择一个试卷')
+            
+            if not Quiz.objects.filter(id=value, is_deleted=False, status='PUBLISHED').exists():
+                raise serializers.ValidationError('试卷不存在')
+        
+        return value
+    
+    def validate_assignee_ids(self, value):
+        """验证学员ID列表"""
+        if value is None:
+            return value
+        
+        if not value:
+            raise serializers.ValidationError('请至少选择一个学员')
+        
+        existing_ids = set(
+            User.objects.filter(
+                id__in=value,
+                is_active=True
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'学员不存在或已停用: {list(invalid_ids)}')
+        
+        return value
+    
+    def validate(self, attrs):
+        """验证更新数据，特别是考试任务的特殊字段"""
+        # 如果是考试任务，验证开始时间和截止时间
+        instance = self.instance
+        if instance and instance.task_type == 'EXAM':
+            start_time = attrs.get('start_time', instance.start_time if instance else None)
+            deadline = attrs.get('deadline', instance.deadline if instance else None)
+            
+            if start_time and deadline and start_time >= deadline:
+                raise serializers.ValidationError({
+                    'start_time': '考试开始时间必须早于截止时间'
+                })
+            
+            # 考试任务只能有一个试卷
+            quiz_id = attrs.get('quiz_id')
+            if quiz_id is None and instance:
+                # 如果没有提供 quiz_id，检查是否已有试卷
+                if instance.task_quizzes.count() == 0:
+                    raise serializers.ValidationError({
+                        'quiz_id': '考试任务必须选择一个试卷'
+                    })
+        
+        # 验证学员范围
+        assignee_ids = attrs.get('assignee_ids')
+        if assignee_ids is not None:
+            request = self.context.get('request')
+            if request and request.user:
+                from apps.users.permissions import get_current_role, validate_students_in_scope
+                current_role = get_current_role(request.user)
+                is_valid, invalid_ids = validate_students_in_scope(
+                    request.user, assignee_ids, current_role
+                )
+                if not is_valid:
+                    if current_role == 'MENTOR':
+                        raise serializers.ValidationError({
+                            'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
+                        })
+                    elif current_role == 'DEPT_MANAGER':
+                        raise serializers.ValidationError({
+                            'assignee_ids': f'以下学员不在您的部门: {invalid_ids}'
+                        })
+                    else:
+                        raise serializers.ValidationError({
+                            'assignee_ids': f'无权为以下学员分配任务: {invalid_ids}'
+                        })
+        
+        return attrs
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        """更新任务信息"""
+        # 检查任务是否已关闭
+        if instance.is_closed:
+            raise serializers.ValidationError('任务已关闭，无法修改')
+        
+        # 提取关联资源字段
+        knowledge_ids = validated_data.pop('knowledge_ids', None)
+        quiz_ids = validated_data.pop('quiz_ids', None)
+        quiz_id = validated_data.pop('quiz_id', None)
+        assignee_ids = validated_data.pop('assignee_ids', None)
+        
+        # 更新基本字段
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # 验证并保存
+        instance.full_clean()
+        instance.save()
+        
+        # 更新关联知识文档
+        if knowledge_ids is not None:
+            # 删除旧的关联
+            TaskKnowledge.objects.filter(task=instance).delete()
+            # 创建新的关联
+            if knowledge_ids:
+                knowledge_queryset = Knowledge.objects.filter(
+                    id__in=knowledge_ids,
+                    is_deleted=False,
+                    status='PUBLISHED'
+                ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+                knowledge_map = {k.id: k for k in knowledge_queryset}
+                for order, kid in enumerate(knowledge_ids, start=1):
+                    knowledge = knowledge_map.get(kid)
+                    if knowledge:
+                        TaskKnowledge.objects.create(
+                            task=instance,
+                            knowledge=knowledge,
+                            order=order,
+                            resource_uuid=knowledge.resource_uuid,
+                            version_number=knowledge.version_number,
+                            snapshot=TaskKnowledge.build_snapshot(knowledge)
+                        )
+        
+        # 更新关联试卷
+        if instance.task_type == 'EXAM':
+            if quiz_id is not None:
+                # 删除旧的关联
+                TaskQuiz.objects.filter(task=instance).delete()
+                # 创建新的关联
+                if quiz_id:
+                    quiz = Quiz.objects.get(pk=quiz_id)
+                    TaskQuiz.objects.create(
+                        task=instance,
+                        quiz=quiz,
+                        order=1,
+                        resource_uuid=quiz.resource_uuid,
+                        version_number=quiz.version_number,
+                        snapshot=TaskQuiz.build_snapshot(quiz)
+                    )
+        elif instance.task_type == 'PRACTICE':
+            if quiz_ids is not None:
+                # 删除旧的关联
+                TaskQuiz.objects.filter(task=instance).delete()
+                # 创建新的关联
+                if quiz_ids:
+                    quiz_queryset = Quiz.objects.filter(
+                        id__in=quiz_ids,
+                        is_deleted=False,
+                        status='PUBLISHED'
+                    )
+                    quiz_map = {q.id: q for q in quiz_queryset}
+                    for order, qid in enumerate(quiz_ids, start=1):
+                        quiz = quiz_map.get(qid)
+                        if quiz:
+                            TaskQuiz.objects.create(
+                                task=instance,
+                                quiz=quiz,
+                                order=order,
+                                resource_uuid=quiz.resource_uuid,
+                                version_number=quiz.version_number,
+                                snapshot=TaskQuiz.build_snapshot(quiz)
+                            )
+        
+        # 更新分配学员
+        if assignee_ids is not None:
+            # 获取现有分配
+            existing_assignee_ids = set(
+                TaskAssignment.objects.filter(task=instance).values_list('assignee_id', flat=True)
+            )
+            new_assignee_ids = set(assignee_ids)
+            
+            # 删除不再分配的学员
+            to_remove = existing_assignee_ids - new_assignee_ids
+            if to_remove:
+                TaskAssignment.objects.filter(
+                    task=instance,
+                    assignee_id__in=to_remove
+                ).delete()
+            
+            # 添加新分配的学员
+            to_add = new_assignee_ids - existing_assignee_ids
+            for assignee_id in to_add:
+                TaskAssignment.objects.create(
+                    task=instance,
+                    assignee_id=assignee_id
+                )
+        
+        return instance

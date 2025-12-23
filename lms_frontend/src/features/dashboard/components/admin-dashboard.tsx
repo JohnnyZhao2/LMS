@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Card, PageHeader, Button, StatusBadge } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
 
 const { Text, Title } = Typography;
 
@@ -27,6 +28,7 @@ const { Text, Title } = Typography;
  */
 export const AdminDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
+  const { data: knowledgeStats, isLoading: knowledgeStatsLoading } = useKnowledgeStats();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -72,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {[
             { label: '注册成员总数', value: data?.summary?.total_students || 0, icon: <TeamOutlined />, color: 'var(--color-accent)' },
-            { label: '知识库条目', value: 452, icon: <BookOutlined />, color: 'var(--color-success)' },
+            { label: '知识库条目', value: knowledgeStatsLoading ? '...' : (knowledgeStats?.total || 0), icon: <BookOutlined />, color: 'var(--color-success)' },
             { label: '本月发布任务', value: 28, icon: <AuditOutlined />, color: 'var(--color-warning)' },
             { label: '系统正常运行时间', value: '99.9%', icon: <CloudServerOutlined />, color: 'var(--color-accent)' },
           ].map((stat, i) => (
@@ -89,6 +91,44 @@ export const AdminDashboard: React.FC = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* 知识库资产统计 */}
+        <motion.div variants={itemVariants}>
+          <Card 
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <BookOutlined style={{ fontSize: '18px', color: 'var(--color-success)' }} />
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>知识库资产</span>
+              </div>
+            }
+            style={{ marginBottom: '24px' }}
+          >
+            {knowledgeStatsLoading ? (
+              <Skeleton active paragraph={{ rows: 1 }} />
+            ) : (
+              <Space size="large" style={{ fontSize: '14px' }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>文档总数</Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-text-primary)' }}>
+                    {knowledgeStats?.total || 0}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>应急类总数</Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-error-500)' }}>
+                    {knowledgeStats?.emergency || 0}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>本月新增</Text>
+                  <Text strong style={{ fontSize: '20px', color: 'var(--color-success-500)' }}>
+                    {knowledgeStats?.monthly_new || 0}
+                  </Text>
+                </div>
+              </Space>
+            )}
+          </Card>
+        </motion.div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '24px' }}>
           {/* QUICK COMMANDS */}

@@ -9,6 +9,7 @@ export interface KnowledgeStats {
   total: number;
   published: number;
   emergency: number;
+  monthly_new: number;
 }
 
 /**

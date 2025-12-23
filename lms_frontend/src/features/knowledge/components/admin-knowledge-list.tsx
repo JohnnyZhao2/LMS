@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Row, Col, Button, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Space, Tabs, Pagination } from 'antd';
+import { Row, Col, Button, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Tabs, Pagination } from 'antd';
 import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
-import { useKnowledgeStats } from '../api/get-knowledge-stats';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
 import { KnowledgeFormModal } from './knowledge-form-modal';
 import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
@@ -151,14 +150,6 @@ export const AdminKnowledgeList: React.FC = () => {
   const { data: systemTags = [] } = useSystemTags(selectedLineTypeId);
   // 级联获取操作标签（根据已选条线类型）
   const { data: operationTags = [] } = useOperationTags(selectedLineTypeId);
-  
-  // 获取统计数据（后端计算）
-  const { data: stats = { total: 0, published: 0, emergency: 0 } } = useKnowledgeStats({
-    search: search || undefined,
-    line_type_id: selectedLineTypeId,
-    system_tag_id: selectedSystemTagIds[0],
-    operation_tag_id: selectedOperationTagIds[0],
-  });
   
   // 应用状态筛选的数据
   const { data, isLoading, refetch } = useAdminKnowledgeList({
@@ -391,22 +382,6 @@ export const AdminKnowledgeList: React.FC = () => {
               className={styles.searchInput}
               size="large"
             />
-
-            {/* 统计数据 */}
-            <Space className={styles.stats}>
-              <span className={styles.statItem}>
-                <span className={styles.statDot} style={{ backgroundColor: '#1890ff' }} />
-                总文档 {String(stats.total).padStart(2, '0')}
-              </span>
-              <span className={styles.statItem}>
-                <span className={styles.statDot} style={{ backgroundColor: '#52c41a' }} />
-                已发布 {String(stats.published).padStart(2, '0')}
-              </span>
-              <span className={styles.statItem}>
-                <span className={styles.statDot} style={{ backgroundColor: '#ff4d4f' }} />
-                应急 {String(stats.emergency).padStart(2, '0')}
-              </span>
-            </Space>
           </div>
 
           {/* 知识卡片列表 */}
