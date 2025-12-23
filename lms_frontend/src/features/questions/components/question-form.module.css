@@ -1,0 +1,549 @@
+/**
+ * 题目表单样式 - 现代化卡片式设计
+ */
+
+/* 容器 - 紧凑布局 */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-4);
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* 头部区域 - 紧凑 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-5);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 1.5px;
+  color: var(--color-primary-500);
+  text-transform: uppercase;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  color: var(--color-gray-500);
+}
+
+.closeButton:hover {
+  background: var(--color-gray-50);
+  color: var(--color-gray-700);
+  border-color: var(--color-gray-300);
+}
+
+/* 表单主体 - 紧凑 */
+.formBody {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-5);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-gray-100);
+}
+
+/* 行布局 */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+/* 表单项 */
+.fieldLabel {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+  margin-bottom: var(--spacing-2);
+}
+
+.fieldGroup {
+  margin-bottom: var(--spacing-4);
+}
+
+/* 选择框样式 - 紧凑 */
+.selectWrapper {
+  position: relative;
+}
+
+.selectWrapper :global(.ant-select) {
+  width: 100%;
+}
+
+.selectWrapper :global(.ant-select-selector) {
+  height: 36px !important;
+  border-radius: var(--radius-md) !important;
+  border-color: var(--color-gray-200) !important;
+  background: var(--color-gray-50) !important;
+  padding: 0 var(--spacing-3) !important;
+}
+
+.selectWrapper :global(.ant-select-selection-item) {
+  line-height: 34px !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.selectWrapper :global(.ant-select:hover .ant-select-selector) {
+  border-color: var(--color-primary-400) !important;
+}
+
+.selectWrapper :global(.ant-select-focused .ant-select-selector) {
+  border-color: var(--color-primary-500) !important;
+  box-shadow: 0 0 0 3px rgba(77, 108, 255, 0.1) !important;
+}
+
+/* 难度选择器 - 三段式紧凑 */
+.difficultySelector {
+  display: flex;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  gap: 2px;
+  height: 36px;
+}
+
+.difficultyOption {
+  flex: 1;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.difficultyOption:hover:not(.difficultyActive) {
+  background: var(--color-gray-200);
+  color: var(--color-gray-800);
+}
+
+.difficultyActive {
+  background: var(--color-success-500);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 题目类型选择器 - 紧凑 */
+.questionTypeGroup {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.questionTypeButton {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+  transition: all var(--transition-fast);
+  height: 32px;
+}
+
+.questionTypeButton:hover:not(.questionTypeActive) {
+  border-color: var(--color-primary-300);
+  color: var(--color-primary-500);
+}
+
+.questionTypeActive {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+/* 文本域 - 紧凑 */
+.textareaWrapper :global(.ant-input) {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--color-gray-200) !important;
+  background: var(--color-gray-50) !important;
+  padding: var(--spacing-3) !important;
+  font-size: var(--font-size-sm);
+  min-height: 100px !important;
+  resize: vertical;
+}
+
+.textareaWrapper :global(.ant-input:focus),
+.textareaWrapper :global(.ant-input-focused) {
+  border-color: var(--color-primary-500) !important;
+  background: var(--color-white) !important;
+}
+
+.textareaWrapper :global(.ant-input::placeholder) {
+  color: var(--color-gray-400);
+}
+
+/* 分隔线 */
+.divider {
+  height: 1px;
+  background: var(--color-gray-200);
+  margin: var(--spacing-4) 0;
+}
+
+/* 选项配置区域 - 紧凑 */
+.optionsSection {
+  margin-bottom: var(--spacing-4);
+}
+
+.optionsSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+}
+
+.addOptionButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-500);
+  transition: all var(--transition-fast);
+}
+
+.addOptionButton:hover {
+  color: var(--color-success-600);
+}
+
+/* 选项卡片 - 紧凑 */
+.optionsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.optionCard {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.optionCard:hover:not(.optionCorrect) {
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.optionCorrect {
+  border-color: var(--color-success-500);
+  background: rgba(16, 183, 89, 0.05);
+}
+
+.optionLetter {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+}
+
+.optionCorrect .optionLetter {
+  background: var(--color-success-500);
+  color: var(--color-white);
+}
+
+.optionInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-900);
+  outline: none;
+}
+
+.optionInput::placeholder {
+  color: var(--color-gray-400);
+}
+
+.optionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.correctBadge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success-500);
+  letter-spacing: 0.5px;
+}
+
+.deleteOptionButton {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-400);
+  transition: all var(--transition-fast);
+}
+
+.deleteOptionButton:hover {
+  background: var(--color-error-50);
+  color: var(--color-error-500);
+}
+
+/* 判断题选项 - 紧凑 */
+.trueFalseOptions {
+  display: flex;
+  gap: var(--spacing-3);
+}
+
+.trueFalseCard {
+  flex: 1;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.trueFalseCard:hover:not(.trueFalseSelected) {
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.trueFalseSelected {
+  border-color: var(--color-success-500);
+  background: rgba(16, 183, 89, 0.05);
+}
+
+.trueFalseIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-2);
+  font-size: var(--font-size-base);
+  background: var(--color-gray-100);
+  color: var(--color-gray-500);
+}
+
+.trueFalseSelected .trueFalseIcon {
+  background: var(--color-success-500);
+  color: var(--color-white);
+}
+
+.trueFalseLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+}
+
+.trueFalseSelected .trueFalseLabel {
+  color: var(--color-success-600);
+}
+
+/* 专家解析区域 - 紧凑 */
+.expertSection {
+  margin-top: var(--spacing-4);
+}
+
+.expertHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+.expertIcon {
+  color: var(--color-warning-500);
+  font-size: var(--font-size-sm);
+}
+
+.expertTitle {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+}
+
+.expertSubtitle {
+  font-size: 10px;
+  color: var(--color-gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: var(--spacing-1);
+}
+
+/* 简答题答案区 */
+.answerSection {
+  margin-top: var(--spacing-4);
+}
+
+/* 底部按钮区域 - 紧凑 */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-5);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.cancelButton {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+  transition: all var(--transition-fast);
+  height: 36px;
+}
+
+.cancelButton:hover {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+}
+
+.submitButton {
+  padding: var(--spacing-2) var(--spacing-5);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-primary-500);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-white);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  height: 36px;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--color-primary-600);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(77, 108, 255, 0.25);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 错误提示 */
+.fieldError {
+  font-size: 11px;
+  color: var(--color-error-500);
+  margin-top: var(--spacing-1);
+}
+
+/* 分值区域 - 紧凑 */
+.scoreSection {
+  margin-top: var(--spacing-4);
+}
+
+.scoreInput {
+  width: 100px;
+}
+
+.scoreInput :global(.ant-input-number) {
+  width: 100%;
+  height: 36px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.scoreInput :global(.ant-input-number-input) {
+  height: 36px !important;
+  font-size: var(--font-size-sm);
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-4);
+  }
+  
+  .row {
+    grid-template-columns: 1fr;
+  }
+  
+  .formBody {
+    padding: var(--spacing-5);
+  }
+  
+  .questionTypeGroup {
+    flex-direction: column;
+  }
+  
+  .questionTypeButton {
+    width: 100%;
+  }
+  
+  .trueFalseOptions {
+    flex-direction: column;
+  }
+}
+

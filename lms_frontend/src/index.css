@@ -544,10 +544,15 @@ a:hover {
   border-radius: var(--radius-lg) !important;
 }
 
-/* Tag 样式优化 */
+/* Tag 样式优化 - 更小更低调 */
 .ant-tag {
   border-radius: var(--radius-sm) !important;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-normal) !important;
+  font-size: var(--font-size-xs) !important;
+  padding: 0 6px !important;
+  line-height: 18px !important;
+  height: 18px !important;
+  margin-inline-end: 4px !important;
 }
 
 /* Badge 样式优化 */
@@ -565,18 +570,201 @@ a:hover {
   color: var(--color-primary-500) !important;
 }
 
-/* Form 样式优化 */
-.ant-form-item-label > label {
-  font-weight: var(--font-weight-medium) !important;
+/* Form 样式优化 - 更紧凑 */
+.ant-form-item {
+  margin-bottom: var(--spacing-4) !important;
 }
 
-/* Pagination 样式优化 */
-.ant-pagination-item {
+.ant-form-item-label {
+  padding-bottom: var(--spacing-1) !important;
+}
+
+.ant-form-item-label > label {
+  font-weight: var(--font-weight-medium) !important;
+  font-size: var(--font-size-sm) !important;
+  color: var(--color-gray-700) !important;
+  height: auto !important;
+}
+
+.ant-form-item-label > label::after {
+  margin-inline: 2px 4px !important;
+}
+
+/* 表单输入框紧凑化 */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-picker,
+.ant-input-number {
+  height: 36px !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.ant-input-lg,
+.ant-input-affix-wrapper-lg,
+.ant-picker-large,
+.ant-input-number-lg {
+  height: 40px !important;
+}
+
+.ant-input-sm,
+.ant-input-affix-wrapper-sm,
+.ant-picker-small,
+.ant-input-number-sm {
+  height: 28px !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+.ant-select-selector {
+  height: 36px !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.ant-select-selection-item {
+  line-height: 34px !important;
+}
+
+.ant-select-selection-placeholder {
+  line-height: 34px !important;
+}
+
+.ant-select-lg .ant-select-selector {
+  height: 40px !important;
+}
+
+.ant-select-lg .ant-select-selection-item,
+.ant-select-lg .ant-select-selection-placeholder {
+  line-height: 38px !important;
+}
+
+.ant-select-sm .ant-select-selector {
+  height: 28px !important;
+}
+
+.ant-select-sm .ant-select-selection-item,
+.ant-select-sm .ant-select-selection-placeholder {
+  line-height: 26px !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+/* 文本域保持灵活高度 */
+.ant-input[type="textarea"],
+textarea.ant-input {
+  height: auto !important;
+  min-height: 80px !important;
+}
+
+/* 按钮紧凑化 */
+.ant-btn {
+  height: 36px !important;
+  padding: 0 var(--spacing-4) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.ant-btn-lg {
+  height: 44px !important;
+  padding: 0 var(--spacing-5) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.ant-btn-sm {
+  height: 28px !important;
+  padding: 0 var(--spacing-2) !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+.ant-btn-icon-only {
+  width: 36px !important;
+  padding: 0 !important;
+}
+
+.ant-btn-icon-only.ant-btn-lg {
+  width: 44px !important;
+}
+
+.ant-btn-icon-only.ant-btn-sm {
+  width: 28px !important;
+}
+
+/* Pagination 样式优化 - 更紧凑精致 */
+.ant-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.ant-pagination-item,
+.ant-pagination-prev,
+.ant-pagination-next {
+  min-width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
   border-radius: var(--radius-md) !important;
+  font-size: var(--font-size-sm) !important;
+  border-color: var(--color-gray-200) !important;
+  background: var(--color-white) !important;
+}
+
+.ant-pagination-item a {
+  color: var(--color-gray-700) !important;
+}
+
+.ant-pagination-item:hover:not(.ant-pagination-item-active) {
+  border-color: var(--color-primary-300) !important;
+  background: var(--color-primary-50) !important;
+}
+
+.ant-pagination-item:hover:not(.ant-pagination-item-active) a {
+  color: var(--color-primary-500) !important;
 }
 
 .ant-pagination-item-active {
   border-color: var(--color-primary-500) !important;
+  background: var(--color-primary-500) !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--color-white) !important;
+}
+
+.ant-pagination-prev button,
+.ant-pagination-next button {
+  color: var(--color-gray-600) !important;
+}
+
+.ant-pagination-prev:hover button,
+.ant-pagination-next:hover button {
+  color: var(--color-primary-500) !important;
+}
+
+.ant-pagination-disabled button {
+  color: var(--color-gray-300) !important;
+}
+
+.ant-pagination-options {
+  margin-inline-start: var(--spacing-3) !important;
+}
+
+.ant-pagination-options .ant-select-selector {
+  height: 32px !important;
+  border-radius: var(--radius-md) !important;
+  font-size: var(--font-size-sm) !important;
+}
+
+.ant-pagination-total-text {
+  font-size: var(--font-size-sm) !important;
+  color: var(--color-gray-500) !important;
+  margin-inline-end: var(--spacing-3) !important;
+}
+
+/* 简化分页 - 小型分页 */
+.ant-pagination-simple .ant-pagination-simple-pager {
+  height: 32px !important;
+  line-height: 32px !important;
+}
+
+.ant-pagination-simple .ant-pagination-simple-pager input {
+  height: 28px !important;
+  font-size: var(--font-size-sm) !important;
 }
 
 /* Progress 样式优化 */

@@ -1,0 +1,237 @@
+/**
+ * 题目标签页样式 - 清晰的列表布局
+ */
+
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 筛选栏 */
+.filterBar {
+  margin-bottom: var(--spacing-4);
+}
+
+.filterBar :global(.ant-card-body) {
+  padding: var(--spacing-3) var(--spacing-4) !important;
+}
+
+/* 分屏布局 */
+.splitView {
+  flex: 1;
+  display: flex;
+  gap: var(--spacing-4);
+  min-height: 0;
+}
+
+/* 左侧列表卡片 */
+.listCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.listCard :global(.ant-card-head) {
+  min-height: auto;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.listCard :global(.ant-card-head-title) {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0;
+}
+
+.listCard :global(.ant-card-extra) {
+  font-size: var(--font-size-xs);
+  padding: 0;
+}
+
+.listCard :global(.ant-card-body) {
+  flex: 1;
+  overflow: auto;
+  padding: 0 !important;
+}
+
+/* 题目列表项 */
+.questionItem {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-gray-100);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  transition: background var(--transition-fast);
+}
+
+.questionItem:hover {
+  background: var(--color-gray-50);
+}
+
+.questionItem.selected {
+  background: var(--color-primary-50);
+  border-left: 3px solid var(--color-primary-500);
+  padding-left: calc(var(--spacing-4) - 3px);
+}
+
+/* 复选框 */
+.questionCheckbox {
+  margin-top: 2px;
+}
+
+/* 题目内容区 */
+.questionContent {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 标签行 - 低调 */
+.questionMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-1);
+}
+
+/* 条线标签 - 更低调 */
+.lineTypeTag {
+  font-size: 10px !important;
+  padding: 0 4px !important;
+  line-height: 16px !important;
+  height: 16px !important;
+  border-radius: 3px !important;
+  background: var(--color-gray-100) !important;
+  color: var(--color-gray-600) !important;
+  border: none !important;
+}
+
+/* 题型标签 - 更低调 */
+.typeTag {
+  font-size: 10px !important;
+  padding: 0 4px !important;
+  line-height: 16px !important;
+  height: 16px !important;
+  border-radius: 3px !important;
+}
+
+/* 题目正文 - 突出 */
+.questionText {
+  font-size: var(--font-size-sm) !important;
+  color: var(--color-gray-900) !important;
+  line-height: 1.5;
+  margin: 0 !important;
+}
+
+/* 日期 - 低调 */
+.questionDate {
+  font-size: 10px !important;
+  color: var(--color-gray-400) !important;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* 分页 */
+.paginationWrapper {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: center;
+  border-top: 1px solid var(--color-gray-100);
+  background: var(--color-gray-50);
+}
+
+.paginationWrapper :global(.ant-pagination) {
+  justify-content: center;
+}
+
+/* 右侧详情卡片 */
+.detailCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detailCard :global(.ant-card-head) {
+  min-height: auto;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.detailCard :global(.ant-card-head-title) {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0;
+}
+
+.detailCard :global(.ant-card-body) {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-4) !important;
+}
+
+/* 详情区块 */
+.detailSection {
+  margin-bottom: var(--spacing-5);
+}
+
+.detailLabel {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-2);
+  font-weight: var(--font-weight-medium);
+}
+
+.detailContent {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+/* 选项卡片 */
+.optionItem {
+  padding: var(--spacing-2) var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+}
+
+.optionItem.correct {
+  border-color: var(--color-success-500);
+  background: rgba(16, 183, 89, 0.05);
+}
+
+.optionKey {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-600);
+}
+
+.optionItem.correct .optionKey {
+  color: var(--color-success-500);
+}
+
+/* 底部操作栏 */
+.actionBar {
+  margin-top: var(--spacing-4);
+}
+
+.actionBar :global(.ant-card-body) {
+  padding: var(--spacing-3) var(--spacing-4) !important;
+}
+
+/* 空状态 */
+.emptyState {
+  padding: var(--spacing-10) 0;
+}
+
+/* 加载状态 */
+.loadingState {
+  text-align: center;
+  padding: var(--spacing-10) 0;
+}
+

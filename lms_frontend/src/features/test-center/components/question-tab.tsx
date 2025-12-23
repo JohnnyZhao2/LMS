@@ -9,8 +9,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useQuestions, useQuestionDetail } from '@/features/questions/api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
-import type { Question, QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
+import styles from './question-tab.module.css';
 
 const { Option } = Select;
 const { Text, Paragraph } = Typography;
@@ -19,6 +20,16 @@ interface QuestionTabProps {
   onQuickCreateQuiz?: (quizId: number, taskType: 'PRACTICE' | 'EXAM') => void;
   search?: string;
 }
+
+/**
+ * 题型配置
+ */
+const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string }> = {
+  SINGLE_CHOICE: { label: '单选', color: 'blue' },
+  MULTIPLE_CHOICE: { label: '多选', color: 'green' },
+  TRUE_FALSE: { label: '判断', color: 'orange' },
+  SHORT_ANSWER: { label: '简答', color: 'purple' },
+};
 
 /**
  * 题目管理标签页
@@ -89,25 +100,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   };
 
   /**
-   * 获取题型标签
-   */
-  const getTypeTag = (type: QuestionType) => {
-    const colors: Record<QuestionType, string> = {
-      SINGLE_CHOICE: 'blue',
-      MULTIPLE_CHOICE: 'green',
-      TRUE_FALSE: 'orange',
-      SHORT_ANSWER: 'purple',
-    };
-    const labels: Record<QuestionType, string> = {
-      SINGLE_CHOICE: '单选',
-      MULTIPLE_CHOICE: '多选',
-      TRUE_FALSE: '判断',
-      SHORT_ANSWER: '简答',
-    };
-    return <Tag color={colors[type]}>{labels[type]}</Tag>;
-  };
-
-  /**
    * 判断选项是否是正确答案
    */
   const isCorrectAnswer = (optionKey: string, answer?: string | string[]) => {
@@ -119,17 +111,18 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className={styles.container}>
       {/* 筛选栏 */}
-      <Card bodyStyle={{ padding: '12px 24px' }} style={{ marginBottom: 16 }}>
+      <Card className={styles.filterBar}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Space>
-              <Text>题型：</Text>
+            <Space size="small">
+              <Text type="secondary" style={{ fontSize: 12 }}>题型</Text>
               <Select
-                style={{ width: 120 }}
+                style={{ width: 100 }}
                 placeholder="全部"
                 allowClear
+                size="small"
                 value={questionType}
                 onChange={(value) => setQuestionType(value)}
               >
@@ -141,12 +134,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             </Space>
           </Col>
           <Col>
-            <Space>
-              <Text>条线类型：</Text>
+            <Space size="small">
+              <Text type="secondary" style={{ fontSize: 12 }}>条线</Text>
               <Select
-                style={{ width: 150 }}
+                style={{ width: 120 }}
                 placeholder="全部"
                 allowClear
+                size="small"
                 value={lineTypeId}
                 onChange={(value) => setLineTypeId(value)}
               >
@@ -162,60 +156,61 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
       </Card>
 
       {/* 分屏布局 */}
-      <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0 }}>
+      <div className={styles.splitView}>
         {/* 左侧：题目列表 */}
         <Card 
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          bodyStyle={{ flex: 1, overflow: 'auto', padding: 0 }}
+          className={styles.listCard}
           title="题目列表"
-          extra={<Text type="secondary">共 {data?.count || 0} 条</Text>}
+          extra={<Text type="secondary" style={{ fontSize: 11 }}>共 {data?.count || 0} 条</Text>}
         >
           {isLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>
-              <Spin size="large" />
+            <div className={styles.loadingState}>
+              <Spin size="default" />
             </div>
           ) : data?.results && data.results.length > 0 ? (
-            <div>
-              {data.results.map((question) => (
-                <div
-                  key={question.id}
-                  onClick={() => handleQuestionClick(question.id)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid var(--color-border)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    background: selectedQuestionId === question.id ? 'var(--color-primary-bg)' : 'transparent',
-                  }}
-                >
-                  <Checkbox
-                    checked={selectedRowKeys.includes(question.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleToggleSelection(question.id);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Space size="small" style={{ marginBottom: 4 }}>
-                      <Tag>{question.line_type?.name || '未分类'}</Tag>
-                      {getTypeTag(question.question_type)}
-                    </Space>
-                    <Paragraph 
-                      ellipsis={{ rows: 2 }} 
-                      style={{ margin: 0, color: 'var(--color-text)' }}
+            <>
+              <div>
+                {data.results.map((question) => {
+                  const typeConfig = QUESTION_TYPE_CONFIG[question.question_type];
+                  return (
+                    <div
+                      key={question.id}
+                      className={`${styles.questionItem} ${selectedQuestionId === question.id ? styles.selected : ''}`}
+                      onClick={() => handleQuestionClick(question.id)}
                     >
-                      {question.content}
-                    </Paragraph>
-                  </div>
-                  <Text type="secondary" style={{ flexShrink: 0 }}>
-                    {dayjs(question.updated_at).format('MM-DD')}
-                  </Text>
-                </div>
-              ))}
-              <div style={{ padding: 16, textAlign: 'center' }}>
+                      <Checkbox
+                        className={styles.questionCheckbox}
+                        checked={selectedRowKeys.includes(question.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToggleSelection(question.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className={styles.questionContent}>
+                        <div className={styles.questionMeta}>
+                          <Tag className={styles.lineTypeTag}>
+                            {question.line_type?.name || '未分类'}
+                          </Tag>
+                          <Tag color={typeConfig.color} className={styles.typeTag}>
+                            {typeConfig.label}
+                          </Tag>
+                        </div>
+                        <Paragraph 
+                          ellipsis={{ rows: 2 }} 
+                          className={styles.questionText}
+                        >
+                          {question.content}
+                        </Paragraph>
+                      </div>
+                      <span className={styles.questionDate}>
+                        {dayjs(question.updated_at).format('MM-DD')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className={styles.paginationWrapper}>
                 <Pagination
                   current={page}
                   total={data.count || 0}
@@ -223,81 +218,70 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                   onChange={setPage}
                   size="small"
                   showSizeChanger={false}
+                  showTotal={(total) => `${total} 条`}
                 />
               </div>
-            </div>
+            </>
           ) : (
-            <Empty description="暂无题目" style={{ marginTop: 40 }} />
+            <Empty description="暂无题目" className={styles.emptyState} />
           )}
         </Card>
 
         {/* 右侧：题目详情 */}
         <Card 
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-          bodyStyle={{ flex: 1, overflow: 'auto' }}
+          className={styles.detailCard}
           title="题目详情"
           extra={
             questionDetail && (
-              <Space>
+              <Space size="small">
                 <Button
+                  size="small"
                   icon={<EditOutlined />}
                   onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
                 >
                   编辑
                 </Button>
                 <Button
+                  size="small"
                   type={selectedRowKeys.includes(questionDetail.id) ? 'default' : 'primary'}
                   icon={<CheckCircleOutlined />}
                   onClick={handleAddFromDetail}
                 >
-                  {selectedRowKeys.includes(questionDetail.id) ? '取消选择' : '加入组卷'}
+                  {selectedRowKeys.includes(questionDetail.id) ? '取消' : '组卷'}
                 </Button>
               </Space>
             )
           }
         >
           {detailLoading ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>
-              <Spin size="large" />
+            <div className={styles.loadingState}>
+              <Spin size="default" />
             </div>
           ) : questionDetail ? (
             <div>
-              {/* 1. 题干 */}
-              <div style={{ marginBottom: 24 }}>
-                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>题干</Text>
-                <Paragraph style={{ fontSize: 15 }}>
+              {/* 题干 */}
+              <div className={styles.detailSection}>
+                <span className={styles.detailLabel}>题干</span>
+                <Paragraph className={styles.detailContent}>
                   {questionDetail.content}
                 </Paragraph>
               </div>
 
-              {/* 2. 选项 */}
+              {/* 选项 */}
               {questionDetail.options && questionDetail.options.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>选项</Text>
+                <div className={styles.detailSection}>
+                  <span className={styles.detailLabel}>选项</span>
                   {questionDetail.options.map((option) => {
                     const isCorrect = isCorrectAnswer(option.key, questionDetail.answer);
                     return (
                       <div
                         key={option.key}
-                        style={{
-                          padding: '8px 12px',
-                          marginBottom: 8,
-                          borderRadius: 6,
-                          border: isCorrect ? '1px solid var(--color-success)' : '1px solid var(--color-border)',
-                          background: isCorrect ? 'var(--color-success-bg)' : 'transparent',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
+                        className={`${styles.optionItem} ${isCorrect ? styles.correct : ''}`}
                       >
-                        <Text strong style={{ color: isCorrect ? 'var(--color-success)' : undefined }}>
-                          {option.key}.
-                        </Text>
-                        <Text style={{ color: isCorrect ? 'var(--color-success)' : undefined }}>
-                          {option.value}
-                        </Text>
+                        <span className={styles.optionKey}>{option.key}.</span>
+                        <span>{option.value}</span>
                         {isCorrect && (
-                          <CheckCircleOutlined style={{ color: 'var(--color-success)', marginLeft: 'auto' }} />
+                          <CheckCircleOutlined style={{ color: 'var(--color-success-500)', marginLeft: 'auto' }} />
                         )}
                       </div>
                     );
@@ -307,82 +291,86 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
 
               {/* 判断题答案 */}
               {questionDetail.question_type === 'TRUE_FALSE' && questionDetail.answer && (
-                <div style={{ marginBottom: 24 }}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>答案</Text>
-                  <Tag color={questionDetail.answer === 'true' ? 'green' : 'red'}>
-                    {questionDetail.answer === 'true' ? '正确' : '错误'}
+                <div className={styles.detailSection}>
+                  <span className={styles.detailLabel}>答案</span>
+                  <Tag color={questionDetail.answer === 'true' || questionDetail.answer === 'TRUE' ? 'green' : 'red'}>
+                    {questionDetail.answer === 'true' || questionDetail.answer === 'TRUE' ? '正确' : '错误'}
                   </Tag>
                 </div>
               )}
 
               {/* 简答题答案 */}
               {questionDetail.question_type === 'SHORT_ANSWER' && questionDetail.answer && (
-                <div style={{ marginBottom: 24 }}>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>参考答案</Text>
-                  <Paragraph style={{ 
-                    background: 'var(--color-bg-layout)', 
-                    padding: 12, 
-                    borderRadius: 6 
+                <div className={styles.detailSection}>
+                  <span className={styles.detailLabel}>参考答案</span>
+                  <div style={{ 
+                    background: 'var(--color-gray-50)', 
+                    padding: 'var(--spacing-3)', 
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
                   }}>
                     {questionDetail.answer}
-                  </Paragraph>
+                  </div>
                 </div>
               )}
 
-              <Divider />
+              <Divider style={{ margin: 'var(--spacing-4) 0' }} />
 
-              {/* 3. 最后更新人和更新时间 */}
-              <div style={{ marginBottom: 24 }}>
-                <Row gutter={24}>
+              {/* 元信息 */}
+              <div className={styles.detailSection}>
+                <Row gutter={16}>
                   <Col span={12}>
-                    <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>更新人</Text>
-                    <Text>{questionDetail.created_by_name || '-'}</Text>
+                    <span className={styles.detailLabel}>更新人</span>
+                    <Text style={{ fontSize: 13 }}>{questionDetail.created_by_name || '-'}</Text>
                   </Col>
                   <Col span={12}>
-                    <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>更新时间</Text>
-                    <Text>{dayjs(questionDetail.updated_at).format('YYYY-MM-DD HH:mm')}</Text>
+                    <span className={styles.detailLabel}>更新时间</span>
+                    <Text style={{ fontSize: 13 }}>{dayjs(questionDetail.updated_at).format('YYYY-MM-DD HH:mm')}</Text>
                   </Col>
                 </Row>
               </div>
 
-              {/* 4. 题目解析 */}
+              {/* 题目解析 */}
               {questionDetail.explanation && (
-                <div>
-                  <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>题目解析</Text>
-                  <Paragraph style={{ 
-                    background: 'var(--color-bg-layout)', 
-                    padding: 12, 
-                    borderRadius: 6 
+                <div className={styles.detailSection}>
+                  <span className={styles.detailLabel}>题目解析</span>
+                  <div style={{ 
+                    background: 'var(--color-gray-50)', 
+                    padding: 'var(--spacing-3)', 
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
                   }}>
                     {questionDetail.explanation}
-                  </Paragraph>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            <Empty description="请选择一道题目查看详情" style={{ marginTop: 40 }} />
+            <Empty description="请选择一道题目查看详情" className={styles.emptyState} />
           )}
         </Card>
       </div>
 
       {/* 底部操作栏 */}
       {selectedRowKeys.length > 0 && (
-        <Card bodyStyle={{ padding: '12px 24px' }} style={{ marginTop: 16 }}>
+        <Card className={styles.actionBar}>
           <Row justify="space-between" align="middle">
             <Col>
-              <Space>
-                <Text>已选 <Text strong>{selectedRowKeys.length}</Text> 道题目</Text>
-              </Space>
+              <Text style={{ fontSize: 13 }}>
+                已选 <Text strong style={{ color: 'var(--color-primary-500)' }}>{selectedRowKeys.length}</Text> 道题目
+              </Text>
             </Col>
             <Col>
-              <Space>
+              <Space size="small">
                 <Button
+                  size="small"
                   icon={<ClearOutlined />}
                   onClick={handleClearSelection}
                 >
-                  一键移除
+                  清空
                 </Button>
                 <Button
+                  size="small"
                   type="primary"
                   onClick={handleCreateQuiz}
                 >
