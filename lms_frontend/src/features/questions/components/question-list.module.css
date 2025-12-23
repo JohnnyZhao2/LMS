@@ -1,0 +1,77 @@
+/**
+ * 题目列表组件样式
+ */
+
+/* 筛选栏容器 */
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+}
+
+/* 筛选项 */
+.filterItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+/* 筛选标签 */
+.filterLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-600);
+  white-space: nowrap;
+}
+
+/* Segmented 分段选择器样式 */
+.filterItem :global(.ant-segmented) {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.filterItem :global(.ant-segmented-item) {
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.filterItem :global(.ant-segmented-item-label) {
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-1) var(--spacing-3);
+  min-height: 28px;
+  line-height: 20px;
+}
+
+.filterItem :global(.ant-segmented-item-selected) {
+  background: var(--color-primary-500);
+  color: var(--color-white);
+}
+
+.filterItem :global(.ant-segmented-thumb) {
+  background: var(--color-primary-500);
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .filterBar {
+    flex-direction: column;
+    gap: var(--spacing-4);
+  }
+  
+  .filterItem {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+  
+  .filterItem :global(.ant-segmented) {
+    width: 100%;
+  }
+}
+

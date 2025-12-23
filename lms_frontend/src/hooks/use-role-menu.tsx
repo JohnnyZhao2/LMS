@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { MenuProps } from 'antd';
 import {
-  DashboardOutlined,
+  AppstoreOutlined,
   BookOutlined,
   FileTextOutlined,
   CheckCircleOutlined,
@@ -9,6 +9,7 @@ import {
   TeamOutlined,
   QuestionCircleOutlined,
   FileSearchOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import type { RoleCode } from '@/types/api';
 
@@ -16,6 +17,13 @@ type MenuItem = Required<MenuProps>['items'][number];
 
 /**
  * 根据角色获取菜单项
+ * 
+ * 角色权限：
+ * - 学员：概览、知识库、任务、个人中心
+ * - 导师：概览、测试中心、任务、评分、抽查
+ * - 室经理：概览、测试中心、任务、评分、抽查
+ * - 管理员：概览、知识库管理、测试中心、任务、评分、用户管理
+ * - 团队经理：概览、数据看板
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
   return useMemo(() => {
@@ -26,8 +34,8 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     const baseMenu: MenuItem[] = [
       {
         key: '/dashboard',
-        icon: <DashboardOutlined />,
-        label: '仪表盘',
+        icon: <AppstoreOutlined />,
+        label: '概览',
       },
     ];
 
@@ -38,12 +46,12 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
           {
             key: '/knowledge',
             icon: <BookOutlined />,
-            label: '知识中心',
+            label: '知识库',
           },
           {
             key: '/tasks',
             icon: <FileTextOutlined />,
-            label: '任务中心',
+            label: '任务',
           },
           {
             key: '/personal',
@@ -64,17 +72,17 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
           {
             key: '/tasks',
             icon: <FileTextOutlined />,
-            label: '任务管理',
+            label: '任务',
           },
           {
             key: '/grading',
             icon: <CheckCircleOutlined />,
-            label: '评分中心',
+            label: '评分',
           },
           {
             key: '/spot-checks',
             icon: <FileSearchOutlined />,
-            label: '抽查中心',
+            label: '抽查',
           },
         ];
 
@@ -84,7 +92,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
           {
             key: '/admin/knowledge',
             icon: <BookOutlined />,
-            label: '知识库管理',
+            label: '知识库',
           },
           {
             key: '/test-center',
@@ -94,12 +102,17 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
           {
             key: '/tasks',
             icon: <FileTextOutlined />,
-            label: '任务管理',
+            label: '任务',
+          },
+          {
+            key: '/grading',
+            icon: <CheckCircleOutlined />,
+            label: '评分',
           },
           {
             key: '/users',
             icon: <TeamOutlined />,
-            label: '用户与权限',
+            label: '用户管理',
           },
         ];
 
@@ -108,8 +121,8 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
           ...baseMenu,
           {
             key: '/analytics',
-            icon: <DashboardOutlined />,
-            label: '团队数据看板',
+            icon: <BarChartOutlined />,
+            label: '数据看板',
           },
         ];
 
@@ -118,4 +131,3 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     }
   }, [currentRole]);
 };
-

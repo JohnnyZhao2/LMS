@@ -121,10 +121,9 @@
   --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Layout */
-  --sidebar-width: 250px;
   --header-height: 64px;
-  --container-max-width: 1280px;
-  --content-max-width: 960px;
+  --container-max-width: 1400px;
+  --content-max-width: 1200px;
 
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.85);
@@ -845,10 +844,6 @@ textarea.ant-input {
    Responsive Utilities
    ============================================ */
 @media (max-width: 768px) {
-  :root {
-    --sidebar-width: 0px;
-  }
-  
   .page-container {
     padding: var(--spacing-4);
   }
@@ -857,3 +852,4 @@ textarea.ant-input {
     font-size: var(--font-size-2xl);
   }
 }
+

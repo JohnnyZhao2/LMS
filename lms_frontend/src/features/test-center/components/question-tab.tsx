@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
-  Button, Space, Select, Tag, Checkbox, Typography, Card, Empty, Spin, 
+  Button, Space, Segmented, Tag, Checkbox, Typography, Card, Empty, Spin, 
   Pagination, Divider, Row, Col
 } from 'antd';
 import { 
@@ -13,8 +13,16 @@ import type { QuestionType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import styles from './question-tab.module.css';
 
-const { Option } = Select;
 const { Text, Paragraph } = Typography;
+
+/** 题型筛选选项 */
+const QUESTION_TYPE_FILTER_OPTIONS = [
+  { label: '全部', value: 'ALL' },
+  { label: '单选题', value: 'SINGLE_CHOICE' },
+  { label: '多选题', value: 'MULTIPLE_CHOICE' },
+  { label: '判断题', value: 'TRUE_FALSE' },
+  { label: '简答题', value: 'SHORT_ANSWER' },
+];
 
 interface QuestionTabProps {
   onQuickCreateQuiz?: (quizId: number, taskType: 'PRACTICE' | 'EXAM') => void;
@@ -39,10 +47,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
   
   const [page, setPage] = useState(1);
-  const [questionType, setQuestionType] = useState<QuestionType | undefined>();
-  const [lineTypeId, setLineTypeId] = useState<number | undefined>();
+  const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
+  const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+
+  /** 将筛选值转换为 API 参数 */
+  const questionType = questionTypeFilter === 'ALL' ? undefined : questionTypeFilter as QuestionType;
+  const lineTypeId = lineTypeFilter === 'ALL' ? undefined : Number(lineTypeFilter);
 
   const { data, isLoading } = useQuestions({ 
     page, 
@@ -51,6 +63,17 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
     search: search || undefined,
   });
   const { data: lineTypes } = useLineTypeTags();
+  
+  /** 条线类型筛选选项（动态生成） */
+  const lineTypeFilterOptions = useMemo(() => {
+    const options = [{ label: '全部', value: 'ALL' }];
+    if (lineTypes) {
+      lineTypes.forEach((tag) => {
+        options.push({ label: tag.name, value: String(tag.id) });
+      });
+    }
+    return options;
+  }, [lineTypes]);
   const { data: questionDetail, isLoading: detailLoading } = useQuestionDetail(
     selectedQuestionId || 0
   );
@@ -114,45 +137,32 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
     <div className={styles.container}>
       {/* 筛选栏 */}
       <Card className={styles.filterBar}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space size="small">
-              <Text type="secondary" style={{ fontSize: 12 }}>题型</Text>
-              <Select
-                style={{ width: 100 }}
-                placeholder="全部"
-                allowClear
-                size="small"
-                value={questionType}
-                onChange={(value) => setQuestionType(value)}
-              >
-                <Option value="SINGLE_CHOICE">单选题</Option>
-                <Option value="MULTIPLE_CHOICE">多选题</Option>
-                <Option value="TRUE_FALSE">判断题</Option>
-                <Option value="SHORT_ANSWER">简答题</Option>
-              </Select>
-            </Space>
-          </Col>
-          <Col>
-            <Space size="small">
-              <Text type="secondary" style={{ fontSize: 12 }}>条线</Text>
-              <Select
-                style={{ width: 120 }}
-                placeholder="全部"
-                allowClear
-                size="small"
-                value={lineTypeId}
-                onChange={(value) => setLineTypeId(value)}
-              >
-                {lineTypes?.map((tag) => (
-                  <Option key={tag.id} value={tag.id}>
-                    {tag.name}
-                  </Option>
-                ))}
-              </Select>
-            </Space>
-          </Col>
-        </Row>
+        <div className={styles.filterRow}>
+          <div className={styles.filterItem}>
+            <Text type="secondary" className={styles.filterLabel}>题型</Text>
+            <Segmented
+              options={QUESTION_TYPE_FILTER_OPTIONS}
+              value={questionTypeFilter}
+              onChange={(value) => {
+                setQuestionTypeFilter(value as string);
+                setPage(1);
+              }}
+              size="small"
+            />
+          </div>
+          <div className={styles.filterItem}>
+            <Text type="secondary" className={styles.filterLabel}>条线</Text>
+            <Segmented
+              options={lineTypeFilterOptions}
+              value={lineTypeFilter}
+              onChange={(value) => {
+                setLineTypeFilter(value as string);
+                setPage(1);
+              }}
+              size="small"
+            />
+          </div>
+        </div>
       </Card>
 
       {/* 分屏布局 */}

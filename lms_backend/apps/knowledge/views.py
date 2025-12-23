@@ -42,15 +42,25 @@ class KnowledgeListCreateView(APIView):
     
     @extend_schema(
         summary='获取知识文档列表',
-        description='获取知识文档列表，支持条线类型、知识类型和系统标签筛选。普通用户只能看到已发布的知识，管理员可以看到所有（包括草稿）',
+        description='''获取知识文档列表，支持条线类型、知识类型和系统标签筛选。
+        
+普通用户只能看到已发布的知识，管理员可以看到所有（包括草稿）。
+
+**filter_type 筛选说明（仅管理员）：**
+- ALL: 全部（已发布+未发布，不含已发布版本的草稿副本）
+- PUBLISHED_CLEAN: 已发布且无待发布修改
+- REVISING: 修订中（已发布但有待发布的草稿修改）
+- UNPUBLISHED: 未发布（从未发布过的新草稿）
+''',
         parameters=[
             OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
             OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
-            OpenApiParameter(name='status', type=str, description='发布状态（DRAFT/PUBLISHED），仅管理员可用'),
-            OpenApiParameter(name='include_drafts', type=bool, description='是否包含草稿（仅管理员可用，默认true，草稿优先）'),
+            OpenApiParameter(name='filter_type', type=str, description='筛选类型：ALL/PUBLISHED_CLEAN/REVISING/UNPUBLISHED（仅管理员可用）'),
+            OpenApiParameter(name='status', type=str, description='[已废弃] 发布状态（DRAFT/PUBLISHED），建议使用 filter_type'),
+            OpenApiParameter(name='include_drafts', type=bool, description='[已废弃] 是否包含草稿，建议使用 filter_type'),
             OpenApiParameter(name='page', type=int, description='页码（默认1）'),
             OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
         ],
@@ -67,29 +77,61 @@ class KnowledgeListCreateView(APIView):
         )
         
         # 权限过滤：普通用户只能看到已发布的知识
-        # 管理员默认看到“草稿优先”视图：如果存在草稿，则展示草稿而不是对应的已发布版本
-        status_param = request.query_params.get('status')
-        include_drafts_param = request.query_params.get('include_drafts')
-        
         if not request.user.is_admin:
             queryset = queryset.filter(status='PUBLISHED', is_current=True)
         else:
-            if include_drafts_param is None:
-                include_drafts = True
-            else:
-                include_drafts = include_drafts_param.lower() == 'true'
+            # 管理员：支持新的 filter_type 筛选
+            filter_type = request.query_params.get('filter_type', 'ALL')
             
-            if status_param in ['DRAFT', 'PUBLISHED']:
-                queryset = queryset.filter(status=status_param)
-                if status_param == 'PUBLISHED':
-                    queryset = queryset.filter(is_current=True)
-            elif include_drafts:
+            # 获取所有已发布版本的草稿（用于判断"修订中"状态）
+            # 这些草稿不应该单独显示在列表中
+            draft_of_published_ids = Knowledge.objects.filter(
+                is_deleted=False,
+                status='DRAFT',
+                source_version__isnull=False
+            ).values_list('id', flat=True)
+            
+            # 获取有待发布草稿的已发布版本ID
+            published_with_draft_ids = Knowledge.objects.filter(
+                is_deleted=False,
+                status='DRAFT',
+                source_version__isnull=False
+            ).values_list('source_version_id', flat=True)
+            
+            if filter_type == 'PUBLISHED_CLEAN':
+                # 已发布且无待发布修改
                 queryset = queryset.filter(
-                    models.Q(status='DRAFT') |
-                    models.Q(status='PUBLISHED', is_current=True)
+                    status='PUBLISHED',
+                    is_current=True
+                ).exclude(id__in=published_with_draft_ids)
+            elif filter_type == 'REVISING':
+                # 修订中：已发布但有待发布的草稿修改
+                queryset = queryset.filter(
+                    status='PUBLISHED',
+                    is_current=True,
+                    id__in=published_with_draft_ids
                 )
-            else:
-                queryset = queryset.filter(status='PUBLISHED', is_current=True)
+            elif filter_type == 'UNPUBLISHED':
+                # 未发布：从未发布过的新草稿（source_version 为空的草稿）
+                queryset = queryset.filter(
+                    status='DRAFT',
+                    source_version__isnull=True
+                )
+            else:  # ALL
+                # 全部：已发布版本 + 从未发布的草稿
+                # 排除：已发布版本的草稿副本（这些会通过 has_pending_draft 显示在已发布卡片上）
+                queryset = queryset.filter(
+                    models.Q(status='PUBLISHED', is_current=True) |
+                    models.Q(status='DRAFT', source_version__isnull=True)
+                )
+            
+            # 兼容旧的 status 参数（已废弃，但保留兼容性）
+            status_param = request.query_params.get('status')
+            if status_param and filter_type == 'ALL':
+                if status_param == 'DRAFT':
+                    queryset = queryset.filter(status='DRAFT')
+                elif status_param == 'PUBLISHED':
+                    queryset = queryset.filter(status='PUBLISHED', is_current=True)
         
         # Filter by knowledge type
         knowledge_type = request.query_params.get('knowledge_type')

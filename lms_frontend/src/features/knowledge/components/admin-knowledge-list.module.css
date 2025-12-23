@@ -288,6 +288,59 @@
   border-color: var(--color-primary-500);
 }
 
+/* 修订中状态标签 */
+.revisingTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
+  color: white;
+  line-height: 1.4;
+  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.3);
+}
+
+/* 未发布状态标签 */
+.unpublishedTag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border: 1px solid var(--color-gray-300);
+  line-height: 1.4;
+}
+
+/* 修订中卡片样式 - 橙色边框 */
+.cardRevising {
+  border-color: #ff9500;
+  border-width: 2px;
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.03) 0%, rgba(255, 107, 0, 0.03) 100%);
+}
+
+.cardRevising:hover {
+  border-color: #ff6b00;
+  box-shadow: 0 8px 24px rgba(255, 149, 0, 0.15);
+}
+
+/* 未发布卡片样式 - 虚线边框 */
+.cardUnpublished {
+  border-style: dashed;
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.cardUnpublished:hover {
+  border-color: var(--color-gray-400);
+  background: var(--color-white);
+}
+
 
 .cardBody {
   flex: 1;

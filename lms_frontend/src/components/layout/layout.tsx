@@ -1,6 +1,5 @@
 import { Layout } from 'antd';
 import { Header } from './header';
-import { Sidebar } from './sidebar';
 
 const { Content } = Layout;
 
@@ -10,7 +9,7 @@ interface AppLayoutProps {
 
 /**
  * 主布局组件
- * 应用毛玻璃效果和氛围背景
+ * 顶部导航栏 + 全宽内容区域
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
@@ -21,38 +20,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       }}
     >
       <Header />
-      <Layout
+      <Content
+        className="animate-fadeIn"
         style={{
-          background: 'transparent',
+          marginTop: 'var(--header-height)',
+          padding: 'var(--spacing-6)',
+          maxWidth: 'var(--container-max-width)',
+          width: '100%',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}
       >
-        <Sidebar />
-        <Layout
-          style={{
-            padding: 'var(--spacing-6)',
-            background: 'transparent',
-            marginLeft: 'var(--sidebar-width)',
-            marginTop: 'var(--header-height)',
-            minHeight: 'calc(100vh - var(--header-height))',
-          }}
-        >
-          <Content
-            className="animate-fadeIn"
-            style={{
-              background: 'var(--glass-bg)',
-              backdropFilter: 'var(--glass-blur)',
-              WebkitBackdropFilter: 'var(--glass-blur)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--spacing-6)',
-              minHeight: 280,
-              boxShadow: 'var(--shadow-md)',
-              border: '1px solid rgba(255, 255, 255, 0.5)',
-            }}
-          >
-            {children}
-          </Content>
-        </Layout>
-      </Layout>
+        {children}
+      </Content>
     </Layout>
   );
 };

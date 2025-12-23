@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Row, Col, Button, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Tabs, Pagination } from 'antd';
-import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
@@ -8,7 +8,7 @@ import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tag
 import { KnowledgeFormModal } from './knowledge-form-modal';
 import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
 import { showApiError } from '@/utils/error-handler';
-import type { KnowledgeListItem, KnowledgeType, Tag as TagType } from '@/types/api';
+import type { KnowledgeListItem, KnowledgeType, KnowledgeFilterType, Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
 import styles from './admin-knowledge-list.module.css';
@@ -29,6 +29,9 @@ interface KnowledgeCardProps {
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onPublish, onUnpublish }) => {
   const isEmergency = item.knowledge_type === 'EMERGENCY';
   const isPublished = item.status === 'PUBLISHED';
+  const isRevising = item.edit_status === 'REVISING';
+  const isUnpublished = item.edit_status === 'UNPUBLISHED';
+  
   // 获取第一个操作标签作为顶部标签
   const firstOperationTag = item.operation_tags && item.operation_tags.length > 0 
     ? item.operation_tags[0].name 
@@ -41,7 +44,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
     if (key === 'edit') {
       onEdit(item.id);
     } else if (key === 'publish') {
-      await onPublish(item.id);
+      // 如果是修订中状态，发布草稿版本
+      const idToPublish = item.pending_draft_id || item.id;
+      await onPublish(idToPublish);
     } else if (key === 'unpublish') {
       await onUnpublish(item.id);
     }
@@ -56,28 +61,58 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
       label: '编辑',
       icon: <EditOutlined />,
     },
-    ...(isPublished
+    // 如果是修订中，显示"发布修订"
+    ...(isRevising
       ? [
           {
-            key: 'unpublish',
-            label: '取消发布',
-            icon: <CloseCircleOutlined />,
-          },
-        ]
-      : [
-          {
             key: 'publish',
-            label: '发布',
+            label: '发布修订',
             icon: <CheckCircleOutlined />,
           },
-        ]),
+        ]
+      : isPublished
+        ? [
+            {
+              key: 'unpublish',
+              label: '取消发布',
+              icon: <CloseCircleOutlined />,
+            },
+          ]
+        : [
+            {
+              key: 'publish',
+              label: '发布',
+              icon: <CheckCircleOutlined />,
+            },
+          ]),
   ];
 
+  /**
+   * 获取卡片样式类名
+   */
+  const getCardClassName = () => {
+    const classes = [styles.card];
+    if (isRevising) {
+      classes.push(styles.cardRevising);
+    } else if (isUnpublished) {
+      classes.push(styles.cardUnpublished);
+    }
+    return classes.join(' ');
+  };
+
   return (
-    <div className={styles.card}>
-      {/* 顶部：左上角操作标签，右上角操作菜单 */}
+    <div className={getCardClassName()}>
+      {/* 顶部：左上角状态标签和操作标签，右上角操作菜单 */}
       <div className={styles.cardHeader}>
         <div className={styles.cardHeaderLeft}>
+          {/* 修订中状态标签 */}
+          {isRevising && (
+            <span className={styles.revisingTag}>
+              <SyncOutlined spin style={{ marginRight: 4 }} />
+              修订中
+            </span>
+          )}
+          {/* 操作标签 */}
           {firstOperationTag && (
             <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
               {firstOperationTag}
@@ -127,9 +162,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
 /**
  * 管理员知识库列表组件
  * 采用双栏布局：左侧筛选，右侧列表
+ * 
+ * 筛选类型说明：
+ * - ALL: 全部（已发布+未发布，不含已发布版本的草稿副本）
+ * - PUBLISHED_CLEAN: 已发布且无待发布修改
+ * - REVISING: 修订中（已发布但有待发布的草稿修改）
+ * - UNPUBLISHED: 未发布（从未发布过的新草稿）
  */
-type KnowledgeStatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT';
-
 export const AdminKnowledgeList: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
@@ -138,7 +177,7 @@ export const AdminKnowledgeList: React.FC = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingKnowledgeId, setEditingKnowledgeId] = useState<number | undefined>();
   const [defaultKnowledgeType, setDefaultKnowledgeType] = useState<KnowledgeType>('OTHER');
-  const [statusFilter, setStatusFilter] = useState<KnowledgeStatusFilter>('ALL');
+  const [filterType, setFilterType] = useState<KnowledgeFilterType>('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
@@ -157,7 +196,7 @@ export const AdminKnowledgeList: React.FC = () => {
     line_type_id: selectedLineTypeId,
     system_tag_id: selectedSystemTagIds[0],
     operation_tag_id: selectedOperationTagIds[0],
-    status: statusFilter === 'ALL' ? undefined : (statusFilter as 'PUBLISHED' | 'DRAFT'),
+    filter_type: filterType,
     page,
     pageSize,
   });
@@ -358,15 +397,16 @@ export const AdminKnowledgeList: React.FC = () => {
           <div className={styles.contentHeader}>
             {/* 状态筛选 */}
             <Tabs
-              activeKey={statusFilter}
+              activeKey={filterType}
               onChange={(key) => {
-                setStatusFilter(key as KnowledgeStatusFilter);
+                setFilterType(key as KnowledgeFilterType);
                 setPage(1); // 重置到第一页
               }}
               items={[
                 { key: 'ALL', label: '全部' },
-                { key: 'PUBLISHED', label: '生产' },
-                { key: 'DRAFT', label: '草稿' },
+                { key: 'PUBLISHED_CLEAN', label: '已发布' },
+                { key: 'REVISING', label: '修订中' },
+                { key: 'UNPUBLISHED', label: '草稿箱' },
               ]}
               className={styles.statusTabs}
             />

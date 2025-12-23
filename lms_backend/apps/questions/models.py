@@ -273,6 +273,9 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def clone_new_version(self):
         """
         创建当前题目的新版本，保持历史版本只读。
+        
+        同时更新所有引用旧版本的试卷，指向新版本。
+        已发布任务的快照不受影响（TaskQuiz.snapshot 是独立存储的）。
         """
         new_question = Question.objects.create(
             content=self.content,
@@ -296,7 +299,28 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             resource_uuid=self.resource_uuid,
             status='PUBLISHED'
         ).exclude(pk=new_question.pk).update(is_current=False)
+        
+        # 更新所有引用旧版本的试卷，指向新版本
+        # 这样试卷管理界面和新创建的任务都会使用最新题目
+        # 已发布任务的 TaskQuiz.snapshot 是独立存储的，不受影响
+        self._update_quiz_references(new_question)
+        
         return new_question
+    
+    def _update_quiz_references(self, new_question):
+        """
+        更新所有引用当前题目的试卷，指向新版本。
+        
+        Args:
+            new_question: 新创建的题目版本
+        """
+        try:
+            from apps.quizzes.models import QuizQuestion
+            # 更新所有引用旧版本的 QuizQuestion，指向新版本
+            QuizQuestion.objects.filter(question=self).update(question=new_question)
+        except ImportError:
+            # quizzes app 尚未实现
+            pass
     
     @property
     def is_objective(self):

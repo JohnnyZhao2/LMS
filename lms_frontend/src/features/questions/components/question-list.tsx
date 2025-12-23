@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Table, Card, Button, Typography, Modal, message, Space, Select, Tag } from 'antd';
+import { useState, useMemo } from 'react';
+import { Table, Card, Button, Typography, Modal, message, Segmented, Tag, Space } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuestions } from '../api/get-questions';
@@ -8,22 +8,47 @@ import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { Question, QuestionType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
+import styles from './question-list.module.css';
 
 const { Title } = Typography;
-const { Option } = Select;
 
 /**
  * 题目列表组件
  */
+/** 题型选项配置 */
+const QUESTION_TYPE_OPTIONS = [
+  { label: '全部', value: 'ALL' },
+  { label: '单选题', value: 'SINGLE_CHOICE' },
+  { label: '多选题', value: 'MULTIPLE_CHOICE' },
+  { label: '判断题', value: 'TRUE_FALSE' },
+  { label: '简答题', value: 'SHORT_ANSWER' },
+];
+
 export const QuestionList: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [questionType, setQuestionType] = useState<QuestionType | undefined>();
-  const [lineTypeId, setLineTypeId] = useState<number | undefined>();
+  const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
+  const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
+  
+  /** 将筛选值转换为 API 参数 */
+  const questionType = questionTypeFilter === 'ALL' ? undefined : questionTypeFilter as QuestionType;
+  const lineTypeId = lineTypeFilter === 'ALL' ? undefined : Number(lineTypeFilter);
+  
   const { data, isLoading } = useQuestions({ page, questionType, lineTypeId });
   const { data: lineTypes } = useLineTypeTags();
   const deleteQuestion = useDeleteQuestion();
   const navigate = useNavigate();
   const { user, currentRole } = useAuth();
+  
+  /** 条线类型选项（动态生成） */
+  const lineTypeOptions = useMemo(() => {
+    const options = [{ label: '全部', value: 'ALL' }];
+    if (lineTypes) {
+      lineTypes.forEach((tag) => {
+        options.push({ label: tag.name, value: String(tag.id) });
+      });
+    }
+    return options;
+  }, [lineTypes]);
 
   /**
    * 检查是否有编辑/删除权限
@@ -139,32 +164,29 @@ export const QuestionList: React.FC = () => {
         </Button>
       </div>
       <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Select
-              style={{ width: 200 }}
-              placeholder="筛选题目类型"
-              allowClear
-              onChange={(value) => setQuestionType(value)}
-            >
-              <Option value="SINGLE_CHOICE">单选题</Option>
-              <Option value="MULTIPLE_CHOICE">多选题</Option>
-              <Option value="TRUE_FALSE">判断题</Option>
-              <Option value="SHORT_ANSWER">简答题</Option>
-            </Select>
-            <Select
-              style={{ width: 200 }}
-              placeholder="筛选条线类型"
-              allowClear
-              onChange={(value) => setLineTypeId(value)}
-            >
-              {lineTypes?.map((tag) => (
-                <Option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </Option>
-              ))}
-            </Select>
-          </Space>
+        <div className={styles.filterBar}>
+          <div className={styles.filterItem}>
+            <span className={styles.filterLabel}>题型</span>
+            <Segmented
+              options={QUESTION_TYPE_OPTIONS}
+              value={questionTypeFilter}
+              onChange={(value) => {
+                setQuestionTypeFilter(value as string);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className={styles.filterItem}>
+            <span className={styles.filterLabel}>条线</span>
+            <Segmented
+              options={lineTypeOptions}
+              value={lineTypeFilter}
+              onChange={(value) => {
+                setLineTypeFilter(value as string);
+                setPage(1);
+              }}
+            />
+          </div>
         </div>
         <Table
           columns={columns}

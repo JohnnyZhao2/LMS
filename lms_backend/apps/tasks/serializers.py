@@ -1026,68 +1026,82 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         instance.save()
         
         # 更新关联知识文档
+        # 注意：只有当知识文档列表真正变化时才重新创建 TaskKnowledge（会重新生成快照）
+        # 如果知识文档没变，保持原有快照不变，避免影响正在进行的任务
         if knowledge_ids is not None:
-            # 删除旧的关联
-            TaskKnowledge.objects.filter(task=instance).delete()
-            # 创建新的关联
-            if knowledge_ids:
-                knowledge_queryset = Knowledge.objects.filter(
-                    id__in=knowledge_ids,
-                    is_deleted=False,
-                    status='PUBLISHED'
-                ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
-                knowledge_map = {k.id: k for k in knowledge_queryset}
-                for order, kid in enumerate(knowledge_ids, start=1):
-                    knowledge = knowledge_map.get(kid)
-                    if knowledge:
-                        TaskKnowledge.objects.create(
-                            task=instance,
-                            knowledge=knowledge,
-                            order=order,
-                            resource_uuid=knowledge.resource_uuid,
-                            version_number=knowledge.version_number,
-                            snapshot=TaskKnowledge.build_snapshot(knowledge)
-                        )
-        
-        # 更新关联试卷
-        if instance.task_type == 'EXAM':
-            if quiz_id is not None:
-                # 删除旧的关联
-                TaskQuiz.objects.filter(task=instance).delete()
-                # 创建新的关联
-                if quiz_id:
-                    quiz = Quiz.objects.get(pk=quiz_id)
-                    TaskQuiz.objects.create(
-                        task=instance,
-                        quiz=quiz,
-                        order=1,
-                        resource_uuid=quiz.resource_uuid,
-                        version_number=quiz.version_number,
-                        snapshot=TaskQuiz.build_snapshot(quiz)
-                    )
-        elif instance.task_type == 'PRACTICE':
-            if quiz_ids is not None:
-                # 删除旧的关联
-                TaskQuiz.objects.filter(task=instance).delete()
-                # 创建新的关联
-                if quiz_ids:
-                    quiz_queryset = Quiz.objects.filter(
-                        id__in=quiz_ids,
+            # 检查是否与现有知识文档列表相同
+            existing_knowledge_ids = list(
+                instance.task_knowledge.order_by('order').values_list('knowledge_id', flat=True)
+            )
+            if existing_knowledge_ids != list(knowledge_ids):
+                # 知识文档列表发生变化，删除旧的并创建新的
+                TaskKnowledge.objects.filter(task=instance).delete()
+                if knowledge_ids:
+                    knowledge_queryset = Knowledge.objects.filter(
+                        id__in=knowledge_ids,
                         is_deleted=False,
                         status='PUBLISHED'
-                    )
-                    quiz_map = {q.id: q for q in quiz_queryset}
-                    for order, qid in enumerate(quiz_ids, start=1):
-                        quiz = quiz_map.get(qid)
-                        if quiz:
-                            TaskQuiz.objects.create(
+                    ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+                    knowledge_map = {k.id: k for k in knowledge_queryset}
+                    for order, kid in enumerate(knowledge_ids, start=1):
+                        knowledge = knowledge_map.get(kid)
+                        if knowledge:
+                            TaskKnowledge.objects.create(
                                 task=instance,
-                                quiz=quiz,
+                                knowledge=knowledge,
                                 order=order,
-                                resource_uuid=quiz.resource_uuid,
-                                version_number=quiz.version_number,
-                                snapshot=TaskQuiz.build_snapshot(quiz)
+                                resource_uuid=knowledge.resource_uuid,
+                                version_number=knowledge.version_number,
+                                snapshot=TaskKnowledge.build_snapshot(knowledge)
                             )
+        
+        # 更新关联试卷
+        # 注意：只有当试卷列表真正变化时才重新创建 TaskQuiz（会重新生成快照）
+        # 如果试卷没变，保持原有快照不变，避免影响正在进行的任务
+        if instance.task_type == 'EXAM':
+            if quiz_id is not None:
+                # 检查是否与现有试卷相同
+                existing_quiz = instance.task_quizzes.first()
+                if existing_quiz is None or existing_quiz.quiz_id != quiz_id:
+                    # 试卷发生变化，删除旧的并创建新的
+                    TaskQuiz.objects.filter(task=instance).delete()
+                    if quiz_id:
+                        quiz = Quiz.objects.get(pk=quiz_id)
+                        TaskQuiz.objects.create(
+                            task=instance,
+                            quiz=quiz,
+                            order=1,
+                            resource_uuid=quiz.resource_uuid,
+                            version_number=quiz.version_number,
+                            snapshot=TaskQuiz.build_snapshot(quiz)
+                        )
+        elif instance.task_type == 'PRACTICE':
+            if quiz_ids is not None:
+                # 检查是否与现有试卷列表相同
+                existing_quiz_ids = list(
+                    instance.task_quizzes.order_by('order').values_list('quiz_id', flat=True)
+                )
+                if existing_quiz_ids != list(quiz_ids):
+                    # 试卷列表发生变化，删除旧的并创建新的
+                    TaskQuiz.objects.filter(task=instance).delete()
+                    if quiz_ids:
+                        quiz_queryset = Quiz.objects.filter(
+                            id__in=quiz_ids,
+                            is_deleted=False,
+                            status='PUBLISHED'
+                        )
+                        quiz_map = {q.id: q for q in quiz_queryset}
+                        for order, qid in enumerate(quiz_ids, start=1):
+                            quiz = quiz_map.get(qid)
+                            if quiz:
+                                TaskQuiz.objects.create(
+                                    task=instance,
+                                    quiz=quiz,
+                                    order=order,
+                                    resource_uuid=quiz.resource_uuid,
+                                    version_number=quiz.version_number,
+                                    snapshot=TaskQuiz.build_snapshot(quiz)
+                                )
         
         # 更新分配学员
         if assignee_ids is not None:

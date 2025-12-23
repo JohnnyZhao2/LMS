@@ -41,6 +41,20 @@ export type KnowledgeType = 'EMERGENCY' | 'OTHER';
 export type KnowledgeStatus = 'DRAFT' | 'PUBLISHED';
 
 /**
+ * 知识编辑状态
+ * - PUBLISHED_CLEAN: 已发布且无待发布修改
+ * - REVISING: 修订中（已发布但有待发布的草稿修改）
+ * - UNPUBLISHED: 未发布（从未发布过的新草稿）
+ * - DRAFT_OF_PUBLISHED: 某个已发布版本的草稿
+ */
+export type KnowledgeEditStatus = 'PUBLISHED_CLEAN' | 'REVISING' | 'UNPUBLISHED' | 'DRAFT_OF_PUBLISHED';
+
+/**
+ * 知识列表筛选类型
+ */
+export type KnowledgeFilterType = 'ALL' | 'PUBLISHED_CLEAN' | 'REVISING' | 'UNPUBLISHED';
+
+/**
  * 通知类型
  */
 export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_COMPLETED' | 'SPOT_CHECK';
@@ -285,6 +299,16 @@ export interface KnowledgeListItem {
   content_preview?: string;
   system_tags: SimpleTag[];
   operation_tags: SimpleTag[];
+  /** 是否有待发布的草稿修改（仅已发布版本有效） */
+  has_pending_draft?: boolean;
+  /** 待发布草稿的ID（仅已发布版本有效） */
+  pending_draft_id?: number | null;
+  /** 草稿对应的来源已发布版本ID */
+  source_version_id?: number | null;
+  /** 草稿对应的来源已发布版本标题 */
+  source_version_title?: string | null;
+  /** 编辑状态：PUBLISHED_CLEAN/REVISING/UNPUBLISHED/DRAFT_OF_PUBLISHED */
+  edit_status?: KnowledgeEditStatus;
   created_by?: number;
   created_by_name?: string;
   updated_by?: number;
