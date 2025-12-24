@@ -263,6 +263,9 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     # 其他类型知识的正文内容（Requirements: 4.3）
     content = models.TextField(blank=True, default='', verbose_name='正文内容')
     
+    # 知识概要（用于卡片预览显示）
+    summary = models.CharField(max_length=500, blank=True, default='', verbose_name='知识概要')
+    
     # 最后更新者
     updated_by = models.ForeignKey(
         'users.User',
@@ -418,6 +421,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             verification_plan=self.verification_plan,
             recovery_plan=self.recovery_plan,
             content=self.content,
+            summary=self.summary,
             status='DRAFT',
             created_by=user,
             updated_by=user,
@@ -471,9 +475,14 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """
         生成内容预览（用于列表显示）
         
-        对于应急类知识：从结构化字段中提取关键信息
-        对于其他类型知识：从 content 字段中提取前150个字符
+        优先使用 summary 字段，如果没有则自动提取：
+        - 应急类知识：从结构化字段中提取关键信息
+        - 其他类型知识：从 content 字段中提取前150个字符
         """
+        # 优先使用手动填写的概要
+        if self.summary and self.summary.strip():
+            return self.summary.strip()
+        
         if self.knowledge_type == 'EMERGENCY':
             # 应急类知识：优先显示故障场景，如果没有则显示解决方案
             preview_text = self.fault_scenario.strip() or self.solution.strip()
@@ -491,3 +500,49 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             return preview_text
         
         return ''
+    
+    @property
+    def table_of_contents(self):
+        """
+        从 Markdown 内容中提取目录结构（用于卡片预览显示）
+        
+        返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
+        
+        对于应急类知识：返回结构化字段的标题
+        对于其他类型知识：从 Markdown 内容中解析标题
+        """
+        import re
+        
+        if self.knowledge_type == 'EMERGENCY':
+            # 应急类知识：返回有内容的结构化字段标题
+            toc = []
+            fields = [
+                ('fault_scenario', '故障场景'),
+                ('trigger_process', '触发流程'),
+                ('solution', '解决方案'),
+                ('verification_plan', '验证方案'),
+                ('recovery_plan', '恢复方案'),
+            ]
+            for field_name, label in fields:
+                value = getattr(self, field_name, '')
+                if value and value.strip():
+                    toc.append({'level': 1, 'text': label})
+            return toc
+        
+        # 其他类型知识：从 Markdown 解析标题
+        if not self.content:
+            return []
+        
+        toc = []
+        lines = self.content.split('\n')
+        for line in lines:
+            # 匹配 Markdown 标题 (# ## ### 等)
+            match = re.match(r'^(#{1,6})\s+(.+)$', line.strip())
+            if match:
+                level = len(match.group(1))
+                text = match.group(2).strip()
+                # 只提取前3级标题，限制数量
+                if level <= 3 and len(toc) < 10:
+                    toc.append({'level': level, 'text': text})
+        
+        return toc

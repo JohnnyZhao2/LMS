@@ -483,6 +483,12 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+/* 上半部分：标题 + 概要 + 标签 */
+.cardTop {
+  flex-shrink: 0;
 }
 
 .cardTitle {
@@ -490,7 +496,7 @@
   font-weight: 700;
   color: var(--color-gray-900);
   line-height: 1.4;
-  margin-bottom: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -501,28 +507,41 @@
   color: var(--color-primary-600);
 }
 
+/* 知识概要（固定两行） */
+.cardSummary {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--color-gray-500);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: var(--spacing-3);
+  min-height: 39px; /* 确保两行高度一致 */
+}
+
 /* 标签区域 */
 .cardTags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: var(--spacing-3);
+  gap: 6px;
 }
 
 .cardTag {
-  padding: 2px 6px;
+  padding: 4px 10px;
   background: transparent;
   border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  color: var(--color-gray-500);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  color: var(--color-gray-600);
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .cardTag .tagIcon {
-  font-size: 8px;
+  font-size: 10px;
   color: var(--color-gray-400);
 }
 
@@ -532,17 +551,89 @@
   border-color: var(--color-gray-200);
 }
 
-/* 内容区域 */
-.contentSection {
-  margin-top: auto;
-  padding-top: var(--spacing-3);
+/* 分割线 */
+.cardDivider {
+  height: 1px;
+  background: var(--color-gray-100);
+  margin: var(--spacing-4) 0;
+  flex-shrink: 0;
 }
 
-/* 内容预览 - 带引号样式 */
+/* 下半部分：目录区域 */
+.cardBottom {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 目录区域 */
+.cardToc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.tocHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-gray-400);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tocHeaderIcon {
+  font-size: 12px;
+}
+
+.tocList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tocItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-gray-700);
+  line-height: 1.4;
+}
+
+.tocItem::before {
+  content: '•';
+  color: var(--color-primary-400);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.tocItemLevel2 {
+  padding-left: var(--spacing-3);
+}
+
+.tocItemLevel3 {
+  padding-left: var(--spacing-6);
+}
+
+.tocMore {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  margin-top: var(--spacing-1);
+}
+
+/* 空目录状态 */
+.tocEmpty {
+  font-size: 12px;
+  color: var(--color-gray-400);
+  font-style: italic;
+}
+
+/* 内容预览（fallback，已不再使用） */
 .cardPreview {
   font-size: 13px;
-  font-style: italic;
-  color: var(--color-gray-500);
+  color: var(--color-gray-600);
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -551,12 +642,32 @@
   min-height: 42px;
 }
 
-.cardPreview::before {
-  content: '"';
+.cardPreview strong {
+  font-weight: 600;
+  color: var(--color-gray-700);
 }
 
-.cardPreview::after {
-  content: '"';
+.cardPreview em {
+  font-style: italic;
+}
+
+.cardPreview del {
+  text-decoration: line-through;
+  color: var(--color-gray-400);
+}
+
+.cardPreview code {
+  padding: 1px 4px;
+  background: var(--color-gray-100);
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+/* 内容区域（兼容旧代码） */
+.contentSection {
+  margin-top: auto;
+  padding-top: var(--spacing-3);
 }
 
 /* 卡片底部 */

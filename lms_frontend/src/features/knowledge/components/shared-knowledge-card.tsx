@@ -6,11 +6,15 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import type { KnowledgeListItem, SimpleTag } from '@/types/api';
+import type { KnowledgeListItem, SimpleTag, TableOfContentsItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import styles from './knowledge-library.module.css';
+
+/** 目录显示的最大条目数 */
+const MAX_TOC_ITEMS = 5;
 
 /**
  * 知识卡片 Props
@@ -173,29 +177,67 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
       {/* 卡片主体 */}
       <div className={styles.cardBody}>
-        {/* 标题 */}
-        <h3 className={styles.cardTitle}>{item.title}</h3>
+        {/* 上半部分：标题 + 概要 + 标签 */}
+        <div className={styles.cardTop}>
+          {/* 标题 */}
+          <h3 className={styles.cardTitle}>{item.title}</h3>
 
-        {/* 标签 */}
-        <div className={styles.cardTags}>
-          {displayTags.map((tag) => (
-            <span key={tag.id} className={styles.cardTag}>
-              <span className={styles.tagIcon}>◇</span>
-              {tag.name}
-            </span>
-          ))}
-          {moreTags > 0 && (
-            <span className={`${styles.cardTag} ${styles.moreTag}`}>
-              +{moreTags}
-            </span>
-          )}
+          {/* 知识概要（固定两行） */}
+          <div className={styles.cardSummary}>
+            {item.summary ? `"${item.summary}"` : (item.content_preview || '暂无概要')}
+          </div>
+
+          {/* 标签 */}
+          <div className={styles.cardTags}>
+            {displayTags.map((tag) => (
+              <span key={tag.id} className={styles.cardTag}>
+                <span className={styles.tagIcon}>◇</span>
+                {tag.name}
+              </span>
+            ))}
+            {moreTags > 0 && (
+              <span className={`${styles.cardTag} ${styles.moreTag}`}>
+                +{moreTags}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* 横线分隔 + 内容预览 */}
-        <div className={styles.contentSection}>
-          <div className={styles.cardPreview}>
-            {item.content_preview || '暂无内容预览'}
-          </div>
+        {/* 分割线 */}
+        <div className={styles.cardDivider} />
+
+        {/* 下半部分：目录映射（固定区域） */}
+        <div className={styles.cardBottom}>
+          {item.table_of_contents && item.table_of_contents.length > 0 ? (
+            <div className={styles.cardToc}>
+              <div className={styles.tocHeader}>
+                <UnorderedListOutlined className={styles.tocHeaderIcon} />
+                <span>PROCEDURAL MAP</span>
+              </div>
+              <div className={styles.tocList}>
+                {item.table_of_contents.slice(0, MAX_TOC_ITEMS).map((tocItem: TableOfContentsItem, index: number) => (
+                  <div 
+                    key={index} 
+                    className={`${styles.tocItem} ${
+                      tocItem.level === 2 ? styles.tocItemLevel2 : 
+                      tocItem.level === 3 ? styles.tocItemLevel3 : ''
+                    }`}
+                  >
+                    {tocItem.level === 1 ? `${index + 1}. ` : ''}{tocItem.text}
+                  </div>
+                ))}
+                {item.table_of_contents.length > MAX_TOC_ITEMS && (
+                  <div className={styles.tocMore}>
+                    +{item.table_of_contents.length - MAX_TOC_ITEMS} more...
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className={styles.tocEmpty}>
+              暂无目录
+            </div>
+          )}
         </div>
       </div>
 

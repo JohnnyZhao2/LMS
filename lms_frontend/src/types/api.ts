@@ -282,6 +282,14 @@ export interface LatestKnowledge {
 }
 
 /**
+ * 目录项
+ */
+export interface TableOfContentsItem {
+  level: number;
+  text: string;
+}
+
+/**
  * 知识文档列表项（管理员视图）
  */
 export interface KnowledgeListItem {
@@ -296,7 +304,11 @@ export interface KnowledgeListItem {
   is_current: boolean;
   published_at?: string;
   line_type?: SimpleTag | null;
+  /** 知识概要 */
+  summary?: string;
   content_preview?: string;
+  /** 目录结构 */
+  table_of_contents?: TableOfContentsItem[];
   system_tags: SimpleTag[];
   operation_tags: SimpleTag[];
   /** 是否有待发布的草稿修改（仅已发布版本有效） */
@@ -341,6 +353,10 @@ export interface KnowledgeDetail {
   recovery_plan?: string;
   // 其他类型知识正文
   content?: string;
+  // 知识概要
+  summary?: string;
+  // 目录结构
+  table_of_contents?: TableOfContentsItem[];
   // 标签
   system_tags: SimpleTag[];
   operation_tags: SimpleTag[];
@@ -417,6 +433,8 @@ export interface KnowledgeCreateRequest {
   recovery_plan?: string;
   // 其他类型知识正文
   content?: string;
+  // 知识概要
+  summary?: string;
   // 标签（使用名称，支持自定义输入）
   system_tag_names?: string[];
   operation_tag_names?: string[];
@@ -436,6 +454,8 @@ export interface KnowledgeUpdateRequest {
   verification_plan?: string;
   recovery_plan?: string;
   content?: string;
+  // 知识概要
+  summary?: string;
   system_tag_names?: string[];
   operation_tag_names?: string[];
 }

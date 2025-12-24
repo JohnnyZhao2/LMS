@@ -6,6 +6,7 @@ import { MentorDashboard } from '@/features/dashboard/components/mentor-dashboar
 import { TeamManagerDashboard } from '@/features/dashboard/components/team-manager-dashboard';
 import { StudentKnowledgeCenter } from '@/features/knowledge/components/student-knowledge-center';
 import { KnowledgeDetail } from '@/features/knowledge/components/knowledge-detail';
+import { KnowledgeForm } from '@/features/knowledge/components/knowledge-form';
 import { AdminKnowledgeList } from '@/features/knowledge/components/admin-knowledge-list';
 import { TaskList } from '@/features/tasks/components/task-list';
 import { TaskDetail } from '@/features/tasks/components/task-detail';
@@ -94,6 +95,22 @@ export const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminKnowledgeList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path={`${ROUTES.ADMIN_KNOWLEDGE}/create`}
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <KnowledgeForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path={`${ROUTES.ADMIN_KNOWLEDGE}/:id/edit`}
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <KnowledgeForm />
           </ProtectedRoute>
         }
       />

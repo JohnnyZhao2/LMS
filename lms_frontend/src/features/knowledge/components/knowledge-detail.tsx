@@ -1,32 +1,191 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Typography, Tag, Spin, Button, Divider, Modal, message, Space } from 'antd';
-import { ArrowLeftOutlined, EyeOutlined, CalendarOutlined, UserOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Spin, Button, Modal, message, Space } from 'antd';
+import {
+  ArrowLeftOutlined,
+  EyeOutlined,
+  CalendarOutlined,
+  UserOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
+  OrderedListOutlined,
+  MenuUnfoldOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useDeleteKnowledge, usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
-import { KnowledgeFormModal } from './knowledge-form-modal';
-import { Card, StatusBadge } from '@/components/ui';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
+import styles from './knowledge-detail.module.css';
 
-const { Title, Text } = Typography;
+/**
+ * 目录项接口
+ */
+interface OutlineItem {
+  id: string;
+  level: number;
+  text: string;
+}
+
+/**
+ * 从 Markdown/HTML 内容解析标题生成目录
+ */
+const parseOutline = (content: string, isEmergency: boolean): OutlineItem[] => {
+  if (isEmergency) {
+    // 应急类知识返回固定的章节目录
+    return [
+      { id: 'fault_scenario', level: 1, text: '故障场景' },
+      { id: 'trigger_process', level: 1, text: '触发流程' },
+      { id: 'solution', level: 1, text: '解决方案' },
+      { id: 'verification_plan', level: 1, text: '验证方案' },
+      { id: 'recovery_plan', level: 1, text: '恢复方案' },
+    ];
+  }
+
+  if (!content) return [];
+  
+  const lines = content.split('\n');
+  const outline: OutlineItem[] = [];
+  
+  lines.forEach((line, index) => {
+    const match = line.match(/^(#{1,3})\s+(.+)$/);
+    if (match) {
+      outline.push({
+        id: `heading-${index}`,
+        level: match[1].length,
+        text: match[2].trim(),
+      });
+    }
+  });
+  
+  return outline;
+};
+
+/**
+ * 简单的 Markdown 渲染
+ */
+const renderMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  
+  let html = markdown;
+  
+  // 转义 HTML
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  };
+  
+  // 代码块（先处理，避免内容被其他规则影响）
+  const codeBlocks: string[] = [];
+  html = html.replace(/```(\w+)?\n([\s\S]+?)\n```/g, (_, lang, code) => {
+    const index = codeBlocks.length;
+    codeBlocks.push(`<pre><code class="${lang || ''}">${escapeHtml(code)}</code></pre>`);
+    return `__CODE_BLOCK_${index}__`;
+  });
+  
+  // 标题
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  
+  // 粗体、斜体、删除线
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  
+  // 行内代码
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // 链接和图片
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  
+  // 引用块
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  
+  // 分隔线
+  html = html.replace(/^---$/gm, '<hr />');
+  
+  // 列表
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>[\s\S]*?<\/li>)+/g, (match) => `<ul>${match}</ul>`);
+  
+  // 段落
+  const lines = html.split('\n');
+  const processedLines: string[] = [];
+  const blockTags = ['<h', '<ul', '<ol', '<li', '<table', '<blockquote', '<hr', '<pre'];
+  
+  let inParagraph = false;
+  let paragraphContent = '';
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) {
+      if (inParagraph && paragraphContent) {
+        processedLines.push(`<p>${paragraphContent}</p>`);
+        paragraphContent = '';
+        inParagraph = false;
+      }
+      continue;
+    }
+    
+    const isBlockElement = blockTags.some(tag => trimmedLine.startsWith(tag));
+    
+    if (isBlockElement) {
+      if (inParagraph && paragraphContent) {
+        processedLines.push(`<p>${paragraphContent}</p>`);
+        paragraphContent = '';
+        inParagraph = false;
+      }
+      processedLines.push(trimmedLine);
+    } else {
+      if (inParagraph) {
+        paragraphContent += '<br/>' + trimmedLine;
+      } else {
+        paragraphContent = trimmedLine;
+        inParagraph = true;
+      }
+    }
+  }
+  
+  if (inParagraph && paragraphContent) {
+    processedLines.push(`<p>${paragraphContent}</p>`);
+  }
+  
+  html = processedLines.join('\n');
+  
+  // 还原代码块
+  codeBlocks.forEach((block, index) => {
+    html = html.replace(`__CODE_BLOCK_${index}__`, block);
+  });
+  
+  return html;
+};
 
 /**
  * 知识详情组件
  * 
- * 支持管理员和学员两种视图：
- * - 管理员视图：显示完整信息，包括状态、编辑功能等
- * - 学员视图：只显示已发布的知识
- * 
- * 注意：阅读次数在点击知识卡片时记录，不在详情页面记录
+ * 布局：
+ * - 顶部：标题、更新人、更新时间、操作按钮
+ * - 左侧：目录导航
+ * - 右侧：内容区域
  */
 export const KnowledgeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // 目录折叠状态
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
   
   // 根据路由判断使用哪个 API
   const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
@@ -35,42 +194,89 @@ export const KnowledgeDetail: React.FC = () => {
   
   const { data, isLoading, refetch } = isAdminRoute ? adminQuery : studentQuery;
   
-  // 操作相关状态
-  const [formModalOpen, setFormModalOpen] = useState(false);
+  // 操作相关
   const deleteKnowledge = useDeleteKnowledge();
   const publishKnowledge = usePublishKnowledge();
   const unpublishKnowledge = useUnpublishKnowledge();
 
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const knowledge = data as KnowledgeDetailType | undefined;
+  const isEmergency = knowledge?.knowledge_type === 'EMERGENCY';
+  const isPublished = knowledge?.status === 'PUBLISHED';
 
-  if (!data) {
-    return (
-      <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
-        <Text type="secondary">知识文档不存在</Text>
-      </div>
-    );
-  }
+  /**
+   * 解析目录
+   */
+  const outline = useMemo(() => {
+    if (!knowledge) return [];
+    return parseOutline(knowledge.content || '', isEmergency);
+  }, [knowledge, isEmergency]);
 
-  const knowledge = data as KnowledgeDetailType;
-  const isPublished = knowledge.status === 'PUBLISHED';
-  
+  /**
+   * 获取渲染内容
+   */
+  const renderedContent = useMemo(() => {
+    if (!knowledge) return '';
+    
+    if (isEmergency) {
+      const sections = [];
+      if (knowledge.fault_scenario) {
+        sections.push(`
+          <div class="${styles.emergencySection}">
+            <h3 class="${styles.emergencySectionTitle}">故障场景</h3>
+            <div class="${styles.emergencySectionContent}">${renderMarkdown(knowledge.fault_scenario)}</div>
+          </div>
+        `);
+      }
+      if (knowledge.trigger_process) {
+        sections.push(`
+          <div class="${styles.emergencySection}">
+            <h3 class="${styles.emergencySectionTitle}">触发流程</h3>
+            <div class="${styles.emergencySectionContent}">${renderMarkdown(knowledge.trigger_process)}</div>
+          </div>
+        `);
+      }
+      if (knowledge.solution) {
+        sections.push(`
+          <div class="${styles.emergencySection}">
+            <h3 class="${styles.emergencySectionTitle}">解决方案</h3>
+            <div class="${styles.emergencySectionContent}">${renderMarkdown(knowledge.solution)}</div>
+          </div>
+        `);
+      }
+      if (knowledge.verification_plan) {
+        sections.push(`
+          <div class="${styles.emergencySection}">
+            <h3 class="${styles.emergencySectionTitle}">验证方案</h3>
+            <div class="${styles.emergencySectionContent}">${renderMarkdown(knowledge.verification_plan)}</div>
+          </div>
+        `);
+      }
+      if (knowledge.recovery_plan) {
+        sections.push(`
+          <div class="${styles.emergencySection}">
+            <h3 class="${styles.emergencySectionTitle}">恢复方案</h3>
+            <div class="${styles.emergencySectionContent}">${renderMarkdown(knowledge.recovery_plan)}</div>
+          </div>
+        `);
+      }
+      return sections.join('');
+    }
+    
+    return renderMarkdown(knowledge.content || '');
+  }, [knowledge, isEmergency]);
+
   /**
    * 处理编辑
    */
   const handleEdit = () => {
-    setFormModalOpen(true);
+    navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
   };
   
   /**
    * 处理删除
    */
   const handleDelete = () => {
+    if (!knowledge) return;
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除知识文档「${knowledge.title}」吗？此操作不可撤销。`,
@@ -108,7 +314,7 @@ export const KnowledgeDetail: React.FC = () => {
   const handleUnpublish = () => {
     Modal.confirm({
       title: '确认取消发布',
-      content: '取消发布后，该知识将变为草稿状态，无法用于任务分配。确定要取消发布吗？',
+      content: '取消发布后，该知识将变为草稿状态。确定要取消发布吗？',
       okText: '确定',
       cancelText: '取消',
       onOk: async () => {
@@ -122,305 +328,168 @@ export const KnowledgeDetail: React.FC = () => {
       },
     });
   };
-  
-  // 获取内容（应急类知识需要手动组合结构化字段）
-  const getContent = () => {
-    if (knowledge.knowledge_type === 'EMERGENCY') {
-      const parts = [];
-      if (knowledge.fault_scenario) parts.push(`<h3>故障场景</h3><div class="content-section">${knowledge.fault_scenario}</div>`);
-      if (knowledge.trigger_process) parts.push(`<h3>触发流程</h3><div class="content-section">${knowledge.trigger_process}</div>`);
-      if (knowledge.solution) parts.push(`<h3>解决方案</h3><div class="content-section">${knowledge.solution}</div>`);
-      if (knowledge.verification_plan) parts.push(`<h3>验证方案</h3><div class="content-section">${knowledge.verification_plan}</div>`);
-      if (knowledge.recovery_plan) parts.push(`<h3>恢复方案</h3><div class="content-section">${knowledge.recovery_plan}</div>`);
-      return parts.join('');
-    }
-    return knowledge.content || '';
-  };
+
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingState}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
+
+  // 空状态
+  if (!knowledge) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.emptyState}>
+          <span>知识文档不存在</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fadeIn">
-      {/* 返回按钮 */}
-      <div style={{ marginBottom: 'var(--spacing-4)' }}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{
-            color: 'var(--color-gray-600)',
-            fontWeight: 500,
-          }}
-        >
-          返回列表
-        </Button>
-      </div>
-
-      <Card>
-        {/* 标题区 */}
-        <div style={{ marginBottom: 'var(--spacing-6)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-3)', flexWrap: 'wrap', gap: 'var(--spacing-3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', flexWrap: 'wrap' }}>
-              <StatusBadge
-                status={knowledge.knowledge_type === 'EMERGENCY' ? 'error' : 'info'}
-                text={knowledge.knowledge_type_display}
-              />
-              {knowledge.line_type && (
-                <Tag style={{ margin: 0, borderRadius: 'var(--radius-full)' }}>
-                  {knowledge.line_type.name}
-                </Tag>
-              )}
+    <div className={styles.container}>
+      {/* 顶部栏 */}
+      <div className={styles.topBar}>
+        <div className={styles.topLeft}>
+          <button className={styles.backButton} onClick={() => navigate(-1)}>
+            <ArrowLeftOutlined />
+          </button>
+          <div className={styles.titleSection}>
+            <div className={styles.titleRow}>
+              <h1 className={styles.title}>{knowledge.title}</h1>
               {isAdminRoute && (
-                <StatusBadge
-                  status={knowledge.status === 'PUBLISHED' ? 'success' : 'default'}
-                  text={knowledge.status_display}
-                  showIcon={false}
-                />
+                <span className={`${styles.statusBadge} ${isPublished ? styles.statusPublished : styles.statusDraft}`}>
+                  {knowledge.status_display}
+                </span>
               )}
             </div>
-            
-            {/* 操作按钮（仅管理员可见） */}
-            {isAdminRoute && (
-              <Space>
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={handleEdit}
-                >
-                  编辑
-                </Button>
-                {isPublished ? (
-                  <Button
-                    icon={<StopOutlined />}
-                    onClick={handleUnpublish}
-                  >
-                    取消发布
-                  </Button>
-                ) : (
-                  <Button
-                    type="primary"
-                    icon={<CheckCircleOutlined />}
-                    onClick={handlePublish}
-                  >
-                    发布
-                  </Button>
-                )}
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={handleDelete}
-                >
-                  删除
-                </Button>
-              </Space>
-            )}
-          </div>
-          
-          <Title
-            level={2}
-            style={{
-              margin: 0,
-              marginBottom: 'var(--spacing-4)',
-              fontSize: 'var(--font-size-3xl)',
-              fontWeight: 700,
-              color: 'var(--color-gray-900)',
-            }}
-          >
-            {knowledge.title}
-          </Title>
-
-          {/* 标签 */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-4)' }}>
-            {knowledge.operation_tags?.map((tag) => (
-              <Tag
-                key={tag.id}
-                style={{
-                  margin: 0,
-                  background: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-600)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                {tag.name}
-              </Tag>
-            ))}
-            {knowledge.system_tags?.map((tag) => (
-              <Tag
-                key={tag.id}
-                style={{
-                  margin: 0,
-                  background: 'rgba(155, 0, 255, 0.1)',
-                  color: 'var(--color-purple-500)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                {tag.name}
-              </Tag>
-            ))}
-          </div>
-
-          {/* 元信息 */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 'var(--spacing-6)',
-              flexWrap: 'wrap',
-              padding: 'var(--spacing-4)',
-              background: 'var(--color-gray-50)',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--font-size-sm)',
-              color: 'var(--color-gray-600)',
-            }}
-          >
-            {knowledge.created_by_name && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-                <UserOutlined />
-                <span>创建人：{knowledge.created_by_name}</span>
-              </div>
-            )}
-            {knowledge.updated_by_name && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-                <UserOutlined />
-                <span>更新人：{knowledge.updated_by_name}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-              <EyeOutlined />
-              <span>阅读次数：{knowledge.view_count}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-              <CalendarOutlined />
-              <span>更新时间：{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+            <div className={styles.metaRow}>
+              {knowledge.updated_by_name && (
+                <span className={styles.metaItem}>
+                  <UserOutlined />
+                  {knowledge.updated_by_name}
+                </span>
+              )}
+              <span className={styles.metaItem}>
+                <CalendarOutlined />
+                {dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}
+              </span>
+              <span className={styles.metaItem}>
+                <EyeOutlined />
+                {knowledge.view_count} 次阅读
+              </span>
             </div>
           </div>
         </div>
+        
+        {/* 操作按钮（仅管理员可见） */}
+        {isAdminRoute && (
+          <div className={styles.topRight}>
+            <Space>
+              <Button icon={<EditOutlined />} onClick={handleEdit}>
+                编辑
+              </Button>
+              {isPublished ? (
+                <Button icon={<StopOutlined />} onClick={handleUnpublish}>
+                  取消发布
+                </Button>
+              ) : (
+                <Button type="primary" icon={<CheckCircleOutlined />} onClick={handlePublish}>
+                  发布
+                </Button>
+              )}
+              <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+                删除
+              </Button>
+            </Space>
+          </div>
+        )}
+      </div>
 
-        <Divider style={{ margin: 'var(--spacing-6) 0' }} />
+      {/* 主体内容 */}
+      <div className={styles.mainContent}>
+        {/* 左侧目录 */}
+        <div className={styles.outlineWrapper}>
+          {outlineCollapsed ? (
+            <button 
+              className={styles.outlineExpandBtn}
+              onClick={() => setOutlineCollapsed(false)}
+              title="展开目录"
+            >
+              <MenuUnfoldOutlined />
+            </button>
+          ) : (
+            <div className={styles.outlinePanel}>
+              <div className={styles.outlineHeader}>
+                <div className={styles.outlineHeaderTitle}>
+                  <OrderedListOutlined style={{ marginRight: 8 }} />
+                  目录
+                </div>
+                <button 
+                  className={styles.outlineCollapseBtn}
+                  onClick={() => setOutlineCollapsed(true)}
+                  title="折叠目录"
+                >
+                  <CloseCircleOutlined />
+                </button>
+              </div>
+              <div className={styles.outlineContent}>
+                {outline.length > 0 ? (
+                  outline.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`${styles.outlineItem} ${
+                        item.level === 1 ? styles.outlineItemH1 : 
+                        item.level === 2 ? styles.outlineItemH2 : 
+                        styles.outlineItemH3
+                      }`}
+                    >
+                      <span className={styles.outlineItemIcon}>{'#'.repeat(item.level)}</span>
+                      <span className={styles.outlineItemText}>{item.text}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.outlineEmpty}>
+                    暂无目录
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* 内容区 */}
-        <div
-          className="knowledge-content"
-          dangerouslySetInnerHTML={{
-            __html: getContent(),
-          }}
-        />
-
-        <style>{`
-          .knowledge-content {
-            color: var(--color-gray-800);
-            line-height: 1.8;
-            font-size: var(--font-size-base);
-          }
-          .knowledge-content h3 {
-            color: var(--color-gray-900);
-            font-size: var(--font-size-xl);
-            font-weight: 600;
-            margin: var(--spacing-8) 0 var(--spacing-4) 0;
-            padding-bottom: var(--spacing-2);
-            border-bottom: 2px solid var(--color-primary-100);
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-2);
-          }
-          .knowledge-content h3::before {
-            content: '';
-            display: inline-block;
-            width: 4px;
-            height: 20px;
-            background: linear-gradient(180deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%);
-            border-radius: 2px;
-          }
-          .knowledge-content .content-section {
-            padding: var(--spacing-4);
-            background: var(--color-gray-50);
-            border-radius: var(--radius-lg);
-            margin-bottom: var(--spacing-4);
-          }
-          .knowledge-content p {
-            margin: var(--spacing-3) 0;
-            color: var(--color-gray-700);
-          }
-          .knowledge-content ul,
-          .knowledge-content ol {
-            margin: var(--spacing-3) 0;
-            padding-left: var(--spacing-6);
-            color: var(--color-gray-700);
-          }
-          .knowledge-content li {
-            margin: var(--spacing-2) 0;
-          }
-          .knowledge-content code {
-            background: var(--color-primary-50);
-            color: var(--color-primary-700);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            font-family: var(--font-mono);
-            font-size: var(--font-size-sm);
-          }
-          .knowledge-content pre {
-            background: var(--color-gray-900);
-            color: var(--color-gray-100);
-            padding: var(--spacing-5);
-            border-radius: var(--radius-lg);
-            overflow-x: auto;
-            margin: var(--spacing-4) 0;
-          }
-          .knowledge-content pre code {
-            background: transparent;
-            color: inherit;
-            padding: 0;
-          }
-          .knowledge-content a {
-            color: var(--color-primary-500);
-            text-decoration: underline;
-          }
-          .knowledge-content a:hover {
-            color: var(--color-primary-600);
-          }
-          .knowledge-content blockquote {
-            margin: var(--spacing-4) 0;
-            padding: var(--spacing-4) var(--spacing-5);
-            border-left: 4px solid var(--color-primary-500);
-            background: var(--color-primary-50);
-            border-radius: 0 var(--radius-md) var(--radius-md) 0;
-            color: var(--color-gray-700);
-          }
-          .knowledge-content table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: var(--spacing-4) 0;
-          }
-          .knowledge-content th,
-          .knowledge-content td {
-            padding: var(--spacing-3) var(--spacing-4);
-            border: 1px solid var(--color-gray-200);
-            text-align: left;
-          }
-          .knowledge-content th {
-            background: var(--color-gray-50);
-            font-weight: 600;
-          }
-          .knowledge-content img {
-            max-width: 100%;
-            border-radius: var(--radius-lg);
-            margin: var(--spacing-4) 0;
-          }
-        `}</style>
-      </Card>
-      
-      {/* 编辑表单弹窗（仅管理员可见） */}
-      {isAdminRoute && (
-        <KnowledgeFormModal
-          open={formModalOpen}
-          knowledgeId={Number(id)}
-          onClose={() => {
-            setFormModalOpen(false);
-          }}
-          onSuccess={() => {
-            setFormModalOpen(false);
-            refetch?.();
-          }}
-        />
-      )}
+        {/* 右侧内容 */}
+        <div className={styles.contentSection}>
+          {/* 标签栏 */}
+          {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
+            <div className={styles.tagsBar}>
+              {knowledge.system_tags?.map((tag) => (
+                <span key={tag.id} className={`${styles.tag} ${styles.tagSystem}`}>
+                  {tag.name}
+                </span>
+              ))}
+              {knowledge.operation_tags?.map((tag) => (
+                <span key={tag.id} className={`${styles.tag} ${styles.tagOperation}`}>
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          
+          {/* 内容 */}
+          <div className={styles.contentBody}>
+            <div 
+              className={styles.markdownContent}
+              dangerouslySetInnerHTML={{ __html: renderedContent }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

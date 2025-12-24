@@ -53,6 +53,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     content_preview = serializers.CharField(read_only=True)
+    table_of_contents = serializers.ListField(read_only=True)
     
     # 新增：用于区分知识状态的字段
     has_pending_draft = serializers.SerializerMethodField()
@@ -68,7 +69,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'title', 'knowledge_type', 'knowledge_type_display',
             'status', 'status_display', 'is_current', 'published_at',
             'line_type', 'system_tags', 'operation_tags',
-            'view_count', 'content_preview',
+            'view_count', 'summary', 'content_preview', 'table_of_contents',
             # 新增字段
             'has_pending_draft', 'pending_draft_id',
             'source_version_id', 'source_version_title', 'edit_status',
@@ -141,6 +142,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     source_version_id = serializers.IntegerField(source='source_version.id', read_only=True, allow_null=True)
+    table_of_contents = serializers.ListField(read_only=True)
     
     class Meta:
         model = Knowledge
@@ -154,8 +156,10 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'verification_plan', 'recovery_plan',
             # 其他类型知识正文
             'content',
+            # 概要
+            'summary',
             # 元数据
-            'view_count',
+            'view_count', 'table_of_contents',
             'source_version_id',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
@@ -200,6 +204,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             'verification_plan', 'recovery_plan',
             # 其他类型知识的正文内容
             'content',
+            # 知识概要
+            'summary',
         ]
     
     def validate(self, attrs):
@@ -331,6 +337,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
             'verification_plan', 'recovery_plan',
             # 其他类型知识的正文内容
             'content',
+            # 知识概要
+            'summary',
         ]
     
     def validate(self, attrs):

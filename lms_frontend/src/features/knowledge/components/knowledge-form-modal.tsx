@@ -15,7 +15,7 @@ const { Option } = Select;
  */
 const KNOWLEDGE_TYPE_OPTIONS = [
   { value: 'EMERGENCY', label: '应急类' },
-  { value: 'OTHER', label: '其他类型' },
+  { value: 'OTHER', label: '标准类' },
 ];
 
 interface KnowledgeFormModalProps {

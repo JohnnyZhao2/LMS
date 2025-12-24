@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Modal, message, Spin, Pagination } from 'antd';
 import {
   PlusOutlined,
@@ -16,12 +15,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags } from '../api/get-tags';
-import { KnowledgeFormModal } from './knowledge-form-modal';
 import { SharedKnowledgeCard } from './shared-knowledge-card';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
 import { showApiError } from '@/utils/error-handler';
-import type { KnowledgeType, KnowledgeFilterType, Tag as TagType } from '@/types/api';
+import type { KnowledgeFilterType, Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import styles from './knowledge-library.module.css';
 
@@ -50,10 +48,6 @@ const getLineTypeIcon = (name: string): React.ReactNode => {
  * 采用暗色科技主题设计
  */
 export const AdminKnowledgeList: React.FC = () => {
-  const [formModalOpen, setFormModalOpen] = useState(false);
-  const [editingKnowledgeId, setEditingKnowledgeId] = useState<number | undefined>();
-  const [defaultKnowledgeType, setDefaultKnowledgeType] = useState<KnowledgeType>('OTHER');
-
   const navigate = useNavigate();
 
   // 使用共用的筛选 Hook
@@ -102,12 +96,10 @@ export const AdminKnowledgeList: React.FC = () => {
   };
 
   /**
-   * 打开新建弹窗
+   * 跳转到新建页面
    */
   const handleCreate = () => {
-    setEditingKnowledgeId(undefined);
-    setDefaultKnowledgeType('OTHER');
-    setFormModalOpen(true);
+    navigate(`${ROUTES.ADMIN_KNOWLEDGE}/create`);
   };
 
   /**
@@ -118,11 +110,10 @@ export const AdminKnowledgeList: React.FC = () => {
   };
 
   /**
-   * 处理编辑
+   * 跳转到编辑页面
    */
   const handleEdit = (id: number) => {
-    setEditingKnowledgeId(id);
-    setFormModalOpen(true);
+    navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
   };
 
   /**
@@ -316,19 +307,6 @@ export const AdminKnowledgeList: React.FC = () => {
         </div>
       </main>
 
-      {/* 知识表单弹窗 */}
-      <KnowledgeFormModal
-        open={formModalOpen}
-        knowledgeId={editingKnowledgeId}
-        defaultKnowledgeType={defaultKnowledgeType}
-        onClose={() => {
-          setFormModalOpen(false);
-          setEditingKnowledgeId(undefined);
-        }}
-        onSuccess={() => {
-          refetch();
-        }}
-      />
     </div>
   );
 };
