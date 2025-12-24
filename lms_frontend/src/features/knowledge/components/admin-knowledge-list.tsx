@@ -197,13 +197,13 @@ export const AdminKnowledgeList: React.FC = () => {
 
       {/* 主内容区 */}
       <main className={styles.mainArea}>
-        {/* 顶部标题栏 */}
+        {/* 顶部标题栏 - 三栏布局 */}
         <header className={styles.topBar}>
           <div className={styles.pageTitle}>
             <DatabaseOutlined className={styles.pageTitleIcon} />
             <span className={styles.pageTitleText}>知识库</span>
           </div>
-          <div className={styles.topActions}>
+          <div className={styles.topCenter}>
             <div className={styles.searchBox}>
               <SearchOutlined className={styles.searchIcon} />
               <input
@@ -216,6 +216,8 @@ export const AdminKnowledgeList: React.FC = () => {
                 onBlur={submitSearch}
               />
             </div>
+          </div>
+          <div className={styles.topActions}>
             <button className={styles.createButton} onClick={handleCreate}>
               <PlusOutlined />
               <span>创建知识</span>

@@ -585,6 +585,89 @@ class KnowledgeStatsView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class StudentKnowledgeListView(APIView):
+    """
+    学员知识列表端点
+    
+    独立于管理员接口，强制只返回已发布的知识。
+    即使用户同时拥有管理员角色，此接口也只返回已发布内容。
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取学员知识列表',
+        description='获取已发布的知识文档列表。此接口专为学员端设计，强制只返回已发布的知识。',
+        parameters=[
+            OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
+            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
+            OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
+            OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
+            OpenApiParameter(name='page', type=int, description='页码（默认1）'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
+        ],
+        responses={200: KnowledgeListSerializer(many=True)},
+        tags=['知识管理']
+    )
+    def get(self, request):
+        # 强制只返回已发布的知识
+        queryset = Knowledge.objects.filter(
+            is_deleted=False,
+            status='PUBLISHED',
+            is_current=True
+        ).select_related(
+            'created_by', 'updated_by'
+        ).prefetch_related(
+            'system_tags', 'operation_tags'
+        )
+        
+        # Filter by knowledge type
+        knowledge_type = request.query_params.get('knowledge_type')
+        if knowledge_type:
+            queryset = queryset.filter(knowledge_type=knowledge_type)
+        
+        # Filter by line type ID (通过ResourceLineType关系表)
+        line_type_id = request.query_params.get('line_type_id')
+        if line_type_id:
+            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
+            queryset = queryset.filter(
+                id__in=ResourceLineType.objects.filter(
+                    content_type=knowledge_content_type,
+                    line_type_id=line_type_id
+                ).values_list('object_id', flat=True)
+            )
+        
+        # Filter by system tag ID
+        system_tag_id = request.query_params.get('system_tag_id')
+        if system_tag_id:
+            queryset = queryset.filter(system_tags__id=system_tag_id)
+        
+        # Filter by operation tag ID
+        operation_tag_id = request.query_params.get('operation_tag_id')
+        if operation_tag_id:
+            queryset = queryset.filter(operation_tags__id=operation_tag_id)
+        
+        # Search by title or content
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(title__icontains=search) |
+                models.Q(content__icontains=search)
+            )
+        
+        queryset = queryset.distinct().order_by('-updated_at')
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = KnowledgeListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        serializer = KnowledgeListSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class KnowledgeIncrementViewCountView(APIView):
     """
     Increment knowledge view count endpoint.

@@ -25,7 +25,9 @@ interface GetStudentKnowledgeListParams {
 /**
  * 获取学员知识列表
  * 
- * 学员只能查看已发布的知识文档
+ * 使用专属的学员接口 /knowledge/student/，强制只返回已发布的知识文档。
+ * 即使用户同时拥有管理员角色，此接口也只返回已发布内容。
+ * 
  * @param params - 筛选参数
  */
 export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = {}) => {
@@ -61,7 +63,8 @@ export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = 
       searchParams.set('page_size', String(pageSize));
 
       const queryString = searchParams.toString();
-      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge/${queryString ? `?${queryString}` : ''}`);
+      // 使用学员专属接口，强制只返回已发布的知识
+      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge/student/${queryString ? `?${queryString}` : ''}`);
     },
   });
 };

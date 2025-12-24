@@ -130,13 +130,13 @@ export const StudentKnowledgeCenter: React.FC = () => {
 
       {/* 主内容区 */}
       <main className={styles.mainArea}>
-        {/* 顶部标题栏 */}
+        {/* 顶部标题栏 - 三栏布局 */}
         <header className={styles.topBar}>
           <div className={styles.pageTitle}>
             <DatabaseOutlined className={styles.pageTitleIcon} />
             <span className={styles.pageTitleText}>知识中心</span>
           </div>
-          <div className={styles.topActions}>
+          <div className={styles.topCenter}>
             <div className={styles.searchBox}>
               <SearchOutlined className={styles.searchIcon} />
               <input
@@ -149,6 +149,8 @@ export const StudentKnowledgeCenter: React.FC = () => {
                 onBlur={submitSearch}
               />
             </div>
+          </div>
+          <div className={styles.topActions}>
             {/* 学员端不显示创建按钮 */}
           </div>
         </header>
