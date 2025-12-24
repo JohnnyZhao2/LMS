@@ -413,39 +413,6 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit, lineTypeTags, lineTypeId]);
 
   /**
-   * 让 textarea 根据内容自动调整高度，确保外层容器可以滚动
-   */
-  useEffect(() => {
-    const adjustTextareaHeight = () => {
-      if (textareaRef.current && editorMode !== 'preview' && editorMode !== 'split') {
-        const textarea = textareaRef.current;
-        // 重置高度，让 scrollHeight 正确计算
-        textarea.style.height = 'auto';
-        // 设置高度为内容高度（完全根据内容，不限制最小值）
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      }
-    };
-
-    // 初始调整和内容变化时调整
-    adjustTextareaHeight();
-    
-    // 监听内容变化
-    if (textareaRef.current) {
-      textareaRef.current.addEventListener('input', adjustTextareaHeight);
-    }
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', adjustTextareaHeight);
-
-    return () => {
-      if (textareaRef.current) {
-        textareaRef.current.removeEventListener('input', adjustTextareaHeight);
-      }
-      window.removeEventListener('resize', adjustTextareaHeight);
-    };
-  }, [content, editorMode]);
-
-  /**
    * 关闭/返回
    */
   const handleClose = useCallback(() => {
