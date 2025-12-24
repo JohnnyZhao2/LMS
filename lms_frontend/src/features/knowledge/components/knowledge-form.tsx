@@ -413,6 +413,39 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit, lineTypeTags, lineTypeId]);
 
   /**
+   * 让 textarea 根据内容自动调整高度，确保外层容器可以滚动
+   */
+  useEffect(() => {
+    const adjustTextareaHeight = () => {
+      if (textareaRef.current && editorMode !== 'preview' && editorMode !== 'split') {
+        const textarea = textareaRef.current;
+        // 重置高度，让 scrollHeight 正确计算
+        textarea.style.height = 'auto';
+        // 设置高度为内容高度（完全根据内容，不限制最小值）
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
+    };
+
+    // 初始调整和内容变化时调整
+    adjustTextareaHeight();
+    
+    // 监听内容变化
+    if (textareaRef.current) {
+      textareaRef.current.addEventListener('input', adjustTextareaHeight);
+    }
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', adjustTextareaHeight);
+
+    return () => {
+      if (textareaRef.current) {
+        textareaRef.current.removeEventListener('input', adjustTextareaHeight);
+      }
+      window.removeEventListener('resize', adjustTextareaHeight);
+    };
+  }, [content, editorMode]);
+
+  /**
    * 关闭/返回
    */
   const handleClose = useCallback(() => {
@@ -1017,118 +1050,107 @@ export const KnowledgeForm: React.FC = () => {
               />
               <div className={styles.fieldHint}>{summary.length}/500 字符</div>
             </div>
+          </div>
 
-            <div className={styles.fieldRow}>
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>知识类型</label>
+          {/* 分类信息 */}
+          <div className={styles.metadataSection}>
+            <div className={styles.metadataSectionHeader}>
+              <SettingOutlined className={styles.metadataSectionIcon} />
+              <span className={styles.metadataSectionTitle}>分类信息</span>
+            </div>
+
+            {/* 2x2 网格布局 */}
+            <div className={styles.gridContainer}>
+              <div className={styles.gridCell}>
+                <label className={styles.gridLabel}>文档类型</label>
                 <Select
                   value={knowledgeType}
                   onChange={setKnowledgeType}
-                  className={styles.fieldSelect}
+                  className={styles.gridSelect}
                 >
                   {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
                     <Option key={opt.value} value={opt.value}>{opt.label}</Option>
                   ))}
                 </Select>
               </div>
-
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>版本</label>
-                <div className={styles.versionBadge}>
-                  v{isEdit && knowledgeDetail ? `${knowledgeDetail.version_number || 1}.0` : '1.0'}
-                </div>
+              <div className={styles.gridCell}>
+                <label className={styles.gridLabel}>条线类型</label>
+                <Select
+                  value={lineTypeId}
+                  onChange={setLineTypeId}
+                  className={styles.gridSelect}
+                  placeholder="选择"
+                >
+                  {lineTypeTags.map((tag: Tag) => (
+                    <Option key={tag.id} value={tag.id}>{tag.name}</Option>
+                  ))}
+                </Select>
+                {errors.lineTypeId && <div className={styles.fieldError}>{errors.lineTypeId}</div>}
               </div>
-            </div>
-          </div>
-
-          {/* 分类标签 */}
-          <div className={styles.metadataSection}>
-            <div className={styles.metadataSectionHeader}>
-              <SettingOutlined className={styles.metadataSectionIcon} />
-              <span className={styles.metadataSectionTitle}>分类标签</span>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>条线类型</label>
-              <Select
-                value={lineTypeId}
-                onChange={setLineTypeId}
-                className={styles.fieldSelect}
-                placeholder="选择条线类型"
-              >
-                {lineTypeTags.map((tag: Tag) => (
-                  <Option key={tag.id} value={tag.id}>{tag.name}</Option>
-                ))}
-              </Select>
-              {errors.lineTypeId && <div className={styles.fieldError}>{errors.lineTypeId}</div>}
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>系统标签</label>
-              <Select
-                mode="tags"
-                value={systemTagNames}
-                onChange={setSystemTagNames}
-                className={styles.tagsSelect}
-                placeholder="选择或输入系统标签"
-                dropdownRender={(menu) => (
-                  <>
-                    {menu}
-                    <Divider style={{ margin: '8px 0' }} />
-                    <Space style={{ padding: '0 8px 8px' }}>
-                      <Input
-                        placeholder="新建标签"
-                        value={systemTagInput}
-                        onChange={(e) => setSystemTagInput(e.target.value)}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        size="small"
-                        style={{ width: 120 }}
-                      />
-                      <Button type="text" icon={<PlusOutlined />} onClick={handleAddSystemTag} size="small">
-                        添加
-                      </Button>
-                    </Space>
-                  </>
-                )}
-              >
-                {systemTags.map((tag: Tag) => (
-                  <Option key={tag.name} value={tag.name}>{tag.name}</Option>
-                ))}
-              </Select>
-            </div>
-
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>操作标签</label>
-              <Select
-                mode="tags"
-                value={operationTagNames}
-                onChange={setOperationTagNames}
-                className={styles.tagsSelect}
-                placeholder="选择或输入操作标签"
-                dropdownRender={(menu) => (
-                  <>
-                    {menu}
-                    <Divider style={{ margin: '8px 0' }} />
-                    <Space style={{ padding: '0 8px 8px' }}>
-                      <Input
-                        placeholder="新建标签"
-                        value={operationTagInput}
-                        onChange={(e) => setOperationTagInput(e.target.value)}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        size="small"
-                        style={{ width: 120 }}
-                      />
-                      <Button type="text" icon={<PlusOutlined />} onClick={handleAddOperationTag} size="small">
-                        添加
-                      </Button>
-                    </Space>
-                  </>
-                )}
-              >
-                {operationTags.map((tag: Tag) => (
-                  <Option key={tag.name} value={tag.name}>{tag.name}</Option>
-                ))}
-              </Select>
+              <div className={styles.gridCell}>
+                <label className={styles.gridLabel}>系统标签</label>
+                <Select
+                  mode="tags"
+                  value={systemTagNames}
+                  onChange={setSystemTagNames}
+                  className={styles.gridSelect}
+                  placeholder="选择"
+                  maxTagCount={1}
+                  dropdownRender={(menu) => (
+                    <>
+                      {menu}
+                      <Divider style={{ margin: '8px 0' }} />
+                      <Space style={{ padding: '0 8px 8px' }}>
+                        <Input
+                          placeholder="新建"
+                          value={systemTagInput}
+                          onChange={(e) => setSystemTagInput(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          size="small"
+                          style={{ width: 80 }}
+                        />
+                        <Button type="text" icon={<PlusOutlined />} onClick={handleAddSystemTag} size="small" />
+                      </Space>
+                    </>
+                  )}
+                >
+                  {systemTags.map((tag: Tag) => (
+                    <Option key={tag.name} value={tag.name}>{tag.name}</Option>
+                  ))}
+                </Select>
+              </div>
+              <div className={styles.gridCell}>
+                <label className={styles.gridLabel}>操作标签</label>
+                <Select
+                  mode="tags"
+                  value={operationTagNames}
+                  onChange={setOperationTagNames}
+                  className={styles.gridSelect}
+                  placeholder="选择"
+                  maxTagCount={1}
+                  dropdownRender={(menu) => (
+                    <>
+                      {menu}
+                      <Divider style={{ margin: '8px 0' }} />
+                      <Space style={{ padding: '0 8px 8px' }}>
+                        <Input
+                          placeholder="新建"
+                          value={operationTagInput}
+                          onChange={(e) => setOperationTagInput(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          size="small"
+                          style={{ width: 80 }}
+                        />
+                        <Button type="text" icon={<PlusOutlined />} onClick={handleAddOperationTag} size="small" />
+                      </Space>
+                    </>
+                  )}
+                >
+                  {operationTags.map((tag: Tag) => (
+                    <Option key={tag.name} value={tag.name}>{tag.name}</Option>
+                  ))}
+                </Select>
+              </div>
             </div>
           </div>
 
