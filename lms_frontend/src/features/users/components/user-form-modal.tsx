@@ -73,13 +73,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           mentor_id: userDetail.mentor?.id || null,
         });
       } else {
+        // 新建模式：重置表单和状态
         form.resetFields();
-        // 默认选择学员角色
         setSelectedRoleCodes([]);
         form.setFieldsValue({
           role_codes: [],
         });
       }
+    } else {
+      // 弹窗关闭时重置状态
+      setSelectedRoleCodes([]);
     }
   }, [open, isEdit, userDetail, form]);
 
@@ -292,19 +295,21 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               gap: 16,
             }}
           >
-            {roles.map((role) => {
-              const isSelected = selectedRoleCodes.includes(role.code as RoleCode);
+            {roles.filter((role) => role.code !== 'STUDENT').map((role) => {
+              const roleCode = role.code as RoleCode;
+              const isSelected = selectedRoleCodes.includes(roleCode);
+              const roleColor = getRoleColor(role.code);
               return (
                 <Card
                   key={role.code}
-                  hoverable
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     // 更新状态和表单值，确保 UI 立即响应
                     let newCodes: RoleCode[];
                     if (isSelected) {
-                      newCodes = selectedRoleCodes.filter((c: RoleCode) => c !== role.code);
+                      newCodes = selectedRoleCodes.filter((c: RoleCode) => c !== roleCode);
                     } else {
-                      newCodes = [...selectedRoleCodes, role.code as RoleCode];
+                      newCodes = [...selectedRoleCodes, roleCode];
                     }
                     setSelectedRoleCodes(newCodes);
                     form.setFieldsValue({
@@ -313,13 +318,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   }}
                   style={{
                     cursor: 'pointer',
-                    border: isSelected ? `2px solid ${getRoleColor(role.code)}` : '1px solid #d9d9d9',
-                    backgroundColor: isSelected ? `${getRoleColor(role.code)}10` : 'transparent',
+                    border: isSelected ? `2px solid ${roleColor}` : '1px solid #d9d9d9',
+                    backgroundColor: isSelected ? `${roleColor}15` : '#ffffff',
                     transition: 'all 0.3s',
+                    boxShadow: isSelected ? `0 2px 8px ${roleColor}30` : '0 1px 2px rgba(0,0,0,0.1)',
+                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
                   }}
                   bodyStyle={{ padding: '16px', textAlign: 'center' }}
                 >
-                  <div style={{ marginBottom: 8, color: getRoleColor(role.code) }}>
+                  <div style={{ marginBottom: 8, color: roleColor }}>
                     {roleIcons[role.code] || <UserOutlined style={{ fontSize: 24 }} />}
                   </div>
                   <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{role.name}</div>
