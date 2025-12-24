@@ -13,18 +13,23 @@
    左侧图标导航栏
    ============================================ */
 .iconSidebar {
+  position: fixed;
+  left: 20px;
+  top: var(--header-height);
   width: 72px;
-  flex-shrink: 0;
+  height: calc(100vh - var(--header-height));
   display: flex;
   flex-direction: column;
+  align-items: center;
   padding: var(--spacing-4) 0;
   gap: var(--spacing-2);
+  z-index: 100;
 }
 
 .iconItem {
   width: 48px;
   height: 48px;
-  margin: 0 auto;
+  flex-shrink: 0;
   border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
@@ -88,6 +93,25 @@
   visibility: visible;
 }
 
+/* 创建按钮容器 - 固定在侧边栏底部 */
+.createButtonWrapper {
+  margin-top: auto;
+  padding-bottom: var(--spacing-4);
+}
+
+/* 创建按钮样式 */
+.createIconButton {
+  background: var(--color-primary-500) !important;
+  color: var(--color-white) !important;
+  box-shadow: var(--shadow-lg);
+}
+
+.createIconButton:hover {
+  background: var(--color-primary-600) !important;
+  color: var(--color-white) !important;
+  transform: scale(1.08);
+}
+
 /* ============================================
    主内容区
    ============================================ */
@@ -98,6 +122,7 @@
   min-width: 0;
   overflow: hidden;
   background: var(--color-gray-50);
+  margin-left: 50px;
 }
 
 /* ============================================
@@ -409,6 +434,10 @@
   color: var(--color-gray-500);
 }
 
+.docTypeLabelEmergency {
+  color: #FF4D6A;
+}
+
 .cardHeaderRight {
   display: flex;
   align-items: center;
@@ -416,24 +445,22 @@
 }
 
 .statusBadge {
-  padding: 4px 12px;
-  border-radius: var(--radius-md);
-  font-size: 11px;
-  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  border: 1px solid currentColor;
 }
 
 .statusPublished {
-  background: rgba(16, 183, 89, 0.12);
-  color: #0DA34F;
+  color: #10B759;
 }
 
 .statusRevising {
-  background: rgba(224, 168, 96, 0.15);
-  color: #B8860B;
+  color: #D4A017;
 }
 
 .statusDraft {
-  background: var(--color-gray-100);
   color: var(--color-gray-500);
 }
 

@@ -142,8 +142,8 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       <div className={styles.cardHeader}>
         <div className={styles.docType}>
           <span className={`${styles.docTypeDot} ${isEmergency ? styles.docTypeDotEmergency : styles.docTypeDotStandard}`} />
-          <span className={styles.docTypeLabel}>
-            {isEmergency ? 'EMERGENCY_OPS' : 'STANDARD_LOGIC'}
+          <span className={`${styles.docTypeLabel} ${isEmergency ? styles.docTypeLabelEmergency : ''}`}>
+            {isEmergency ? 'EMERGENCY' : 'STANDARD'}
           </span>
         </div>
         <div className={styles.cardHeaderRight}>

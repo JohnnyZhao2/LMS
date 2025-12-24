@@ -193,6 +193,17 @@ export const AdminKnowledgeList: React.FC = () => {
             <span className={styles.iconTooltip}>{tag.name}</span>
           </div>
         ))}
+
+        {/* 创建按钮 - 吸附在侧边栏底部 */}
+        <div className={styles.createButtonWrapper}>
+          <div
+            className={`${styles.iconItem} ${styles.createIconButton}`}
+            onClick={handleCreate}
+          >
+            <PlusOutlined />
+            <span className={styles.iconTooltip}>创建知识</span>
+          </div>
+        </div>
       </aside>
 
       {/* 主内容区 */}
@@ -218,10 +229,7 @@ export const AdminKnowledgeList: React.FC = () => {
             </div>
           </div>
           <div className={styles.topActions}>
-            <button className={styles.createButton} onClick={handleCreate}>
-              <PlusOutlined />
-              <span>创建知识</span>
-            </button>
+            {/* 右侧预留空间，保持三栏布局平衡 */}
           </div>
         </header>
 
