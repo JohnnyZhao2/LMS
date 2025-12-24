@@ -668,6 +668,52 @@ class StudentKnowledgeListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class StudentKnowledgeDetailView(APIView):
+    """
+    学员知识详情端点
+    
+    独立于管理员接口，强制只返回已发布的知识详情。
+    即使用户同时拥有管理员角色，此接口也只返回已发布内容，不会返回草稿版本。
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary='获取学员知识详情',
+        description='获取已发布的知识文档详情。此接口专为学员端设计，强制只返回已发布的知识，不会返回草稿版本。',
+        responses={
+            200: KnowledgeDetailSerializer,
+            403: OpenApiResponse(description='无权访问该知识文档'),
+            404: OpenApiResponse(description='知识文档不存在'),
+        },
+        tags=['知识管理']
+    )
+    def get(self, request, pk):
+        """
+        获取学员知识详情
+        
+        强制只返回已发布的知识，不会返回草稿版本。
+        """
+        try:
+            knowledge = Knowledge.objects.select_related(
+                'created_by', 'updated_by', 'source_version'
+            ).prefetch_related(
+                'system_tags', 'operation_tags'
+            ).get(
+                pk=pk,
+                is_deleted=False,
+                status='PUBLISHED',
+                is_current=True
+            )
+        except Knowledge.DoesNotExist:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='知识文档不存在或未发布'
+            )
+        
+        serializer = KnowledgeDetailSerializer(knowledge)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class KnowledgeIncrementViewCountView(APIView):
     """
     Increment knowledge view count endpoint.
