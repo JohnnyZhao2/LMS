@@ -450,7 +450,9 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         self.status = 'DRAFT'
         self.is_current = False
         self.published_at = None
-        self.save(update_fields=['status', 'is_current', 'published_at'])
+        # 取消发布后，将 source_version 设为 None，使其显示在草稿列表中
+        self.source_version = None
+        self.save(update_fields=['status', 'is_current', 'published_at', 'source_version'])
         return self
     
     def increment_view_count(self):
