@@ -45,6 +45,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const isEdit = !!userId;
+  // 使用 useState 管理选中状态，确保 UI 立即响应
+  const [selectedRoleCodes, setSelectedRoleCodes] = useState<RoleCode[]>([]);
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -62,6 +64,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         const currentRoleCodes = userDetail.roles
           .filter((r) => r.code !== 'STUDENT')
           .map((r) => r.code as RoleCode);
+        setSelectedRoleCodes(currentRoleCodes);
         form.setFieldsValue({
           username: userDetail.username,
           employee_id: userDetail.employee_id,
@@ -70,12 +73,16 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           mentor_id: userDetail.mentor?.id || null,
         });
       } else {
+        // 新建模式：重置表单和状态
         form.resetFields();
-        // 默认选择学员角色
+        setSelectedRoleCodes([]);
         form.setFieldsValue({
           role_codes: [],
         });
       }
+    } else {
+      // 弹窗关闭时重置状态
+      setSelectedRoleCodes([]);
     }
   }, [open, isEdit, userDetail, form]);
 
@@ -134,8 +141,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         message.success('用户创建成功');
       }
-      onClose();
-      form.resetFields();
+      handleClose();
       onSuccess?.();
     } catch (error) {
       showApiError(error, isEdit ? '更新失败' : '创建失败');
@@ -178,14 +184,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     return colors[code] || '#1890ff';
   };
 
-  const selectedRoleCodes = Form.useWatch('role_codes', form) || [];
   const selectedDepartmentId = Form.useWatch('department_id', form);
   const username = Form.useWatch('username', form) || userDetail?.username;
+
+  // 处理弹窗关闭，重置状态
+  const handleClose = () => {
+    form.resetFields();
+    setSelectedRoleCodes([]);
+    onClose();
+  };
 
   return (
     <Modal
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={null}
       width={800}
       closeIcon={<CloseOutlined />}
@@ -283,40 +295,89 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               gap: 16,
             }}
           >
-            {roles.map((role) => {
-              const isSelected = selectedRoleCodes.includes(role.code as RoleCode);
+            {roles.filter((role) => role.code !== 'STUDENT').map((role) => {
+              const roleCode = role.code as RoleCode;
+              const isSelected = selectedRoleCodes.includes(roleCode);
+              const roleColor = getRoleColor(role.code);
               return (
-                <Card
+                <div
                   key={role.code}
-                  hoverable
-                  onClick={() => {
-                    const currentCodes = form.getFieldValue('role_codes') || [];
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // 更新状态和表单值，确保 UI 立即响应
+                    let newCodes: RoleCode[];
                     if (isSelected) {
-                      form.setFieldsValue({
-                        role_codes: currentCodes.filter((c: RoleCode) => c !== role.code),
-                      });
+                      newCodes = selectedRoleCodes.filter((c: RoleCode) => c !== roleCode);
                     } else {
-                      form.setFieldsValue({
-                        role_codes: [...currentCodes, role.code as RoleCode],
-                      });
+                      newCodes = [...selectedRoleCodes, roleCode];
+                    }
+                    setSelectedRoleCodes(newCodes);
+                    form.setFieldsValue({
+                      role_codes: newCodes,
+                    });
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = roleColor;
+                      e.currentTarget.style.backgroundColor = `${roleColor}08`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = '#d9d9d9';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
                     }
                   }}
                   style={{
                     cursor: 'pointer',
-                    border: isSelected ? `2px solid ${getRoleColor(role.code)}` : '1px solid #d9d9d9',
-                    backgroundColor: isSelected ? `${getRoleColor(role.code)}10` : 'transparent',
-                    transition: 'all 0.3s',
+                    border: isSelected ? `2px solid ${roleColor}` : '1px solid #d9d9d9',
+                    backgroundColor: isSelected ? `${roleColor}15` : '#ffffff',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    boxShadow: isSelected ? `0 4px 12px ${roleColor}40` : '0 1px 2px rgba(0,0,0,0.1)',
+                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                    position: 'relative',
+                    minHeight: '120px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
-                  bodyStyle={{ padding: '16px', textAlign: 'center' }}
                 >
-                  <div style={{ marginBottom: 8, color: getRoleColor(role.code) }}>
-                    {roleIcons[role.code] || <UserOutlined style={{ fontSize: 24 }} />}
+                  {isSelected && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        backgroundColor: roleColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        boxShadow: `0 2px 4px ${roleColor}50`,
+                      }}
+                    >
+                      ✓
+                    </div>
+                  )}
+                  <div style={{ marginBottom: 8, color: roleColor, fontSize: 28 }}>
+                    {roleIcons[role.code] || <UserOutlined style={{ fontSize: 28 }} />}
                   </div>
-                  <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{role.name}</div>
+                  <div style={{ fontWeight: 'bold', marginBottom: 4, fontSize: 16, color: isSelected ? roleColor : '#000000' }}>
+                    {role.name}
+                  </div>
                   <div style={{ fontSize: 12, color: '#8c8c8c' }}>
                     {roleDescriptions[role.code] || '标准执行权限'}
                   </div>
-                </Card>
+                </div>
               );
             })}
             {/* 学员角色（始终选中，不可取消） */}
@@ -408,7 +469,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         {/* 底部按钮 */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-          <Button size="large" onClick={onClose}>
+          <Button size="large" onClick={handleClose}>
             取消
           </Button>
           <Button
