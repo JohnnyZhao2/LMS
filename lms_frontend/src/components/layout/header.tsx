@@ -118,11 +118,7 @@ export const Header: React.FC = () => {
         justifyContent: 'space-between',
         padding: '0 var(--spacing-6)',
         height: 'var(--header-height)',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'var(--glass-blur)',
-        WebkitBackdropFilter: 'var(--glass-blur)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
-        boxShadow: 'var(--shadow-sm)',
+        background: 'var(--color-gray-100)',
       }}
     >
       {/* 左侧：Logo + 品牌名 + 导航菜单 */}
@@ -196,14 +192,16 @@ export const Header: React.FC = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.background = 'var(--color-gray-100)';
+                    e.currentTarget.style.background = 'var(--color-white)';
                     e.currentTarget.style.color = 'var(--color-gray-900)';
+                    e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.color = 'var(--color-gray-600)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }
                 }}
               >
@@ -241,8 +239,8 @@ export const Header: React.FC = () => {
                 borderRadius: 'var(--radius-full)',
                 cursor: 'pointer',
                 transition: 'all var(--transition-fast)',
-                background: 'var(--color-gray-50)',
-                border: '1px solid var(--color-gray-200)',
+                background: 'var(--color-white)',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
               }}
             >
               <Avatar

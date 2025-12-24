@@ -155,13 +155,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   
-  /* 氛围背景 - 渐变光晕 */
-  background-color: var(--color-gray-50);
-  background-image: 
-    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(77, 108, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(255, 61, 143, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(16, 183, 89, 0.04) 0%, transparent 50%);
-  background-attachment: fixed;
+  /* 统一纯净背景 - 所有区域使用相同底色 */
+  background-color: var(--color-gray-100);
 }
 
 #root {
@@ -473,15 +468,16 @@ a:hover {
   box-shadow: 0 4px 12px rgba(77, 108, 255, 0.25);
 }
 
-/* Card 样式优化 */
+/* Card 样式优化 - 内容层浮在底色上 */
 .ant-card {
   border: none !important;
-  box-shadow: var(--shadow-sm);
+  background: var(--color-white) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
   transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
 .ant-card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* Modal 样式优化 */
@@ -496,10 +492,20 @@ a:hover {
   backdrop-filter: var(--glass-blur);
 }
 
-/* Table 样式优化 */
+/* Table 样式优化 - 内容层浮在底色上 */
 .ant-table-wrapper {
   border-radius: var(--radius-lg);
   overflow: hidden;
+  background: var(--color-white);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.ant-table {
+  background: var(--color-white) !important;
+}
+
+.ant-table-thead > tr > th {
+  background: var(--color-gray-50) !important;
 }
 
 /* Menu 样式优化 */
@@ -851,6 +857,24 @@ textarea.ant-input {
 /* DatePicker 样式优化 */
 .ant-picker-focused {
   box-shadow: 0 0 0 3px rgba(77, 108, 255, 0.1) !important;
+}
+
+/* Segmented 样式优化 - 与统一背景协调 */
+.ant-segmented {
+  background: var(--color-white) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md) !important;
+  padding: 2px !important;
+}
+
+.ant-segmented-item-selected {
+  background: var(--color-primary-500) !important;
+  color: var(--color-white) !important;
+  box-shadow: none !important;
+}
+
+.ant-segmented-item:not(.ant-segmented-item-selected):hover {
+  background: var(--color-gray-50) !important;
 }
 
 /* Skeleton 样式优化 - Shimmer 效果 */

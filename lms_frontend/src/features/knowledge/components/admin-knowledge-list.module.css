@@ -19,8 +19,7 @@
   flex-shrink: 0;
   background: var(--color-white);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--color-gray-100);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
   height: fit-content;
   position: sticky;
   top: calc(var(--header-height) + var(--spacing-6));
@@ -31,7 +30,6 @@
 /* 侧边栏头部 - 新建按钮 */
 .sidebarHeader {
   padding: var(--spacing-5);
-  border-bottom: 1px solid var(--color-gray-100);
 }
 
 .createButton {
@@ -206,10 +204,10 @@
   min-width: 0;
 }
 
-/* 卡片样式 - 现代化精致设计 */
+/* 卡片样式 - 白色卡片浮在灰色背景上 */
 .card {
   background: var(--color-white);
-  border: 1px solid var(--color-gray-100);
+  border: 1px solid var(--color-gray-200);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   cursor: pointer;
@@ -219,28 +217,13 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 0;
-  background: var(--color-primary-500);
-  transition: height var(--transition-base);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .card:hover {
-  border-color: transparent;
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-xl);
-}
-
-.card:hover::before {
-  height: 100%;
+  border-color: var(--color-primary-300);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .cardHeader {
@@ -339,36 +322,26 @@
   white-space: nowrap;
 }
 
-/* 修订中卡片样式 - 橙色边框与淡暖色背景 */
+/* 修订中卡片样式 - 琥珀色边框 */
 .cardRevising {
-  border-color: var(--color-warning-300);
-  border-width: 1px;
-  background: linear-gradient(135deg, #fffcf0 0%, #fff) !important;
-}
-
-.cardRevising::before {
-  background: var(--color-warning-500);
+  border: 1.5px solid var(--color-warning-300) !important;
+  background: var(--color-white) !important;
 }
 
 .cardRevising:hover {
-  border-color: var(--color-warning-500);
+  border-color: var(--color-warning-500) !important;
+  box-shadow: 0 8px 24px rgba(245, 194, 0, 0.12);
 }
 
-/* 未发布卡片样式 - 虚线效果 */
+/* 未发布卡片样式 - 虚线边框 + 灰色背景 */
 .cardUnpublished {
-  border-style: dashed !important;
-  border-color: var(--color-gray-300) !important;
+  border: 1.5px dashed var(--color-gray-300) !important;
   background: var(--color-gray-50) !important;
-  opacity: 0.85;
-}
-
-.cardUnpublished::before {
-  background: var(--color-gray-400);
 }
 
 .cardUnpublished:hover {
+  border-color: var(--color-gray-400) !important;
   background: var(--color-white) !important;
-  opacity: 1;
 }
 
 .cardBody {
@@ -412,7 +385,6 @@
   justify-content: space-between;
   margin-top: auto;
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--color-gray-50);
 }
 
 .footerLeft {

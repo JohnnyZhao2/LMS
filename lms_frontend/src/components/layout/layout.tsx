@@ -16,7 +16,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <Layout
       style={{
         minHeight: '100vh',
-        background: 'transparent',
+        background: 'var(--color-gray-100)',
       }}
     >
       <Header />
