@@ -142,6 +142,12 @@ export const AdminKnowledgeList: React.FC = () => {
         try {
           await unpublishKnowledge.mutateAsync(id);
           message.success('取消发布成功');
+          
+          // 如果当前筛选是已发布相关的状态，自动切换到草稿视图
+          if (filterType === 'PUBLISHED_CLEAN' || filterType === 'REVISING') {
+            setFilterType('UNPUBLISHED');
+          }
+          
           refetch();
         } catch (error) {
           showApiError(error, '取消发布失败');
