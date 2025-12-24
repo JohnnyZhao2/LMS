@@ -165,35 +165,32 @@
 .systemTagsRow {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-2);
-  flex-wrap: wrap;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 .systemTag {
-  padding: 4px 12px;
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
-  color: var(--color-gray-600);
-  font-size: 12px;
+  color: var(--color-gray-500);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-base);
   white-space: nowrap;
-  box-shadow: var(--shadow-sm);
 }
 
 .systemTag:hover {
-  background: var(--color-primary-50);
-  border-color: var(--color-primary-200);
-  color: var(--color-primary-600);
+  color: var(--color-gray-700);
 }
 
 .systemTagActive {
-  background: var(--color-primary-50);
-  border-color: var(--color-primary-500);
-  color: var(--color-primary-600);
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
   font-weight: 600;
 }
 
@@ -202,20 +199,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-3);
-  background: var(--color-white);
-  padding: var(--spacing-2) var(--spacing-3);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  gap: var(--spacing-1);
 }
 
 .statusTabs {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--spacing-1);
 }
 
-/* 全部视图按钮 - 带背景 */
+/* 状态筛选按钮 */
 .statusTab {
   display: flex;
   align-items: center;
@@ -238,7 +231,8 @@
 
 .statusTabActive {
   background: var(--color-gray-100);
-  color: var(--color-gray-900);
+  color: var(--color-gray-800);
+  font-weight: 600;
 }
 
 .statusIcon {
@@ -321,7 +315,7 @@
 
 .cardsContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-4);
 }
 
@@ -331,13 +325,13 @@
 .card {
   background: var(--color-white);
   border: 1px solid var(--color-gray-100);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   cursor: pointer;
   transition: all var(--transition-base);
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-4);
+  padding: var(--spacing-5);
   box-shadow: var(--shadow-sm);
 }
 
@@ -347,18 +341,39 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* 修订中卡片 - 柔和琥珀色边框 */
+.cardRevising {
+  border: 1.5px solid #E0A860;
+  background: #FFFDF8;
+}
+
+.cardRevising:hover {
+  border-color: #C9924D;
+}
+
+/* 草稿卡片 - 虚线边框 */
+.cardDraft {
+  border: 1.5px dashed var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.cardDraft:hover {
+  border-color: var(--color-gray-400);
+  background: var(--color-white);
+}
+
 /* 卡片头部：文档类型 + 状态 */
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
 }
 
 .docType {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: 6px;
 }
 
 .docTypeDot {
@@ -368,11 +383,11 @@
 }
 
 .docTypeDotEmergency {
-  background: var(--color-error-500);
+  background: #FF4D6A;
 }
 
 .docTypeDotStandard {
-  background: var(--color-success-500);
+  background: #10B759;
 }
 
 .docTypeLabel {
@@ -393,22 +408,22 @@
   padding: 4px 12px;
   border-radius: var(--radius-md);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .statusPublished {
-  background: var(--color-success-50);
-  color: var(--color-success-600);
+  background: rgba(16, 183, 89, 0.12);
+  color: #0DA34F;
 }
 
 .statusRevising {
-  background: var(--color-warning-50);
-  color: #8B7000;
+  background: rgba(224, 168, 96, 0.15);
+  color: #B8860B;
 }
 
 .statusDraft {
   background: var(--color-gray-100);
-  color: var(--color-gray-600);
+  color: var(--color-gray-500);
 }
 
 /* 卡片主体 */
@@ -419,8 +434,8 @@
 }
 
 .cardTitle {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--color-gray-900);
   line-height: 1.4;
   margin-bottom: var(--spacing-3);
@@ -438,7 +453,7 @@
 .cardTags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-1);
+  gap: 4px;
   margin-bottom: var(--spacing-3);
 }
 
@@ -451,7 +466,7 @@
   color: var(--color-gray-500);
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .cardTag .tagIcon {
@@ -460,12 +475,12 @@
 }
 
 .moreTag {
-  color: var(--color-gray-500);
+  color: var(--color-gray-400);
   background: transparent;
   border-color: var(--color-gray-200);
 }
 
-/* 内容区域 - 横线上方 */
+/* 内容区域 */
 .contentSection {
   margin-top: auto;
   padding-top: var(--spacing-3);
@@ -474,14 +489,15 @@
 
 /* 内容预览 - 带引号样式 */
 .cardPreview {
-  font-size: 12px;
+  font-size: 13px;
   font-style: italic;
   color: var(--color-gray-500);
-  line-height: 1.5;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 42px;
 }
 
 .cardPreview::before {
@@ -496,8 +512,10 @@
 .cardFooter {
   display: flex;
   align-items: center;
-  margin-top: var(--spacing-3);
+  justify-content: space-between;
+  margin-top: var(--spacing-4);
   padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-gray-100);
 }
 
 .footerLeft {
@@ -507,22 +525,22 @@
 }
 
 .authorAvatar {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--color-primary-100);
+  background: var(--color-gray-100);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--color-primary-600);
+  color: var(--color-gray-600);
 }
 
 .authorInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .authorName {
@@ -532,7 +550,7 @@
 }
 
 .updateTime {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--color-gray-400);
 }
 
@@ -542,7 +560,6 @@
   gap: var(--spacing-1);
   color: var(--color-gray-400);
   font-size: 12px;
-  margin-left: auto;
 }
 
 .viewCount {
@@ -617,9 +634,15 @@
 /* ============================================
    响应式设计
    ============================================ */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .cardsContainer {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .cardsContainer {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -665,4 +688,14 @@
   .cardGrid {
     padding: var(--spacing-4);
   }
+}
+
+/* ============================================
+   搜索结果统计
+   ============================================ */
+.resultCount {
+  color: var(--color-gray-500);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 }

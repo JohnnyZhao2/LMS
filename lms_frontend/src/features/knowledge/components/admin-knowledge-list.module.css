@@ -521,3 +521,49 @@
     justify-content: flex-start;
   }
 }
+
+/* ============================================
+   页面头部（学员端知识中心）
+   ============================================ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-6);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.headerIcon {
+  font-size: 32px;
+  color: var(--color-primary-500);
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.headerTitle {
+  margin: 0 !important;
+  color: var(--color-gray-900);
+}
+
+.headerSubtitle {
+  color: var(--color-gray-500);
+  font-size: var(--font-size-sm);
+}
+
+/* 搜索结果统计 */
+.resultCount {
+  color: var(--color-gray-500);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
