@@ -160,15 +160,12 @@ export const LoginForm: React.FC = () => {
             label={<Text strong>工号</Text>}
             rules={[{ required: true, message: '请输入工号' }]}
             style={{ marginBottom: 'var(--spacing-5)' }}
+            className="login-form-item"
           >
             <Input
               prefix={<UserOutlined style={{ color: 'var(--color-gray-400)' }} />}
               placeholder="请输入工号"
-              style={{
-                height: 48,
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--font-size-base)',
-              }}
+              className="login-input"
             />
           </Form.Item>
 
@@ -177,15 +174,12 @@ export const LoginForm: React.FC = () => {
             label={<Text strong>密码</Text>}
             rules={[{ required: true, message: '请输入密码' }]}
             style={{ marginBottom: 'var(--spacing-8)' }}
+            className="login-form-item"
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: 'var(--color-gray-400)' }} />}
               placeholder="请输入密码"
-              style={{
-                height: 48,
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--font-size-base)',
-              }}
+              className="login-input"
             />
           </Form.Item>
 

@@ -1,19 +1,54 @@
-import { useState } from 'react';
-import { Row, Col, Button, Modal, message, Spin, Empty, Input, Checkbox, Dropdown, Tabs, Pagination } from 'antd';
-import { PlusOutlined, MoreOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, SyncOutlined, EyeOutlined, CalendarOutlined, UserOutlined } from '@ant-design/icons';
+import { useState, useMemo } from 'react';
+import { Modal, message, Spin, Dropdown, Pagination } from 'antd';
+import { 
+  PlusOutlined, 
+  MoreOutlined, 
+  EditOutlined, 
+  CheckCircleOutlined, 
+  CloseCircleOutlined, 
+  EyeOutlined, 
+  SearchOutlined,
+  HomeOutlined,
+  DatabaseOutlined,
+  CloudOutlined,
+  ApiOutlined,
+  SafetyCertificateOutlined,
+  SettingOutlined,
+  FileTextOutlined,
+  InboxOutlined,
+  AppstoreOutlined
+} from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
-import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
+import { useLineTypeTags, useSystemTags } from '../api/get-tags';
 import { KnowledgeFormModal } from './knowledge-form-modal';
 import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
 import { showApiError } from '@/utils/error-handler';
-import type { KnowledgeListItem, KnowledgeType, KnowledgeFilterType, Tag as TagType } from '@/types/api';
+import type { KnowledgeListItem, KnowledgeType, KnowledgeFilterType, Tag as TagType, SimpleTag } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
-import styles from './admin-knowledge-list.module.css';
+import styles from './knowledge-library.module.css';
 
-const { Search } = Input;
+/**
+ * 条线类型图标映射
+ */
+const LINE_TYPE_ICONS: Record<string, React.ReactNode> = {
+  '双云': <CloudOutlined />,
+  '数据库': <DatabaseOutlined />,
+  '网络': <ApiOutlined />,
+  '应用': <AppstoreOutlined />,
+  '应急': <SafetyCertificateOutlined />,
+  '规章制度': <FileTextOutlined />,
+  '其他': <SettingOutlined />,
+};
+
+/**
+ * 获取条线类型图标
+ */
+const getLineTypeIcon = (name: string): React.ReactNode => {
+  return LINE_TYPE_ICONS[name] || <FileTextOutlined />;
+};
 
 /**
  * 知识卡片组件
@@ -30,21 +65,30 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
   const isEmergency = item.knowledge_type === 'EMERGENCY';
   const isPublished = item.status === 'PUBLISHED';
   const isRevising = item.edit_status === 'REVISING';
-  const isUnpublished = item.edit_status === 'UNPUBLISHED';
-  
-  // 获取第一个操作标签作为顶部标签
-  const firstOperationTag = item.operation_tags && item.operation_tags.length > 0 
-    ? item.operation_tags[0].name 
-    : null;
+
+  /**
+   * 获取状态样式类和文本
+   */
+  const getStatusInfo = () => {
+    if (isRevising) {
+      return { className: styles.statusRevising, text: '修订中' };
+    }
+    if (isPublished) {
+      return { className: styles.statusPublished, text: '已发布' };
+    }
+    return { className: styles.statusDraft, text: '草稿' };
+  };
+
+  const statusInfo = getStatusInfo();
 
   /**
    * 处理操作菜单点击
    */
-  const handleMenuClick: MenuProps['onClick'] = async ({ key }) => {
+  const handleMenuClick: MenuProps['onClick'] = async ({ key, domEvent }) => {
+    domEvent.stopPropagation();
     if (key === 'edit') {
       onEdit(item.id);
     } else if (key === 'publish') {
-      // 如果是修订中状态，发布草稿版本
       const idToPublish = item.pending_draft_id || item.id;
       await onPublish(idToPublish);
     } else if (key === 'unpublish') {
@@ -61,100 +105,99 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
       label: '编辑',
       icon: <EditOutlined />,
     },
-    // 如果是修订中，显示"发布修订"
     ...(isRevising
-      ? [
-          {
-            key: 'publish',
-            label: '发布修订',
-            icon: <CheckCircleOutlined />,
-          },
-        ]
+      ? [{ key: 'publish', label: '发布修订', icon: <CheckCircleOutlined /> }]
       : isPublished
-        ? [
-            {
-              key: 'unpublish',
-              label: '取消发布',
-              icon: <CloseCircleOutlined />,
-            },
-          ]
-        : [
-            {
-              key: 'publish',
-              label: '发布',
-              icon: <CheckCircleOutlined />,
-            },
-          ]),
+        ? [{ key: 'unpublish', label: '取消发布', icon: <CloseCircleOutlined /> }]
+        : [{ key: 'publish', label: '发布', icon: <CheckCircleOutlined /> }]),
   ];
 
   /**
-   * 获取卡片样式类名
+   * 获取所有标签（系统标签 + 操作标签）
    */
-  const getCardClassName = () => {
-    const classes = [styles.card];
-    if (isRevising) {
-      classes.push(styles.cardRevising);
-    } else if (isUnpublished) {
-      classes.push(styles.cardUnpublished);
-    }
-    return classes.join(' ');
-  };
+  const allTags = useMemo(() => {
+    const tags: SimpleTag[] = [];
+    if (item.system_tags) tags.push(...item.system_tags);
+    if (item.operation_tags) tags.push(...item.operation_tags);
+    return tags;
+  }, [item.system_tags, item.operation_tags]);
+
+  /**
+   * 显示的标签（最多3个）
+   */
+  const displayTags = allTags.slice(0, 3);
+  const moreTags = allTags.length - 3;
 
   return (
-    <div className={getCardClassName()}>
-      {/* 顶部：左上角操作标签，右上角操作菜单 */}
+    <div className={styles.card} onClick={() => onView(item.id)}>
+      {/* 卡片头部：文档类型 + 状态 */}
       <div className={styles.cardHeader}>
-        <div className={styles.cardHeaderLeft}>
-          {/* 仅保留核心的操作标签，减少视觉疲劳 */}
-          {firstOperationTag && (
-            <span className={`${styles.typeTag} ${isEmergency ? styles.emergencyTag : styles.normalTag}`}>
-              {firstOperationTag}
-            </span>
-          )}
-          {/* 修订中和草稿状态通过卡片整体样式表达，不再使用文字标签 */}
+        <div className={styles.docType}>
+          <span className={`${styles.docTypeDot} ${isEmergency ? styles.docTypeDotEmergency : styles.docTypeDotStandard}`} />
+          <span className={styles.docTypeLabel}>
+            {isEmergency ? 'EMERGENCY_OPS' : 'STANDARD_LOGIC'}
+          </span>
         </div>
         <div className={styles.cardHeaderRight}>
-          {isRevising && (
-            <span className={styles.revisingTag}>
-              <SyncOutlined spin style={{ marginRight: 6, fontSize: 12 }} />
-              修订中
-            </span>
-          )}
+          <span className={`${styles.statusBadge} ${statusInfo.className}`}>
+            {statusInfo.text}
+          </span>
           <Dropdown
             menu={{ items: menuItems, onClick: handleMenuClick }}
             trigger={['click']}
             placement="bottomRight"
           >
-            <Button
-              type="text"
-              icon={<MoreOutlined />}
+            <button
               className={styles.actionButton}
               onClick={(e) => e.stopPropagation()}
-            />
+            >
+              <MoreOutlined />
+            </button>
           </Dropdown>
         </div>
       </div>
 
-      {/* 主体内容：标题 + 知识内容缩略 */}
-      <div className={styles.cardBody} onClick={() => onView(item.id)}>
+      {/* 卡片主体 */}
+      <div className={styles.cardBody}>
+        {/* 标题 */}
         <h3 className={styles.cardTitle}>{item.title}</h3>
-        <div className={styles.cardPreview} title={item.content_preview || ''}>
-          {item.content_preview || '暂无内容预览'}
+        
+        {/* 标签 */}
+        <div className={styles.cardTags}>
+          {displayTags.map((tag) => (
+            <span key={tag.id} className={styles.cardTag}>
+              <span className={styles.tagIcon}>◇</span>
+              {tag.name}
+            </span>
+          ))}
+          {moreTags > 0 && (
+            <span className={`${styles.cardTag} ${styles.moreTag}`}>
+              +{moreTags}
+            </span>
+          )}
+        </div>
+
+        {/* 横线分隔 + 内容预览 */}
+        <div className={styles.contentSection}>
+          <div className={styles.cardPreview}>
+            {item.content_preview || '暂无内容预览'}
+          </div>
         </div>
       </div>
 
-      {/* 底部信息：姓名、时间、阅读次数 */}
-      <div className={styles.cardFooter} onClick={() => onView(item.id)}>
+      {/* 卡片底部 */}
+      <div className={styles.cardFooter}>
         <div className={styles.footerLeft}>
-          <div className={styles.footerItem}>
-            <div className={styles.userAvatar}>
-              {(item.updated_by_name || item.created_by_name || '?').charAt(0)}
-            </div>
-            <span>{item.updated_by_name || item.created_by_name || '-'}</span>
+          <div className={styles.authorAvatar}>
+            {(item.updated_by_name || item.created_by_name || '?').charAt(0)}
           </div>
-          <div className={styles.footerItem}>
-            <CalendarOutlined />
-            <span>{item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}</span>
+          <div className={styles.authorInfo}>
+            <span className={styles.authorName}>
+              {item.updated_by_name || item.created_by_name || '-'}
+            </span>
+            <span className={styles.updateTime}>
+              {item.updated_at ? dayjs(item.updated_at).format('YYYY-MM-DD') : '-'}
+            </span>
           </div>
         </div>
         <div className={styles.footerRight}>
@@ -168,19 +211,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ item, onView, onEdit, onP
 
 /**
  * 管理员知识库列表组件
- * 采用双栏布局：左侧筛选，右侧列表
- * 
- * 筛选类型说明：
- * - ALL: 全部（已发布+未发布，不含已发布版本的草稿副本）
- * - PUBLISHED_CLEAN: 已发布且无待发布修改
- * - REVISING: 修订中（已发布但有待发布的草稿修改）
- * - UNPUBLISHED: 未发布（从未发布过的新草稿）
+ * 采用暗色科技主题设计
  */
 export const AdminKnowledgeList: React.FC = () => {
   const [search, setSearch] = useState('');
+  const [searchValue, setSearchValue] = useState('');
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
   const [selectedSystemTagIds, setSelectedSystemTagIds] = useState<number[]>([]);
-  const [selectedOperationTagIds, setSelectedOperationTagIds] = useState<number[]>([]);
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingKnowledgeId, setEditingKnowledgeId] = useState<number | undefined>();
   const [defaultKnowledgeType, setDefaultKnowledgeType] = useState<KnowledgeType>('OTHER');
@@ -194,20 +231,21 @@ export const AdminKnowledgeList: React.FC = () => {
   const { data: lineTypeTags = [] } = useLineTypeTags();
   // 级联获取系统标签（根据已选条线类型）
   const { data: systemTags = [] } = useSystemTags(selectedLineTypeId);
-  // 级联获取操作标签（根据已选条线类型）
-  const { data: operationTags = [] } = useOperationTags(selectedLineTypeId);
   
-  // 应用状态筛选的数据
+  // 获取知识列表
   const { data, isLoading, refetch } = useAdminKnowledgeList({
     search: search || undefined,
     line_type_id: selectedLineTypeId,
     system_tag_id: selectedSystemTagIds[0],
-    operation_tag_id: selectedOperationTagIds[0],
     filter_type: filterType,
     page,
     pageSize,
   });
-  
+
+  // 发布和取消发布操作
+  const publishKnowledge = usePublishKnowledge();
+  const unpublishKnowledge = useUnpublishKnowledge();
+
   /**
    * 处理分页变化
    */
@@ -215,10 +253,6 @@ export const AdminKnowledgeList: React.FC = () => {
     setPage(newPage);
     setPageSize(newPageSize);
   };
-
-  // 发布和取消发布操作
-  const publishKnowledge = usePublishKnowledge();
-  const unpublishKnowledge = useUnpublishKnowledge();
 
   /**
    * 处理条线类型选择
@@ -230,32 +264,44 @@ export const AdminKnowledgeList: React.FC = () => {
       setSelectedLineTypeId(id);
     }
     setSelectedSystemTagIds([]);
-    setSelectedOperationTagIds([]);
-    setPage(1); // 重置到第一页
+    setPage(1);
   };
 
   /**
    * 处理系统标签选择
    */
-  const handleSystemTagChange = (tagId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedSystemTagIds([...selectedSystemTagIds, tagId]);
+  const handleSystemTagClick = (tagId: number) => {
+    if (selectedSystemTagIds.includes(tagId)) {
+      setSelectedSystemTagIds([]);
     } else {
-      setSelectedSystemTagIds(selectedSystemTagIds.filter(id => id !== tagId));
+      setSelectedSystemTagIds([tagId]);
     }
-    setPage(1); // 重置到第一页
+    setPage(1);
   };
 
   /**
-   * 处理操作标签选择
+   * 处理状态筛选
    */
-  const handleOperationTagChange = (tagId: number, checked: boolean) => {
-    if (checked) {
-      setSelectedOperationTagIds([...selectedOperationTagIds, tagId]);
-    } else {
-      setSelectedOperationTagIds(selectedOperationTagIds.filter(id => id !== tagId));
+  const handleFilterTypeChange = (type: KnowledgeFilterType) => {
+    setFilterType(type);
+    setPage(1);
+  };
+
+  /**
+   * 处理搜索
+   */
+  const handleSearch = () => {
+    setSearch(searchValue);
+    setPage(1);
+  };
+
+  /**
+   * 处理搜索输入回车
+   */
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
-    setPage(1); // 重置到第一页
   };
 
   /**
@@ -316,160 +362,153 @@ export const AdminKnowledgeList: React.FC = () => {
     });
   };
 
+  /**
+   * 状态筛选配置
+   */
+  const statusFilters: Array<{ key: KnowledgeFilterType; label: string; dotClass?: string; showIcon?: boolean }> = [
+    { key: 'ALL', label: '全部视图', showIcon: true },
+    { key: 'PUBLISHED_CLEAN', label: '已发布', dotClass: styles.statusDotPublished },
+    { key: 'REVISING', label: '修订中', dotClass: styles.statusDotRevising },
+    { key: 'UNPUBLISHED', label: '草稿', dotClass: styles.statusDotDraft },
+  ];
+
   return (
     <div className={styles.container}>
-      <div className={styles.mainContent}>
-        {/* 左侧：新建按钮和筛选 */}
-        <aside className={styles.sidebar}>
-          {/* 新建文档按钮 */}
-          <div className={styles.sidebarHeader}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              className={styles.createButton}
-              onClick={handleCreate}
-              block
+      {/* 左侧图标导航栏 */}
+      <aside className={styles.iconSidebar}>
+        {/* 全部 */}
+        <div
+          className={`${styles.iconItem} ${!selectedLineTypeId ? styles.iconItemActive : ''}`}
+          onClick={() => handleLineTypeSelect(undefined)}
+        >
+          <HomeOutlined />
+          <span className={styles.iconTooltip}>全部条线</span>
+        </div>
+
+        {/* 条线类型图标 */}
+        {lineTypeTags.map((tag: TagType) => (
+          <div
+            key={tag.id}
+            className={`${styles.iconItem} ${selectedLineTypeId === tag.id ? styles.iconItemActive : ''}`}
+            onClick={() => handleLineTypeSelect(tag.id)}
+          >
+            {getLineTypeIcon(tag.name)}
+            <span className={styles.iconTooltip}>{tag.name}</span>
+          </div>
+        ))}
+      </aside>
+
+      {/* 主内容区 */}
+      <main className={styles.mainArea}>
+        {/* 顶部标题栏 */}
+        <header className={styles.topBar}>
+          <div className={styles.pageTitle}>
+            <DatabaseOutlined className={styles.pageTitleIcon} />
+            <span className={styles.pageTitleText}>知识库</span>
+          </div>
+          <div className={styles.topActions}>
+            <button className={styles.createButton} onClick={handleCreate}>
+              <PlusOutlined />
+              <span>创建知识</span>
+            </button>
+          </div>
+        </header>
+
+        {/* 筛选区域 */}
+        <div className={styles.filterArea}>
+          {/* 系统标签筛选 */}
+          <div className={styles.systemTagsRow}>
+            <span
+              className={`${styles.systemTag} ${selectedSystemTagIds.length === 0 ? styles.systemTagActive : ''}`}
+              onClick={() => setSelectedSystemTagIds([])}
             >
-              创建新知识文档
-            </Button>
+              ALL_SYSTEMS
+            </span>
+            {systemTags.map((tag: TagType) => (
+              <span
+                key={tag.id}
+                className={`${styles.systemTag} ${selectedSystemTagIds.includes(tag.id) ? styles.systemTagActive : ''}`}
+                onClick={() => handleSystemTagClick(tag.id)}
+              >
+                {tag.name}
+              </span>
+            ))}
           </div>
 
-          {/* 筛选区域 */}
-          <div className={styles.sidebarContent}>
-            {/* 业务条线 */}
-            <div className={styles.filterSection}>
-              <div className={styles.filterTitle}>业务条线</div>
-              <div className={styles.lineTypeList}>
-                <div
-                  className={`${styles.lineTypeItem} ${!selectedLineTypeId ? styles.lineTypeItemActive : ''}`}
-                  onClick={() => handleLineTypeSelect(undefined)}
+          {/* 状态筛选 + 搜索 */}
+          <div className={styles.statusSearchRow}>
+            <div className={styles.statusTabs}>
+              {statusFilters.map((filter) => (
+                <button
+                  key={filter.key}
+                  className={`${styles.statusTab} ${filterType === filter.key ? styles.statusTabActive : ''}`}
+                  onClick={() => handleFilterTypeChange(filter.key)}
                 >
-                  全部
-                </div>
-                {lineTypeTags.map((tag: TagType) => (
-                  <div
-                    key={tag.id}
-                    className={`${styles.lineTypeItem} ${selectedLineTypeId === tag.id ? styles.lineTypeItemActive : ''}`}
-                    onClick={() => handleLineTypeSelect(tag.id)}
-                  >
-                    {tag.name}
-                  </div>
-                ))}
-              </div>
+                  {filter.showIcon && <AppstoreOutlined className={styles.statusIcon} />}
+                  {filter.dotClass && <span className={`${styles.statusDot} ${filter.dotClass}`} />}
+                  <span>{filter.label}</span>
+                </button>
+              ))}
             </div>
 
-            {/* 系统标签（选择条线后显示） */}
-            {selectedLineTypeId && systemTags.length > 0 && (
-              <div className={styles.filterSection}>
-                <div className={styles.filterTitle}>系统标签</div>
-                <div className={styles.tagList}>
-                  {systemTags.map((tag: TagType) => (
-                    <Checkbox
-                      key={tag.id}
-                      checked={selectedSystemTagIds.includes(tag.id)}
-                      onChange={(e) => handleSystemTagChange(tag.id, e.target.checked)}
-                      className={styles.tagCheckbox}
-                    >
-                      {tag.name}
-                    </Checkbox>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 操作标签（选择条线后显示） */}
-            {selectedLineTypeId && operationTags.length > 0 && (
-              <div className={styles.filterSection}>
-                <div className={styles.filterTitle}>操作标签</div>
-                <div className={styles.tagList}>
-                  {operationTags.map((tag: TagType) => (
-                    <Checkbox
-                      key={tag.id}
-                      checked={selectedOperationTagIds.includes(tag.id)}
-                      onChange={(e) => handleOperationTagChange(tag.id, e.target.checked)}
-                      className={styles.tagCheckbox}
-                    >
-                      {tag.name}
-                    </Checkbox>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </aside>
-
-        {/* 右侧：状态筛选、搜索、统计和卡片列表 */}
-        <main className={styles.content}>
-          {/* 右侧顶部：状态筛选、搜索、统计 */}
-          <div className={styles.contentHeader}>
-            {/* 状态筛选 */}
-            <Tabs
-              activeKey={filterType}
-              onChange={(key) => {
-                setFilterType(key as KnowledgeFilterType);
-                setPage(1); // 重置到第一页
-              }}
-              items={[
-                { key: 'ALL', label: '全部' },
-                { key: 'PUBLISHED_CLEAN', label: '已发布' },
-                { key: 'REVISING', label: '修订中' },
-                { key: 'UNPUBLISHED', label: '草稿箱' },
-              ]}
-              className={styles.statusTabs}
-            />
-
-            {/* 搜索 */}
-            <Search
-              placeholder="全库检索..."
-              allowClear
-              onSearch={(value) => {
-                setSearch(value);
-                setPage(1); // 重置到第一页
-              }}
-              className={styles.searchInput}
-              size="large"
-            />
-          </div>
-
-          {/* 知识卡片列表 */}
-          <Spin spinning={isLoading}>
-            {data?.results && data.results.length > 0 ? (
-              <>
-                <Row gutter={[24, 24]}>
-                  {data.results.map((item) => (
-                    <Col key={item.id} xs={24} sm={12} lg={8} xxl={6}>
-                      <KnowledgeCard
-                        item={item}
-                        onView={handleView}
-                        onEdit={handleEdit}
-                        onPublish={handlePublish}
-                        onUnpublish={handleUnpublish}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-                <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
-                  <Pagination
-                    current={page}
-                    total={data.count || 0}
-                    pageSize={pageSize}
-                    showSizeChanger
-                    showTotal={(total) => `共 ${total} 条`}
-                    onChange={handlePageChange}
-                    onShowSizeChange={handlePageChange}
-                    pageSizeOptions={[12, 20, 40, 60]}
-                  />
-                </div>
-              </>
-            ) : (
-              <Empty
-                description="暂无知识文档"
-                className={styles.empty}
+            <div className={styles.searchBox}>
+              <SearchOutlined className={styles.searchIcon} />
+              <input
+                type="text"
+                className={styles.searchInput}
+                placeholder="按指令、标签或资产编号搜索..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                onBlur={handleSearch}
               />
-            )}
-          </Spin>
-        </main>
-      </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 卡片网格区域 */}
+        <div className={styles.cardGrid}>
+          {isLoading ? (
+            <div className={styles.loadingState}>
+              <Spin size="large" />
+            </div>
+          ) : data?.results && data.results.length > 0 ? (
+            <>
+              <div className={styles.cardsContainer}>
+                {data.results.map((item) => (
+                  <KnowledgeCard
+                    key={item.id}
+                    item={item}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onPublish={handlePublish}
+                    onUnpublish={handleUnpublish}
+                  />
+                ))}
+              </div>
+
+              {/* 分页 */}
+              <div className={styles.pagination}>
+                <Pagination
+                  current={page}
+                  total={data.count || 0}
+                  pageSize={pageSize}
+                  showSizeChanger
+                  showTotal={(total) => `共 ${total} 条`}
+                  onChange={handlePageChange}
+                  onShowSizeChange={handlePageChange}
+                  pageSizeOptions={[12, 20, 40, 60]}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={styles.emptyState}>
+              <InboxOutlined className={styles.emptyIcon} />
+              <span className={styles.emptyText}>暂无知识文档</span>
+            </div>
+          )}
+        </div>
+      </main>
 
       {/* 知识表单弹窗 */}
       <KnowledgeFormModal

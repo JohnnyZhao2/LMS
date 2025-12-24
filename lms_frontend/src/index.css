@@ -613,25 +613,66 @@ a:hover {
 
 /* 表单输入框紧凑化 */
 .ant-input,
-.ant-input-affix-wrapper,
 .ant-picker,
 .ant-input-number {
   height: 36px !important;
   font-size: var(--font-size-sm) !important;
 }
 
+.ant-input-affix-wrapper {
+  height: 36px !important;
+  font-size: var(--font-size-sm) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* 确保带前缀的输入框内部 input 样式正确 */
+.ant-input-affix-wrapper > .ant-input {
+  height: auto !important;
+  line-height: 1.5 !important;
+}
+
 .ant-input-lg,
-.ant-input-affix-wrapper-lg,
 .ant-picker-large,
 .ant-input-number-lg {
   height: 40px !important;
 }
 
+.ant-input-affix-wrapper-lg {
+  height: 40px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.ant-input-affix-wrapper-lg > .ant-input {
+  height: auto !important;
+  line-height: 1.5 !important;
+  font-size: var(--font-size-base) !important;
+}
+
 .ant-input-sm,
-.ant-input-affix-wrapper-sm,
 .ant-picker-small,
 .ant-input-number-sm {
   height: 28px !important;
+  font-size: var(--font-size-xs) !important;
+}
+
+.ant-input-affix-wrapper-sm {
+  height: 28px !important;
+  font-size: var(--font-size-xs) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.ant-input-affix-wrapper-sm > .ant-input {
+  height: auto !important;
+  line-height: 1.5 !important;
   font-size: var(--font-size-xs) !important;
 }
 
@@ -777,6 +818,7 @@ textarea.ant-input {
   margin-inline-end: var(--spacing-3) !important;
 }
 
+
 /* 简化分页 - 小型分页 */
 .ant-pagination-simple .ant-pagination-simple-pager {
   height: 32px !important;
@@ -826,6 +868,24 @@ textarea.ant-input {
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================
+   登录页面输入框特殊样式
+   ============================================ */
+.login-input.ant-input-affix-wrapper,
+.login-input.ant-input {
+  height: 48px !important;
+  border-radius: var(--radius-lg) !important;
+  font-size: var(--font-size-base) !important;
+}
+
+.login-input.ant-input-affix-wrapper > .ant-input {
+  font-size: var(--font-size-base) !important;
+}
+
+.login-form-item .ant-form-item-label > label {
+  font-size: var(--font-size-base) !important;
 }
 
 /* ============================================
