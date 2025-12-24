@@ -45,6 +45,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const isEdit = !!userId;
+  // 使用 useState 管理选中状态，确保 UI 立即响应
+  const [selectedRoleCodes, setSelectedRoleCodes] = useState<RoleCode[]>([]);
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -62,6 +64,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         const currentRoleCodes = userDetail.roles
           .filter((r) => r.code !== 'STUDENT')
           .map((r) => r.code as RoleCode);
+        setSelectedRoleCodes(currentRoleCodes);
         form.setFieldsValue({
           username: userDetail.username,
           employee_id: userDetail.employee_id,
@@ -72,6 +75,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       } else {
         form.resetFields();
         // 默认选择学员角色
+        setSelectedRoleCodes([]);
         form.setFieldsValue({
           role_codes: [],
         });
@@ -134,8 +138,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         message.success('用户创建成功');
       }
-      onClose();
-      form.resetFields();
+      handleClose();
       onSuccess?.();
     } catch (error) {
       showApiError(error, isEdit ? '更新失败' : '创建失败');
@@ -178,14 +181,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     return colors[code] || '#1890ff';
   };
 
-  const selectedRoleCodes = Form.useWatch('role_codes', form) || [];
   const selectedDepartmentId = Form.useWatch('department_id', form);
   const username = Form.useWatch('username', form) || userDetail?.username;
+
+  // 处理弹窗关闭，重置状态
+  const handleClose = () => {
+    form.resetFields();
+    setSelectedRoleCodes([]);
+    onClose();
+  };
 
   return (
     <Modal
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       footer={null}
       width={800}
       closeIcon={<CloseOutlined />}
@@ -290,16 +299,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   key={role.code}
                   hoverable
                   onClick={() => {
-                    const currentCodes = form.getFieldValue('role_codes') || [];
+                    // 更新状态和表单值，确保 UI 立即响应
+                    let newCodes: RoleCode[];
                     if (isSelected) {
-                      form.setFieldsValue({
-                        role_codes: currentCodes.filter((c: RoleCode) => c !== role.code),
-                      });
+                      newCodes = selectedRoleCodes.filter((c: RoleCode) => c !== role.code);
                     } else {
-                      form.setFieldsValue({
-                        role_codes: [...currentCodes, role.code as RoleCode],
-                      });
+                      newCodes = [...selectedRoleCodes, role.code as RoleCode];
                     }
+                    setSelectedRoleCodes(newCodes);
+                    form.setFieldsValue({
+                      role_codes: newCodes,
+                    });
                   }}
                   style={{
                     cursor: 'pointer',
@@ -408,7 +418,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
         {/* 底部按钮 */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 32 }}>
-          <Button size="large" onClick={onClose}>
+          <Button size="large" onClick={handleClose}>
             取消
           </Button>
           <Button
