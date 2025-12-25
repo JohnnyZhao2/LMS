@@ -43,3 +43,4 @@ class Migration(migrations.Migration):
         migrations.RunPython(set_existing_knowledge_as_published, reverse_set_status),
     ]
 
+

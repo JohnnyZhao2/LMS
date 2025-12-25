@@ -1,21 +1,18 @@
 import React from 'react';
 import { Button as AntButton } from 'antd';
 import type { ButtonProps as AntButtonProps } from 'antd';
-import { motion } from 'framer-motion';
 
 /**
  * STUDIO BUTTON - REFINED & TACTILE
  * Minimalist design with high-precision interaction feedback.
  */
-export interface ButtonProps extends AntButtonProps {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'link';
-  pressEffect?: boolean;
+export interface ButtonProps extends Omit<AntButtonProps, 'variant'> {
+  btnVariant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'link';
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = 'primary',
-  pressEffect = true,
+  btnVariant = 'primary',
   style,
   className = '',
   ...props
@@ -55,15 +52,13 @@ export const Button: React.FC<ButtonProps> = ({
     },
   };
 
-  const Component = pressEffect ? motion.button : 'button';
-  
   // We use Ant Button for consistency but wrap or override its behavior
   return (
     <AntButton
       {...props}
       className={className}
       style={{
-        ...variantStyles[variant as string],
+        ...variantStyles[btnVariant as string],
         fontFamily: 'var(--font-body)',
         borderRadius: 'var(--radius-sm)',
         fontWeight: 600,
