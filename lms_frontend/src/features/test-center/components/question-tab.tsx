@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
-import { 
-  Button, Space, Segmented, Tag, Checkbox, Typography, Card, Empty, Spin, 
+import React, { useState, useMemo } from 'react';
+import {
+  Button, Space, Segmented, Tag, Checkbox, Typography, Card, Empty, Spin,
   Pagination, Divider, Row, Col
 } from 'antd';
-import { 
+import {
   EditOutlined, CheckCircleOutlined, ClearOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -43,9 +43,9 @@ const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string 
  * 题目管理标签页
  * 采用分屏布局：左侧题目列表，右侧题目详情
  */
-export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
+export const QuestionTab: React.FC<QuestionTabProps> = ({ onQuickCreateQuiz, search = '' }) => {
   const navigate = useNavigate();
-  
+
   const [page, setPage] = useState(1);
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
   const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
@@ -56,14 +56,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const questionType = questionTypeFilter === 'ALL' ? undefined : questionTypeFilter as QuestionType;
   const lineTypeId = lineTypeFilter === 'ALL' ? undefined : Number(lineTypeFilter);
 
-  const { data, isLoading } = useQuestions({ 
-    page, 
-    questionType, 
+  const { data, isLoading } = useQuestions({
+    page,
+    questionType,
     lineTypeId,
     search: search || undefined,
   });
   const { data: lineTypes } = useLineTypeTags();
-  
+
   /** 条线类型筛选选项（动态生成） */
   const lineTypeFilterOptions = useMemo(() => {
     const options = [{ label: '全部', value: 'ALL' }];
@@ -168,7 +168,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
       {/* 分屏布局 */}
       <div className={styles.splitView}>
         {/* 左侧：题目列表 */}
-        <Card 
+        <Card
           className={styles.listCard}
           title="题目列表"
           extra={<Text type="secondary" style={{ fontSize: 11 }}>共 {data?.count || 0} 条</Text>}
@@ -206,8 +206,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                             {typeConfig.label}
                           </Tag>
                         </div>
-                        <Paragraph 
-                          ellipsis={{ rows: 2 }} 
+                        <Paragraph
+                          ellipsis={{ rows: 2 }}
                           className={styles.questionText}
                         >
                           {question.content}
@@ -238,7 +238,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
         </Card>
 
         {/* 右侧：题目详情 */}
-        <Card 
+        <Card
           className={styles.detailCard}
           title="题目详情"
           extra={
@@ -313,9 +313,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
               {questionDetail.question_type === 'SHORT_ANSWER' && questionDetail.answer && (
                 <div className={styles.detailSection}>
                   <span className={styles.detailLabel}>参考答案</span>
-                  <div style={{ 
-                    background: 'var(--color-gray-50)', 
-                    padding: 'var(--spacing-3)', 
+                  <div style={{
+                    background: 'var(--color-gray-50)',
+                    padding: 'var(--spacing-3)',
                     borderRadius: 'var(--radius-md)',
                     fontSize: 'var(--font-size-sm)'
                   }}>
@@ -344,9 +344,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
               {questionDetail.explanation && (
                 <div className={styles.detailSection}>
                   <span className={styles.detailLabel}>题目解析</span>
-                  <div style={{ 
-                    background: 'var(--color-gray-50)', 
-                    padding: 'var(--spacing-3)', 
+                  <div style={{
+                    background: 'var(--color-gray-50)',
+                    padding: 'var(--spacing-3)',
                     borderRadius: 'var(--radius-md)',
                     fontSize: 'var(--font-size-sm)'
                   }}>

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button, Card, Input, Space, Row, Col } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -57,7 +57,7 @@ export const TestCenter: React.FC = () => {
   return (
     <div style={{ height: 'calc(100vh - var(--header-height) - 48px)', display: 'flex', flexDirection: 'column' }}>
       {/* 顶部导航栏 */}
-      <Card bodyStyle={{ padding: '16px 24px' }} style={{ marginBottom: 16 }}>
+      <Card styles={{ body: { padding: '16px 24px' } }} style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle">
           <Col>
             <Space size="middle">
@@ -100,8 +100,8 @@ export const TestCenter: React.FC = () => {
       {/* 内容区域 */}
       <div style={{ flex: 1, minHeight: 0 }}>
         {activeTab === 'questions' ? (
-          <QuestionTab 
-            onQuickCreateQuiz={handleQuickCreateQuiz} 
+          <QuestionTab
+            onQuickCreateQuiz={handleQuickCreateQuiz}
             search={search}
           />
         ) : (

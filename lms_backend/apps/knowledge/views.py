@@ -118,8 +118,11 @@ class KnowledgeListCreateView(APIView):
                     source_version__isnull=True
                 )
             else:  # ALL
-                # 全部：已发布版本 + 从未发布的草稿
+                # 全部：已发布版本 + 所有独立草稿
                 # 排除：已发布版本的草稿副本（这些会通过 has_pending_draft 显示在已发布卡片上）
+                # 独立草稿包括：
+                # 1. 从未发布的新草稿（source_version 为空）
+                # 2. 取消发布后的草稿（source_version 为空，但曾经发布过）
                 queryset = queryset.filter(
                     models.Q(status='PUBLISHED', is_current=True) |
                     models.Q(status='DRAFT', source_version__isnull=True)

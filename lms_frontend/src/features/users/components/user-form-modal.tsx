@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   Modal,
   Form,
@@ -17,6 +17,7 @@ import {
   ApartmentOutlined,
   TeamOutlined,
   CloseOutlined,
+  CheckCircleFilled,
 } from '@ant-design/icons';
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
@@ -50,7 +51,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const updateUser = useUpdateUser();
   const assignRoles = useAssignRoles();
   const assignMentor = useAssignMentor();
-  const { data: userDetail, isLoading: detailLoading } = useUserDetail(userId || 0);
+  const { data: userDetail } = useUserDetail(userId || 0);
   const { data: mentors = [] } = useMentors();
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
@@ -112,7 +113,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         // 需要检查是否有变化：如果原本有导师现在清空了，或者原本没有导师现在选择了，都需要更新
         const currentMentorId = userDetail?.mentor?.id ?? null;
         const newMentorId = values.mentor_id ?? null;
-        
+
         // 只有当导师信息发生变化时才调用 API
         if (currentMentorId !== newMentorId) {
           await assignMentor.mutateAsync({
@@ -303,16 +304,32 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   }}
                   style={{
                     cursor: 'pointer',
-                    border: isSelected ? `2px solid ${getRoleColor(role.code)}` : '1px solid #d9d9d9',
-                    backgroundColor: isSelected ? `${getRoleColor(role.code)}10` : 'transparent',
+                    border: isSelected ? `3px solid ${getRoleColor(role.code)}` : '1px solid #d9d9d9',
+                    backgroundColor: isSelected ? `${getRoleColor(role.code)}20` : 'transparent',
                     transition: 'all 0.3s',
+                    position: 'relative',
+                    boxShadow: isSelected ? `0 4px 12px ${getRoleColor(role.code)}30` : 'none',
                   }}
-                  bodyStyle={{ padding: '16px', textAlign: 'center' }}
+                  styles={{ body: { padding: '16px', textAlign: 'center' } }}
                 >
+                  {/* 选中状态指示器 */}
+                  {isSelected && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        color: getRoleColor(role.code),
+                        fontSize: 20,
+                      }}
+                    >
+                      <CheckCircleFilled />
+                    </div>
+                  )}
                   <div style={{ marginBottom: 8, color: getRoleColor(role.code) }}>
                     {roleIcons[role.code] || <UserOutlined style={{ fontSize: 24 }} />}
                   </div>
-                  <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{role.name}</div>
+                  <div style={{ fontWeight: 'bold', marginBottom: 4, fontSize: 16 }}>{role.name}</div>
                   <div style={{ fontSize: 12, color: '#8c8c8c' }}>
                     {roleDescriptions[role.code] || '标准执行权限'}
                   </div>
@@ -322,16 +339,30 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             {/* 学员角色（始终选中，不可取消） */}
             <Card
               style={{
-                border: '2px solid #1890ff',
-                backgroundColor: '#1890ff10',
+                border: '3px solid #1890ff',
+                backgroundColor: '#1890ff20',
                 cursor: 'not-allowed',
+                position: 'relative',
+                boxShadow: '0 4px 12px #1890ff30',
               }}
-              bodyStyle={{ padding: '16px', textAlign: 'center' }}
+              styles={{ body: { padding: '16px', textAlign: 'center' } }}
             >
+              {/* 选中状态指示器 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  color: '#1890ff',
+                  fontSize: 20,
+                }}
+              >
+                <CheckCircleFilled />
+              </div>
               <div style={{ marginBottom: 8, color: '#1890ff' }}>
                 <UserOutlined style={{ fontSize: 24 }} />
               </div>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>普通学员</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 4, fontSize: 16 }}>普通学员</div>
               <div style={{ fontSize: 12, color: '#8c8c8c' }}>标准执行权限</div>
             </Card>
           </div>

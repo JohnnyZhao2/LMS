@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { 
-  Table, Card, Button, Space, Modal, message, Radio, Form, Tag 
+import React, { useState } from 'react';
+import {
+  Table, Card, Button, Space, Modal, message, Radio, Form, Tag
 } from 'antd';
-import { 
-  EditOutlined, DeleteOutlined, SendOutlined 
+import {
+  EditOutlined, DeleteOutlined, SendOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '@/features/quizzes/api/get-quizzes';
@@ -62,7 +62,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
   const handleQuickPublish = async () => {
     try {
       const values = await form.validateFields();
-      
+
       setQuickPublishModalVisible(false);
       form.resetFields();
 
