@@ -83,7 +83,7 @@ export const colors = {
 
 export const typography = {
   fontFamily: {
-    primary: "'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    primary: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif",
     mono: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
   },
   fontSize: {
