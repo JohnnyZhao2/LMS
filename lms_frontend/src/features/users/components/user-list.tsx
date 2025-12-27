@@ -3,14 +3,12 @@ import { Table, Button, Typography, Modal, message, Space, Tag, Input } from 'an
 import {
   PlusOutlined,
   EditOutlined,
-  UserSwitchOutlined,
   LockOutlined,
   SearchOutlined,
   TeamOutlined,
   CheckCircleOutlined,
   StopOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import { useUsers } from '../api/get-users';
 import { useActivateUser, useDeactivateUser, useResetPassword } from '../api/manage-users';
 import { UserFormModal } from './user-form-modal';
@@ -33,7 +31,6 @@ export const UserList: React.FC = () => {
   const activateUser = useActivateUser();
   const deactivateUser = useDeactivateUser();
   const resetPassword = useResetPassword();
-  const navigate = useNavigate();
 
   const handleToggleActive = async (user: UserListType) => {
     try {
@@ -132,7 +129,7 @@ export const UserList: React.FC = () => {
       title: '部门',
       key: 'department',
       render: (_: unknown, record: UserListType) => (
-        <Text type={record.department ? 'default' : 'secondary'}>
+        <Text type={record.department ? undefined : 'secondary'}>
           {record.department?.name || '-'}
         </Text>
       ),
@@ -149,15 +146,16 @@ export const UserList: React.FC = () => {
                   width: 24,
                   height: 24,
                   borderRadius: 'var(--radius-full)',
-                  background: 'var(--color-success-50)',
+                  background: 'var(--color-cyan-500)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--color-success-500)',
-                  fontSize: 12,
+                  color: 'white',
+                  fontSize: 11,
+                  fontWeight: 600,
                 }}
               >
-                <TeamOutlined />
+                {record.mentor.username?.charAt(0).toUpperCase() || '?'}
               </div>
               <Text>{record.mentor.username}</Text>
             </div>
@@ -196,7 +194,7 @@ export const UserList: React.FC = () => {
       width: 200,
       render: (_: unknown, record: UserListType) => {
         const isSuperuser = record.is_superuser || false;
-        
+
         return (
           <Space size={4} onClick={(e) => e.stopPropagation()}>
             <Button
