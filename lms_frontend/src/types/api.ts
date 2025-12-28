@@ -674,6 +674,10 @@ export interface TaskListItem {
   knowledge_count: number;
   quiz_count: number;
   assignee_count: number;
+  /** 已完成的学员数量 */
+  completed_count: number;
+  /** 及格率（百分比，如 85.5 表示 85.5%） */
+  pass_rate?: number | null;
   created_by?: number;
   created_by_name: string;
   created_at: string;

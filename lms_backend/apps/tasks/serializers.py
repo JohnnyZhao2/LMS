@@ -96,6 +96,10 @@ class TaskListSerializer(serializers.ModelSerializer):
     knowledge_count = serializers.ReadOnlyField()
     quiz_count = serializers.ReadOnlyField()
     assignee_count = serializers.ReadOnlyField()
+    completed_count = serializers.ReadOnlyField()
+    pass_rate = serializers.ReadOnlyField()
+    # 计算属性：手动关闭或截止时间已过都返回 True
+    is_closed = serializers.SerializerMethodField()
     
     class Meta:
         model = Task
@@ -104,8 +108,16 @@ class TaskListSerializer(serializers.ModelSerializer):
             'deadline', 'start_time', 'duration', 'pass_score',
             'is_closed', 'closed_at',
             'knowledge_count', 'quiz_count', 'assignee_count',
+            'completed_count', 'pass_rate',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
+    
+    def get_is_closed(self, obj):
+        """任务是否已结束：手动关闭或截止时间已过"""
+        from django.utils import timezone
+        if obj.is_closed:
+            return True
+        return timezone.now() > obj.deadline
 
 
 class TaskDetailSerializer(serializers.ModelSerializer):

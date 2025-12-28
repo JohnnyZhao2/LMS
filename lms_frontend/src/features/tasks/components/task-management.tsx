@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-    Select,
     Table,
     Empty,
     Spin,
@@ -12,22 +11,22 @@ import {
     Popconfirm,
     message,
     Tooltip,
+    Segmented,
 } from 'antd';
 import {
     PlusOutlined,
     FileTextOutlined,
-    FilterOutlined,
     SearchOutlined,
     BookOutlined,
-    FileSearchOutlined,
     FireOutlined,
-    ClockCircleOutlined,
-    TeamOutlined,
     CheckCircleOutlined,
     EditOutlined,
     DeleteOutlined,
     EyeOutlined,
     GoldOutlined,
+    DownOutlined,
+    UpOutlined,
+    CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useTaskList } from '../api/get-tasks';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -190,18 +189,14 @@ const taskTypeConfig = {
 export const TaskManagement: React.FC = () => {
     const { currentRole, user } = useAuth();
     const navigate = useNavigate();
-    const [taskType, setTaskType] = useState<TaskType | undefined>();
-    const [statusFilter, setStatusFilter] = useState<string | undefined>();
+    const [taskType, setTaskType] = useState<string>('ALL');
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [deptFilter, setDeptFilter] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-    // 获取任务列表
-    const isClosed =
-        statusFilter === 'CLOSED'
-            ? true
-            : statusFilter === 'ACTIVE'
-                ? false
-                : undefined;
-    const { data: tasks, isLoading } = useTaskList({ taskType, isClosed });
+    // 获取任务列表（不带筛选，前端筛选）
+    const { data: tasks, isLoading } = useTaskList({});
 
     // 获取待评分数量
     const { data: pendingGradingData } = usePendingGrading(1);
@@ -209,27 +204,46 @@ export const TaskManagement: React.FC = () => {
     // 删除任务
     const deleteTask = useDeleteTask();
 
-    // 筛选任务
+    // 综合筛选任务
     const filteredTasks = useMemo(() => {
         if (!tasks) return [];
-        if (!searchQuery) return tasks;
-        const query = searchQuery.toLowerCase();
-        return tasks.filter(
-            (t) =>
+        return tasks.filter((t) => {
+            // 搜索
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = !query ||
                 t.title.toLowerCase().includes(query) ||
-                t.id.toString().includes(query)
-        );
-    }, [tasks, searchQuery]);
+                t.id.toString().includes(query);
+
+            // 任务类型
+            const matchesType = taskType === 'ALL' || t.task_type === taskType;
+
+            // 状态
+            const matchesStatus = statusFilter === 'ALL' ||
+                (statusFilter === 'ACTIVE' && !t.is_closed) ||
+                (statusFilter === 'CLOSED' && t.is_closed);
+
+            // 部门（暂时前端模拟，后端需要添加 dept 字段）
+            // const matchesDept = deptFilter === 'ALL' || t.dept === deptFilter;
+
+            return matchesSearch && matchesType && matchesStatus;
+        });
+    }, [tasks, searchQuery, taskType, statusFilter]);
 
     // 统计数据
     const stats = useMemo(() => {
         const allTasks = tasks || [];
         const total = allTasks.length;
+        // is_closed 由后端计算（手动关闭或截止时间已过）
         const active = allTasks.filter((t) => !t.is_closed).length;
         const pendingGrading = pendingGradingData?.count || 0;
 
-        // 计算及格率（模拟数据，实际应从后端获取）
-        const passRate = total > 0 ? '94%' : '-';
+        // 计算整体及格率：所有任务的平均及格率
+        const tasksWithPassRate = allTasks.filter((t) => t.pass_rate !== null && t.pass_rate !== undefined);
+        let passRate = '-';
+        if (tasksWithPassRate.length > 0) {
+            const avgPassRate = tasksWithPassRate.reduce((sum, t) => sum + (t.pass_rate ?? 0), 0) / tasksWithPassRate.length;
+            passRate = `${avgPassRate.toFixed(1)}%`;
+        }
 
         return { total, active, pendingGrading, passRate };
     }, [tasks, pendingGradingData]);
@@ -257,35 +271,37 @@ export const TaskManagement: React.FC = () => {
             title: '任务名称',
             dataIndex: 'title',
             key: 'title',
+            width: 280,
+            ellipsis: true,
             render: (text: string, record: TaskListItem) => {
                 const config = taskTypeConfig[record.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
                 return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
                         <div
                             style={{
-                                width: 40,
-                                height: 40,
+                                width: 36,
+                                height: 36,
                                 borderRadius: 'var(--radius-md)',
                                 background: config.bg,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 color: config.color,
-                                fontSize: 18,
+                                fontSize: 16,
                                 flexShrink: 0,
                             }}
                         >
                             {config.icon}
                         </div>
-                        <div>
-                            <Text strong style={{ display: 'block' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <Text strong ellipsis style={{ display: 'block', maxWidth: '100%' }}>
                                 {text}
                             </Text>
                             <Text
                                 type="secondary"
                                 style={{ fontSize: 'var(--font-size-xs)' }}
                             >
-                                ID: {record.id} · 创建者: {record.created_by_name}
+                                {record.created_by_name}
                             </Text>
                         </div>
                     </div>
@@ -296,76 +312,91 @@ export const TaskManagement: React.FC = () => {
             title: '类型',
             dataIndex: 'task_type',
             key: 'task_type',
-            width: 100,
+            width: 80,
+            align: 'center' as const,
             render: (type: TaskType) => {
                 const config = taskTypeConfig[type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
                 return (
-                    <Tag color={config.tagColor} icon={config.icon}>
+                    <Tag color={config.tagColor}>
                         {config.label}
                     </Tag>
                 );
             },
         },
         {
-            title: '资源统计',
-            key: 'resources',
-            width: 180,
-            render: (_: unknown, record: TaskListItem) => (
-                <div style={{ display: 'flex', gap: 'var(--spacing-4)' }}>
-                    <Tooltip title="指派学员">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <TeamOutlined style={{ color: 'var(--color-gray-400)' }} />
-                            <Text type="secondary">{record.assignee_count}</Text>
+            title: '完成进度',
+            key: 'progress',
+            width: 140,
+            render: (_: unknown, record: TaskListItem) => {
+                const completed = record.completed_count || 0;
+                const total = record.assignee_count || 0;
+                const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const config = taskTypeConfig[record.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
+
+                return (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                                {completed}/{total}
+                            </Text>
+                            <Text style={{ fontSize: 'var(--font-size-xs)', color: config.color, fontWeight: 600 }}>
+                                {percentage}%
+                            </Text>
                         </div>
-                    </Tooltip>
-                    <Tooltip title="知识文档">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <BookOutlined style={{ color: 'var(--color-gray-400)' }} />
-                            <Text type="secondary">{record.knowledge_count}</Text>
-                        </div>
-                    </Tooltip>
-                    <Tooltip title="试卷">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <FileSearchOutlined style={{ color: 'var(--color-gray-400)' }} />
-                            <Text type="secondary">{record.quiz_count}</Text>
-                        </div>
-                    </Tooltip>
-                </div>
-            ),
+                        <Progress
+                            percent={percentage}
+                            showInfo={false}
+                            strokeColor={config.color}
+                            trailColor="var(--color-gray-100)"
+                            size="small"
+                        />
+                    </div>
+                );
+            },
+        },
+        {
+            title: '及格率',
+            key: 'pass_rate',
+            width: 80,
+            align: 'center' as const,
+            render: (_: unknown, record: TaskListItem) => {
+                if (record.pass_rate === null || record.pass_rate === undefined) {
+                    return <Text type="secondary">-</Text>;
+                }
+                const rate = record.pass_rate;
+                const color = rate >= 80 ? 'var(--color-success-500)' : rate >= 60 ? 'var(--color-warning-500)' : 'var(--color-error-500)';
+                return (
+                    <Text style={{ fontWeight: 600, color }}>
+                        {rate.toFixed(0)}%
+                    </Text>
+                );
+            },
         },
         {
             title: '截止时间',
             dataIndex: 'deadline',
             key: 'deadline',
-            width: 150,
+            width: 120,
             render: (deadline: string, record: TaskListItem) => {
                 const isUrgent = !record.is_closed && dayjs(deadline).diff(dayjs(), 'day') <= 1;
                 return (
-                    <div
+                    <Text
                         style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--spacing-1)',
-                            color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
+                            color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-600)',
+                            fontWeight: isUrgent ? 600 : 400,
+                            fontSize: 'var(--font-size-sm)',
                         }}
                     >
-                        <ClockCircleOutlined style={{ fontSize: 12 }} />
-                        <Text
-                            style={{
-                                color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
-                                fontWeight: isUrgent ? 600 : 400,
-                            }}
-                        >
-                            {dayjs(deadline).format('MM-DD HH:mm')}
-                        </Text>
-                    </div>
+                        {dayjs(deadline).format('MM-DD HH:mm')}
+                    </Text>
                 );
             },
         },
         {
             title: '状态',
             key: 'status',
-            width: 100,
+            width: 80,
+            align: 'center' as const,
             render: (_: unknown, record: TaskListItem) => (
                 <StatusBadge
                     status={record.is_closed ? 'default' : 'processing'}
@@ -537,71 +568,119 @@ export const TaskManagement: React.FC = () => {
 
             {/* 筛选区和任务列表 */}
             <Card>
-                {/* 筛选条 */}
+                {/* 顶部筛选条 */}
                 <div
                     style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 'var(--spacing-4)',
-                        marginBottom: 'var(--spacing-4)',
-                        paddingBottom: 'var(--spacing-4)',
-                        borderBottom: '1px solid var(--color-gray-100)',
+                        marginBottom: showAdvancedFilters ? 'var(--spacing-3)' : 'var(--spacing-4)',
                     }}
                 >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--spacing-2)',
-                            color: 'var(--color-gray-500)',
-                        }}
-                    >
-                        <FilterOutlined />
-                        <Text type="secondary">筛选</Text>
-                    </div>
-
+                    {/* 搜索框 */}
                     <Input
-                        placeholder="搜索任务名称或ID..."
+                        placeholder="搜索任务名称..."
                         prefix={<SearchOutlined style={{ color: 'var(--color-gray-400)' }} />}
-                        style={{ width: 260 }}
+                        style={{ width: 220 }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         allowClear
                     />
 
-                    <Select
-                        style={{ width: 140 }}
-                        placeholder="任务类型"
-                        allowClear
-                        onChange={(value) => setTaskType(value)}
+                    {/* 任务类型分段选择器 */}
+                    <Segmented
+                        value={taskType}
+                        onChange={(value) => setTaskType(value as string)}
                         options={[
-                            { value: 'LEARNING', label: '学习任务' },
-                            { value: 'PRACTICE', label: '练习任务' },
-                            { value: 'EXAM', label: '考试任务' },
+                            { value: 'ALL', label: '全部' },
+                            { value: 'LEARNING', label: '学习' },
+                            { value: 'PRACTICE', label: '练习' },
+                            { value: 'EXAM', label: '考试' },
                         ]}
                     />
 
-                    <Select
-                        style={{ width: 140 }}
-                        placeholder="状态"
-                        allowClear
-                        onChange={(value) => setStatusFilter(value)}
-                        options={[
-                            { value: 'ACTIVE', label: '进行中' },
-                            { value: 'CLOSED', label: '已结束' },
-                        ]}
-                    />
-
-                    <Text
-                        type="secondary"
+                    {/* 更多筛选按钮 */}
+                    <Button
+                        type="text"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        icon={showAdvancedFilters ? <UpOutlined /> : <DownOutlined />}
                         style={{
                             marginLeft: 'auto',
-                            fontSize: 'var(--font-size-sm)',
+                            color: (statusFilter !== 'ALL' || deptFilter !== 'ALL')
+                                ? 'var(--color-primary-500)'
+                                : 'var(--color-gray-500)',
                         }}
                     >
-                        共 {filteredTasks.length} 个任务
-                    </Text>
+                        更多筛选
+                        {(statusFilter !== 'ALL' || deptFilter !== 'ALL') && (
+                            <Tag
+                                color="blue"
+                                style={{ marginLeft: 4, borderRadius: 'var(--radius-full)' }}
+                            >
+                                {(statusFilter !== 'ALL' ? 1 : 0) + (deptFilter !== 'ALL' ? 1 : 0)}
+                            </Tag>
+                        )}
+                    </Button>
                 </div>
+
+                {/* 高级筛选面板 */}
+                {showAdvancedFilters && (
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-4)',
+                            padding: 'var(--spacing-3)',
+                            marginBottom: 'var(--spacing-4)',
+                            background: 'var(--color-gray-50)',
+                            borderRadius: 'var(--radius-md)',
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+                            <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>状态:</Text>
+                            <Segmented
+                                size="small"
+                                value={statusFilter}
+                                onChange={(value) => setStatusFilter(value as string)}
+                                options={[
+                                    { value: 'ALL', label: '全部' },
+                                    { value: 'ACTIVE', label: '进行中' },
+                                    { value: 'CLOSED', label: '已结束' },
+                                ]}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+                            <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>部门:</Text>
+                            <Segmented
+                                size="small"
+                                value={deptFilter}
+                                onChange={(value) => setDeptFilter(value as string)}
+                                options={[
+                                    { value: 'ALL', label: '全部' },
+                                    { value: 'DEPT_1', label: '一室' },
+                                    { value: 'DEPT_2', label: '二室' },
+                                ]}
+                            />
+                        </div>
+
+                        {/* 重置筛选 */}
+                        {(statusFilter !== 'ALL' || deptFilter !== 'ALL') && (
+                            <Button
+                                type="link"
+                                size="small"
+                                icon={<CloseCircleOutlined />}
+                                onClick={() => {
+                                    setStatusFilter('ALL');
+                                    setDeptFilter('ALL');
+                                }}
+                                style={{ marginLeft: 'auto' }}
+                            >
+                                重置
+                            </Button>
+                        )}
+                    </div>
+                )}
 
                 {/* 任务表格 */}
                 <Spin spinning={isLoading}>

@@ -180,6 +180,37 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """获取分配学员数量"""
         return self.assignments.count()
     
+    @property
+    def completed_count(self):
+        """获取已完成学员数量"""
+        return self.assignments.filter(status='COMPLETED').count()
+    
+    @property
+    def pass_rate(self):
+        """
+        获取及格率（百分比）
+        
+        仅对已完成的学员计算及格率：
+        - 学习任务：完成即及格，及格率 = 已完成数/总分配数
+        - 练习/考试任务：需要看成绩是否及格
+        """
+        completed = self.assignments.filter(status='COMPLETED')
+        completed_count = completed.count()
+        
+        if completed_count == 0:
+            return None
+        
+        if self.task_type == 'LEARNING':
+            # 学习任务完成即及格
+            total = self.assignments.count()
+            return round(completed_count / total * 100, 1) if total > 0 else None
+        else:
+            # 练习/考试任务需要检查成绩
+            if self.pass_score is None:
+                return None
+            passed_count = completed.filter(score__gte=self.pass_score).count()
+            return round(passed_count / completed_count * 100, 1) if completed_count > 0 else None
+    
     def close(self):
         """
         强制结束任务
