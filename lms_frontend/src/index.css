@@ -62,7 +62,7 @@
   /* Typography */
   --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  
+
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-base: 14px;
@@ -134,7 +134,9 @@
 /* ============================================
    Reset & Base Styles
    ============================================ */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -154,7 +156,7 @@ body {
   color: var(--color-gray-900);
   min-width: 320px;
   min-height: 100vh;
-  
+
   /* 统一纯净背景 - 所有区域使用相同底色 */
   background-color: var(--color-gray-100);
 }
@@ -167,12 +169,29 @@ body {
 /* ============================================
    Typography Utilities
    ============================================ */
-.text-primary { color: var(--color-primary-500); }
-.text-success { color: var(--color-success-500); }
-.text-warning { color: var(--color-warning-500); }
-.text-error { color: var(--color-error-500); }
-.text-secondary { color: var(--color-gray-600); }
-.text-muted { color: var(--color-gray-500); }
+.text-primary {
+  color: var(--color-primary-500);
+}
+
+.text-success {
+  color: var(--color-success-500);
+}
+
+.text-warning {
+  color: var(--color-warning-500);
+}
+
+.text-error {
+  color: var(--color-error-500);
+}
+
+.text-secondary {
+  color: var(--color-gray-600);
+}
+
+.text-muted {
+  color: var(--color-gray-500);
+}
 
 /* ============================================
    Animation Keyframes
@@ -181,6 +200,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -191,6 +211,7 @@ body {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -202,6 +223,7 @@ body {
     opacity: 0;
     transform: translateY(-16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -213,6 +235,7 @@ body {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -224,6 +247,7 @@ body {
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -235,6 +259,7 @@ body {
     opacity: 0;
     transform: translateX(20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -242,9 +267,12 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
@@ -254,15 +282,19 @@ body {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-6px);
   }
@@ -272,6 +304,7 @@ body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -317,14 +350,37 @@ body {
 }
 
 /* Staggered animation delays */
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-.stagger-6 { animation-delay: 0.3s; }
-.stagger-7 { animation-delay: 0.35s; }
-.stagger-8 { animation-delay: 0.4s; }
+.stagger-1 {
+  animation-delay: 0.05s;
+}
+
+.stagger-2 {
+  animation-delay: 0.1s;
+}
+
+.stagger-3 {
+  animation-delay: 0.15s;
+}
+
+.stagger-4 {
+  animation-delay: 0.2s;
+}
+
+.stagger-5 {
+  animation-delay: 0.25s;
+}
+
+.stagger-6 {
+  animation-delay: 0.3s;
+}
+
+.stagger-7 {
+  animation-delay: 0.35s;
+}
+
+.stagger-8 {
+  animation-delay: 0.4s;
+}
 
 /* Initial state for staggered animations */
 .stagger-item {
@@ -435,10 +491,21 @@ a:hover {
   display: inline-block;
 }
 
-.status-dot-success { background: var(--color-success-500); }
-.status-dot-warning { background: var(--color-warning-500); }
-.status-dot-error { background: var(--color-error-500); }
-.status-dot-info { background: var(--color-primary-500); }
+.status-dot-success {
+  background: var(--color-success-500);
+}
+
+.status-dot-warning {
+  background: var(--color-warning-500);
+}
+
+.status-dot-error {
+  background: var(--color-error-500);
+}
+
+.status-dot-info {
+  background: var(--color-primary-500);
+}
 
 /* ============================================
    Gradient Text
@@ -504,7 +571,7 @@ a:hover {
   background: var(--color-white) !important;
 }
 
-.ant-table-thead > tr > th {
+.ant-table-thead>tr>th {
   background: var(--color-gray-50) !important;
 }
 
@@ -567,14 +634,48 @@ a:hover {
 }
 
 /* 预设颜色标签优化 - 降低饱和度，增加对比度 */
-.ant-tag-blue { background: var(--color-primary-50) !important; color: var(--color-primary-600) !important; }
-.ant-tag-green, .ant-tag-success { background: var(--color-success-50) !important; color: var(--color-success-600) !important; }
-.ant-tag-orange, .ant-tag-warning { background: var(--color-warning-50) !important; color: #8B7000 !important; }
-.ant-tag-red, .ant-tag-error { background: var(--color-error-50) !important; color: var(--color-error-600) !important; }
-.ant-tag-purple { background: #F3E8FF !important; color: #7E22CE !important; }
-.ant-tag-geekblue { background: #EEF2FF !important; color: #4338CA !important; }
-.ant-tag-cyan { background: #ECFEFF !important; color: #0E7490 !important; }
-.ant-tag-default { background: var(--color-gray-100) !important; color: var(--color-gray-700) !important; }
+.ant-tag-blue {
+  background: var(--color-primary-50) !important;
+  color: var(--color-primary-600) !important;
+}
+
+.ant-tag-green,
+.ant-tag-success {
+  background: var(--color-success-50) !important;
+  color: var(--color-success-600) !important;
+}
+
+.ant-tag-orange,
+.ant-tag-warning {
+  background: var(--color-warning-50) !important;
+  color: #8B7000 !important;
+}
+
+.ant-tag-red,
+.ant-tag-error {
+  background: var(--color-error-50) !important;
+  color: var(--color-error-600) !important;
+}
+
+.ant-tag-purple {
+  background: #F3E8FF !important;
+  color: #7E22CE !important;
+}
+
+.ant-tag-geekblue {
+  background: #EEF2FF !important;
+  color: #4338CA !important;
+}
+
+.ant-tag-cyan {
+  background: #ECFEFF !important;
+  color: #0E7490 !important;
+}
+
+.ant-tag-default {
+  background: var(--color-gray-100) !important;
+  color: var(--color-gray-700) !important;
+}
 
 /* 标签悬浮效果 */
 .ant-tag:hover {
@@ -606,14 +707,14 @@ a:hover {
   padding-bottom: var(--spacing-1) !important;
 }
 
-.ant-form-item-label > label {
+.ant-form-item-label>label {
   font-weight: var(--font-weight-medium) !important;
   font-size: var(--font-size-sm) !important;
   color: var(--color-gray-700) !important;
   height: auto !important;
 }
 
-.ant-form-item-label > label::after {
+.ant-form-item-label>label::after {
   margin-inline: 2px 4px !important;
 }
 
@@ -635,7 +736,7 @@ a:hover {
 }
 
 /* 确保带前缀的输入框内部 input 样式正确 */
-.ant-input-affix-wrapper > .ant-input {
+.ant-input-affix-wrapper>.ant-input {
   height: auto !important;
   line-height: 1.5 !important;
 }
@@ -654,7 +755,7 @@ a:hover {
   align-items: center !important;
 }
 
-.ant-input-affix-wrapper-lg > .ant-input {
+.ant-input-affix-wrapper-lg>.ant-input {
   height: auto !important;
   line-height: 1.5 !important;
   font-size: var(--font-size-base) !important;
@@ -676,7 +777,7 @@ a:hover {
   align-items: center !important;
 }
 
-.ant-input-affix-wrapper-sm > .ant-input {
+.ant-input-affix-wrapper-sm>.ant-input {
   height: auto !important;
   line-height: 1.5 !important;
   font-size: var(--font-size-xs) !important;
@@ -883,13 +984,11 @@ textarea.ant-input {
 .ant-skeleton-element .ant-skeleton-input,
 .ant-skeleton-element .ant-skeleton-image,
 .ant-skeleton-content .ant-skeleton-title,
-.ant-skeleton-content .ant-skeleton-paragraph > li {
-  background: linear-gradient(
-    90deg,
-    var(--color-gray-100) 25%,
-    var(--color-gray-200) 50%,
-    var(--color-gray-100) 75%
-  );
+.ant-skeleton-content .ant-skeleton-paragraph>li {
+  background: linear-gradient(90deg,
+      var(--color-gray-100) 25%,
+      var(--color-gray-200) 50%,
+      var(--color-gray-100) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
@@ -904,11 +1003,11 @@ textarea.ant-input {
   font-size: var(--font-size-base) !important;
 }
 
-.login-input.ant-input-affix-wrapper > .ant-input {
+.login-input.ant-input-affix-wrapper>.ant-input {
   font-size: var(--font-size-base) !important;
 }
 
-.login-form-item .ant-form-item-label > label {
+.login-form-item .ant-form-item-label>label {
   font-size: var(--font-size-base) !important;
 }
 
@@ -953,9 +1052,415 @@ textarea.ant-input {
   .page-container {
     padding: var(--spacing-4);
   }
-  
+
   .page-title {
     font-size: var(--font-size-2xl);
   }
 }
 
+/* ============================================
+   Task Form - 三栏布局
+   ============================================ */
+.task-form-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn var(--transition-base) ease;
+}
+
+/* 固定头部 */
+.task-form-header {
+  height: 64px;
+  padding: 0 var(--spacing-6);
+  border-bottom: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-white);
+  flex-shrink: 0;
+}
+
+.task-form-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.task-form-back-btn {
+  color: var(--color-gray-600);
+}
+
+.task-form-back-btn:hover {
+  color: var(--color-primary-500);
+}
+
+.task-form-header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-gray-200);
+}
+
+.task-form-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* 主体三栏布局 */
+.task-form-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 侧边栏通用样式 */
+.task-form-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-200);
+  overflow: hidden;
+}
+
+.task-form-sidebar-left {
+  width: 320px;
+  border-right: 1px solid var(--color-gray-200);
+  padding: var(--spacing-5);
+}
+
+.task-form-sidebar-right {
+  width: 400px;
+  border-left: 1px solid var(--color-gray-200);
+  padding: var(--spacing-5);
+  overflow-y: auto;
+}
+
+/* Section 标题 */
+.task-form-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: var(--spacing-4);
+}
+
+.task-form-section-header .anticon {
+  color: var(--color-primary-500);
+}
+
+/* 搜索框 */
+.task-form-search-box {
+  margin-bottom: var(--spacing-3);
+}
+
+/* 资源列表 */
+.task-form-resource-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 calc(var(--spacing-5) * -1);
+  padding: 0 var(--spacing-5);
+}
+
+.task-form-resource-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.task-form-resource-item:hover {
+  background: var(--color-white);
+}
+
+.task-form-resource-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.task-form-resource-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-form-resource-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-form-resource-category {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  margin-top: 2px;
+}
+
+.task-form-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-10);
+}
+
+/* 中间 Pipeline 区域 */
+.task-form-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-white);
+  padding: var(--spacing-5);
+  overflow: hidden;
+}
+
+.task-form-pipeline {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-6) 0;
+}
+
+.task-form-pipeline-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.task-form-pipeline-list {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  padding-left: 48px;
+}
+
+/* 垂直连接线 */
+.task-form-pipeline-line {
+  position: absolute;
+  left: 17px;
+  top: 32px;
+  bottom: 32px;
+  width: 2px;
+  background: var(--color-gray-200);
+}
+
+.task-form-pipeline-item {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  position: relative;
+}
+
+.task-form-pipeline-node {
+  position: absolute;
+  left: -48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.task-form-pipeline-node-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  z-index: 1;
+}
+
+.task-form-pipeline-node-index {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-400);
+  font-family: var(--font-mono);
+}
+
+.task-form-pipeline-card {
+  flex: 1;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  transition: all var(--transition-fast);
+}
+
+.task-form-pipeline-card:hover {
+  border-color: var(--color-primary-300);
+  box-shadow: var(--shadow-md);
+}
+
+.task-form-pipeline-card-header {
+  margin-bottom: var(--spacing-2);
+}
+
+.task-form-pipeline-card-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-800);
+  line-height: 1.4;
+}
+
+.task-form-pipeline-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-3);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid var(--color-gray-100);
+}
+
+/* 右侧表单区域 */
+.task-form-meta-section {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin-bottom: var(--spacing-4);
+}
+
+.task-form-meta-section .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 用户搜索 */
+.task-form-user-search {
+  position: relative;
+  margin-bottom: var(--spacing-4);
+}
+
+.task-form-user-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: var(--spacing-2);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.task-form-user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.task-form-user-dropdown-item:hover {
+  background: var(--color-gray-50);
+}
+
+.task-form-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-gray-200);
+  color: var(--color-gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.task-form-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-form-user-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-800);
+}
+
+.task-form-user-id {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  font-family: var(--font-mono);
+}
+
+/* 已选用户 */
+.task-form-selected-users {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.task-form-no-users {
+  color: var(--color-gray-400);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  padding: var(--spacing-4);
+}
+
+.task-form-selected-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.task-form-selected-user:hover {
+  background: var(--color-gray-50);
+}
+
+/* 底部状态 */
+.task-form-meta-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+}
+
+.task-form-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.task-form-status-text {
+  font-family: var(--font-mono);
+}
+
+/* 错误状态 */
+.task-form-error {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

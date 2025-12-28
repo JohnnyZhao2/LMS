@@ -28,7 +28,7 @@ export const useStudentLearningTaskDetail = (
   const { enabled = true } = options;
   return useQuery({
     queryKey: ['student-learning-task-detail', taskId],
-    queryFn: () => apiClient.get<StudentLearningTaskDetail>(`/tasks/${taskId}/learning-detail/`),
+    queryFn: () => apiClient.get<StudentLearningTaskDetail>(`/tasks/${taskId}/detail/`),
     enabled: Boolean(taskId) && enabled,
   });
 };

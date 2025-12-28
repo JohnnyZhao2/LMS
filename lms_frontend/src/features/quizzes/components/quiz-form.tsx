@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Form, Input, Button, Card, Typography, message, Space, Table, Modal, 
+import {
+  Form, Input, Button, Card, Typography, message, Space, Table, Modal,
   Radio, Tag, InputNumber, Row, Col, Statistic, Divider, Empty, Select,
   Drawer
 } from 'antd';
-import { 
-  useNavigate, useParams, useSearchParams 
+import {
+  useNavigate, useParams, useSearchParams
 } from 'react-router-dom';
-import { 
+import {
   PlusOutlined, DeleteOutlined, SendOutlined, MenuOutlined,
   ArrowUpOutlined, ArrowDownOutlined, FormOutlined
 } from '@ant-design/icons';
@@ -116,22 +116,22 @@ const SortableQuestionRow: React.FC<{
       >
         <MenuOutlined />
       </div>
-      
+
       {/* 序号 */}
       <div style={{ width: 30, color: '#666', fontWeight: 500 }}>
         {index + 1}.
       </div>
-      
+
       {/* 题型标签 */}
       <div style={{ width: 80 }}>
         {getTypeTag(item.question_type)}
       </div>
-      
+
       {/* 题目内容 */}
       <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {item.content}
       </div>
-      
+
       {/* 分值 */}
       <div style={{ width: 100 }}>
         <InputNumber
@@ -145,7 +145,7 @@ const SortableQuestionRow: React.FC<{
           style={{ width: 90 }}
         />
       </div>
-      
+
       {/* 操作按钮 */}
       <Space size={4}>
         <Button
@@ -184,22 +184,22 @@ export const QuizForm: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const isEdit = !!id;
-  
+
   // 已选题目列表（带顺序和分值）
   const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestionItem[]>([]);
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
   const [publishModalVisible, setPublishModalVisible] = useState(false);
   const [createdQuizId, setCreatedQuizId] = useState<number | null>(null);
   const [publishForm] = Form.useForm();
-  
+
   // 新建题目抽屉
   const [newQuestionDrawerVisible, setNewQuestionDrawerVisible] = useState(false);
   const [newQuestionForm] = Form.useForm();
-  
+
   // 标记是否已从 URL/试卷详情初始化，避免重复覆盖本地编辑状态
   const initializedFromUrlRef = useRef(false);
   const initializedFromQuizRef = useRef(false);
-  
+
   const { data: quizData, isLoading } = useQuizDetail(Number(id));
   const { data: questionsData } = useQuestions({ pageSize: 1000 });
   const { data: lineTypes } = useLineTypeTags();
@@ -235,7 +235,7 @@ export const QuizForm: React.FC = () => {
         title: quizData.title,
         description: quizData.description,
       });
-      
+
       if (quizData.questions) {
         const items: QuizQuestionItem[] = quizData.questions.map((qq) => ({
           id: qq.question,
@@ -334,9 +334,8 @@ export const QuizForm: React.FC = () => {
    */
   const handlePublish = async () => {
     try {
-      const values = await publishForm.validateFields();
       setPublishModalVisible(false);
-      navigate(`/tasks/create?quiz_id=${createdQuizId}&task_type=${values.taskType}`);
+      navigate(`/tasks/create?quiz_id=${createdQuizId}`);
     } catch {
       // 表单验证失败
     }
@@ -356,14 +355,14 @@ export const QuizForm: React.FC = () => {
   const handleAddQuestions = (questionIds: number[]) => {
     const newItems: QuizQuestionItem[] = [];
     const currentMaxOrder = selectedQuestions.length;
-    
+
     questionIds.forEach((qid, index) => {
       // 避免重复添加
       if (selectedQuestions.some(q => q.id === qid)) return;
-      
+
       const question = questionsData?.results?.find(q => q.id === qid);
       if (!question) return;
-      
+
       newItems.push({
         id: question.id,
         content: question.content,
@@ -373,7 +372,7 @@ export const QuizForm: React.FC = () => {
         order: currentMaxOrder + index + 1,
       });
     });
-    
+
     setSelectedQuestions([...selectedQuestions, ...newItems]);
     setQuestionModalVisible(false);
     if (newItems.length > 0) {
@@ -392,7 +391,7 @@ export const QuizForm: React.FC = () => {
    * 修改题目分值
    */
   const handleScoreChange = (questionId: number, score: number) => {
-    setSelectedQuestions(selectedQuestions.map(q => 
+    setSelectedQuestions(selectedQuestions.map(q =>
       q.id === questionId ? { ...q, score: String(score) } : q
     ));
   };
@@ -439,9 +438,9 @@ export const QuizForm: React.FC = () => {
         ...values,
         score: String(values.score || 1),
       };
-      
+
       const newQuestion = await createQuestion.mutateAsync(submitData);
-      
+
       // 添加到已选题目
       const newItem: QuizQuestionItem = {
         id: newQuestion.id,
@@ -451,9 +450,9 @@ export const QuizForm: React.FC = () => {
         score: newQuestion.score || String(values.score || 1),
         order: selectedQuestions.length + 1,
       };
-      
+
       setSelectedQuestions(prev => [...prev, newItem]);
-      
+
       message.success('题目创建成功并已添加到试卷');
       setNewQuestionDrawerVisible(false);
       newQuestionForm.resetFields();
@@ -494,7 +493,7 @@ export const QuizForm: React.FC = () => {
             </Form>
           </Card>
 
-          <Card 
+          <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>题目列表 ({selectedQuestions.length} 道)</span>
@@ -630,8 +629,8 @@ export const QuizForm: React.FC = () => {
         extra={
           <Space>
             <Button onClick={() => setNewQuestionDrawerVisible(false)}>取消</Button>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               onClick={handleCreateNewQuestion}
               loading={createQuestion.isPending}
             >
@@ -736,18 +735,6 @@ export const QuizForm: React.FC = () => {
         ]}
       >
         <p style={{ marginBottom: 16 }}>试卷创建成功！是否立即发布为任务？</p>
-        <Form form={publishForm} layout="vertical">
-          <Form.Item
-            name="taskType"
-            label="任务类型"
-            rules={[{ required: true, message: '请选择任务类型' }]}
-          >
-            <Radio.Group>
-              <Radio value="PRACTICE">练习任务</Radio>
-              <Radio value="EXAM">考试任务</Radio>
-            </Radio.Group>
-          </Form.Item>
-        </Form>
       </Modal>
     </div>
   );

@@ -20,7 +20,6 @@ class NotificationSerializer(serializers.ModelSerializer):
     )
     task_id = serializers.IntegerField(source='task.id', read_only=True, allow_null=True)
     task_title = serializers.CharField(source='task.title', read_only=True, allow_null=True)
-    task_type = serializers.CharField(source='task.task_type', read_only=True, allow_null=True)
     
     class Meta:
         model = Notification
@@ -34,7 +33,6 @@ class NotificationSerializer(serializers.ModelSerializer):
             'read_at',
             'task_id',
             'task_title',
-            'task_type',
             'created_at',
         ]
         read_only_fields = fields

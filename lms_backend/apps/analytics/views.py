@@ -139,28 +139,11 @@ class StudentDashboardView(APIView):
         
         total_count = base_query.count()
         
-        # Count by task type
-        by_type = base_query.filter(
-            status__in=['IN_PROGRESS', 'PENDING_EXAM']
-        ).values('task__task_type').annotate(
-            count=Count('id')
-        )
-        
-        type_counts = {
-            'learning': 0,
-            'practice': 0,
-            'exam': 0
-        }
-        for item in by_type:
-            task_type = item['task__task_type'].lower()
-            type_counts[task_type] = item['count']
-        
         return {
             'pending': pending_count,
             'completed': completed_count,
             'overdue': overdue_count,
-            'total': total_count,
-            'by_type': type_counts
+            'total': total_count
         }
 
 
@@ -373,11 +356,6 @@ class StudentTaskCenterListView(APIView):
         description='获取学员的任务列表，支持按类型和状态筛选',
         parameters=[
             OpenApiParameter(
-                name='task_type',
-                type=str,
-                description='任务类型（LEARNING/PRACTICE/EXAM）'
-            ),
-            OpenApiParameter(
                 name='status',
                 type=str,
                 description='任务状态（IN_PROGRESS/COMPLETED/OVERDUE/PENDING_EXAM）'
@@ -423,11 +401,7 @@ class StudentTaskCenterListView(APIView):
             'knowledge_progress'
         )
         
-        # Filter by task type
-        # Requirements 17.1: 支持按类型（学习/练习/考试）筛选
-        task_type = request.query_params.get('task_type')
-        if task_type:
-            queryset = queryset.filter(task__task_type=task_type)
+
         
         # Filter by status
         # Requirements 17.1: 支持按状态（进行中/已完成/已逾期）筛选
@@ -510,17 +484,7 @@ class StudentTaskCenterDetailView(APIView):
         
         serializer = StudentTaskCenterListSerializer(assignment)
         
-        # Generate redirect path based on task type
-        task = assignment.task
-        task_type = task.task_type
-        
-        # Determine redirect path based on task type
-        if task_type == 'LEARNING':
-            redirect_path = f'/student/tasks/learning/{assignment.id}'
-        elif task_type == 'PRACTICE':
-            redirect_path = f'/student/tasks/practice/{assignment.id}'
-        else:  # EXAM
-            redirect_path = f'/student/tasks/exam/{assignment.id}'
+        redirect_path = f'/tasks/{assignment.task.id}'
         
         response_data = serializer.data
         response_data['redirect_path'] = redirect_path
@@ -583,11 +547,6 @@ class StudentScoreHistoryView(APIView):
         description='获取当前登录学员的练习和考试历史成绩记录',
         parameters=[
             OpenApiParameter(
-                name='task_type',
-                type=str,
-                description='任务类型筛选（PRACTICE/EXAM）'
-            ),
-            OpenApiParameter(
                 name='status',
                 type=str,
                 description='状态筛选（SUBMITTED/GRADING/GRADED）'
@@ -621,18 +580,13 @@ class StudentScoreHistoryView(APIView):
         # Base queryset: submissions by the current user for practice/exam tasks
         queryset = Submission.objects.filter(
             user=user,
-            task_assignment__task__task_type__in=['PRACTICE', 'EXAM'],
             task_assignment__task__is_deleted=False,
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
         ).select_related(
             'task_assignment__task',
             'quiz'
         ).order_by('-submitted_at', '-created_at')
-        
-        # Filter by task type
-        task_type = request.query_params.get('task_type')
-        if task_type:
-            queryset = queryset.filter(task_assignment__task__task_type=task_type)
+
         
         # Filter by status
         status_filter = request.query_params.get('status')
@@ -667,10 +621,9 @@ class StudentScoreHistoryView(APIView):
         from apps.submissions.models import Submission
         from django.db.models import Avg, Max, Count
         
-        # Practice statistics
-        practice_stats = Submission.objects.filter(
+        # Quiz statistics (formerly practice/exam)
+        quiz_stats = Submission.objects.filter(
             user=user,
-            task_assignment__task__task_type='PRACTICE',
             task_assignment__task__is_deleted=False,
             status='GRADED'
         ).aggregate(
@@ -679,43 +632,18 @@ class StudentScoreHistoryView(APIView):
             max_score=Max('obtained_score')
         )
         
-        # Exam statistics
-        exam_stats = Submission.objects.filter(
-            user=user,
-            task_assignment__task__task_type='EXAM',
-            task_assignment__task__is_deleted=False,
-            status='GRADED'
-        ).aggregate(
-            total_count=Count('id'),
-            avg_score=Avg('obtained_score'),
-            max_score=Max('obtained_score')
-        )
-        
-        # Count passed exams
-        passed_exams = 0
-        exam_submissions = Submission.objects.filter(
-            user=user,
-            task_assignment__task__task_type='EXAM',
-            task_assignment__task__is_deleted=False,
-            status='GRADED'
-        ).select_related('task_assignment__task')
-        
-        for submission in exam_submissions:
-            if submission.obtained_score and submission.task_assignment.task.pass_score:
-                if submission.obtained_score >= submission.task_assignment.task.pass_score:
-                    passed_exams += 1
-        
+        # We consolidate all into 'practice' for now, leaving exam empty as type is removed
         return {
             'practice': {
-                'total_count': practice_stats['total_count'] or 0,
-                'avg_score': float(practice_stats['avg_score']) if practice_stats['avg_score'] else None,
-                'max_score': float(practice_stats['max_score']) if practice_stats['max_score'] else None,
+                'total_count': quiz_stats['total_count'] or 0,
+                'avg_score': float(quiz_stats['avg_score']) if quiz_stats['avg_score'] else None,
+                'max_score': float(quiz_stats['max_score']) if quiz_stats['max_score'] else None,
             },
             'exam': {
-                'total_count': exam_stats['total_count'] or 0,
-                'avg_score': float(exam_stats['avg_score']) if exam_stats['avg_score'] else None,
-                'max_score': float(exam_stats['max_score']) if exam_stats['max_score'] else None,
-                'passed_count': passed_exams,
+                'total_count': 0,
+                'avg_score': None,
+                'max_score': None,
+                'passed_count': 0,
             }
         }
 
@@ -737,11 +665,6 @@ class StudentWrongAnswersView(APIView):
         summary='获取学员错题本',
         description='获取当前登录学员在练习和考试中答错的题目',
         parameters=[
-            OpenApiParameter(
-                name='task_type',
-                type=str,
-                description='任务类型筛选（PRACTICE/EXAM）'
-            ),
             OpenApiParameter(
                 name='question_type',
                 type=str,
@@ -776,7 +699,6 @@ class StudentWrongAnswersView(APIView):
         # Base queryset: wrong answers by the current user
         queryset = Answer.objects.filter(
             submission__user=user,
-            submission__task_assignment__task__task_type__in=['PRACTICE', 'EXAM'],
             submission__task_assignment__task__is_deleted=False,
             submission__status__in=['SUBMITTED', 'GRADING', 'GRADED'],
             is_correct=False
@@ -785,11 +707,7 @@ class StudentWrongAnswersView(APIView):
             'submission__quiz',
             'question'
         ).order_by('-submission__submitted_at', '-created_at')
-        
-        # Filter by task type
-        task_type = request.query_params.get('task_type')
-        if task_type:
-            queryset = queryset.filter(submission__task_assignment__task__task_type=task_type)
+
         
         # Filter by question type
         question_type = request.query_params.get('question_type')
@@ -827,7 +745,6 @@ class StudentWrongAnswersView(APIView):
         # Count by question type
         by_type = Answer.objects.filter(
             submission__user=user,
-            submission__task_assignment__task__task_type__in=['PRACTICE', 'EXAM'],
             submission__task_assignment__task__is_deleted=False,
             submission__status__in=['SUBMITTED', 'GRADING', 'GRADED'],
             is_correct=False
@@ -1086,10 +1003,8 @@ class MentorDashboardView(APIView):
             task_assignment__task__is_deleted=False
         ).count()
         
-        # Task type breakdown
-        learning_tasks = self._get_task_type_stats(assignments, 'LEARNING')
-        practice_tasks = self._get_task_type_stats(assignments, 'PRACTICE')
-        exam_tasks = self._get_exam_task_stats(assignments, student_ids)
+        # Task type breakdown - DEPRECATED: Returns placeholder data
+        default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         
         return {
             'total_students': len(student_ids),
@@ -1100,48 +1015,9 @@ class MentorDashboardView(APIView):
             'overall_completion_rate': round(overall_completion_rate, 1),
             'overall_avg_score': round(overall_avg_score, 2) if overall_avg_score else None,
             'pending_grading_count': pending_grading_count,
-            'learning_tasks': learning_tasks,
-            'practice_tasks': practice_tasks,
-            'exam_tasks': exam_tasks
-        }
-    
-    def _get_task_type_stats(self, assignments, task_type):
-        """Get statistics for a specific task type."""
-        type_assignments = assignments.filter(task__task_type=task_type)
-        total = type_assignments.count()
-        completed = type_assignments.filter(status='COMPLETED').count()
-        completion_rate = (completed / total * 100) if total > 0 else 0.0
-        
-        return {
-            'total': total,
-            'completed': completed,
-            'completion_rate': round(completion_rate, 1)
-        }
-    
-    def _get_exam_task_stats(self, assignments, student_ids):
-        """Get statistics for exam tasks including average score."""
-        from apps.submissions.models import Submission
-        from django.db.models import Avg
-        
-        exam_assignments = assignments.filter(task__task_type='EXAM')
-        total = exam_assignments.count()
-        completed = exam_assignments.filter(status='COMPLETED').count()
-        completion_rate = (completed / total * 100) if total > 0 else 0.0
-        
-        # Calculate average exam score
-        avg_score_result = Submission.objects.filter(
-            user_id__in=student_ids,
-            task_assignment__task__task_type='EXAM',
-            task_assignment__task__is_deleted=False,
-            status='GRADED'
-        ).aggregate(avg_score=Avg('obtained_score'))
-        avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
-        
-        return {
-            'total': total,
-            'completed': completed,
-            'completion_rate': round(completion_rate, 1),
-            'avg_score': round(avg_score, 2) if avg_score else None
+            'learning_tasks': default_stats,
+            'practice_tasks': default_stats,
+            'exam_tasks': {**default_stats, 'avg_score': None}
         }
     
     def _calculate_student_stats(self, students):
@@ -1178,22 +1054,10 @@ class MentorDashboardView(APIView):
             ).aggregate(avg_score=Avg('obtained_score'))
             avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
             
-            # Exam statistics
-            exam_submissions = Submission.objects.filter(
-                user=student,
-                task_assignment__task__task_type='EXAM',
-                task_assignment__task__is_deleted=False,
-                status='GRADED'
-            ).select_related('task_assignment__task')
-            
-            exam_count = exam_submissions.count()
+            # Exam statistics - DEPRECATED
+            exam_count = 0
             exam_passed_count = 0
-            for submission in exam_submissions:
-                if submission.obtained_score and submission.task_assignment.task.pass_score:
-                    if submission.obtained_score >= submission.task_assignment.task.pass_score:
-                        exam_passed_count += 1
-            
-            exam_pass_rate = (exam_passed_count / exam_count * 100) if exam_count > 0 else None
+            exam_pass_rate = None
             
             student_stats.append({
                 'id': student.id,

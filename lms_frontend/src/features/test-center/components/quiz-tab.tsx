@@ -14,7 +14,7 @@ import { showApiError } from '@/utils/error-handler';
 import dayjs from 'dayjs';
 
 interface QuizTabProps {
-  onQuickPublish: (quizIds: number[], taskType: 'PRACTICE' | 'EXAM') => void;
+  onQuickPublish: (quizIds: number[]) => void;
   search?: string;
 }
 
@@ -61,20 +61,16 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
    */
   const handleQuickPublish = async () => {
     try {
-      const values = await form.validateFields();
-
       setQuickPublishModalVisible(false);
-      form.resetFields();
-
       // 跳转到任务创建流程
-      onQuickPublish(selectedRowKeys, values.taskType);
+      onQuickPublish(selectedRowKeys);
       setSelectedRowKeys([]);
     } catch {
-      // 表单验证失败
+      // 失败
     }
   };
 
-  // 多个试卷只能发练习
+  // 多个试卷
   const isMultipleQuizzes = selectedRowKeys.length > 1;
 
   const columns = [
@@ -189,36 +185,15 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
 
       {/* 快速发布弹窗 */}
       <Modal
-        title="快速发布任务"
+        title="确认发布任务"
         open={quickPublishModalVisible}
         onOk={handleQuickPublish}
         onCancel={() => {
           setQuickPublishModalVisible(false);
-          form.resetFields();
+          // form.resetFields(); // Not using form
         }}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="taskType"
-            label="任务类型"
-            rules={[{ required: true, message: '请选择任务类型' }]}
-            initialValue={isMultipleQuizzes ? 'PRACTICE' : undefined}
-          >
-            <Radio.Group disabled={isMultipleQuizzes}>
-              <Radio value="PRACTICE">练习任务</Radio>
-              <Radio value="EXAM" disabled={isMultipleQuizzes}>
-                考试任务
-                {isMultipleQuizzes && (
-                  <Tag color="orange" style={{ marginLeft: 8 }}>多试卷仅支持练习</Tag>
-                )}
-              </Radio>
-            </Radio.Group>
-          </Form.Item>
-          <div style={{ color: '#666', fontSize: 12 }}>
-            已选择 {selectedRowKeys.length} 份试卷
-            {isMultipleQuizzes && '，多试卷只能发布为练习任务'}
-          </div>
-        </Form>
+        <p>确认将选中的 {selectedRowKeys.length} 份试卷发布为新任务吗？</p>
       </Modal>
     </Card>
   );

@@ -18,7 +18,6 @@ import {
     FileTextOutlined,
     SearchOutlined,
     BookOutlined,
-    FireOutlined,
     CheckCircleOutlined,
     EditOutlined,
     DeleteOutlined,
@@ -27,6 +26,7 @@ import {
     DownOutlined,
     UpOutlined,
     CloseCircleOutlined,
+    AppstoreOutlined,
 } from '@ant-design/icons';
 import { useTaskList } from '../api/get-tasks';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -35,7 +35,7 @@ import { usePendingGrading } from '@/features/grading/api/get-pending-grading';
 import { PageHeader, Card, StatusBadge } from '@/components/ui';
 import { useDeleteTask } from '../api/delete-task';
 import { showApiError } from '@/utils/error-handler';
-import type { TaskListItem, TaskType } from '@/types/api';
+import type { TaskListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 
 const { Text } = Typography;
@@ -156,32 +156,7 @@ const StatCard: React.FC<StatCardProps> = ({
     </Card>
 );
 
-/**
- * 任务类型配置
- */
-const taskTypeConfig = {
-    LEARNING: {
-        icon: <BookOutlined />,
-        color: 'var(--color-success-500)',
-        bg: 'var(--color-success-50)',
-        label: '学习',
-        tagColor: 'green',
-    },
-    PRACTICE: {
-        icon: <FileTextOutlined />,
-        color: 'var(--color-primary-500)',
-        bg: 'var(--color-primary-50)',
-        label: '练习',
-        tagColor: 'blue',
-    },
-    EXAM: {
-        icon: <FireOutlined />,
-        color: 'var(--color-error-500)',
-        bg: 'var(--color-error-50)',
-        label: '考试',
-        tagColor: 'red',
-    },
-};
+
 
 /**
  * 任务管理组件（管理员/导师视图）
@@ -189,7 +164,7 @@ const taskTypeConfig = {
 export const TaskManagement: React.FC = () => {
     const { currentRole, user } = useAuth();
     const navigate = useNavigate();
-    const [taskType, setTaskType] = useState<string>('ALL');
+
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
     const [deptFilter, setDeptFilter] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
@@ -214,20 +189,14 @@ export const TaskManagement: React.FC = () => {
                 t.title.toLowerCase().includes(query) ||
                 t.id.toString().includes(query);
 
-            // 任务类型
-            const matchesType = taskType === 'ALL' || t.task_type === taskType;
-
             // 状态
             const matchesStatus = statusFilter === 'ALL' ||
                 (statusFilter === 'ACTIVE' && !t.is_closed) ||
                 (statusFilter === 'CLOSED' && t.is_closed);
 
-            // 部门（暂时前端模拟，后端需要添加 dept 字段）
-            // const matchesDept = deptFilter === 'ALL' || t.dept === deptFilter;
-
-            return matchesSearch && matchesType && matchesStatus;
+            return matchesSearch && matchesStatus;
         });
-    }, [tasks, searchQuery, taskType, statusFilter]);
+    }, [tasks, searchQuery, statusFilter]);
 
     // 统计数据
     const stats = useMemo(() => {
@@ -274,7 +243,6 @@ export const TaskManagement: React.FC = () => {
             width: 280,
             ellipsis: true,
             render: (text: string, record: TaskListItem) => {
-                const config = taskTypeConfig[record.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
                         <div
@@ -282,16 +250,16 @@ export const TaskManagement: React.FC = () => {
                                 width: 36,
                                 height: 36,
                                 borderRadius: 'var(--radius-md)',
-                                background: config.bg,
+                                background: 'var(--color-gray-50)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                color: config.color,
+                                color: 'var(--color-gray-500)',
                                 fontSize: 16,
                                 flexShrink: 0,
                             }}
                         >
-                            {config.icon}
+                            <AppstoreOutlined />
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
                             <Text strong ellipsis style={{ display: 'block', maxWidth: '100%' }}>
@@ -309,17 +277,55 @@ export const TaskManagement: React.FC = () => {
             },
         },
         {
-            title: '类型',
-            dataIndex: 'task_type',
-            key: 'task_type',
-            width: 80,
+            title: 'Resources',
+            key: 'resources',
+            width: 90,
             align: 'center' as const,
-            render: (type: TaskType) => {
-                const config = taskTypeConfig[type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
+            render: (_: unknown, record: TaskListItem) => {
+                const hasKnowledge = (record.knowledge_count || 0) > 0;
+                const hasQuiz = (record.quiz_count || 0) > 0;
+
                 return (
-                    <Tag color={config.tagColor}>
-                        {config.label}
-                    </Tag>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--spacing-1)' }}>
+                        {hasKnowledge && (
+                            <Tooltip title={`${record.knowledge_count} 知识点`}>
+                                <div
+                                    style={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: 'var(--color-success-50)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'var(--color-success-500)',
+                                        fontSize: 14,
+                                    }}
+                                >
+                                    <BookOutlined />
+                                </div>
+                            </Tooltip>
+                        )}
+                        {hasQuiz && (
+                            <Tooltip title={`${record.quiz_count} 测验`}>
+                                <div
+                                    style={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: 'var(--color-primary-50)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'var(--color-primary-500)',
+                                        fontSize: 14,
+                                    }}
+                                >
+                                    <FileTextOutlined />
+                                </div>
+                            </Tooltip>
+                        )}
+                    </div>
                 );
             },
         },
@@ -331,7 +337,7 @@ export const TaskManagement: React.FC = () => {
                 const completed = record.completed_count || 0;
                 const total = record.assignee_count || 0;
                 const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const config = taskTypeConfig[record.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
+                const progressColor = percentage >= 80 ? 'var(--color-success-500)' : percentage >= 50 ? 'var(--color-primary-500)' : 'var(--color-gray-400)';
 
                 return (
                     <div>
@@ -339,14 +345,14 @@ export const TaskManagement: React.FC = () => {
                             <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
                                 {completed}/{total}
                             </Text>
-                            <Text style={{ fontSize: 'var(--font-size-xs)', color: config.color, fontWeight: 600 }}>
+                            <Text style={{ fontSize: 'var(--font-size-xs)', color: progressColor, fontWeight: 600 }}>
                                 {percentage}%
                             </Text>
                         </div>
                         <Progress
                             percent={percentage}
                             showInfo={false}
-                            strokeColor={config.color}
+                            strokeColor={progressColor}
                             trailColor="var(--color-gray-100)"
                             size="small"
                         />
@@ -586,19 +592,6 @@ export const TaskManagement: React.FC = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         allowClear
                     />
-
-                    {/* 任务类型分段选择器 */}
-                    <Segmented
-                        value={taskType}
-                        onChange={(value) => setTaskType(value as string)}
-                        options={[
-                            { value: 'ALL', label: '全部' },
-                            { value: 'LEARNING', label: '学习' },
-                            { value: 'PRACTICE', label: '练习' },
-                            { value: 'EXAM', label: '考试' },
-                        ]}
-                    />
-
                     {/* 更多筛选按钮 */}
                     <Button
                         type="text"

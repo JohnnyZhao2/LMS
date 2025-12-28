@@ -5,39 +5,24 @@ import {
   ClockCircleOutlined,
   RocketOutlined,
   TrophyOutlined,
-  FireOutlined,
 } from '@ant-design/icons';
 import { useStudentDashboard } from '../api/student-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
-import { Card, StatusBadge, PageHeader, StaggeredList } from '@/components/ui';
+import { Card, StatusBadge, StaggeredList } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 
-const { Text, Title } = Typography;
+const { Text, Title, Paragraph } = Typography;
 
 /**
  * 任务类型配色
  */
-const taskTypeConfig = {
-  EXAM: {
-    color: 'var(--color-error-500)',
-    bg: 'var(--color-error-50)',
-    icon: <FireOutlined />,
-    label: '考试',
-  },
-  PRACTICE: {
-    color: 'var(--color-primary-500)',
-    bg: 'var(--color-primary-50)',
-    icon: <FileTextOutlined />,
-    label: '练习',
-  },
-  LEARNING: {
-    color: 'var(--color-success-500)',
-    bg: 'var(--color-success-50)',
-    icon: <BookOutlined />,
-    label: '学习',
-  },
+const taskConfig = {
+  color: 'var(--color-primary-500)',
+  bg: 'var(--color-primary-50)',
+  icon: <FileTextOutlined />,
+  label: '任务',
 };
 
 /**
@@ -165,13 +150,13 @@ export const StudentDashboard: React.FC = () => {
             ) : data?.pending_tasks && data.pending_tasks.length > 0 ? (
               <StaggeredList staggerDelay={60} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
                 {data.pending_tasks.map((task) => {
-                  const typeConfig = taskTypeConfig[task.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
+                  const typeConfig = taskConfig;
                   const isUrgent = dayjs(task.deadline).diff(dayjs(), 'day') <= 1;
 
                   return (
                     <div
                       key={task.id}
-                      onClick={() => navigate(`${ROUTES.TASKS}/${task.id}`)}
+                      onClick={() => navigate(`${ROUTES.TASKS}/${task.task_id}`)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -211,11 +196,11 @@ export const StudentDashboard: React.FC = () => {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 4 }}>
                           <Text strong ellipsis style={{ flex: 1 }}>
-                            {task.title}
+                            {task.task_title}
                           </Text>
                           <StatusBadge
-                            status={task.task_type === 'EXAM' ? 'error' : task.task_type === 'PRACTICE' ? 'info' : 'success'}
-                            text={task.task_type_display}
+                            status={'processing'}
+                            text={'进行中'}
                             size="small"
                             showIcon={false}
                           />
@@ -311,13 +296,13 @@ export const StudentDashboard: React.FC = () => {
                     <Text strong ellipsis style={{ display: 'block', marginBottom: 4 }}>
                       {knowledge.title}
                     </Text>
-                    <Text
+                    <Paragraph
                       type="secondary"
                       ellipsis={{ rows: 2 }}
                       style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-2)' }}
                     >
                       {knowledge.summary}
-                    </Text>
+                    </Paragraph>
                     <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
                       {dayjs(knowledge.updated_at).format('YYYY-MM-DD')}
                     </Text>

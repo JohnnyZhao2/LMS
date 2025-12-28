@@ -1,35 +1,28 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type {
-  ExamTaskCreateRequest,
-  LearningTaskCreateRequest,
-  PracticeTaskCreateRequest,
-  TaskDetail,
-} from '@/types/api';
-
-export type CreateTaskPayload =
-  | { type: 'LEARNING'; data: LearningTaskCreateRequest }
-  | { type: 'PRACTICE'; data: PracticeTaskCreateRequest }
-  | { type: 'EXAM'; data: ExamTaskCreateRequest };
+import type { TaskDetail } from '@/types/api';
 
 /**
- * 创建任务
+ * 统一的任务创建请求
+ */
+export interface TaskCreateRequest {
+  title: string;
+  description?: string;
+  deadline: string;
+  knowledge_ids?: number[];
+  quiz_ids?: number[];
+  assignee_ids: number[];
+}
+
+/**
+ * 创建任务（统一API）
  */
 export const useCreateTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateTaskPayload) => {
-      switch (payload.type) {
-        case 'LEARNING':
-          return apiClient.post<TaskDetail>('/tasks/learning/', payload.data);
-        case 'PRACTICE':
-          return apiClient.post<TaskDetail>('/tasks/practice/', payload.data);
-        case 'EXAM':
-          return apiClient.post<TaskDetail>('/tasks/exam/', payload.data);
-        default:
-          throw new Error('Unsupported task type');
-      }
+    mutationFn: (data: TaskCreateRequest) => {
+      return apiClient.post<TaskDetail>('/tasks/create/', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -37,5 +30,3 @@ export const useCreateTask = () => {
     },
   });
 };
-
-

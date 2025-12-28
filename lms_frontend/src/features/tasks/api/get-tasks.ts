@@ -3,14 +3,12 @@ import { apiClient } from '@/lib/api-client';
 import type {
   StudentTaskCenterResponse,
   TaskListItem,
-  TaskType,
   TaskStatus,
 } from '@/types/api';
 
 interface GetTasksParams {
   page?: number;
   pageSize?: number;
-  taskType?: TaskType;
   status?: TaskStatus;
   isClosed?: boolean;
 }
@@ -26,16 +24,15 @@ export const useStudentTasks = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
-  const { page = 1, pageSize = 20, taskType, status } = params;
+  const { page = 1, pageSize = 20, status } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['student-tasks', page, pageSize, taskType, status],
+    queryKey: ['student-tasks', page, pageSize, status],
     queryFn: () => {
       const searchParams = new URLSearchParams();
       if (page) searchParams.set('page', String(page));
       if (pageSize) searchParams.set('page_size', String(pageSize));
-      if (taskType) searchParams.set('task_type', taskType);
       if (status) searchParams.set('status', status);
 
       return apiClient.get<StudentTaskCenterResponse>(
@@ -53,16 +50,15 @@ export const useTaskList = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
-  const { page = 1, pageSize = 20, taskType, isClosed } = params;
+  const { page = 1, pageSize = 20, isClosed } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', page, pageSize, taskType, isClosed],
+    queryKey: ['tasks', page, pageSize, isClosed],
     queryFn: () => {
       const searchParams = new URLSearchParams();
       if (page) searchParams.set('page', String(page));
       if (pageSize) searchParams.set('page_size', String(pageSize));
-      if (taskType) searchParams.set('task_type', taskType);
       if (typeof isClosed === 'boolean') {
         searchParams.set('is_closed', isClosed ? 'true' : 'false');
       }
@@ -74,5 +70,3 @@ export const useTaskList = (
     enabled,
   });
 };
-
-

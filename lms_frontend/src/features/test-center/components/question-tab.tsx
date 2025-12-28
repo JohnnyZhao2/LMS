@@ -25,7 +25,6 @@ const QUESTION_TYPE_FILTER_OPTIONS = [
 ];
 
 interface QuestionTabProps {
-  onQuickCreateQuiz?: (quizId: number, taskType: 'PRACTICE' | 'EXAM') => void;
   search?: string;
 }
 
@@ -43,7 +42,7 @@ const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string 
  * 题目管理标签页
  * 采用分屏布局：左侧题目列表，右侧题目详情
  */
-export const QuestionTab: React.FC<QuestionTabProps> = ({ onQuickCreateQuiz, search = '' }) => {
+export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
 
   const [page, setPage] = useState(1);

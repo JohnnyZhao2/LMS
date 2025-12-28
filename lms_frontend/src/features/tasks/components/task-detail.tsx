@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Typography, Tag, Spin, List, Descriptions, message, Modal, Space, Divider, Dropdown } from 'antd';
+import { Button, Typography, Tag, Spin, List, Dropdown, Space, message, Progress, Divider } from 'antd';
 import {
   CheckCircleOutlined,
   PlayCircleOutlined,
@@ -8,40 +8,18 @@ import {
   FileTextOutlined,
   ArrowLeftOutlined,
   ClockCircleOutlined,
-  UserOutlined,
-  CalendarOutlined,
   EditOutlined,
   MoreOutlined,
+  InfoCircleOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import { useCompleteLearning } from '../api/complete-learning';
 import { Card, StatusBadge } from '@/components/ui';
-import type { KnowledgeSnapshot, QuizSnapshot } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 
 const { Title, Text } = Typography;
-
-/**
- * 任务类型配置
- */
-const taskTypeConfig = {
-  LEARNING: {
-    color: 'var(--color-success-500)',
-    bg: 'var(--color-success-50)',
-    gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
-  },
-  PRACTICE: {
-    color: 'var(--color-primary-500)',
-    bg: 'var(--color-primary-50)',
-    gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-  },
-  EXAM: {
-    color: 'var(--color-error-500)',
-    bg: 'var(--color-error-50)',
-    gradient: 'linear-gradient(135deg, var(--color-error-500) 0%, var(--color-pink-500) 100%)',
-  },
-};
 
 const assignmentStatusMap: Record<string, 'default' | 'success' | 'warning' | 'error' | 'processing'> = {
   IN_PROGRESS: 'processing',
@@ -56,150 +34,130 @@ const assignmentStatusLabelMap: Record<string, string> = {
   COMPLETED: '已完成',
   OVERDUE: '已逾期',
 };
+
 interface KnowledgeListViewItem {
   id: number;
-  knowledgeId?: number;
-  title?: string;
+  knowledgeId: number;
+  title: string;
   summary?: string;
-  knowledgeType?: string;
+  knowledgeType: string;
   knowledgeTypeDisplay?: string;
   version?: number;
-  snapshot?: KnowledgeSnapshot;
   isCompleted?: boolean;
   completedAt?: string | null;
 }
 
 /**
- * 任务详情组件
+ * 任务详情组件 - 兼容学员学习视图和管理详情视图
  */
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentRole, user } = useAuth();
+
   const isStudent = currentRole === 'STUDENT';
+  const isAdmin = currentRole === 'ADMIN';
+  const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER' || currentRole === 'TEAM_MANAGER';
+
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
+
   const {
     data: task,
     isLoading: taskLoading,
     isError: taskError,
   } = useTaskDetail(taskId, { enabled: isValidTaskId });
-  const shouldFetchLearningDetail = isStudent && task?.task_type === 'LEARNING';
+
+  const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
+  const shouldFetchLearningDetail = isStudent && hasKnowledge;
+
   const {
     data: learningDetail,
     isLoading: learningLoading,
   } = useStudentLearningTaskDetail(taskId, {
     enabled: Boolean(taskId) && shouldFetchLearningDetail,
   });
+
   const completeLearning = useCompleteLearning();
-  const [previewKnowledge, setPreviewKnowledge] = useState<KnowledgeSnapshot | null>(null);
-  const [previewQuiz, setPreviewQuiz] = useState<QuizSnapshot | null>(null);
   const isLoading = !isValidTaskId || taskLoading || (shouldFetchLearningDetail && learningLoading);
 
-  const knowledgeSnapshotMap = useMemo(() => {
-    const map = new Map<number, KnowledgeSnapshot>();
-    task?.knowledge_items?.forEach((item) => {
-      const snapshotId = item.snapshot?.id ?? item.knowledge;
-      if (snapshotId) {
-        map.set(snapshotId, item.snapshot);
-      }
-    });
-    return map;
-  }, [task]);
-
-  const knowledgeVersionMap = useMemo(() => {
-    const map = new Map<number, number>();
-    task?.knowledge_items?.forEach((item) => {
-      const snapshotId = item.snapshot?.id ?? item.knowledge;
-      if (snapshotId) {
-        map.set(snapshotId, item.version_number);
-      }
-    });
-    return map;
+  // 风格配置
+  const appearance = useMemo(() => {
+    const isExam = !!task?.pass_score || !!task?.start_time;
+    if (isExam) {
+      return {
+        gradient: 'linear-gradient(135deg, #FF3D71 0%, #FF8C52 100%)',
+        icon: <TrophyOutlined />,
+        themeColor: 'var(--color-error-500)',
+        bgSoft: 'var(--color-error-50)',
+      };
+    }
+    return {
+      gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
+      icon: <BookOutlined />,
+      themeColor: 'var(--color-primary-500)',
+      bgSoft: 'var(--color-primary-50)',
+    };
   }, [task]);
 
   const knowledgeList: KnowledgeListViewItem[] = useMemo(() => {
-    if (!task || task.task_type !== 'LEARNING') {
-      return [];
-    }
+    if (!task) return [];
+
     if (isStudent && learningDetail) {
-      return learningDetail.knowledge_items.map((item) => {
-        const snapshot = item.knowledge_id ? knowledgeSnapshotMap.get(item.knowledge_id) : undefined;
-        const version = item.knowledge_id ? knowledgeVersionMap.get(item.knowledge_id) : undefined;
-        return {
-          id: item.id,
-          knowledgeId: item.knowledge_id,
-          title: snapshot?.title || item.title,
-          summary: snapshot?.summary,
-          knowledgeType: item.knowledge_type,
-          knowledgeTypeDisplay: snapshot?.knowledge_type_display ?? item.knowledge_type_display,
-          version,
-          snapshot,
-          isCompleted: item.is_completed,
-          completedAt: item.completed_at,
-        };
-      });
+      return learningDetail.knowledge_items.map((item) => ({
+        id: item.id,
+        knowledgeId: item.knowledge_id,
+        title: item.title || '无标题',
+        summary: item.summary,
+        knowledgeType: item.knowledge_type,
+        knowledgeTypeDisplay: item.knowledge_type_display,
+        isCompleted: item.is_completed,
+        completedAt: item.completed_at,
+      }));
     }
+
     return (task.knowledge_items ?? []).map((item) => ({
       id: item.id,
-      knowledgeId: item.snapshot?.id ?? item.knowledge,
-      title: item.snapshot?.title || item.knowledge_title,
-      summary: item.snapshot?.summary,
-      knowledgeType: item.snapshot?.knowledge_type ?? item.knowledge_type,
-      knowledgeTypeDisplay: item.snapshot?.knowledge_type_display ?? item.knowledge_type,
+      knowledgeId: item.knowledge,
+      title: item.knowledge_title || '无标题',
+      summary: item.summary,
+      knowledgeType: item.knowledge_type,
+      knowledgeTypeDisplay: item.knowledge_type_display,
       version: item.version_number,
-      snapshot: item.snapshot,
       isCompleted: false,
-      completedAt: undefined,
     }));
-  }, [isStudent, knowledgeSnapshotMap, knowledgeVersionMap, learningDetail, task]);
+  }, [isStudent, learningDetail, task]);
 
   if (!isValidTaskId) {
     return (
-      <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+      <Card className="animate-fadeIn" style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
         <Text type="secondary">任务 ID 无效</Text>
-      </div>
+      </Card>
     );
   }
 
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <Spin size="large" />
+        <Spin size="large" tip="加载任务详情..." />
       </div>
     );
   }
 
   if (taskError || !task) {
     return (
-      <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
-        <Text type="secondary">任务不存在</Text>
-      </div>
+      <Card className="animate-fadeIn" style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <Text type="secondary">任务不存在或加载失败</Text>
+      </Card>
     );
   }
 
-  const typeConfig = taskTypeConfig[task.task_type as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
-
-  const myAssignment = task.assignments?.find((assignment) => assignment.assignee === user?.id);
-  const canStartQuiz =
-    !!myAssignment && ['IN_PROGRESS', 'PENDING_EXAM'].includes(myAssignment.status);
-  const assignmentStatusLabel =
-    myAssignment && assignmentStatusLabelMap[myAssignment.status]
-      ? assignmentStatusLabelMap[myAssignment.status]
-      : myAssignment?.status;
-
-  // 检查是否有编辑权限（管理员或创建者，且任务未关闭）
-  // 注意：TaskDetail 中没有 created_by 字段，需要通过其他方式判断
-  // 这里假设只有管理员、导师和室经理可以编辑，且任务未关闭
-  const isAdmin = currentRole === 'ADMIN';
-  const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
+  const isExam = !!task?.pass_score || !!task?.start_time;
+  const myAssignment = task.assignments?.find((a) => a.assignee === user?.id);
+  const canStartQuiz = !!myAssignment && ['IN_PROGRESS', 'PENDING_EXAM'].includes(myAssignment.status);
   const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
 
-  const handleCompleteLearning = async (knowledgeId?: number) => {
-    if (!knowledgeId) {
-      message.warning('无法获取知识文档信息');
-      return;
-    }
+  const handleCompleteLearning = async (knowledgeId: number) => {
     try {
       await completeLearning.mutateAsync({ taskId, knowledgeId });
       message.success('已标记为完成');
@@ -209,533 +167,288 @@ export const TaskDetail: React.FC = () => {
   };
 
   const handleStartQuiz = (quizId: number) => {
-    if (!isStudent) {
-      return;
-    }
-    if (!myAssignment) {
-      message.warning('您尚未被分配该任务');
-      return;
-    }
-    if (!canStartQuiz) {
-      message.warning('当前任务状态不可操作');
-      return;
-    }
-    const basePath = task.task_type === 'EXAM' ? '/exam' : '/quiz';
+    if (!isStudent || !myAssignment || !canStartQuiz) return;
+    const basePath = isExam ? '/exam' : '/quiz';
     navigate(`${basePath}/${quizId}?assignment=${myAssignment.id}&task=${taskId}`);
   };
 
-  const renderTagList = (tags?: KnowledgeSnapshot['system_tags']) => {
-    if (!tags || tags.length === 0) {
-      return '—';
-    }
-    return (
-      <Space size={[4, 8]} wrap>
-        {tags.map((tag) => (
-          <Tag key={`${tag.id ?? tag.name}`} style={{ margin: 0, borderRadius: 'var(--radius-full)' }}>
-            {tag.name}
-          </Tag>
-        ))}
-      </Space>
-    );
-  };
-
-  const renderStructuredSection = (label: string, value?: string) => {
-    if (!value) return null;
-    return (
-      <div style={{ marginBottom: 'var(--spacing-4)' }}>
-        <Text strong style={{ display: 'block', marginBottom: 'var(--spacing-2)' }}>{label}</Text>
+  return (
+    <div className="animate-fadeIn" style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto' }}>
+      {/* 顶部 Header 卡片 */}
+      <div
+        className="animate-fadeInDown"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          background: appearance.gradient,
+          color: 'var(--color-white)',
+          padding: 'var(--spacing-8)',
+          marginBottom: 'var(--spacing-6)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-lg)',
+        }}
+      >
         <div
           style={{
-            whiteSpace: 'pre-wrap',
-            padding: 'var(--spacing-4)',
-            background: 'var(--color-gray-50)',
-            borderRadius: 'var(--radius-lg)',
-            lineHeight: 1.6,
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+            backgroundImage: 'radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%)',
+            pointerEvents: 'none',
           }}
-        >
-          {value}
-        </div>
-      </div>
-    );
-  };
+        />
 
-  return (
-    <div className="animate-fadeIn">
-      {/* 返回按钮 */}
-      <div style={{ marginBottom: 'var(--spacing-4)' }}>
-        <Button
-          type="text"
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(-1)}
-          style={{ color: 'var(--color-gray-600)', fontWeight: 500 }}
-        >
-          返回列表
-        </Button>
-      </div>
-
-      {/* 任务信息卡片 */}
-      <Card style={{ marginBottom: 'var(--spacing-6)', position: 'relative' }}>
-        {/* 编辑按钮 - 仅在有权限时显示 */}
-        {canEditTask && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 16,
-              right: 16,
-              zIndex: 10,
-            }}
-          >
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'edit',
-                    label: '编辑任务',
-                    icon: <EditOutlined />,
-                    onClick: () => navigate(`/tasks/${taskId}/edit`),
-                  },
-                ],
-              }}
-              trigger={['click']}
-              placement="bottomRight"
-            >
-              <Button
-                type="text"
-                icon={<MoreOutlined />}
-                size="small"
-                style={{
-                  width: 32,
-                  height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '50%',
-                  background: 'white',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(0, 0, 0, 0.06)',
-                }}
-              />
-            </Dropdown>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-5)' }}>
-          {/* 类型图标 */}
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 'var(--radius-xl)',
-              background: typeConfig.gradient,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: 24,
-              boxShadow: `0 4px 14px ${typeConfig.color}40`,
-              flexShrink: 0,
-            }}
-          >
-            {task.task_type === 'LEARNING' ? <BookOutlined /> : <FileTextOutlined />}
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-2)', flexWrap: 'wrap' }}>
-              <StatusBadge
-                status={task.task_type === 'EXAM' ? 'error' : task.task_type === 'PRACTICE' ? 'info' : 'success'}
-                text={task.task_type_display}
-              />
-              {task.is_closed && (
-                <Tag color="default" icon={<CheckCircleOutlined />}>
-                  已关闭
-                </Tag>
-              )}
-            </div>
-            
-            <Title level={3} style={{ margin: 0, marginBottom: 'var(--spacing-3)' }}>
-              {task.title}
-            </Title>
-
-            {task.description && (
-              <Text type="secondary" style={{ display: 'block', marginBottom: 'var(--spacing-4)' }}>
-                {task.description}
-              </Text>
-            )}
-
-            {/* 元信息 */}
-            <div
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-6)' }}>
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
               style={{
-                display: 'flex',
-                gap: 'var(--spacing-6)',
-                flexWrap: 'wrap',
-                padding: 'var(--spacing-4)',
-                background: 'var(--color-gray-50)',
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--font-size-sm)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', color: 'var(--color-gray-600)' }}>
-                <UserOutlined />
-                <span>创建人：{task.created_by_name}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', color: 'var(--color-gray-600)' }}>
-                <CalendarOutlined />
-                <span>截止时间：{dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}</span>
-              </div>
-              {task.task_type === 'EXAM' && task.start_time && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', color: 'var(--color-gray-600)' }}>
-                    <ClockCircleOutlined />
-                    <span>考试开始：{dayjs(task.start_time).format('YYYY-MM-DD HH:mm')}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', color: 'var(--color-gray-600)' }}>
-                    <ClockCircleOutlined />
-                    <span>考试时长：{task.duration} 分钟</span>
-                  </div>
-                </>
-              )}
-            </div>
-            {shouldFetchLearningDetail && learningDetail && (
-              <div
-                style={{
-                  marginTop: 'var(--spacing-4)',
-                  padding: 'var(--spacing-4)',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-white)',
-                  boxShadow: 'var(--shadow-xs)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 'var(--spacing-3)',
-                }}
-              >
-                <div>
-                  <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
-                    学习进度
-                  </Text>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                    {learningDetail.progress.completed}/{learningDetail.progress.total}（
-                    {learningDetail.progress.percentage}%）
-                  </div>
-                </div>
-                {assignmentStatusLabel && myAssignment && (
-                  <StatusBadge
-                    status={assignmentStatusMap[myAssignment.status] ?? 'default'}
-                    text={`当前状态：${assignmentStatusLabel}`}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* 学习任务 - 知识列表 */}
-      {task.task_type === 'LEARNING' && knowledgeList.length > 0 && (
-        <Card style={{ marginBottom: 'var(--spacing-6)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-5)' }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--color-success-50)',
+                color: 'white',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: 'var(--radius-full)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-success-500)',
-                fontSize: 18,
+                backdropFilter: 'blur(4px)'
               }}
             >
-              <BookOutlined />
-            </div>
-            <Text strong style={{ fontSize: 'var(--font-size-lg)' }}>
-              学习内容
-            </Text>
-          </div>
+              返回
+            </Button>
 
-          <List
-            dataSource={knowledgeList}
-            renderItem={(item) => {
-              const actions: ReactNode[] = [];
-              if (item.snapshot) {
-                actions.push(
-                  <Button
-                    key="preview"
-                    type="link"
-                    icon={<BookOutlined />}
-                    onClick={() => setPreviewKnowledge(item.snapshot ?? null)}
-                  >
-                    查看快照
-                  </Button>
-                );
-              }
-              if (shouldFetchLearningDetail && isStudent) {
-                if (item.isCompleted) {
-                  actions.push(
-                    <Tag key="completed" color="success" style={{ borderRadius: 'var(--radius-full)' }}>
-                      已完成
-                    </Tag>
-                  );
-                } else {
-                  actions.push(
-                    <Button
-                      key="complete"
-                      type="primary"
-                      size="small"
-                      icon={<CheckCircleOutlined />}
-                      loading={completeLearning.isPending}
-                      onClick={() => handleCompleteLearning(item.knowledgeId)}
-                    >
-                      我已学习掌握
-                    </Button>
-                  );
-                }
-              }
-
-              return (
-                <List.Item
-                  key={item.id}
-                  style={{
-                    padding: 'var(--spacing-4)',
-                    background: 'var(--color-gray-50)',
-                    borderRadius: 'var(--radius-lg)',
-                    marginBottom: 'var(--spacing-3)',
-                    border: 'none',
-                  }}
-                  actions={actions}
-                >
-                  <List.Item.Meta
-                    title={
-                      <Space size={8}>
-                        <Text strong>{item.title}</Text>
-                        {item.version && (
-                          <Tag color="geekblue" style={{ borderRadius: 'var(--radius-full)' }}>
-                            V{item.version}
-                          </Tag>
-                        )}
-                      </Space>
-                    }
-                    description={
-                      <Text type="secondary">
-                        {item.knowledgeTypeDisplay ?? item.knowledgeType}
-                        {item.summary ? ` · ${item.summary}` : ''}
-                      </Text>
-                    }
-                  />
-                  {item.isCompleted && item.completedAt && (
-                    <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-                      完成于 {dayjs(item.completedAt).format('YYYY-MM-DD HH:mm')}
-                    </Text>
-                  )}
-                </List.Item>
-              );
-            }}
-          />
-        </Card>
-      )}
-
-      {/* 练习/考试任务 - 试卷列表 */}
-      {(task.task_type === 'PRACTICE' || task.task_type === 'EXAM') && task.quizzes.length > 0 && (
-        <Card>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-5)' }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 'var(--radius-lg)',
-                background: task.task_type === 'EXAM' ? 'var(--color-error-50)' : 'var(--color-primary-50)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: task.task_type === 'EXAM' ? 'var(--color-error-500)' : 'var(--color-primary-500)',
-                fontSize: 18,
-              }}
-            >
-              <FileTextOutlined />
-            </div>
-            <Text strong style={{ fontSize: 'var(--font-size-lg)' }}>
-              {task.task_type === 'EXAM' ? '考试试卷' : '练习试卷'}
-            </Text>
-          </div>
-
-          <List
-            dataSource={task.quizzes}
-            renderItem={(item) => (
-              <List.Item
-                key={item.id}
-                style={{
-                  padding: 'var(--spacing-4)',
-                  background: 'var(--color-gray-50)',
-                  borderRadius: 'var(--radius-lg)',
-                  marginBottom: 'var(--spacing-3)',
-                  border: 'none',
+            {canEditTask && (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'edit',
+                      label: '编辑任务',
+                      icon: <EditOutlined />,
+                      onClick: () => navigate(`/tasks/${taskId}/edit`),
+                    },
+                  ],
                 }}
-                actions={[
-                  <Space size={8}>
-                    {isStudent && (
-                      <Button
-                        type="primary"
-                        icon={<PlayCircleOutlined />}
-                        onClick={() => handleStartQuiz(item.quiz)}
-                        style={{ fontWeight: 600 }}
-                        disabled={!canStartQuiz}
-                      >
-                        {task.task_type === 'EXAM' ? '开始考试' : '开始练习'}
-                      </Button>
-                    )}
-                    <Button
-                      type="link"
-                      icon={<FileTextOutlined />}
-                      onClick={() => setPreviewQuiz(item.snapshot)}
-                    >
-                      查看版本
-                    </Button>
-                  </Space>,
-                ]}
+                placement="bottomRight"
               >
-                <List.Item.Meta
-                  avatar={
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 'var(--radius-lg)',
-                        background: typeConfig.gradient,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: 20,
-                      }}
-                    >
-                      <FileTextOutlined />
-                    </div>
-                  }
-                  title={
-                    <Space size={8}>
-                      <Text strong>{item.snapshot.title || item.quiz_title}</Text>
-                      <Tag color="geekblue" style={{ borderRadius: 'var(--radius-full)' }}>
-                        V{item.version_number}
-                      </Tag>
-                    </Space>
-                  }
-                  description={
-                    <div style={{ color: 'var(--color-gray-600)' }}>
-                      <div>题目数：{item.snapshot.question_count} · 总分 {item.snapshot.total_score}</div>
-                      <div>主观题：{item.snapshot.subjective_question_count} · 客观题：{item.snapshot.objective_question_count}</div>
-                    </div>
-                  }
+                <Button
+                  type="text"
+                  icon={<MoreOutlined style={{ fontSize: 20, color: 'white' }} />}
+                  style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 'var(--radius-full)' }}
                 />
-              </List.Item>
+              </Dropdown>
             )}
-          />
-        </Card>
-      )}
-
-      {/* 知识快照预览弹窗 */}
-      <Modal
-        open={!!previewKnowledge}
-        width={800}
-        onCancel={() => setPreviewKnowledge(null)}
-        footer={null}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-            <BookOutlined style={{ color: 'var(--color-primary-500)' }} />
-            <span>知识快照 · V{previewKnowledge?.version_number}</span>
           </div>
-        }
-      >
-        {previewKnowledge && (
-          <>
-            <Descriptions column={2} size="small" style={{ marginBottom: 'var(--spacing-4)' }}>
-              <Descriptions.Item label="标题">{previewKnowledge.title}</Descriptions.Item>
-              <Descriptions.Item label="类型">
-                {previewKnowledge.knowledge_type_display ?? previewKnowledge.knowledge_type}
-              </Descriptions.Item>
-              <Descriptions.Item label="所属条线">
-                {previewKnowledge.line_type?.name ?? '—'}
-              </Descriptions.Item>
-              <Descriptions.Item label="版本号">V{previewKnowledge.version_number}</Descriptions.Item>
-              <Descriptions.Item label="系统标签" span={2}>
-                {renderTagList(previewKnowledge.system_tags)}
-              </Descriptions.Item>
-              <Descriptions.Item label="操作标签" span={2}>
-                {renderTagList(previewKnowledge.operation_tags)}
-              </Descriptions.Item>
-            </Descriptions>
-            <Divider />
-            {previewKnowledge.knowledge_type === 'EMERGENCY' ? (
-              <>
-                {renderStructuredSection('故障场景', previewKnowledge.fault_scenario)}
-                {renderStructuredSection('触发流程', previewKnowledge.trigger_process)}
-                {renderStructuredSection('解决方案', previewKnowledge.solution)}
-                {renderStructuredSection('验证方案', previewKnowledge.verification_plan)}
-                {renderStructuredSection('恢复方案', previewKnowledge.recovery_plan)}
-              </>
-            ) : (
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
-                {previewKnowledge.content || '暂无正文'}
+
+          <div style={{ display: 'flex', gap: 'var(--spacing-6)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 300 }}>
+              <Space direction="vertical" size="small">
+                <Tag color="white" style={{ color: appearance.themeColor, fontWeight: 700, border: 'none' }}>
+                  {isExam ? '考试任务' : '学习任务'}
+                </Tag>
+                <Title level={1} style={{ color: 'white', margin: 0, fontSize: 'var(--font-size-5xl)', letterSpacing: '-0.02em' }}>
+                  {task.title}
+                </Title>
+                {task.description && (
+                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'var(--font-size-lg)', display: 'block', maxWidth: 600 }}>
+                    {task.description}
+                  </Text>
+                )}
+              </Space>
+            </div>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--spacing-4) var(--spacing-6)',
+              display: 'flex',
+              gap: 'var(--spacing-8)',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'var(--font-size-xs)', marginBottom: 4 }}>发布人</div>
+                <div style={{ fontWeight: 600 }}>{task.created_by_name}</div>
               </div>
-            )}
-          </>
-        )}
-      </Modal>
-
-      {/* 试卷快照预览弹窗 */}
-      <Modal
-        open={!!previewQuiz}
-        width={840}
-        onCancel={() => setPreviewQuiz(null)}
-        footer={null}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-            <FileTextOutlined style={{ color: 'var(--color-primary-500)' }} />
-            <span>试卷快照 · V{previewQuiz?.version_number}</span>
+              <Divider type="vertical" style={{ height: 40, borderColor: 'rgba(255,255,255,0.2)' }} />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'var(--font-size-xs)', marginBottom: 4 }}>截止日期</div>
+                <div style={{ fontWeight: 600 }}>{dayjs(task.deadline).format('MM月DD日 HH:mm')}</div>
+              </div>
+            </div>
           </div>
-        }
-      >
-        {previewQuiz && (
-          <>
-            <Descriptions column={2} size="small" style={{ marginBottom: 'var(--spacing-4)' }}>
-              <Descriptions.Item label="标题">{previewQuiz.title}</Descriptions.Item>
-              <Descriptions.Item label="总分">{previewQuiz.total_score}</Descriptions.Item>
-              <Descriptions.Item label="题目数">{previewQuiz.question_count}</Descriptions.Item>
-              <Descriptions.Item label="主观/客观">
-                {previewQuiz.subjective_question_count} / {previewQuiz.objective_question_count}
-              </Descriptions.Item>
-            </Descriptions>
-            <Divider />
-            {previewQuiz.questions && previewQuiz.questions.length > 0 ? (
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isStudent ? '1fr 320px' : '1fr', gap: 'var(--spacing-6)' }}>
+        <div style={{ display: 'flex', direction: 'vertical' as any, flexWrap: 'nowrap', flexDirection: 'column', gap: 'var(--spacing-6)' }}>
+          {/* 知识列表 */}
+          {hasKnowledge && (
+            <Card title={<Space><BookOutlined /> 学习章节</Space>} className="animate-fadeInUp stagger-1">
               <List
-                size="small"
-                dataSource={previewQuiz.questions}
-                style={{ maxHeight: 320, overflowY: 'auto' }}
-                renderItem={(question) => (
+                dataSource={knowledgeList}
+                renderItem={(item, index) => (
                   <List.Item
-                    key={`${question.id}-${question.order}`}
+                    key={item.id}
+                    className="stagger-item animate-fadeInUp"
                     style={{
-                      padding: 'var(--spacing-3)',
+                      padding: 'var(--spacing-4)',
                       background: 'var(--color-gray-50)',
-                      borderRadius: 'var(--radius-md)',
-                      marginBottom: 'var(--spacing-2)',
+                      borderRadius: 'var(--radius-lg)',
+                      marginBottom: 'var(--spacing-3)',
                       border: 'none',
+                      animationDelay: `${0.1 + index * 0.05}s`,
+                      opacity: 1 // Override stagger-item initial opacity for direct visibility or use class
                     }}
+                    actions={[
+                      isStudent && (item.isCompleted ? (
+                        <Tag color="success" icon={<CheckCircleOutlined />}>已掌握</Tag>
+                      ) : (
+                        <Button
+                          type="primary"
+                          size="small"
+                          ghost
+                          loading={completeLearning.isPending}
+                          onClick={() => handleCompleteLearning(item.knowledgeId)}
+                        >
+                          标记掌握
+                        </Button>
+                      ))
+                    ].filter(Boolean) as ReactNode[]}
                   >
                     <List.Item.Meta
-                      title={`Q${question.order} · ${question.question_type}`}
-                      description={`分值 ${question.score}`}
+                      avatar={
+                        <div style={{
+                          width: 40, height: 40, borderRadius: '50%',
+                          background: item.isCompleted ? 'var(--color-success-50)' : 'var(--color-primary-50)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: item.isCompleted ? 'var(--color-success-500)' : 'var(--color-primary-500)'
+                        }}>
+                          {index + 1}
+                        </div>
+                      }
+                      title={<Text strong>{item.title}</Text>}
+                      description={
+                        <Space split={<Divider type="vertical" />}>
+                          <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                            {item.knowledgeTypeDisplay || item.knowledgeType}
+                          </Text>
+                          {item.summary && <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>{item.summary}</Text>}
+                        </Space>
+                      }
                     />
                   </List.Item>
                 )}
               />
-            ) : (
-              <Text type="secondary">暂无题目快照</Text>
-            )}
-          </>
+            </Card>
+          )}
+
+          {/* 试卷列表 */}
+          {task.quizzes.length > 0 && (
+            <Card title={<Space><FileTextOutlined /> 考察评估</Space>} className="animate-fadeInUp stagger-2">
+              <List
+                dataSource={task.quizzes}
+                renderItem={(item) => (
+                  <List.Item
+                    key={item.id}
+                    style={{
+                      padding: 'var(--spacing-5)',
+                      background: 'var(--color-gray-50)',
+                      borderRadius: 'var(--radius-lg)',
+                      marginBottom: 'var(--spacing-3)',
+                      border: 'none',
+                    }}
+                    actions={[
+                      isStudent && (
+                        <Button
+                          type="primary"
+                          icon={<PlayCircleOutlined />}
+                          disabled={!canStartQuiz}
+                          onClick={() => handleStartQuiz(item.quiz)}
+                        >
+                          开始考评
+                        </Button>
+                      )
+                    ].filter(Boolean) as ReactNode[]}
+                  >
+                    <List.Item.Meta
+                      title={<Title level={5} style={{ margin: 0 }}>{item.quiz_title}</Title>}
+                      description={
+                        <Space direction="vertical" size={2} style={{ marginTop: 8 }}>
+                          <Space size="middle" style={{ color: 'var(--color-gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                            <span><InfoCircleOutlined /> 题量：{item.question_count}</span>
+                            <span><TrophyOutlined /> 总分：{item.total_score}分</span>
+                          </Space>
+                          {isExam && task.duration && (
+                            <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                              <ClockCircleOutlined /> 考试限时：{task.duration} 分钟
+                            </Text>
+                          )}
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          )}
+        </div>
+
+        {/* 学员侧边栏 - 进度与状态 */}
+        {isStudent && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-6)' }}>
+            <Card className="animate-slideInRight stagger-1">
+              <Title level={5} style={{ marginBottom: 'var(--spacing-4)' }}>任务进度</Title>
+              {learningDetail ? (
+                <div style={{ textAlign: 'center', padding: 'var(--spacing-2) 0' }}>
+                  <Progress
+                    type="dashboard"
+                    percent={learningDetail.progress.percentage}
+                    strokeColor={appearance.gradient}
+                    size={160}
+                    format={(percent) => (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 700 }}>{percent}%</span>
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)', fontWeight: 400 }}>已学习</span>
+                      </div>
+                    )}
+                  />
+                  <div style={{ marginTop: 'var(--spacing-4)', display: 'flex', justifyContent: 'space-between' }}>
+                    <Text type="secondary">完成章节</Text>
+                    <Text strong>{learningDetail.progress.completed} / {learningDetail.progress.total}</Text>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: 'var(--spacing-4)' }}>
+                  <Text type="secondary">暂无详细进度数据</Text>
+                </div>
+              )}
+            </Card>
+
+            <Card className="animate-slideInRight stagger-2">
+              <Title level={5} style={{ marginBottom: 'var(--spacing-4)' }}>分配状态</Title>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--spacing-4)' }}>
+                <Text type="secondary">当前状态</Text>
+                {myAssignment && (
+                  <StatusBadge
+                    status={assignmentStatusMap[myAssignment.status] || 'default'}
+                    text={assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
+                  />
+                )}
+              </div>
+
+              {isExam && task.pass_score && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text type="secondary">合格分数</Text>
+                  <Text strong style={{ color: 'var(--color-error-500)' }}>{task.pass_score}分</Text>
+                </div>
+              )}
+            </Card>
+          </div>
         )}
-      </Modal>
+      </div>
     </div>
   );
 };
+

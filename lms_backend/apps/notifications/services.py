@@ -37,18 +37,8 @@ class NotificationService:
     # 通知模板
     TEMPLATES = {
         'TASK_ASSIGNED': {
-            'LEARNING': {
-                'title': '您有新的学习任务',
-                'content': '您被分配了学习任务「{task_title}」，请在 {deadline} 前完成。'
-            },
-            'PRACTICE': {
-                'title': '您有新的练习任务',
-                'content': '您被分配了练习任务「{task_title}」，请在 {deadline} 前完成。'
-            },
-            'EXAM': {
-                'title': '您有新的考试任务',
-                'content': '您被分配了考试任务「{task_title}」，考试时间：{start_time} 至 {deadline}，时长 {duration} 分钟。'
-            },
+            'title': '您有新的任务',
+            'content': '您被分配了任务「{task_title}」，请在 {deadline} 前完成。'
         },
         'DEADLINE_REMINDER': {
             'title': '任务即将截止',
@@ -81,27 +71,14 @@ class NotificationService:
         notifications = []
         
         # 获取模板
-        template = cls.TEMPLATES['TASK_ASSIGNED'].get(task.task_type, {})
-        if not template:
-            logger.warning(f"No template found for task type: {task.task_type}")
-            return notifications
+        template = cls.TEMPLATES['TASK_ASSIGNED']
         
         # 格式化内容
         deadline_str = task.deadline.strftime('%Y-%m-%d %H:%M')
-        
-        if task.task_type == 'EXAM':
-            start_time_str = task.start_time.strftime('%Y-%m-%d %H:%M') if task.start_time else ''
-            content = template['content'].format(
-                task_title=task.title,
-                start_time=start_time_str,
-                deadline=deadline_str,
-                duration=task.duration or 0
-            )
-        else:
-            content = template['content'].format(
-                task_title=task.title,
-                deadline=deadline_str
-            )
+        content = template['content'].format(
+            task_title=task.title,
+            deadline=deadline_str
+        )
         
         # 批量创建通知
         with transaction.atomic():

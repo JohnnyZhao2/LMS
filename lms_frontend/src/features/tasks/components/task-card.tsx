@@ -4,7 +4,7 @@ import {
   UserOutlined,
   BookOutlined,
   FileTextOutlined,
-  FireOutlined,
+
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   TeamOutlined,
@@ -30,9 +30,9 @@ const { Text, Paragraph } = Typography;
 
 type TaskCardProps =
   | {
-      variant: 'student';
-      task: StudentTaskCenterItem;
-    }
+    variant: 'student';
+    task: StudentTaskCenterItem;
+  }
   | {
     variant: 'manager';
     task: TaskListItem;
@@ -41,26 +41,7 @@ type TaskCardProps =
 /**
  * 任务类型配置
  */
-const taskTypeConfig = {
-  LEARNING: {
-    icon: <BookOutlined />,
-    color: 'var(--color-success-500)',
-    bg: 'var(--color-success-50)',
-    gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
-  },
-  PRACTICE: {
-    icon: <FileTextOutlined />,
-    color: 'var(--color-primary-500)',
-    bg: 'var(--color-primary-50)',
-    gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-  },
-  EXAM: {
-    icon: <FireOutlined />,
-    color: 'var(--color-error-500)',
-    bg: 'var(--color-error-50)',
-    gradient: 'linear-gradient(135deg, var(--color-error-500) 0%, var(--color-pink-500) 100%)',
-  },
-};
+
 
 /**
  * 状态配置
@@ -102,12 +83,25 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
   const closeTask = useCloseTask();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
-  
+
   const isStudentView = variant === 'student';
   const studentTask = isStudentView ? (task as StudentTaskCenterItem) : null;
   const managerTask = !isStudentView ? (task as TaskListItem) : null;
-  const taskType = task.task_type;
-  const typeConfig = taskTypeConfig[taskType as keyof typeof taskTypeConfig] || taskTypeConfig.LEARNING;
+
+  // Determine style based on content
+  const hasQuiz = managerTask ? (managerTask.quiz_count > 0) : (studentTask?.has_quiz ?? false);
+
+  const typeConfig = hasQuiz ? {
+    icon: <FileTextOutlined />,
+    color: 'var(--color-primary-500)',
+    bg: 'var(--color-primary-50)',
+    gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
+  } : {
+    icon: <BookOutlined />,
+    color: 'var(--color-success-500)',
+    bg: 'var(--color-success-50)',
+    gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
+  };
   const managerClosed = managerTask?.is_closed ?? false;
   const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
   const statusKey = isStudentView
@@ -191,13 +185,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
     },
     ...(isAdmin && !managerClosed
       ? [
-          {
-            key: 'close',
-            label: '关闭任务',
-            icon: <StopOutlined />,
-            onClick: handleCloseClick,
-          },
-        ]
+        {
+          key: 'close',
+          label: '关闭任务',
+          icon: <StopOutlined />,
+          onClick: handleCloseClick,
+        },
+      ]
       : []),
     {
       key: 'delete',
@@ -227,9 +221,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <Dropdown 
-              menu={{ items: menuItems }} 
-              trigger={['click']} 
+            <Dropdown
+              menu={{ items: menuItems }}
+              trigger={['click']}
               placement="bottomRight"
               getPopupContainer={(trigger) => trigger.parentElement || document.body}
             >
@@ -286,167 +280,167 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
           <StatusBadge status={stConfig.status} text={statusLabel} size="small" />
         </div>
 
-      {/* 标题和描述 */}
-      <Text
-        strong
-        ellipsis={{ tooltip: title }}
-        style={{
-          display: 'block',
-          fontSize: 'var(--font-size-lg)',
-          marginBottom: 'var(--spacing-2)',
-          color: 'var(--color-gray-900)',
-        }}
-      >
-        {title}
-      </Text>
-      
-        {description && (
-        <Paragraph
-          type="secondary"
-          ellipsis={{ rows: 2, tooltip: description }}
+        {/* 标题和描述 */}
+        <Text
+          strong
+          ellipsis={{ tooltip: title }}
           style={{
             display: 'block',
-            marginBottom: 'var(--spacing-4)',
-            fontSize: 'var(--font-size-sm)',
-            lineHeight: 1.5,
+            fontSize: 'var(--font-size-lg)',
+            marginBottom: 'var(--spacing-2)',
+            color: 'var(--color-gray-900)',
           }}
         >
-          {description}
-        </Paragraph>
-      )}
+          {title}
+        </Text>
 
-      {/* 进度条 */}
-      {isStudentView ? (
-        <div style={{ marginBottom: 'var(--spacing-4)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--spacing-1)' }}>
-            <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
-              完成进度
-            </Text>
-            <Text strong style={{ fontSize: 'var(--font-size-sm)', color: typeConfig.color }}>
-              {progress?.percentage ?? 0}%
-            </Text>
-          </div>
-          <Progress
-            percent={progress?.percentage ?? 0}
-            showInfo={false}
-            strokeColor={typeConfig.gradient}
-            trailColor="var(--color-gray-100)"
-            size="small"
-          />
-          <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-            {progress?.completed ?? 0}/{progress?.total ?? 0} 项已完成
-          </Text>
-        </div>
-      ) : (
-        <div
-          style={{
-            marginBottom: 'var(--spacing-4)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-            gap: 'var(--spacing-3)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-            <TeamOutlined style={{ color: typeConfig.color }} />
-            <div>
-              <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-                指派学员
-              </Text>
-              <div style={{ fontWeight: 600 }}>{managerTask?.assignee_count ?? 0}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-            <BookOutlined style={{ color: typeConfig.color }} />
-            <div>
-              <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-                知识文档
-              </Text>
-              <div style={{ fontWeight: 600 }}>{managerTask?.knowledge_count ?? 0}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-            <FileTextOutlined style={{ color: typeConfig.color }} />
-            <div>
-              <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-                试卷
-              </Text>
-              <div style={{ fontWeight: 600 }}>{managerTask?.quiz_count ?? 0}</div>
-            </div>
-          </div>
-        </div>
-      )}
+        {description && (
+          <Paragraph
+            type="secondary"
+            ellipsis={{ rows: 2, tooltip: description }}
+            style={{
+              display: 'block',
+              marginBottom: 'var(--spacing-4)',
+              fontSize: 'var(--font-size-sm)',
+              lineHeight: 1.5,
+            }}
+          >
+            {description}
+          </Paragraph>
+        )}
 
-      {/* 底部信息 */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingTop: 'var(--spacing-3)',
-          borderTop: '1px solid var(--color-gray-100)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)' }}>
-          <UserOutlined style={{ fontSize: 12, color: 'var(--color-gray-400)' }} />
-          <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
-            {task.created_by_name}
-          </Text>
-        </div>
+        {/* 进度条 */}
+        {isStudentView ? (
+          <div style={{ marginBottom: 'var(--spacing-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--spacing-1)' }}>
+              <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+                完成进度
+              </Text>
+              <Text strong style={{ fontSize: 'var(--font-size-sm)', color: typeConfig.color }}>
+                {progress?.percentage ?? 0}%
+              </Text>
+            </div>
+            <Progress
+              percent={progress?.percentage ?? 0}
+              showInfo={false}
+              strokeColor={typeConfig.gradient}
+              trailColor="var(--color-gray-100)"
+              size="small"
+            />
+            <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+              {progress?.completed ?? 0}/{progress?.total ?? 0} 项已完成
+            </Text>
+          </div>
+        ) : (
+          <div
+            style={{
+              marginBottom: 'var(--spacing-4)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gap: 'var(--spacing-3)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <TeamOutlined style={{ color: typeConfig.color }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                  指派学员
+                </Text>
+                <div style={{ fontWeight: 600 }}>{managerTask?.assignee_count ?? 0}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <BookOutlined style={{ color: typeConfig.color }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                  知识文档
+                </Text>
+                <div style={{ fontWeight: 600 }}>{managerTask?.knowledge_count ?? 0}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <FileTextOutlined style={{ color: typeConfig.color }} />
+              <div>
+                <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+                  试卷
+                </Text>
+                <div style={{ fontWeight: 600 }}>{managerTask?.quiz_count ?? 0}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 底部信息 */}
         <div
           style={{
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: 'var(--spacing-1)',
-            color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)',
+            paddingTop: 'var(--spacing-3)',
+            borderTop: '1px solid var(--color-gray-100)',
           }}
         >
-          <ClockCircleOutlined style={{ fontSize: 12 }} />
-          <Text
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)' }}>
+            <UserOutlined style={{ fontSize: 12, color: 'var(--color-gray-400)' }} />
+            <Text type="secondary" style={{ fontSize: 'var(--font-size-xs)' }}>
+              {task.created_by_name}
+            </Text>
+          </div>
+          <div
             style={{
-              fontSize: 'var(--font-size-xs)',
-              color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
-              fontWeight: isUrgent ? 600 : 400,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--spacing-1)',
+              color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)',
             }}
           >
-            {dayjs(task.deadline).format('MM-DD HH:mm')}
-          </Text>
+            <ClockCircleOutlined style={{ fontSize: 12 }} />
+            <Text
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
+                fontWeight: isUrgent ? 600 : 400,
+              }}
+            >
+              {dayjs(task.deadline).format('MM-DD HH:mm')}
+            </Text>
+          </div>
         </div>
-      </div>
 
-      {!isStudentView && managerClosed && managerTask?.closed_at && (
-        <div style={{ marginTop: 'var(--spacing-3)' }}>
-          <Tag color="default" icon={<DeploymentUnitOutlined />}>
-            已于 {dayjs(managerTask.closed_at).format('MM-DD HH:mm')} 结束
-          </Tag>
-        </div>
-      )}
-    </Card>
+        {!isStudentView && managerClosed && managerTask?.closed_at && (
+          <div style={{ marginTop: 'var(--spacing-3)' }}>
+            <Tag color="default" icon={<DeploymentUnitOutlined />}>
+              已于 {dayjs(managerTask.closed_at).format('MM-DD HH:mm')} 结束
+            </Tag>
+          </div>
+        )}
+      </Card>
 
-    {/* 关闭任务确认弹窗 */}
-    <Modal
-      open={closeModalOpen}
-      title="确认关闭任务"
-      onOk={handleClose}
-      onCancel={() => setCloseModalOpen(false)}
-      okText="关闭任务"
-      cancelText="取消"
-      okButtonProps={{ loading: closeTask.isPending }}
-    >
-      <p>确定要关闭任务「{title}」吗？关闭后未完成的分配记录将标记为已逾期。</p>
-    </Modal>
+      {/* 关闭任务确认弹窗 */}
+      <Modal
+        open={closeModalOpen}
+        title="确认关闭任务"
+        onOk={handleClose}
+        onCancel={() => setCloseModalOpen(false)}
+        okText="关闭任务"
+        cancelText="取消"
+        okButtonProps={{ loading: closeTask.isPending }}
+      >
+        <p>确定要关闭任务「{title}」吗？关闭后未完成的分配记录将标记为已逾期。</p>
+      </Modal>
 
-    {/* 删除确认弹窗 */}
-    <Modal
-      open={deleteModalOpen}
-      title="确认删除"
-      onOk={handleDelete}
-      onCancel={() => setDeleteModalOpen(false)}
-      okText="删除"
-      cancelText="取消"
-      okButtonProps={{ danger: true, loading: deleteTask.isPending }}
-    >
-      <p>确定要删除任务「{title}」吗？此操作不可恢复。</p>
-    </Modal>
+      {/* 删除确认弹窗 */}
+      <Modal
+        open={deleteModalOpen}
+        title="确认删除"
+        onOk={handleDelete}
+        onCancel={() => setDeleteModalOpen(false)}
+        okText="删除"
+        cancelText="取消"
+        okButtonProps={{ danger: true, loading: deleteTask.isPending }}
+      >
+        <p>确定要删除任务「{title}」吗？此操作不可恢复。</p>
+      </Modal>
     </>
   );
 };

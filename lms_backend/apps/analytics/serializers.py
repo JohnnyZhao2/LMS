@@ -25,8 +25,6 @@ class StudentPendingTaskSerializer(serializers.ModelSerializer):
     """
     task_id = serializers.IntegerField(source='task.id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
-    task_type = serializers.CharField(source='task.task_type', read_only=True)
-    task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
     created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -35,54 +33,42 @@ class StudentPendingTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskAssignment
         fields = [
-            'id', 'task_id', 'task_title', 'task_type', 'task_type_display',
+            'id', 'task_id', 'task_title',
             'deadline', 'created_by_name', 'status', 'status_display',
             'progress', 'created_at'
         ]
     
     def get_progress(self, obj):
         """
-        Calculate progress based on task type.
-        
-        For learning tasks: completed knowledge / total knowledge
-        For practice tasks: completed quizzes / total quizzes
-        For exam tasks: 0 or 100 based on completion
+        Calculate progress based on total items (knowledge + quizzes).
         """
         task = obj.task
         
-        if task.task_type == 'LEARNING':
-            total = task.task_knowledge.count()
-            if total == 0:
-                return {'completed': 0, 'total': 0, 'percentage': 0}
-            completed = obj.knowledge_progress.filter(is_completed=True).count()
-            return {
-                'completed': completed,
-                'total': total,
-                'percentage': round(completed / total * 100, 1)
-            }
-        elif task.task_type == 'PRACTICE':
-            total = task.task_quizzes.count()
-            if total == 0:
-                return {'completed': 0, 'total': 0, 'percentage': 0}
-            # Check submissions for practice tasks
-            from apps.submissions.models import Submission
-            completed_quiz_ids = set(
-                Submission.objects.filter(
-                    task_assignment=obj
-                ).values_list('quiz_id', flat=True).distinct()
-            )
-            completed = len(completed_quiz_ids)
-            return {
-                'completed': completed,
-                'total': total,
-                'percentage': round(completed / total * 100, 1) if total > 0 else 0
-            }
-        else:  # EXAM
-            return {
-                'completed': 1 if obj.status == 'COMPLETED' else 0,
-                'total': 1,
-                'percentage': 100 if obj.status == 'COMPLETED' else 0
-            }
+        total_k = task.task_knowledge.count()
+        total_q = task.task_quizzes.count()
+        total = total_k + total_q
+            
+        if total == 0:
+            return {'completed': 0, 'total': 0, 'percentage': 0}
+            
+        completed_k = obj.knowledge_progress.filter(is_completed=True).count()
+            
+        from apps.submissions.models import Submission
+        completed_q_ids = set(
+            Submission.objects.filter(
+                task_assignment=obj
+                # Consider passed quizzes? Or just submitted? Assuming submitted/graded counts as done
+            ).values_list('quiz_id', flat=True).distinct()
+        )
+        completed_q = len(completed_q_ids)
+            
+        completed = completed_k + completed_q
+        
+        return {
+            'completed': completed,
+            'total': total,
+            'percentage': round(completed / total * 100, 1)
+        }
 
 
 class LatestKnowledgeSerializer(serializers.ModelSerializer):
@@ -298,79 +284,52 @@ class StudentTaskCenterListSerializer(serializers.ModelSerializer):
     task_id = serializers.IntegerField(source='task.id', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     task_description = serializers.CharField(source='task.description', read_only=True)
-    task_type = serializers.CharField(source='task.task_type', read_only=True)
-    task_type_display = serializers.CharField(source='task.get_task_type_display', read_only=True)
     deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
     created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     progress = serializers.SerializerMethodField()
     
-    # Exam-specific fields
-    start_time = serializers.DateTimeField(source='task.start_time', read_only=True)
-    duration = serializers.IntegerField(source='task.duration', read_only=True)
-    pass_score = serializers.DecimalField(
-        source='task.pass_score', 
-        max_digits=5, 
-        decimal_places=2, 
-        read_only=True
-    )
+    progress = serializers.SerializerMethodField()
     
     class Meta:
         model = TaskAssignment
         fields = [
             'id', 'task_id', 'task_title', 'task_description',
-            'task_type', 'task_type_display',
-            'deadline', 'start_time', 'duration', 'pass_score',
+            'deadline',
             'created_by_name', 'status', 'status_display',
             'progress', 'score', 'completed_at', 'created_at'
         ]
     
     def get_progress(self, obj):
         """
-        Calculate progress based on task type.
-        
-        Requirements:
-        - 17.2: 展示进度
-        
-        For learning tasks: completed knowledge / total knowledge
-        For practice tasks: completed quizzes / total quizzes
-        For exam tasks: 0 or 100 based on completion
+        Calculate progress based on total items (knowledge + quizzes).
         """
         task = obj.task
         
-        if task.task_type == 'LEARNING':
-            total = task.task_knowledge.count()
-            if total == 0:
-                return {'completed': 0, 'total': 0, 'percentage': 0}
-            completed = obj.knowledge_progress.filter(is_completed=True).count()
-            return {
-                'completed': completed,
-                'total': total,
-                'percentage': round(completed / total * 100, 1)
-            }
-        elif task.task_type == 'PRACTICE':
-            total = task.task_quizzes.count()
-            if total == 0:
-                return {'completed': 0, 'total': 0, 'percentage': 0}
-            # Check submissions for practice tasks
-            from apps.submissions.models import Submission
-            completed_quiz_ids = set(
-                Submission.objects.filter(
-                    task_assignment=obj
-                ).values_list('quiz_id', flat=True).distinct()
-            )
-            completed = len(completed_quiz_ids)
-            return {
-                'completed': completed,
-                'total': total,
-                'percentage': round(completed / total * 100, 1) if total > 0 else 0
-            }
-        else:  # EXAM
-            return {
-                'completed': 1 if obj.status == 'COMPLETED' else 0,
-                'total': 1,
-                'percentage': 100 if obj.status == 'COMPLETED' else 0
-            }
+        total_k = task.task_knowledge.count()
+        total_q = task.task_quizzes.count()
+        total = total_k + total_q
+            
+        if total == 0:
+            return {'completed': 0, 'total': 0, 'percentage': 0}
+            
+        completed_k = obj.knowledge_progress.filter(is_completed=True).count()
+            
+        from apps.submissions.models import Submission
+        completed_q_ids = set(
+            Submission.objects.filter(
+                task_assignment=obj
+            ).values_list('quiz_id', flat=True).distinct()
+        )
+        completed_q = len(completed_q_ids)
+            
+        completed = completed_k + completed_q
+        
+        return {
+            'completed': completed,
+            'total': total,
+            'percentage': round(completed / total * 100, 1)
+        }
 
 
 # ============ Student Personal Center Serializers ============
@@ -413,8 +372,6 @@ class StudentScoreRecordSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     task_id = serializers.IntegerField(source='task_assignment.task.id', read_only=True)
     task_title = serializers.CharField(source='task_assignment.task.title', read_only=True)
-    task_type = serializers.CharField(source='task_assignment.task.task_type', read_only=True)
-    task_type_display = serializers.CharField(source='task_assignment.task.get_task_type_display', read_only=True)
     quiz_id = serializers.IntegerField(source='quiz.id', read_only=True)
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     attempt_number = serializers.IntegerField(read_only=True)
@@ -428,16 +385,15 @@ class StudentScoreRecordSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
     
     def get_is_passed(self, obj):
-        """Check if the submission passed (for exam tasks)."""
-        if obj.task_assignment.task.task_type == 'EXAM':
-            if obj.obtained_score is not None and obj.task_assignment.task.pass_score:
-                return obj.obtained_score >= obj.task_assignment.task.pass_score
+        """Check if the submission passed."""
+        # Assume pass if score >= pass_score (if defined)
+        # Or remove this logic if pass_score removed from Task. 
+        # But we assume pass_score is removed. So always return None?
+        # Or if Quiz has pass_score?
+        # For now, return None as Task model doesn't support pass_score
         return None
     
     def get_pass_score(self, obj):
-        """Get pass score (for exam tasks)."""
-        if obj.task_assignment.task.task_type == 'EXAM':
-            return obj.task_assignment.task.pass_score
         return None
 
 
@@ -451,7 +407,6 @@ class WrongAnswerSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     submission_id = serializers.IntegerField(source='submission.id', read_only=True)
     task_title = serializers.CharField(source='submission.task_assignment.task.title', read_only=True)
-    task_type = serializers.CharField(source='submission.task_assignment.task.task_type', read_only=True)
     quiz_title = serializers.CharField(source='submission.quiz.title', read_only=True)
     
     # Question details
@@ -481,7 +436,6 @@ class StudentScoreExportSerializer(serializers.Serializer):
     - 18.4: 学员导出记录时生成包含历史成绩的导出文件
     """
     task_title = serializers.CharField()
-    task_type = serializers.CharField()
     quiz_title = serializers.CharField()
     attempt_number = serializers.IntegerField()
     total_score = serializers.DecimalField(max_digits=6, decimal_places=2)
@@ -547,10 +501,8 @@ class MentorDashboardSummarySerializer(serializers.Serializer):
     # Grading statistics (Requirements 19.3)
     pending_grading_count = serializers.IntegerField(read_only=True)
     
-    # Task type breakdown
+    # Task status breakdown
     learning_tasks = serializers.DictField(read_only=True)
-    practice_tasks = serializers.DictField(read_only=True)
-    exam_tasks = serializers.DictField(read_only=True)
 
 
 class MentorDashboardSerializer(serializers.Serializer):
@@ -636,10 +588,8 @@ class TeamManagerOverviewSerializer(serializers.Serializer):
     overall_completion_rate = serializers.FloatField(read_only=True)
     overall_avg_score = serializers.FloatField(read_only=True, allow_null=True)
     
-    # Task type breakdown
+    # Task status breakdown
     learning_tasks = serializers.DictField(read_only=True)
-    practice_tasks = serializers.DictField(read_only=True)
-    exam_tasks = serializers.DictField(read_only=True)
 
 
 class TeamManagerDashboardSerializer(serializers.Serializer):

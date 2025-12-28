@@ -16,21 +16,15 @@ export const TestCenter: React.FC = () => {
   const activeTab = searchParams.get('tab') || 'questions';
   const [search, setSearch] = useState('');
 
-  /**
-   * 快速组卷完成后的回调
-   * 跳转到任务创建流程
-   */
-  const handleQuickCreateQuiz = useCallback((quizId: number, taskType: 'PRACTICE' | 'EXAM') => {
-    navigate(`/tasks/create?quiz_id=${quizId}&task_type=${taskType}`);
-  }, [navigate]);
+
 
   /**
    * 快速发布完成后的回调
    * 跳转到任务创建流程
    */
-  const handleQuickPublish = useCallback((quizIds: number[], taskType: 'PRACTICE' | 'EXAM') => {
+  const handleQuickPublish = useCallback((quizIds: number[]) => {
     const quizIdsParam = quizIds.join(',');
-    navigate(`/tasks/create?quiz_ids=${quizIdsParam}&task_type=${taskType}`);
+    navigate(`/tasks/create?quiz_ids=${quizIdsParam}`);
   }, [navigate]);
 
   /**
@@ -101,7 +95,6 @@ export const TestCenter: React.FC = () => {
       <div style={{ flex: 1, minHeight: 0 }}>
         {activeTab === 'questions' ? (
           <QuestionTab
-            onQuickCreateQuiz={handleQuickCreateQuiz}
             search={search}
           />
         ) : (

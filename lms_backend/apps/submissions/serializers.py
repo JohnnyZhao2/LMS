@@ -65,14 +65,13 @@ class SubmissionListSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
-    task_type = serializers.CharField(source='task.task_type', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
         model = Submission
         fields = [
             'id', 'quiz', 'quiz_title', 'user', 'user_name',
-            'task_title', 'task_type', 'attempt_number',
+            'task_title', 'attempt_number',
             'status', 'status_display',
             'total_score', 'obtained_score',
             'started_at', 'submitted_at',
@@ -85,7 +84,6 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
-    task_type = serializers.CharField(source='task.task_type', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     answers = AnswerSerializer(many=True, read_only=True)
     is_passed = serializers.ReadOnlyField()
@@ -95,7 +93,7 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
         model = Submission
         fields = [
             'id', 'quiz', 'quiz_title', 'user', 'user_name',
-            'task_title', 'task_type', 'attempt_number',
+            'task_title', 'attempt_number',
             'status', 'status_display',
             'total_score', 'obtained_score', 'is_passed', 'pass_score',
             'started_at', 'submitted_at', 'remaining_seconds',
@@ -138,11 +136,11 @@ class StartPracticeSerializer(serializers.Serializer):
         except TaskAssignment.DoesNotExist:
             raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
         
-        # Check it's a practice task
-        if assignment.task.task_type != 'PRACTICE':
-            raise serializers.ValidationError({'assignment_id': '此接口仅支持练习任务'})
+        # Check it's a task with quizzes
+        if not assignment.task.has_quiz:
+            raise serializers.ValidationError({'assignment_id': '此任务不包含试卷'})
         
-        # Check quiz is part of the task and get TaskQuiz with snapshot
+        # Check quiz is part of the task
         try:
             task_quiz = TaskQuiz.objects.get(task_id=assignment.task_id, quiz_id=quiz_id)
         except TaskQuiz.DoesNotExist:
@@ -170,44 +168,42 @@ class StartPracticeSerializer(serializers.Serializer):
         Requirements: 10.2, 10.5
         Properties: 24, 26
         
-        Note: 使用 TaskQuiz.snapshot 中的题目，确保任务创建时的内容不变
+        Note: 使用关联版本的题目，确保任务创建时的内容不变
         """
         assignment = validated_data['assignment']
-        quiz = validated_data['quiz']
         task_quiz = validated_data['task_quiz']
+        
+        # 获取特定版本的试卷
+        quiz_version = task_quiz.get_versioned_quiz()
         user = self.context['request'].user
         
         # Calculate attempt number
         # Property 24: 练习允许多次提交
         existing_count = Submission.objects.filter(
             task_assignment=assignment,
-            quiz=quiz
+            quiz=quiz_version
         ).count()
         attempt_number = existing_count + 1
         
-        # 从 snapshot 获取总分
-        snapshot = task_quiz.snapshot
-        total_score = snapshot.get('total_score', quiz.total_score)
+        total_score = quiz_version.total_score
         
         # Create submission
         submission = Submission.objects.create(
             task_assignment=assignment,
-            quiz=quiz,
+            quiz=quiz_version,
             user=user,
             attempt_number=attempt_number,
             status='IN_PROGRESS',
             total_score=total_score
         )
         
-        # 从 TaskQuiz.snapshot 获取题目，确保使用任务创建时的题目版本
-        snapshot_questions = snapshot.get('questions', [])
-        for q_data in snapshot_questions:
-            question_id = q_data.get('id')
-            if question_id:
-                Answer.objects.create(
-                    submission=submission,
-                    question_id=question_id
-                )
+        # 获取题目
+        questions = quiz_version.get_ordered_questions()
+        for relation in questions:
+            Answer.objects.create(
+                submission=submission,
+                question_id=relation.question_id
+            )
         
         return submission
 
@@ -339,16 +335,10 @@ class StartExamSerializer(serializers.Serializer):
         
         task = assignment.task
         
-        # Check it's an exam task
-        if task.task_type != 'EXAM':
-            raise serializers.ValidationError({'assignment_id': '此接口仅支持考试任务'})
-        
         # Property 28: 考试时间窗口控制
         now = timezone.now()
-        if now < task.start_time:
-            raise serializers.ValidationError({'assignment_id': '考试尚未开始'})
         if now > task.deadline:
-            raise serializers.ValidationError({'assignment_id': '考试已结束'})
+            raise serializers.ValidationError({'assignment_id': '任务已结束'})
         
         # Property 29: 考试单次提交限制
         existing_submission = Submission.objects.filter(
@@ -364,7 +354,7 @@ class StartExamSerializer(serializers.Serializer):
             status='IN_PROGRESS'
         ).first()
         
-        # Get the quiz (exam has only one quiz) with snapshot
+        # Get the quiz (exam has only one quiz)
         task_quiz = TaskQuiz.objects.select_related('quiz').get(task=task)
         quiz = task_quiz.quiz
         
@@ -382,49 +372,32 @@ class StartExamSerializer(serializers.Serializer):
         
         Requirements: 12.2
         
-        Note: 使用 TaskQuiz.snapshot 中的题目，确保任务创建时的内容不变
+        Note: 使用关联版本的题目，确保任务创建时的内容不变
         """
         assignment = validated_data['assignment']
-        quiz = validated_data['quiz']
         task = validated_data['task']
         task_quiz = validated_data['task_quiz']
         in_progress = validated_data.get('in_progress_submission')
         user = self.context['request'].user
         
-        # If there's an in-progress submission, return it
-        if in_progress:
-            # Update remaining time
-            now = timezone.now()
-            elapsed = (now - in_progress.started_at).total_seconds()
-            remaining = max(0, task.duration * 60 - int(elapsed))
-            in_progress.remaining_seconds = remaining
-            in_progress.save(update_fields=['remaining_seconds'])
-            return in_progress
-        
-        # 从 snapshot 获取总分
-        snapshot = task_quiz.snapshot
-        total_score = snapshot.get('total_score', quiz.total_score)
-        
         # Create new submission
         submission = Submission.objects.create(
             task_assignment=assignment,
-            quiz=quiz,
+            quiz=quiz_version,
             user=user,
             attempt_number=1,
             status='IN_PROGRESS',
             total_score=total_score,
-            remaining_seconds=task.duration * 60
+            remaining_seconds=None  # Untimed for now
         )
         
-        # 从 TaskQuiz.snapshot 获取题目，确保使用任务创建时的题目版本
-        snapshot_questions = snapshot.get('questions', [])
-        for q_data in snapshot_questions:
-            question_id = q_data.get('id')
-            if question_id:
-                Answer.objects.create(
-                    submission=submission,
-                    question_id=question_id
-                )
+        # 获取题目
+        questions = quiz_version.get_ordered_questions()
+        for relation in questions:
+            Answer.objects.create(
+                submission=submission,
+                question_id=relation.question_id
+            )
         
         return submission
 

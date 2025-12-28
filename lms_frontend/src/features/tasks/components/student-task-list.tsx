@@ -4,7 +4,7 @@ import { FileTextOutlined, FilterOutlined } from '@ant-design/icons';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
 import { PageHeader } from '@/components/ui';
-import type { TaskType, TaskStatus } from '@/types/api';
+import type { TaskStatus } from '@/types/api';
 
 const { Text } = Typography;
 
@@ -13,10 +13,9 @@ const { Text } = Typography;
  * 使用卡片式布局展示任务
  */
 export const StudentTaskList: React.FC = () => {
-    const [taskType, setTaskType] = useState<TaskType | undefined>();
     const [status, setStatus] = useState<TaskStatus | undefined>();
 
-    const { data, isLoading } = useStudentTasks({ taskType, status });
+    const { data, isLoading } = useStudentTasks({ status });
     const tasks = data?.results ?? [];
     const totalLabel = data?.count ?? 0;
 
@@ -60,17 +59,6 @@ export const StudentTaskList: React.FC = () => {
                     <FilterOutlined />
                     <Text type="secondary">筛选</Text>
                 </div>
-                <Select
-                    style={{ width: 140 }}
-                    placeholder="任务类型"
-                    allowClear
-                    onChange={(value) => setTaskType(value)}
-                    options={[
-                        { value: 'LEARNING', label: '学习任务' },
-                        { value: 'PRACTICE', label: '练习任务' },
-                        { value: 'EXAM', label: '考试任务' },
-                    ]}
-                />
                 <Select
                     style={{ width: 140 }}
                     placeholder="状态"

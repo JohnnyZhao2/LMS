@@ -370,51 +370,7 @@ export interface KnowledgeDetail {
   updated_at: string;
 }
 
-export interface KnowledgeSnapshot {
-  id: number;
-  resource_uuid: string;
-  version_number: number;
-  title: string;
-  knowledge_type: KnowledgeType;
-  knowledge_type_display?: string;
-  summary?: string;
-  content?: string;
-  fault_scenario?: string;
-  trigger_process?: string;
-  solution?: string;
-  verification_plan?: string;
-  recovery_plan?: string;
-  line_type?: SimpleTag | null;
-  system_tags?: SimpleTag[];
-  operation_tags?: SimpleTag[];
-}
 
-export interface QuizQuestionSnapshot {
-  id: number;
-  resource_uuid: string;
-  version_number: number;
-  order: number;
-  question_type: string;
-  score: number;
-  content: string;
-  options?: Array<{ key: string; value: string }>;
-  answer?: unknown;
-  explanation?: string;
-}
-
-export interface QuizSnapshot {
-  id: number;
-  resource_uuid: string;
-  version_number: number;
-  title: string;
-  description?: string;
-  question_count: number;
-  total_score: number;
-  has_subjective_questions: boolean;
-  objective_question_count: number;
-  subjective_question_count: number;
-  questions: QuizQuestionSnapshot[];
-}
 
 /**
  * 创建知识文档请求
@@ -486,10 +442,11 @@ export interface TaskKnowledge {
   knowledge: number;
   knowledge_title: string;
   knowledge_type: string;
+  knowledge_type_display: string;
+  summary?: string;
   order: number;
   resource_uuid: string;
   version_number: number;
-  snapshot: KnowledgeSnapshot;
 }
 
 /**
@@ -499,10 +456,13 @@ export interface TaskQuiz {
   id: number;
   quiz: number;
   quiz_title: string;
+  question_count: number;
+  total_score: number;
+  subjective_question_count: number;
+  objective_question_count: number;
   order: number;
   resource_uuid: string;
   version_number: number;
-  snapshot: QuizSnapshot;
 }
 
 /**
@@ -512,8 +472,6 @@ export interface TaskDetail {
   id: number;
   title: string;
   description?: string;
-  task_type: TaskType;
-  task_type_display: string;
   deadline: string;
   start_time?: string;
   duration?: number;
@@ -553,6 +511,21 @@ export interface LearningTaskKnowledgeItem {
 }
 
 /**
+ * 学员学习任务试卷项
+ */
+export interface LearningTaskQuizItem {
+  id: number;
+  quiz_id: number;
+  title: string;
+  description?: string;
+  question_count: number;
+  total_score: number;
+  order: number;
+  is_completed: boolean;
+  score?: number | null;
+}
+
+/**
  * 学员学习任务详情
  */
 export interface StudentLearningTaskDetail {
@@ -560,15 +533,16 @@ export interface StudentLearningTaskDetail {
   task_id: number;
   task_title: string;
   task_description?: string;
-  task_type: TaskType;
-  task_type_display: string;
+
   deadline: string;
   created_by_name: string;
   status: TaskStatus;
   status_display: string;
   progress: LearningTaskProgress;
   completed_at?: string;
+  score?: string | number | null;
   knowledge_items: LearningTaskKnowledgeItem[];
+  quiz_items: LearningTaskQuizItem[];
   created_at: string;
   updated_at: string;
 }
@@ -615,11 +589,14 @@ export interface ExamTaskCreateRequest {
  */
 export interface StudentPendingTask {
   id: number;
-  title: string;
-  task_type: TaskType;
-  task_type_display: string;
+  task_id: number;
+  task_title: string;
   deadline: string;
-  assignment_id: number;
+  created_by_name: string;
+  status: TaskStatus;
+  status_display: string;
+  progress: LearningTaskProgress;
+  created_at: string;
 }
 
 /**
@@ -636,16 +613,13 @@ export interface StudentTaskCenterItem {
   task_id: number;
   task_title: string;
   task_description?: string;
-  task_type: TaskType;
-  task_type_display: string;
+  has_quiz: boolean;
+  has_knowledge: boolean;
   deadline: string;
   status: TaskStatus;
   status_display: string;
   progress: TaskProgress;
   created_by_name: string;
-  start_time?: string;
-  duration?: number;
-  pass_score?: string;
   score?: string;
   completed_at?: string;
   created_at: string;
@@ -663,8 +637,6 @@ export interface TaskListItem {
   id: number;
   title: string;
   description?: string;
-  task_type: TaskType;
-  task_type_display: string;
   deadline: string;
   start_time?: string;
   duration?: number;
@@ -856,7 +828,6 @@ export interface SubmissionDetail {
   user: number;
   user_name: string;
   task_title: string;
-  task_type: TaskType;
   attempt_number: number;
   status: SubmissionStatus;
   status_display: string;
@@ -974,7 +945,6 @@ export interface Notification {
   read_at?: string;
   task_id?: number;
   task_title?: string;
-  task_type?: string;
   created_at: string;
 }
 
