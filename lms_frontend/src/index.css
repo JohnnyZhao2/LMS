@@ -1307,6 +1307,9 @@ textarea.ant-input {
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
 }
 
 .task-form-pipeline-card:hover {
@@ -1314,7 +1317,12 @@ textarea.ant-input {
   box-shadow: var(--shadow-md);
 }
 
-.task-form-pipeline-card-header {
+.task-form-pipeline-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-form-pipeline-card-content .ant-tag {
   margin-bottom: var(--spacing-2);
 }
 
@@ -1327,11 +1335,9 @@ textarea.ant-input {
 
 .task-form-pipeline-card-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: var(--spacing-1);
-  margin-top: var(--spacing-3);
-  padding-top: var(--spacing-3);
-  border-top: 1px solid var(--color-gray-100);
+  flex-shrink: 0;
 }
 
 /* 右侧表单区域 */
