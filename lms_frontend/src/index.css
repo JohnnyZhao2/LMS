@@ -1,3 +1,4 @@
+@ -1, 287+1, 503 @@
 /**
  * LMS 全局样式 - 极致设计版
  * 基于 design.json 规范，融合现代 UI 设计美学：
@@ -23,56 +24,56 @@
    Tailwind v4 Theme 配置 (CSS-first)
    ============================================ */
 @theme {
-  /* 主色调 - 严格遵循 design.json */
-  --color-primary-50: #E8EEFF;
-  --color-primary-100: #C7D7FF;
-  --color-primary-200: #9AB8FF;
-  --color-primary-300: #6B94FF;
-  --color-primary-400: #4D7CFF;
-  --color-primary-500: #4D6CFF;
-  --color-primary-600: #3D5FE6;
-  --color-primary-700: #2F4AC7;
+    /* 主色调 - 严格遵循 design.json */
+    --color-primary-50: #E8EEFF;
+    --color-primary-100: #C7D7FF;
+    --color-primary-200: #9AB8FF;
+    --color-primary-300: #6B94FF;
+    --color-primary-400: #4D7CFF;
+    --color-primary-500: #4D6CFF;
+    --color-primary-600: #3D5FE6;
+    --color-primary-700: #2F4AC7;
 
-  /* 辅助色 */
-  --color-success-500: #10B759;
-  --color-warning-500: #F5C200;
-  --color-error-500: #FF3D71;
-  --color-purple-500: #9B00FF;
-  --color-pink-500: #FF3D8F;
-  --color-cyan-500: #00C7E6;
-  --color-orange-500: #FF8C52;
+    /* 辅助色 */
+    --color-success-500: #10B759;
+    --color-warning-500: #F5C200;
+    --color-error-500: #FF3D71;
+    --color-purple-500: #9B00FF;
+    --color-pink-500: #FF3D8F;
+    --color-cyan-500: #00C7E6;
+    --color-orange-500: #FF8C52;
 
-  /* 中性色 */
-  --color-gray-50: #F8F9FA;
-  --color-gray-100: #F1F3F5;
-  --color-gray-200: #E9ECEF;
-  --color-gray-300: #DEE2E6;
-  --color-gray-400: #CED4DA;
-  --color-gray-500: #ADB5BD;
-  --color-gray-600: #868E96;
-  --color-gray-700: #495057;
-  --color-gray-800: #343A40;
-  --color-gray-900: #212529;
+    /* 中性色 */
+    --color-gray-50: #F8F9FA;
+    --color-gray-100: #F1F3F5;
+    --color-gray-200: #E9ECEF;
+    --color-gray-300: #DEE2E6;
+    --color-gray-400: #CED4DA;
+    --color-gray-500: #ADB5BD;
+    --color-gray-600: #868E96;
+    --color-gray-700: #495057;
+    --color-gray-800: #343A40;
+    --color-gray-900: #212529;
 
-  /* 字体 - 选用更具现代感的 Outfit */
-  --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
-  --font-display: 'Outfit', sans-serif;
+    /* 字体 - 选用更具现代感的 Outfit */
+    --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
+    --font-display: 'Outfit', sans-serif;
 
-  /* 阴影 - 增强深度感 */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  --shadow-premium: 0 20px 40px -4px rgba(77, 108, 255, 0.08), 0 10px 20px -4px rgba(77, 108, 255, 0.04);
-  /* 内阴影 - 用于按钮等 */
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    /* 阴影 - 增强深度感 */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-premium: 0 20px 40px -4px rgba(77, 108, 255, 0.08), 0 10px 20px -4px rgba(77, 108, 255, 0.04);
+    /* 内阴影 - 用于按钮等 */
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
 
-  /* 动画曲线 */
-  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%,
-      1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%,
-      0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
+    /* 动画曲线 */
+    --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%,
+            1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%,
+            0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
 }
 
 /* ============================================
@@ -80,26 +81,26 @@
    ============================================ */
 /* Mentor Theme: Purple/Violet */
 .theme-mentor {
-  --color-primary-50: #faf5ff;
-  --color-primary-100: #f3e8ff;
-  --color-primary-200: #e9d5ff;
-  --color-primary-300: #d8b4fe;
-  --color-primary-400: #c084fc;
-  --color-primary-500: #a855f7;
-  --color-primary-600: #9333ea;
-  --color-primary-700: #7e22ce;
+    --color-primary-50: #faf5ff;
+    --color-primary-100: #f3e8ff;
+    --color-primary-200: #e9d5ff;
+    --color-primary-300: #d8b4fe;
+    --color-primary-400: #c084fc;
+    --color-primary-500: #a855f7;
+    --color-primary-600: #9333ea;
+    --color-primary-700: #7e22ce;
 }
 
 /* Team Manager Theme: Cyan/Teal */
 .theme-manager {
-  --color-primary-50: #ecfeff;
-  --color-primary-100: #cffafe;
-  --color-primary-200: #a5f3fc;
-  --color-primary-300: #67e8f9;
-  --color-primary-400: #22d3ee;
-  --color-primary-500: #06b6d4;
-  --color-primary-600: #0891b2;
-  --color-primary-700: #0e7490;
+    --color-primary-50: #ecfeff;
+    --color-primary-100: #cffafe;
+    --color-primary-200: #a5f3fc;
+    --color-primary-300: #67e8f9;
+    --color-primary-400: #22d3ee;
+    --color-primary-500: #06b6d4;
+    --color-primary-600: #0891b2;
+    --color-primary-700: #0e7490;
 }
 
 
@@ -109,84 +110,84 @@
 
 /* 1. 动态渐变网孔背景 */
 .bg-mesh {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: #f8faff;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(77, 108, 255, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(155, 0, 255, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(0, 199, 230, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(77, 108, 255, 0.05) 0px, transparent 50%);
-  z-index: -2;
-  pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #f8faff;
+    background-image:
+        radial-gradient(at 0% 0%, rgba(77, 108, 255, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(155, 0, 255, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(0, 199, 230, 0.05) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(77, 108, 255, 0.05) 0px, transparent 50%);
+    z-index: -2;
+    pointer-events: none;
 }
 
 /* 2. 背景点状纹理 */
 .bg-dots {
-  background-image: radial-gradient(var(--color-gray-400) 1px, transparent 1px);
-  background-size: 24px 24px;
+    background-image: radial-gradient(var(--color-gray-400) 1px, transparent 1px);
+    background-size: 24px 24px;
 }
 
 /* 3. 玻璃拟态卡片 (Glass Card) */
 .glass-card {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
 }
 
 /* 4. 极致卡片 (Premium Card) */
 .card-premium {
-  background: white;
-  border-radius: 1.5rem;
-  /* 24px */
-  border: 1px solid rgba(230, 235, 245, 0.6);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background: white;
+    border-radius: 1.5rem;
+    /* 24px */
+    border: 1px solid rgba(230, 235, 245, 0.6);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .card-premium:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-premium);
-  border-color: var(--color-primary-100);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-premium);
+    border-color: var(--color-primary-100);
 }
 
 /* 5. 渐变按钮 (Gradient Button) */
 .btn-gradient {
-  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-500) 100%);
-  color: white;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+    background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-500) 100%);
+    color: white;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .btn-gradient::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .btn-gradient:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px -4px rgba(77, 108, 255, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -4px rgba(77, 108, 255, 0.4);
 }
 
 .btn-gradient:hover::after {
-  opacity: 1;
+    opacity: 1;
 }
 
 .btn-gradient:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 /* ============================================
@@ -195,93 +196,93 @@
 
 /* Fade In */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
+    from {
+        opacity: 0;
+    }
 
-  to {
-    opacity: 1;
-  }
+    to {
+        opacity: 1;
+    }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.6s ease-out forwards;
+    animation: fadeIn 0.6s ease-out forwards;
 }
 
 /* Fade In Up */
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .animate-fadeInUp {
-  animation: fadeInUp 0.6s var(--ease-spring) forwards;
+    animation: fadeInUp 0.6s var(--ease-spring) forwards;
 }
 
 /* Fade In Down */
 @keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .animate-fadeInDown {
-  animation: fadeInDown 0.6s var(--ease-spring) forwards;
+    animation: fadeInDown 0.6s var(--ease-spring) forwards;
 }
 
 /* Reveal Item (Simple class for JS libraries or stagger) */
 .reveal-item {
-  opacity: 0;
-  animation: fadeInUp 0.8s var(--ease-spring) forwards;
+    opacity: 0;
+    animation: fadeInUp 0.8s var(--ease-spring) forwards;
 }
 
 /* Stagger Delays */
 .stagger-delay-1 {
-  animation-delay: 0.1s;
+    animation-delay: 0.1s;
 }
 
 .stagger-delay-2 {
-  animation-delay: 0.2s;
+    animation-delay: 0.2s;
 }
 
 .stagger-delay-3 {
-  animation-delay: 0.3s;
+    animation-delay: 0.3s;
 }
 
 .stagger-delay-4 {
-  animation-delay: 0.4s;
+    animation-delay: 0.4s;
 }
 
 /* ============================================
    Scrollbar Clean up
    ============================================ */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gray-200);
-  border-radius: 99px;
+    background: var(--color-gray-200);
+    border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-300);
+    background: var(--color-gray-300);
 }
