@@ -74,22 +74,21 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
 
         {/* 标题区域 */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-6">
           {icon && (
-            <div className="w-16 h-16 bg-gray-900 rounded-[1.25rem] flex items-center justify-center shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-primary-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
+            <div className="w-20 h-20 bg-gradient-to-br from-clay-primary to-clay-secondary rounded-3xl flex items-center justify-center shadow-clay-btn relative overflow-hidden group animate-breathe">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "text-white w-8 h-8 relative z-10")
+                className: cn(icon.props.className, "text-white w-10 h-10 relative z-10")
               }) : icon}
             </div>
           )}
           <div>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
+            <h2 className="text-4xl md:text-5xl font-black text-clay-foreground tracking-tighter leading-none font-display">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
-                <span className="w-6 h-[2px] bg-primary-500/30 rounded-full" />
+              <p className="text-lg font-bold text-clay-muted uppercase tracking-widest mt-2 flex items-center gap-3 leading-none italic opacity-60">
+                <span className="w-10 h-[3px] bg-clay-primary/30 rounded-full" />
                 {subtitle}
               </p>
             )}

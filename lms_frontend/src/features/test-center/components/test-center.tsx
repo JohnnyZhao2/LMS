@@ -106,7 +106,7 @@ export const TestCenter: React.FC = () => {
 
       {/* 动态内容区域 */}
       <div className="flex-1 reveal-item stagger-delay-1">
-        <div className="glass-card rounded-[2.5rem] p-8 min-h-[600px] border-none shadow-2xl overflow-hidden relative">
+        <div className="glass-card rounded-[2.5rem] p-8 min-h-[600px] border-none overflow-hidden relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
           {activeTab === 'questions' ? (

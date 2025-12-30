@@ -6,6 +6,8 @@ import {
   Building2,
   Users,
   Briefcase,
+  Pencil,
+  Plus,
 } from 'lucide-react';
 
 import {
@@ -172,82 +174,87 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      {/* 
-        Modified: 
-        1. max-w-3xl for a more focused modal width (4xl was too wide).
-        2. Added [&>button]:hidden to DialogContent to hide default close button if desired, 
-           BUT user complained about 'double X', so we keep default and REMOVE our custom one.
-      */}
-      <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px] border-none shadow-2xl h-[85vh] flex flex-col bg-white">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2.5rem] border-none h-[85vh] flex flex-col bg-white shadow-2xl">
 
-        {/* Header - Simplified to match page headers */}
-        <DialogHeader className="px-6 py-4 shrink-0 bg-white border-b border-gray-100">
-          <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
+        {/* Header - Clean White */}
+        <DialogHeader className="px-10 py-8 shrink-0 border-b border-gray-100">
+          <DialogTitle className="text-2xl font-black text-gray-900 flex items-center gap-4 tracking-tight" style={{ fontFamily: "Nunito, sans-serif" }}>
+            <div className={cn(
+              "w-14 h-14 rounded-2xl flex items-center justify-center text-white",
+              isEdit ? "bg-gradient-to-br from-purple-400 to-purple-600" : "bg-gradient-to-br from-emerald-400 to-emerald-600"
+            )}>
+              {isEdit ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
+            </div>
             {isEdit ? '编辑成员档案' : '邀请新成员'}
             {isEdit && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-xs font-bold bg-green-50 text-green-600 border border-green-100">
-                active
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600">
+                Active
               </span>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Scrollable Content - Clean White Background */}
-        <div className="flex-1 overflow-y-auto bg-white p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-10 py-8 space-y-8 scrollbar-hide bg-white">
 
-          {/* 1. Basic Info Card */}
-          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-1 h-5 rounded-full bg-blue-500" />
-              <h3 className="text-base font-bold text-gray-900">基础信息</h3>
+          {/* 1. Basic Info */}
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-5 rounded-full bg-purple-500" />
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">基础信息</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">真实姓名</label>
                 <Input
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
-                  className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
-                  placeholder="真实姓名"
+                  className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-base px-4"
+                  placeholder="请输入姓名"
                 />
-                {errors.username && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.username}</p>}
+                {errors.username && <p className="text-xs font-medium text-red-500 ml-1">{errors.username}</p>}
               </div>
 
-              <div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">员工工号</label>
                 <Input
                   value={formData.employee_id}
                   onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                  className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-mono font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
-                  placeholder="员工工号 (E.g. EMP001)"
+                  className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-mono font-medium text-base px-4"
+                  placeholder="E.g. EMP001"
                 />
-                {errors.employee_id && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.employee_id}</p>}
+                {errors.employee_id && <p className="text-xs font-medium text-red-500 ml-1">{errors.employee_id}</p>}
               </div>
 
               {!isEdit && (
-                <div className="md:col-span-2">
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">初始密码</label>
                   <Input
                     type="password"
                     value={formData.password}
                     onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
-                    placeholder="设置初始密码"
+                    className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-base px-4 tracking-widest"
+                    placeholder="••••••••"
                   />
-                  {errors.password && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.password}</p>}
+                  {errors.password && <p className="text-xs font-medium text-red-500 ml-1">{errors.password}</p>}
                 </div>
               )}
             </div>
           </div>
 
-          {/* 2. Organization Card */}
-          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-1 h-5 rounded-full bg-purple-500" />
-              <h3 className="text-base font-bold text-gray-900">组织归属</h3>
+          <div className="h-px w-full bg-gray-100" />
+
+          {/* 2. Organization */}
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-5 rounded-full bg-pink-500" />
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">组织归属</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-              <div className="space-y-3">
-                {/* No Label, context provided by icon/layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">选择部门</label>
                 <div className="grid grid-cols-2 gap-3">
                   {departments.map(dept => {
                     const active = formData.department_id === dept.id;
@@ -256,77 +263,69 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                         key={dept.id}
                         onClick={() => setFormData({ ...formData, department_id: dept.id })}
                         className={cn(
-                          "cursor-pointer group relative flex flex-1 items-center justify-center gap-2 px-4 h-14 rounded-2xl transition-all duration-300 ease-out min-w-[100px]",
+                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-12 rounded-xl transition-all",
                           active
-                            ? "bg-purple-50 shadow-lg shadow-purple-500/20 -translate-y-0.5"
-                            : "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
+                            ? "bg-pink-500 text-white shadow-md"
+                            : "bg-gray-50 border border-gray-100 text-gray-700 hover:border-pink-200 hover:bg-pink-50"
                         )}
                       >
-                        <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
-                          active ? "bg-white text-purple-600 shadow-sm" : "bg-purple-50 text-purple-400 group-hover:bg-purple-100"
-                        )}>
-                          <Building2 className="w-4 h-4" />
-                        </div>
-                        <span className={cn(
-                          "text-sm font-bold transition-colors whitespace-nowrap",
-                          active ? "text-purple-900" : "text-gray-600 group-hover:text-gray-900"
-                        )}>
+                        <Building2 className="w-4 h-4" />
+                        <span className="text-sm font-bold whitespace-nowrap">
                           {dept.name}
                         </span>
                       </div>
                     )
                   })}
                 </div>
-                {errors.department_id && <p className="text-xs font-bold text-red-500 ml-1">{errors.department_id}</p>}
+                {errors.department_id && <p className="text-xs font-medium text-red-500 ml-1">{errors.department_id}</p>}
               </div>
 
-              <div>
-                {/* No Label */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">分配导师 (可选)</label>
                 <Select
                   value={formData.mentor_id?.toString() || ''}
                   onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
                 >
-                  <SelectTrigger className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-purple-500/10 transition-all font-medium text-gray-700 px-4">
-                    <SelectValue placeholder="带教导师 (可选)" />
+                  <SelectTrigger className="h-14 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-gray-900 px-4 text-base">
+                    <SelectValue placeholder="选择带教导师..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl border border-gray-100 shadow-xl z-[9999]" sideOffset={5}>
-                    <div className="p-1">
-                      {mentors.filter(m => !userId || m.id !== userId).map(m => (
-                        <SelectItem key={m.id} value={m.id.toString()} className="rounded-lg py-2.5 px-3 my-0.5 cursor-pointer focus:bg-purple-50 focus:text-purple-900 data-[state=checked]:bg-purple-50 data-[state=checked]:text-purple-900">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8 border border-gray-100">
-                              <AvatarFallback className="bg-purple-50 text-purple-600 text-[10px] font-bold">
-                                {getAvatarText(m.username)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-bold text-sm">{m.username}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </div>
+                  <SelectContent className="max-h-60 rounded-xl border border-gray-100 shadow-xl z-[9999] bg-white p-2" sideOffset={8}>
+                    {mentors.filter(m => !userId || m.id !== userId).map(m => (
+                      <SelectItem key={m.id} value={m.id.toString()} className="rounded-lg py-3 px-4 my-0.5 cursor-pointer focus:bg-purple-50 data-[state=checked]:bg-purple-50">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8 rounded-full">
+                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white text-xs font-bold">
+                              {getAvatarText(m.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-gray-900">{m.username}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
 
-          {/* 3. Roles Card */}
-          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-1 h-5 rounded-full bg-green-500" />
-              <h3 className="text-base font-bold text-gray-900">系统权限</h3>
+          <div className="h-px w-full bg-gray-100" />
+
+          {/* 3. Roles - Clay Style */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-7 rounded-full bg-gradient-to-b from-clay-tertiary to-sky-400" />
+              <h3 className="text-lg font-black text-clay-foreground tracking-tight" style={{ fontFamily: "Nunito, sans-serif" }}>系统权限</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pl-4">
               {/* Default Role */}
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50/80 border border-transparent">
-                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 text-gray-400 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5" />
+              <div className="flex items-center gap-4 p-5 rounded-3xl bg-clay-muted/8 opacity-60">
+                <div className="w-12 h-12 rounded-2xl bg-white shadow-sm text-clay-muted flex items-center justify-center shrink-0">
+                  <User className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-gray-500">普通学员</span>
-                  <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">基础权限</span>
+                  <span className="text-base font-black text-clay-muted" style={{ fontFamily: "Nunito, sans-serif" }}>普通学员</span>
+                  <span className="text-xs text-clay-muted/80 font-bold uppercase mt-0.5 tracking-widest">Default</span>
                 </div>
               </div>
 
@@ -335,44 +334,49 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 const config = roleConfigs[role.code] || roleConfigs.STUDENT;
                 const active = formData.role_codes.includes(role.code as RoleCode);
 
-                // Map role codes to specific solid colors for active state borders/text
-                const colorMap: Record<string, string> = {
-                  ADMIN: "red",
-                  MENTOR: "amber", // Changed to amber to match config
-                  TEAM_MANAGER: "cyan",
-                  DEPT_MANAGER: "purple", // Fixed key from ROOM_MANAGER to DEPT_MANAGER to match roleConfigs
-                  ROOM_MANAGER: "purple"  // Kept for fallback
+                // Map role codes to candy-shop gradient colors
+                const colorMap: Record<string, { gradient: string; text: string }> = {
+                  ADMIN: { gradient: "from-red-400 to-red-600", text: "text-red-500" },
+                  MENTOR: { gradient: "from-amber-400 to-amber-600", text: "text-amber-500" },
+                  TEAM_MANAGER: { gradient: "from-cyan-400 to-cyan-600", text: "text-cyan-500" },
+                  DEPT_MANAGER: { gradient: "from-purple-400 to-purple-600", text: "text-purple-500" },
+                  ROOM_MANAGER: { gradient: "from-purple-400 to-fuchsia-600", text: "text-purple-500" }
                 };
-                const color = colorMap[role.code] || "blue";
+                const colorConfig = colorMap[role.code] || { gradient: "from-clay-primary to-purple-600", text: "text-clay-primary" };
 
                 return (
                   <div
                     key={role.code}
                     onClick={() => toggleRole(role.code as RoleCode)}
                     className={cn(
-                      "group cursor-pointer relative flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 ease-out",
+                      "group cursor-pointer relative flex items-center gap-4 p-5 rounded-3xl transition-all duration-300 ease-out",
                       active
-                        ? `bg-${color}-50 shadow-lg shadow-${color}-500/20 -translate-y-0.5`
-                        : "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
+                        ? "bg-white shadow-clay-card -translate-y-1"
+                        : "bg-white/60 hover:bg-white hover:shadow-clay-card hover:-translate-y-0.5"
                     )}
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0",
                       active
-                        ? `bg-white text-${color}-600 shadow-sm`
-                        : `bg-${color}-50 text-${color}-500 group-hover:bg-${color}-100`
+                        ? `bg-gradient-to-br ${colorConfig.gradient} text-white shadow-clay-btn scale-110 rotate-3`
+                        : "bg-white shadow-sm text-clay-muted group-hover:text-clay-foreground"
                     )}>
                       {config.icon}
                     </div>
 
                     <div className="flex-1">
                       <div className={cn(
-                        "text-sm font-bold transition-colors",
-                        active ? `text-${color}-900` : "text-gray-700"
-                      )}>
+                        "text-base font-black transition-colors",
+                        active ? colorConfig.text : "text-clay-muted group-hover:text-clay-foreground"
+                      )} style={{ fontFamily: "Nunito, sans-serif" }}>
                         {role.name}
                       </div>
+                      {active && <div className="text-[10px] font-bold uppercase text-clay-muted tracking-widest animate-fadeIn">Enabled</div>}
                     </div>
+
+                    {active && (
+                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full bg-clay-success shadow-sm animate-breathe" />
+                    )}
                   </div>
                 )
               })}
@@ -380,15 +384,22 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <DialogFooter className="px-8 py-5 border-t border-gray-100 bg-white shrink-0 sm:justify-end">
-          {/* Removed redundant 'Cancel' to minimize noise as requested by user */}
+        {/* Footer - Clay Style */}
+        <DialogFooter className="px-10 py-8 border-t border-white/60 bg-gradient-to-r from-white/40 to-white/20 shrink-0 sm:justify-end gap-4">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="h-14 px-8 rounded-2xl font-bold text-clay-muted hover:bg-clay-muted/10 hover:text-clay-foreground transition-all"
+          >
+            取消
+          </Button>
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="w-full sm:w-auto h-12 px-8 rounded-xl bg-gradient-to-r from-primary-600 to-indigo-600 text-white font-bold text-base hover:from-primary-700 hover:to-indigo-700 hover:scale-[1.02] transition-all shadow-xl shadow-primary-500/20"
+            className="w-full sm:w-auto h-14 px-10 rounded-2xl bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] text-white font-black text-lg shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 active:scale-[0.92] active:shadow-clay-pressed"
+            style={{ fontFamily: "Nunito, sans-serif" }}
           >
-            {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即创建成员"}
+            {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即邀请"}
           </Button>
         </DialogFooter>
 

@@ -99,12 +99,12 @@ export function DataTable<TData, TValue>({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-gray-200 bg-white">
+    <div className="space-y-6">
+      <div className="rounded-3xl border-none bg-transparent">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-gray-50/50">
+              <TableRow key={headerGroup.id} className="border-none hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder

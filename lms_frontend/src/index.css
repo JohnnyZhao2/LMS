@@ -1,288 +1,231 @@
-@ -1, 287+1, 503 @@
-/**
- * LMS 全局样式 - 极致设计版
- * 基于 design.json 规范，融合现代 UI 设计美学：
- * 1. 玻璃拟态 (Glassmorphism)
- * 2. 几何背景纹理 (Geometric Patterns)
- * 3. 渐进式入场动画 (Staggered Reveals)
- * 4. 极致细节转换 (Micro-interactions)
- */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Nunito:wght@700;800;900&display=swap');
 
-/* ============================================
-   Google Fonts - Outfit (现代无衬线字体)
-   ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
-/* 可选用字体: Urbanist or Satoshi (本地) - 这里使用 Outfit 保持一致但优化排版 */
-
-/* ============================================
-   Tailwind CSS v4 导入
-   ============================================ */
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* ============================================
-   Tailwind v4 Theme 配置 (CSS-first)
-   ============================================ */
 @theme {
-    /* 主色调 - 严格遵循 design.json */
-    --color-primary-50: #E8EEFF;
-    --color-primary-100: #C7D7FF;
-    --color-primary-200: #9AB8FF;
-    --color-primary-300: #6B94FF;
-    --color-primary-400: #4D7CFF;
-    --color-primary-500: #4D6CFF;
-    --color-primary-600: #3D5FE6;
-    --color-primary-700: #2F4AC7;
+    /* ============================================
+       Claymorphism "Candy Shop" Palette
+       ============================================ */
 
-    /* 辅助色 */
-    --color-success-500: #10B759;
-    --color-warning-500: #F5C200;
-    --color-error-500: #FF3D71;
-    --color-purple-500: #9B00FF;
-    --color-pink-500: #FF3D8F;
-    --color-cyan-500: #00C7E6;
-    --color-orange-500: #FF8C52;
+    /* Canvas (Cool Lavender-White) */
+    --color-clay-bg: #F4F1FA;
+    --color-clay-cardBg: rgba(255, 255, 255, 0.65);
 
-    /* 中性色 */
-    --color-gray-50: #F8F9FA;
-    --color-gray-100: #F1F3F5;
-    --color-gray-200: #E9ECEF;
-    --color-gray-300: #DEE2E6;
-    --color-gray-400: #CED4DA;
-    --color-gray-500: #ADB5BD;
-    --color-gray-600: #868E96;
-    --color-gray-700: #495057;
-    --color-gray-800: #343A40;
-    --color-gray-900: #212529;
+    /* Foreground */
+    --color-clay-foreground: #332F3A;
+    /* Soft Charcoal */
+    --color-clay-muted: #635F69;
+    /* Dark Lavender-Gray */
 
-    /* 字体 - 选用更具现代感的 Outfit */
-    --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
-    --font-display: 'Outfit', sans-serif;
+    /* Accents */
+    --color-clay-primary: #7C3AED;
+    /* Vivid Violet */
+    --color-clay-secondary: #DB2777;
+    /* Hot Pink */
+    --color-clay-tertiary: #0EA5E9;
+    /* Sky Blue */
+    --color-clay-success: #10B981;
+    /* Emerald Green */
+    --color-clay-warning: #F59E0B;
+    /* Amber */
 
-    /* 阴影 - 增强深度感 */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    --shadow-premium: 0 20px 40px -4px rgba(77, 108, 255, 0.08), 0 10px 20px -4px rgba(77, 108, 255, 0.04);
-    /* 内阴影 - 用于按钮等 */
-    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    /* Standard Palette Mappings (for compatibility) */
+    --color-primary-50: #F4F1FA;
+    --color-primary-100: #EDE9FE;
+    --color-primary-200: #DDD6FE;
+    --color-primary-300: #C4B5FD;
+    --color-primary-400: #A78BFA;
+    --color-primary-500: #8B5CF6;
+    --color-primary-600: #7C3AED;
+    /* Main Primary */
+    --color-primary-700: #6D28D9;
+    --color-gray-900: #332F3A;
+    --color-gray-500: #635F69;
+    --color-bg-primary: #F4F1FA;
+    /* Map legacy bg tokens */
 
-    /* 动画曲线 */
-    --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%,
-            1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%,
-            0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
+    /* Typography */
+    --font-sans: 'DM Sans', -apple-system, sans-serif;
+    --font-display: 'Nunito', sans-serif;
+
+    /* Radii - Super Rounded */
+    --radius-3xl: 48px;
+    --radius-2xl: 32px;
+    /* Standard Card */
+    --radius-xl: 24px;
+    --radius-lg: 20px;
+    /* Buttons/Inputs */
+    --radius-md: 16px;
+
+    /* Animations */
+    --animate-float: float 8s ease-in-out infinite;
+    --animate-float-delayed: float-delayed 10s ease-in-out infinite;
+    --animate-float-slow: float-slow 12s ease-in-out infinite;
+    --animate-breathe: breathe 6s ease-in-out infinite;
+    --animate-squish: squish 0.2s ease-out;
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0) rotate(0deg);
+        }
+
+        50% {
+            transform: translateY(-20px) rotate(2deg);
+        }
+    }
+
+    @keyframes float-delayed {
+
+        0%,
+        100% {
+            transform: translateY(0) rotate(0deg);
+        }
+
+        50% {
+            transform: translateY(-15px) rotate(-2deg);
+        }
+    }
+
+    @keyframes float-slow {
+
+        0%,
+        100% {
+            transform: translateY(0) rotate(0deg);
+        }
+
+        50% {
+            transform: translateY(-30px) rotate(5deg);
+        }
+    }
+
+    @keyframes breathe {
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.02);
+        }
+    }
+
+    @keyframes squish {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(0.92);
+        }
+
+        100% {
+            transform: scale(0.92);
+        }
+    }
 }
 
 /* ============================================
-   Role-Based Themes (CSS Variables Override)
+   High-Fidelity Shadow Engine (The Core)
    ============================================ */
-/* Mentor Theme: Purple/Violet */
-.theme-mentor {
-    --color-primary-50: #faf5ff;
-    --color-primary-100: #f3e8ff;
-    --color-primary-200: #e9d5ff;
-    --color-primary-300: #d8b4fe;
-    --color-primary-400: #c084fc;
-    --color-primary-500: #a855f7;
-    --color-primary-600: #9333ea;
-    --color-primary-700: #7e22ce;
-}
+@layer utilities {
 
-/* Team Manager Theme: Cyan/Teal */
-.theme-manager {
-    --color-primary-50: #ecfeff;
-    --color-primary-100: #cffafe;
-    --color-primary-200: #a5f3fc;
-    --color-primary-300: #67e8f9;
-    --color-primary-400: #22d3ee;
-    --color-primary-500: #06b6d4;
-    --color-primary-600: #0891b2;
-    --color-primary-700: #0e7490;
-}
+    /* 1. Deep Clay (Surface/Backgrounds) - Ambient glow, no offset */
+    .shadow-clay-deep {
+        box-shadow:
+            0 25px 50px -12px rgba(0, 0, 0, 0.15),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
 
+    /* 2. Clay Card (Floating Content) - Soft centered shadow */
+    .shadow-clay-card {
+        box-shadow:
+            0 10px 40px -10px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.5);
+    }
+
+    /* 3. Clay Card Hover (Lifted) */
+    .shadow-clay-card-hover {
+        box-shadow:
+            0 20px 50px -15px rgba(0, 0, 0, 0.12),
+            0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+
+    /* 4. Clay Button (Convex) - Subtle purple glow */
+    .shadow-clay-btn {
+        box-shadow:
+            0 8px 24px -4px rgba(124, 58, 237, 0.25),
+            0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    /* 5. Clay Button Hover */
+    .shadow-clay-btn-hover {
+        box-shadow:
+            0 12px 32px -4px rgba(124, 58, 237, 0.35),
+            0 0 0 1px rgba(255, 255, 255, 0.3);
+    }
+
+    /* 6. Clay Pressed (Fields) - Very subtle inner shadow */
+    .shadow-clay-pressed {
+        box-shadow:
+            inset 0 2px 6px rgba(0, 0, 0, 0.04),
+            0 0 0 1px rgba(255, 255, 255, 0.5);
+    }
+
+    /* Premium shadow for inputs/search */
+    .shadow-premium {
+        box-shadow:
+            0 4px 20px -2px rgba(0, 0, 0, 0.06),
+            0 0 0 1px rgba(255, 255, 255, 0.8);
+    }
+}
 
 /* ============================================
-   Custom Utilities & Components
+   Global Reset & Typography
+   ============================================ */
+@layer base {
+    body {
+        @apply bg-[#F4F1FA] text-clay-foreground font-sans antialiased;
+        overflow-x: hidden;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-display font-black tracking-tight text-clay-foreground;
+    }
+
+    /* Smooth Scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Global Selection Color */
+    ::selection {
+        @apply bg-clay-primary text-white;
+    }
+}
+
+/* ============================================
+   Utility Helpers
    ============================================ */
 
-/* 1. 动态渐变网孔背景 */
-.bg-mesh {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #f8faff;
-    background-image:
-        radial-gradient(at 0% 0%, rgba(77, 108, 255, 0.08) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(155, 0, 255, 0.05) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(0, 199, 230, 0.05) 0px, transparent 50%),
-        radial-gradient(at 0% 100%, rgba(77, 108, 255, 0.05) 0px, transparent 50%);
-    z-index: -2;
-    pointer-events: none;
+/* Text Gradient */
+.text-gradient-clay {
+    @apply bg-gradient-to-br from-clay-foreground via-clay-primary to-clay-secondary bg-clip-text text-transparent;
 }
 
-/* 2. 背景点状纹理 */
-.bg-dots {
-    background-image: radial-gradient(var(--color-gray-400) 1px, transparent 1px);
-    background-size: 24px 24px;
+/* Glass Effect Helpers */
+.glass-panel {
+    @apply bg-clay-cardBg backdrop-blur-xl border border-white/40;
 }
 
-/* 3. 玻璃拟态卡片 (Glass Card) */
 .glass-card {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-}
-
-/* 4. 极致卡片 (Premium Card) */
-.card-premium {
-    background: white;
-    border-radius: 1.5rem;
-    /* 24px */
-    border: 1px solid rgba(230, 235, 245, 0.6);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.card-premium:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-premium);
-    border-color: var(--color-primary-100);
-}
-
-/* 5. 渐变按钮 (Gradient Button) */
-.btn-gradient {
-    background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-500) 100%);
-    color: white;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-gradient::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.btn-gradient:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px -4px rgba(77, 108, 255, 0.4);
-}
-
-.btn-gradient:hover::after {
-    opacity: 1;
-}
-
-.btn-gradient:active {
-    transform: translateY(0);
-}
-
-/* ============================================
-   Animations
-   ============================================ */
-
-/* Fade In */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.animate-fadeIn {
-    animation: fadeIn 0.6s ease-out forwards;
-}
-
-/* Fade In Up */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fadeInUp {
-    animation: fadeInUp 0.6s var(--ease-spring) forwards;
-}
-
-/* Fade In Down */
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fadeInDown {
-    animation: fadeInDown 0.6s var(--ease-spring) forwards;
-}
-
-/* Reveal Item (Simple class for JS libraries or stagger) */
-.reveal-item {
-    opacity: 0;
-    animation: fadeInUp 0.8s var(--ease-spring) forwards;
-}
-
-/* Stagger Delays */
-.stagger-delay-1 {
-    animation-delay: 0.1s;
-}
-
-.stagger-delay-2 {
-    animation-delay: 0.2s;
-}
-
-.stagger-delay-3 {
-    animation-delay: 0.3s;
-}
-
-.stagger-delay-4 {
-    animation-delay: 0.4s;
-}
-
-/* ============================================
-   Scrollbar Clean up
-   ============================================ */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--color-gray-200);
-    border-radius: 99px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gray-300);
+    @apply bg-white/50 backdrop-blur-xl;
 }

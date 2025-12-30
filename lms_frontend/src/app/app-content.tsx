@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layouts';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
+import { ClayBackground } from '@/components/layout/clay-background';
 
 /**
  * 应用内容组件（在 Provider 内部）
@@ -22,14 +23,19 @@ export const AppContent: React.FC = () => {
   // 登录页不需要布局
   const isLoginPage = location.pathname === ROUTES.LOGIN;
 
-  if (isAuthenticated && !isLoginPage) {
-    return (
-      <AppLayout>
-        <AppRouter />
-      </AppLayout>
-    );
-  }
+  const content = (isAuthenticated && !isLoginPage) ? (
+    <AppLayout>
+      <AppRouter />
+    </AppLayout>
+  ) : (
+    <AppRouter />
+  );
 
-  return <AppRouter />;
+  return (
+    <>
+      <ClayBackground />
+      {content}
+    </>
+  );
 };
 

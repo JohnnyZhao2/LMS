@@ -327,7 +327,7 @@ export const TaskManagement: React.FC = () => {
 
             {/* 列表主体 */}
             <div className="reveal-item stagger-delay-2">
-                <div className="glass-card rounded-[2.5rem] p-8 border-none shadow-2xl">
+                <div className="glass-card rounded-[2.5rem] p-8 border-none">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
