@@ -29,25 +29,25 @@
   --color-primary-500: #4D6CFF;
   --color-primary-600: #3D5FE6;
   --color-primary-700: #2F4AC7;
-  
+
   /* 成功色 */
   --color-success-50: #E6F9F0;
   --color-success-100: #B8EDCE;
   --color-success-500: #10B759;
   --color-success-600: #0DA34F;
-  
+
   /* 警告色 */
   --color-warning-50: #FFFBEB;
   --color-warning-100: #FFF4C7;
   --color-warning-300: #FFE577;
   --color-warning-500: #F5C200;
-  
+
   /* 错误色 */
   --color-error-50: #FFE9ED;
   --color-error-100: #FFC9D3;
   --color-error-500: #FF3D71;
   --color-error-600: #E6355F;
-  
+
   /* 中性色 */
   --color-gray-50: #F8F9FA;
   --color-gray-100: #F1F3F5;
@@ -59,7 +59,7 @@
   --color-gray-700: #495057;
   --color-gray-800: #343A40;
   --color-gray-900: #212529;
-  
+
   /* ShadCN 需要的颜色变量 */
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(222.2 84% 4.9%);
@@ -78,11 +78,11 @@
   --color-border: hsl(214.3 31.8% 91.4%);
   --color-input: hsl(214.3 31.8% 91.4%);
   --color-ring: hsl(231 100% 65%);
-  
+
   /* 字体 */
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  
+
   /* 圆角 */
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -154,6 +154,7 @@
   --color-pink-500: #FF3D8F;
   --color-cyan-500: #00C7E6;
   --color-orange-500: #FF8C52;
+  --color-orange-600: #E67743;
 
   /* Neutral Colors */
   --color-white: #FFFFFF;
@@ -238,6 +239,37 @@
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-blur: blur(12px);
   --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+
+  /* ============================================
+     Surface & Semantic Colors (Dashboard 专用)
+     ============================================ */
+  /* Surface Colors */
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8F9FA;
+  --color-surface-active: #F1F3F5;
+
+  /* Accent Color (主色调别名) */
+  --color-accent: #4D6CFF;
+
+  /* Border Color */
+  --color-border: #E9ECEF;
+  --color-border-hover: #DEE2E6;
+
+  /* Text Colors (语义化别名) */
+  --color-text-primary: #212529;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #868E96;
+  --color-text-disabled: #ADB5BD;
+  --color-text-inverse: #FFFFFF;
+
+  /* Semantic Status Colors (简化别名) */
+  --color-success: #10B759;
+  --color-warning: #F5C200;
+  --color-error: #FF3D71;
+  --color-info: #4D6CFF;
+
+  /* Font Family Aliases */
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* ============================================
@@ -247,6 +279,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-gray-100 text-foreground font-sans antialiased;
   }
@@ -686,6 +719,3 @@ a:hover {
     font-size: var(--font-size-2xl);
   }
 }
-
-
-

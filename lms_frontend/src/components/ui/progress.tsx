@@ -14,8 +14,8 @@ export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const sizeClasses = {
   sm: 'h-1',
-  default: 'h-2',
-  lg: 'h-3',
+  default: 'h-1.5',
+  lg: 'h-2',
 };
 
 /**
@@ -30,7 +30,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       max = 100,
       showInfo = false,
       strokeColor = 'var(--color-primary-500)',
-      trailColor = 'var(--color-gray-100)',
+      trailColor = 'var(--color-gray-200)',
       size = 'default',
       ...props
     },
