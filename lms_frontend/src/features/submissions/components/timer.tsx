@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Typography } from 'antd';
-import { ClockCircleOutlined, WarningOutlined } from '@ant-design/icons';
-
-const { Text } = Typography;
+import { Clock, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TimerProps {
   remainingSeconds: number;
@@ -55,57 +53,33 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
 
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--spacing-2)',
-        padding: 'var(--spacing-2) var(--spacing-4)',
-        borderRadius: 'var(--radius-full)',
-        background: isCritical
-          ? 'var(--color-error-50)'
-          : isWarning
-            ? 'var(--color-warning-50)'
-            : 'rgba(255, 255, 255, 0.1)',
-        border: `1px solid ${
-          isCritical
-            ? 'var(--color-error-300)'
-            : isWarning
-              ? 'var(--color-warning-300)'
-              : 'rgba(255, 255, 255, 0.2)'
-        }`,
-        animation: isCritical ? 'pulse 1s ease-in-out infinite' : undefined,
-      }}
+      className={cn(
+        'flex items-center gap-2 px-4 py-2 rounded-full border',
+        isCritical && 'bg-error-50 border-error-300 animate-pulse',
+        isWarning && !isCritical && 'bg-warning-50 border-warning-300',
+        !isWarning && 'bg-white/10 border-white/20'
+      )}
     >
       {isCritical ? (
-        <WarningOutlined
-          style={{
-            color: 'var(--color-error-500)',
-            fontSize: 16,
-          }}
-        />
+        <AlertTriangle className="w-4 h-4 text-error-500" />
       ) : (
-        <ClockCircleOutlined
-          style={{
-            color: isWarning ? 'var(--color-warning-600)' : 'white',
-            fontSize: 16,
-          }}
+        <Clock
+          className={cn(
+            'w-4 h-4',
+            isWarning ? 'text-warning-600' : 'text-white'
+          )}
         />
       )}
-      <Text
-        strong
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--font-size-lg)',
-          color: isCritical
-            ? 'var(--color-error-600)'
-            : isWarning
-              ? 'var(--color-warning-600)'
-              : 'white',
-          letterSpacing: '0.5px',
-        }}
+      <span
+        className={cn(
+          'font-mono text-lg font-semibold tracking-wide',
+          isCritical && 'text-error-600',
+          isWarning && !isCritical && 'text-warning-600',
+          !isWarning && 'text-white'
+        )}
       >
         {formatTime(seconds)}
-      </Text>
+      </span>
     </div>
   );
 };

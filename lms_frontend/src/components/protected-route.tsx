@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Spinner } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { RoleCode } from '@/types/api';
 
@@ -16,8 +16,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Spin size="large" />
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner size="lg" />
       </div>
     );
   }

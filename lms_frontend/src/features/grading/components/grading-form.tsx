@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Typography, InputNumber, Input, Spin, message, Row, Col, Descriptions } from 'antd';
-import { CheckCircleOutlined } from '@ant-design/icons';
+import { toast } from 'sonner';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+
 import { useGradingDetail } from '../api/get-grading-detail';
 import { useSubmitGrade } from '../api/submit-grade';
 import type { Answer } from '@/types/api';
 
-const { Title, Text } = Typography;
-const { TextArea } = Input;
-
 /**
- * 评分表单组件
+ * 评分表单组件（ShadCN UI 版本）
  */
 export const GradingForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +35,7 @@ export const GradingForm: React.FC = () => {
   const handleSubmit = async (answerId: number) => {
     const grade = grades[answerId];
     if (!grade) {
-      message.error('请填写分数');
+      toast.error('请填写分数');
       return;
     }
 
@@ -43,9 +48,9 @@ export const GradingForm: React.FC = () => {
           comment: grade.comment,
         },
       });
-      message.success('评分成功');
-    } catch (error) {
-      message.error('评分失败');
+      toast.success('评分成功');
+    } catch {
+      toast.error('评分失败');
     }
   };
 
@@ -54,103 +59,137 @@ export const GradingForm: React.FC = () => {
   };
 
   if (isLoading) {
-    return <Spin />;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-32" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!data) {
-    return <div>提交记录不存在</div>;
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-gray-500">提交记录不存在</CardContent>
+      </Card>
+    );
   }
 
   // 筛选出需要评分的主观题
   const subjectiveAnswers = data.answers.filter((a) => a.question_type === 'SHORT_ANSWER');
 
   return (
-    <div>
-      <Title level={2}>评分详情</Title>
-      <Card style={{ marginBottom: 16 }}>
-        <Descriptions column={2}>
-          <Descriptions.Item label="学员">{data.user_name}</Descriptions.Item>
-          <Descriptions.Item label="试卷">{data.quiz_title}</Descriptions.Item>
-          <Descriptions.Item label="任务">{data.task_title}</Descriptions.Item>
-          <Descriptions.Item label="总分">{data.total_score}</Descriptions.Item>
-        </Descriptions>
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" onClick={() => navigate('/grading')}>
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          返回列表
+        </Button>
+        <h1 className="text-2xl font-semibold m-0">评分详情</h1>
+      </div>
+
+      {/* 基本信息卡片 */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody>
+                <tr className="border-b">
+                  <td className="bg-gray-50 px-4 py-3 font-medium text-gray-600 w-24 border-r">学员</td>
+                  <td className="px-4 py-3 w-1/3">{data.user_name}</td>
+                  <td className="bg-gray-50 px-4 py-3 font-medium text-gray-600 w-24 border-r border-l">试卷</td>
+                  <td className="px-4 py-3">{data.quiz_title}</td>
+                </tr>
+                <tr>
+                  <td className="bg-gray-50 px-4 py-3 font-medium text-gray-600 border-r">任务</td>
+                  <td className="px-4 py-3">{data.task_title}</td>
+                  <td className="bg-gray-50 px-4 py-3 font-medium text-gray-600 border-r border-l">总分</td>
+                  <td className="px-4 py-3">{data.total_score}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
       </Card>
 
+      {/* 主观题评分 */}
       {subjectiveAnswers.length === 0 ? (
         <Card>
-          <Text>没有需要评分的主观题</Text>
+          <CardContent className="p-6 text-center text-gray-500">没有需要评分的主观题</CardContent>
         </Card>
       ) : (
         subjectiveAnswers.map((answer, index) => (
-          <Card key={answer.id} style={{ marginBottom: 16 }}>
-            <Title level={5}>
-              {index + 1}. {answer.question_content}
-              <Text type="secondary" style={{ marginLeft: 8, fontWeight: 'normal' }}>
-                ({answer.score}分)
-              </Text>
-            </Title>
-            <div
-              style={{
-                padding: 12,
-                background: '#f6f6f6',
-                borderRadius: 4,
-                marginTop: 8,
-                marginBottom: 16,
-              }}
-            >
-              <Text strong>学员答案:</Text>
-              <div style={{ marginTop: 8 }}>
-                {(answer.user_answer?.value as string) || '未作答'}
+          <Card key={answer.id}>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-sm font-semibold">
+                  {index + 1}
+                </span>
+                <span className="flex-1">{answer.question_content}</span>
+                <span className="text-sm font-normal text-gray-500">({answer.score}分)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* 学员答案 */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <Label className="text-sm font-medium text-gray-700">学员答案:</Label>
+                <div className="mt-2 text-gray-900 whitespace-pre-wrap">
+                  {(answer.user_answer?.value as string) || '未作答'}
+                </div>
               </div>
-            </div>
-            <Row gutter={16} align="middle">
-              <Col>
-                <Text>得分:</Text>
-                <InputNumber
-                  min={0}
-                  max={Number(answer.score)}
-                  value={grades[answer.id]?.score ? Number(grades[answer.id].score) : undefined}
-                  onChange={(value) => handleGrade(answer.id, String(value || 0), grades[answer.id]?.comment)}
-                  style={{ marginLeft: 8, width: 80 }}
-                />
-                <Text type="secondary" style={{ marginLeft: 4 }}>
-                  / {answer.score}
-                </Text>
-              </Col>
-              <Col>
-                <Button size="small" onClick={() => handleFullScore(answer)}>
+
+              {/* 评分输入 */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor={`score-${answer.id}`}>得分:</Label>
+                  <Input
+                    id={`score-${answer.id}`}
+                    type="number"
+                    min={0}
+                    max={Number(answer.score)}
+                    value={grades[answer.id]?.score || ''}
+                    onChange={(e) => handleGrade(answer.id, e.target.value, grades[answer.id]?.comment)}
+                    className="w-20"
+                  />
+                  <span className="text-gray-500">/ {answer.score}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handleFullScore(answer)}>
                   一键满分
                 </Button>
-              </Col>
-            </Row>
-            <div style={{ marginTop: 12 }}>
-              <Text>评语:</Text>
-              <TextArea
-                rows={2}
-                placeholder="输入评语（可选）"
-                value={grades[answer.id]?.comment || ''}
-                onChange={(e) =>
-                  handleGrade(answer.id, grades[answer.id]?.score || '0', e.target.value)
-                }
-                style={{ marginTop: 8 }}
-              />
-            </div>
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleSubmit(answer.id)}
-              loading={submitGrade.isPending}
-              style={{ marginTop: 12 }}
-            >
-              确认评分
-            </Button>
+              </div>
+
+              {/* 评语输入 */}
+              <div className="space-y-2">
+                <Label htmlFor={`comment-${answer.id}`}>评语:</Label>
+                <Textarea
+                  id={`comment-${answer.id}`}
+                  rows={2}
+                  placeholder="输入评语（可选）"
+                  value={grades[answer.id]?.comment || ''}
+                  onChange={(e) => handleGrade(answer.id, grades[answer.id]?.score || '0', e.target.value)}
+                />
+              </div>
+
+              {/* 确认评分按钮 */}
+              <Button onClick={() => handleSubmit(answer.id)} disabled={submitGrade.isPending}>
+                <CheckCircle className="w-4 h-4 mr-1" />
+                确认评分
+              </Button>
+            </CardContent>
           </Card>
         ))
       )}
-
-      <Button onClick={() => navigate('/grading')}>返回列表</Button>
     </div>
   );
 };
-
-

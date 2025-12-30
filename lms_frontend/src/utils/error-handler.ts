@@ -1,5 +1,5 @@
 import { ApiError } from '@/lib/api-client';
-import { message } from 'antd';
+import { toast } from 'sonner';
 
 /**
  * 后端错误响应格式
@@ -68,9 +68,9 @@ export function showApiError(error: unknown, defaultMessage?: string): void {
     }
 
     const errorMessage = extractErrorMessage(error.data);
-    message.error(errorMessage || defaultMessage || '操作失败');
+    toast.error(errorMessage || defaultMessage || '操作失败');
   } else {
-    message.error(defaultMessage || '网络错误，请稍后重试');
+    toast.error(defaultMessage || '网络错误，请稍后重试');
   }
 }
 

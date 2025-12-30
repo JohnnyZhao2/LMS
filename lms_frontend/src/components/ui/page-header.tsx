@@ -1,9 +1,6 @@
 import React from 'react';
-import { Breadcrumb, Typography, Space } from 'antd';
 import { Link } from 'react-router-dom';
-import { HomeOutlined } from '@ant-design/icons';
-
-const { Title, Text } = Typography;
+import { Home, ChevronRight } from 'lucide-react';
 
 export interface BreadcrumbItem {
   title: string;
@@ -52,34 +49,33 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     >
       {/* 面包屑 */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <Breadcrumb
+        <nav
+          className="flex items-center gap-2 text-sm"
           style={{ marginBottom: 'var(--spacing-3)' }}
-          items={[
-            {
-              title: (
-                <Link to="/dashboard">
-                  <HomeOutlined />
-                </Link>
-              ),
-            },
-            ...breadcrumbs.map((item, index) => ({
-              title: item.path ? (
-                <Link to={item.path}>
-                  <Space size={4}>
-                    {item.icon}
-                    <span>{item.title}</span>
-                  </Space>
-                </Link>
-              ) : (
-                <Space size={4}>
+        >
+          <Link to="/dashboard" className="text-gray-500 hover:text-primary-500 transition-colors">
+            <Home className="w-4 h-4" />
+          </Link>
+          {breadcrumbs.map((item, index) => (
+            <React.Fragment key={index}>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+              {item.path ? (
+                <Link
+                  to={item.path}
+                  className="flex items-center gap-1 text-gray-500 hover:text-primary-500 transition-colors"
+                >
                   {item.icon}
                   <span>{item.title}</span>
-                </Space>
-              ),
-              key: index,
-            })),
-          ]}
-        />
+                </Link>
+              ) : (
+                <span className="flex items-center gap-1 text-gray-700">
+                  {item.icon}
+                  <span>{item.title}</span>
+                </span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
       )}
 
       {/* 标题区域 */}
@@ -93,8 +89,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         }}
       >
         <div>
-          <Title
-            level={2}
+          <h2
             style={{
               margin: 0,
               marginBottom: subtitle ? 'var(--spacing-1)' : 0,
@@ -116,24 +111,24 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
                   borderRadius: 'var(--radius-lg)',
                   background: 'var(--color-primary-50)',
                   color: 'var(--color-primary-500)',
-                  fontSize: 20,
                 }}
               >
                 {icon}
               </span>
             )}
             {title}
-          </Title>
+          </h2>
           {subtitle && (
-            <Text
-              type="secondary"
+            <p
               style={{
+                margin: 0,
                 fontSize: 'var(--font-size-base)',
                 marginLeft: icon ? 52 : 0,
+                color: 'var(--color-gray-500)',
               }}
             >
               {subtitle}
-            </Text>
+            </p>
           )}
         </div>
 

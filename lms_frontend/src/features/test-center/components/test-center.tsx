@@ -1,12 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import { Button, Card, Input, Space, Row, Col } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { Plus, Search } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QuestionTab } from './question-tab';
 import { QuizTab } from './quiz-tab';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /**
- * 测试中心统一页面
+ * 测试中心统一页面 - ShadCN UI 版本
  * 包含题目管理和试卷管理两个标签页
  * 采用固定导航栏 + 分屏布局
  */
@@ -15,8 +17,6 @@ export const TestCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'questions';
   const [search, setSearch] = useState('');
-
-
 
   /**
    * 快速发布完成后的回调
@@ -51,52 +51,54 @@ export const TestCenter: React.FC = () => {
   return (
     <div style={{ height: 'calc(100vh - var(--header-height) - 48px)', display: 'flex', flexDirection: 'column' }}>
       {/* 顶部导航栏 */}
-      <Card styles={{ body: { padding: '16px 24px' } }} style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space size="middle">
+      <Card className="mb-4">
+        <CardContent className="py-4 px-6">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-3">
               <Button
-                type={activeTab === 'questions' ? 'primary' : 'default'}
+                variant={activeTab === 'questions' ? 'default' : 'outline'}
                 onClick={() => handleTabChange('questions')}
               >
                 题库治理
               </Button>
               <Button
-                type={activeTab === 'quizzes' ? 'primary' : 'default'}
+                variant={activeTab === 'quizzes' ? 'default' : 'outline'}
                 onClick={() => handleTabChange('quizzes')}
               >
                 试卷管理
               </Button>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              <Input
-                placeholder={activeTab === 'questions' ? '搜索题目...' : '搜索试卷...'}
-                prefix={<SearchOutlined />}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ width: 250 }}
-                allowClear
-              />
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-              >
+            </div>
+            <div className="flex gap-3">
+              <div className="relative w-62.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder={activeTab === 'questions' ? '搜索题目...' : '搜索试卷...'}
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <Button onClick={handleAdd}>
+                <Plus className="h-4 w-4 mr-2" />
                 {activeTab === 'questions' ? '新建题目' : '新建试卷'}
               </Button>
-            </Space>
-          </Col>
-        </Row>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* 内容区域 */}
       <div style={{ flex: 1, minHeight: 0 }}>
         {activeTab === 'questions' ? (
-          <QuestionTab
-            search={search}
-          />
+          <QuestionTab search={search} />
         ) : (
           <QuizTab onQuickPublish={handleQuickPublish} search={search} />
         )}
@@ -104,3 +106,5 @@ export const TestCenter: React.FC = () => {
     </div>
   );
 };
+
+export default TestCenter;

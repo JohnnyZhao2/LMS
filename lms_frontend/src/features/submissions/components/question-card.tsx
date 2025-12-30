@@ -1,9 +1,10 @@
-import { Radio, Checkbox, Input, Typography } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { CheckCircle, XCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type { Answer } from '@/types/api';
-
-const { Title, Text } = Typography;
-const { TextArea } = Input;
 
 type OptionItem = { key: string; label: string };
 
@@ -31,23 +32,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   showResult = false,
   isDarkMode = false,
 }) => {
-  const textColor = isDarkMode ? 'white' : 'var(--color-gray-900)';
   const questionScore = (answer.question_score as string | number | undefined) ?? answer.score;
-  const secondaryColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'var(--color-gray-600)';
-  const optionBg = isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'var(--color-gray-50)';
-  const optionBorder = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-gray-200)';
-
-  const optionStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'flex-start',
-    padding: 'var(--spacing-4)',
-    marginBottom: 'var(--spacing-2)',
-    borderRadius: 'var(--radius-lg)',
-    background: optionBg,
-    border: `1px solid ${optionBorder}`,
-    transition: 'all var(--transition-fast)',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-  };
 
   const normalizeOptions = (): OptionItem[] => {
     if (!answer.question_options) {
@@ -145,133 +130,172 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     return '';
   };
 
-  const renderQuestion = () => {
+  const handleMultipleChoiceChange = (key: string, checked: boolean) => {
+    const currentValues = getMultipleChoiceValue();
+    if (checked) {
+      onAnswerChange([...currentValues, key]);
+    } else {
+      onAnswerChange(currentValues.filter((v) => v !== key));
+    }
+  };
 
+  const renderQuestion = () => {
     switch (answer.question_type) {
       case 'SINGLE_CHOICE': {
         const singleValue = getSingleChoiceValue();
         return (
-          <Radio.Group
+          <RadioGroup
             value={singleValue}
-            onChange={(e) => onAnswerChange(e.target.value)}
+            onValueChange={onAnswerChange}
             disabled={disabled}
-            style={{ width: '100%' }}
+            className="flex flex-col gap-2"
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
-              {optionItems.map(({ key, label }) => (
-                  <label
-                    key={key}
-                    style={{
-                      ...optionStyle,
-                      borderColor: singleValue === key ? 'var(--color-primary-500)' : optionBorder,
-                      background: singleValue === key
-                        ? (isDarkMode ? 'rgba(77, 108, 255, 0.15)' : 'var(--color-primary-50)')
-                        : optionBg,
-                    }}
-                  >
-                    <Radio value={key} style={{ color: textColor }}>
-                      <span style={{ color: textColor, fontWeight: 500 }}>{key}.</span>{' '}
-                      <span style={{ color: textColor }}>{label}</span>
-                    </Radio>
-                  </label>
-                ))}
-            </div>
-          </Radio.Group>
+            {optionItems.map(({ key, label }) => {
+              const isSelected = singleValue === key;
+              return (
+                <label
+                  key={key}
+                  className={cn(
+                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer',
+                    isDarkMode
+                      ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+                    isSelected && (isDarkMode
+                      ? 'border-primary-500 bg-primary-500/15'
+                      : 'border-primary-500 bg-primary-50'),
+                    disabled && 'cursor-not-allowed opacity-60'
+                  )}
+                >
+                  <RadioGroupItem value={key} id={`option-${answer.id}-${key}`} />
+                  <span className={cn(
+                    'flex-1',
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  )}>
+                    <span className="font-medium">{key}.</span>{' '}
+                    <span>{label}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </RadioGroup>
         );
       }
 
       case 'MULTIPLE_CHOICE': {
         const multipleValue = getMultipleChoiceValue();
         return (
-          <Checkbox.Group
-            value={multipleValue}
-            onChange={(values) => onAnswerChange(values)}
-            disabled={disabled}
-            style={{ width: '100%' }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
-              {optionItems.map(({ key, label }) => {
-                  const isSelected = multipleValue.includes(key);
-                  return (
-                    <label
-                      key={key}
-                      style={{
-                        ...optionStyle,
-                        borderColor: isSelected ? 'var(--color-primary-500)' : optionBorder,
-                        background: isSelected ? (isDarkMode ? 'rgba(77, 108, 255, 0.15)' : 'var(--color-primary-50)') : optionBg,
-                      }}
-                    >
-                      <Checkbox value={key} style={{ color: textColor }}>
-                        <span style={{ color: textColor, fontWeight: 500 }}>{key}.</span>{' '}
-                        <span style={{ color: textColor }}>{label}</span>
-                      </Checkbox>
-                    </label>
-                  );
-                })}
-            </div>
-          </Checkbox.Group>
+          <div className="flex flex-col gap-2">
+            {optionItems.map(({ key, label }) => {
+              const isSelected = multipleValue.includes(key);
+              return (
+                <label
+                  key={key}
+                  className={cn(
+                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer',
+                    isDarkMode
+                      ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+                    isSelected && (isDarkMode
+                      ? 'border-primary-500 bg-primary-500/15'
+                      : 'border-primary-500 bg-primary-50'),
+                    disabled && 'cursor-not-allowed opacity-60'
+                  )}
+                >
+                  <Checkbox
+                    id={`option-${answer.id}-${key}`}
+                    checked={isSelected}
+                    onCheckedChange={(checked) =>
+                      handleMultipleChoiceChange(key, checked === true)
+                    }
+                    disabled={disabled}
+                  />
+                  <span className={cn(
+                    'flex-1',
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  )}>
+                    <span className="font-medium">{key}.</span>{' '}
+                    <span>{label}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
         );
       }
 
-      case 'TRUE_FALSE':
+      case 'TRUE_FALSE': {
+        const trueFalseValue = getTrueFalseValue();
         return (
-          <Radio.Group
-            value={getTrueFalseValue()}
-            onChange={(e) => onAnswerChange(e.target.value)}
+          <RadioGroup
+            value={trueFalseValue}
+            onValueChange={onAnswerChange}
             disabled={disabled}
-            style={{ width: '100%' }}
+            className="flex gap-4"
           >
-            <div style={{ display: 'flex', gap: 'var(--spacing-4)' }}>
-              <label
-                style={{
-                  ...optionStyle,
-                  flex: 1,
-                  justifyContent: 'center',
-                  borderColor: getTrueFalseValue() === 'TRUE' ? 'var(--color-success-500)' : optionBorder,
-                  background: getTrueFalseValue() === 'TRUE'
-                    ? (isDarkMode ? 'rgba(16, 183, 89, 0.15)' : 'var(--color-success-50)')
-                    : optionBg,
-                }}
+            <label
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer',
+                isDarkMode
+                  ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+                trueFalseValue === 'TRUE' && (isDarkMode
+                  ? 'border-green-500 bg-green-500/15'
+                  : 'border-green-500 bg-green-50'),
+                disabled && 'cursor-not-allowed opacity-60'
+              )}
+            >
+              <RadioGroupItem value="TRUE" id={`true-${answer.id}`} />
+              <Label
+                htmlFor={`true-${answer.id}`}
+                className={cn(
+                  'font-medium cursor-pointer',
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                )}
               >
-                <Radio value="TRUE">
-                  <span style={{ color: textColor, fontWeight: 500 }}>✓ 正确</span>
-                </Radio>
-              </label>
-              <label
-                style={{
-                  ...optionStyle,
-                  flex: 1,
-                  justifyContent: 'center',
-                  borderColor: getTrueFalseValue() === 'FALSE' ? 'var(--color-error-500)' : optionBorder,
-                  background: getTrueFalseValue() === 'FALSE'
-                    ? (isDarkMode ? 'rgba(255, 61, 113, 0.15)' : 'var(--color-error-50)')
-                    : optionBg,
-                }}
+                ✓ 正确
+              </Label>
+            </label>
+            <label
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer',
+                isDarkMode
+                  ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
+                trueFalseValue === 'FALSE' && (isDarkMode
+                  ? 'border-red-500 bg-red-500/15'
+                  : 'border-red-500 bg-red-50'),
+                disabled && 'cursor-not-allowed opacity-60'
+              )}
+            >
+              <RadioGroupItem value="FALSE" id={`false-${answer.id}`} />
+              <Label
+                htmlFor={`false-${answer.id}`}
+                className={cn(
+                  'font-medium cursor-pointer',
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                )}
               >
-                <Radio value="FALSE">
-                  <span style={{ color: textColor, fontWeight: 500 }}>✗ 错误</span>
-                </Radio>
-              </label>
-            </div>
-          </Radio.Group>
+                ✗ 错误
+              </Label>
+            </label>
+          </RadioGroup>
         );
+      }
 
       case 'SHORT_ANSWER':
         return (
-          <TextArea
+          <Textarea
             value={getShortAnswerValue()}
             onChange={(e) => onAnswerChange(e.target.value)}
             rows={6}
             placeholder="请在此输入您的答案..."
             disabled={disabled}
-            style={{
-              background: optionBg,
-              border: `1px solid ${optionBorder}`,
-              borderRadius: 'var(--radius-lg)',
-              color: textColor,
-              fontSize: 'var(--font-size-base)',
-              padding: 'var(--spacing-4)',
-            }}
+            className={cn(
+              'text-base',
+              isDarkMode
+                ? 'bg-white/5 border-white/10 text-white placeholder:text-white/40'
+                : 'bg-gray-50 border-gray-200 text-gray-900'
+            )}
           />
         );
 
@@ -283,18 +307,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   return (
     <div>
       {/* 题目内容 */}
-      <div style={{ marginBottom: 'var(--spacing-5)' }}>
-        <Title
-          level={5}
-          style={{
-            color: textColor,
-            margin: 0,
-            lineHeight: 1.6,
-            fontWeight: 500,
-          }}
+      <div className="mb-5">
+        <h5
+          className={cn(
+            'text-base font-medium leading-relaxed m-0',
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          )}
         >
           {answer.question_content}
-        </Title>
+        </h5>
       </div>
 
       {/* 答题区 */}
@@ -303,39 +324,39 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {/* 结果展示 */}
       {showResult && (
         <div
-          style={{
-            marginTop: 'var(--spacing-5)',
-            padding: 'var(--spacing-4)',
-            background: answer.is_correct
-              ? (isDarkMode ? 'rgba(16, 183, 89, 0.1)' : 'var(--color-success-50)')
-              : (isDarkMode ? 'rgba(255, 61, 113, 0.1)' : 'var(--color-error-50)'),
-            borderRadius: 'var(--radius-lg)',
-            border: `1px solid ${answer.is_correct ? 'var(--color-success-300)' : 'var(--color-error-300)'}`,
-          }}
+          className={cn(
+            'mt-5 p-4 rounded-lg border',
+            answer.is_correct
+              ? (isDarkMode ? 'bg-green-500/10 border-green-300' : 'bg-green-50 border-green-300')
+              : (isDarkMode ? 'bg-red-500/10 border-red-300' : 'bg-red-50 border-red-300')
+          )}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+          <div className="flex items-center gap-2 mb-2">
             {answer.is_correct ? (
-              <CheckCircleOutlined style={{ color: 'var(--color-success-500)', fontSize: 18 }} />
+              <CheckCircle className="w-4.5 h-4.5 text-green-500" />
             ) : (
-              <CloseCircleOutlined style={{ color: 'var(--color-error-500)', fontSize: 18 }} />
+              <XCircle className="w-4.5 h-4.5 text-red-500" />
             )}
-            <Text
-              strong
-              style={{
-                color: answer.is_correct ? 'var(--color-success-600)' : 'var(--color-error-600)',
-              }}
+            <span
+              className={cn(
+                'font-semibold',
+                answer.is_correct ? 'text-green-600' : 'text-red-600'
+              )}
             >
               {answer.is_correct ? '回答正确' : '回答错误'}
-            </Text>
-            <Text style={{ color: secondaryColor, marginLeft: 'auto' }}>
+            </span>
+            <span className={cn(
+              'ml-auto',
+              isDarkMode ? 'text-white/60' : 'text-gray-600'
+            )}>
               得分: {answer.obtained_score || 0}/{questionScore ?? '--'}
-            </Text>
+            </span>
           </div>
           {answer.explanation && (
-            <div style={{ marginTop: 'var(--spacing-2)' }}>
-              <Text style={{ color: secondaryColor }}>
+            <div className="mt-2">
+              <span className={isDarkMode ? 'text-white/60' : 'text-gray-600'}>
                 💡 解析: {answer.explanation}
-              </Text>
+              </span>
             </div>
           )}
         </div>

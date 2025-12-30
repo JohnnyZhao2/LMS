@@ -1,100 +1,99 @@
 import { useState } from 'react';
-import { Table, Button, Typography, Empty, Card } from 'antd';
-import { EditOutlined, UserOutlined, FileTextOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Spinner } from '@/components/ui/spinner';
+import { Pencil, User, FileText, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePendingGrading } from '../api/get-pending-grading';
 import { PageHeader, StatusBadge } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { type ColumnDef } from '@tanstack/react-table';
 import type { GradingList as GradingListType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 
-const { Text } = Typography;
-
 /**
- * 待评分列表组件
+ * 待评分列表组件 - ShadCN UI 版本
  */
 export const GradingList: React.FC = () => {
   const [page, setPage] = useState(1);
   const { data, isLoading } = usePendingGrading(page);
   const navigate = useNavigate();
 
-  const columns = [
+  const columns: ColumnDef<GradingListType>[] = [
     {
-      title: '学员',
-      dataIndex: 'user_name',
-      key: 'user_name',
-      render: (text: string) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 600,
-              fontSize: 'var(--font-size-sm)',
-            }}
-          >
-            {text?.charAt(0) || <UserOutlined />}
+      id: 'user_name',
+      header: '学员',
+      cell: ({ row }) => {
+        const record = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%)',
+              }}
+            >
+              {record.user_name?.charAt(0) || <User className="w-4 h-4" />}
+            </div>
+            <span className="font-semibold">{record.user_name}</span>
           </div>
-          <Text strong>{text}</Text>
-        </div>
-      ),
+        );
+      },
     },
     {
-      title: '试卷',
-      dataIndex: 'quiz_title',
-      key: 'quiz_title',
-      render: (text: string) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-          <FileTextOutlined style={{ color: 'var(--color-primary-500)' }} />
-          <Text>{text}</Text>
-        </div>
-      ),
+      id: 'quiz_title',
+      header: '试卷',
+      cell: ({ row }) => {
+        const record = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary-500" />
+            <span>{record.quiz_title}</span>
+          </div>
+        );
+      },
     },
     {
-      title: '任务',
-      dataIndex: 'task_title',
-      key: 'task_title',
+      id: 'task_title',
+      header: '任务',
+      accessorKey: 'task_title',
     },
     {
-      title: '提交时间',
-      dataIndex: 'submitted_at',
-      key: 'submitted_at',
-      render: (text: string) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', color: 'var(--color-gray-500)' }}>
-          <ClockCircleOutlined style={{ fontSize: 12 }} />
-          <span>{text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-'}</span>
-        </div>
-      ),
+      id: 'submitted_at',
+      header: '提交时间',
+      cell: ({ row }) => {
+        const record = row.original;
+        return (
+          <div className="flex items-center gap-2 text-gray-500">
+            <Clock className="w-3 h-3" />
+            <span>{record.submitted_at ? dayjs(record.submitted_at).format('YYYY-MM-DD HH:mm') : '-'}</span>
+          </div>
+        );
+      },
     },
     {
-      title: '状态',
-      key: 'status',
-      render: () => (
+      id: 'status',
+      header: '状态',
+      cell: () => (
         <StatusBadge status="pending" text="待评分" size="small" />
       ),
     },
     {
-      title: '操作',
-      key: 'action',
-      width: 120,
-      render: (_: unknown, record: GradingListType) => (
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() => navigate(`/grading/${record.submission}`)}
-          style={{
-            fontWeight: 600,
-            borderRadius: 'var(--radius-md)',
-          }}
-        >
-          评分
-        </Button>
-      ),
+      id: 'action',
+      header: '操作',
+      size: 120,
+      cell: ({ row }) => {
+        const record = row.original;
+        return (
+          <Button
+            onClick={() => navigate(`/grading/${record.submission}`)}
+            className="font-semibold rounded-md"
+          >
+            <Pencil className="w-4 h-4 mr-2" />
+            评分
+          </Button>
+        );
+      },
     },
   ];
 
@@ -103,37 +102,54 @@ export const GradingList: React.FC = () => {
       <PageHeader
         title="评分中心"
         subtitle="查看待评分的答卷并进行评分"
-        icon={<EditOutlined />}
+        icon={<Pencil className="w-5 h-5" />}
       />
 
       <Card>
-        {data?.results && data.results.length > 0 ? (
-          <Table
-            columns={columns}
-            dataSource={data.results}
-            rowKey="id"
-            loading={isLoading}
-            pagination={{
-              current: page,
-              total: data.count || 0,
-              pageSize: 20,
-              onChange: setPage,
-              showSizeChanger: false,
-              showTotal: (total) => `共 ${total} 份待评分`,
-            }}
-          />
-        ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <div style={{ textAlign: 'center' }}>
-                <Text type="secondary">暂无待评分答卷</Text>
+        <CardContent className="p-6">
+          <Spinner spinning={isLoading}>
+            {data?.results && data.results.length > 0 ? (
+              <div>
+                <DataTable
+                  columns={columns}
+                  data={data.results}
+                />
+                {/* 分页 */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <span className="text-sm text-gray-500">
+                    共 {data.count || 0} 份待评分
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page === 1}
+                      onClick={() => setPage(page - 1)}
+                    >
+                      上一页
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!data.next}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      下一页
+                    </Button>
+                  </div>
+                </div>
               </div>
-            }
-            style={{ padding: 'var(--spacing-12) 0' }}
-          />
-        )}
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                <FileText className="w-12 h-12 text-gray-300 mb-4" />
+                <span className="text-base">暂无待评分答卷</span>
+              </div>
+            )}
+          </Spinner>
+        </CardContent>
       </Card>
     </div>
   );
 };
+
+export default GradingList;

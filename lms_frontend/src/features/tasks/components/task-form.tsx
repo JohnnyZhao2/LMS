@@ -1,35 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Form,
-  Input,
-  DatePicker,
-  Button,
-  message,
-  Spin,
-  Empty,
-  Modal,
-  Checkbox,
-  List,
-  Avatar,
-  Tag,
-  Segmented,
-} from 'antd';
-import {
-  ArrowLeftOutlined,
-  SearchOutlined,
-  PlusOutlined,
-  BookOutlined,
-  FileTextOutlined,
-  DeleteOutlined,
-  UpOutlined,
-  DownOutlined,
-  SendOutlined,
-  LoadingOutlined,
-  AppstoreOutlined,
-  UserAddOutlined,
-  CheckOutlined,
-} from '@ant-design/icons';
+  ArrowLeft,
+  Search,
+  Plus,
+  BookOpen,
+  FileText,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Send,
+  Loader2,
+  LayoutGrid,
+  UserPlus,
+  Check,
+} from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { DatePicker } from '@/components/ui/date-picker';
+
 import { useCreateTask, type TaskCreateRequest } from '../api/create-task';
 import { useUpdateTask } from '../api/update-task';
 import { useTaskDetail } from '../api/get-task-detail';
@@ -42,10 +44,6 @@ import type {
   QuizListItem,
 } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
-import dayjs from '@/lib/dayjs';
-import type { Dayjs } from 'dayjs';
-
-const { TextArea } = Input;
 
 type ResourceType = 'DOCUMENT' | 'QUIZ';
 
@@ -57,28 +55,22 @@ interface SelectedResource {
   category?: string;
 }
 
-interface FormValues {
-  title: string;
-  description?: string;
-  deadline: Dayjs;
-  assignee_ids: number[];
-}
-
 /**
- * TaskForm - Task creation/editing form
- * Uses predefined CSS classes from index.css
+ * TaskForm - Task creation/editing form using ShadCN UI
  */
 export const TaskForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [form] = Form.useForm<FormValues>();
 
   const isEdit = !!id;
   const taskId = isEdit ? Number(id) : 0;
   const paramQuizId = Number(searchParams.get('quiz_id'));
 
-  // State
+  // Form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState<Date | undefined>();
   const [selectedResources, setSelectedResources] = useState<SelectedResource[]>([]);
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
@@ -111,17 +103,21 @@ export const TaskForm: React.FC = () => {
         }]);
       }
     }
-  }, [quizDetail, paramQuizId, isEdit]);
+  }, [quizDetail, paramQuizId, isEdit, selectedResources]);
 
   // Load existing task data for edit mode
   useEffect(() => {
     if (isEdit && task) {
+      setTitle(task.title);
+      setDescription(task.description || '');
+      setDeadline(task.deadline ? new Date(task.deadline) : undefined);
+
       const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => ({
         uid: Date.now() + Math.random() + idx,
         id: item.knowledge,
         title: item.knowledge_title || `Document ${item.knowledge}`,
         resourceType: 'DOCUMENT' as ResourceType,
-        category: (item as any).knowledge_type_display || 'Document',
+        category: (item as { knowledge_type_display?: string }).knowledge_type_display || 'Document',
       }));
 
       const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
@@ -129,21 +125,14 @@ export const TaskForm: React.FC = () => {
         id: item.quiz,
         title: item.quiz_title || `Quiz ${item.quiz}`,
         resourceType: 'QUIZ' as ResourceType,
-        category: `${(item as any).question_count || 0} questions`,
+        category: `${(item as { question_count?: number }).question_count || 0} questions`,
       }));
 
       setSelectedResources([...knowledgeResources, ...quizResources]);
       const assigneeIds = task.assignments?.map((item) => item.assignee) || [];
       setSelectedUserIds(assigneeIds);
-
-      form.setFieldsValue({
-        title: task.title,
-        description: task.description || '',
-        deadline: task.deadline ? dayjs(task.deadline) : undefined,
-        assignee_ids: assigneeIds,
-      });
     }
-  }, [isEdit, task, form]);
+  }, [isEdit, task]);
 
   // Memoized data
   const knowledgeList = useMemo(() => {
@@ -197,7 +186,7 @@ export const TaskForm: React.FC = () => {
 
   // Handlers
   const addResource = (res: { id: number; title: string; resourceType: ResourceType; category?: string }) => {
-    setSelectedResources([...selectedResources, { ...res, uid: Date.now() + Math.random() }]);
+    setSelectedResources(prev => [...prev, { ...res, uid: prev.length + Date.now() }]);
   };
 
   const moveResource = (idx: number, direction: 'up' | 'down') => {
@@ -226,26 +215,34 @@ export const TaskForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (values: FormValues) => {
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      toast.error('请输入任务标题');
+      return;
+    }
+    if (!deadline) {
+      toast.error('请选择截止时间');
+      return;
+    }
     if (selectedResources.length === 0 || selectedUserIds.length === 0) {
-      message.error('请选择资源和指派人员');
+      toast.error('请选择资源和指派人员');
       return;
     }
     try {
       const payload: TaskCreateRequest = {
-        title: values.title,
-        description: values.description || undefined,
-        deadline: values.deadline.toISOString(),
+        title,
+        description: description || undefined,
+        deadline: deadline.toISOString(),
         knowledge_ids: selectedResources.filter(s => s.resourceType === 'DOCUMENT').map(s => s.id),
         quiz_ids: selectedResources.filter(s => s.resourceType === 'QUIZ').map(s => s.id),
         assignee_ids: selectedUserIds,
       };
       if (isEdit) {
         await updateTask.mutateAsync({ taskId, data: payload });
-        message.success('任务更新成功');
+        toast.success('任务更新成功');
       } else {
         await createTask.mutateAsync(payload);
-        message.success('任务发布成功');
+        toast.success('任务发布成功');
       }
       navigate('/tasks');
     } catch (error) {
@@ -256,174 +253,119 @@ export const TaskForm: React.FC = () => {
   // Computed values
   const isLoading = knowledgeQuery.isLoading || quizQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
-  const canSubmit = selectedResources.length > 0 && selectedUserIds.length > 0;
+  const canSubmit = title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0;
   const isAllSelected = modalFilteredUsers.length > 0 && modalFilteredUsers.every(u => selectedUserIds.includes(u.id));
-  const isIndeterminate = modalFilteredUsers.some(u => selectedUserIds.includes(u.id)) && !isAllSelected;
 
   if (taskError) {
     return (
-      <div className="task-form-error">
-        <Empty description="加载任务失败">
-          <Button onClick={() => navigate('/tasks')}>返回</Button>
-        </Empty>
+      <div className="flex flex-col items-center justify-center py-16">
+        <FileText className="w-12 h-12 text-gray-300 mb-4" />
+        <span className="text-gray-500 mb-4">加载任务失败</span>
+        <Button onClick={() => navigate('/tasks')}>返回</Button>
       </div>
     );
   }
 
+
   return (
-    <div className="task-form-container">
+    <div className="flex flex-col min-h-[calc(100vh-var(--header-height))]">
       {/* Header */}
-      <div className="task-form-header">
-        <div className="task-form-header-left">
+      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-4">
           <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/tasks')}
-            className="task-form-back-btn"
-          />
-          <div className="task-form-header-divider" />
-          <h1 className="task-form-title">
+            className="text-gray-600 hover:text-primary-500"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="w-px h-5 bg-gray-200" />
+          <h1 className="text-lg font-semibold text-gray-900">
             {isEdit ? '编辑任务' : '创建任务'}
           </h1>
         </div>
         <Button
-          type="primary"
-          icon={isSubmitting ? <LoadingOutlined /> : <SendOutlined />}
-          loading={isSubmitting}
-          disabled={!canSubmit}
-          onClick={() => form.submit()}
-          size="large"
+          onClick={handleSubmit}
+          disabled={!canSubmit || isSubmitting}
+          className="h-10 px-5"
         >
+          {isSubmitting ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4 mr-2" />
+          )}
           {isEdit ? '保存' : '发布任务'}
         </Button>
       </div>
 
       {/* Body - Three columns */}
-      <Form form={form} layout="vertical" onFinish={handleSubmit} className="task-form-body">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Resource Library */}
-        <div className="task-form-sidebar task-form-sidebar-left">
-          <div className="task-form-section-header">
-            <AppstoreOutlined />
+        <div className="w-80 flex flex-col bg-white border-r border-gray-200 shrink-0">
+          <div className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-gray-900">
+            <LayoutGrid className="w-4 h-4 text-primary-500" />
             资源库
           </div>
 
-          <div className="task-form-search-box">
-            <Input
-              placeholder="搜索文档/测验..."
-              prefix={<SearchOutlined />}
-              value={resourceSearch}
-              onChange={e => setResourceSearch(e.target.value)}
-              allowClear
-            />
+          <div className="px-5 mb-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="搜索文档/测验..."
+                className="pl-9"
+                value={resourceSearch}
+                onChange={e => setResourceSearch(e.target.value)}
+              />
+            </div>
           </div>
 
-          <Segmented
-            block
-            value={resourceType}
-            onChange={(val) => setResourceType(val as 'ALL' | ResourceType)}
-            options={[
-              { label: '全部', value: 'ALL' },
-              { label: '文档', value: 'DOCUMENT' },
-              { label: '测验', value: 'QUIZ' },
-            ]}
-            style={{ marginBottom: 'var(--spacing-4)' }}
-          />
+          <div className="flex gap-1 px-5 mb-4">
+            {(['ALL', 'DOCUMENT', 'QUIZ'] as const).map((type) => (
+              <Button
+                key={type}
+                variant={resourceType === type ? 'default' : 'ghost'}
+                size="sm"
+                className="flex-1"
+                onClick={() => setResourceType(type)}
+              >
+                {type === 'ALL' ? '全部' : type === 'DOCUMENT' ? '文档' : '测验'}
+              </Button>
+            ))}
+          </div>
 
-          <div className="task-form-resource-list">
+          <div className="flex-1 overflow-y-auto px-5 pb-5">
             {isLoading ? (
-              <div className="task-form-loading"><Spin /></div>
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
             ) : availableResources.length === 0 ? (
-              <Empty description="暂无资源" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              availableResources.map(res => (
-                <div
-                  key={`${res.resourceType}-${res.id}`}
-                  className="task-form-resource-item"
-                  onClick={() => addResource(res)}
-                >
-                  <div
-                    className="task-form-resource-icon"
-                    style={{
-                      background: res.resourceType === 'DOCUMENT' ? 'var(--color-success-50)' : 'var(--color-primary-50)',
-                      color: res.resourceType === 'DOCUMENT' ? 'var(--color-success-500)' : 'var(--color-primary-500)',
-                    }}
-                  >
-                    {res.resourceType === 'DOCUMENT' ? <BookOutlined /> : <FileTextOutlined />}
-                  </div>
-                  <div className="task-form-resource-info">
-                    <div className="task-form-resource-title">{res.title}</div>
-                    <div className="task-form-resource-category">{res.category}</div>
-                  </div>
-                  <PlusOutlined style={{ color: 'var(--color-gray-400)' }} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Center - Task Pipeline */}
-        <div className="task-form-main">
-          <div className="task-form-section-header">
-            <BookOutlined />
-            任务流程
-          </div>
-
-          <div className="task-form-pipeline">
-            {selectedResources.length === 0 ? (
-              <div className="task-form-pipeline-empty">
-                <Empty
-                  image={<AppstoreOutlined style={{ fontSize: 64, color: 'var(--color-gray-300)' }} />}
-                  description="从左侧资源库点击添加到任务流程"
-                />
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <FileText className="w-8 h-8 mb-2" />
+                <span className="text-sm">暂无资源</span>
               </div>
             ) : (
-              <div className="task-form-pipeline-list">
-                {selectedResources.length > 1 && <div className="task-form-pipeline-line" />}
-                {selectedResources.map((item, idx) => (
-                  <div key={item.uid} className="task-form-pipeline-item animate-fadeInUp">
-                    <div className="task-form-pipeline-node">
-                      <div
-                        className="task-form-pipeline-node-circle"
-                        style={{
-                          background: item.resourceType === 'DOCUMENT'
-                            ? 'var(--color-success-500)'
-                            : 'var(--color-primary-500)',
-                        }}
-                      >
-                        {item.resourceType === 'DOCUMENT' ? <BookOutlined /> : <FileTextOutlined />}
-                      </div>
+              <div className="space-y-2">
+                {availableResources.map(res => (
+                  <div
+                    key={`${res.resourceType}-${res.id}`}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 cursor-pointer transition-all hover:bg-white hover:shadow-sm"
+                    onClick={() => addResource(res)}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                      style={{
+                        background: res.resourceType === 'DOCUMENT' ? 'var(--color-success-50)' : 'var(--color-primary-50)',
+                        color: res.resourceType === 'DOCUMENT' ? 'var(--color-success-500)' : 'var(--color-primary-500)',
+                      }}
+                    >
+                      {res.resourceType === 'DOCUMENT' ? <BookOpen className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
                     </div>
-                    <div className="task-form-pipeline-card">
-                      <div className="task-form-pipeline-card-content">
-                        <Tag color={item.resourceType === 'DOCUMENT' ? 'green' : 'blue'}>
-                          步骤 {idx + 1}
-                        </Tag>
-                        <div className="task-form-pipeline-card-title">{item.title}</div>
-                      </div>
-                      <div className="task-form-pipeline-card-actions">
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<UpOutlined />}
-                          disabled={idx === 0}
-                          onClick={() => moveResource(idx, 'up')}
-                        />
-                        <Button
-                          type="text"
-                          size="small"
-                          icon={<DownOutlined />}
-                          disabled={idx === selectedResources.length - 1}
-                          onClick={() => moveResource(idx, 'down')}
-                        />
-                        <Button
-                          type="text"
-                          size="small"
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => removeResource(idx)}
-                        />
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">{res.title}</div>
+                      <div className="text-xs text-gray-500">{res.category}</div>
                     </div>
+                    <Plus className="w-4 h-4 text-gray-400" />
                   </div>
                 ))}
               </div>
@@ -431,164 +373,251 @@ export const TaskForm: React.FC = () => {
           </div>
         </div>
 
+        {/* Center - Task Pipeline */}
+        <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
+          <div className="flex items-center gap-2 px-6 py-4 text-sm font-semibold text-gray-900 bg-white border-b border-gray-200">
+            <BookOpen className="w-4 h-4 text-primary-500" />
+            任务流程
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {selectedResources.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <LayoutGrid className="w-16 h-16 mb-4 text-gray-300" />
+                <span className="text-base">从左侧资源库点击添加到任务流程</span>
+              </div>
+            ) : (
+              <div className="relative w-full max-w-[480px] mx-auto pl-12">
+                {selectedResources.length > 1 && (
+                  <div
+                    className="absolute left-[17px] top-[18px] w-0.5 bg-gray-200"
+                    style={{ height: `calc(100% - 36px)` }}
+                  />
+                )}
+                <div className="space-y-4">
+                  {selectedResources.map((item, idx) => (
+                    <div key={item.uid} className="relative flex gap-4 animate-fadeInUp">
+                      <div className="absolute -left-12 top-0 flex flex-col items-center">
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md"
+                          style={{
+                            background: item.resourceType === 'DOCUMENT'
+                              ? 'var(--color-success-500)'
+                              : 'var(--color-primary-500)',
+                          }}
+                        >
+                          {item.resourceType === 'DOCUMENT' ? <BookOpen className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                        </div>
+                      </div>
+                      <div className="flex-1 flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:shadow-md">
+                        <div className="flex-1 min-w-0">
+                          <Badge
+                            variant={item.resourceType === 'DOCUMENT' ? 'default' : 'secondary'}
+                            className={`mb-2 ${item.resourceType === 'DOCUMENT' ? 'bg-green-100 text-green-700 hover:bg-green-100' : 'bg-blue-100 text-blue-700 hover:bg-blue-100'}`}
+                          >
+                            步骤 {idx + 1}
+                          </Badge>
+                          <div className="text-base font-medium text-gray-900 truncate">{item.title}</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={idx === 0}
+                            onClick={() => moveResource(idx, 'up')}
+                          >
+                            <ChevronUp className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={idx === selectedResources.length - 1}
+                            onClick={() => moveResource(idx, 'down')}
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => removeResource(idx)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Right Sidebar - Configuration */}
-        <div className="task-form-sidebar task-form-sidebar-right">
-          <div className="task-form-section-header">
-            <FileTextOutlined />
+        <div className="w-[400px] flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
+          <div className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">
+            <FileText className="w-4 h-4 text-primary-500" />
             配置
           </div>
 
-          <div className="task-form-meta-section">
-            <Form.Item
-              label="任务标题"
-              name="title"
-              rules={[{ required: true, message: '必填' }]}
-            >
-              <Input placeholder="输入任务标题" />
-            </Form.Item>
-
-            <Form.Item
-              label="截止时间"
-              name="deadline"
-              rules={[{ required: true, message: '必填' }]}
-            >
-              <DatePicker
-                showTime
-                placeholder="选择截止时间"
-                style={{ width: '100%' }}
+          <div className="p-5 space-y-4 bg-white rounded-lg mx-5 mt-5 border border-gray-100">
+            <div className="space-y-2">
+              <Label>任务标题</Label>
+              <Input
+                placeholder="输入任务标题"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
               />
-            </Form.Item>
+            </div>
 
-            <Form.Item label="任务描述（可选）" name="description">
-              <TextArea placeholder="添加任务描述..." rows={3} />
-            </Form.Item>
+            <div className="space-y-2">
+              <Label>截止时间</Label>
+              <DatePicker
+                date={deadline}
+                onDateChange={setDeadline}
+                placeholder="选择截止时间"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>任务描述（可选）</Label>
+              <textarea
+                className="w-full p-3 border border-gray-200 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                placeholder="添加任务描述..."
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="task-form-section-header">
-            <UserAddOutlined />
+          <div className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-gray-900 mt-4">
+            <UserPlus className="w-4 h-4 text-primary-500" />
             指派人员
-            <Tag style={{ marginLeft: 'auto' }}>已选 {selectedUserIds.length} 人</Tag>
+            <Badge variant="secondary" className="ml-auto">已选 {selectedUserIds.length} 人</Badge>
           </div>
 
-          <Button
-            block
-            icon={<PlusOutlined />}
-            onClick={() => setIsUserModalOpen(true)}
-            style={{ marginBottom: 'var(--spacing-4)' }}
-          >
-            选择人员
-          </Button>
+          <div className="px-5 mb-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setIsUserModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              选择人员
+            </Button>
+          </div>
 
-          <div className="task-form-selected-users">
+          <div className="px-5 pb-5 max-h-[200px] overflow-y-auto">
             {selectedUserDetails.length === 0 ? (
-              <div className="task-form-no-users">
+              <div className="text-gray-400 text-sm text-center py-4">
                 暂未选择人员
               </div>
             ) : (
-              selectedUserDetails.slice(0, 8).map(u => (
-                <div key={u.id} className="task-form-selected-user">
-                  <Avatar size="small" style={{ background: 'var(--color-primary-500)' }}>
-                    {u.username[0]}
-                  </Avatar>
-                  <div className="task-form-user-info">
-                    <div className="task-form-user-name">{u.username}</div>
-                    <div className="task-form-user-id">{u.employee_id}</div>
+              <div className="space-y-2">
+                {selectedUserDetails.slice(0, 8).map(u => (
+                  <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-primary-500 text-white text-xs">
+                        {u.username[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">{u.username}</div>
+                      <div className="text-xs text-gray-500">{u.employee_id}</div>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-            {selectedUserDetails.length > 8 && (
-              <div className="task-form-no-users">
-                还有 {selectedUserDetails.length - 8} 人
+                ))}
+                {selectedUserDetails.length > 8 && (
+                  <div className="text-gray-400 text-sm text-center py-2">
+                    还有 {selectedUserDetails.length - 8} 人
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
-      </Form>
+      </div>
 
       {/* User Selection Modal */}
-      <Modal
-        title="选择指派人员"
-        open={isUserModalOpen}
-        onCancel={() => setIsUserModalOpen(false)}
-        footer={[
-          <div key="footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--color-gray-500)' }}>
-              已选择 {selectedUserIds.length} 人
-            </span>
-            <Button type="primary" onClick={() => setIsUserModalOpen(false)}>
-              完成
+      <Dialog open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>选择指派人员</DialogTitle>
+          </DialogHeader>
+
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="搜索姓名或工号..."
+                className="pl-9"
+                value={userModalSearch}
+                onChange={e => setUserModalSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={isAllSelected}
+                onCheckedChange={(checked: boolean) => toggleAllUsers(checked)}
+              />
+              <span className="text-sm">全选</span>
+            </div>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-red-500 hover:text-red-600"
+              onClick={() => setSelectedUserIds([])}
+            >
+              清空
             </Button>
           </div>
-        ]}
-        width={560}
-        centered
-      >
-        <div style={{ marginBottom: 'var(--spacing-4)' }}>
-          <Input
-            placeholder="搜索姓名或工号..."
-            prefix={<SearchOutlined />}
-            value={userModalSearch}
-            onChange={e => setUserModalSearch(e.target.value)}
-            allowClear
-          />
-        </div>
 
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 'var(--spacing-3)',
-          paddingBottom: 'var(--spacing-3)',
-          borderBottom: '1px solid var(--color-gray-200)'
-        }}>
-          <Checkbox
-            checked={isAllSelected}
-            indeterminate={isIndeterminate}
-            onChange={e => toggleAllUsers(e.target.checked)}
-          >
-            全选
-          </Checkbox>
-          <Button type="link" size="small" onClick={() => setSelectedUserIds([])} danger>
-            清空
-          </Button>
-        </div>
-
-        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-          <List
-            dataSource={modalFilteredUsers}
-            renderItem={user => {
+          <div className="max-h-[400px] overflow-y-auto space-y-1">
+            {modalFilteredUsers.map(user => {
               const checked = selectedUserIds.includes(user.id);
               return (
-                <List.Item
+                <div
                   key={user.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                    checked ? 'bg-primary-50' : 'hover:bg-gray-50'
+                  }`}
                   onClick={() => toggleUser(user.id)}
-                  style={{
-                    cursor: 'pointer',
-                    background: checked ? 'var(--color-primary-50)' : 'transparent',
-                    padding: 'var(--spacing-3)',
-                    borderRadius: 'var(--radius-md)',
-                    marginBottom: 'var(--spacing-1)',
-                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', width: '100%' }}>
-                    <Checkbox checked={checked} />
-                    <Avatar style={{ background: checked ? 'var(--color-primary-500)' : 'var(--color-gray-300)' }}>
+                  <Checkbox checked={checked} />
+                  <Avatar className={checked ? 'bg-primary-500' : 'bg-gray-300'}>
+                    <AvatarFallback className="text-white">
                       {user.username[0]}
-                    </Avatar>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 500, color: 'var(--color-gray-800)' }}>{user.username}</div>
-                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)' }}>
-                        {user.employee_id} | {user.department?.name || '无部门'}
-                      </div>
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800">{user.username}</div>
+                    <div className="text-xs text-gray-500">
+                      {user.employee_id} | {user.department?.name || '无部门'}
                     </div>
-                    {checked && <CheckOutlined style={{ color: 'var(--color-primary-500)' }} />}
                   </div>
-                </List.Item>
+                  {checked && <Check className="w-4 h-4 text-primary-500" />}
+                </div>
               );
-            }}
-          />
-        </div>
-      </Modal>
+            })}
+          </div>
+
+          <DialogFooter className="flex items-center justify-between mt-4">
+            <span className="text-sm text-gray-500">
+              已选择 {selectedUserIds.length} 人
+            </span>
+            <Button onClick={() => setIsUserModalOpen(false)}>
+              完成
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

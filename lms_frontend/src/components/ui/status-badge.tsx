@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
-  CloseCircleOutlined,
-  InfoCircleOutlined,
-  SyncOutlined,
-} from '@ant-design/icons';
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  XCircle,
+  Info,
+  Loader2,
+} from 'lucide-react';
 
 /**
  * 状态徽章类型
@@ -78,14 +78,14 @@ const statusStyles: Record<StatusType, { bg: string; color: string; border: stri
  * 状态图标映射
  */
 const statusIcons: Record<StatusType, React.ReactNode> = {
-  success: <CheckCircleOutlined />,
-  warning: <ExclamationCircleOutlined />,
-  error: <CloseCircleOutlined />,
-  info: <InfoCircleOutlined />,
-  pending: <ClockCircleOutlined />,
-  open: <ExclamationCircleOutlined />,
-  closed: <CloseCircleOutlined />,
-  processing: <SyncOutlined spin />,
+  success: <CheckCircle className="w-3.5 h-3.5" />,
+  warning: <AlertCircle className="w-3.5 h-3.5" />,
+  error: <XCircle className="w-3.5 h-3.5" />,
+  info: <Info className="w-3.5 h-3.5" />,
+  pending: <Clock className="w-3.5 h-3.5" />,
+  open: <AlertCircle className="w-3.5 h-3.5" />,
+  closed: <XCircle className="w-3.5 h-3.5" />,
+  processing: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
   default: null,
 };
 
@@ -156,7 +156,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       }}
     >
       {showIcon && icon && (
-        <span style={{ display: 'flex', fontSize: currentSize.iconSize }}>{icon}</span>
+        <span style={{ display: 'flex' }}>{icon}</span>
       )}
       {text && <span>{text}</span>}
     </span>

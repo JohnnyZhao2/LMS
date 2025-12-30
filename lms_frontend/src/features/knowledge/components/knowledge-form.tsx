@@ -1,34 +1,45 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Select, Spin, message, Divider, Input, Button, Space, Segmented } from 'antd';
+import { toast } from 'sonner';
 import {
-  CloseOutlined,
-  BoldOutlined,
-  ItalicOutlined,
-  LinkOutlined,
-  UnorderedListOutlined,
-  TableOutlined,
-  FileTextOutlined,
-  SettingOutlined,
-  CheckCircleOutlined,
-  PlusOutlined,
-  SaveOutlined,
-  SendOutlined,
-  OrderedListOutlined,
-  CodeOutlined,
-  StrikethroughOutlined,
-  MenuUnfoldOutlined,
-  CloseCircleOutlined,
-} from '@ant-design/icons';
+  X,
+  Bold,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Table,
+  FileText,
+  Settings,
+  CheckCircle,
+  Plus,
+  Save,
+  Send,
+  Code,
+  Strikethrough,
+  PanelLeftClose,
+  PanelLeft,
+  Loader2,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge, usePublishKnowledge } from '../api/manage-knowledge';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
-import styles from './knowledge-form.module.css';
-
-const { Option } = Select;
 
 /**
  * 编辑模式
@@ -40,20 +51,16 @@ type EditorMode = 'edit' | 'split' | 'preview';
  */
 const htmlToMarkdown = (html: string): string => {
   const markdown = html
-    // 先处理块级元素
     .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n')
     .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n')
     .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n')
     .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '#### $1\n\n')
     .replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, '##### $1\n\n')
     .replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, '###### $1\n\n')
-    // 引用块
     .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, content) => {
       return content.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '> $1\n').trim() + '\n\n';
     })
-    // 代码块
     .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```\n\n')
-    // 列表
     .replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, (_, content) => {
       return content.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n').trim() + '\n\n';
     })
@@ -64,13 +71,9 @@ const htmlToMarkdown = (html: string): string => {
         return `${index}. $1\n`;
       }).trim() + '\n\n';
     })
-    // 段落
     .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
-    // 分隔线
     .replace(/<hr[^>]*\/?>/gi, '---\n\n')
-    // 换行
     .replace(/<br[^>]*\/?>/gi, '\n')
-    // 行内元素
     .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
     .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
     .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
@@ -81,14 +84,11 @@ const htmlToMarkdown = (html: string): string => {
     .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
     .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, '![$2]($1)')
     .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*\/?>/gi, '![$1]($2)')
-    // 清理剩余标签
     .replace(/<[^>]+>/g, '')
-    // 解码 HTML 实体
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
-    // 清理多余空行
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   
@@ -96,26 +96,22 @@ const htmlToMarkdown = (html: string): string => {
 };
 
 /**
- * 简单的 Markdown 渲染（不依赖第三方库）
- * 支持 GitHub Flavored Markdown 常用语法
+ * 简单的 Markdown 渲染
  */
 const renderMarkdown = (markdown: string): string => {
   if (!markdown) return '<p style="color: #656d76; font-style: italic;">暂无内容，开始编辑...</p>';
   
-  // 预处理：保护代码块
   const codeBlocks: string[] = [];
   let html = markdown.replace(/```([\s\S]*?)```/g, (_, code) => {
     codeBlocks.push(code.trim());
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
   
-  // 转义 HTML（在代码块保护之后）
   html = html
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   
-  // 标题（支持 h1-h6）
   html = html
     .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
     .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
@@ -124,15 +120,10 @@ const renderMarkdown = (markdown: string): string => {
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>');
   
-  // 分隔线
   html = html.replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '<hr/>');
-  
-  // 引用块
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>');
-  // 合并连续的引用块
   html = html.replace(/<\/blockquote>\s*<blockquote>/g, '');
   
-  // 粗体和斜体（注意顺序）
   html = html
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/___(.+?)___/g, '<strong><em>$1</em></strong>')
@@ -141,61 +132,21 @@ const renderMarkdown = (markdown: string): string => {
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/_(.+?)_/g, '<em>$1</em>');
   
-  // 删除线
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-  
-  // 行内代码
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   
-  // 链接和图片
   html = html
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   
-  // 任务列表
   html = html
     .replace(/^- \[x\] (.+)$/gm, '<li class="task-item"><input type="checkbox" checked disabled /> $1</li>')
     .replace(/^- \[ \] (.+)$/gm, '<li class="task-item"><input type="checkbox" disabled /> $1</li>');
   
-  // 无序列表
   html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
   html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
-  
-  // 有序列表
   html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
   
-  // 表格处理
-  html = html.replace(/^\|(.+)\|$/gm, (_, content) => {
-    const cells = content.split('|').map((cell: string) => cell.trim());
-    // 检测是否是分隔行
-    if (cells.every((cell: string) => /^[-:]+$/.test(cell))) {
-      return '__TABLE_SEP__';
-    }
-    return `<tr>${cells.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`;
-  });
-  // 将表头后的分隔行转换为 thead
-  html = html.replace(/<tr>(.+?)<\/tr>\s*__TABLE_SEP__/g, '<thead><tr>$1</tr></thead><tbody>');
-  html = html.replace(/__TABLE_SEP__/g, '');
-  // 包装表格
-  html = html.replace(/(<thead>[\s\S]*?<\/thead>[\s\S]*?)(<tr>[\s\S]*?<\/tr>)+/g, (match) => {
-    if (match.includes('<thead>')) {
-      return `<table>${match}</tbody></table>`;
-    }
-    return match;
-  });
-  // 单独的表格行也包装
-  html = html.replace(/(<tr>[\s\S]*?<\/tr>)+(?![\s\S]*<\/tbody>)/g, (match) => {
-    if (!match.includes('<table>')) {
-      return `<table><tbody>${match}</tbody></table>`;
-    }
-    return match;
-  });
-  // 将 td 改为 th（在 thead 中）
-  html = html.replace(/<thead><tr>([\s\S]*?)<\/tr><\/thead>/g, (_, content) => {
-    return `<thead><tr>${content.replace(/<td>/g, '<th>').replace(/<\/td>/g, '</th>')}</tr></thead>`;
-  });
-  
-  // 包装连续的 li 为 ul
   html = html.replace(/(<li>[\s\S]*?<\/li>)+/g, (match) => {
     if (match.includes('task-item')) {
       return `<ul class="task-list">${match}</ul>`;
@@ -203,7 +154,6 @@ const renderMarkdown = (markdown: string): string => {
     return `<ul>${match}</ul>`;
   });
   
-  // 段落处理：将连续的非标签文本包装为 p
   const lines = html.split('\n');
   const processedLines: string[] = [];
   let inParagraph = false;
@@ -247,7 +197,6 @@ const renderMarkdown = (markdown: string): string => {
   
   html = processedLines.join('\n');
   
-  // 还原代码块
   codeBlocks.forEach((code, index) => {
     const escapedCode = code
       .replace(/&/g, '&amp;')
@@ -311,19 +260,13 @@ const parseOutline = (markdown: string): OutlineItem[] => {
 };
 
 /**
- * 知识表单组件
- * 
- * 布局：
- * - 左侧：大面积内容编辑区（Markdown编辑器）
- * - 右侧：元数据面板（分组显示属性）
- * - 顶部：面包屑、状态、操作按钮
+ * 知识表单组件 - ShadCN UI 版本
  */
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = !!id;
 
-  // 编辑器 ref
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const emergencyPreviewRef = useRef<HTMLDivElement>(null);
@@ -337,10 +280,7 @@ export const KnowledgeForm: React.FC = () => {
   const updateKnowledge = useUpdateKnowledge();
   const publishKnowledge = usePublishKnowledge();
 
-  // 编辑模式
   const [editorMode, setEditorMode] = useState<EditorMode>('edit');
-  
-  // 目录面板折叠状态
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
   // 表单状态
@@ -350,11 +290,9 @@ export const KnowledgeForm: React.FC = () => {
   const [systemTagNames, setSystemTagNames] = useState<string[]>([]);
   const [operationTagNames, setOperationTagNames] = useState<string[]>([]);
 
-  // 获取所有标签供选择
   const { data: systemTags = [] } = useSystemTags();
   const { data: operationTags = [] } = useOperationTags();
   
-  // 内容状态
   const [content, setContent] = useState('');
   const [summary, setSummary] = useState('');
   const [faultScenario, setFaultScenario] = useState('');
@@ -363,79 +301,56 @@ export const KnowledgeForm: React.FC = () => {
   const [verificationPlan, setVerificationPlan] = useState('');
   const [recoveryPlan, setRecoveryPlan] = useState('');
 
-  // 应急类知识的当前标签页
   const [activeEmergencyTab, setActiveEmergencyTab] = useState('fault_scenario');
-
-  // 标签输入
   const [systemTagInput, setSystemTagInput] = useState('');
   const [operationTagInput, setOperationTagInput] = useState('');
-
-  // 表单错误
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  /**
-   * 编辑模式下填充数据
-   * 这是表单初始化的标准模式，需要从服务端数据同步到本地状态
-   */
+  // 编辑模式下填充数据
   useEffect(() => {
     if (isEdit && knowledgeDetail) {
-      // 表单初始化：从服务端数据同步到本地状态（这是必要的副作用）
-      const initFormData = () => {
-        setTitle(knowledgeDetail.title || '');
-        setKnowledgeType(knowledgeDetail.knowledge_type);
-        setLineTypeId(knowledgeDetail.line_type?.id);
-        setSystemTagNames(knowledgeDetail.system_tags?.map((t) => t.name) || []);
-        setOperationTagNames(knowledgeDetail.operation_tags?.map((t) => t.name) || []);
-        setContent(knowledgeDetail.content || '');
-        setSummary(knowledgeDetail.summary || '');
-        setFaultScenario(knowledgeDetail.fault_scenario || '');
-        setTriggerProcess(knowledgeDetail.trigger_process || '');
-        setSolution(knowledgeDetail.solution || '');
-        setVerificationPlan(knowledgeDetail.verification_plan || '');
-        setRecoveryPlan(knowledgeDetail.recovery_plan || '');
-      };
-      initFormData();
+      setTitle(knowledgeDetail.title || '');
+      setKnowledgeType(knowledgeDetail.knowledge_type);
+      setLineTypeId(knowledgeDetail.line_type?.id);
+      setSystemTagNames(knowledgeDetail.system_tags?.map((t) => t.name) || []);
+      setOperationTagNames(knowledgeDetail.operation_tags?.map((t) => t.name) || []);
+      setContent(knowledgeDetail.content || '');
+      setSummary(knowledgeDetail.summary || '');
+      setFaultScenario(knowledgeDetail.fault_scenario || '');
+      setTriggerProcess(knowledgeDetail.trigger_process || '');
+      setSolution(knowledgeDetail.solution || '');
+      setVerificationPlan(knowledgeDetail.verification_plan || '');
+      setRecoveryPlan(knowledgeDetail.recovery_plan || '');
     }
   }, [isEdit, knowledgeDetail]);
 
-  /**
-   * 新建模式下设置默认值
-   */
+  // 新建模式下设置默认值
   useEffect(() => {
     if (!isEdit && lineTypeTags.length > 0) {
       const defaultLineType = lineTypeTags.find((t: Tag) => t.name === '其他');
       if (defaultLineType && !lineTypeId) {
-        // 设置默认条线类型（这是必要的副作用）
-        const setDefaultLineType = () => setLineTypeId(defaultLineType.id);
-        setDefaultLineType();
+        setLineTypeId(defaultLineType.id);
       }
     }
   }, [isEdit, lineTypeTags, lineTypeId]);
 
-  /**
-   * 让 textarea 根据内容自动调整高度，确保外层容器可以滚动
-   */
+  // Textarea 自动高度
   useEffect(() => {
     const textarea = textareaRef.current;
     
     const adjustTextareaHeight = () => {
       if (textarea && editorMode !== 'preview' && editorMode !== 'split') {
-        // 重置高度，让 scrollHeight 正确计算
         textarea.style.height = 'auto';
-        // 设置高度为内容高度（完全根据内容，不限制最小值）
         textarea.style.height = `${textarea.scrollHeight}px`;
       }
     };
 
-    // 初始调整和内容变化时调整
     adjustTextareaHeight();
     
-    // 监听内容变化
     if (textarea) {
       textarea.addEventListener('input', adjustTextareaHeight);
     }
 
-    // 监听窗口大小变化
     window.addEventListener('resize', adjustTextareaHeight);
 
     return () => {
@@ -446,16 +361,10 @@ export const KnowledgeForm: React.FC = () => {
     };
   }, [content, editorMode]);
 
-  /**
-   * 关闭/返回
-   */
   const handleClose = useCallback(() => {
     navigate(ROUTES.ADMIN_KNOWLEDGE);
   }, [navigate]);
 
-  /**
-   * 获取当前应急类知识内容
-   */
   const getCurrentEmergencyContent = useCallback(() => {
     switch (activeEmergencyTab) {
       case 'fault_scenario': return faultScenario;
@@ -467,9 +376,6 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [activeEmergencyTab, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan]);
 
-  /**
-   * 设置当前应急类知识内容
-   */
   const setCurrentEmergencyContent = useCallback((value: string) => {
     switch (activeEmergencyTab) {
       case 'fault_scenario': setFaultScenario(value); break;
@@ -480,12 +386,6 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [activeEmergencyTab]);
 
-  /**
-   * 处理预览区域编辑完成（失去焦点时）
-   * 将 HTML 内容转换回 Markdown
-   * @param isEmergency 是否是应急类知识
-   * @param isSplit 是否是分屏模式
-   */
   const handlePreviewBlur = useCallback((isEmergency: boolean = false, isSplit: boolean = false) => {
     let previewElement: HTMLDivElement | null = null;
     
@@ -507,16 +407,6 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [setCurrentEmergencyContent]);
 
-  /**
-   * 处理预览区域输入时的提示
-   */
-  const handlePreviewInput = useCallback(() => {
-    // 可以在这里添加实时同步逻辑，但为了性能考虑，我们只在 blur 时同步
-  }, []);
-
-  /**
-   * 在文本框中插入 Markdown 语法
-   */
   const insertMarkdown = useCallback((before: string, after: string = '', placeholder: string = '') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -531,14 +421,12 @@ export const KnowledgeForm: React.FC = () => {
       before + textToInsert + after + 
       textarea.value.substring(end);
     
-    // 更新内容
     if (knowledgeType === 'EMERGENCY') {
       setCurrentEmergencyContent(newValue);
     } else {
       setContent(newValue);
     }
     
-    // 恢复焦点和选择
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + before.length + textToInsert.length + after.length;
@@ -546,9 +434,6 @@ export const KnowledgeForm: React.FC = () => {
     }, 0);
   }, [knowledgeType, setCurrentEmergencyContent]);
 
-  /**
-   * 工具栏按钮处理
-   */
   const handleBold = () => insertMarkdown('**', '**', '粗体文字');
   const handleItalic = () => insertMarkdown('*', '*', '斜体文字');
   const handleStrikethrough = () => insertMarkdown('~~', '~~', '删除线文字');
@@ -561,9 +446,6 @@ export const KnowledgeForm: React.FC = () => {
   );
   const handleHeading = () => insertMarkdown('## ', '', '标题');
 
-  /**
-   * 添加自定义系统标签
-   */
   const handleAddSystemTag = useCallback(() => {
     if (!systemTagInput.trim()) return;
     if (!systemTagNames.includes(systemTagInput.trim())) {
@@ -572,9 +454,6 @@ export const KnowledgeForm: React.FC = () => {
     setSystemTagInput('');
   }, [systemTagInput, systemTagNames]);
 
-  /**
-   * 添加自定义操作标签
-   */
   const handleAddOperationTag = useCallback(() => {
     if (!operationTagInput.trim()) return;
     if (!operationTagNames.includes(operationTagInput.trim())) {
@@ -583,9 +462,6 @@ export const KnowledgeForm: React.FC = () => {
     setOperationTagInput('');
   }, [operationTagInput, operationTagNames]);
 
-  /**
-   * 表单验证
-   */
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
@@ -611,9 +487,6 @@ export const KnowledgeForm: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   }, [title, lineTypeId, knowledgeType, content, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan]);
 
-  /**
-   * 构建请求数据
-   */
   const buildRequestData = useCallback((): KnowledgeCreateRequest | KnowledgeUpdateRequest => {
     const requestData: KnowledgeCreateRequest | KnowledgeUpdateRequest = {
       title,
@@ -646,12 +519,9 @@ export const KnowledgeForm: React.FC = () => {
     content, summary, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
   ]);
 
-  /**
-   * 保存为草稿
-   */
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
-      message.error('请检查表单填写是否完整');
+      toast.error('请检查表单填写是否完整');
       return;
     }
 
@@ -660,11 +530,10 @@ export const KnowledgeForm: React.FC = () => {
     try {
       if (isEdit && id) {
         await updateKnowledge.mutateAsync({ id: Number(id), data: requestData });
-        message.success('保存成功');
+        toast.success('保存成功');
       } else {
         const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
-        message.success('创建成功');
-        // 跳转到编辑页面
+        toast.success('创建成功');
         navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
       }
     } catch (error) {
@@ -672,12 +541,9 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate]);
 
-  /**
-   * 保存并发布
-   */
   const handlePublish = useCallback(async () => {
     if (!validateForm()) {
-      message.error('请检查表单填写是否完整');
+      toast.error('请检查表单填写是否完整');
       return;
     }
 
@@ -694,9 +560,8 @@ export const KnowledgeForm: React.FC = () => {
         savedId = result.id;
       }
 
-      // 发布
       await publishKnowledge.mutateAsync(savedId);
-      message.success('发布成功');
+      toast.success('发布成功');
       navigate(ROUTES.ADMIN_KNOWLEDGE);
     } catch (error) {
       showApiError(error, '发布失败');
@@ -705,9 +570,6 @@ export const KnowledgeForm: React.FC = () => {
 
   const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending || publishKnowledge.isPending;
 
-  /**
-   * 获取面包屑信息
-   */
   const breadcrumbInfo = useMemo(() => {
     const lineType = lineTypeTags.find((t: Tag) => t.id === lineTypeId);
     return {
@@ -716,9 +578,6 @@ export const KnowledgeForm: React.FC = () => {
     };
   }, [lineTypeTags, lineTypeId, title, isEdit]);
 
-  /**
-   * 获取状态信息
-   */
   const statusInfo = useMemo(() => {
     if (!isEdit) return { label: '草稿', isDraft: true };
     if (!knowledgeDetail) return { label: '草稿', isDraft: true };
@@ -728,131 +587,150 @@ export const KnowledgeForm: React.FC = () => {
     };
   }, [isEdit, knowledgeDetail]);
 
-  /**
-   * 解析内容目录
-   */
   const outline = useMemo(() => {
     if (knowledgeType === 'EMERGENCY') {
-      // 应急类知识：显示结构化章节
       return EMERGENCY_TABS.map((tab) => ({
         id: tab.key,
         level: 1,
         text: tab.label,
       }));
     }
-    // 其他类型：从 Markdown 解析标题
     return parseOutline(content);
   }, [knowledgeType, content]);
 
-  // 加载状态
   if (isEdit && detailLoading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loading}>
-          <Spin size="large" />
-        </div>
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-100 z-[1000]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
       </div>
     );
   }
 
+
   return (
-    <div className={styles.container}>
+    <div className="fixed inset-0 flex flex-col bg-gray-100 z-[1000] animate-fadeIn">
       {/* 顶部导航栏 */}
-      <div className={styles.topBar}>
-        <div className={styles.topBarLeft}>
-          <button className={styles.closeButton} onClick={handleClose} title="返回">
-            <CloseOutlined />
+      <div className="flex items-center justify-between h-14 px-5 bg-white border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            className="w-9 h-9 flex items-center justify-center bg-transparent border border-gray-200 rounded-lg text-gray-600 cursor-pointer transition-all hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+            onClick={handleClose}
+            title="返回"
+          >
+            <X className="w-4 h-4" />
           </button>
-          <div className={styles.breadcrumb}>
-            <span className={styles.breadcrumbItem} onClick={handleClose}>知识库</span>
-            <span className={styles.breadcrumbSeparator}>/</span>
-            <span className={styles.breadcrumbItem}>{breadcrumbInfo.lineTypeName}</span>
-            <span className={styles.breadcrumbSeparator}>/</span>
-            <span className={styles.breadcrumbActive}>{breadcrumbInfo.documentTitle}</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span
+              className="text-gray-500 cursor-pointer transition-colors hover:text-gray-700"
+              onClick={handleClose}
+            >
+              知识库
+            </span>
+            <span className="text-gray-300">/</span>
+            <span className="text-gray-500">{breadcrumbInfo.lineTypeName}</span>
+            <span className="text-gray-300">/</span>
+            <span className="text-gray-900 font-medium">{breadcrumbInfo.documentTitle}</span>
           </div>
         </div>
 
         {/* 中间：编辑模式切换 */}
-        <div className={styles.topBarCenter}>
-          <Segmented
-            value={editorMode}
-            onChange={(value) => setEditorMode(value as EditorMode)}
-            options={[
-              { label: '编辑', value: 'edit' },
-              { label: '分屏', value: 'split' },
-              { label: '预览', value: 'preview' },
-            ]}
-            size="small"
-          />
+        <div className="flex items-center">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            {(['edit', 'split', 'preview'] as EditorMode[]).map((mode) => (
+              <button
+                key={mode}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  editorMode === mode
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setEditorMode(mode)}
+              >
+                {mode === 'edit' ? '编辑' : mode === 'split' ? '分屏' : '预览'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className={styles.topBarRight}>
-          <div className={`${styles.statusBadge} ${statusInfo.isDraft ? styles.statusDraft : styles.statusPublished}`}>
-            <span className={styles.statusDot} />
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
+              statusInfo.isDraft
+                ? 'bg-yellow-50 text-yellow-700'
+                : 'bg-green-50 text-green-600'
+            }`}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: 'currentColor' }}
+            />
             <span>{statusInfo.label}</span>
           </div>
           
-          <button
-            className={styles.saveButton}
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleSave}
             disabled={isSubmitting}
+            className="h-9 px-4 font-medium"
           >
-            <SaveOutlined />
+            <Save className="w-4 h-4 mr-2" />
             保存草稿
-          </button>
+          </Button>
 
-          <button
-            className={styles.publishButton}
+          <Button
+            size="sm"
             onClick={handlePublish}
             disabled={isSubmitting}
+            className="h-9 px-4 font-medium"
           >
-            <SendOutlined />
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
             {isSubmitting ? '处理中...' : '保存并发布'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* 主体内容区域 */}
-      <div className={styles.mainContent}>
+      <div className="flex flex-1 overflow-hidden">
         {/* 左侧目录导航 */}
-        <div className={styles.outlineWrapper}>
+        <div className="flex flex-col m-4 mr-2 shrink-0">
           {outlineCollapsed ? (
-            /* 折叠状态：只显示展开按钮 */
-            <button 
-              className={styles.outlineExpandBtn}
+            <button
+              className="flex items-center justify-center w-8 h-8 bg-white border-none rounded-lg shadow-sm cursor-pointer text-gray-500 transition-all hover:bg-gray-50 hover:text-primary-500 hover:shadow-md"
               onClick={() => setOutlineCollapsed(false)}
               title="展开目录"
             >
-              <MenuUnfoldOutlined />
+              <PanelLeft className="w-4 h-4" />
             </button>
           ) : (
-            /* 展开状态：显示完整目录面板 */
-            <div className={styles.outlinePanel}>
-              <div className={styles.outlineHeader}>
-                <div className={styles.outlineHeaderTitle}>
-                  <OrderedListOutlined style={{ marginRight: 8 }} />
+            <div className="w-[200px] bg-white rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0 min-h-[200px] max-h-[400px]">
+              <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider shrink-0">
+                <div className="flex items-center whitespace-nowrap overflow-hidden">
+                  <ListOrdered className="w-4 h-4 mr-2" />
                   目录
                 </div>
-                <button 
-                  className={styles.outlineCollapseBtn}
+                <button
+                  className="flex items-center justify-center w-6 h-6 p-0 border-none bg-transparent text-gray-400 cursor-pointer rounded-md transition-all hover:bg-gray-100 hover:text-gray-600 shrink-0"
                   onClick={() => setOutlineCollapsed(true)}
                   title="折叠目录"
                 >
-                  <CloseCircleOutlined />
+                  <PanelLeftClose className="w-4 h-4" />
                 </button>
               </div>
-              <div className={styles.outlineContent}>
+              <div className="flex-1 overflow-y-auto py-2">
                 {outline.length > 0 ? (
                   outline.map((item) => (
                     <div
                       key={item.id}
-                      className={`${styles.outlineItem} ${
-                        item.level === 1 ? styles.outlineItemH1 : 
-                        item.level === 2 ? styles.outlineItemH2 : 
-                        styles.outlineItemH3
+                      className={`flex items-center gap-2 py-2 text-sm text-gray-600 cursor-pointer transition-all border-l-2 border-transparent hover:bg-gray-50 hover:text-gray-900 ${
+                        item.level === 1 ? 'px-4 font-medium' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
                       } ${
-                        knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id 
-                          ? styles.outlineItemActive 
+                        knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id
+                          ? 'bg-primary-50 text-primary-600 border-l-primary-500'
                           : ''
                       }`}
                       onClick={() => {
@@ -861,12 +739,14 @@ export const KnowledgeForm: React.FC = () => {
                         }
                       }}
                     >
-                      <span className={styles.outlineItemIcon}>{'#'.repeat(item.level)}</span>
-                      <span className={styles.outlineItemText}>{item.text}</span>
+                      <span className="text-[11px] font-mono font-semibold text-gray-400 shrink-0 min-w-6 text-right">
+                        {'#'.repeat(item.level)}
+                      </span>
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{item.text}</span>
                     </div>
                   ))
                 ) : (
-                  <div className={styles.outlineEmpty}>
+                  <div className="p-4 text-xs text-gray-400 text-center">
                     {knowledgeType === 'EMERGENCY' 
                       ? '选择章节开始编辑' 
                       : '使用 # ## ### 创建标题'}
@@ -878,40 +758,40 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 中间编辑区 */}
-        <div className={styles.editorSection}>
+        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-xl shadow-sm min-h-0">
           {/* 编辑器头部 */}
-          <div className={styles.editorHeader}>
-            <span className={styles.editorTitle}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+            <span className="text-sm font-semibold text-gray-900">
               {knowledgeType === 'EMERGENCY' ? '应急知识内容' : '知识内容'}
             </span>
             {editorMode !== 'preview' && (
-              <div className={styles.editorActions}>
-                <button className={styles.toolbarButton} title="标题" onClick={handleHeading}>
-                  <FileTextOutlined />
+              <div className="flex items-center gap-1">
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="标题" onClick={handleHeading}>
+                  <FileText className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="加粗" onClick={handleBold}>
-                  <BoldOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="加粗" onClick={handleBold}>
+                  <Bold className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="斜体" onClick={handleItalic}>
-                  <ItalicOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="斜体" onClick={handleItalic}>
+                  <Italic className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="删除线" onClick={handleStrikethrough}>
-                  <StrikethroughOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="删除线" onClick={handleStrikethrough}>
+                  <Strikethrough className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="代码" onClick={handleCode}>
-                  <CodeOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="代码" onClick={handleCode}>
+                  <Code className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="链接" onClick={handleLink}>
-                  <LinkOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="链接" onClick={handleLink}>
+                  <Link className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="无序列表" onClick={handleList}>
-                  <UnorderedListOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="无序列表" onClick={handleList}>
+                  <List className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="有序列表" onClick={handleOrderedList}>
-                  <OrderedListOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="有序列表" onClick={handleOrderedList}>
+                  <ListOrdered className="w-4 h-4" />
                 </button>
-                <button className={styles.toolbarButton} title="表格" onClick={handleTable}>
-                  <TableOutlined />
+                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="表格" onClick={handleTable}>
+                  <Table className="w-4 h-4" />
                 </button>
               </div>
             )}
@@ -919,258 +799,295 @@ export const KnowledgeForm: React.FC = () => {
 
           {/* 编辑内容 */}
           {knowledgeType === 'EMERGENCY' ? (
-            <div className={styles.structuredEditor}>
-              <div className={styles.structuredTabs}>
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex px-5 border-b border-gray-100 overflow-x-auto gap-1">
                 {EMERGENCY_TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    className={`${styles.structuredTab} ${activeEmergencyTab === tab.key ? styles.structuredTabActive : ''}`}
+                    className={`px-4 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-500 text-sm font-medium cursor-pointer transition-all whitespace-nowrap hover:text-gray-700 ${
+                      activeEmergencyTab === tab.key
+                        ? 'text-primary-500 border-b-primary-500'
+                        : ''
+                    }`}
                     onClick={() => setActiveEmergencyTab(tab.key)}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-              <div className={styles.structuredContent}>
+              <div className="flex-1 p-5 overflow-y-auto">
                 {editorMode === 'preview' ? (
                   <div 
                     ref={emergencyPreviewRef}
-                    className={`${styles.previewContent} ${styles.editablePreview}`}
+                    className="prose prose-gray max-w-none min-h-[200px] cursor-text outline-none"
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={() => handlePreviewBlur(true)}
-                    onInput={handlePreviewInput}
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(getCurrentEmergencyContent()) }}
                   />
                 ) : editorMode === 'split' ? (
-                  <div className={styles.splitView}>
+                  <div className="flex flex-1 min-h-0 gap-6">
                     <textarea
                       ref={textareaRef}
-                      className={styles.editorTextarea}
+                      className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
                       value={getCurrentEmergencyContent()}
                       onChange={(e) => setCurrentEmergencyContent(e.target.value)}
                       placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
                     />
+                    <Separator orientation="vertical" className="mx-4" />
                     <div 
                       ref={splitEmergencyPreviewRef}
-                      className={`${styles.previewContent} ${styles.editablePreview}`}
+                      className="flex-1 min-h-0 prose prose-gray max-w-none overflow-hidden cursor-text outline-none"
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={() => handlePreviewBlur(true, true)}
-                      onInput={handlePreviewInput}
                       dangerouslySetInnerHTML={{ __html: renderMarkdown(getCurrentEmergencyContent()) }}
                     />
                   </div>
                 ) : (
                   <textarea
                     ref={textareaRef}
-                    className={styles.editorTextarea}
+                    className="w-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
                     value={getCurrentEmergencyContent()}
                     onChange={(e) => setCurrentEmergencyContent(e.target.value)}
                     placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
                   />
                 )}
               </div>
-              {errors.emergency && <div className={styles.fieldError} style={{ padding: '0 20px 20px' }}>{errors.emergency}</div>}
+              {errors.emergency && <div className="text-[11px] text-red-500 px-5 pb-5">{errors.emergency}</div>}
             </div>
           ) : (
-            <div className={styles.editorContent}>
+            <div className="flex-1 p-5 overflow-y-auto">
               {editorMode === 'preview' ? (
                 <div 
                   ref={previewRef}
-                  className={`${styles.previewContent} ${styles.editablePreview}`}
+                  className="prose prose-gray max-w-none min-h-[200px] cursor-text outline-none"
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={() => handlePreviewBlur(false)}
-                  onInput={handlePreviewInput}
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                 />
               ) : editorMode === 'split' ? (
-                <div className={styles.splitView}>
+                <div className="flex flex-1 min-h-0 gap-6">
                   <textarea
                     ref={textareaRef}
-                    className={styles.editorTextarea}
+                    className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="在此输入知识内容，支持 Markdown 格式..."
                   />
+                  <Separator orientation="vertical" className="mx-4" />
                   <div 
                     ref={splitPreviewRef}
-                    className={`${styles.previewContent} ${styles.editablePreview}`}
+                    className="flex-1 min-h-0 prose prose-gray max-w-none overflow-hidden cursor-text outline-none"
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={() => handlePreviewBlur(false, true)}
-                    onInput={handlePreviewInput}
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                   />
                 </div>
               ) : (
                 <textarea
                   ref={textareaRef}
-                  className={styles.editorTextarea}
+                  className="w-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="在此输入知识内容，支持 Markdown 格式..."
                 />
               )}
-              {errors.content && <div className={styles.fieldError}>{errors.content}</div>}
+              {errors.content && <div className="text-[11px] text-red-500 mt-2">{errors.content}</div>}
             </div>
           )}
         </div>
 
         {/* 右侧元数据面板 */}
-        <div className={styles.metadataPanel}>
+        <div className="w-[360px] flex flex-col bg-white m-4 ml-2 rounded-xl shadow-sm overflow-y-auto shrink-0">
           {/* 基本信息 */}
-          <div className={styles.metadataSection}>
-            <div className={styles.metadataSectionHeader}>
-              <FileTextOutlined className={styles.metadataSectionIcon} />
-              <span className={styles.metadataSectionTitle}>基本信息</span>
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-4 h-4 text-primary-500" />
+              <span className="text-sm font-semibold text-gray-900">基本信息</span>
             </div>
             
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>标题</label>
-              <input
-                type="text"
-                className={styles.fieldInput}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-600 mb-2">标题</label>
+              <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="输入知识文档标题"
+                className="h-9"
               />
-              {errors.title && <div className={styles.fieldError}>{errors.title}</div>}
+              {errors.title && <div className="text-[11px] text-red-500 mt-1">{errors.title}</div>}
             </div>
 
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>知识概要</label>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">知识概要</label>
               <textarea
-                className={styles.fieldTextarea}
+                className="w-full p-3 bg-white border border-gray-200 rounded-md text-sm leading-relaxed resize-y min-h-[80px] transition-all focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/10"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="简要描述这篇知识的核心内容（用于卡片预览展示）"
                 rows={2}
                 maxLength={500}
               />
-              <div className={styles.fieldHint}>{summary.length}/500 字符</div>
+              <div className="text-xs text-gray-400 mt-1 text-right">{summary.length}/500 字符</div>
             </div>
           </div>
 
           {/* 分类信息 */}
-          <div className={styles.metadataSection}>
-            <div className={styles.metadataSectionHeader}>
-              <SettingOutlined className={styles.metadataSectionIcon} />
-              <span className={styles.metadataSectionTitle}>分类信息</span>
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="w-4 h-4 text-primary-500" />
+              <span className="text-sm font-semibold text-gray-900">分类信息</span>
             </div>
 
-            {/* 2x2 网格布局 */}
-            <div className={styles.gridContainer}>
-              <div className={styles.gridCell}>
-                <label className={styles.gridLabel}>文档类型</label>
-                <Select
-                  value={knowledgeType}
-                  onChange={setKnowledgeType}
-                  className={styles.gridSelect}
-                >
-                  {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
-                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                  ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">文档类型</label>
+                <Select value={knowledgeType} onValueChange={(v) => setKnowledgeType(v as KnowledgeType)}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="选择类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
-              <div className={styles.gridCell}>
-                <label className={styles.gridLabel}>条线类型</label>
-                <Select
-                  value={lineTypeId}
-                  onChange={setLineTypeId}
-                  className={styles.gridSelect}
-                  placeholder="选择"
-                >
-                  {lineTypeTags.map((tag: Tag) => (
-                    <Option key={tag.id} value={tag.id}>{tag.name}</Option>
-                  ))}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">条线类型</label>
+                <Select value={lineTypeId?.toString() || ''} onValueChange={(v) => setLineTypeId(Number(v))}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {lineTypeTags.map((tag: Tag) => (
+                      <SelectItem key={tag.id} value={tag.id.toString()}>{tag.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                {errors.lineTypeId && <div className={styles.fieldError}>{errors.lineTypeId}</div>}
+                {errors.lineTypeId && <div className="text-[11px] text-red-500">{errors.lineTypeId}</div>}
               </div>
-              <div className={styles.gridCell}>
-                <label className={styles.gridLabel}>系统标签</label>
-                <Select
-                  mode="tags"
-                  value={systemTagNames}
-                  onChange={setSystemTagNames}
-                  className={styles.gridSelect}
-                  placeholder="选择"
-                  maxTagCount={1}
-                  dropdownRender={(menu) => (
-                    <>
-                      {menu}
-                      <Divider style={{ margin: '8px 0' }} />
-                      <Space style={{ padding: '0 8px 8px' }}>
-                        <Input
-                          placeholder="新建"
-                          value={systemTagInput}
-                          onChange={(e) => setSystemTagInput(e.target.value)}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          size="small"
-                          style={{ width: 80 }}
-                        />
-                        <Button type="text" icon={<PlusOutlined />} onClick={handleAddSystemTag} size="small" />
-                      </Space>
-                    </>
-                  )}
-                >
-                  {systemTags.map((tag: Tag) => (
-                    <Option key={tag.name} value={tag.name}>{tag.name}</Option>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">系统标签</label>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {systemTagNames.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                      <button
+                        className="ml-1 hover:text-red-500"
+                        onClick={() => setSystemTagNames(prev => prev.filter(t => t !== tag))}
+                      >
+                        ×
+                      </button>
+                    </Badge>
                   ))}
+                </div>
+                <Select
+                  value=""
+                  onValueChange={(v) => {
+                    if (v && !systemTagNames.includes(v)) {
+                      setSystemTagNames(prev => [...prev, v]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {systemTags.filter((tag: Tag) => !systemTagNames.includes(tag.name)).map((tag: Tag) => (
+                      <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
+                <div className="flex gap-1 mt-1">
+                  <Input
+                    placeholder="新建"
+                    value={systemTagInput}
+                    onChange={(e) => setSystemTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSystemTag();
+                      }
+                    }}
+                    className="h-7 text-xs flex-1"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleAddSystemTag} className="h-7 w-7 p-0">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
-              <div className={styles.gridCell}>
-                <label className={styles.gridLabel}>操作标签</label>
-                <Select
-                  mode="tags"
-                  value={operationTagNames}
-                  onChange={setOperationTagNames}
-                  className={styles.gridSelect}
-                  placeholder="选择"
-                  maxTagCount={1}
-                  dropdownRender={(menu) => (
-                    <>
-                      {menu}
-                      <Divider style={{ margin: '8px 0' }} />
-                      <Space style={{ padding: '0 8px 8px' }}>
-                        <Input
-                          placeholder="新建"
-                          value={operationTagInput}
-                          onChange={(e) => setOperationTagInput(e.target.value)}
-                          onKeyDown={(e) => e.stopPropagation()}
-                          size="small"
-                          style={{ width: 80 }}
-                        />
-                        <Button type="text" icon={<PlusOutlined />} onClick={handleAddOperationTag} size="small" />
-                      </Space>
-                    </>
-                  )}
-                >
-                  {operationTags.map((tag: Tag) => (
-                    <Option key={tag.name} value={tag.name}>{tag.name}</Option>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">操作标签</label>
+                <div className="flex flex-wrap gap-1 mb-1">
+                  {operationTagNames.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                      <button
+                        className="ml-1 hover:text-red-500"
+                        onClick={() => setOperationTagNames(prev => prev.filter(t => t !== tag))}
+                      >
+                        ×
+                      </button>
+                    </Badge>
                   ))}
+                </div>
+                <Select
+                  value=""
+                  onValueChange={(v) => {
+                    if (v && !operationTagNames.includes(v)) {
+                      setOperationTagNames(prev => [...prev, v]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {operationTags.filter((tag: Tag) => !operationTagNames.includes(tag.name)).map((tag: Tag) => (
+                      <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
+                <div className="flex gap-1 mt-1">
+                  <Input
+                    placeholder="新建"
+                    value={operationTagInput}
+                    onChange={(e) => setOperationTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddOperationTag();
+                      }
+                    }}
+                    className="h-7 text-xs flex-1"
+                  />
+                  <Button variant="ghost" size="sm" onClick={handleAddOperationTag} className="h-7 w-7 p-0">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
 
           {/* 发布状态 */}
-          <div className={styles.metadataSection}>
-            <div className={styles.metadataSectionHeader}>
-              <CheckCircleOutlined className={styles.metadataSectionIcon} />
-              <span className={styles.metadataSectionTitle}>发布状态</span>
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle className="w-4 h-4 text-primary-500" />
+              <span className="text-sm font-semibold text-gray-900">发布状态</span>
             </div>
 
-            <div className={styles.statusCard}>
-              <div className={styles.statusCardHeader}>
-                <span className={styles.statusCardLabel}>当前状态</span>
-                <span className={`${styles.statusCardValue} ${statusInfo.isDraft ? styles.statusCardPending : styles.statusCardApproved}`}>
-                  <span className={styles.statusDot} />
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">当前状态</span>
+                <span className={`flex items-center gap-1 text-xs font-semibold ${statusInfo.isDraft ? 'text-yellow-500' : 'text-green-500'}`}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
                   {statusInfo.isDraft ? '待发布' : '已发布'}
                 </span>
               </div>
-              <div className={styles.statusCardNote}>
+              <div className="text-xs text-gray-500 leading-relaxed">
                 {statusInfo.isDraft 
                   ? '当前为草稿状态，保存后可以继续编辑。点击「保存并发布」后，该知识将对所有用户可见。'
                   : '该知识已发布，修改后需要重新发布才能更新内容。'
@@ -1183,3 +1100,5 @@ export const KnowledgeForm: React.FC = () => {
     </div>
   );
 };
+
+export default KnowledgeForm;

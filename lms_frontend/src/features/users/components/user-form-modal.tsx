@@ -1,33 +1,38 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import {
-  Modal,
-  Form,
-  Input,
-  Button,
-  Typography,
-  Card,
-  Avatar,
-  message,
+  User,
+  Shield,
+  Building2,
+  Users,
+  X,
+  CheckCircle2,
+  IdCard,
+  Lock,
+} from 'lucide-react';
+
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPortal,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
   Select,
-  ConfigProvider,
-} from 'antd';
-import {
-  UserOutlined,
-  SafetyOutlined,
-  ApartmentOutlined,
-  TeamOutlined,
-  CloseOutlined,
-  CheckCircleFilled,
-  IdcardOutlined,
-  LockOutlined,
-} from '@ant-design/icons';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
+
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
-
-const { Title, Text } = Typography;
-const { Option } = Select;
 
 interface UserFormModalProps {
   open: boolean;
@@ -36,9 +41,26 @@ interface UserFormModalProps {
   onSuccess?: () => void;
 }
 
+interface FormData {
+  username: string;
+  employee_id: string;
+  password: string;
+  department_id: number | undefined;
+  role_codes: RoleCode[];
+  mentor_id: number | null;
+}
+
+interface FormErrors {
+  username?: string;
+  employee_id?: string;
+  password?: string;
+  department_id?: string;
+}
+
+
 /**
  * 用户表单弹窗组件（用于创建和编辑）
- * 极致美学重构：采用分层动效、精致卡片、现代排版
+ * 使用 ShadCN UI + 受控状态
  */
 export const UserFormModal: React.FC<UserFormModalProps> = ({
   open,
@@ -46,7 +68,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [form] = Form.useForm();
   const isEdit = !!userId;
 
   const createUser = useCreateUser();
@@ -58,6 +79,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
 
+  const [formData, setFormData] = useState<FormData>({
+    username: '',
+    employee_id: '',
+    password: '',
+    department_id: undefined,
+    role_codes: [],
+    mentor_id: null,
+  });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+
   // 编辑模式下填充表单
   useEffect(() => {
     if (open) {
@@ -65,82 +97,76 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         const currentRoleCodes = userDetail.roles
           .filter((r) => r.code !== 'STUDENT')
           .map((r) => r.code as RoleCode);
-        form.setFieldsValue({
+        setFormData({
           username: userDetail.username,
           employee_id: userDetail.employee_id,
+          password: '',
           department_id: userDetail.department?.id,
           role_codes: currentRoleCodes,
           mentor_id: userDetail.mentor?.id || null,
         });
       } else {
-        form.resetFields();
-        form.setFieldsValue({
+        setFormData({
+          username: '',
+          employee_id: '',
+          password: '',
+          department_id: undefined,
           role_codes: [],
+          mentor_id: null,
         });
       }
+      setErrors({});
     }
-  }, [open, isEdit, userDetail, form]);
+  }, [open, isEdit, userDetail]);
 
-  const handleSubmit = async (values: {
-    password?: string;
-    employee_id: string;
-    username: string;
-    department_id: number;
-    role_codes?: RoleCode[];
-    mentor_id?: number | null;
-  }) => {
+  const validate = (): boolean => {
+    const newErrors: FormErrors = {};
+    if (!formData.username.trim()) newErrors.username = '请填写姓名';
+    if (!formData.employee_id.trim()) newErrors.employee_id = '请填写工号';
+    if (!isEdit && !formData.password.trim()) newErrors.password = '请设置初始密码';
+    if (!formData.department_id) newErrors.department_id = '请选择部门';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
     try {
       if (isEdit) {
         await updateUser.mutateAsync({
           id: userId!,
           data: {
-            username: values.username,
-            employee_id: values.employee_id,
-            department_id: values.department_id,
+            username: formData.username,
+            employee_id: formData.employee_id,
+            department_id: formData.department_id,
           },
         });
-
-        if (values.role_codes !== undefined) {
-          await assignRoles.mutateAsync({
-            id: userId!,
-            roles: values.role_codes,
-          });
-        }
-
+        await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
         const currentMentorId = userDetail?.mentor?.id ?? null;
-        const newMentorId = values.mentor_id ?? null;
-
-        if (currentMentorId !== newMentorId) {
-          await assignMentor.mutateAsync({
-            id: userId!,
-            mentorId: newMentorId,
-          });
+        if (currentMentorId !== formData.mentor_id) {
+          await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
         }
-
-        message.success('用户信息更新成功');
+        toast.success('用户信息更新成功');
       } else {
         await createUser.mutateAsync({
-          password: values.password!,
-          employee_id: values.employee_id!,
-          username: values.username,
-          department_id: values.department_id,
-          mentor_id: values.mentor_id || null,
+          password: formData.password,
+          employee_id: formData.employee_id,
+          username: formData.username,
+          department_id: formData.department_id!,
+          mentor_id: formData.mentor_id,
         });
-
-        message.success('用户创建成功');
+        toast.success('用户创建成功');
       }
       onClose();
-      form.resetFields();
       onSuccess?.();
     } catch (error) {
       showApiError(error, isEdit ? '更新失败' : '创建失败');
     }
   };
 
-  const getAvatarText = (name?: string) => {
-    if (!name) return '?';
-    return name.charAt(0).toUpperCase();
-  };
+  const getAvatarText = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
 
   const roleDescriptions: Record<string, string> = {
     ADMIN: '全平台治理与系统维护',
@@ -151,524 +177,207 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   const roleIcons: Record<string, React.ReactNode> = {
-    ADMIN: <SafetyOutlined />,
-    DEPT_MANAGER: <ApartmentOutlined />,
-    MENTOR: <TeamOutlined />,
-    TEAM_MANAGER: <TeamOutlined />,
-    STUDENT: <UserOutlined />,
+    ADMIN: <Shield className="w-5 h-5" />,
+    DEPT_MANAGER: <Building2 className="w-5 h-5" />,
+    MENTOR: <Users className="w-5 h-5" />,
+    TEAM_MANAGER: <Users className="w-5 h-5" />,
+    STUDENT: <User className="w-5 h-5" />,
   };
 
   const getRoleColor = (code: string) => {
     const colors: Record<string, string> = {
-      ADMIN: 'var(--color-error-500)',
-      DEPT_MANAGER: 'var(--color-purple-500)',
-      MENTOR: 'var(--color-warning-500)',
-      TEAM_MANAGER: 'var(--color-cyan-500)',
-      STUDENT: 'var(--color-primary-500)',
+      ADMIN: 'rgb(239, 68, 68)',
+      DEPT_MANAGER: 'rgb(168, 85, 247)',
+      MENTOR: 'rgb(245, 158, 11)',
+      TEAM_MANAGER: 'rgb(6, 182, 212)',
+      STUDENT: 'rgb(77, 108, 255)',
     };
-    return colors[code] || 'var(--color-primary-500)';
+    return colors[code] || 'rgb(77, 108, 255)';
   };
 
-  const selectedRoleCodes = Form.useWatch('role_codes', form) || [];
-  const selectedDepartmentId = Form.useWatch('department_id', form);
-  const username = Form.useWatch('username', form) || userDetail?.username;
+  const toggleRole = (roleCode: RoleCode) => {
+    setFormData(prev => ({
+      ...prev,
+      role_codes: prev.role_codes.includes(roleCode)
+        ? prev.role_codes.filter(c => c !== roleCode)
+        : [...prev.role_codes, roleCode],
+    }));
+  };
+
+  const isLoading = createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending;
 
   return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Modal: {
-            contentBg: '#ffffff',
-            headerBg: '#ffffff',
-            paddingContentHorizontal: 0,
-            paddingMD: 0,
-          },
-        },
-      }}
-    >
-      <Modal
-        open={open}
-        onCancel={onClose}
-        footer={null}
-        width={720}
-        centered
-        closeIcon={<CloseOutlined style={{ color: 'var(--color-gray-400)' }} />}
-        styles={{
-          mask: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0,0,0,0.4)',
-          },
-          content: {
-            borderRadius: 'var(--radius-xl)',
-            overflow: 'hidden',
-            boxShadow: 'var(--shadow-xl)',
-          },
-        }}
-      >
-        <div className="animate-fadeIn">
-          {/* Header Section */}
-          <div
-            style={{
-              padding: '40px 40px 32px',
-              background: 'linear-gradient(135deg, #f8faff 0%, #ffffff 100%)',
-              borderBottom: '1px solid var(--color-gray-100)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Decoration */}
-            <div
-              style={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 140,
-                height: 140,
-                background: 'radial-gradient(circle, var(--color-primary-50) 0%, transparent 70%)',
-                borderRadius: '50%',
-              }}
-            />
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogPortal>
+        <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
+        <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-180 -translate-x-1/2 -translate-y-1/2">
+          <div className="bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
+            <button onClick={onClose} className="absolute right-4 top-4 z-10 rounded-sm opacity-70 hover:opacity-100">
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-              <div style={{ position: 'relative' }}>
-                <Avatar
-                  size={80}
-                  style={{
-                    background: 'linear-gradient(135deg, var(--color-primary-400), var(--color-primary-600))',
-                    fontSize: 32,
-                    fontWeight: 700,
-                    boxShadow: 'var(--shadow-glow-primary)',
-                    border: '4px solid #fff',
-                  }}
-                >
-                  {getAvatarText(username)}
-                </Avatar>
-                {isEdit && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      right: 0,
-                      width: 24,
-                      height: 24,
-                      background: 'var(--color-success-500)',
-                      borderRadius: '50%',
-                      border: '3px solid #fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 10,
-                      color: '#fff',
-                    }}
-                  >
-                    <CheckCircleFilled />
+            {/* Header */}
+            <div className="px-10 pt-10 pb-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f8faff 0%, #ffffff 100%)', borderBottom: '1px solid rgb(243, 244, 246)' }}>
+              <div className="absolute -top-5 -right-5 w-36 h-36 rounded-full" style={{ background: 'radial-gradient(circle, rgba(77, 108, 255, 0.1) 0%, transparent 70%)' }} />
+              <div className="flex items-center relative z-1">
+                <div className="relative">
+                  <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
+                    <AvatarFallback className="text-3xl font-bold text-white" style={{ background: 'linear-gradient(135deg, rgb(99, 130, 255), rgb(77, 108, 255))' }}>
+                      {getAvatarText(formData.username || userDetail?.username)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEdit && (
+                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full border-[3px] border-white flex items-center justify-center" style={{ background: 'rgb(34, 197, 94)' }}>
+                      <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className="ml-6">
+                  <h2 className="text-2xl font-bold tracking-tight m-0">{isEdit ? '编辑详细资料' : '创建新成员'}</h2>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-500">
+                      {isEdit ? (<><IdCard className="inline w-3.5 h-3.5 mr-1" />{userDetail?.employee_id || 'ID LOADING...'}</>) : '请完善下方基础信息以邀请新成员'}
+                    </span>
+                    {isEdit && <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(77, 108, 255, 0.1)', color: 'rgb(77, 108, 255)' }}>已激活</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            <form onSubmit={handleSubmit} className="px-10 pt-8 pb-10">
+              {/* Basic Info */}
+              <div className="mb-8">
+                <div className="flex items-center mb-5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(77, 108, 255, 0.1)', color: 'rgb(77, 108, 255)' }}>
+                    <User className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-semibold m-0">核心身份信息</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">真实姓名</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input id="username" placeholder="例如: 张三" className="pl-9 h-11 rounded-lg" value={formData.username} onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))} />
+                    </div>
+                    {errors.username && <p className="text-sm font-medium text-red-500">{errors.username}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="employee_id">工号</Label>
+                    <div className="relative">
+                      <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input id="employee_id" placeholder="例如: EMP888" className="pl-9 h-11 rounded-lg" value={formData.employee_id} onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))} />
+                    </div>
+                    {errors.employee_id && <p className="text-sm font-medium text-red-500">{errors.employee_id}</p>}
+                  </div>
+                </div>
+                {!isEdit && (
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="password">初始密码</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input id="password" type="password" placeholder="设置一个安全的初始密码" className="pl-9 h-11 rounded-lg" value={formData.password} onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} />
+                    </div>
+                    {errors.password && <p className="text-sm font-medium text-red-500">{errors.password}</p>}
                   </div>
                 )}
               </div>
-              <div style={{ marginLeft: 24 }}>
-                <Title level={2} style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em' }}>
-                  {isEdit ? '编辑详细资料' : '创建新成员'}
-                </Title>
-                <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
-                    {isEdit ? (
-                      <>
-                        <IdcardOutlined style={{ marginRight: 4 }} />
-                        {userDetail?.employee_id || 'ID LOADING...'}
-                      </>
-                    ) : (
-                      '请完善下方基础信息以邀请新成员'
-                    )}
-                  </Text>
-                  {isEdit && (
-                    <span
-                      style={{
-                        padding: '2px 8px',
-                        background: 'var(--color-primary-50)',
-                        color: 'var(--color-primary-600)',
-                        borderRadius: 'var(--radius-full)',
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}
-                    >
-                      已激活
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
-            style={{ padding: '32px 40px 40px' }}
-            requiredMark={false}
-          >
-            {/* 1. Basic Info */}
-            <div className="animate-fadeInUp" style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--color-primary-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-primary-500)',
-                    marginRight: 12,
-                  }}
-                >
-                  <UserOutlined />
-                </div>
-                <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-                  核心身份信息
-                </Title>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-                <Form.Item
-                  name="username"
-                  label="真实姓名"
-                  rules={[{ required: true, message: '请填写姓名' }]}
-                >
-                  <Input
-                    placeholder="例如: 张三"
-                    prefix={<UserOutlined style={{ color: 'var(--color-gray-400)' }} />}
-                    size="large"
-                    className="card-hover"
-                    style={{ borderRadius: 'var(--radius-lg)' }}
-                  />
-                </Form.Item>
-                <Form.Item
-                  name="employee_id"
-                  label="工号"
-                  rules={[{ required: true, message: '请填写工号' }]}
-                >
-                  <Input
-                    placeholder="例如: EMP888"
-                    prefix={<IdcardOutlined style={{ color: 'var(--color-gray-400)' }} />}
-                    size="large"
-                    className="card-hover"
-                    style={{ borderRadius: 'var(--radius-lg)' }}
-                  />
-                </Form.Item>
-              </div>
-
-              {!isEdit && (
-                <Form.Item
-                  name="password"
-                  label="初始密码"
-                  rules={[{ required: true, message: '请设置初始密码' }]}
-                  className="animate-fadeInUp stagger-1"
-                >
-                  <Input.Password
-                    placeholder="设置一个安全的初始密码"
-                    prefix={<LockOutlined style={{ color: 'var(--color-gray-400)' }} />}
-                    size="large"
-                    style={{ borderRadius: 'var(--radius-lg)' }}
-                  />
-                </Form.Item>
-              )}
-            </div>
-
-            {/* 2. Role Configuration */}
-            <div className="animate-fadeInUp stagger-2" style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--color-success-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-success-500)',
-                    marginRight: 12,
-                  }}
-                >
-                  <SafetyOutlined />
-                </div>
-                <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-                  角色与权限分配
-                </Title>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                {roles.map((role) => {
-                  const isSelected = selectedRoleCodes.includes(role.code as RoleCode);
-                  const roleColor = getRoleColor(role.code);
-
-                  return (
-                    <Card
-                      key={role.code}
-                      onClick={() => {
-                        const currentCodes = form.getFieldValue('role_codes') || [];
-                        if (isSelected) {
-                          form.setFieldsValue({
-                            role_codes: currentCodes.filter((c: RoleCode) => c !== role.code),
-                          });
-                        } else {
-                          form.setFieldsValue({
-                            role_codes: [...currentCodes, role.code as RoleCode],
-                          });
-                        }
-                      }}
-                      className="card-hover"
-                      style={{
-                        cursor: 'pointer',
-                        border: '2px solid transparent',
-                        borderColor: isSelected ? roleColor : 'var(--color-gray-100)',
-                        backgroundColor: isSelected ? `${roleColor}08` : '#fff',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        borderRadius: 'var(--radius-lg)',
-                        position: 'relative',
-                        boxShadow: isSelected ? `0 8px 16px ${roleColor}15` : 'none',
-                      }}
-                      styles={{ body: { padding: '16px' } }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: '10px',
-                            background: isSelected ? roleColor : 'var(--color-gray-50)',
-                            color: isSelected ? '#fff' : 'var(--color-gray-500)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 20,
-                            transition: 'all 0.3s',
-                          }}
-                        >
-                          {roleIcons[role.code] || <UserOutlined />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: isSelected ? 'var(--color-gray-900)' : 'var(--color-gray-700)' }}>
-                            {role.name}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--color-gray-400)', marginTop: 2 }}>
-                            {roleDescriptions[role.code] || '基础操作权限'}
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <CheckCircleFilled style={{ color: roleColor, fontSize: 18, animation: 'scaleIn 0.3s' }} />
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
-                {/* Always Student (ReadOnly) */}
-                <Card
-                  style={{
-                    border: '2px solid var(--color-primary-500)',
-                    backgroundColor: 'var(--color-primary-50)',
-                    borderRadius: 'var(--radius-lg)',
-                    cursor: 'default',
-                    opacity: 0.8,
-                  }}
-                  styles={{ body: { padding: '16px' } }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '10px',
-                        background: 'var(--color-primary-500)',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 20,
-                      }}
-                    >
-                      <UserOutlined />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-gray-900)' }}>
-                        学员
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--color-gray-500)', marginTop: 2 }}>
-                        核心学习权限 (内置)
-                      </div>
-                    </div>
-                    <CheckCircleFilled style={{ color: 'var(--color-primary-500)', fontSize: 18 }} />
+              {/* Role Configuration */}
+              <div className="mb-8">
+                <div className="flex items-center mb-5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'rgb(34, 197, 94)' }}>
+                    <Shield className="w-4 h-4" />
                   </div>
-                </Card>
-              </div>
-              <Form.Item name="role_codes" hidden>
-                <Input />
-              </Form.Item>
-            </div>
-
-            {/* 3. Organization & Mentorship */}
-            <div className="animate-fadeInUp stagger-3" style={{ marginBottom: 40 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
-                {/* Department */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-purple-50)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--color-purple-500)',
-                        marginRight: 12,
-                      }}
-                    >
-                      <ApartmentOutlined />
+                  <h3 className="text-base font-semibold m-0">角色与权限分配</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {roles.map((role) => {
+                    const isSelected = formData.role_codes.includes(role.code as RoleCode);
+                    const roleColor = getRoleColor(role.code);
+                    return (
+                      <Card key={role.code} onClick={() => toggleRole(role.code as RoleCode)} className="cursor-pointer p-4 transition-all duration-300" style={{ borderWidth: '2px', borderColor: isSelected ? roleColor : 'rgb(243, 244, 246)', backgroundColor: isSelected ? `${roleColor}08` : '#fff', boxShadow: isSelected ? `0 8px 16px ${roleColor}15` : 'none' }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-[10px] flex items-center justify-center text-xl transition-all duration-300" style={{ background: isSelected ? roleColor : 'rgb(249, 250, 251)', color: isSelected ? '#fff' : 'rgb(107, 114, 128)' }}>
+                            {roleIcons[role.code] || <User className="w-5 h-5" />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm" style={{ color: isSelected ? 'rgb(17, 24, 39)' : 'rgb(55, 65, 81)' }}>{role.name}</div>
+                            <div className="text-xs text-gray-400 mt-0.5">{roleDescriptions[role.code] || '基础操作权限'}</div>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-4.5 h-4.5" style={{ color: roleColor }} />}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                  <Card className="p-4 cursor-default opacity-80" style={{ borderWidth: '2px', borderColor: 'rgb(77, 108, 255)', backgroundColor: 'rgba(77, 108, 255, 0.05)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center text-xl text-white" style={{ background: 'rgb(77, 108, 255)' }}><User className="w-5 h-5" /></div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-gray-900">学员</div>
+                        <div className="text-xs text-gray-500 mt-0.5">核心学习权限 (内置)</div>
+                      </div>
+                      <CheckCircle2 className="w-4.5 h-4.5" style={{ color: 'rgb(77, 108, 255)' }} />
                     </div>
-                    <Title level={5} style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
-                      所属组织架构
-                    </Title>
-                  </div>
-                  <Form.Item name="department_id" rules={[{ required: true, message: '请选择部门' }]}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Organization & Mentorship */}
+              <div className="mb-10">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'rgb(168, 85, 247)' }}><Building2 className="w-4 h-4" /></div>
+                      <h3 className="text-[15px] font-semibold m-0">所属组织架构</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
                       {departments.map((dept) => {
-                        const isSelected = selectedDepartmentId === dept.id;
+                        const isSelected = formData.department_id === dept.id;
                         return (
-                          <div
-                            key={dept.id}
-                            onClick={() => form.setFieldsValue({ department_id: dept.id })}
-                            style={{
-                              padding: '8px 16px',
-                              borderRadius: 'var(--radius-full)',
-                              background: isSelected ? 'var(--color-primary-500)' : 'var(--color-gray-50)',
-                              color: isSelected ? '#fff' : 'var(--color-gray-600)',
-                              fontSize: 13,
-                              fontWeight: isSelected ? 600 : 400,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              border: '1px solid',
-                              borderColor: isSelected ? 'var(--color-primary-500)' : 'var(--color-gray-100)',
-                              boxShadow: isSelected ? '0 4px 10px rgba(77, 108, 255, 0.2)' : 'none',
-                            }}
-                            className="btn-press"
-                          >
+                          <button key={dept.id} type="button" onClick={() => setFormData(prev => ({ ...prev, department_id: dept.id }))} className="px-4 py-2 rounded-full text-sm transition-all duration-200 border active:scale-95" style={{ background: isSelected ? 'rgb(77, 108, 255)' : 'rgb(249, 250, 251)', color: isSelected ? '#fff' : 'rgb(75, 85, 99)', fontWeight: isSelected ? 600 : 400, borderColor: isSelected ? 'rgb(77, 108, 255)' : 'rgb(243, 244, 246)', boxShadow: isSelected ? '0 4px 10px rgba(77, 108, 255, 0.2)' : 'none' }}>
                             {dept.name}
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
-                  </Form.Item>
-                </div>
-
-                {/* Mentor */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-cyan-50)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--color-cyan-500)',
-                        marginRight: 12,
-                      }}
-                    >
-                      <TeamOutlined />
-                    </div>
-                    <Title level={5} style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
-                      师徒关系绑定
-                    </Title>
+                    {errors.department_id && <p className="text-sm font-medium text-red-500 mt-2">{errors.department_id}</p>}
                   </div>
-                  <Form.Item name="mentor_id">
-                    <Select
-                      placeholder="点击搜索并指定导师"
-                      allowClear
-                      showSearch
-                      optionFilterProp="children"
-                      size="large"
-                      style={{ borderRadius: 'var(--radius-lg)' }}
-                    >
-                      {mentors
-                        .filter((m) => !isEdit || m.id !== userId)
-                        .map((mentor) => (
-                          <Option key={mentor.id} value={mentor.id}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <Avatar
-                                size="small"
-                                style={{
-                                  background: 'var(--color-cyan-500)',
-                                  fontSize: 12,
-                                  fontWeight: 600
-                                }}
-                              >
-                                {getAvatarText(mentor.username)}
-                              </Avatar>
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(6, 182, 212, 0.1)', color: 'rgb(6, 182, 212)' }}><Users className="w-4 h-4" /></div>
+                      <h3 className="text-[15px] font-semibold m-0">师徒关系绑定</h3>
+                    </div>
+                    <Select value={formData.mentor_id?.toString() || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, mentor_id: value ? Number(value) : null }))}>
+                      <SelectTrigger className="h-11 rounded-lg"><SelectValue placeholder="点击搜索并指定导师" /></SelectTrigger>
+                      <SelectContent>
+                        {mentors.filter((m) => !isEdit || m.id !== userId).map((mentor) => (
+                          <SelectItem key={mentor.id} value={mentor.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6"><AvatarFallback className="text-xs font-semibold text-white" style={{ background: 'rgb(6, 182, 212)' }}>{getAvatarText(mentor.username)}</AvatarFallback></Avatar>
                               <span>{mentor.username}</span>
-                              <span style={{ color: 'var(--color-gray-400)', fontSize: 12 }}>({mentor.employee_id})</span>
+                              <span className="text-xs text-gray-400">({mentor.employee_id})</span>
                             </div>
-                          </Option>
+                          </SelectItem>
                         ))}
+                      </SelectContent>
                     </Select>
-                  </Form.Item>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Footer Actions */}
-            <div
-              className="animate-fadeInUp stagger-4"
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 16,
-                paddingTop: 32,
-                borderTop: '1px solid var(--color-gray-100)'
-              }}
-            >
-              <Button
-                onClick={onClose}
-                size="large"
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '0 32px',
-                  fontWeight: 500,
-                  color: 'var(--color-gray-500)',
-                  border: 'none',
-                  background: 'var(--color-gray-50)'
-                }}
-                className="btn-press"
-              >
-                取消
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                size="large"
-                loading={createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending}
-                style={{
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '0 48px',
-                  fontWeight: 600,
-                  boxShadow: 'var(--shadow-glow-primary)',
-                  height: 48,
-                  background: 'var(--color-primary-500)'
-                }}
-                className="btn-press"
-              >
-                {isEdit ? '保存更改' : '立即创建'}
-              </Button>
-            </div>
-          </Form>
+              {/* Footer */}
+              <div className="flex justify-end gap-4 pt-8" style={{ borderTop: '1px solid rgb(243, 244, 246)' }}>
+                <Button type="button" variant="ghost" onClick={onClose} className="px-8 h-12 rounded-lg font-medium text-gray-500 bg-gray-50 hover:bg-gray-100">取消</Button>
+                <Button type="submit" disabled={isLoading} className="px-12 h-12 rounded-lg font-semibold" style={{ background: 'rgb(77, 108, 255)', boxShadow: '0 0 20px rgba(77, 108, 255, 0.3)' }}>
+                  {isLoading ? '处理中...' : isEdit ? '保存更改' : '立即创建'}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      </Modal>
-    </ConfigProvider>
+      </DialogPortal>
+    </Dialog>
   );
 };
-
-

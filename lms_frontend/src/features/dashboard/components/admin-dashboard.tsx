@@ -1,14 +1,14 @@
 import React from 'react';
 import {
-  SafetyOutlined,
-  TeamOutlined,
-  BookOutlined,
-  CloudServerOutlined,
-  DatabaseOutlined,
-  SettingOutlined,
-  AuditOutlined,
-  NotificationOutlined,
-} from '@ant-design/icons';
+  Shield,
+  Users,
+  BookOpen,
+  Cloud,
+  Database,
+  Settings,
+  ClipboardCheck,
+  Bell,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 import { useNavigate } from 'react-router-dom';
@@ -66,7 +66,7 @@ export const AdminDashboard: React.FC = () => {
       <PageHeader
         title="系统概览"
         subtitle="全局资源分配、用户权限审计及核心性能指标监控。"
-        icon={<SettingOutlined />}
+        icon={<Settings className="w-5 h-5" />}
         extra={
           <div className="flex items-center gap-3">
             <div style={{ textAlign: 'right', marginRight: '16px' }}>
@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
               <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-accent)' }}>{user?.username}</div>
             </div>
             <Button variant="outline" size="icon">
-              <NotificationOutlined />
+              <Bell className="w-4 h-4" />
             </Button>
           </div>
         }
@@ -89,15 +89,15 @@ export const AdminDashboard: React.FC = () => {
         {/* STATS GRID */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {[
-            { label: '注册成员总数', value: data?.mentees_count || 0, icon: <TeamOutlined />, color: 'var(--color-accent)' },
-            { label: '知识库条目', value: knowledgeStatsLoading ? '...' : (knowledgeStats?.total || 0), icon: <BookOutlined />, color: 'var(--color-success)' },
-            { label: '本月发布任务', value: 28, icon: <AuditOutlined />, color: 'var(--color-warning)' },
-            { label: '系统正常运行时间', value: '99.9%', icon: <CloudServerOutlined />, color: 'var(--color-accent)' },
+            { label: '注册成员总数', value: data?.mentees_count || 0, icon: <Users className="w-5 h-5" />, color: 'var(--color-accent)' },
+            { label: '知识库条目', value: knowledgeStatsLoading ? '...' : (knowledgeStats?.total || 0), icon: <BookOpen className="w-5 h-5" />, color: 'var(--color-success)' },
+            { label: '本月发布任务', value: 28, icon: <ClipboardCheck className="w-5 h-5" />, color: 'var(--color-warning)' },
+            { label: '系统正常运行时间', value: '99.9%', icon: <Cloud className="w-5 h-5" />, color: 'var(--color-accent)' },
           ].map((stat, i) => (
             <motion.div key={i} variants={itemVariants}>
               <Card className="p-6 hover:shadow-md transition-shadow">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-hover)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color, fontSize: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-hover)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color }}>
                     {stat.icon}
                   </div>
                 </div>
@@ -113,7 +113,7 @@ export const AdminDashboard: React.FC = () => {
           <Card className="mb-6">
             <div className="p-6">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <BookOutlined style={{ fontSize: '18px', color: 'var(--color-success)' }} />
+                <BookOpen className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600 }}>知识库资产</span>
               </div>
               {knowledgeStatsLoading ? (
@@ -153,10 +153,10 @@ export const AdminDashboard: React.FC = () => {
           <motion.div variants={itemVariants} style={{ gridColumn: 'span 12' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
               {[
-                { label: '成员管理', description: '管理权限与身份', icon: <TeamOutlined />, route: ROUTES.USERS },
-                { label: '资源库', description: '编排知识与文档', icon: <DatabaseOutlined />, route: ROUTES.ADMIN_KNOWLEDGE },
-                { label: '测评引擎', description: '试卷与题库维护', icon: <AuditOutlined />, route: ROUTES.TEST_CENTER },
-                { label: '系统审计', description: '查看操作与日志', icon: <SafetyOutlined />, route: ROUTES.ANALYTICS },
+                { label: '成员管理', description: '管理权限与身份', icon: <Users className="w-6 h-6" />, route: ROUTES.USERS },
+                { label: '资源库', description: '编排知识与文档', icon: <Database className="w-6 h-6" />, route: ROUTES.ADMIN_KNOWLEDGE },
+                { label: '测评引擎', description: '试卷与题库维护', icon: <ClipboardCheck className="w-6 h-6" />, route: ROUTES.TEST_CENTER },
+                { label: '系统审计', description: '查看操作与日志', icon: <Shield className="w-6 h-6" />, route: ROUTES.ANALYTICS },
               ].map((cmd, i) => (
                 <div 
                   key={i}
@@ -174,7 +174,7 @@ export const AdminDashboard: React.FC = () => {
                   }}
                   className="hover:border-primary-500 hover:bg-gray-50"
                 >
-                  <div style={{ fontSize: '24px', color: 'var(--color-accent)' }}>{cmd.icon}</div>
+                  <div style={{ color: 'var(--color-accent)' }}>{cmd.icon}</div>
                   <div>
                     <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{cmd.label}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>{cmd.description}</div>

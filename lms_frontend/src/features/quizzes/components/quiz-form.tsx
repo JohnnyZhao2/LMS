@@ -1,19 +1,42 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
-  Form, Input, Button, Card, Typography, message, Space, Table, Modal,
-  Tag, InputNumber, Row, Col, Statistic, Divider, Empty, Select,
-  Drawer
-} from 'antd';
-import {
-  useNavigate, useParams, useSearchParams
-} from 'react-router-dom';
-import {
-  PlusOutlined, DeleteOutlined, SendOutlined, MenuOutlined,
-  ArrowUpOutlined, ArrowDownOutlined, FormOutlined
-} from '@ant-design/icons';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+  Plus,
+  Trash2,
+  Send,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  FileEdit,
+  X,
+  Loader2,
+} from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/questions/api/get-questions';
@@ -21,10 +44,6 @@ import { useCreateQuestion } from '@/features/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import type { QuizCreateRequest, Question, QuestionType, QuestionCreateRequest } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
-
-const { Title, Text } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
 
 /**
  * 试卷中的题目项（带排序信息）
@@ -49,6 +68,19 @@ const getQuestionTypeDisplay = (type: QuestionType): string => {
     SHORT_ANSWER: '简答题',
   };
   return labels[type] || type;
+};
+
+/**
+ * 获取题型标签颜色
+ */
+const getTypeTagStyle = (type: QuestionType) => {
+  const styles: Record<QuestionType, { bg: string; text: string }> = {
+    SINGLE_CHOICE: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    MULTIPLE_CHOICE: { bg: 'bg-green-100', text: 'text-green-700' },
+    TRUE_FALSE: { bg: 'bg-orange-100', text: 'text-orange-700' },
+    SHORT_ANSWER: { bg: 'bg-purple-100', text: 'text-purple-700' },
+  };
+  return styles[type] || { bg: 'bg-gray-100', text: 'text-gray-700' };
 };
 
 /**
@@ -79,124 +111,119 @@ const SortableQuestionRow: React.FC<{
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const getTypeTag = (type: QuestionType) => {
-    const colors: Record<QuestionType, string> = {
-      SINGLE_CHOICE: 'blue',
-      MULTIPLE_CHOICE: 'green',
-      TRUE_FALSE: 'orange',
-      SHORT_ANSWER: 'purple',
-    };
-    const labels: Record<QuestionType, string> = {
-      SINGLE_CHOICE: '单选题',
-      MULTIPLE_CHOICE: '多选题',
-      TRUE_FALSE: '判断题',
-      SHORT_ANSWER: '简答题',
-    };
-    return <Tag color={colors[type]}>{labels[type]}</Tag>;
-  };
+  const tagStyle = getTypeTagStyle(item.question_type);
 
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '12px 16px',
-        background: isDragging ? '#f0f5ff' : '#fff',
-        borderBottom: '1px solid #f0f0f0',
-        gap: 12,
-      }}
+      style={style}
+      className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 ${
+        isDragging ? 'bg-blue-50' : 'bg-white'
+      }`}
       {...attributes}
     >
       {/* 拖拽手柄 */}
-      <div
-        {...listeners}
-        style={{ cursor: 'grab', color: '#999', padding: '4px' }}
-      >
-        <MenuOutlined />
+      <div {...listeners} className="cursor-grab text-gray-400 p-1">
+        <GripVertical className="w-4 h-4" />
       </div>
 
       {/* 序号 */}
-      <div style={{ width: 30, color: '#666', fontWeight: 500 }}>
+      <div className="w-8 text-gray-600 font-medium text-sm">
         {index + 1}.
       </div>
 
       {/* 题型标签 */}
-      <div style={{ width: 80 }}>
-        {getTypeTag(item.question_type)}
+      <div className="w-20">
+        <span className={`px-2 py-1 rounded text-xs font-medium ${tagStyle.bg} ${tagStyle.text}`}>
+          {getQuestionTypeDisplay(item.question_type)}
+        </span>
       </div>
 
       {/* 题目内容 */}
-      <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-gray-700">
         {item.content}
       </div>
 
       {/* 分值 */}
-      <div style={{ width: 100 }}>
-        <InputNumber
-          size="small"
+      <div className="w-24">
+        <Input
+          type="number"
           min={0}
           max={100}
-          precision={1}
+          step={0.1}
           value={Number(item.score)}
-          onChange={(val) => onScoreChange(item.id, val || 0)}
-          addonAfter="分"
-          style={{ width: 90 }}
+          onChange={(e) => onScoreChange(item.id, Number(e.target.value) || 0)}
+          className="h-8 text-sm w-20"
         />
       </div>
 
       {/* 操作按钮 */}
-      <Space size={4}>
+      <div className="flex items-center gap-1">
         <Button
-          type="text"
-          size="small"
-          icon={<ArrowUpOutlined />}
+          type="button"
+          variant="ghost"
+          size="sm"
           disabled={isFirst}
           onClick={() => onMoveUp(index)}
-        />
+          className="h-7 w-7 p-0"
+        >
+          <ArrowUp className="w-3.5 h-3.5" />
+        </Button>
         <Button
-          type="text"
-          size="small"
-          icon={<ArrowDownOutlined />}
+          type="button"
+          variant="ghost"
+          size="sm"
           disabled={isLast}
           onClick={() => onMoveDown(index)}
-        />
+          className="h-7 w-7 p-0"
+        >
+          <ArrowDown className="w-3.5 h-3.5" />
+        </Button>
         <Button
-          type="text"
-          size="small"
-          danger
-          icon={<DeleteOutlined />}
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onRemove(item.id)}
-        />
-      </Space>
+          className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
     </div>
   );
 };
 
 /**
- * 试卷表单组件
- * 支持从 URL 参数接收预选题目 ID
+ * 试卷表单组件 - ShadCN UI 版本
  */
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [form] = Form.useForm();
   const isEdit = !!id;
+
+  // 表单状态
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   // 已选题目列表（带顺序和分值）
   const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestionItem[]>([]);
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
   const [publishModalVisible, setPublishModalVisible] = useState(false);
   const [createdQuizId, setCreatedQuizId] = useState<number | null>(null);
-  const [_publishForm] = Form.useForm();
 
   // 新建题目抽屉
   const [newQuestionDrawerVisible, setNewQuestionDrawerVisible] = useState(false);
-  const [newQuestionForm] = Form.useForm();
+  const [newQuestionType, setNewQuestionType] = useState<QuestionType>('SINGLE_CHOICE');
+  const [newQuestionLineTypeId, setNewQuestionLineTypeId] = useState<number | undefined>();
+  const [newQuestionContent, setNewQuestionContent] = useState('');
+  const [newQuestionOptions, setNewQuestionOptions] = useState<Array<{ key: string; value: string }>>([]);
+  const [newQuestionAnswer, setNewQuestionAnswer] = useState<string | string[]>('');
+  const [newQuestionExplanation, setNewQuestionExplanation] = useState('');
+  const [newQuestionScore, setNewQuestionScore] = useState(1);
+  const [newQuestionDifficulty, setNewQuestionDifficulty] = useState('MEDIUM');
 
-  // 标记是否已从 URL/试卷详情初始化，避免重复覆盖本地编辑状态
+  // 标记是否已从 URL/试卷详情初始化
   const initializedFromUrlRef = useRef(false);
   const initializedFromQuizRef = useRef(false);
 
@@ -226,15 +253,11 @@ export const QuizForm: React.FC = () => {
 
   /**
    * 初始化：从 URL 参数或编辑数据加载已选题目
-   * 使用 ref 确保只初始化一次，避免新建题目或手动调整后被覆盖
    */
   useEffect(() => {
     if (isEdit && quizData && !initializedFromQuizRef.current) {
-      // 编辑模式：从 quizData 加载
-      form.setFieldsValue({
-        title: quizData.title,
-        description: quizData.description,
-      });
+      setTitle(quizData.title);
+      setDescription(quizData.description || '');
 
       if (quizData.questions) {
         const items: QuizQuestionItem[] = quizData.questions.map((qq) => ({
@@ -251,7 +274,6 @@ export const QuizForm: React.FC = () => {
       }
       initializedFromQuizRef.current = true;
     } else if (!isEdit && questionsData?.results && !initializedFromUrlRef.current) {
-      // 新建模式：从 URL 参数加载预选题目（只执行一次）
       const questionIdsParam = searchParams.get('question_ids');
       if (questionIdsParam) {
         const questionIds = questionIdsParam.split(',').map(Number).filter(Boolean);
@@ -273,7 +295,7 @@ export const QuizForm: React.FC = () => {
         initializedFromUrlRef.current = true;
       }
     }
-  }, [isEdit, quizData, questionsData, searchParams, form]);
+  }, [isEdit, quizData, questionsData, searchParams]);
 
   /**
    * 计算总分
@@ -288,12 +310,7 @@ export const QuizForm: React.FC = () => {
   const typeStats = useMemo(() => {
     const stats: Record<string, number> = {};
     selectedQuestions.forEach(q => {
-      const label = {
-        SINGLE_CHOICE: '单选题',
-        MULTIPLE_CHOICE: '多选题',
-        TRUE_FALSE: '判断题',
-        SHORT_ANSWER: '简答题',
-      }[q.question_type] || q.question_type;
+      const label = getQuestionTypeDisplay(q.question_type);
       stats[label] = (stats[label] || 0) + 1;
     });
     return stats;
@@ -302,25 +319,30 @@ export const QuizForm: React.FC = () => {
   /**
    * 提交表单
    */
-  const handleSubmit = async (values: { title: string; description?: string }) => {
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      toast.error('请输入试卷名称');
+      return;
+    }
     if (selectedQuestions.length === 0) {
-      message.warning('请至少添加一道题目');
+      toast.warning('请至少添加一道题目');
       return;
     }
 
     try {
       const submitData: QuizCreateRequest = {
-        ...values,
+        title,
+        description: description || undefined,
         existing_question_ids: selectedQuestions.map(q => q.id),
       };
 
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data: submitData });
-        message.success('更新成功');
+        toast.success('更新成功');
         navigate('/test-center?tab=quizzes');
       } else {
         const quiz = await createQuiz.mutateAsync(submitData);
-        message.success('创建成功');
+        toast.success('创建成功');
         setCreatedQuizId(quiz.id);
         setPublishModalVisible(true);
       }
@@ -332,13 +354,9 @@ export const QuizForm: React.FC = () => {
   /**
    * 立即发布任务
    */
-  const handlePublish = async () => {
-    try {
-      setPublishModalVisible(false);
-      navigate(`/tasks/create?quiz_id=${createdQuizId}`);
-    } catch {
-      // 表单验证失败
-    }
+  const handlePublish = () => {
+    setPublishModalVisible(false);
+    navigate(`/tasks/create?quiz_id=${createdQuizId}`);
   };
 
   /**
@@ -357,7 +375,6 @@ export const QuizForm: React.FC = () => {
     const currentMaxOrder = selectedQuestions.length;
 
     questionIds.forEach((qid, index) => {
-      // 避免重复添加
       if (selectedQuestions.some(q => q.id === qid)) return;
 
       const question = questionsData?.results?.find(q => q.id === qid);
@@ -376,7 +393,7 @@ export const QuizForm: React.FC = () => {
     setSelectedQuestions([...selectedQuestions, ...newItems]);
     setQuestionModalVisible(false);
     if (newItems.length > 0) {
-      message.success(`已添加 ${newItems.length} 道题目`);
+      toast.success(`已添加 ${newItems.length} 道题目`);
     }
   };
 
@@ -419,9 +436,9 @@ export const QuizForm: React.FC = () => {
   /**
    * 拖拽排序结束
    */
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over.id) {
+    if (over && active.id !== over.id) {
       const oldIndex = selectedQuestions.findIndex(q => q.id === active.id);
       const newIndex = selectedQuestions.findIndex(q => q.id === over.id);
       setSelectedQuestions(arrayMove(selectedQuestions, oldIndex, newIndex));
@@ -432,30 +449,51 @@ export const QuizForm: React.FC = () => {
    * 新建题目并添加到试卷
    */
   const handleCreateNewQuestion = async () => {
+    if (!newQuestionLineTypeId) {
+      toast.error('请选择条线类型');
+      return;
+    }
+    if (!newQuestionContent.trim()) {
+      toast.error('请输入题目内容');
+      return;
+    }
+
     try {
-      const values = await newQuestionForm.validateFields();
       const submitData: QuestionCreateRequest = {
-        ...values,
-        score: String(values.score || 1),
+        line_type_id: newQuestionLineTypeId,
+        question_type: newQuestionType,
+        content: newQuestionContent,
+        options: (newQuestionType === 'SINGLE_CHOICE' || newQuestionType === 'MULTIPLE_CHOICE') ? newQuestionOptions : undefined,
+        answer: newQuestionAnswer,
+        explanation: newQuestionExplanation || undefined,
+        score: String(newQuestionScore),
+        difficulty: newQuestionDifficulty as 'EASY' | 'MEDIUM' | 'HARD',
       };
 
       const newQuestion = await createQuestion.mutateAsync(submitData);
 
-      // 添加到已选题目
       const newItem: QuizQuestionItem = {
         id: newQuestion.id,
         content: newQuestion.content,
         question_type: newQuestion.question_type,
         question_type_display: newQuestion.question_type_display || getQuestionTypeDisplay(newQuestion.question_type),
-        score: newQuestion.score || String(values.score || 1),
+        score: newQuestion.score || String(newQuestionScore),
         order: selectedQuestions.length + 1,
       };
 
       setSelectedQuestions(prev => [...prev, newItem]);
 
-      message.success('题目创建成功并已添加到试卷');
+      toast.success('题目创建成功并已添加到试卷');
       setNewQuestionDrawerVisible(false);
-      newQuestionForm.resetFields();
+      // 重置表单
+      setNewQuestionType('SINGLE_CHOICE');
+      setNewQuestionLineTypeId(undefined);
+      setNewQuestionContent('');
+      setNewQuestionOptions([]);
+      setNewQuestionAnswer('');
+      setNewQuestionExplanation('');
+      setNewQuestionScore(1);
+      setNewQuestionDifficulty('MEDIUM');
     } catch (error) {
       showApiError(error, '创建题目失败');
     }
@@ -466,55 +504,77 @@ export const QuizForm: React.FC = () => {
     (q) => !selectedQuestions.some(sq => sq.id === q.id)
   ) || [];
 
-  const newQuestionType = Form.useWatch('question_type', newQuestionForm);
+  const isSubmitting = createQuiz.isPending || updateQuiz.isPending;
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: 24 }}>
+    <div className="p-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">
         {isEdit ? '编辑试卷' : '新建试卷'}
-      </Title>
+      </h2>
 
-      <Row gutter={24}>
+      <div className="grid grid-cols-3 gap-6">
         {/* 左侧：试卷信息和题目列表 */}
-        <Col span={16}>
-          <Card title="基本信息" style={{ marginBottom: 16 }}>
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
-              <Form.Item
-                name="title"
-                label="试卷名称"
-                rules={[{ required: true, message: '请输入试卷名称' }]}
-              >
-                <Input placeholder="请输入试卷名称" size="large" />
-              </Form.Item>
-
-              <Form.Item name="description" label="试卷描述">
-                <TextArea rows={2} placeholder="请输入试卷描述（可选）" />
-              </Form.Item>
-            </Form>
+        <div className="col-span-2 space-y-4">
+          <Card className="p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">基本信息</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title" className="text-sm font-medium text-gray-700">
+                  试卷名称 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="请输入试卷名称"
+                  className="mt-1.5 h-10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                  试卷描述
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                  placeholder="请输入试卷描述（可选）"
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
+            </div>
           </Card>
 
-          <Card
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>题目列表 ({selectedQuestions.length} 道)</span>
-                <Space>
-                  <Button
-                    icon={<PlusOutlined />}
-                    onClick={() => setQuestionModalVisible(true)}
-                  >
-                    从题库添加
-                  </Button>
-                  <Button
-                    type="primary"
-                    icon={<FormOutlined />}
-                    onClick={() => setNewQuestionDrawerVisible(true)}
-                  >
-                    新建题目
-                  </Button>
-                </Space>
+          <Card className="p-0 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <span className="text-base font-semibold text-gray-900">
+                题目列表 ({selectedQuestions.length} 道)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuestionModalVisible(true)}
+                  className="h-8"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  从题库添加
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setNewQuestionDrawerVisible(true)}
+                  className="h-8"
+                  style={{ background: 'rgb(77, 108, 255)' }}
+                >
+                  <FileEdit className="w-4 h-4 mr-1" />
+                  新建题目
+                </Button>
               </div>
-            }
-          >
+            </div>
+
             {selectedQuestions.length > 0 ? (
               <DndContext
                 sensors={sensors}
@@ -525,7 +585,7 @@ export const QuizForm: React.FC = () => {
                   items={selectedQuestions.map(q => q.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div style={{ border: '1px solid #f0f0f0', borderRadius: 4 }}>
+                  <div>
                     {selectedQuestions.map((item, index) => (
                       <SortableQuestionRow
                         key={item.id}
@@ -543,202 +603,265 @@ export const QuizForm: React.FC = () => {
                 </SortableContext>
               </DndContext>
             ) : (
-              <Empty
-                description="暂无题目，请从题库添加或新建题目"
-                style={{ padding: '40px 0' }}
-              />
+              <div className="py-10 text-center text-gray-400">
+                暂无题目，请从题库添加或新建题目
+              </div>
             )}
           </Card>
 
           {/* 提交按钮 */}
-          <div style={{ marginTop: 16, textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => navigate('/test-center?tab=quizzes')}>
-                取消
-              </Button>
-              <Button
-                type="primary"
-                size="large"
-                onClick={() => form.submit()}
-                loading={createQuiz.isPending || updateQuiz.isPending}
-                disabled={selectedQuestions.length === 0}
-              >
-                {isEdit ? '保存修改' : '创建试卷'}
-              </Button>
-            </Space>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/test-center?tab=quizzes')}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || selectedQuestions.length === 0}
+              className="px-6"
+              style={{ background: 'rgb(77, 108, 255)' }}
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isEdit ? '保存修改' : '创建试卷'}
+            </Button>
           </div>
-        </Col>
+        </div>
 
         {/* 右侧：统计信息 */}
-        <Col span={8}>
-          <Card title="试卷统计" style={{ position: 'sticky', top: 16 }}>
-            <Statistic
-              title="总分"
-              value={totalScore}
-              suffix="分"
-              valueStyle={{ color: '#1890ff', fontSize: 36 }}
-            />
-            <Divider />
-            <Statistic
-              title="题目数量"
-              value={selectedQuestions.length}
-              suffix="道"
-            />
-            <Divider />
-            <div>
-              <Text type="secondary">题型分布</Text>
-              <div style={{ marginTop: 8 }}>
-                {Object.entries(typeStats).length > 0 ? (
-                  Object.entries(typeStats).map(([type, count]) => (
-                    <div key={type} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text>{type}</Text>
-                      <Text strong>{count} 道</Text>
-                    </div>
-                  ))
-                ) : (
-                  <Text type="secondary">暂无题目</Text>
-                )}
+        <div className="col-span-1">
+          <Card className="p-6 sticky top-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">试卷统计</h3>
+            
+            <div className="mb-6">
+              <div className="text-sm text-gray-500 mb-1">总分</div>
+              <div className="text-4xl font-bold" style={{ color: 'rgb(77, 108, 255)' }}>
+                {totalScore}
+                <span className="text-base font-normal text-gray-400 ml-1">分</span>
               </div>
             </div>
+
+            <div className="h-px bg-gray-100 my-4" />
+
+            <div className="mb-6">
+              <div className="text-sm text-gray-500 mb-1">题目数量</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {selectedQuestions.length}
+                <span className="text-base font-normal text-gray-400 ml-1">道</span>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100 my-4" />
+
+            <div>
+              <div className="text-sm text-gray-500 mb-3">题型分布</div>
+              {Object.entries(typeStats).length > 0 ? (
+                <div className="space-y-2">
+                  {Object.entries(typeStats).map(([type, count]) => (
+                    <div key={type} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">{type}</span>
+                      <span className="text-sm font-semibold text-gray-900">{count} 道</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400">暂无题目</div>
+              )}
+            </div>
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* 从题库添加题目弹窗 */}
-      <Modal
-        title="从题库添加题目"
-        open={questionModalVisible}
-        onCancel={() => setQuestionModalVisible(false)}
-        footer={null}
-        width={900}
-      >
-        <QuestionSelector
-          availableQuestions={availableQuestions}
-          onConfirm={handleAddQuestions}
-          onCancel={() => setQuestionModalVisible(false)}
-        />
-      </Modal>
+      <Dialog open={questionModalVisible} onOpenChange={setQuestionModalVisible}>
+        <DialogContent className="max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle>从题库添加题目</DialogTitle>
+          </DialogHeader>
+          <QuestionSelector
+            availableQuestions={availableQuestions}
+            onConfirm={handleAddQuestions}
+            onCancel={() => setQuestionModalVisible(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* 新建题目抽屉 */}
-      <Drawer
-        title="新建题目"
-        placement="right"
-        width={600}
-        open={newQuestionDrawerVisible}
-        onClose={() => setNewQuestionDrawerVisible(false)}
-        extra={
-          <Space>
-            <Button onClick={() => setNewQuestionDrawerVisible(false)}>取消</Button>
+      <Dialog open={newQuestionDrawerVisible} onOpenChange={setNewQuestionDrawerVisible}>
+        <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>新建题目</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium">
+                条线类型 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={newQuestionLineTypeId?.toString()}
+                onValueChange={(val) => setNewQuestionLineTypeId(Number(val))}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="请选择条线类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lineTypes?.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id.toString()}>
+                      {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">
+                题目类型 <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={newQuestionType}
+                onValueChange={(val) => setNewQuestionType(val as QuestionType)}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="请选择题目类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SINGLE_CHOICE">单选题</SelectItem>
+                  <SelectItem value="MULTIPLE_CHOICE">多选题</SelectItem>
+                  <SelectItem value="TRUE_FALSE">判断题</SelectItem>
+                  <SelectItem value="SHORT_ANSWER">简答题</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">
+                题目内容 <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                value={newQuestionContent}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewQuestionContent(e.target.value)}
+                placeholder="请输入题目内容"
+                className="mt-1.5"
+                rows={3}
+              />
+            </div>
+
+            {(newQuestionType === 'SINGLE_CHOICE' || newQuestionType === 'MULTIPLE_CHOICE') && (
+              <div>
+                <Label className="text-sm font-medium">选项</Label>
+                <OptionsInput
+                  value={newQuestionOptions}
+                  onChange={setNewQuestionOptions}
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium">
+                答案 <span className="text-red-500">*</span>
+              </Label>
+              <AnswerInput
+                questionType={newQuestionType}
+                options={newQuestionOptions}
+                value={newQuestionAnswer}
+                onChange={setNewQuestionAnswer}
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">解析</Label>
+              <Textarea
+                value={newQuestionExplanation}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewQuestionExplanation(e.target.value)}
+                placeholder="请输入解析（可选）"
+                className="mt-1.5"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">分值</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  value={newQuestionScore}
+                  onChange={(e) => setNewQuestionScore(Number(e.target.value) || 1)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">难度</Label>
+                <Select
+                  value={newQuestionDifficulty}
+                  onValueChange={setNewQuestionDifficulty}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EASY">简单</SelectItem>
+                    <SelectItem value="MEDIUM">中等</SelectItem>
+                    <SelectItem value="HARD">困难</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
             <Button
-              type="primary"
-              onClick={handleCreateNewQuestion}
-              loading={createQuestion.isPending}
+              type="button"
+              variant="outline"
+              onClick={() => setNewQuestionDrawerVisible(false)}
             >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreateNewQuestion}
+              disabled={createQuestion.isPending}
+              style={{ background: 'rgb(77, 108, 255)' }}
+            >
+              {createQuestion.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               创建并添加
             </Button>
-          </Space>
-        }
-      >
-        <Form
-          form={newQuestionForm}
-          layout="vertical"
-          initialValues={{ difficulty: 'MEDIUM', score: 1 }}
-        >
-          <Form.Item
-            name="line_type_id"
-            label="条线类型"
-            rules={[{ required: true, message: '请选择条线类型' }]}
-          >
-            <Select placeholder="请选择条线类型">
-              {lineTypes?.map((tag) => (
-                <Option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="question_type"
-            label="题目类型"
-            rules={[{ required: true, message: '请选择题目类型' }]}
-          >
-            <Select placeholder="请选择题目类型">
-              <Option value="SINGLE_CHOICE">单选题</Option>
-              <Option value="MULTIPLE_CHOICE">多选题</Option>
-              <Option value="TRUE_FALSE">判断题</Option>
-              <Option value="SHORT_ANSWER">简答题</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="content"
-            label="题目内容"
-            rules={[{ required: true, message: '请输入题目内容' }]}
-          >
-            <TextArea rows={3} placeholder="请输入题目内容" />
-          </Form.Item>
-
-          {(newQuestionType === 'SINGLE_CHOICE' || newQuestionType === 'MULTIPLE_CHOICE') && (
-            <Form.Item
-              name="options"
-              label="选项"
-              rules={[{ required: true, message: '请设置选项' }]}
-            >
-              <OptionsInput />
-            </Form.Item>
-          )}
-
-          <Form.Item
-            name="answer"
-            label="答案"
-            rules={[{ required: true, message: '请设置答案' }]}
-          >
-            <AnswerInput questionType={newQuestionType} form={newQuestionForm} />
-          </Form.Item>
-
-          <Form.Item name="explanation" label="解析">
-            <TextArea rows={2} placeholder="请输入解析（可选）" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="score" label="分值" rules={[{ required: true }]}>
-                <InputNumber min={0} precision={1} style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="difficulty" label="难度">
-                <Select>
-                  <Option value="EASY">简单</Option>
-                  <Option value="MEDIUM">中等</Option>
-                  <Option value="HARD">困难</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Drawer>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 创建成功后发布弹窗 */}
-      <Modal
-        title="试卷创建成功"
-        open={publishModalVisible}
-        onCancel={handleLater}
-        footer={[
-          <Button key="later" onClick={handleLater}>
-            稍后发布
-          </Button>,
-          <Button key="publish" type="primary" icon={<SendOutlined />} onClick={handlePublish}>
-            立即发布任务
-          </Button>,
-        ]}
-      >
-        <p style={{ marginBottom: 16 }}>试卷创建成功！是否立即发布为任务？</p>
-      </Modal>
+      <Dialog open={publishModalVisible} onOpenChange={setPublishModalVisible}>
+        <DialogContent className="max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>试卷创建成功</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600 py-4">试卷创建成功！是否立即发布为任务？</p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleLater}>
+              稍后发布
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePublish}
+              style={{ background: 'rgb(77, 108, 255)' }}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              立即发布任务
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
 
 /**
  * 题库选择器组件
@@ -748,94 +871,115 @@ const QuestionSelector: React.FC<{
   onConfirm: (ids: number[]) => void;
   onCancel: () => void;
 }> = ({ availableQuestions, onConfirm, onCancel }) => {
-  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
-  const [filterType, setFilterType] = useState<QuestionType | undefined>();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [filterType, setFilterType] = useState<QuestionType | 'all'>('all');
 
-  const filteredQuestions = filterType
-    ? availableQuestions.filter(q => q.question_type === filterType)
-    : availableQuestions;
+  const filteredQuestions = filterType === 'all'
+    ? availableQuestions
+    : availableQuestions.filter(q => q.question_type === filterType);
 
-  const getTypeTag = (type: QuestionType) => {
-    const colors: Record<QuestionType, string> = {
-      SINGLE_CHOICE: 'blue',
-      MULTIPLE_CHOICE: 'green',
-      TRUE_FALSE: 'orange',
-      SHORT_ANSWER: 'purple',
-    };
-    const labels: Record<QuestionType, string> = {
-      SINGLE_CHOICE: '单选题',
-      MULTIPLE_CHOICE: '多选题',
-      TRUE_FALSE: '判断题',
-      SHORT_ANSWER: '简答题',
-    };
-    return <Tag color={colors[type]}>{labels[type]}</Tag>;
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredQuestions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredQuestions.map(q => q.id));
+    }
   };
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
+      <div className="flex items-center gap-4 mb-4">
         <Select
-          style={{ width: 150 }}
-          placeholder="筛选题型"
-          allowClear
-          onChange={(value) => setFilterType(value)}
+          value={filterType}
+          onValueChange={(val) => setFilterType(val as QuestionType | 'all')}
         >
-          <Option value="SINGLE_CHOICE">单选题</Option>
-          <Option value="MULTIPLE_CHOICE">多选题</Option>
-          <Option value="TRUE_FALSE">判断题</Option>
-          <Option value="SHORT_ANSWER">简答题</Option>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="筛选题型" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部题型</SelectItem>
+            <SelectItem value="SINGLE_CHOICE">单选题</SelectItem>
+            <SelectItem value="MULTIPLE_CHOICE">多选题</SelectItem>
+            <SelectItem value="TRUE_FALSE">判断题</SelectItem>
+            <SelectItem value="SHORT_ANSWER">简答题</SelectItem>
+          </SelectContent>
         </Select>
+        <span className="text-sm text-gray-500">
+          共 {filteredQuestions.length} 道题目
+        </span>
       </div>
-      <Table
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys as number[]),
-        }}
-        columns={[
-          {
-            title: '题目类型',
-            dataIndex: 'question_type',
-            key: 'question_type',
-            width: 100,
-            render: (type: QuestionType) => getTypeTag(type),
-          },
-          {
-            title: '题目内容',
-            dataIndex: 'content',
-            key: 'content',
-            ellipsis: true,
-          },
-          {
-            title: '条线类型',
-            dataIndex: 'line_type',
-            key: 'line_type',
-            width: 100,
-            render: (lineType?: { name: string } | null) => lineType?.name || '-',
-          },
-          {
-            title: '分值',
-            dataIndex: 'score',
-            key: 'score',
-            width: 60,
-          },
-        ]}
-        dataSource={filteredQuestions}
-        rowKey="id"
-        pagination={{ pageSize: 10 }}
-        scroll={{ y: 400 }}
-        size="small"
-      />
-      <div style={{ marginTop: 16, textAlign: 'right' }}>
-        <Space>
-          <Button onClick={onCancel}>取消</Button>
-          <Button
-            type="primary"
-            disabled={selectedRowKeys.length === 0}
-            onClick={() => onConfirm(selectedRowKeys)}
-          >
-            添加已选 ({selectedRowKeys.length})
-          </Button>
-        </Space>
+
+      <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+        {/* 表头 */}
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 sticky top-0">
+          <Checkbox
+            checked={selectedIds.length === filteredQuestions.length && filteredQuestions.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <div className="w-20 text-xs font-medium text-gray-500">题目类型</div>
+          <div className="flex-1 text-xs font-medium text-gray-500">题目内容</div>
+          <div className="w-20 text-xs font-medium text-gray-500">条线类型</div>
+          <div className="w-14 text-xs font-medium text-gray-500">分值</div>
+        </div>
+
+        {/* 题目列表 */}
+        {filteredQuestions.length > 0 ? (
+          filteredQuestions.map((q) => {
+            const tagStyle = getTypeTagStyle(q.question_type);
+            return (
+              <div
+                key={q.id}
+                onClick={() => toggleSelect(q.id)}
+                className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors ${
+                  selectedIds.includes(q.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
+                }`}
+              >
+                <Checkbox
+                  checked={selectedIds.includes(q.id)}
+                  onCheckedChange={() => toggleSelect(q.id)}
+                />
+                <div className="w-20">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${tagStyle.bg} ${tagStyle.text}`}>
+                    {getQuestionTypeDisplay(q.question_type)}
+                  </span>
+                </div>
+                <div className="flex-1 text-sm text-gray-700 truncate">
+                  {q.content}
+                </div>
+                <div className="w-20 text-sm text-gray-500">
+                  {q.line_type?.name || '-'}
+                </div>
+                <div className="w-14 text-sm text-gray-700">
+                  {q.score}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="py-10 text-center text-gray-400">
+            暂无可添加的题目
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-3 mt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          取消
+        </Button>
+        <Button
+          type="button"
+          disabled={selectedIds.length === 0}
+          onClick={() => onConfirm(selectedIds)}
+          style={{ background: 'rgb(77, 108, 255)' }}
+        >
+          添加已选 ({selectedIds.length})
+        </Button>
       </div>
     </div>
   );
@@ -845,58 +989,62 @@ const QuestionSelector: React.FC<{
  * 选项输入组件
  */
 const OptionsInput: React.FC<{
-  value?: Array<{ key: string; value: string }>;
-  onChange?: (value: Array<{ key: string; value: string }>) => void;
+  value: Array<{ key: string; value: string }>;
+  onChange: (value: Array<{ key: string; value: string }>) => void;
 }> = ({ value = [], onChange }) => {
-  const [options, setOptions] = useState<Array<{ key: string; value: string }>>(value || []);
-
-  useEffect(() => {
-    if (value) {
-      setOptions(value);
-    }
-  }, [value]);
-
   const handleAdd = () => {
     const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const nextKey = keys[options.length] || String.fromCharCode(65 + options.length);
-    const newOptions = [...options, { key: nextKey, value: '' }];
-    setOptions(newOptions);
-    onChange?.(newOptions);
+    const nextKey = keys[value.length] || String.fromCharCode(65 + value.length);
+    onChange([...value, { key: nextKey, value: '' }]);
   };
 
   const handleChange = (index: number, field: 'key' | 'value', val: string) => {
-    const newOptions = [...options];
+    const newOptions = [...value];
     newOptions[index] = { ...newOptions[index], [field]: val };
-    setOptions(newOptions);
-    onChange?.(newOptions);
+    onChange(newOptions);
   };
 
   const handleRemove = (index: number) => {
-    const newOptions = options.filter((_, i) => i !== index);
-    setOptions(newOptions);
-    onChange?.(newOptions);
+    onChange(value.filter((_, i) => i !== index));
   };
 
   return (
-    <div>
-      {options.map((opt, index) => (
-        <Space key={index} style={{ display: 'flex', marginBottom: 8 }}>
+    <div className="mt-1.5 space-y-2">
+      {value.map((opt, index) => (
+        <div key={index} className="flex items-center gap-2">
           <Input
-            style={{ width: 60 }}
             value={opt.key}
             onChange={(e) => handleChange(index, 'key', e.target.value)}
             placeholder="选项"
+            className="w-16"
           />
           <Input
-            style={{ flex: 1, width: 350 }}
             value={opt.value}
             onChange={(e) => handleChange(index, 'value', e.target.value)}
             placeholder="选项内容"
+            className="flex-1"
           />
-          <Button size="small" onClick={() => handleRemove(index)}>删除</Button>
-        </Space>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => handleRemove(index)}
+            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       ))}
-      <Button onClick={handleAdd} size="small">添加选项</Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleAdd}
+        className="h-8"
+      >
+        <Plus className="w-3 h-3 mr-1" />
+        添加选项
+      </Button>
     </div>
   );
 };
@@ -905,57 +1053,80 @@ const OptionsInput: React.FC<{
  * 答案输入组件
  */
 const AnswerInput: React.FC<{
-  questionType?: QuestionType;
-  form: any;
-  value?: string | string[];
-  onChange?: (value: string | string[]) => void;
-}> = ({ questionType, form, value, onChange }) => {
-  const options = Form.useWatch('options', form) || [];
-
+  questionType: QuestionType;
+  options: Array<{ key: string; value: string }>;
+  value: string | string[];
+  onChange: (value: string | string[]) => void;
+}> = ({ questionType, options, value, onChange }) => {
   if (questionType === 'SINGLE_CHOICE') {
     return (
-      <Select value={value as string} onChange={onChange} placeholder="请选择答案">
-        {options.map((opt: { key: string; value: string }) => (
-          <Option key={opt.key} value={opt.key}>
-            {opt.key}: {opt.value}
-          </Option>
-        ))}
+      <Select
+        value={value as string}
+        onValueChange={onChange}
+      >
+        <SelectTrigger className="mt-1.5">
+          <SelectValue placeholder="请选择答案" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.key} value={opt.key}>
+              {opt.key}: {opt.value}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
     );
   }
 
   if (questionType === 'MULTIPLE_CHOICE') {
+    const selectedKeys = Array.isArray(value) ? value : [];
     return (
-      <Select
-        mode="multiple"
-        value={value as string[]}
-        onChange={onChange}
-        placeholder="请选择答案（可多选）"
-      >
-        {options.map((opt: { key: string; value: string }) => (
-          <Option key={opt.key} value={opt.key}>
-            {opt.key}: {opt.value}
-          </Option>
+      <div className="mt-1.5 space-y-2">
+        {options.map((opt) => (
+          <div key={opt.key} className="flex items-center gap-2">
+            <Checkbox
+              checked={selectedKeys.includes(opt.key)}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  onChange([...selectedKeys, opt.key]);
+                } else {
+                  onChange(selectedKeys.filter(k => k !== opt.key));
+                }
+              }}
+            />
+            <span className="text-sm">
+              {opt.key}: {opt.value}
+            </span>
+          </div>
         ))}
-      </Select>
+      </div>
     );
   }
 
   if (questionType === 'TRUE_FALSE') {
     return (
-      <Select value={value as string} onChange={onChange} placeholder="请选择答案">
-        <Option value="TRUE">正确</Option>
-        <Option value="FALSE">错误</Option>
+      <Select
+        value={value as string}
+        onValueChange={onChange}
+      >
+        <SelectTrigger className="mt-1.5">
+          <SelectValue placeholder="请选择答案" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="TRUE">正确</SelectItem>
+          <SelectItem value="FALSE">错误</SelectItem>
+        </SelectContent>
       </Select>
     );
   }
 
   return (
-    <TextArea
-      rows={2}
+    <Textarea
       value={value as string}
-      onChange={(e) => onChange?.(e.target.value)}
+      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
       placeholder="请输入参考答案"
+      className="mt-1.5"
+      rows={2}
     />
   );
 };

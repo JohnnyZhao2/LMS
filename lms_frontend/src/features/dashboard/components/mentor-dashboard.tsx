@@ -1,14 +1,14 @@
 import React from 'react';
 import {
-  CheckCircleOutlined,
-  EditOutlined,
-  FileSearchOutlined,
-  PlusOutlined,
-  SendOutlined,
-  TrophyOutlined,
-  TeamOutlined,
-  BarChartOutlined,
-} from '@ant-design/icons';
+  CheckCircle,
+  Pencil,
+  FileSearch,
+  Plus,
+  Send,
+  Trophy,
+  Users,
+  BarChart3,
+} from 'lucide-react';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
@@ -24,7 +24,7 @@ const statCards = [
   {
     key: 'mentees',
     title: '学员数量',
-    icon: <TeamOutlined />,
+    icon: <Users className="w-5 h-5" />,
     color: 'var(--color-primary-500)',
     bg: 'var(--color-primary-50)',
     getValue: (data: MentorDashboardData | undefined) => data?.mentees_count || 0,
@@ -33,7 +33,7 @@ const statCards = [
   {
     key: 'completion',
     title: '任务完成率',
-    icon: <CheckCircleOutlined />,
+    icon: <CheckCircle className="w-5 h-5" />,
     color: 'var(--color-success-500)',
     bg: 'var(--color-success-50)',
     getValue: (data: MentorDashboardData | undefined) => data?.completion_rate || '0%',
@@ -42,7 +42,7 @@ const statCards = [
   {
     key: 'score',
     title: '平均分',
-    icon: <TrophyOutlined />,
+    icon: <Trophy className="w-5 h-5" />,
     color: 'var(--color-purple-500)',
     bg: 'rgba(155, 0, 255, 0.1)',
     getValue: (data: MentorDashboardData | undefined) => data?.average_score || '0',
@@ -51,7 +51,7 @@ const statCards = [
   {
     key: 'grading',
     title: '待评分',
-    icon: <EditOutlined />,
+    icon: <Pencil className="w-5 h-5" />,
     color: 'var(--color-orange-500)',
     bg: 'rgba(255, 140, 82, 0.1)',
     getValue: (data: MentorDashboardData | undefined) => data?.pending_grading_count || 0,
@@ -67,7 +67,7 @@ const quickActions = [
     key: 'spot-check',
     title: '发起抽查',
     description: '对学员进行知识抽查',
-    icon: <FileSearchOutlined />,
+    icon: <FileSearch className="w-5 h-5" />,
     color: 'var(--color-error-500)',
     bg: 'linear-gradient(135deg, var(--color-error-500) 0%, var(--color-pink-500) 100%)',
     route: ROUTES.SPOT_CHECKS,
@@ -76,7 +76,7 @@ const quickActions = [
     key: 'task',
     title: '发布任务',
     description: '创建学习/练习/考试任务',
-    icon: <SendOutlined />,
+    icon: <Send className="w-5 h-5" />,
     color: 'var(--color-primary-500)',
     bg: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
     route: `${ROUTES.TASKS}/create`,
@@ -85,7 +85,7 @@ const quickActions = [
     key: 'quiz',
     title: '新建试卷',
     description: '创建新的考试或练习试卷',
-    icon: <PlusOutlined />,
+    icon: <Plus className="w-5 h-5" />,
     color: 'var(--color-success-500)',
     bg: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
     route: ROUTES.TEST_CENTER,
@@ -94,7 +94,7 @@ const quickActions = [
     key: 'grading',
     title: '批改作业',
     description: '查看待批改的答卷',
-    icon: <EditOutlined />,
+    icon: <Pencil className="w-5 h-5" />,
     color: 'var(--color-orange-500)',
     bg: 'linear-gradient(135deg, var(--color-orange-500) 0%, var(--color-warning-500) 100%)',
     route: ROUTES.GRADING,
@@ -154,7 +154,7 @@ export const MentorDashboard: React.FC = () => {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
-            <BarChartOutlined style={{ fontSize: 20, color: 'var(--color-primary-400)' }} />
+            <BarChart3 className="w-5 h-5" style={{ color: 'var(--color-primary-400)' }} />
             <span style={{ color: 'var(--color-gray-400)', fontSize: 'var(--font-size-sm)' }}>
               {roleName}工作台
             </span>

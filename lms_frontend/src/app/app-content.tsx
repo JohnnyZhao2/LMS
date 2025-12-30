@@ -1,7 +1,6 @@
 import { AppRouter } from './router';
-import { AppLayout } from '@/components/layout/layout';
+import { AppLayout } from '@/components/layouts';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { Spin } from 'antd';
 import { useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 
@@ -14,8 +13,8 @@ export const AppContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Spin size="large" />
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
       </div>
     );
   }

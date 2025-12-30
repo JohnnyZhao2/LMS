@@ -1,5 +1,5 @@
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { TaskManagementNew } from './task-management-new';
+import { TaskManagement } from './task-management';
 import { StudentTaskList } from './student-task-list';
 
 /**
@@ -16,7 +16,7 @@ export const TaskList: React.FC = () => {
     return <StudentTaskList />;
   }
 
-  return <TaskManagementNew />;
+  return <TaskManagement />;
 };
 
 export default TaskList;

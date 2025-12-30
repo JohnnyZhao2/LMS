@@ -43,7 +43,7 @@ export interface KnowledgeFilterActions {
   setSearchValue: (value: string) => void;
   /** 提交搜索 */
   submitSearch: () => void;
-  /** 直接搜索（用于 antd Search 组件） */
+  /** 直接搜索（用于 Search 组件） */
   searchDirectly: (value: string) => void;
   /** 选择/取消条线类型 */
   handleLineTypeSelect: (id: number | undefined) => void;
@@ -90,7 +90,7 @@ export const useKnowledgeFilters = (
   }, [searchValue]);
 
   /**
-   * 直接搜索（用于 antd Search 组件）
+   * 直接搜索（用于 Search 组件）
    */
   const searchDirectly = useCallback((value: string) => {
     setSearchValue(value);

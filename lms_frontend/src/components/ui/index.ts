@@ -113,6 +113,24 @@ export type { TextareaProps } from './textarea';
 // Checkbox
 export { Checkbox } from './checkbox';
 
+// RadioGroup
+export { RadioGroup, RadioGroupItem } from './radio-group';
+
+// Spinner (Spin replacement)
+export { Spinner, Spin } from './spinner';
+export type { SpinnerProps } from './spinner';
+
+// Progress
+export { Progress } from './progress';
+export type { ProgressProps } from './progress';
+
+// Tooltip
+export { Tooltip, TooltipRoot, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip';
+
+// Pagination
+export { Pagination } from './pagination';
+export type { PaginationProps } from './pagination';
+
 // Legacy components (kept for backward compatibility during migration)
 export { StatusBadge } from './status-badge';
 export type { StatusBadgeProps, StatusType } from './status-badge';

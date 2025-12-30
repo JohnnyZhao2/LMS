@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  TeamOutlined,
-  BarChartOutlined,
-  RiseOutlined,
-  TrophyOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+  Users,
+  BarChart3,
+  TrendingUp,
+  Trophy,
+  User,
+} from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Card } from '@/components/ui';
 
@@ -81,7 +81,7 @@ export const TeamManagerDashboard: React.FC = () => {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
-            <BarChartOutlined style={{ fontSize: 20, color: 'rgba(255, 255, 255, 0.9)' }} />
+            <BarChart3 className="w-5 h-5" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
             <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 'var(--font-size-sm)' }}>
               团队经理工作台
             </span>
@@ -139,10 +139,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-primary-500)',
-                    fontSize: 22,
                   }}
                 >
-                  <TeamOutlined />
+                  <Users className="w-5 h-5" />
                 </div>
               </div>
             </div>
@@ -180,10 +179,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-success-500)',
-                    fontSize: 22,
                   }}
                 >
-                  <RiseOutlined />
+                  <TrendingUp className="w-5 h-5" />
                 </div>
               </div>
             </div>
@@ -224,10 +222,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-purple-500)',
-                    fontSize: 22,
                   }}
                 >
-                  <TrophyOutlined />
+                  <Trophy className="w-5 h-5" />
                 </div>
               </div>
             </div>
@@ -268,10 +265,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-cyan-500)',
-                    fontSize: 22,
                   }}
                 >
-                  <UserOutlined />
+                  <User className="w-5 h-5" />
                 </div>
               </div>
             </div>
@@ -295,10 +291,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-primary-500)',
-                    fontSize: 18,
                   }}
                 >
-                  <BarChartOutlined />
+                  <BarChart3 className="w-5 h-5" />
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
                   学习趋势
@@ -326,10 +321,9 @@ export const TeamManagerDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-success-500)',
-                    fontSize: 18,
                   }}
                 >
-                  <TrophyOutlined />
+                  <Trophy className="w-5 h-5" />
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
                   排行榜

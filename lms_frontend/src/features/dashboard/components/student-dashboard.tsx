@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  BookOutlined,
-  FileTextOutlined,
-  ClockCircleOutlined,
-  RocketOutlined,
-  TrophyOutlined,
-} from '@ant-design/icons';
+  BookOpen,
+  FileText,
+  Clock,
+  Rocket,
+  Trophy,
+} from 'lucide-react';
 import { useStudentDashboard } from '../api/student-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
@@ -20,7 +20,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 const taskConfig = {
   color: 'var(--color-primary-500)',
   bg: 'var(--color-primary-50)',
-  icon: <FileTextOutlined />,
+  icon: <FileText className="w-4 h-4" />,
   label: '任务',
 };
 
@@ -162,7 +162,7 @@ export const StudentDashboard: React.FC = () => {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-2)' }}>
-            <RocketOutlined style={{ fontSize: 24, color: 'rgba(255, 255, 255, 0.9)' }} />
+            <Rocket className="w-6 h-6" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
             <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 'var(--font-size-base)' }}>
               {getGreeting()}
             </span>
@@ -208,10 +208,9 @@ export const StudentDashboard: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: 'var(--color-primary-500)',
-                      fontSize: 18,
                     }}
                   >
-                    <FileTextOutlined />
+                    <FileText className="w-5 h-5" />
                   </div>
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
@@ -284,7 +283,7 @@ export const StudentDashboard: React.FC = () => {
                             />
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-                            <ClockCircleOutlined style={{ fontSize: 12, color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)' }} />
+                            <Clock className="w-3 h-3" style={{ color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)' }} />
                             <span
                               style={{
                                 fontSize: 'var(--font-size-sm)',
@@ -301,7 +300,7 @@ export const StudentDashboard: React.FC = () => {
                 </StaggeredList>
               ) : (
                 <EmptyState
-                  icon={<TrophyOutlined style={{ fontSize: 32, color: 'var(--color-success-500)', marginBottom: 'var(--spacing-2)' }} />}
+                  icon={<Trophy className="w-8 h-8" style={{ color: 'var(--color-success-500)', marginBottom: 'var(--spacing-2)' }} />}
                   description="太棒了！暂无待办任务"
                 />
               )}
@@ -331,10 +330,9 @@ export const StudentDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--color-success-500)',
-                    fontSize: 18,
                   }}
                 >
-                  <BookOutlined />
+                  <BookOpen className="w-5 h-5" />
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
                   最新知识
@@ -408,10 +406,9 @@ export const StudentDashboard: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
-                  fontSize: 18,
                 }}
               >
-                <TrophyOutlined />
+                <Trophy className="w-5 h-5" />
               </div>
               <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
                 学习进度
