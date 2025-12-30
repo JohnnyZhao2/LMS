@@ -1,15 +1,124 @@
 /**
  * LMS 全局样式
  * 基于 design.json + REFACTOR_AND_DESIGN.md 规范
+ * 
+ * Tailwind CSS v4 + ShadCN UI + Ant Design 共存
  */
 
 /* ============================================
    Google Fonts - Outfit (现代无衬线字体)
+   必须在 Tailwind 导入之前
    ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
 /* ============================================
-   CSS Variables (设计令牌)
+   Tailwind CSS v4 导入 (CSS-first 配置)
+   ============================================ */
+@import "tailwindcss";
+
+/* ============================================
+   Tailwind v4 Theme 配置 (CSS-first)
+   ============================================ */
+@theme {
+  /* 主色调 */
+  --color-primary-50: #E8EEFF;
+  --color-primary-100: #C7D7FF;
+  --color-primary-200: #9AB8FF;
+  --color-primary-300: #6B94FF;
+  --color-primary-400: #4D7CFF;
+  --color-primary-500: #4D6CFF;
+  --color-primary-600: #3D5FE6;
+  --color-primary-700: #2F4AC7;
+  
+  /* 成功色 */
+  --color-success-50: #E6F9F0;
+  --color-success-100: #B8EDCE;
+  --color-success-500: #10B759;
+  --color-success-600: #0DA34F;
+  
+  /* 警告色 */
+  --color-warning-50: #FFFBEB;
+  --color-warning-100: #FFF4C7;
+  --color-warning-300: #FFE577;
+  --color-warning-500: #F5C200;
+  
+  /* 错误色 */
+  --color-error-50: #FFE9ED;
+  --color-error-100: #FFC9D3;
+  --color-error-500: #FF3D71;
+  --color-error-600: #E6355F;
+  
+  /* 中性色 */
+  --color-gray-50: #F8F9FA;
+  --color-gray-100: #F1F3F5;
+  --color-gray-200: #E9ECEF;
+  --color-gray-300: #DEE2E6;
+  --color-gray-400: #CED4DA;
+  --color-gray-500: #ADB5BD;
+  --color-gray-600: #868E96;
+  --color-gray-700: #495057;
+  --color-gray-800: #343A40;
+  --color-gray-900: #212529;
+  
+  /* ShadCN 需要的颜色变量 */
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+  --color-secondary: hsl(210 40% 96.1%);
+  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --color-muted: hsl(210 40% 96.1%);
+  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
+  --color-accent: hsl(210 40% 96.1%);
+  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
+  --color-destructive: hsl(346 84% 61%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-border: hsl(214.3 31.8% 91.4%);
+  --color-input: hsl(214.3 31.8% 91.4%);
+  --color-ring: hsl(231 100% 65%);
+  
+  /* 字体 */
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+}
+
+/* ============================================
+   ShadCN CSS 变量 (兼容层)
+   ============================================ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 231 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 346 84% 61%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 231 100% 65%;
+  --radius: 0.5rem;
+}
+
+/* ============================================
+   CSS Variables (设计令牌) - 保留供 Ant Design 使用
    ============================================ */
 :root {
   /* Primary Colors */
@@ -132,6 +241,18 @@
 }
 
 /* ============================================
+   Tailwind Base Layer
+   ============================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-gray-100 text-foreground font-sans antialiased;
+  }
+}
+
+/* ============================================
    Reset & Base Styles
    ============================================ */
 *,
@@ -165,6 +286,7 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
 
 /* ============================================
    Typography Utilities
@@ -517,8 +639,9 @@ a:hover {
   background-clip: text;
 }
 
+
 /* ============================================
-   Ant Design Overrides
+   Ant Design Overrides (共存期间保留)
    ============================================ */
 
 /* 全局取消 Ant Design 的默认阴影 */
@@ -854,6 +977,7 @@ textarea.ant-input {
   width: 28px !important;
 }
 
+
 /* Pagination 样式优化 - 更紧凑精致 */
 .ant-pagination {
   display: flex;
@@ -924,7 +1048,6 @@ textarea.ant-input {
   color: var(--color-gray-500) !important;
   margin-inline-end: var(--spacing-3) !important;
 }
-
 
 /* 简化分页 - 小型分页 */
 .ant-pagination-simple .ant-pagination-simple-pager {
@@ -1057,6 +1180,7 @@ textarea.ant-input {
     font-size: var(--font-size-2xl);
   }
 }
+
 
 /* ============================================
    Task Form - 三栏布局
@@ -1443,30 +1567,11 @@ textarea.ant-input {
   background: var(--color-gray-50);
 }
 
-/* 底部状态 */
-.task-form-meta-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3);
-  font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+.task-form-selected-user-remove {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
 }
 
-.task-form-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.task-form-status-text {
-  font-family: var(--font-mono);
-}
-
-/* 错误状态 */
-.task-form-error {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.task-form-selected-user:hover .task-form-selected-user-remove {
+  opacity: 1;
 }

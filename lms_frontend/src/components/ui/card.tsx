@@ -1,67 +1,76 @@
-import React from 'react';
-import { Card as AntCard } from 'antd';
-import type { CardProps as AntCardProps } from 'antd';
+import * as React from "react"
 
-/**
- * 增强型卡片组件
- * 基于 design.json 规范，预设圆角、阴影和 Hover 效果
- */
-export interface CardProps extends AntCardProps {
-  /** 是否启用悬停效果 */
-  hoverable?: boolean;
-  /** 变体样式 */
-  variant?: 'default' | 'bordered' | 'glass';
-  /** 是否无内边距 */
-  noPadding?: boolean;
-}
+import { cn } from "@/lib/utils"
 
-export const Card: React.FC<CardProps> = ({
-  children,
-  hoverable = false,
-  variant = 'default',
-  noPadding = false,
-  style,
-  className = '',
-  ...props
-}) => {
-  const baseStyles: React.CSSProperties = {
-    borderRadius: 'var(--radius-lg)',
-    border: 'none',
-    boxShadow: 'var(--shadow-sm)',
-    transition: 'transform var(--transition-base), box-shadow var(--transition-base)',
-    ...(noPadding && { padding: 0 }),
-  };
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-xl border border-gray-200 bg-white text-gray-900 shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
 
-  const variantStyles: Record<string, React.CSSProperties> = {
-    default: {},
-    bordered: {
-      border: '1px solid var(--color-gray-200)',
-      boxShadow: 'none',
-    },
-    glass: {
-      background: 'var(--glass-bg)',
-      backdropFilter: 'var(--glass-blur)',
-      WebkitBackdropFilter: 'var(--glass-blur)',
-      border: 'var(--glass-border)',
-    },
-  };
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
 
-  const hoverClassName = hoverable ? 'card-hover' : '';
+const CardTitle = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("font-semibold leading-none tracking-tight", className)}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
 
-  return (
-    <AntCard
-      {...props}
-      className={`${className} ${hoverClassName}`.trim()}
-      style={{
-        ...baseStyles,
-        ...variantStyles[variant],
-        ...style,
-      }}
-    >
-      {children}
-    </AntCard>
-  );
-};
+const CardDescription = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm text-gray-500", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
 
-export default Card;
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
 
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center p-6 pt-0", className)}
+    {...props}
+  />
+))
+CardFooter.displayName = "CardFooter"
+
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

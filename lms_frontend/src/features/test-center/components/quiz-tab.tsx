@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Table, Card, Button, Space, Modal, message, Radio, Form, Tag
+  Table, Card, Button, Space, Modal, message, Form
 } from 'antd';
 import {
   EditOutlined, DeleteOutlined, SendOutlined
@@ -26,7 +26,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
   const [page, setPage] = useState(1);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [quickPublishModalVisible, setQuickPublishModalVisible] = useState(false);
-  const [form] = Form.useForm();
+  const [_form] = Form.useForm();
 
   const { data, isLoading } = useQuizzes({ page, search: search || undefined });
   const deleteQuiz = useDeleteQuiz();
@@ -69,9 +69,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       // 失败
     }
   };
-
-  // 多个试卷
-  const isMultipleQuizzes = selectedRowKeys.length > 1;
 
   const columns = [
     {

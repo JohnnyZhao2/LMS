@@ -259,7 +259,7 @@ export const Header: React.FC = () => {
                     lineHeight: 1.2,
                   }}
                 >
-                  {user.display_name || user.username}
+                  {user.username}
                 </Text>
                 {currentRole && (
                   <Text

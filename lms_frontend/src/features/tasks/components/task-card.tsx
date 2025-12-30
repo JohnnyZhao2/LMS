@@ -1,4 +1,4 @@
-import { Typography, Progress, Tag, Dropdown, Button, Modal, message } from 'antd';
+import { Typography, Progress, Tag, Dropdown, Button, Modal, message, Card } from 'antd';
 import {
   ClockCircleOutlined,
   UserOutlined,
@@ -18,7 +18,7 @@ import {
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Card, StatusBadge } from '@/components/ui';
+import { StatusBadge } from '@/components/ui';
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
 import { useCloseTask } from '../api/close-task';

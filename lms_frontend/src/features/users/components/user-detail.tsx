@@ -200,11 +200,6 @@ export const UserDetail: React.FC = () => {
           <Descriptions.Item label="更新时间">
             {user.updated_at ? dayjs(user.updated_at).format('YYYY-MM-DD HH:mm:ss') : '-'}
           </Descriptions.Item>
-          {user.last_login && (
-            <Descriptions.Item label="最后登录">
-              {dayjs(user.last_login).format('YYYY-MM-DD HH:mm:ss')}
-            </Descriptions.Item>
-          )}
         </Descriptions>
 
         <Divider />

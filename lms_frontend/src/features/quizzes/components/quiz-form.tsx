@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Form, Input, Button, Card, Typography, message, Space, Table, Modal,
-  Radio, Tag, InputNumber, Row, Col, Statistic, Divider, Empty, Select,
+  Tag, InputNumber, Row, Col, Statistic, Divider, Empty, Select,
   Drawer
 } from 'antd';
 import {
@@ -190,7 +190,7 @@ export const QuizForm: React.FC = () => {
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
   const [publishModalVisible, setPublishModalVisible] = useState(false);
   const [createdQuizId, setCreatedQuizId] = useState<number | null>(null);
-  const [publishForm] = Form.useForm();
+  const [_publishForm] = Form.useForm();
 
   // 新建题目抽屉
   const [newQuestionDrawerVisible, setNewQuestionDrawerVisible] = useState(false);
@@ -200,7 +200,7 @@ export const QuizForm: React.FC = () => {
   const initializedFromUrlRef = useRef(false);
   const initializedFromQuizRef = useRef(false);
 
-  const { data: quizData, isLoading } = useQuizDetail(Number(id));
+  const { data: quizData } = useQuizDetail(Number(id));
   const { data: questionsData } = useQuestions({ pageSize: 1000 });
   const { data: lineTypes } = useLineTypeTags();
   const createQuiz = useCreateQuiz();

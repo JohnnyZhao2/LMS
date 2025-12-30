@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Typography, Tag, Spin, List, Dropdown, Space, message, Progress, Divider } from 'antd';
+import { Button, Typography, Tag, Spin, List, Dropdown, Space, message, Progress, Divider, Card } from 'antd';
 import {
   CheckCircleOutlined,
   PlayCircleOutlined,
@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import { useCompleteLearning } from '../api/complete-learning';
-import { Card, StatusBadge } from '@/components/ui';
+import { StatusBadge } from '@/components/ui';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 

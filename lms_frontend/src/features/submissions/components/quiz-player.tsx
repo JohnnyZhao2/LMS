@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { Button, Row, Col, Typography, Modal, message, Spin, Affix, Progress } from 'antd';
+import { Button, Row, Col, Typography, Modal, message, Spin, Affix, Progress, Card } from 'antd';
 import {
   LeftOutlined,
   RightOutlined,
@@ -14,7 +14,7 @@ import { useSaveAnswer } from '../api/save-answer';
 import { useSubmit } from '../api/submit';
 import { QuestionCard } from './question-card';
 import { Timer } from './timer';
-import { Card, StatusBadge } from '@/components/ui';
+import { StatusBadge } from '@/components/ui';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';
 

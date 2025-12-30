@@ -1,26 +1,26 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/protected-route';
-import { LoginForm } from '@/features/auth/components/login-form';
+import { LoginPage } from '@/app/routes/auth/login';
 import { StudentDashboard } from '@/features/dashboard/components/student-dashboard';
 import { MentorDashboard } from '@/features/dashboard/components/mentor-dashboard';
 import { TeamManagerDashboard } from '@/features/dashboard/components/team-manager-dashboard';
 import { StudentKnowledgeCenter } from '@/features/knowledge/components/student-knowledge-center';
 import { KnowledgeDetail } from '@/features/knowledge/components/knowledge-detail';
-import { KnowledgeForm } from '@/features/knowledge/components/knowledge-form';
-import { AdminKnowledgeList } from '@/features/knowledge/components/admin-knowledge-list';
+import { KnowledgeFormNew } from '@/features/knowledge/components/knowledge-form-new';
+import { AdminKnowledgeListNew } from '@/features/knowledge/components/admin-knowledge-list-new';
 import { TaskList } from '@/features/tasks/components/task-list';
 import { TaskDetail } from '@/features/tasks/components/task-detail';
-import { TaskForm } from '@/features/tasks/components/task-form';
+import { TaskFormNew } from '@/features/tasks/components/task-form-new';
 import { QuizPlayer } from '@/features/submissions/components/quiz-player';
 import { AnswerReview } from '@/features/submissions/components/answer-review';
-import { GradingList } from '@/features/grading/components/grading-list';
+import { GradingListNew } from '@/features/grading/components/grading-list-new';
 import { GradingForm } from '@/features/grading/components/grading-form';
-import { QuestionForm } from '@/features/questions/components/question-form';
-import { QuizForm } from '@/features/quizzes/components/quiz-form';
-import { TestCenter } from '@/features/test-center';
-import { SpotCheckList } from '@/features/spot-checks/components/spot-check-list';
-import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
-import { UserList } from '@/features/users/components/user-list';
+import { QuestionFormNew } from '@/features/questions/components/question-form-new';
+import { QuizFormNew } from '@/features/quizzes/components/quiz-form-new';
+import { TestCenterNew } from '@/features/test-center/components/test-center-new';
+import { SpotCheckListNew } from '@/features/spot-checks/components/spot-check-list-new';
+import { SpotCheckFormNew } from '@/features/spot-checks/components/spot-check-form-new';
+import { UserListNew } from '@/features/users/components/user-list-new';
 import { UserForm } from '@/features/users/components/user-form';
 import { UserDetail } from '@/features/users/components/user-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -59,7 +59,7 @@ export const AppRouter: React.FC = () => {
   return (
     <Routes>
       {/* 登录页 */}
-      <Route path={ROUTES.LOGIN} element={<LoginForm />} />
+      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
       {/* 仪表盘 */}
       <Route
@@ -94,7 +94,7 @@ export const AppRouter: React.FC = () => {
         path={ROUTES.ADMIN_KNOWLEDGE}
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
-            <AdminKnowledgeList />
+            <AdminKnowledgeListNew />
           </ProtectedRoute>
         }
       />
@@ -102,7 +102,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.ADMIN_KNOWLEDGE}/create`}
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
-            <KnowledgeForm />
+            <KnowledgeFormNew />
           </ProtectedRoute>
         }
       />
@@ -110,7 +110,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.ADMIN_KNOWLEDGE}/:id/edit`}
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
-            <KnowledgeForm />
+            <KnowledgeFormNew />
           </ProtectedRoute>
         }
       />
@@ -136,7 +136,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TASKS}/create`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <TaskForm />
+            <TaskFormNew />
           </ProtectedRoute>
         }
       />
@@ -144,7 +144,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TASKS}/:id/edit`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <TaskForm />
+            <TaskFormNew />
           </ProtectedRoute>
         }
       />
@@ -196,7 +196,7 @@ export const AppRouter: React.FC = () => {
         path={ROUTES.GRADING}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <GradingList />
+            <GradingListNew />
           </ProtectedRoute>
         }
       />
@@ -214,7 +214,7 @@ export const AppRouter: React.FC = () => {
         path={ROUTES.TEST_CENTER}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <TestCenter />
+            <TestCenterNew />
           </ProtectedRoute>
         }
       />
@@ -222,7 +222,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TEST_CENTER_QUESTIONS}/create`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuestionForm />
+            <QuestionFormNew />
           </ProtectedRoute>
         }
       />
@@ -230,7 +230,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TEST_CENTER_QUESTIONS}/:id/edit`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuestionForm />
+            <QuestionFormNew />
           </ProtectedRoute>
         }
       />
@@ -238,7 +238,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TEST_CENTER_QUIZZES}/create`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuizForm />
+            <QuizFormNew />
           </ProtectedRoute>
         }
       />
@@ -246,7 +246,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.TEST_CENTER_QUIZZES}/:id/edit`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-            <QuizForm />
+            <QuizFormNew />
           </ProtectedRoute>
         }
       />
@@ -256,7 +256,7 @@ export const AppRouter: React.FC = () => {
         path={ROUTES.SPOT_CHECKS}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER']}>
-            <SpotCheckList />
+            <SpotCheckListNew />
           </ProtectedRoute>
         }
       />
@@ -264,7 +264,7 @@ export const AppRouter: React.FC = () => {
         path={`${ROUTES.SPOT_CHECKS}/create`}
         element={
           <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER']}>
-            <SpotCheckForm />
+            <SpotCheckFormNew />
           </ProtectedRoute>
         }
       />
@@ -274,7 +274,7 @@ export const AppRouter: React.FC = () => {
         path={ROUTES.USERS}
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
-            <UserList />
+            <UserListNew />
           </ProtectedRoute>
         }
       />

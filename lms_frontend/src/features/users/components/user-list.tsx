@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Button, Typography, Modal, message, Space, Tag, Input } from 'antd';
+import { Table, Button, Typography, Modal, message, Space, Tag, Input, Card } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
@@ -12,7 +12,7 @@ import {
 import { useUsers } from '../api/get-users';
 import { useActivateUser, useDeactivateUser, useResetPassword } from '../api/manage-users';
 import { UserFormModal } from './user-form-modal';
-import { Card, PageHeader, StatusBadge } from '@/components/ui';
+import { PageHeader, StatusBadge } from '@/components/ui';
 import type { UserList as UserListType, Role } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';

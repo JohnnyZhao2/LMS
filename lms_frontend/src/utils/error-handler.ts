@@ -38,7 +38,7 @@ export function extractErrorMessage(errorData: unknown): string {
   // 如果有 details 字段（字段验证错误），组合显示
   if (error.details && typeof error.details === 'object') {
     const detailMessages: string[] = [];
-    for (const [field, messages] of Object.entries(error.details)) {
+    for (const [, messages] of Object.entries(error.details)) {
       if (Array.isArray(messages)) {
         detailMessages.push(`${messages.join(', ')}`);
       } else if (typeof messages === 'string') {

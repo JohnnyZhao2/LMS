@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ElementType } from 'react';
 
 export type AnimationType =
   | 'fadeIn'
@@ -24,7 +24,7 @@ export interface AnimatedContainerProps {
   /** 自定义样式 */
   style?: React.CSSProperties;
   /** HTML 标签 */
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
 }
 
 const durationMap = {

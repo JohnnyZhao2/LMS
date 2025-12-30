@@ -76,7 +76,9 @@ export const QuestionForm: React.FC = () => {
   useEffect(() => {
     if (isEdit && questionData) {
       setLineTypeId(questionData.line_type?.id);
-      setDifficulty(questionData.difficulty);
+      if (questionData.difficulty) {
+        setDifficulty(questionData.difficulty);
+      }
       setQuestionType(questionData.question_type);
       setContent(questionData.content);
       setOptions(questionData.options || [
@@ -85,7 +87,9 @@ export const QuestionForm: React.FC = () => {
         { key: 'C', value: '' },
         { key: 'D', value: '' },
       ]);
-      setAnswer(questionData.answer);
+      if (questionData.answer) {
+        setAnswer(questionData.answer);
+      }
       setExplanation(questionData.explanation || '');
       setScore(Number(questionData.score) || 1);
     }

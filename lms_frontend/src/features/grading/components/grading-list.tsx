@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Typography, Empty } from 'antd';
+import { Table, Button, Typography, Empty, Card } from 'antd';
 import { EditOutlined, UserOutlined, FileTextOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { usePendingGrading } from '../api/get-pending-grading';
-import { Card, PageHeader, StatusBadge } from '@/components/ui';
+import { PageHeader, StatusBadge } from '@/components/ui';
 import type { GradingList as GradingListType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 

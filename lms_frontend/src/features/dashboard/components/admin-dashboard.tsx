@@ -1,13 +1,10 @@
 import React from 'react';
-import { Typography, Skeleton, Row, Col, Progress, Space } from 'antd';
 import {
   SafetyOutlined,
   TeamOutlined,
   BookOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
-  ThunderboltOutlined,
-  BarChartOutlined,
   SettingOutlined,
   AuditOutlined,
   NotificationOutlined,
@@ -16,15 +13,18 @@ import { motion } from 'framer-motion';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-import { Card, PageHeader, Button, StatusBadge } from '@/components/ui';
+import { Card, Skeleton, Button } from '@/components/ui';
+import { PageHeader, StatusBadge } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
 
-const { Text, Title } = Typography;
+// Pre-generated chart heights for the learning load analysis chart
+const CHART_HEIGHTS = [45, 62, 78, 55, 88, 72, 65, 82, 58, 90, 75, 95];
 
 /**
  * STUDIO ADMIN DASHBOARD
  * Sophisticated system control interface.
+ * Migrated from Ant Design to ShadCN UI
  */
 export const AdminDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
@@ -45,7 +45,21 @@ export const AdminDashboard: React.FC = () => {
     visible: { y: 0, opacity: 1 },
   };
 
-  if (isLoading) return <div style={{ padding: '40px' }}><Skeleton active paragraph={{ rows: 10 }} /></div>;
+  if (isLoading) {
+    return (
+      <div style={{ padding: '40px' }}>
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-96" />
+          <div className="grid grid-cols-4 gap-6 mt-8">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -54,13 +68,15 @@ export const AdminDashboard: React.FC = () => {
         subtitle="全局资源分配、用户权限审计及核心性能指标监控。"
         icon={<SettingOutlined />}
         extra={
-          <Space size={12}>
+          <div className="flex items-center gap-3">
             <div style={{ textAlign: 'right', marginRight: '16px' }}>
               <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>Operator</div>
               <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-accent)' }}>{user?.username}</div>
             </div>
-            <Button icon={<NotificationOutlined />} />
-          </Space>
+            <Button variant="outline" size="icon">
+              <NotificationOutlined />
+            </Button>
+          </div>
         }
       />
 
@@ -73,13 +89,13 @@ export const AdminDashboard: React.FC = () => {
         {/* STATS GRID */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
           {[
-            { label: '注册成员总数', value: data?.summary?.total_students || 0, icon: <TeamOutlined />, color: 'var(--color-accent)' },
+            { label: '注册成员总数', value: data?.mentees_count || 0, icon: <TeamOutlined />, color: 'var(--color-accent)' },
             { label: '知识库条目', value: knowledgeStatsLoading ? '...' : (knowledgeStats?.total || 0), icon: <BookOutlined />, color: 'var(--color-success)' },
             { label: '本月发布任务', value: 28, icon: <AuditOutlined />, color: 'var(--color-warning)' },
             { label: '系统正常运行时间', value: '99.9%', icon: <CloudServerOutlined />, color: 'var(--color-accent)' },
           ].map((stat, i) => (
             <motion.div key={i} variants={itemVariants}>
-              <Card variant="default" style={{ padding: '24px' }}>
+              <Card className="p-6 hover:shadow-md transition-shadow">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-hover)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color, fontSize: '20px' }}>
                     {stat.icon}
@@ -94,39 +110,41 @@ export const AdminDashboard: React.FC = () => {
 
         {/* 知识库资产统计 */}
         <motion.div variants={itemVariants}>
-          <Card 
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Card className="mb-6">
+            <div className="p-6">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <BookOutlined style={{ fontSize: '18px', color: 'var(--color-success)' }} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>知识库资产</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600 }}>知识库资产</span>
               </div>
-            }
-            style={{ marginBottom: '24px' }}
-          >
-            {knowledgeStatsLoading ? (
-              <Skeleton active paragraph={{ rows: 1 }} />
-            ) : (
-              <Space size="large" style={{ fontSize: '14px' }}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>文档总数</Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-text-primary)' }}>
-                    {knowledgeStats?.total || 0}
-                  </Text>
+              {knowledgeStatsLoading ? (
+                <div className="flex gap-8">
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-12 w-24" />
                 </div>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>应急类总数</Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-error-500)' }}>
-                    {knowledgeStats?.emergency || 0}
-                  </Text>
+              ) : (
+                <div className="flex gap-8" style={{ fontSize: '14px' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>文档总数</span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      {knowledgeStats?.total || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>应急类总数</span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-error-500)' }}>
+                      {knowledgeStats?.emergency || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>本月新增</span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-success-500)' }}>
+                      {knowledgeStats?.monthly_new || 0}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>本月新增</Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-success-500)' }}>
-                    {knowledgeStats?.monthly_new || 0}
-                  </Text>
-                </div>
-              </Space>
-            )}
+              )}
+            </div>
           </Card>
         </motion.div>
 
@@ -154,14 +172,7 @@ export const AdminDashboard: React.FC = () => {
                     alignItems: 'center',
                     gap: '20px'
                   }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
-                    e.currentTarget.style.background = 'var(--color-surface-hover)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border)';
-                    e.currentTarget.style.background = 'var(--color-surface)';
-                  }}
+                  className="hover:border-primary-500 hover:bg-gray-50"
                 >
                   <div style={{ fontSize: '24px', color: 'var(--color-accent)' }}>{cmd.icon}</div>
                   <div>
@@ -175,53 +186,59 @@ export const AdminDashboard: React.FC = () => {
 
           {/* LOGS */}
           <motion.div variants={itemVariants} style={{ gridColumn: 'span 7' }}>
-            <Card title={<span style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>系统安全日志</span>} style={{ height: '440px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {[
-                  { time: '14:22:01', action: 'ROOT ACCESS', target: 'Super Admin', status: 'success' },
-                  { time: '14:21:45', action: 'KNOWLEDGE_PUBLISHED', target: 'Intel_4021', status: 'success' },
-                  { time: '14:20:12', action: 'DB_BACKUP_COMPLETED', target: 'Main Cluster', status: 'success' },
-                  { time: '14:18:33', action: 'PERMISSION_CHANGED', target: 'Member: Chen', status: 'warning' },
-                  { time: '14:15:09', action: 'TASK_DEPLOYED', target: 'Group: Students', status: 'success' },
-                  { time: '14:10:55', action: 'API_PEAK_DETECTED', target: 'Analytics Svc', status: 'info' },
-                ].map((log, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>[{log.time}]</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>{log.action}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>Target: {log.target}</div>
+            <Card style={{ height: '440px' }}>
+              <div className="p-6">
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>系统安全日志</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {[
+                    { time: '14:22:01', action: 'ROOT ACCESS', target: 'Super Admin', status: 'success' },
+                    { time: '14:21:45', action: 'KNOWLEDGE_PUBLISHED', target: 'Intel_4021', status: 'success' },
+                    { time: '14:20:12', action: 'DB_BACKUP_COMPLETED', target: 'Main Cluster', status: 'success' },
+                    { time: '14:18:33', action: 'PERMISSION_CHANGED', target: 'Member: Chen', status: 'warning' },
+                    { time: '14:15:09', action: 'TASK_DEPLOYED', target: 'Group: Students', status: 'success' },
+                    { time: '14:10:55', action: 'API_PEAK_DETECTED', target: 'Analytics Svc', status: 'info' },
+                  ].map((log, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--color-border)' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-tertiary)' }}>[{log.time}]</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', fontFamily: 'var(--font-mono)' }}>{log.action}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>Target: {log.target}</div>
+                      </div>
+                      <StatusBadge status={log.status as 'success' | 'warning' | 'info'} text={log.status === 'success' ? 'OK' : 'WARN'} />
                     </div>
-                    <StatusBadge status={log.status as any} text={log.status === 'success' ? 'OK' : 'WARN'} />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </Card>
           </motion.div>
 
           {/* TRENDS */}
           <motion.div variants={itemVariants} style={{ gridColumn: 'span 5' }}>
-            <Card title={<span style={{ fontFamily: 'var(--font-display)', fontSize: '18px' }}>学习负载分析</span>} style={{ height: '440px' }}>
-              <div style={{ height: '280px', display: 'flex', alignItems: 'flex-end', gap: '8px', marginBottom: '24px' }}>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
-                    <motion.div 
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.random() * 80 + 20}%` }}
-                      transition={{ duration: 1, delay: i * 0.05 }}
-                      style={{ 
-                        width: '100%', 
-                        background: 'var(--color-accent)', 
-                        opacity: 0.1 + (i / 12) * 0.9,
-                        borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0'
-                      }} 
-                    />
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>M{i+1}</div>
+            <Card style={{ height: '440px' }}>
+              <div className="p-6">
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, marginBottom: '16px' }}>学习负载分析</div>
+                <div style={{ height: '280px', display: 'flex', alignItems: 'flex-end', gap: '8px', marginBottom: '24px' }}>
+                  {CHART_HEIGHTS.map((height, i) => (
+                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${height}%` }}
+                        transition={{ duration: 1, delay: i * 0.05 }}
+                        style={{ 
+                          width: '100%', 
+                          background: 'var(--color-accent)', 
+                          opacity: 0.1 + (i / 12) * 0.9,
+                          borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0'
+                        }} 
+                      />
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', textAlign: 'center', color: 'var(--color-text-tertiary)' }}>M{i+1}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '16px', background: 'var(--color-surface-hover)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                    系统当前处于 <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>高效率</span> 运行状态。近 24 小时内学习节点活跃度增长了 12.5%。
                   </div>
-                ))}
-              </div>
-              <div style={{ padding: '16px', background: 'var(--color-surface-hover)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                  系统当前处于 <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>高效率</span> 运行状态。近 24 小时内学习节点活跃度增长了 12.5%。
                 </div>
               </div>
             </Card>

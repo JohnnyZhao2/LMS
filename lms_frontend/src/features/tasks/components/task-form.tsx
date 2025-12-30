@@ -7,7 +7,6 @@ import {
   message,
   Spin,
   Empty,
-  Tooltip,
   Modal,
   Checkbox,
   List,

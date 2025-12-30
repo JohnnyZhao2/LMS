@@ -1,5 +1,4 @@
 import { QueryClient } from '@tanstack/react-query';
-import { ApiError } from './api-client';
 import { showApiError } from '@/utils/error-handler';
 
 /**

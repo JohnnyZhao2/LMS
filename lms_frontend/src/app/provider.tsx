@@ -4,6 +4,7 @@ import zhCN from 'antd/locale/zh_CN';
 import { queryClient } from '@/lib/react-query';
 import { AuthProvider } from '@/features/auth/stores/auth-context';
 import { appTheme } from '@/config/theme';
+import { Toaster } from '@/components/ui/sonner';
 import dayjs from '@/lib/dayjs';
 import 'dayjs/locale/zh-cn';
 
@@ -19,7 +20,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={zhCN} theme={appTheme}>
         <AntApp>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </AuthProvider>
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>

@@ -43,6 +43,8 @@ export interface KnowledgeFilterActions {
   setSearchValue: (value: string) => void;
   /** 提交搜索 */
   submitSearch: () => void;
+  /** 直接搜索（用于 antd Search 组件） */
+  searchDirectly: (value: string) => void;
   /** 选择/取消条线类型 */
   handleLineTypeSelect: (id: number | undefined) => void;
   /** 切换系统标签 */

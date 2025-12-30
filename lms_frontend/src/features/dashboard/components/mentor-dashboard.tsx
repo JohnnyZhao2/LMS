@@ -1,6 +1,5 @@
-import { Row, Col, Typography, Button, Skeleton, Space } from 'antd';
+import React from 'react';
 import {
-  UserOutlined,
   CheckCircleOutlined,
   EditOutlined,
   FileSearchOutlined,
@@ -9,16 +8,14 @@ import {
   TrophyOutlined,
   TeamOutlined,
   BarChartOutlined,
-  BookOutlined,
 } from '@ant-design/icons';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-import { Card, PageHeader, StaggeredList } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
-
-const { Text, Title } = Typography;
+import { Card, Skeleton } from '@/components/ui';
+import type { MentorDashboard as MentorDashboardData } from '@/types/api';
 
 /**
  * 统计卡片配置
@@ -30,7 +27,7 @@ const statCards = [
     icon: <TeamOutlined />,
     color: 'var(--color-primary-500)',
     bg: 'var(--color-primary-50)',
-    getValue: (data: Record<string, unknown>) => data?.mentees_count || 0,
+    getValue: (data: MentorDashboardData | undefined) => data?.mentees_count || 0,
     suffix: '人',
   },
   {
@@ -39,7 +36,7 @@ const statCards = [
     icon: <CheckCircleOutlined />,
     color: 'var(--color-success-500)',
     bg: 'var(--color-success-50)',
-    getValue: (data: Record<string, unknown>) => data?.completion_rate || '0%',
+    getValue: (data: MentorDashboardData | undefined) => data?.completion_rate || '0%',
     suffix: '',
   },
   {
@@ -48,7 +45,7 @@ const statCards = [
     icon: <TrophyOutlined />,
     color: 'var(--color-purple-500)',
     bg: 'rgba(155, 0, 255, 0.1)',
-    getValue: (data: Record<string, unknown>) => data?.average_score || '0',
+    getValue: (data: MentorDashboardData | undefined) => data?.average_score || '0',
     suffix: '分',
   },
   {
@@ -57,7 +54,7 @@ const statCards = [
     icon: <EditOutlined />,
     color: 'var(--color-orange-500)',
     bg: 'rgba(255, 140, 82, 0.1)',
-    getValue: (data: Record<string, unknown>) => data?.pending_grading_count || 0,
+    getValue: (data: MentorDashboardData | undefined) => data?.pending_grading_count || 0,
     suffix: '份',
   },
 ];
@@ -106,6 +103,7 @@ const quickActions = [
 
 /**
  * 导师/室经理仪表盘组件
+ * Migrated from Ant Design to ShadCN UI
  */
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
@@ -157,12 +155,11 @@ export const MentorDashboard: React.FC = () => {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
             <BarChartOutlined style={{ fontSize: 20, color: 'var(--color-primary-400)' }} />
-            <Text style={{ color: 'var(--color-gray-400)', fontSize: 'var(--font-size-sm)' }}>
+            <span style={{ color: 'var(--color-gray-400)', fontSize: 'var(--font-size-sm)' }}>
               {roleName}工作台
-            </Text>
+            </span>
           </div>
-          <Title
-            level={2}
+          <h2
             style={{
               margin: 0,
               marginBottom: 'var(--spacing-1)',
@@ -172,32 +169,33 @@ export const MentorDashboard: React.FC = () => {
             }}
           >
             欢迎回来，{user?.username || '老师'}
-          </Title>
-          <Text style={{ color: 'var(--color-gray-400)' }}>
+          </h2>
+          <span style={{ color: 'var(--color-gray-400)' }}>
             今天有 {data?.pending_grading_count || 0} 份答卷等待批改
-          </Text>
+          </span>
         </div>
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={[24, 24]} style={{ marginBottom: 'var(--spacing-8)' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((stat, index) => (
-          <Col xs={24} sm={12} lg={6} key={stat.key}>
-            <div
-              className="animate-fadeInUp"
-              style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
-            >
-              <Card hoverable>
+          <div
+            key={stat.key}
+            className="animate-fadeInUp"
+            style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
+          >
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <div className="p-5">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                   <div>
-                    <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+                    <span style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-sm)' }}>
                       {stat.title}
-                    </Text>
+                    </span>
                     {isLoading ? (
-                      <Skeleton.Input active size="small" style={{ marginTop: 8, width: 80 }} />
+                      <Skeleton className="h-10 w-20 mt-2" />
                     ) : (
                       <div style={{ marginTop: 'var(--spacing-2)' }}>
-                        <Text
+                        <span
                           style={{
                             fontSize: 'var(--font-size-4xl)',
                             fontWeight: 700,
@@ -205,12 +203,12 @@ export const MentorDashboard: React.FC = () => {
                             lineHeight: 1,
                           }}
                         >
-                          {stat.getValue(data as Record<string, unknown>)}
-                        </Text>
+                          {String(stat.getValue(data))}
+                        </span>
                         {stat.suffix && (
-                          <Text type="secondary" style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)' }}>
+                          <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
                             {stat.suffix}
-                          </Text>
+                          </span>
                         )}
                       </div>
                     )}
@@ -231,70 +229,76 @@ export const MentorDashboard: React.FC = () => {
                     {stat.icon}
                   </div>
                 </div>
-              </Card>
-            </div>
-          </Col>
+              </div>
+            </Card>
+          </div>
         ))}
-      </Row>
+      </div>
 
       {/* 知识库资产统计（仅管理员） */}
       {isAdmin && (
         <div style={{ marginBottom: 'var(--spacing-6)' }}>
-          <Text strong style={{ fontSize: 'var(--font-size-lg)', display: 'block', marginBottom: 'var(--spacing-4)' }}>
+          <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)', display: 'block', marginBottom: 'var(--spacing-4)' }}>
             知识库资产
-          </Text>
+          </span>
           <Card>
-            {knowledgeStatsLoading ? (
-              <Skeleton active paragraph={{ rows: 1 }} />
-            ) : (
-              <Space size="large" style={{ fontSize: '14px' }}>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    文档总数
-                  </Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-text-primary)' }}>
-                    {knowledgeStats?.total || 0}
-                  </Text>
+            <div className="p-5">
+              {knowledgeStatsLoading ? (
+                <div className="flex gap-8">
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-12 w-24" />
+                  <Skeleton className="h-12 w-24" />
                 </div>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    应急类总数
-                  </Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-error-500)' }}>
-                    {knowledgeStats?.emergency || 0}
-                  </Text>
+              ) : (
+                <div className="flex gap-8" style={{ fontSize: '14px' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>
+                      文档总数
+                    </span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                      {knowledgeStats?.total || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>
+                      应急类总数
+                    </span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-error-500)' }}>
+                      {knowledgeStats?.emergency || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '12px', display: 'block', marginBottom: '4px', color: 'var(--color-gray-500)' }}>
+                      本月新增
+                    </span>
+                    <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-success-500)' }}>
+                      {knowledgeStats?.monthly_new || 0}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>
-                    本月新增
-                  </Text>
-                  <Text strong style={{ fontSize: '20px', color: 'var(--color-success-500)' }}>
-                    {knowledgeStats?.monthly_new || 0}
-                  </Text>
-                </div>
-              </Space>
-            )}
+              )}
+            </div>
           </Card>
         </div>
       )}
 
       {/* 快捷操作 */}
       <div style={{ marginBottom: 'var(--spacing-6)' }}>
-        <Text strong style={{ fontSize: 'var(--font-size-lg)', display: 'block', marginBottom: 'var(--spacing-4)' }}>
+        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)', display: 'block', marginBottom: 'var(--spacing-4)' }}>
           快捷操作
-        </Text>
-        <Row gutter={[24, 24]}>
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action, index) => (
-            <Col xs={24} sm={12} lg={6} key={action.key}>
-              <div
-                className="animate-fadeInUp"
-                style={{ animationDelay: `${(index + 4) * 50}ms`, animationFillMode: 'both' }}
+            <div
+              key={action.key}
+              className="animate-fadeInUp"
+              style={{ animationDelay: `${(index + 4) * 50}ms`, animationFillMode: 'both' }}
+            >
+              <Card
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(action.route)}
               >
-                <Card
-                  hoverable
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => navigate(action.route)}
-                >
+                <div className="p-5">
                   <div
                     style={{
                       width: 48,
@@ -312,17 +316,17 @@ export const MentorDashboard: React.FC = () => {
                   >
                     {action.icon}
                   </div>
-                  <Text strong style={{ display: 'block', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
                     {action.title}
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+                  </span>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
                     {action.description}
-                  </Text>
-                </Card>
-              </div>
-            </Col>
+                  </span>
+                </div>
+              </Card>
+            </div>
           ))}
-        </Row>
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
     message,
     Tooltip,
     Segmented,
+    Card,
 } from 'antd';
 import {
     PlusOutlined,
@@ -32,7 +33,7 @@ import { useTaskList } from '../api/get-tasks';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
 import { usePendingGrading } from '@/features/grading/api/get-pending-grading';
-import { PageHeader, Card, StatusBadge } from '@/components/ui';
+import { PageHeader, StatusBadge } from '@/components/ui';
 import { useDeleteTask } from '../api/delete-task';
 import { showApiError } from '@/utils/error-handler';
 import type { TaskListItem } from '@/types/api';

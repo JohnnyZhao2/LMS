@@ -1,31 +1,69 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, message, Typography } from 'antd';
-import { UserOutlined, LockOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
 import { ROUTES } from '@/config/routes';
-import type { LoginRequest } from '@/types/api';
-import { showApiError } from '@/utils/error-handler';
+import { ApiError } from '@/lib/api-client';
 
-const { Text, Title } = Typography;
+// Zod 验证 schema
+const loginSchema = z.object({
+  employee_id: z.string().min(1, '请输入工号'),
+  password: z.string().min(1, '请输入密码'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 /**
  * 登录表单组件
- * 现代化设计，带有氛围背景和动画效果
+ * 使用 ShadCN UI + React Hook Form + Zod 验证
+ * 保持原有的现代化设计风格
  */
 export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: LoginRequest) => {
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      employee_id: '',
+      password: '',
+    },
+  });
+
+  const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
     try {
       await login(values);
-      message.success('登录成功');
+      toast.success('登录成功');
       navigate(ROUTES.DASHBOARD, { replace: true });
     } catch (error) {
-      showApiError(error, '登录失败，请检查工号和密码');
+      if (error instanceof ApiError) {
+        if (error.status !== 401 && error.status !== 403) {
+          const errorData = error.data as { message?: string; detail?: string };
+          const errorMessage = errorData?.message || errorData?.detail || '登录失败，请检查工号和密码';
+          toast.error(errorMessage);
+        } else {
+          toast.error('登录失败，请检查工号和密码');
+        }
+      } else {
+        toast.error('网络错误，请稍后重试');
+      }
     } finally {
       setLoading(false);
     }
@@ -33,36 +71,26 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        padding: 'var(--spacing-6)',
-        background: 'var(--color-gray-900)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      className="flex justify-center items-center min-h-screen p-6 relative overflow-hidden"
+      style={{ background: 'var(--color-gray-900)' }}
     >
       {/* 动态背景 - 渐变光晕 */}
       <div
+        className="absolute inset-0 animate-pulse"
         style={{
-          position: 'absolute',
-          inset: 0,
           background: `
             radial-gradient(ellipse 80% 80% at 20% 10%, rgba(77, 108, 255, 0.4) 0%, transparent 50%),
             radial-gradient(ellipse 60% 60% at 80% 30%, rgba(155, 0, 255, 0.3) 0%, transparent 50%),
             radial-gradient(ellipse 50% 50% at 50% 90%, rgba(255, 61, 143, 0.25) 0%, transparent 50%)
           `,
-          animation: 'pulse 8s ease-in-out infinite',
+          animationDuration: '8s',
         }}
       />
 
       {/* 网格背景 */}
       <div
+        className="absolute inset-0"
         style={{
-          position: 'absolute',
-          inset: 0,
           backgroundImage: `
             linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
@@ -73,181 +101,139 @@ export const LoginForm: React.FC = () => {
 
       {/* 登录卡片 */}
       <div
-        className="animate-scaleIn"
+        className="relative w-full max-w-[440px] rounded-2xl animate-scaleIn"
         style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 440,
-          padding: 'var(--spacing-10)',
           background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderRadius: 'var(--radius-2xl)',
           boxShadow: `
             0 0 0 1px rgba(255, 255, 255, 0.1),
             0 25px 50px -12px rgba(0, 0, 0, 0.4),
             0 0 100px rgba(77, 108, 255, 0.15)
           `,
+          padding: '40px',
         }}
       >
         {/* Logo 和标题 */}
-        <div
-          className="animate-fadeInDown"
-          style={{
-            textAlign: 'center',
-            marginBottom: 'var(--spacing-8)',
-          }}
-        >
+        <div className="text-center mb-8 animate-fadeInDown">
           {/* Logo */}
           <div
+            className="w-[72px] h-[72px] mx-auto mb-5 rounded-xl flex items-center justify-center"
             style={{
-              width: 72,
-              height: 72,
-              margin: '0 auto var(--spacing-5)',
-              borderRadius: 'var(--radius-xl)',
               background: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               boxShadow: '0 10px 40px rgba(77, 108, 255, 0.4)',
             }}
           >
-            <span
-              style={{
-                color: 'white',
-                fontSize: 32,
-                fontWeight: 700,
-                fontFamily: 'var(--font-family)',
-              }}
-            >
-              L
-            </span>
+            <span className="text-white text-[32px] font-bold">L</span>
           </div>
 
-          <Title
-            level={2}
-            style={{
-              margin: 0,
-              marginBottom: 'var(--spacing-2)',
-              fontSize: 'var(--font-size-3xl)',
-              fontWeight: 700,
-              color: 'var(--color-gray-900)',
-            }}
-          >
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
             LMS 学习管理系统
-          </Title>
-          <Text
-            type="secondary"
-            style={{
-              fontSize: 'var(--font-size-base)',
-            }}
-          >
+          </h2>
+          <p className="text-gray-500">
             欢迎回来，请登录您的账号
-          </Text>
+          </p>
         </div>
 
         {/* 表单 */}
-        <Form
-          name="login"
-          onFinish={handleSubmit}
-          autoComplete="off"
-          size="large"
-          layout="vertical"
-          requiredMark={false}
-        >
-          <Form.Item
-            name="employee_id"
-            label={<Text strong>工号</Text>}
-            rules={[{ required: true, message: '请输入工号' }]}
-            style={{ marginBottom: 'var(--spacing-5)' }}
-            className="login-form-item"
-          >
-            <Input
-              prefix={<UserOutlined style={{ color: 'var(--color-gray-400)' }} />}
-              placeholder="请输入工号"
-              className="login-input"
-            />
-          </Form.Item>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <div className="space-y-5">
+              <FormField
+                control={form.control}
+                name="employee_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 font-semibold text-sm">工号</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                        <Input
+                          placeholder="请输入工号"
+                          style={{
+                            paddingLeft: '44px',
+                            height: '48px',
+                            fontSize: '14px',
+                            borderRadius: '12px',
+                            border: '1px solid #e5e7eb',
+                          }}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Form.Item
-            name="password"
-            label={<Text strong>密码</Text>}
-            rules={[{ required: true, message: '请输入密码' }]}
-            style={{ marginBottom: 'var(--spacing-8)' }}
-            className="login-form-item"
-          >
-            <Input.Password
-              prefix={<LockOutlined style={{ color: 'var(--color-gray-400)' }} />}
-              placeholder="请输入密码"
-              className="login-input"
-            />
-          </Form.Item>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-900 font-semibold text-sm">密码</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                        <Input
+                          type="password"
+                          placeholder="请输入密码"
+                          style={{
+                            paddingLeft: '44px',
+                            height: '48px',
+                            fontSize: '14px',
+                            borderRadius: '12px',
+                            border: '1px solid #e5e7eb',
+                          }}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              loading={loading}
-              icon={!loading && <ArrowRightOutlined />}
-              style={{
-                height: 52,
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--font-size-md)',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%)',
-                border: 'none',
-                boxShadow: '0 4px 14px rgba(77, 108, 255, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'var(--spacing-2)',
-                flexDirection: 'row-reverse',
-              }}
-            >
-              登录系统
-            </Button>
-          </Form.Item>
+            <div className="mt-8">
+              <Button
+                type="submit"
+                className="w-full h-[52px] text-base font-semibold rounded-xl flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%)',
+                  boxShadow: '0 4px 14px rgba(77, 108, 255, 0.4)',
+                }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    登录中...
+                  </>
+                ) : (
+                  <>
+                    登录系统
+                    <ArrowRight className="h-5 w-5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </Form>
 
         {/* 底部装饰 */}
-        <div
-          style={{
-            marginTop: 'var(--spacing-8)',
-            paddingTop: 'var(--spacing-6)',
-            borderTop: '1px solid var(--color-gray-100)',
-            textAlign: 'center',
-          }}
-        >
-          <Text
-            type="secondary"
-            style={{
-              fontSize: 'var(--font-size-sm)',
-            }}
-          >
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <p className="text-sm text-gray-400">
             © {new Date().getFullYear()} LMS 学习管理系统
-          </Text>
+          </p>
         </div>
       </div>
 
       {/* 底部装饰文字 */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'var(--spacing-6)',
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-        }}
-      >
-        <Text
-          style={{
-            color: 'rgba(255, 255, 255, 0.4)',
-            fontSize: 'var(--font-size-sm)',
-          }}
-        >
+      <div className="absolute bottom-6 left-0 right-0 text-center">
+        <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
           Designed with ❤️ for better learning
-        </Text>
+        </p>
       </div>
     </div>
   );

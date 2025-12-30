@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Table, Button, Typography, Empty, Rate } from 'antd';
+import { Table, Button, Typography, Empty, Rate, Card } from 'antd';
 import { PlusOutlined, SearchOutlined, UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useSpotChecks } from '../api/get-spot-checks';
-import { Card, PageHeader, StatusBadge } from '@/components/ui';
+import { PageHeader } from '@/components/ui';
 import dayjs from '@/lib/dayjs';
 
 const { Text } = Typography;
