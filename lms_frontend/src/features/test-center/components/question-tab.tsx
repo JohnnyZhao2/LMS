@@ -1,20 +1,18 @@
+"use client"
+
 import React, { useState, useMemo } from 'react';
-import { Pencil, CheckCircle, X, Check } from 'lucide-react';
+import { Pencil, CheckCircle, Database, User, Clock, AlertCircle, Sparkles, ChevronLeft, ChevronRight, Box } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuestions, useQuestionDetail } from '@/features/questions/api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import type { QuestionType } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/ui/spinner';
-import { Pagination } from '@/components/ui/pagination';
-import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui';
 
-/** 题型筛选选项 */
 const QUESTION_TYPE_FILTER_OPTIONS = [
   { label: '全部', value: 'ALL' },
   { label: '单选题', value: 'SINGLE_CHOICE' },
@@ -23,65 +21,25 @@ const QUESTION_TYPE_FILTER_OPTIONS = [
   { label: '简答题', value: 'SHORT_ANSWER' },
 ];
 
+const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string; bg: string }> = {
+  SINGLE_CHOICE: { label: '单选', color: 'text-primary-600', bg: 'bg-primary-50' },
+  MULTIPLE_CHOICE: { label: '多选', color: 'text-success-600', bg: 'bg-success-50' },
+  TRUE_FALSE: { label: '判断', color: 'text-orange-600', bg: 'bg-orange-50' },
+  SHORT_ANSWER: { label: '简答', color: 'text-purple-600', bg: 'bg-purple-50' },
+};
+
 interface QuestionTabProps {
   search?: string;
 }
 
-/**
- * 题型配置
- */
-const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; variant: 'info' | 'success' | 'warning' | 'secondary' }> = {
-  SINGLE_CHOICE: { label: '单选', variant: 'info' },
-  MULTIPLE_CHOICE: { label: '多选', variant: 'success' },
-  TRUE_FALSE: { label: '判断', variant: 'warning' },
-  SHORT_ANSWER: { label: '简答', variant: 'secondary' },
-};
-
-/**
- * 分段选择器组件
- */
-interface SegmentedProps {
-  options: { label: string; value: string }[];
-  value: string;
-  onChange: (value: string) => void;
-}
-
-const Segmented: React.FC<SegmentedProps> = ({ options, value, onChange }) => {
-  return (
-    <div className="inline-flex bg-gray-100 rounded-md p-0.5">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={cn(
-            'px-3 py-1 text-xs rounded-md transition-colors',
-            value === option.value
-              ? 'bg-primary-500 text-white'
-              : 'text-gray-600 hover:text-gray-900'
-          )}
-          onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-};
-
-/**
- * 题目管理标签页 - ShadCN UI 版本
- * 采用分屏布局：左侧题目列表，右侧题目详情
- */
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
-
   const [page, setPage] = useState(1);
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
   const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
 
-  /** 将筛选值转换为 API 参数 */
   const questionType = questionTypeFilter === 'ALL' ? undefined : questionTypeFilter as QuestionType;
   const lineTypeId = lineTypeFilter === 'ALL' ? undefined : Number(lineTypeFilter);
 
@@ -93,330 +51,304 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   });
   const { data: lineTypes } = useLineTypeTags();
 
-  /** 条线类型筛选选项（动态生成） */
   const lineTypeFilterOptions = useMemo(() => {
     const options = [{ label: '全部', value: 'ALL' }];
-    if (lineTypes) {
-      lineTypes.forEach((tag) => {
-        options.push({ label: tag.name, value: String(tag.id) });
-      });
-    }
+    if (lineTypes) lineTypes.forEach(tag => options.push({ label: tag.name, value: String(tag.id) }));
     return options;
   }, [lineTypes]);
 
-  const { data: questionDetail, isLoading: detailLoading } = useQuestionDetail(
-    selectedQuestionId || 0
-  );
+  const { data: questionDetail, isLoading: detailLoading } = useQuestionDetail(selectedQuestionId || 0);
 
-  /**
-   * 立即组卷
-   */
-  const handleCreateQuiz = () => {
-    if (selectedRowKeys.length === 0) return;
-    const questionIds = selectedRowKeys.join(',');
-    navigate(`/test-center/quizzes/create?question_ids=${questionIds}`);
-  };
-
-  /**
-   * 一键移除所有选中
-   */
-  const handleClearSelection = () => {
-    setSelectedRowKeys([]);
-  };
-
-  /**
-   * 切换题目选中状态
-   */
-  const handleToggleSelection = (questionId: number) => {
-    setSelectedRowKeys(prev => {
-      if (prev.includes(questionId)) {
-        return prev.filter(id => id !== questionId);
-      } else {
-        return [...prev, questionId];
-      }
-    });
-  };
-
-  /**
-   * 点击题目查看详情
-   */
-  const handleQuestionClick = (questionId: number) => {
-    setSelectedQuestionId(questionId);
-  };
-
-  /**
-   * 从详情面板勾选加入/取消
-   */
-  const handleAddFromDetail = () => {
-    if (!selectedQuestionId) return;
-    handleToggleSelection(selectedQuestionId);
-  };
-
-  /**
-   * 判断选项是否是正确答案
-   */
   const isCorrectAnswer = (optionKey: string, answer?: string | string[]) => {
     if (!answer) return false;
-    if (Array.isArray(answer)) {
-      return answer.includes(optionKey);
-    }
-    return answer === optionKey;
+    return Array.isArray(answer) ? answer.includes(optionKey) : answer === optionKey;
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* 筛选栏 */}
-      <Card className="mb-4">
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-wrap gap-6 items-center">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500 whitespace-nowrap">题型</span>
-              <Segmented
-                options={QUESTION_TYPE_FILTER_OPTIONS}
-                value={questionTypeFilter}
-                onChange={(value) => {
-                  setQuestionTypeFilter(value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500 whitespace-nowrap">条线</span>
-              <Segmented
-                options={lineTypeFilterOptions}
-                value={lineTypeFilter}
-                onChange={(value) => {
-                  setLineTypeFilter(value);
-                  setPage(1);
-                }}
-              />
-            </div>
+    <div className="flex flex-col gap-6 h-[700px]">
+      {/* 顶部过滤器 */}
+      <div className="flex flex-wrap gap-8 items-center bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Question Structure</span>
+          <div className="flex bg-white/80 p-1.5 rounded-2xl shadow-sm border border-white">
+            {QUESTION_TYPE_FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setQuestionTypeFilter(opt.value)}
+                className={cn(
+                  "px-5 py-2 text-xs font-bold rounded-xl transition-all",
+                  questionTypeFilter === opt.value ? "bg-gray-900 text-white shadow-lg" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* 分屏布局 */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* 左侧：题目列表 */}
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b border-gray-100">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-sm font-semibold">题目列表</CardTitle>
-              <span className="text-xs text-gray-500">共 {data?.count || 0} 条</span>
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Logic Stream</span>
+          <div className="flex bg-white/80 p-1.5 rounded-2xl shadow-sm border border-white overflow-x-auto max-w-lg no-scrollbar">
+            {lineTypeFilterOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setLineTypeFilter(opt.value)}
+                className={cn(
+                  "px-5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap",
+                  lineTypeFilter === opt.value ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 核心分屏 */}
+      <div className="flex-1 flex gap-6 min-h-0">
+        {/* 左侧列表 */}
+        <div className="flex-1 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+            <div className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-primary-500" />
+              <span className="text-sm font-black text-gray-900 uppercase tracking-tight">Governance Index</span>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-0">
+            <Badge variant="secondary" className="bg-gray-100 text-gray-500 font-bold px-3">{data?.count || 0}</Badge>
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar">
             {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Spinner />
+              <div className="p-6 space-y-4">
+                {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
               </div>
             ) : data?.results && data.results.length > 0 ? (
-              <>
-                <div>
-                  {data.results.map((question) => {
-                    const typeConfig = QUESTION_TYPE_CONFIG[question.question_type];
-                    return (
-                      <div
-                        key={question.id}
-                        className={cn(
-                          'px-4 py-3 border-b border-gray-100 cursor-pointer flex items-start gap-3 transition-colors hover:bg-gray-50',
-                          selectedQuestionId === question.id && 'bg-primary-50 border-l-3 border-l-primary-500 pl-3.25'
-                        )}
-                        onClick={() => handleQuestionClick(question.id)}
-                      >
-                        <Checkbox
-                          className="mt-0.5"
-                          checked={selectedRowKeys.includes(question.id)}
-                          onCheckedChange={() => handleToggleSelection(question.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] px-1 py-0 leading-4 h-4 rounded bg-gray-100 text-gray-600">
-                              {question.line_type?.name || '未分类'}
-                            </span>
-                            <Badge variant={typeConfig.variant} className="text-[10px] px-1 py-0 leading-4 h-4">
-                              {typeConfig.label}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-900 line-clamp-2 m-0">
-                            {question.content}
-                          </p>
-                        </div>
-                        <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
-                          {dayjs(question.updated_at).format('MM-DD')}
+              data.results.map(q => {
+                const config = QUESTION_TYPE_CONFIG[q.question_type] || { label: '未知', color: 'text-gray-600', bg: 'bg-gray-50' };
+                const isSelected = selectedQuestionId === q.id;
+                return (
+                  <div
+                    key={q.id}
+                    onClick={() => setSelectedQuestionId(q.id)}
+                    className={cn(
+                      "p-6 border-b border-gray-50 cursor-pointer transition-all duration-300 group flex items-start gap-4 hover:bg-gray-50/50",
+                      isSelected && "bg-primary-50/30 border-l-[6px] border-l-primary-500 pl-[1.125rem]"
+                    )}
+                  >
+                    <Checkbox
+                      className="mt-1.5"
+                      checked={selectedRowKeys.includes(q.id)}
+                      onCheckedChange={() => {
+                        setSelectedRowKeys(prev => prev.includes(q.id) ? prev.filter(k => k !== q.id) : [...prev, q.id])
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge className={cn("border-none px-2 py-0 text-[9px] font-black uppercase", config.bg, config.color)}>
+                          {config.label}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                          {q.line_type?.name || 'General'}
                         </span>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="py-3 px-4 text-center border-t border-gray-100 bg-gray-50">
-                  <Pagination
-                    current={page}
-                    total={data.count || 0}
-                    pageSize={10}
-                    onChange={(newPage) => setPage(newPage)}
-                    showTotal={(total) => `${total} 条`}
-                  />
-                </div>
-              </>
+                      <h4 className="text-sm font-bold text-gray-800 line-clamp-2 leading-relaxed">
+                        {q.content}
+                      </h4>
+                    </div>
+                    <div className="text-[10px] font-bold text-gray-300 mt-1 uppercase whitespace-nowrap">
+                      {dayjs(q.updated_at).format('MM.DD')}
+                    </div>
+                  </div>
+                )
+              })
             ) : (
-              <div className="flex items-center justify-center py-10 text-gray-500">
-                暂无题目
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <AlertCircle className="w-10 h-10 opacity-20 mb-3" />
+                <span className="text-xs font-bold uppercase tracking-widest">Repository Empty</span>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* 右侧：题目详情 */}
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="py-3 px-4 border-b border-gray-100">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-sm font-semibold">题目详情</CardTitle>
-              {questionDetail && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1" />
-                    编辑
-                  </Button>
-                  <Button
-                    variant={selectedRowKeys.includes(questionDetail.id) ? 'outline' : 'default'}
-                    size="sm"
-                    onClick={handleAddFromDetail}
-                  >
-                    <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                    {selectedRowKeys.includes(questionDetail.id) ? '取消' : '组卷'}
-                  </Button>
-                </div>
-              )}
+          {/* 分页按钮 */}
+          {data && data.count > 10 && (
+            <div className="p-4 border-t border-gray-50 bg-gray-50/30 flex justify-center gap-4">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" disabled={page === 1} onClick={() => setPage(page - 1)}>
+                <ChevronLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex items-center gap-2 text-sm font-black text-gray-900">
+                {page} <span className="text-gray-300">/</span> {Math.ceil(data.count / 10)}
+              </div>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" disabled={!data.next} onClick={() => setPage(page + 1)}>
+                <ChevronRight className="w-5 h-5" />
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 overflow-auto p-4">
+          )}
+        </div>
+
+        {/* 右侧详情 */}
+        <div className="flex-1 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col overflow-hidden">
+          <div className="p-5 border-b border-gray-50 flex justify-between items-center bg-white/50 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <span className="text-sm font-black text-gray-900 uppercase tracking-tight">Intelligence Preview</span>
+            </div>
+            {questionDetail && (
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" className="rounded-xl font-bold text-primary-600 hover:bg-primary-50" onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}>
+                  <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                </Button>
+                <Button
+                  className={cn(
+                    "rounded-xl font-bold text-xs uppercase shadow-lg shadow-primary-500/10 transition-all",
+                    selectedRowKeys.includes(questionDetail.id) ? "bg-success-500 hover:bg-success-600 text-white" : "bg-gray-900 hover:bg-gray-800 text-white"
+                  )}
+                  size="sm"
+                  onClick={() => {
+                    const id = questionDetail.id;
+                    setSelectedRowKeys(prev => prev.includes(id) ? prev.filter(k => k !== id) : [...prev, id])
+                  }}
+                >
+                  {selectedRowKeys.includes(questionDetail.id) ? <><CheckCircle className="w-3.5 h-3.5 mr-2" /> In Quiz</> : 'Add to Quiz'}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-8 no-scrollbar">
             {detailLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Spinner />
+              <div className="space-y-6">
+                <Skeleton className="h-20 w-full rounded-2xl" />
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+                </div>
               </div>
             ) : questionDetail ? (
-              <div>
-                {/* 题干 */}
-                <div className="mb-5">
-                  <span className="block text-xs text-gray-500 mb-2 font-medium">题干</span>
-                  <p className="text-sm leading-relaxed">{questionDetail.content}</p>
+              <div className="animate-fadeIn">
+                {/* 题干内容 */}
+                <div className="mb-8 p-6 bg-gray-50/50 rounded-3xl border border-gray-100">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-4">Prompt Body</span>
+                  <p className="text-lg font-bold text-gray-900 leading-relaxed">{questionDetail.content}</p>
                 </div>
 
-                {/* 选项 */}
+                {/* 选项渲染 */}
                 {questionDetail.options && questionDetail.options.length > 0 && (
-                  <div className="mb-5">
-                    <span className="block text-xs text-gray-500 mb-2 font-medium">选项</span>
-                    {questionDetail.options.map((option) => {
-                      const isCorrect = isCorrectAnswer(option.key, questionDetail.answer);
+                  <div className="space-y-3 mb-8">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block px-1">Mapping Options</span>
+                    {questionDetail.options.map(opt => {
+                      const isCorrect = isCorrectAnswer(opt.key, questionDetail.answer);
                       return (
                         <div
-                          key={option.key}
+                          key={opt.key}
                           className={cn(
-                            'p-2 px-3 mb-2 rounded-md border border-gray-200 flex items-center gap-2 text-sm',
-                            isCorrect && 'border-success-500 bg-success-50/50'
+                            "p-4 rounded-2xl border-2 flex items-center gap-4 transition-all duration-500",
+                            isCorrect ? "bg-success-50 border-success-200 shadow-lg shadow-success-500/5 translate-x-2" : "bg-white border-gray-100"
                           )}
                         >
-                          <span className={cn('font-semibold text-gray-600', isCorrect && 'text-success-500')}>
-                            {option.key}.
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm",
+                            isCorrect ? "bg-success-500 text-white" : "bg-gray-100 text-gray-400"
+                          )}>
+                            {opt.key}
+                          </div>
+                          <span className={cn("text-sm font-bold", isCorrect ? "text-success-700" : "text-gray-700")}>
+                            {opt.value}
                           </span>
-                          <span>{option.value}</span>
-                          {isCorrect && (
-                            <Check className="h-4 w-4 text-success-500 ml-auto" />
-                          )}
+                          {isCorrect && <CheckCircle className="w-5 h-5 text-success-500 ml-auto" />}
                         </div>
-                      );
+                      )
                     })}
                   </div>
                 )}
 
-                {/* 判断题答案 */}
-                {questionDetail.question_type === 'TRUE_FALSE' && questionDetail.answer && (
-                  <div className="mb-5">
-                    <span className="block text-xs text-gray-500 mb-2 font-medium">答案</span>
-                    <Badge variant={questionDetail.answer === 'true' || questionDetail.answer === 'TRUE' ? 'success' : 'error'}>
-                      {questionDetail.answer === 'true' || questionDetail.answer === 'TRUE' ? '正确' : '错误'}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* 简答题答案 */}
-                {questionDetail.question_type === 'SHORT_ANSWER' && questionDetail.answer && (
-                  <div className="mb-5">
-                    <span className="block text-xs text-gray-500 mb-2 font-medium">参考答案</span>
-                    <div className="bg-gray-50 p-3 rounded-md text-sm">
-                      {questionDetail.answer}
+                {/* 特殊类型答案 */}
+                {questionDetail.question_type === 'TRUE_FALSE' && (
+                  <div className="mb-8">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3 px-1">Boolean State</span>
+                    <div className={cn(
+                      "inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-black italic",
+                      questionDetail.answer?.toLowerCase() === 'true' ? "bg-success-50 text-success-600 border border-success-100" : "bg-error-50 text-error-600 border border-error-100"
+                    )}>
+                      {questionDetail.answer?.toLowerCase() === 'true' ? 'CORRECT / 正确' : 'WRONG / 错误'}
                     </div>
                   </div>
                 )}
 
-                <Separator className="my-4" />
-
-                {/* 元信息 */}
-                <div className="mb-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-xs text-gray-500 mb-2 font-medium">更新人</span>
-                      <span className="text-[13px]">{questionDetail.created_by_name || '-'}</span>
+                {questionDetail.question_type === 'SHORT_ANSWER' && (
+                  <div className="mb-8">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3 px-1">Reference Model</span>
+                    <div className="p-6 bg-primary-50/30 rounded-3xl border border-primary-100 text-sm font-bold text-primary-900 leading-relaxed italic">
+                      {questionDetail.answer || 'No reference model provided.'}
                     </div>
-                    <div>
-                      <span className="block text-xs text-gray-500 mb-2 font-medium">更新时间</span>
-                      <span className="text-[13px]">{dayjs(questionDetail.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-6 pt-8 border-t border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Architect</span>
+                      <span className="text-xs font-bold text-gray-700">{questionDetail.created_by_name || 'System Auto'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Deployment</span>
+                      <span className="text-xs font-bold text-gray-700">{dayjs(questionDetail.updated_at).format('YYYY.MM.DD HH:mm')}</span>
                     </div>
                   </div>
                 </div>
-
-                {/* 题目解析 */}
-                {questionDetail.explanation && (
-                  <div className="mb-5">
-                    <span className="block text-xs text-gray-500 mb-2 font-medium">题目解析</span>
-                    <div className="bg-gray-50 p-3 rounded-md text-sm">
-                      {questionDetail.explanation}
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="flex items-center justify-center py-10 text-gray-500">
-                请选择一道题目查看详情
+              <div className="flex flex-col items-center justify-center py-32 text-gray-400">
+                <Box className="w-16 h-16 opacity-10 mb-4" />
+                <h3 className="text-sm font-black uppercase tracking-[0.2em]">Select an Asset</h3>
+                <p className="text-[10px] font-bold text-gray-300 mt-2 italic">Waiting for intelligence selection...</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* 底部操作栏 */}
+      {/* 底部悬浮动作条 */}
       {selectedRowKeys.length > 0 && (
-        <Card className="mt-4">
-          <CardContent className="py-3 px-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[13px]">
-                已选 <span className="font-semibold text-primary-500">{selectedRowKeys.length}</span> 道题目
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearSelection}
-                >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  清空
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleCreateQuiz}
-                >
-                  立即组卷
-                </Button>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-fadeInUp">
+          <div className="bg-gray-900 text-white px-8 py-5 rounded-[2.5rem] shadow-2xl flex items-center gap-10 border border-white/10 backdrop-blur-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-primary-500 rounded-2xl flex items-center justify-center text-white font-black text-lg">
+                {selectedRowKeys.length}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Question Payload</span>
+                <span className="text-sm font-black italic">Assets Ready for Assembly</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-[1px] h-10 bg-white/10" />
+            <div className="flex gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedRowKeys([])}
+                className="text-gray-400 hover:text-white font-black text-xs uppercase"
+              >
+                Reset Build
+              </Button>
+              <Button
+                onClick={() => {
+                  const ids = selectedRowKeys.join(',');
+                  navigate(`/test-center/quizzes/create?question_ids=${ids}`);
+                }}
+                className="bg-primary-500 hover:bg-primary-600 text-white rounded-2xl font-black text-xs px-8 h-12 shadow-xl shadow-primary-500/20"
+              >
+                Construct Quiz Engine
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -142,276 +143,268 @@ export const UserForm: React.FC = () => {
     );
   }
 
-  return (
-    <div className="max-w-200 mx-auto p-4 animate-in fade-in-0 slide-in-from-bottom-4 duration-400">
-      {/* 头部 */}
-      <div className="flex justify-between items-start mb-6">
+  return createPortal(
+    <div className="fixed inset-0 flex flex-col bg-gray-50 z-[1000] animate-fadeIn">
+      {/* 顶部导航栏 */}
+      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={handleClose}
-            className="w-10 h-10 rounded-lg border border-gray-200 bg-white cursor-pointer flex items-center justify-center transition-all text-gray-500 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300"
+            className="w-9 h-9 flex items-center justify-center bg-transparent border border-gray-200 rounded-lg text-gray-500 cursor-pointer transition-all hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
             title="返回"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-gray-900 m-0">
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-gray-900 m-0 leading-tight">
               {isEdit ? '编辑用户' : '新建用户'}
             </h1>
-            <span className="text-xs font-medium text-gray-500">
-              {isEdit ? '修改用户基本信息' : '创建新的系统用户'}
+            <span className="text-xs text-gray-500">
+              {isEdit ? '修改系统用户信息' : '创建新的用户账号'}
             </span>
           </div>
         </div>
-        <button
-          onClick={handleClose}
-          className="w-10 h-10 rounded-lg border border-gray-200 bg-white cursor-pointer flex items-center justify-center transition-all text-gray-500 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-300"
-          title="关闭"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="h-9 px-4"
+          >
+            取消
+          </Button>
+          <Button
+            onClick={form.handleSubmit(handleSubmit)}
+            disabled={isLoading}
+            className="h-9 px-6 bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition-all hover:shadow-md"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                处理中...
+              </>
+            ) : isEdit ? (
+              '保存修改'
+            ) : (
+              '立即创建'
+            )}
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        {/* 用户头像区域 */}
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-gray-100">
-              <AvatarFallback
-                className="text-xl font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, rgb(99, 130, 255), rgb(77, 108, 255))' }}
-              >
-                {getAvatarText(form.watch('username') || userDetail?.username)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-lg">
-                {form.watch('username') || userDetail?.username || '新用户'}
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                {isEdit ? `工号: ${userDetail?.employee_id || ''}` : '请填写用户信息'}
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-              {/* 基本信息区域 */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ background: 'rgba(77, 108, 255, 0.1)', color: 'rgb(77, 108, 255)' }}
+      {/* 主体内容区域 - 可滚动 */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto">
+          <Card className="border-none shadow-sm ring-1 ring-gray-900/5">
+            {/* 用户头像区域 */}
+            <CardHeader className="pb-6 border-b border-gray-100 bg-white rounded-t-xl">
+              <div className="flex items-center gap-5">
+                <Avatar className="h-20 w-20 border-4 border-white shadow-lg shadow-primary-500/10">
+                  <AvatarFallback
+                    className="text-2xl font-bold text-white bg-gradient-to-br from-primary-400 to-primary-600"
                   >
-                    <User className="w-4 h-4" />
+                    {getAvatarText(form.watch('username') || userDetail?.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <CardTitle className="text-xl text-gray-900">
+                    {form.watch('username') || userDetail?.username || '新用户'}
+                  </CardTitle>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      {isEdit ? `工号: ${userDetail?.employee_id || '未设置'}` : '待创建'}
+                    </span>
+                    {form.watch('department_id') && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                        {departments.find(d => d.id === form.watch('department_id'))?.name}
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900">基本信息</h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* 工号 - 仅创建时显示 */}
-                  {!isEdit && (
-                    <FormField
-                      control={form.control}
-                      name="employee_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>工号</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                placeholder="请输入工号"
-                                className="pl-9 h-10"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* 密码 - 仅创建时显示 */}
-                  {!isEdit && (
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>密码</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                                type="password"
-                                placeholder="请输入密码"
-                                className="pl-9 h-10"
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* 姓名 */}
-                  <FormField
-                    control={form.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>姓名</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
-                              placeholder="请输入姓名"
-                              className="pl-9 h-10"
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* 部门 */}
-                  <FormField
-                    control={form.control}
-                    name="department_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>部门</FormLabel>
-                        <Select
-                          value={field.value?.toString()}
-                          onValueChange={(value) => field.onChange(Number(value))}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-10">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-gray-400" />
-                                <SelectValue placeholder="请选择部门" />
-                              </div>
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept.id} value={dept.id.toString()}>
-                                {dept.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </div>
+            </CardHeader>
 
-              {/* 导师选择 - 仅创建时显示 */}
-              {!isEdit && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: 'rgba(6, 182, 212, 0.1)', color: 'rgb(6, 182, 212)' }}
-                    >
-                      <Users className="w-4 h-4" />
+            <CardContent className="p-8 bg-white rounded-b-xl">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+                  {/* 基本信息区域 */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+                      <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-base font-bold text-gray-900">基本信息</h3>
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-900">导师指定</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                      {/* 姓名 */}
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>姓名</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <Input
+                                  placeholder="请输入姓名"
+                                  className="pl-9 h-10"
+                                  {...field}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 部门 */}
+                      <FormField
+                        control={form.control}
+                        name="department_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>部门</FormLabel>
+                            <Select
+                              value={field.value?.toString()}
+                              onValueChange={(value) => field.onChange(Number(value))}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-10">
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-gray-400" />
+                                    <SelectValue placeholder="请选择部门" />
+                                  </div>
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="z-[1050]">
+                                {departments.map((dept) => (
+                                  <SelectItem key={dept.id} value={dept.id.toString()}>
+                                    {dept.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 工号 - 仅创建时显示 */}
+                      {!isEdit && (
+                        <FormField
+                          control={form.control}
+                          name="employee_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>工号</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <IdCard className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                  <Input
+                                    placeholder="请输入工号"
+                                    className="pl-9 h-10"
+                                    {...field}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* 密码 - 仅创建时显示 */}
+                      {!isEdit && (
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>密码</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                  <Input
+                                    type="password"
+                                    placeholder="请输入初始密码"
+                                    className="pl-9 h-10"
+                                    {...field}
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="mentor_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>导师（可选）</FormLabel>
-                        <Select
-                          value={field.value?.toString() || ''}
-                          onValueChange={(value) =>
-                            field.onChange(value ? Number(value) : null)
-                          }
-                        >
-                          <FormControl>
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="请选择导师（可选）" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {mentors.map((mentor) => (
-                              <SelectItem key={mentor.id} value={mentor.id.toString()}>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback
-                                      className="text-xs font-semibold text-white"
-                                      style={{ background: 'rgb(6, 182, 212)' }}
-                                    >
-                                      {getAvatarText(mentor.username)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span>{mentor.username}</span>
-                                  <span className="text-xs text-gray-400">
-                                    ({mentor.employee_id})
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          可选，创建后也可以随时指定或更换导师
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
+                  {/* 导师选择 - 仅创建时显示 */}
+                  {!isEdit && (
+                    <div className="space-y-6 pt-2">
+                      <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+                        <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-600">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <h3 className="text-base font-bold text-gray-900">
+                          导师分配 <span className="text-xs font-normal text-gray-400 ml-2">(可选)</span>
+                        </h3>
+                      </div>
 
-              {/* 底部按钮 */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  className="px-6 h-10"
-                >
-                  取消
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-6 h-10"
-                  style={{
-                    background: 'rgb(77, 108, 255)',
-                    boxShadow: '0 4px 12px rgba(77, 108, 255, 0.25)',
-                  }}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      处理中...
-                    </>
-                  ) : isEdit ? (
-                    '更新'
-                  ) : (
-                    '创建'
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="mentor_id"
+                          render={({ field }) => (
+                            <FormItem className="col-span-2 md:col-span-1">
+                              <FormLabel>选择导师</FormLabel>
+                              <Select
+                                value={field.value?.toString() || ''}
+                                onValueChange={(value) =>
+                                  field.onChange(value ? Number(value) : null)
+                                }
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="暂不指定导师" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="z-[1050]">
+                                  {mentors.map((mentor) => (
+                                    <SelectItem key={mentor.id} value={mentor.id.toString()}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-cyan-100 flex items-center justify-center text-[10px] text-cyan-700 font-bold">
+                                          {getAvatarText(mentor.username)}
+                                        </div>
+                                        <span>{mentor.username}</span>
+                                        <span className="text-xs text-gray-400">
+                                          ({mentor.employee_id})
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                可以稍后在用户详情页进行分配或变更
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
+

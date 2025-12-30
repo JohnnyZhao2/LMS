@@ -5,16 +5,17 @@ import {
   TrendingUp,
   Trophy,
   User,
+  Users2
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { Card } from '@/components/ui';
+import { Card, StatCard, PageHeader, Skeleton } from '@/components/ui';
 
 /**
  * 空状态组件
  */
 const EmptyState: React.FC<{ description: string; subDescription?: string }> = ({ description, subDescription }) => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
-    <div style={{ color: 'var(--color-gray-400)', marginBottom: 'var(--spacing-2)' }}>
+    <div className="text-gray-400 mb-2">
       <svg width="64" height="41" viewBox="0 0 64 41" xmlns="http://www.w3.org/2000/svg">
         <g transform="translate(0 1)" fill="none" fillRule="evenodd">
           <ellipse fill="#f5f5f5" cx="32" cy="33" rx="32" ry="7" />
@@ -25,9 +26,9 @@ const EmptyState: React.FC<{ description: string; subDescription?: string }> = (
         </g>
       </svg>
     </div>
-    <span style={{ color: 'var(--color-gray-500)' }}>{description}</span>
+    <span className="text-gray-500 font-bold">{description}</span>
     {subDescription && (
-      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-400)', marginTop: 'var(--spacing-1)' }}>
+      <span className="text-sm text-gray-400 mt-1 font-medium">
         {subDescription}
       </span>
     )}
@@ -36,301 +37,99 @@ const EmptyState: React.FC<{ description: string; subDescription?: string }> = (
 
 /**
  * 团队经理仪表盘组件
- * Migrated from Ant Design to ShadCN UI
+ * Sophisticated dashboard for Team Managers.
  */
 export const TeamManagerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const isLoading = false; // Mock loading state if needed, or derived from data hooks
 
-  return (
-    <div>
-      {/* 欢迎区 */}
-      <div
-        className="animate-fadeInDown"
-        style={{
-          marginBottom: 'var(--spacing-8)',
-          padding: 'var(--spacing-8)',
-          borderRadius: 'var(--radius-xl)',
-          background: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* 装饰 */}
-        <div
-          style={{
-            position: 'absolute',
-            right: -30,
-            top: -30,
-            width: 150,
-            height: 150,
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.15)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            right: 80,
-            bottom: -20,
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.1)',
-          }}
-        />
-
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
-            <BarChart3 className="w-5 h-5" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
-            <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 'var(--font-size-sm)' }}>
-              团队经理工作台
-            </span>
-          </div>
-          <h2
-            style={{
-              margin: 0,
-              marginBottom: 'var(--spacing-1)',
-              color: 'white',
-              fontSize: 'var(--font-size-3xl)',
-              fontWeight: 700,
-            }}
-          >
-            欢迎回来，{user?.username || '经理'}
-          </h2>
-          <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-            全面掌握团队学习动态
-          </span>
+  if (isLoading) {
+    return (
+      <div className="p-10 space-y-6 animate-pulse">
+        <Skeleton className="h-20 w-1/3 rounded-2xl" />
+        <div className="grid grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-40 rounded-3xl" />
+          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-10 animate-fadeIn pb-10">
+      <PageHeader
+        title="团队经理工作台"
+        subtitle={`欢迎回来，${user?.username || '经理'}。全面掌握团队学习动态。`}
+        icon={<Users2 />}
+      />
 
       {/* 统计概览 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="animate-fadeInUp" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
-          <Card className="hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <span style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-sm)' }}>
-                    团队人数
-                  </span>
-                  <div style={{ marginTop: 'var(--spacing-2)' }}>
-                    <span
-                      style={{
-                        fontSize: 'var(--font-size-4xl)',
-                        fontWeight: 700,
-                        color: 'var(--color-primary-500)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      --
-                    </span>
-                    <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
-                      人
-                    </span>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-primary-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-primary-500)',
-                  }}
-                >
-                  <Users className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="animate-fadeInUp" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
-          <Card className="hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <span style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-sm)' }}>
-                    平均完成率
-                  </span>
-                  <div style={{ marginTop: 'var(--spacing-2)' }}>
-                    <span
-                      style={{
-                        fontSize: 'var(--font-size-4xl)',
-                        fontWeight: 700,
-                        color: 'var(--color-success-500)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      --%
-                    </span>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-success-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-success-500)',
-                  }}
-                >
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="animate-fadeInUp" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
-          <Card className="hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <span style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-sm)' }}>
-                    平均分数
-                  </span>
-                  <div style={{ marginTop: 'var(--spacing-2)' }}>
-                    <span
-                      style={{
-                        fontSize: 'var(--font-size-4xl)',
-                        fontWeight: 700,
-                        color: 'var(--color-purple-500)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      --
-                    </span>
-                    <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
-                      分
-                    </span>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'rgba(155, 0, 255, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-purple-500)',
-                  }}
-                >
-                  <Trophy className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="animate-fadeInUp" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
-          <Card className="hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                  <span style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-sm)' }}>
-                    活跃学员
-                  </span>
-                  <div style={{ marginTop: 'var(--spacing-2)' }}>
-                    <span
-                      style={{
-                        fontSize: 'var(--font-size-4xl)',
-                        fontWeight: 700,
-                        color: 'var(--color-cyan-500)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      --
-                    </span>
-                    <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
-                      人
-                    </span>
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'rgba(0, 199, 230, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-cyan-500)',
-                  }}
-                >
-                  <User className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="团队人数"
+          value="--"
+          icon={Users}
+          color="var(--color-primary-500)"
+          gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
+          delay="stagger-delay-1"
+        />
+        <StatCard
+          title="平均完成率"
+          value="--%"
+          icon={TrendingUp}
+          color="var(--color-success-500)"
+          gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
+          delay="stagger-delay-2"
+        />
+        <StatCard
+          title="平均分数"
+          value="--"
+          icon={Trophy}
+          color="var(--color-purple-500)"
+          gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
+          delay="stagger-delay-3"
+        />
+        <StatCard
+          title="活跃学员"
+          value="--"
+          icon={User}
+          color="var(--color-cyan-500)"
+          gradient="linear-gradient(135deg, var(--color-cyan-500) 0%, var(--color-cyan-300) 100%)"
+          delay="stagger-delay-4"
+        />
       </div>
 
       {/* 数据看板占位 */}
-      <div className="grid grid-cols-1 lg:grid-cols-24 gap-6">
-        <div className="lg:col-span-16">
-          <Card className="hover:shadow-md transition-shadow">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-5)' }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-primary-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-primary-500)',
-                  }}
-                >
-                  <BarChart3 className="w-5 h-5" />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                  学习趋势
-                </span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 reveal-item stagger-delay-2">
+        <div className="lg:col-span-8">
+          <Card className="h-full border-none shadow-premium p-6 rounded-[2.5rem]">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-primary-500" />
               </div>
-              <EmptyState
-                description="数据看板开发中..."
-                subDescription="将展示团队学习趋势图表"
-              />
+              <span className="font-black text-lg text-gray-900">
+                学习趋势
+              </span>
             </div>
+            <EmptyState
+              description="数据看板开发中..."
+              subDescription="将展示团队学习趋势图表"
+            />
           </Card>
         </div>
 
-        <div className="lg:col-span-8">
-          <Card className="hover:shadow-md transition-shadow h-full">
-            <div className="p-5">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-5)' }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-success-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-success-500)',
-                  }}
-                >
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                  排行榜
-                </span>
+        <div className="lg:col-span-4">
+          <Card className="h-full border-none shadow-premium p-6 rounded-[2.5rem]">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-success-50 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-success-500" />
               </div>
-              <EmptyState description="即将推出..." />
+              <span className="font-black text-lg text-gray-900">
+                排行榜
+              </span>
             </div>
+            <EmptyState description="即将推出..." />
           </Card>
         </div>
       </div>

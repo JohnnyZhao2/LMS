@@ -1,14 +1,27 @@
-import { useState } from 'react';
-import { type ColumnDef } from '@tanstack/react-table';
-import { Users, Plus, Pencil, Lock, Ban, CheckCircle, Search } from 'lucide-react';
-import { useUsers } from '../api/get-users';
-import { useActivateUser, useDeactivateUser, useResetPassword } from '../api/manage-users';
-import { UserFormModal } from './user-form-modal';
-import { DataTable } from '@/components/ui/data-table/data-table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import * as React from "react"
+import { type ColumnDef } from "@tanstack/react-table"
+import {
+  Users,
+  Plus,
+  Pencil,
+  Lock,
+  Ban,
+  CheckCircle,
+  Search,
+  ShieldCheck,
+  UserCheck,
+  Building2,
+  MoreHorizontal,
+  Shield,
+  RefreshCw,
+} from "lucide-react"
+import { useUsers } from "../api/get-users"
+import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
+import { UserFormModal } from "./user-form-modal"
+import { DataTable } from "@/components/ui/data-table/data-table"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -16,412 +29,434 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import type { UserList as UserListType, Role } from '@/types/api';
-import { showApiError } from '@/utils/error-handler';
-import dayjs from '@/lib/dayjs';
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+import { showApiError } from "@/utils/error-handler"
+import dayjs from "@/lib/dayjs"
+import { cn } from "@/lib/utils"
+import type { UserList as UserListType, Role } from "@/types/api"
+import { PageHeader, StatCard } from "@/components/ui"
 
-/**
- * 用户列表组件 - ShadCN UI 版本
- * 保持与原 Ant Design 版本完全一致的视觉效果
- */
 export const UserList: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [formModalOpen, setFormModalOpen] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<number | undefined>();
-  const [resetPasswordDialog, setResetPasswordDialog] = useState<{
-    open: boolean;
-    userId?: number;
-  }>({ open: false });
-  const [tempPasswordDialog, setTempPasswordDialog] = useState<{
-    open: boolean;
-    password?: string;
-  }>({ open: false });
+  const [search, setSearch] = React.useState("")
+  const [searchInput, setSearchInput] = React.useState("")
+  const [formModalOpen, setFormModalOpen] = React.useState(false)
+  const [editingUserId, setEditingUserId] = React.useState<number | undefined>()
+  const [resetPasswordDialog, setResetPasswordDialog] = React.useState<{
+    open: boolean
+    userId?: number
+  }>({ open: false })
+  const [tempPasswordDialog, setTempPasswordDialog] = React.useState<{
+    open: boolean
+    password?: string
+  }>({ open: false })
 
-  const { data, isLoading, refetch } = useUsers({ search });
-  const activateUser = useActivateUser();
-  const deactivateUser = useDeactivateUser();
-  const resetPassword = useResetPassword();
+  const { data, isLoading, refetch } = useUsers({ search })
+  const activateUser = useActivateUser()
+  const deactivateUser = useDeactivateUser()
+  const resetPassword = useResetPassword()
+
+  // 统计逻辑
+  const stats = React.useMemo(() => {
+    const users = data || []
+    return {
+      total: users.length,
+      active: users.filter(u => u.is_active).length,
+      admins: users.filter(u => u.roles.some(r => r.code === 'ADMIN')).length,
+      new: users.filter(u => dayjs(u.created_at).isAfter(dayjs().subtract(7, 'day'))).length
+    }
+  }, [data])
 
   const handleToggleActive = async (user: UserListType) => {
     try {
       if (user.is_active) {
-        await deactivateUser.mutateAsync(user.id);
-        toast.success('已停用');
+        await deactivateUser.mutateAsync(user.id)
+        toast.success("账号已停用")
       } else {
-        await activateUser.mutateAsync(user.id);
-        toast.success('已启用');
+        await activateUser.mutateAsync(user.id)
+        toast.success("账号已启用")
       }
+      refetch()
     } catch (error) {
-      showApiError(error, '操作失败');
+      showApiError(error)
     }
-  };
+  }
 
   const handleResetPassword = async () => {
-    if (!resetPasswordDialog.userId) return;
+    if (!resetPasswordDialog.userId) return
     try {
-      const result = await resetPassword.mutateAsync(resetPasswordDialog.userId);
-      setResetPasswordDialog({ open: false });
-      setTempPasswordDialog({ open: true, password: result.temporary_password });
+      const result = await resetPassword.mutateAsync(resetPasswordDialog.userId)
+      setResetPasswordDialog({ open: false })
+      setTempPasswordDialog({ open: true, password: result.temporary_password })
     } catch (error) {
-      showApiError(error, '重置失败');
+      showApiError(error)
     }
-  };
+  }
 
   const handleSearch = () => {
-    setSearch(searchInput);
-  };
+    setSearch(searchInput)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
+    if (e.key === "Enter") {
+      handleSearch()
     }
-  };
+  }
 
   const columns: ColumnDef<UserListType>[] = [
     {
-      id: 'basic_info',
-      header: '用户信息',
-      cell: ({ row }) => {
-        const record = row.original;
-        return (
-          <div className="flex items-center gap-3">
+      id: "user",
+      header: "用户信息",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-4 py-1">
+          <div className="relative">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-base"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-inner group-hover:scale-110 transition-transform duration-300"
               style={{
-                background: 'linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%)',
+                background: "linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%)",
               }}
             >
-              {record.username?.charAt(0) || '?'}
+              {row.original.username?.charAt(0) || "?"}
             </div>
-            <div>
-              <div className="font-semibold text-gray-900">{record.username}</div>
-              <div className="text-xs text-gray-500">{record.employee_id}</div>
-            </div>
+            <div className={cn(
+              "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm",
+              row.original.is_active ? "bg-success-500" : "bg-gray-300"
+            )} />
           </div>
-        );
-      },
-    },
-    {
-      id: 'roles',
-      header: '角色',
-      cell: ({ row }) => {
-        const record = row.original;
-        return (
-          <div className="flex flex-wrap gap-1">
-            {record.roles.map((role: Role) => (
-              <span
-                key={role.code}
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                style={{
-                  background: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-600)',
-                }}
-              >
-                {role.name}
-              </span>
-            ))}
+          <div className="flex flex-col">
+            <span className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+              {row.original.username}
+            </span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+              {row.original.employee_id || 'NO ID'}
+            </span>
           </div>
-        );
-      },
+        </div>
+      ),
     },
     {
-      id: 'department',
-      header: '部门',
-      cell: ({ row }) => {
-        const record = row.original;
-        return (
-          <span className={record.department ? 'text-gray-900' : 'text-gray-400'}>
-            {record.department?.name || '-'}
+      id: "roles",
+      header: "权限角色",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1.5">
+          {row.original.roles.map((role: Role) => (
+            <Badge
+              key={role.code}
+              className={cn(
+                "badge-pill border-none px-2 py-0.5 text-[10px] font-bold uppercase",
+                role.code === 'ADMIN' ? "bg-error-500/10 text-error-600" :
+                  role.code === 'MENTOR' ? "bg-purple-500/10 text-purple-600" :
+                    "bg-primary-500/10 text-primary-600"
+              )}
+            >
+              {role.name}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: "department",
+      header: "所属部门",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Building2 className="w-3.5 h-3.5 text-gray-400" />
+          <span className={cn(
+            "text-xs font-bold",
+            row.original.department ? "text-gray-700" : "text-gray-300 italic"
+          )}>
+            {row.original.department?.name || "未分配"}
           </span>
-        );
-      },
+        </div>
+      ),
     },
     {
-      id: 'mentor',
-      header: '导师',
+      id: "mentor",
+      header: "指导老师",
       cell: ({ row }) => {
-        const record = row.original;
-        if (record.mentor) {
-          return (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-semibold"
-                style={{ background: 'var(--color-cyan-500)' }}
-              >
-                {record.mentor.username?.charAt(0).toUpperCase() || '?'}
-              </div>
-              <span className="text-gray-900">{record.mentor.username}</span>
+        const mentor = row.original.mentor
+        if (!mentor) return <span className="text-gray-300 italic text-[10px] font-bold uppercase">未分配导师</span>
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-[10px] font-black border border-cyan-100">
+              {mentor.username?.charAt(0).toUpperCase()}
             </div>
-          );
-        }
-        return <span className="text-gray-400">-</span>;
+            <span className="text-xs font-bold text-gray-700">{mentor.username}</span>
+          </div>
+        )
       },
     },
     {
-      id: 'is_active',
-      header: '状态',
-      size: 100,
-      cell: ({ row }) => {
-        const record = row.original;
-        return (
-          <Badge
-            variant={record.is_active ? 'default' : 'secondary'}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              record.is_active
-                ? 'bg-green-50 text-green-600 hover:bg-green-50'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {record.is_active ? '已启用' : '已停用'}
-          </Badge>
-        );
-      },
+      id: "is_active",
+      header: "状态",
+      cell: ({ row }) => (
+        <Badge
+          className={cn(
+            "badge-pill border-none",
+            row.original.is_active ? "bg-success-500/10 text-success-600" : "bg-gray-100 text-gray-400"
+          )}
+        >
+          {row.original.is_active ? "活跃" : "已停用"}
+        </Badge>
+      ),
     },
     {
-      id: 'created_at',
-      header: '创建时间',
-      size: 120,
-      cell: ({ row }) => {
-        const record = row.original;
-        return (
-          <span className="text-sm text-gray-500">
-            {record.created_at ? dayjs(record.created_at).format('YYYY-MM-DD') : '-'}
-          </span>
-        );
-      },
-    },
-    {
-      id: 'action',
-      header: '操作',
-      size: 200,
-      cell: ({ row }) => {
-        const record = row.original;
-        const isSuperuser = record.is_superuser || false;
-
-        return (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+      id: "actions",
+      header: "操作",
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-gray-100">
+              <MoreHorizontal className="h-5 w-5 text-gray-400" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 border-none shadow-premium animate-fadeIn">
+            <DropdownMenuLabel className="text-[10px] font-bold text-gray-400 uppercase px-3 py-2">账号操作</DropdownMenuLabel>
+            <DropdownMenuItem
+              className="rounded-xl px-3 py-2.5 font-bold text-gray-700 focus:bg-primary-50 focus:text-primary-600 cursor-pointer"
               onClick={() => {
-                setEditingUserId(record.id);
-                setFormModalOpen(true);
+                setEditingUserId(row.original.id)
+                setFormModalOpen(true)
               }}
             >
-              <Pencil className="h-4 w-4 mr-1" />
-              编辑
-            </Button>
-            {!isSuperuser && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`h-8 px-2 ${
-                  record.is_active
-                    ? 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                    : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                }`}
-                onClick={() => handleToggleActive(record)}
-              >
-                {record.is_active ? (
-                  <>
-                    <Ban className="h-4 w-4 mr-1" />
-                    停用
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    启用
-                  </>
-                )}
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              onClick={() => setResetPasswordDialog({ open: true, userId: record.id })}
+              <Pencil className="mr-2 h-4 w-4" /> 编辑资料
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-xl px-3 py-2.5 font-bold text-gray-700 focus:bg-purple-50 focus:text-purple-600 cursor-pointer"
+              onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
             >
-              <Lock className="h-4 w-4 mr-1" />
-              重置
-            </Button>
-          </div>
-        );
-      },
+              <Lock className="mr-2 h-4 w-4" /> 重置密码
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-gray-100 my-1 mx-2" />
+            <DropdownMenuItem
+              className={cn(
+                "rounded-xl px-3 py-2.5 font-bold cursor-pointer",
+                row.original.is_active ? "text-error-500 focus:bg-error-50" : "text-success-500 focus:bg-success-50"
+              )}
+              onClick={() => handleToggleActive(row.original)}
+            >
+              {row.original.is_active ? (
+                <><Ban className="mr-2 h-4 w-4" /> 停用账号</>
+              ) : (
+                <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
-  ];
+  ]
 
   return (
-    <div className="animate-fadeIn">
-      {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2
-              className="m-0 flex items-center gap-3 text-2xl font-bold"
-              style={{ fontSize: 'var(--font-size-3xl)' }}
+    <div className="space-y-10 animate-fadeIn overflow-x-hidden pb-10">
+      <PageHeader
+        title="用户管理"
+        subtitle="Accounts & Permissions"
+        icon={<Users />}
+        extra={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="h-auto py-3 px-6 rounded-2xl border-2 border-gray-100 font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+              onClick={() => refetch()}
             >
-              <span
-                className="flex items-center justify-center w-10 h-10 rounded-lg"
-                style={{
-                  background: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-500)',
-                }}
-              >
-                <Users className="w-5 h-5" />
-              </span>
-              用户管理
-            </h2>
-            <p className="text-gray-500 mt-1" style={{ fontSize: 'var(--font-size-base)', marginLeft: '52px' }}>
-              管理系统用户账号、角色权限及组织归属
-            </p>
+              <RefreshCw className="h-4 w-4" />
+              刷新
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingUserId(undefined)
+                setFormModalOpen(true)
+              }}
+              className="btn-gradient h-12 px-6 rounded-xl text-white font-bold shadow-md shadow-primary-500/20 hover:scale-105 transition-all duration-300"
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              新增用户
+            </Button>
           </div>
-          <Button
-            onClick={() => {
-              setEditingUserId(undefined);
-              setFormModalOpen(true);
-            }}
-            className="h-11 px-5 font-semibold rounded-xl"
-            style={{
-              background: 'var(--color-primary-500)',
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            新建用户
-          </Button>
-        </div>
+        }
+      />
+
+      {/* 统计网格 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="活跃用户"
+          value={stats.active}
+          icon={UserCheck}
+          color="var(--color-primary-500)"
+          gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
+          delay="stagger-delay-1"
+        />
+        <StatCard
+          title="管理员"
+          value={stats.admins}
+          icon={ShieldCheck}
+          color="var(--color-error-500)"
+          gradient="linear-gradient(135deg, var(--color-error-500) 0%, var(--color-error-300) 100%)"
+          delay="stagger-delay-2"
+        />
+        <StatCard
+          title="总用户数"
+          value={stats.total}
+          icon={Users}
+          color="var(--color-orange-500)"
+          gradient="linear-gradient(135deg, var(--color-orange-500) 0%, var(--color-orange-300) 100%)"
+          delay="stagger-delay-3"
+        />
+        <StatCard
+          title="近一周新增"
+          value={stats.new}
+          icon={Plus}
+          color="var(--color-success-500)"
+          gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
+          delay="stagger-delay-4"
+        />
       </div>
 
-      <Card className="rounded-xl border-gray-200 shadow-sm">
-        <CardContent className="p-6">
-          {/* Search Bar */}
-          <div className="flex justify-between items-center mb-5">
-            <div className="relative w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      {/* 列表主体 */}
+      <div className="reveal-item stagger-delay-2">
+        <div className="glass-card rounded-[2.5rem] p-8 border-none shadow-2xl">
+          {/* 搜索和筛选 */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+            <div className="relative flex-1 max-w-md group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
               <Input
-                placeholder="搜索姓名或工号..."
+                placeholder="搜索姓名、工号、电子邮箱..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="pl-9 h-10 rounded-lg border-gray-200 focus:border-primary-500"
+                className="pl-14 h-16 bg-gray-50/50 border-none rounded-[1.25rem] focus:ring-4 ring-primary-50 shadow-inner text-base font-medium"
               />
-              {searchInput && (
-                <button
-                  onClick={() => {
-                    setSearchInput('');
-                    setSearch('');
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              )}
             </div>
-            {data && (
-              <span className="text-sm text-gray-500">
-                共 {data.length} 个用户
+
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleSearch}
+                className="h-14 px-8 rounded-2xl bg-primary-600 text-white font-bold hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-all duration-300 transform hover:scale-105"
+              >
+                搜索
+              </Button>
+              <div className="h-10 w-[1px] bg-gray-100 mx-2" />
+              <span className="text-sm font-bold text-gray-400">
+                Found <span className="text-gray-900">{data?.length || 0}</span> matches
               </span>
-            )}
+            </div>
           </div>
 
-          {/* Data Table */}
-          <DataTable
-            columns={columns}
-            data={data || []}
-            isLoading={isLoading}
-            onRowClick={(row) => {
-              setEditingUserId(row.id);
-              setFormModalOpen(true);
-            }}
-          />
-        </CardContent>
-      </Card>
+          {/* 表格 */}
+          <div className="overflow-hidden rounded-[1.5rem] border border-gray-100/50">
+            <DataTable
+              columns={columns}
+              data={data || []}
+              isLoading={isLoading}
+              className="border-none"
+              rowClassName="hover:bg-primary-50/30 transition-colors cursor-pointer group"
+              onRowClick={(row) => {
+                setEditingUserId(row.id)
+                setFormModalOpen(true)
+              }}
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* User Form Modal - ShadCN UI version */}
+      {/* 用户表单弹窗 */}
       <UserFormModal
         open={formModalOpen}
         userId={editingUserId}
         onClose={() => {
-          setFormModalOpen(false);
-          setEditingUserId(undefined);
+          setFormModalOpen(false)
+          setEditingUserId(undefined)
         }}
         onSuccess={() => {
-          refetch();
+          refetch()
         }}
       />
 
-      {/* Reset Password Confirmation Dialog */}
+      {/* 重置密码确认对话框 */}
       <Dialog
         open={resetPasswordDialog.open}
         onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="rounded-[2rem] max-w-md p-10 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>确认重置密码</DialogTitle>
-            <DialogDescription>
-              确定要重置该用户的密码吗？重置后会生成临时密码。
+            <div className="w-20 h-20 bg-purple-50 text-purple-500 rounded-3xl flex items-center justify-center mb-8 mx-auto">
+              <Lock className="h-10 w-10" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">锁定并重置密码？</DialogTitle>
+            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+              确定要重置该用户的密码吗？系统将自动生成随机临时密码，用户下次登录时必须修改。
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="mt-10 gap-4 sm:flex-row">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setResetPasswordDialog({ open: false })}
+              className="flex-1 rounded-2xl h-14 font-bold text-gray-500 hover:bg-gray-100"
             >
-              取消
+              放弃
             </Button>
             <Button
               onClick={handleResetPassword}
               disabled={resetPassword.isPending}
+              className="flex-1 bg-purple-500 hover:bg-purple-600 text-white rounded-2xl h-14 font-bold shadow-xl shadow-purple-500/20"
             >
-              {resetPassword.isPending ? '重置中...' : '确定重置'}
+              {resetPassword.isPending ? "处理中..." : "确定重置"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Temporary Password Display Dialog */}
+      {/* 临时密码显示对话框 */}
       <Dialog
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="rounded-[2rem] max-w-md p-10 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-green-600 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              密码重置成功
-            </DialogTitle>
+            <div className="w-20 h-20 bg-success-50 text-success-500 rounded-3xl flex items-center justify-center mb-8 mx-auto">
+              <Shield className="h-10 w-10" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">密码重置成功</DialogTitle>
+            <DialogDescription className="text-gray-500 font-medium text-center">
+              请务必安全地将此密码转交给用户
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="mb-3">临时密码：</p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 px-4 py-3 bg-gray-100 rounded-lg font-mono text-lg select-all">
+
+          <div className="mt-8">
+            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center group cursor-pointer hover:border-primary-300 transition-colors"
+              onClick={() => {
+                navigator.clipboard.writeText(tempPasswordDialog.password || '');
+                toast.success('密码已复制');
+              }}>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">临时密码</span>
+              <code className="text-3xl font-black text-primary-600 tracking-wider">
                 {tempPasswordDialog.password}
               </code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(tempPasswordDialog.password || '');
-                  toast.success('已复制到剪贴板');
-                }}
-              >
-                复制
-              </Button>
+              <div className="mt-4 text-[10px] font-bold text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity uppercase">
+                点击复制
+              </div>
             </div>
-            <p className="mt-4 text-sm text-gray-500">
-              请通知用户使用临时密码登录并修改密码。
-            </p>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setTempPasswordDialog({ open: false })}>
-              确定
+
+          <DialogFooter className="mt-10">
+            <Button
+              onClick={() => setTempPasswordDialog({ open: false })}
+              className="w-full bg-gray-900 text-white rounded-2xl h-14 font-bold shadow-xl"
+            >
+              完成并关闭
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
+  )
+}

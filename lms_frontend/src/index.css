@@ -1,26 +1,29 @@
 /**
- * LMS 全局样式
- * 基于 design.json + REFACTOR_AND_DESIGN.md 规范
- * 
- * Tailwind CSS v4 + ShadCN UI
+ * LMS 全局样式 - 极致设计版
+ * 基于 design.json 规范，融合现代 UI 设计美学：
+ * 1. 玻璃拟态 (Glassmorphism)
+ * 2. 几何背景纹理 (Geometric Patterns)
+ * 3. 渐进式入场动画 (Staggered Reveals)
+ * 4. 极致细节转换 (Micro-interactions)
  */
 
 /* ============================================
    Google Fonts - Outfit (现代无衬线字体)
-   必须在 Tailwind 导入之前
    ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+/* 可选用字体: Urbanist or Satoshi (本地) - 这里使用 Outfit 保持一致但优化排版 */
 
 /* ============================================
-   Tailwind CSS v4 导入 (CSS-first 配置)
+   Tailwind CSS v4 导入
    ============================================ */
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* ============================================
    Tailwind v4 Theme 配置 (CSS-first)
    ============================================ */
 @theme {
-  /* 主色调 */
+  /* 主色调 - 严格遵循 design.json */
   --color-primary-50: #E8EEFF;
   --color-primary-100: #C7D7FF;
   --color-primary-200: #9AB8FF;
@@ -29,25 +32,16 @@
   --color-primary-500: #4D6CFF;
   --color-primary-600: #3D5FE6;
   --color-primary-700: #2F4AC7;
-  
-  /* 成功色 */
-  --color-success-50: #E6F9F0;
-  --color-success-100: #B8EDCE;
+
+  /* 辅助色 */
   --color-success-500: #10B759;
-  --color-success-600: #0DA34F;
-  
-  /* 警告色 */
-  --color-warning-50: #FFFBEB;
-  --color-warning-100: #FFF4C7;
-  --color-warning-300: #FFE577;
   --color-warning-500: #F5C200;
-  
-  /* 错误色 */
-  --color-error-50: #FFE9ED;
-  --color-error-100: #FFC9D3;
   --color-error-500: #FF3D71;
-  --color-error-600: #E6355F;
-  
+  --color-purple-500: #9B00FF;
+  --color-pink-500: #FF3D8F;
+  --color-cyan-500: #00C7E6;
+  --color-orange-500: #FF8C52;
+
   /* 中性色 */
   --color-gray-50: #F8F9FA;
   --color-gray-100: #F1F3F5;
@@ -59,265 +53,147 @@
   --color-gray-700: #495057;
   --color-gray-800: #343A40;
   --color-gray-900: #212529;
-  
-  /* ShadCN 需要的颜色变量 */
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222.2 84% 4.9%);
-  --color-secondary: hsl(210 40% 96.1%);
-  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
-  --color-destructive: hsl(346 84% 61%);
-  --color-destructive-foreground: hsl(0 0% 100%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(231 100% 65%);
-  
-  /* 字体 */
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  
-  /* 圆角 */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
+
+  /* 字体 - 选用更具现代感的 Outfit */
+  --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+
+  /* 阴影 - 增强深度感 */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-premium: 0 20px 40px -4px rgba(77, 108, 255, 0.08), 0 10px 20px -4px rgba(77, 108, 255, 0.04);
+  /* 内阴影 - 用于按钮等 */
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* 动画曲线 */
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%,
+      1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%,
+      0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
 }
 
 /* ============================================
-   ShadCN CSS 变量 (兼容层)
+   Role-Based Themes (CSS Variables Override)
    ============================================ */
-:root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 231 100% 65%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 346 84% 61%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 231 100% 65%;
-  --radius: 0.5rem;
+/* Mentor Theme: Purple/Violet */
+.theme-mentor {
+  --color-primary-50: #faf5ff;
+  --color-primary-100: #f3e8ff;
+  --color-primary-200: #e9d5ff;
+  --color-primary-300: #d8b4fe;
+  --color-primary-400: #c084fc;
+  --color-primary-500: #a855f7;
+  --color-primary-600: #9333ea;
+  --color-primary-700: #7e22ce;
 }
+
+/* Team Manager Theme: Cyan/Teal */
+.theme-manager {
+  --color-primary-50: #ecfeff;
+  --color-primary-100: #cffafe;
+  --color-primary-200: #a5f3fc;
+  --color-primary-300: #67e8f9;
+  --color-primary-400: #22d3ee;
+  --color-primary-500: #06b6d4;
+  --color-primary-600: #0891b2;
+  --color-primary-700: #0e7490;
+}
+
 
 /* ============================================
-   CSS Variables (设计令牌)
+   Custom Utilities & Components
    ============================================ */
-:root {
-  /* Primary Colors */
-  --color-primary-50: #E8EEFF;
-  --color-primary-100: #C7D7FF;
-  --color-primary-200: #9AB8FF;
-  --color-primary-300: #6B94FF;
-  --color-primary-400: #4D7CFF;
-  --color-primary-500: #4D6CFF;
-  --color-primary-600: #3D5FE6;
-  --color-primary-700: #2F4AC7;
 
-  /* Success/Green */
-  --color-success-50: #E6F9F0;
-  --color-success-100: #B8EDCE;
-  --color-success-500: #10B759;
-  --color-success-600: #0DA34F;
-
-  /* Warning/Yellow */
-  --color-warning-50: #FFFBEB;
-  --color-warning-100: #FFF4C7;
-  --color-warning-300: #FFE577;
-  --color-warning-500: #F5C200;
-
-  /* Error/Red */
-  --color-error-50: #FFE9ED;
-  --color-error-100: #FFC9D3;
-  --color-error-500: #FF3D71;
-  --color-error-600: #E6355F;
-
-  /* Accent Colors */
-  --color-purple-500: #9B00FF;
-  --color-pink-500: #FF3D8F;
-  --color-cyan-500: #00C7E6;
-  --color-orange-500: #FF8C52;
-
-  /* Neutral Colors */
-  --color-white: #FFFFFF;
-  --color-gray-50: #F8F9FA;
-  --color-gray-100: #F1F3F5;
-  --color-gray-200: #E9ECEF;
-  --color-gray-300: #DEE2E6;
-  --color-gray-400: #CED4DA;
-  --color-gray-500: #ADB5BD;
-  --color-gray-600: #868E96;
-  --color-gray-700: #495057;
-  --color-gray-800: #343A40;
-  --color-gray-900: #212529;
-
-  /* Typography */
-  --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-md: 15px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  --font-size-2xl: 20px;
-  --font-size-3xl: 24px;
-  --font-size-4xl: 30px;
-  --font-size-5xl: 36px;
-
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
-  --line-height-tight: 1.2;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.6;
-
-  /* Spacing */
-  --spacing-0: 0px;
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
-  --spacing-10: 40px;
-  --spacing-12: 48px;
-  --spacing-16: 64px;
-
-  /* Border Radius */
-  --radius-none: 0px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-base: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
-  --shadow-glow-primary: 0 0 20px rgba(77, 108, 255, 0.3);
-  --shadow-glow-success: 0 0 20px rgba(16, 183, 89, 0.3);
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
-  --transition-slow: 0.3s ease;
-  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* Layout */
-  --header-height: 64px;
-  --container-max-width: 1400px;
-  --content-max-width: 1200px;
-
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-blur: blur(12px);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* ============================================
-   Tailwind Base Layer
-   ============================================ */
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-gray-100 text-foreground font-sans antialiased;
-  }
-}
-
-/* ============================================
-   Reset & Base Styles
-   ============================================ */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  font-size: var(--font-size-base);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-body {
-  font-family: var(--font-family);
-  font-weight: var(--font-weight-normal);
-  line-height: var(--line-height-normal);
-  color: var(--color-gray-900);
-  min-width: 320px;
-  min-height: 100vh;
-
-  /* 统一纯净背景 - 所有区域使用相同底色 */
-  background-color: var(--color-gray-100);
-}
-
-#root {
+/* 1. 动态渐变网孔背景 */
+.bg-mesh {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  background-color: #f8faff;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(77, 108, 255, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(155, 0, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(0, 199, 230, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(77, 108, 255, 0.05) 0px, transparent 50%);
+  z-index: -2;
+  pointer-events: none;
 }
 
+/* 2. 背景点状纹理 */
+.bg-dots {
+  background-image: radial-gradient(var(--color-gray-400) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* 3. 玻璃拟态卡片 (Glass Card) */
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+}
+
+/* 4. 极致卡片 (Premium Card) */
+.card-premium {
+  background: white;
+  border-radius: 1.5rem;
+  /* 24px */
+  border: 1px solid rgba(230, 235, 245, 0.6);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-premium);
+  border-color: var(--color-primary-100);
+}
+
+/* 5. 渐变按钮 (Gradient Button) */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-500) 100%);
+  color: white;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gradient::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -4px rgba(77, 108, 255, 0.4);
+}
+
+.btn-gradient:hover::after {
+  opacity: 1;
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
 
 /* ============================================
-   Typography Utilities
+   Animations
    ============================================ */
-.text-primary {
-  color: var(--color-primary-500);
-}
 
-.text-success {
-  color: var(--color-success-500);
-}
-
-.text-warning {
-  color: var(--color-warning-500);
-}
-
-.text-error {
-  color: var(--color-error-500);
-}
-
-.text-secondary {
-  color: var(--color-gray-600);
-}
-
-.text-muted {
-  color: var(--color-gray-500);
-}
-
-/* ============================================
-   Animation Keyframes
-   ============================================ */
+/* Fade In */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -328,364 +204,84 @@ body {
   }
 }
 
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+/* Fade In Up */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-6px);
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ============================================
-   Animation Utility Classes
-   ============================================ */
-.animate-fadeIn {
-  animation: fadeIn var(--transition-base) ease-out forwards;
 }
 
 .animate-fadeInUp {
-  animation: fadeInUp var(--transition-slow) ease-out forwards;
+  animation: fadeInUp 0.6s var(--ease-spring) forwards;
+}
+
+/* Fade In Down */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fadeInDown {
-  animation: fadeInDown var(--transition-slow) ease-out forwards;
+  animation: fadeInDown 0.6s var(--ease-spring) forwards;
 }
 
-.animate-scaleIn {
-  animation: scaleIn var(--transition-base) ease-out forwards;
+/* Reveal Item (Simple class for JS libraries or stagger) */
+.reveal-item {
+  opacity: 0;
+  animation: fadeInUp 0.8s var(--ease-spring) forwards;
 }
 
-.animate-slideInLeft {
-  animation: slideInLeft var(--transition-slow) ease-out forwards;
-}
-
-.animate-slideInRight {
-  animation: slideInRight var(--transition-slow) ease-out forwards;
-}
-
-.animate-pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Staggered animation delays */
-.stagger-1 {
-  animation-delay: 0.05s;
-}
-
-.stagger-2 {
+/* Stagger Delays */
+.stagger-delay-1 {
   animation-delay: 0.1s;
 }
 
-.stagger-3 {
-  animation-delay: 0.15s;
-}
-
-.stagger-4 {
+.stagger-delay-2 {
   animation-delay: 0.2s;
 }
 
-.stagger-5 {
-  animation-delay: 0.25s;
-}
-
-.stagger-6 {
+.stagger-delay-3 {
   animation-delay: 0.3s;
 }
 
-.stagger-7 {
-  animation-delay: 0.35s;
-}
-
-.stagger-8 {
+.stagger-delay-4 {
   animation-delay: 0.4s;
 }
 
-/* Initial state for staggered animations */
-.stagger-item {
-  opacity: 0;
-}
-
 /* ============================================
-   Glassmorphism Utilities
-   ============================================ */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
-}
-
-.glass-dark {
-  background: rgba(33, 37, 41, 0.85);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* ============================================
-   Card Enhancements
-   ============================================ */
-.card-hover {
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-/* ============================================
-   Button Enhancements
-   ============================================ */
-.btn-press:active {
-  transform: scale(0.97);
-}
-
-/* ============================================
-   Scrollbar Styling
+   Scrollbar Clean up
    ============================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-gray-100);
-  border-radius: var(--radius-full);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gray-300);
-  border-radius: var(--radius-full);
-  transition: background var(--transition-fast);
+  background: var(--color-gray-200);
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
+  background: var(--color-gray-300);
 }
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-300) var(--color-gray-100);
-}
-
-/* ============================================
-   Selection Styling
-   ============================================ */
-::selection {
-  background: var(--color-primary-100);
-  color: var(--color-primary-700);
-}
-
-/* ============================================
-   Focus Ring Styling
-   ============================================ */
-:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-/* ============================================
-   Link Styling
-   ============================================ */
-a {
-  color: var(--color-primary-500);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-a:hover {
-  color: var(--color-primary-400);
-}
-
-/* ============================================
-   Status Indicator Dot
-   ============================================ */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  display: inline-block;
-}
-
-.status-dot-success {
-  background: var(--color-success-500);
-}
-
-.status-dot-warning {
-  background: var(--color-warning-500);
-}
-
-.status-dot-error {
-  background: var(--color-error-500);
-}
-
-.status-dot-info {
-  background: var(--color-primary-500);
-}
-
-/* ============================================
-   Gradient Text
-   ============================================ */
-.gradient-text {
-  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-
-/* ============================================
-   Page Layout Utilities
-   ============================================ */
-.page-container {
-  max-width: var(--container-max-width);
-  margin: 0 auto;
-  padding: var(--spacing-6);
-}
-
-.page-header {
-  margin-bottom: var(--spacing-6);
-}
-
-.page-title {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-gray-900);
-  margin-bottom: var(--spacing-2);
-}
-
-.page-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--color-gray-600);
-}
-
-/* ============================================
-   Grid Utilities
-   ============================================ */
-.grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--spacing-6);
-}
-
-/* ============================================
-   Responsive Utilities
-   ============================================ */
-@media (max-width: 768px) {
-  .page-container {
-    padding: var(--spacing-4);
-  }
-
-  .page-title {
-    font-size: var(--font-size-2xl);
-  }
-}
-
-
-

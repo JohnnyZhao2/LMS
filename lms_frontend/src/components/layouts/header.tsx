@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, ChevronDown, Bell } from "lucide-react"
 import {
   LayoutGrid,
   BookOpen,
@@ -12,6 +12,7 @@ import {
   HelpCircle,
   FileSearch,
   BarChart3,
+  Sparkles,
 } from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
@@ -21,13 +22,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { RoleCode } from "@/types/api"
 
-/**
- * 角色代码到简称的映射
- */
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   STUDENT: "学",
   MENTOR: "师",
@@ -36,9 +35,6 @@ const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   TEAM_MANAGER: "团",
 }
 
-/**
- * 角色代码到完整名称的映射
- */
 const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   STUDENT: "学员",
   MENTOR: "导师",
@@ -47,14 +43,16 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   TEAM_MANAGER: "团队经理",
 }
 
-/**
- * 角色排序顺序：学员 -> 导师 -> 室经理 -> 团队经理 -> 管理员
- */
+const ROLE_COLORS: Record<RoleCode, string> = {
+  STUDENT: "var(--color-primary-500)",
+  MENTOR: "var(--color-success-500)",
+  DEPT_MANAGER: "var(--color-purple-500)",
+  TEAM_MANAGER: "var(--color-orange-500)",
+  ADMIN: "var(--color-error-500)",
+}
+
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
 
-/**
- * 菜单项图标映射 - 使用 Lucide 图标替换 Ant Design 图标
- */
 const MENU_ICONS: Record<string, React.ReactNode> = {
   "/dashboard": <LayoutGrid className="h-4 w-4" />,
   "/knowledge": <BookOpen className="h-4 w-4" />,
@@ -69,9 +67,7 @@ const MENU_ICONS: Record<string, React.ReactNode> = {
 }
 
 /**
- * 顶部导航栏组件
- * 包含 Logo、导航菜单、角色切换器和用户信息
- * 使用 Tailwind CSS 样式，保持与原 Ant Design 版本相同的视觉效果
+ * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
   const { user, currentRole, availableRoles, logout, switchRole } = useAuth()
@@ -84,9 +80,6 @@ export const Header: React.FC = () => {
     navigate("/login")
   }
 
-  /**
-   * 处理角色切换
-   */
   const handleRoleChange = async (roleCode: RoleCode) => {
     if (roleCode !== currentRole) {
       try {
@@ -98,16 +91,10 @@ export const Header: React.FC = () => {
     }
   }
 
-  /**
-   * 处理导航菜单点击
-   */
   const handleNavClick = (path: string) => {
     navigate(path)
   }
 
-  /**
-   * 获取当前选中的导航项
-   */
   const getSelectedNavKey = () => {
     const pathname = location.pathname
     const matched = menuItems.find((item) => {
@@ -118,7 +105,6 @@ export const Header: React.FC = () => {
     return (matched as { key?: string })?.key || ""
   }
 
-  // 角色分段选择器选项（按指定顺序排列）
   const roleOptions = [...availableRoles]
     .sort((a, b) => ROLE_ORDER.indexOf(a.code) - ROLE_ORDER.indexOf(b.code))
     .map((role) => ({
@@ -130,40 +116,45 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-1000 flex items-center justify-between h-16 px-6"
-      style={{
-        background: "var(--color-gray-100)",
-      }}
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-8 glass-card border-none shadow-premium transition-all duration-300"
     >
       {/* 左侧：Logo + 品牌名 + 导航菜单 */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-10">
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={() => navigate("/dashboard")}
+        >
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center relative shadow-lg group-hover:scale-110 transition-transform duration-300 ease-in-out"
             style={{
               background: "linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)",
-              boxShadow: "var(--shadow-glow-primary)",
             }}
           >
-            <span className="text-white text-sm font-bold">L</span>
+            <Sparkles className="text-white w-5 h-5" />
+            <div className="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity" />
           </div>
 
-          <span
-            className="text-lg font-semibold"
-            style={{
-              background: "linear-gradient(135deg, var(--color-gray-900) 0%, var(--color-gray-700) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            SyncLearn Pro
-          </span>
+          <div className="flex flex-col">
+            <span
+              className="text-lg font-bold tracking-tight leading-none"
+              style={{
+                background: "linear-gradient(135deg, var(--color-gray-900) 0%, var(--color-gray-700) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              SyncLearn
+            </span>
+            <span className="text-[10px] font-bold text-primary-500 tracking-[0.2em] uppercase mt-0.5">
+              Platform
+            </span>
+          </div>
         </div>
 
         {/* 导航菜单 */}
-        <nav className="flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-2">
           {menuItems.map((item) => {
             const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
             if (!menuItem.key) return null
@@ -176,49 +167,50 @@ export const Header: React.FC = () => {
                 key={menuItem.key}
                 onClick={() => handleNavClick(menuItem.key!)}
                 className={cn(
-                  "flex items-center gap-2 px-3.5 py-1.5 border-none rounded-lg text-sm font-medium cursor-pointer transition-all duration-150",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 relative group",
                   isActive
-                    ? "bg-primary-500 text-white"
-                    : "bg-transparent text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm"
+                    ? "text-primary-600 bg-primary-50"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 )}
-                style={{
-                  fontFamily: "inherit",
-                  background: isActive ? "var(--color-primary-500)" : undefined,
-                }}
               >
-                <span className="flex items-center">{icon}</span>
+                <span className={cn(
+                  "transition-transform duration-300 group-hover:rotate-12",
+                  isActive ? "text-primary-600" : "text-gray-400 group-hover:text-gray-600"
+                )}>
+                  {icon}
+                </span>
                 <span>{menuItem.label}</span>
+                {isActive && (
+                  <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+                )}
               </button>
             )
           })}
         </nav>
       </div>
 
-      {/* 右侧：角色切换器 + 用户信息 */}
-      <div className="flex items-center gap-4">
-        {/* 角色分段选择器 */}
+      {/* 右侧：通知 + 角色切换器 + 用户信息 */}
+      <div className="flex items-center gap-6">
+        {/* 通知图标 */}
+        <button className="p-2.5 bg-gray-100 rounded-xl text-gray-500 hover:text-primary-600 hover:bg-primary-50 transition-all">
+          <Bell className="w-5 h-5" />
+        </button>
+
+        {/* 角色切换器 */}
         {availableRoles.length > 1 && currentRole && (
           <div
-            className="flex items-center rounded-lg p-0.5"
-            style={{
-              background: "var(--color-white)",
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-            }}
+            className="hidden md:flex items-center bg-gray-100/50 p-1 rounded-xl gap-1"
           >
             {roleOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => handleRoleChange(option.value)}
                 className={cn(
-                  "px-3 py-1 text-xs font-medium rounded-md transition-all duration-150 border-none cursor-pointer",
+                  "px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-300",
                   currentRole === option.value
-                    ? "text-white"
-                    : "bg-transparent text-gray-600 hover:bg-gray-50"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
                 )}
-                style={{
-                  background: currentRole === option.value ? "var(--color-primary-500)" : undefined,
-                  fontFamily: "inherit",
-                }}
               >
                 {option.label}
               </button>
@@ -231,46 +223,63 @@ export const Header: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full cursor-pointer transition-all duration-150 border-none"
-                style={{
-                  background: "var(--color-white)",
-                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-                }}
+                className="flex items-center gap-3 p-1 rounded-2xl hover:bg-gray-100 transition-all group"
               >
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback
-                    className="text-white text-xs"
-                    style={{
-                      background: "linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%)",
-                    }}
-                  >
-                    <User className="h-3.5 w-3.5" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col items-start">
-                  <span
-                    className="text-sm font-medium leading-tight"
-                    style={{ color: "var(--color-gray-900)" }}
-                  >
+                <div className="relative">
+                  <Avatar className="h-9 w-9 border-2 border-white shadow-md transition-transform group-hover:scale-105">
+                    <AvatarFallback
+                      className="text-white font-bold text-sm"
+                      style={{
+                        background: `linear-gradient(135deg, ${ROLE_COLORS[currentRole!] || 'var(--color-primary-500)'} 0%, var(--color-gray-900) 100%)`,
+                      }}
+                    >
+                      {user.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div
+                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
+                    style={{ background: ROLE_COLORS[currentRole!] || 'var(--color-primary-500)' }}
+                  />
+                </div>
+
+                <div className="hidden sm:flex flex-col items-start pr-2">
+                  <span className="text-sm font-bold text-gray-900 leading-tight">
                     {user.username}
                   </span>
-                  {currentRole && (
-                    <span
-                      className="text-[10px] leading-tight"
-                      style={{ color: "var(--color-gray-500)" }}
-                    >
-                      {ROLE_FULL_LABELS[currentRole]}
-                    </span>
-                  )}
+                  <span className="text-[10px] font-bold text-gray-400 leading-tight uppercase tracking-wider">
+                    {ROLE_FULL_LABELS[currentRole!]}
+                  </span>
                 </div>
+                <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-transform group-data-[state=open]:rotate-180" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl">
+              <div className="px-3 py-3 border-b border-gray-100 mb-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">当前角色</p>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: ROLE_COLORS[currentRole!] }}
+                  />
+                  <span className="text-sm font-bold text-gray-900">{ROLE_FULL_LABELS[currentRole!]}</span>
+                </div>
+              </div>
+
+              <DropdownMenuItem
+                onClick={() => navigate("/personal")}
+                className="rounded-xl py-2.5 focus:bg-primary-50 focus:text-primary-600 cursor-pointer"
+              >
+                <User className="mr-3 h-4 w-4" />
+                个人设置
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator className="bg-gray-100" />
+
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 cursor-pointer"
+                className="rounded-xl py-2.5 text-red-500 focus:text-red-600 focus:bg-red-50 cursor-pointer"
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-3 h-4 w-4" />
                 退出登录
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -1,29 +1,30 @@
+"use client"
+
+import * as React from 'react';
 import {
   Clock,
-  User,
   BookOpen,
   FileText,
-  CheckCircle,
-  AlertCircle,
   Users,
-  Timer,
   Pencil,
   Trash2,
-  MoreVertical,
+  MoreHorizontal,
   StopCircle,
+  BarChart3,
+  ChevronRight,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Card } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
-import { Progress, StatusBadge, Tooltip } from '@/components/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -35,352 +36,262 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 
+import { ErrorBoundary } from '@/components/ui/error-boundary';
+
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
 import { useCloseTask } from '../api/close-task';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
+import { cn } from '@/lib/utils';
 
 type TaskCardProps =
-  | {
-      variant: 'student';
-      task: StudentTaskCenterItem;
-    }
-  | {
-      variant: 'manager';
-      task: TaskListItem;
-    };
+  | { variant: 'student'; task: StudentTaskCenterItem }
+  | { variant: 'manager'; task: TaskListItem };
 
 /**
- * 状态配置
+ * 任务卡片组件 - 极致美学版
  */
-const statusConfig = {
-  IN_PROGRESS: {
-    status: 'processing' as const,
-    icon: <Clock className="w-3.5 h-3.5" />,
-  },
-  PENDING_EXAM: {
-    status: 'warning' as const,
-    icon: <Timer className="w-3.5 h-3.5" />,
-  },
-  COMPLETED: {
-    status: 'success' as const,
-    icon: <CheckCircle className="w-3.5 h-3.5" />,
-  },
-  OVERDUE: {
-    status: 'error' as const,
-    icon: <AlertCircle className="w-3.5 h-3.5" />,
-  },
-  ACTIVE: {
-    status: 'processing' as const,
-    icon: <Clock className="w-3.5 h-3.5" />,
-  },
-  CLOSED: {
-    status: 'default' as const,
-    icon: <CheckCircle className="w-3.5 h-3.5" />,
-  },
-};
+export const TaskCard: React.FC<TaskCardProps> = (props) => (
+  <ErrorBoundary>
+    <TaskCardContent {...props} />
+  </ErrorBoundary>
+);
 
-/**
- * 任务卡片组件 - ShadCN UI 版本
- */
-export const TaskCard: React.FC<TaskCardProps> = ({ task, variant }) => {
+const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const navigate = useNavigate();
   const { user, currentRole } = useAuth();
   const deleteTask = useDeleteTask();
   const closeTask = useCloseTask();
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+  const [closeModalOpen, setCloseModalOpen] = React.useState(false);
+
+  const handleClose = () => {
+    if (!targetTaskId) return;
+
+    closeTask.mutate(targetTaskId, {
+      onSuccess: () => {
+        toast.success("Task closed successfully");
+        setCloseModalOpen(false);
+      },
+      onError: (error: unknown) => {
+        showApiError(error);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (!targetTaskId) return;
+
+    deleteTask.mutate(targetTaskId, {
+      onSuccess: () => {
+        toast.success("Task deleted successfully");
+        setDeleteModalOpen(false);
+      },
+      onError: (error: unknown) => {
+        showApiError(error);
+      }
+    });
+  };
 
   const isStudentView = variant === 'student';
   const studentTask = isStudentView ? (task as StudentTaskCenterItem) : null;
   const managerTask = !isStudentView ? (task as TaskListItem) : null;
 
-  // Determine style based on content
   const hasQuiz = managerTask ? managerTask.quiz_count > 0 : (studentTask?.has_quiz ?? false);
 
   const typeConfig = hasQuiz
     ? {
-        icon: <FileText className="w-5 h-5" />,
-        color: 'var(--color-primary-500)',
-        bg: 'var(--color-primary-50)',
-        gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-      }
+      icon: FileText,
+      color: 'var(--color-primary-500)',
+      gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
+      label: '考核',
+    }
     : {
-        icon: <BookOpen className="w-5 h-5" />,
-        color: 'var(--color-success-500)',
-        bg: 'var(--color-success-50)',
-        gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
-      };
+      icon: BookOpen,
+      color: 'var(--color-success-500)',
+      gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
+      label: '知识',
+    };
 
   const managerClosed = managerTask?.is_closed ?? false;
   const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
-  const statusKey = isStudentView ? studentTask!.status : managerClosed ? 'CLOSED' : 'ACTIVE';
-  const stConfig = statusConfig[statusKey as keyof typeof statusConfig] || statusConfig.IN_PROGRESS;
 
   const title = isStudentView ? studentTask!.task_title : managerTask!.title;
   const description = isStudentView ? studentTask!.task_description : managerTask!.description;
-  const statusLabel = isStudentView
-    ? studentTask!.status_display
-    : managerClosed
-      ? '已结束'
-      : '进行中';
   const progress = studentTask?.progress;
-  const isTaskClosed = isStudentView ? studentTask!.status === 'COMPLETED' : managerClosed;
-  const isUrgent = !isTaskClosed && dayjs(task.deadline).diff(dayjs(), 'day') <= 1;
+  const isUrgent = !managerClosed && dayjs(task.deadline).diff(dayjs(), 'day') <= 1;
 
-  // 检查是否有权限操作任务（管理员或创建者）
-  const isAdmin = currentRole === 'ADMIN';
-  const isCreator = managerTask?.created_by === user?.id;
-  const canEditTask = !isStudentView && (isAdmin || isCreator);
-
-  /**
-   * 处理编辑
-   */
-  const handleEdit = () => {
-    navigate(`/tasks/${targetTaskId}/edit`);
-  };
-
-  /**
-   * 处理关闭任务
-   */
-  const handleCloseClick = () => {
-    setCloseModalOpen(true);
-  };
-
-  /**
-   * 确认关闭任务
-   */
-  const handleClose = async () => {
-    try {
-      await closeTask.mutateAsync(targetTaskId);
-      toast.success('任务已关闭');
-      setCloseModalOpen(false);
-    } catch (error) {
-      showApiError(error, '关闭任务失败');
-    }
-  };
-
-  /**
-   * 处理删除
-   */
-  const handleDeleteClick = () => {
-    setDeleteModalOpen(true);
-  };
-
-  /**
-   * 确认删除任务
-   */
-  const handleDelete = async () => {
-    try {
-      await deleteTask.mutateAsync(targetTaskId);
-      toast.success('任务已删除');
-      setDeleteModalOpen(false);
-    } catch (error) {
-      showApiError(error, '删除失败');
-    }
-  };
+  const canEditTask = !isStudentView && (currentRole === 'ADMIN' || managerTask?.created_by === user?.id);
 
   return (
-    <>
-      <Card
-        className="h-full cursor-pointer relative p-5 hover:shadow-md transition-shadow"
-        onClick={() => navigate(`/tasks/${targetTaskId}`)}
-      >
-        {/* 操作按钮 - 仅在管理员/导师视图且有权限时显示 */}
-        {canEditTask && (
+    <div
+      className={cn(
+        "group relative flex flex-col h-full bg-white rounded-[2.5rem] p-8 transition-all duration-500 ease-out border border-transparent shadow-sm hover:shadow-2xl hover:shadow-primary-500/10 hover:-translate-y-2 overflow-hidden",
+        isStudentView && studentTask?.status === 'COMPLETED' && "bg-gray-50/50"
+      )}
+      onClick={() => navigate(`/tasks/${targetTaskId}`)}
+    >
+      {/* 装饰性背景光效 */}
+      <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-3xl pointer-events-none" style={{ background: typeConfig.color }} />
+
+      {/* 状态排布 */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
           <div
-            className="absolute top-3 right-3 z-10"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6"
+            style={{ background: typeConfig.gradient }}
           >
+            <typeConfig.icon className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">{typeConfig.label}</span>
+            <span className="text-[10px] font-bold text-gray-300">ID: {targetTaskId}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          {isUrgent && <Badge className="bg-error-500 text-white border-none animate-pulse px-2 py-0.5 text-[10px] font-bold">紧急</Badge>}
+          {canEditTask && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-full bg-white shadow-md border border-gray-100 hover:bg-gray-50"
-                >
-                  <MoreVertical className="h-4 w-4 text-gray-700" />
-                </Button>
+                <button className="h-9 w-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-900 hover:text-white transition-all">
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-36">
-                <DropdownMenuItem
-                  onClick={handleEdit}
-                  disabled={managerClosed}
-                  className="cursor-pointer"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  修改
+              <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 border-none shadow-premium animate-fadeIn">
+                <DropdownMenuLabel className="text-[10px] font-bold text-gray-400 uppercase px-3 py-2">任务控制</DropdownMenuLabel>
+                <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold cursor-pointer" onClick={() => navigate(`/tasks/${targetTaskId}/edit`)}>
+                  <Pencil className="w-4 h-4 mr-2" /> 编辑任务
                 </DropdownMenuItem>
-                {isAdmin && !managerClosed && (
-                  <DropdownMenuItem onClick={handleCloseClick} className="cursor-pointer">
-                    <StopCircle className="mr-2 h-4 w-4" />
-                    关闭任务
+                {!managerClosed && (
+                  <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold cursor-pointer" onClick={() => setCloseModalOpen(true)}>
+                    <StopCircle className="w-4 h-4 mr-2" /> 终止任务
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  onClick={handleDeleteClick}
-                  className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  删除
+                <DropdownMenuSeparator className="bg-gray-50 mx-2" />
+                <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold text-error-500 focus:bg-error-50 cursor-pointer" onClick={() => setDeleteModalOpen(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" /> 彻底删除
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
-
-        {/* 顶部类型标识 */}
-        <div className="flex justify-between items-start mb-4">
-          <div
-            className="w-11 h-11 rounded-lg flex items-center justify-center text-white"
-            style={{
-              background: typeConfig.gradient,
-              boxShadow: `0 4px 12px ${typeConfig.color}40`,
-            }}
-          >
-            {typeConfig.icon}
-          </div>
-          <StatusBadge status={stConfig.status} text={statusLabel} size="small" />
+          )}
         </div>
+      </div>
 
-        {/* 标题和描述 */}
-        <Tooltip title={title}>
-          <h3 className="font-semibold text-lg text-gray-900 mb-2 truncate">{title}</h3>
-        </Tooltip>
+      {/* 标题 & 描述 */}
+      <div className="flex-1 mb-8">
+        <h3 className="text-xl font-black text-gray-900 leading-tight mb-4 line-clamp-2 group-hover:text-primary-600 transition-colors">
+          {title}
+        </h3>
+        <p className="text-sm font-medium text-gray-400 line-clamp-2 leading-relaxed italic">
+          {description || '此任务暂无战略指示...'}
+        </p>
+      </div>
 
-        {description && (
-          <Tooltip title={description}>
-            <p className="text-sm text-gray-500 mb-4 line-clamp-2">{description}</p>
-          </Tooltip>
-        )}
-
-        {/* 进度条 - 学员视图 */}
+      {/* 进度/指标渲染 */}
+      <div className="mb-8">
         {isStudentView ? (
-          <div className="mb-4">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm text-gray-500">完成进度</span>
-              <span className="text-sm font-semibold" style={{ color: typeConfig.color }}>
-                {progress?.percentage ?? 0}%
-              </span>
+          <div className="space-y-4 bg-gray-50/50 p-6 rounded-[1.5rem] group-hover:bg-white transition-colors duration-500 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary-500" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">进度</span>
+              </div>
+              <span className="text-lg font-black text-gray-900 italic">{progress?.percentage ?? 0}<span className="text-xs font-bold text-gray-300 ml-0.5">%</span></span>
             </div>
-            <Progress
-              percent={progress?.percentage ?? 0}
-              showInfo={false}
-              strokeColor={typeConfig.gradient}
-              trailColor="var(--color-gray-100)"
-              size="sm"
-            />
-            <span className="text-xs text-gray-500">
-              {progress?.completed ?? 0}/{progress?.total ?? 0} 项已完成
-            </span>
+            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden shadow-inner">
+              <div
+                className="h-full bg-primary-500 rounded-full transition-all duration-1000 ease-out"
+                style={{
+                  width: `${progress?.percentage ?? 0}%`,
+                  background: typeConfig.gradient
+                }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase">
+              <span>模块同步</span>
+              <span className="text-gray-900">{progress?.completed ?? 0} / {progress?.total ?? 0}</span>
+            </div>
           </div>
         ) : (
-          /* 统计信息 - 管理员视图 */
-          <div className="mb-4 grid grid-cols-3 gap-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4" style={{ color: typeConfig.color }} />
-              <div>
-                <div className="text-xs text-gray-500">指派学员</div>
-                <div className="font-semibold">{managerTask?.assignee_count ?? 0}</div>
-              </div>
+          <div className="grid grid-cols-3 gap-4 bg-gray-50/50 p-6 rounded-[1.5rem] group-hover:bg-white transition-colors duration-500 border border-gray-100">
+            <div className="flex flex-col items-center">
+              <Users className="w-4 h-4 text-primary-500 mb-2" />
+              <span className="text-sm font-black text-gray-900">{managerTask?.assignee_count ?? 0}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase">学员</span>
             </div>
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4" style={{ color: typeConfig.color }} />
-              <div>
-                <div className="text-xs text-gray-500">知识文档</div>
-                <div className="font-semibold">{managerTask?.knowledge_count ?? 0}</div>
-              </div>
+            <div className="flex flex-col items-center border-x border-gray-200">
+              <BookOpen className="w-4 h-4 text-success-500 mb-2" />
+              <span className="text-sm font-black text-gray-900">{managerTask?.knowledge_count ?? 0}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase">文档</span>
             </div>
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4" style={{ color: typeConfig.color }} />
-              <div>
-                <div className="text-xs text-gray-500">试卷</div>
-                <div className="font-semibold">{managerTask?.quiz_count ?? 0}</div>
-              </div>
+            <div className="flex flex-col items-center">
+              <FileText className="w-4 h-4 text-purple-500 mb-2" />
+              <span className="text-sm font-black text-gray-900">{managerTask?.quiz_count ?? 0}</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase">测验</span>
             </div>
           </div>
         )}
+      </div>
 
-        {/* 底部信息 */}
-        <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-1">
-            <User className="w-3 h-3 text-gray-400" />
-            <span className="text-xs text-gray-500">{task.created_by_name}</span>
+      {/* 底部信息 */}
+      <div className="mt-auto pt-6 border-t border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-sm group-hover:scale-110 transition-transform shadow-lg">
+            {(task.created_by_name || 'U').charAt(0)}
           </div>
-          <div
-            className="flex items-center gap-1"
-            style={{ color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)' }}
-          >
-            <Clock className="w-3 h-3" />
-            <span
-              className="text-xs"
-              style={{
-                color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
-                fontWeight: isUrgent ? 600 : 400,
-              }}
-            >
-              {dayjs(task.deadline).format('MM-DD HH:mm')}
+          <div className="flex flex-col">
+            <span className="text-[11px] font-black text-gray-900 leading-none mb-1">{task.created_by_name || '发布人'}</span>
+            <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              截止: {dayjs(task.deadline).format('MM.DD')}
             </span>
           </div>
         </div>
 
-        {/* 已关闭标签 - 管理员视图 */}
-        {!isStudentView && managerClosed && managerTask?.closed_at && (
-          <div className="mt-3">
-            <Badge variant="secondary" className="text-xs">
-              <Timer className="w-3 h-3 mr-1" />
-              已于 {dayjs(managerTask.closed_at).format('MM-DD HH:mm')} 结束
-            </Badge>
-          </div>
-        )}
-      </Card>
+        <div className="h-10 w-10 rounded-2xl bg-primary-50 text-primary-500 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-all transform group-hover:translate-x-1">
+          <ChevronRight className="w-6 h-6" />
+        </div>
+      </div>
 
-      {/* 关闭任务确认弹窗 */}
+      {/* 对话框保持之前的逻辑 */}
       <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="rounded-[2.5rem] max-w-md p-10 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>确认关闭任务</DialogTitle>
-            <DialogDescription>
-              确定要关闭任务「{title}」吗？关闭后未完成的分配记录将标记为已逾期。
+            <div className="w-20 h-20 bg-orange-50 text-orange-500 rounded-[1.5rem] flex items-center justify-center mb-8 mx-auto">
+              <StopCircle className="w-10 h-10" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">终止当前任务？</DialogTitle>
+            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+              终止后，所有未完成的学员记录将同步标记为“已逾期”。此操作不可撤回。
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCloseModalOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleClose} disabled={closeTask.isPending}>
-              {closeTask.isPending ? '关闭中...' : '关闭任务'}
-            </Button>
+          <DialogFooter className="mt-10 gap-4 sm:flex-row">
+            <Button variant="ghost" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setCloseModalOpen(false)}>放弃</Button>
+            <Button className="flex-1 h-14 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-xl shadow-orange-500/20" onClick={handleClose}>确认终止</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 删除确认弹窗 */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="rounded-[2.5rem] max-w-md p-10 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
-            <DialogDescription>
-              确定要删除任务「{title}」吗？此操作不可恢复。
+            <div className="w-20 h-20 bg-error-50 text-error-500 rounded-[1.5rem] flex items-center justify-center mb-8 mx-auto">
+              <Trash2 className="w-10 h-10" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">彻底清除任务？</DialogTitle>
+            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+              确定要永久删除任务「{title}」吗？相关的所有提交记录和数据镜像都将被粉碎。
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteTask.isPending}
-            >
-              {deleteTask.isPending ? '删除中...' : '删除'}
-            </Button>
+          <DialogFooter className="mt-10 gap-4 sm:flex-row">
+            <Button variant="ghost" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setDeleteModalOpen(false)}>取消</Button>
+            <Button className="flex-1 h-14 rounded-2xl bg-error-500 hover:bg-error-600 text-white font-bold shadow-xl shadow-error-500/20" onClick={handleDelete}>粉碎任务</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };

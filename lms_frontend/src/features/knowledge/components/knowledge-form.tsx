@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import {
   X,
@@ -91,7 +92,7 @@ const htmlToMarkdown = (html: string): string => {
     .replace(/&nbsp;/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  
+
   return markdown;
 };
 
@@ -100,18 +101,18 @@ const htmlToMarkdown = (html: string): string => {
  */
 const renderMarkdown = (markdown: string): string => {
   if (!markdown) return '<p style="color: #656d76; font-style: italic;">暂无内容，开始编辑...</p>';
-  
+
   const codeBlocks: string[] = [];
   let html = markdown.replace(/```([\s\S]*?)```/g, (_, code) => {
     codeBlocks.push(code.trim());
     return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
   });
-  
+
   html = html
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-  
+
   html = html
     .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
     .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
@@ -119,11 +120,11 @@ const renderMarkdown = (markdown: string): string => {
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  
+
   html = html.replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '<hr/>');
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>');
   html = html.replace(/<\/blockquote>\s*<blockquote>/g, '');
-  
+
   html = html
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/___(.+?)___/g, '<strong><em>$1</em></strong>')
@@ -131,36 +132,36 @@ const renderMarkdown = (markdown: string): string => {
     .replace(/__(.+?)__/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/_(.+?)_/g, '<em>$1</em>');
-  
+
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
+
   html = html
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  
+
   html = html
     .replace(/^- \[x\] (.+)$/gm, '<li class="task-item"><input type="checkbox" checked disabled /> $1</li>')
     .replace(/^- \[ \] (.+)$/gm, '<li class="task-item"><input type="checkbox" disabled /> $1</li>');
-  
+
   html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
   html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
   html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-  
+
   html = html.replace(/(<li>[\s\S]*?<\/li>)+/g, (match) => {
     if (match.includes('task-item')) {
       return `<ul class="task-list">${match}</ul>`;
     }
     return `<ul>${match}</ul>`;
   });
-  
+
   const lines = html.split('\n');
   const processedLines: string[] = [];
   let inParagraph = false;
   let paragraphContent = '';
-  
+
   const blockTags = ['<h', '<ul', '<ol', '<li', '<table', '<thead', '<tbody', '<tr', '<blockquote', '<hr', '<pre'];
-  
+
   for (const line of lines) {
     const trimmedLine = line.trim();
     if (!trimmedLine) {
@@ -171,9 +172,9 @@ const renderMarkdown = (markdown: string): string => {
       }
       continue;
     }
-    
+
     const isBlockElement = blockTags.some(tag => trimmedLine.startsWith(tag));
-    
+
     if (isBlockElement) {
       if (inParagraph && paragraphContent) {
         processedLines.push(`<p>${paragraphContent}</p>`);
@@ -190,13 +191,13 @@ const renderMarkdown = (markdown: string): string => {
       }
     }
   }
-  
+
   if (inParagraph && paragraphContent) {
     processedLines.push(`<p>${paragraphContent}</p>`);
   }
-  
+
   html = processedLines.join('\n');
-  
+
   codeBlocks.forEach((code, index) => {
     const escapedCode = code
       .replace(/&/g, '&amp;')
@@ -204,7 +205,7 @@ const renderMarkdown = (markdown: string): string => {
       .replace(/>/g, '&gt;');
     html = html.replace(`__CODE_BLOCK_${index}__`, `<pre><code>${escapedCode}</code></pre>`);
   });
-  
+
   return html;
 };
 
@@ -241,10 +242,10 @@ interface OutlineItem {
  */
 const parseOutline = (markdown: string): OutlineItem[] => {
   if (!markdown) return [];
-  
+
   const lines = markdown.split('\n');
   const outline: OutlineItem[] = [];
-  
+
   lines.forEach((line, index) => {
     const match = line.match(/^(#{1,3})\s+(.+)$/);
     if (match) {
@@ -255,7 +256,7 @@ const parseOutline = (markdown: string): OutlineItem[] => {
       });
     }
   });
-  
+
   return outline;
 };
 
@@ -292,7 +293,7 @@ export const KnowledgeForm: React.FC = () => {
 
   const { data: systemTags = [] } = useSystemTags();
   const { data: operationTags = [] } = useOperationTags();
-  
+
   const [content, setContent] = useState('');
   const [summary, setSummary] = useState('');
   const [faultScenario, setFaultScenario] = useState('');
@@ -334,32 +335,7 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [isEdit, lineTypeTags, lineTypeId]);
 
-  // Textarea 自动高度
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    
-    const adjustTextareaHeight = () => {
-      if (textarea && editorMode !== 'preview' && editorMode !== 'split') {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      }
-    };
 
-    adjustTextareaHeight();
-    
-    if (textarea) {
-      textarea.addEventListener('input', adjustTextareaHeight);
-    }
-
-    window.addEventListener('resize', adjustTextareaHeight);
-
-    return () => {
-      if (textarea) {
-        textarea.removeEventListener('input', adjustTextareaHeight);
-      }
-      window.removeEventListener('resize', adjustTextareaHeight);
-    };
-  }, [content, editorMode]);
 
   const handleClose = useCallback(() => {
     navigate(ROUTES.ADMIN_KNOWLEDGE);
@@ -388,18 +364,18 @@ export const KnowledgeForm: React.FC = () => {
 
   const handlePreviewBlur = useCallback((isEmergency: boolean = false, isSplit: boolean = false) => {
     let previewElement: HTMLDivElement | null = null;
-    
+
     if (isEmergency) {
       previewElement = isSplit ? splitEmergencyPreviewRef.current : emergencyPreviewRef.current;
     } else {
       previewElement = isSplit ? splitPreviewRef.current : previewRef.current;
     }
-    
+
     if (!previewElement) return;
-    
+
     const htmlContent = previewElement.innerHTML;
     const markdownContent = htmlToMarkdown(htmlContent);
-    
+
     if (isEmergency) {
       setCurrentEmergencyContent(markdownContent);
     } else {
@@ -415,18 +391,18 @@ export const KnowledgeForm: React.FC = () => {
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
     const textToInsert = selectedText || placeholder;
-    
-    const newValue = 
-      textarea.value.substring(0, start) + 
-      before + textToInsert + after + 
+
+    const newValue =
+      textarea.value.substring(0, start) +
+      before + textToInsert + after +
       textarea.value.substring(end);
-    
+
     if (knowledgeType === 'EMERGENCY') {
       setCurrentEmergencyContent(newValue);
     } else {
       setContent(newValue);
     }
-    
+
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + before.length + textToInsert.length + after.length;
@@ -607,7 +583,7 @@ export const KnowledgeForm: React.FC = () => {
   }
 
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 flex flex-col bg-gray-100 z-[1000] animate-fadeIn">
       {/* 顶部导航栏 */}
       <div className="flex items-center justify-between h-14 px-5 bg-white border-b border-gray-200 shrink-0">
@@ -639,11 +615,10 @@ export const KnowledgeForm: React.FC = () => {
             {(['edit', 'split', 'preview'] as EditorMode[]).map((mode) => (
               <button
                 key={mode}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                  editorMode === mode
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${editorMode === mode
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 onClick={() => setEditorMode(mode)}
               >
                 {mode === 'edit' ? '编辑' : mode === 'split' ? '分屏' : '预览'}
@@ -654,11 +629,10 @@ export const KnowledgeForm: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-              statusInfo.isDraft
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'bg-green-50 text-green-600'
-            }`}
+            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusInfo.isDraft
+              ? 'bg-yellow-50 text-yellow-700'
+              : 'bg-green-50 text-green-600'
+              }`}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
@@ -666,7 +640,7 @@ export const KnowledgeForm: React.FC = () => {
             />
             <span>{statusInfo.label}</span>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -726,13 +700,11 @@ export const KnowledgeForm: React.FC = () => {
                   outline.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-2 py-2 text-sm text-gray-600 cursor-pointer transition-all border-l-2 border-transparent hover:bg-gray-50 hover:text-gray-900 ${
-                        item.level === 1 ? 'px-4 font-medium' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
-                      } ${
-                        knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id
+                      className={`flex items-center gap-2 py-2 text-sm text-gray-600 cursor-pointer transition-all border-l-2 border-transparent hover:bg-gray-50 hover:text-gray-900 ${item.level === 1 ? 'px-4 font-medium' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
+                        } ${knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id
                           ? 'bg-primary-50 text-primary-600 border-l-primary-500'
                           : ''
-                      }`}
+                        }`}
                       onClick={() => {
                         if (knowledgeType === 'EMERGENCY') {
                           setActiveEmergencyTab(item.id);
@@ -747,8 +719,8 @@ export const KnowledgeForm: React.FC = () => {
                   ))
                 ) : (
                   <div className="p-4 text-xs text-gray-400 text-center">
-                    {knowledgeType === 'EMERGENCY' 
-                      ? '选择章节开始编辑' 
+                    {knowledgeType === 'EMERGENCY'
+                      ? '选择章节开始编辑'
                       : '使用 # ## ### 创建标题'}
                   </div>
                 )}
@@ -804,22 +776,21 @@ export const KnowledgeForm: React.FC = () => {
                 {EMERGENCY_TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    className={`px-4 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-500 text-sm font-medium cursor-pointer transition-all whitespace-nowrap hover:text-gray-700 ${
-                      activeEmergencyTab === tab.key
-                        ? 'text-primary-500 border-b-primary-500'
-                        : ''
-                    }`}
+                    className={`px-4 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-500 text-sm font-medium cursor-pointer transition-all whitespace-nowrap hover:text-gray-700 ${activeEmergencyTab === tab.key
+                      ? 'text-primary-500 border-b-primary-500'
+                      : ''
+                      }`}
                     onClick={() => setActiveEmergencyTab(tab.key)}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-              <div className="flex-1 p-5 overflow-y-auto">
+              <div className="flex-1 overflow-hidden flex flex-col relative">
                 {editorMode === 'preview' ? (
-                  <div 
+                  <div
                     ref={emergencyPreviewRef}
-                    className="prose prose-gray max-w-none min-h-[200px] cursor-text outline-none"
+                    className="prose prose-gray max-w-none h-full p-5 overflow-y-auto cursor-text outline-none"
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={() => handlePreviewBlur(true)}
@@ -829,15 +800,15 @@ export const KnowledgeForm: React.FC = () => {
                   <div className="flex flex-1 min-h-0 gap-6">
                     <textarea
                       ref={textareaRef}
-                      className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
+                      className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
                       value={getCurrentEmergencyContent()}
                       onChange={(e) => setCurrentEmergencyContent(e.target.value)}
                       placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
                     />
                     <Separator orientation="vertical" className="mx-4" />
-                    <div 
+                    <div
                       ref={splitEmergencyPreviewRef}
-                      className="flex-1 min-h-0 prose prose-gray max-w-none overflow-hidden cursor-text outline-none"
+                      className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={() => handlePreviewBlur(true, true)}
@@ -847,7 +818,7 @@ export const KnowledgeForm: React.FC = () => {
                 ) : (
                   <textarea
                     ref={textareaRef}
-                    className="w-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
+                    className="w-full h-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
                     value={getCurrentEmergencyContent()}
                     onChange={(e) => setCurrentEmergencyContent(e.target.value)}
                     placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
@@ -857,11 +828,11 @@ export const KnowledgeForm: React.FC = () => {
               {errors.emergency && <div className="text-[11px] text-red-500 px-5 pb-5">{errors.emergency}</div>}
             </div>
           ) : (
-            <div className="flex-1 p-5 overflow-y-auto">
+            <div className="flex-1 overflow-hidden flex flex-col relative">
               {editorMode === 'preview' ? (
-                <div 
+                <div
                   ref={previewRef}
-                  className="prose prose-gray max-w-none min-h-[200px] cursor-text outline-none"
+                  className="prose prose-gray max-w-none h-full p-5 overflow-y-auto cursor-text outline-none"
                   contentEditable
                   suppressContentEditableWarning
                   onBlur={() => handlePreviewBlur(false)}
@@ -871,15 +842,15 @@ export const KnowledgeForm: React.FC = () => {
                 <div className="flex flex-1 min-h-0 gap-6">
                   <textarea
                     ref={textareaRef}
-                    className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
+                    className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="在此输入知识内容，支持 Markdown 格式..."
                   />
                   <Separator orientation="vertical" className="mx-4" />
-                  <div 
+                  <div
                     ref={splitPreviewRef}
-                    className="flex-1 min-h-0 prose prose-gray max-w-none overflow-hidden cursor-text outline-none"
+                    className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={() => handlePreviewBlur(false, true)}
@@ -889,7 +860,7 @@ export const KnowledgeForm: React.FC = () => {
               ) : (
                 <textarea
                   ref={textareaRef}
-                  className="w-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-hidden"
+                  className="w-full h-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="在此输入知识内容，支持 Markdown 格式..."
@@ -908,7 +879,7 @@ export const KnowledgeForm: React.FC = () => {
               <FileText className="w-4 h-4 text-primary-500" />
               <span className="text-sm font-semibold text-gray-900">基本信息</span>
             </div>
-            
+
             <div className="mb-4">
               <label className="block text-xs font-medium text-gray-600 mb-2">标题</label>
               <Input
@@ -941,132 +912,146 @@ export const KnowledgeForm: React.FC = () => {
               <span className="text-sm font-semibold text-gray-900">分类信息</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">文档类型</label>
-                <Select value={knowledgeType} onValueChange={(v) => setKnowledgeType(v as KnowledgeType)}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="选择类型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="flex flex-col gap-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">文档类型</label>
+                  <Select value={knowledgeType} onValueChange={(v) => setKnowledgeType(v as KnowledgeType)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="选择类型" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1050]">
+                      {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">条线类型</label>
+                  <Select value={lineTypeId?.toString() || ''} onValueChange={(v) => setLineTypeId(Number(v))}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="选择" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1050]">
+                      {lineTypeTags.map((tag: Tag) => (
+                        <SelectItem key={tag.id} value={tag.id.toString()}>{tag.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.lineTypeId && <div className="text-[11px] text-red-500">{errors.lineTypeId}</div>}
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">条线类型</label>
-                <Select value={lineTypeId?.toString() || ''} onValueChange={(v) => setLineTypeId(Number(v))}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="选择" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lineTypeTags.map((tag: Tag) => (
-                      <SelectItem key={tag.id} value={tag.id.toString()}>{tag.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.lineTypeId && <div className="text-[11px] text-red-500">{errors.lineTypeId}</div>}
-              </div>
+
+              {/* 系统标签 */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">系统标签</label>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {systemTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                <div className="flex flex-wrap gap-1.5 min-h-[24px] p-2 bg-gray-50 rounded-md border border-gray-100 border-dashed transition-all hover:bg-white hover:border-gray-300">
+                  {systemTagNames.length > 0 ? systemTagNames.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
                       {tag}
                       <button
-                        className="ml-1 hover:text-red-500"
+                        className="ml-1 hover:text-red-500 transition-colors"
                         onClick={() => setSystemTagNames(prev => prev.filter(t => t !== tag))}
                       >
                         ×
                       </button>
                     </Badge>
-                  ))}
+                  )) : (
+                    <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
+                  )}
                 </div>
-                <Select
-                  value=""
-                  onValueChange={(v) => {
-                    if (v && !systemTagNames.includes(v)) {
-                      setSystemTagNames(prev => [...prev, v]);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="选择" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {systemTags.filter((tag: Tag) => !systemTagNames.includes(tag.name)).map((tag: Tag) => (
-                      <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-1 mt-1">
-                  <Input
-                    placeholder="新建"
-                    value={systemTagInput}
-                    onChange={(e) => setSystemTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSystemTag();
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <Select
+                    value=""
+                    onValueChange={(v) => {
+                      if (v && !systemTagNames.includes(v)) {
+                        setSystemTagNames(prev => [...prev, v]);
                       }
                     }}
-                    className="h-7 text-xs flex-1"
-                  />
-                  <Button variant="ghost" size="sm" onClick={handleAddSystemTag} className="h-7 w-7 p-0">
-                    <Plus className="w-3 h-3" />
-                  </Button>
+                  >
+                    <SelectTrigger className="h-8 text-xs text-gray-500">
+                      <SelectValue placeholder="选择已有..." />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1050]">
+                      {systemTags.filter((tag: Tag) => !systemTagNames.includes(tag.name)).map((tag: Tag) => (
+                        <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-1">
+                    <Input
+                      placeholder="新建..."
+                      value={systemTagInput}
+                      onChange={(e) => setSystemTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSystemTag();
+                        }
+                      }}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button variant="ghost" size="sm" onClick={handleAddSystemTag} className="h-8 w-8 p-0 border border-gray-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200">
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              {/* 操作标签 */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">操作标签</label>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {operationTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                <div className="flex flex-wrap gap-1.5 min-h-[24px] p-2 bg-gray-50 rounded-md border border-gray-100 border-dashed transition-all hover:bg-white hover:border-gray-300">
+                  {operationTagNames.length > 0 ? operationTagNames.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
                       {tag}
                       <button
-                        className="ml-1 hover:text-red-500"
+                        className="ml-1 hover:text-red-500 transition-colors"
                         onClick={() => setOperationTagNames(prev => prev.filter(t => t !== tag))}
                       >
                         ×
                       </button>
                     </Badge>
-                  ))}
+                  )) : (
+                    <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
+                  )}
                 </div>
-                <Select
-                  value=""
-                  onValueChange={(v) => {
-                    if (v && !operationTagNames.includes(v)) {
-                      setOperationTagNames(prev => [...prev, v]);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="选择" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {operationTags.filter((tag: Tag) => !operationTagNames.includes(tag.name)).map((tag: Tag) => (
-                      <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-1 mt-1">
-                  <Input
-                    placeholder="新建"
-                    value={operationTagInput}
-                    onChange={(e) => setOperationTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddOperationTag();
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <Select
+                    value=""
+                    onValueChange={(v) => {
+                      if (v && !operationTagNames.includes(v)) {
+                        setOperationTagNames(prev => [...prev, v]);
                       }
                     }}
-                    className="h-7 text-xs flex-1"
-                  />
-                  <Button variant="ghost" size="sm" onClick={handleAddOperationTag} className="h-7 w-7 p-0">
-                    <Plus className="w-3 h-3" />
-                  </Button>
+                  >
+                    <SelectTrigger className="h-8 text-xs text-gray-500">
+                      <SelectValue placeholder="选择已有..." />
+                    </SelectTrigger>
+                    <SelectContent className="z-[1050]">
+                      {operationTags.filter((tag: Tag) => !operationTagNames.includes(tag.name)).map((tag: Tag) => (
+                        <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-1">
+                    <Input
+                      placeholder="新建..."
+                      value={operationTagInput}
+                      onChange={(e) => setOperationTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddOperationTag();
+                        }
+                      }}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button variant="ghost" size="sm" onClick={handleAddOperationTag} className="h-8 w-8 p-0 border border-gray-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200">
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1088,7 +1073,7 @@ export const KnowledgeForm: React.FC = () => {
                 </span>
               </div>
               <div className="text-xs text-gray-500 leading-relaxed">
-                {statusInfo.isDraft 
+                {statusInfo.isDraft
                   ? '当前为草稿状态，保存后可以继续编辑。点击「保存并发布」后，该知识将对所有用户可见。'
                   : '该知识已发布，修改后需要重新发布才能更新内容。'
                 }
@@ -1097,7 +1082,8 @@ export const KnowledgeForm: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

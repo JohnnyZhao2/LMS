@@ -134,9 +134,9 @@ export const SpotCheckList: React.FC = () => {
         extra={
           <Button
             onClick={() => navigate('/spot-checks/create')}
-            className="h-11 px-5 font-semibold rounded-xl"
+            className="h-12 px-6 rounded-xl bg-gradient-to-r from-error-500 to-pink-500 hover:from-error-600 hover:to-pink-600 text-white font-bold shadow-md shadow-error-500/20 hover:scale-105 transition-all duration-300"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-5 h-5 mr-2" />
             发起抽查
           </Button>
         }

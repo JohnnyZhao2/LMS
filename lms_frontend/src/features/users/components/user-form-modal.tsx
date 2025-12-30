@@ -5,20 +5,19 @@ import {
   Shield,
   Building2,
   Users,
-  X,
-  CheckCircle2,
-  IdCard,
-  Lock,
+  Briefcase,
 } from 'lucide-react';
 
 import {
   Dialog,
-  DialogOverlay,
-  DialogPortal,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  // DialogClose removed to avoid duplication with default Close button
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -27,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
@@ -57,11 +56,6 @@ interface FormErrors {
   department_id?: string;
 }
 
-
-/**
- * 用户表单弹窗组件（用于创建和编辑）
- * 使用 ShadCN UI + 受控状态
- */
 export const UserFormModal: React.FC<UserFormModalProps> = ({
   open,
   userId,
@@ -69,7 +63,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   onSuccess,
 }) => {
   const isEdit = !!userId;
-
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const assignRoles = useAssignRoles();
@@ -90,19 +83,15 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const [errors, setErrors] = useState<FormErrors>({});
 
-  // 编辑模式下填充表单
   useEffect(() => {
     if (open) {
       if (isEdit && userDetail) {
-        const currentRoleCodes = userDetail.roles
-          .filter((r) => r.code !== 'STUDENT')
-          .map((r) => r.code as RoleCode);
         setFormData({
           username: userDetail.username,
           employee_id: userDetail.employee_id,
           password: '',
           department_id: userDetail.department?.id,
-          role_codes: currentRoleCodes,
+          role_codes: userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode),
           mentor_id: userDetail.mentor?.id || null,
         });
       } else {
@@ -121,263 +110,289 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
-    if (!formData.username.trim()) newErrors.username = '请填写姓名';
-    if (!formData.employee_id.trim()) newErrors.employee_id = '请填写工号';
-    if (!isEdit && !formData.password.trim()) newErrors.password = '请设置初始密码';
+    if (!formData.username.trim()) newErrors.username = '此项必填';
+    if (!formData.employee_id.trim()) newErrors.employee_id = '此项必填';
+    if (!isEdit && !formData.password.trim()) newErrors.password = '设置初始密码';
     if (!formData.department_id) newErrors.department_id = '请选择部门';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!validate()) return;
-
     try {
       if (isEdit) {
         await updateUser.mutateAsync({
           id: userId!,
-          data: {
-            username: formData.username,
-            employee_id: formData.employee_id,
-            department_id: formData.department_id,
-          },
+          data: { username: formData.username, employee_id: formData.employee_id, department_id: formData.department_id },
         });
         await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
-        const currentMentorId = userDetail?.mentor?.id ?? null;
-        if (currentMentorId !== formData.mentor_id) {
+        if (userDetail?.mentor?.id !== formData.mentor_id) {
           await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
         }
-        toast.success('用户信息更新成功');
+        toast.success("账号信息已更新");
       } else {
         await createUser.mutateAsync({
-          password: formData.password,
-          employee_id: formData.employee_id,
           username: formData.username,
+          employee_id: formData.employee_id,
+          password: formData.password,
           department_id: formData.department_id!,
           mentor_id: formData.mentor_id,
         });
-        toast.success('用户创建成功');
+        toast.success("新账号已创建");
       }
       onClose();
       onSuccess?.();
     } catch (error) {
-      showApiError(error, isEdit ? '更新失败' : '创建失败');
+      showApiError(error);
     }
   };
 
-  const getAvatarText = (name?: string) => name ? name.charAt(0).toUpperCase() : '?';
+  const getAvatarText = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
 
-  const roleDescriptions: Record<string, string> = {
-    ADMIN: '全平台治理与系统维护',
-    DEPT_MANAGER: '本室资源调配与人员治理',
-    MENTOR: '指导学员完成学习任务',
-    TEAM_MANAGER: '团队日常治理与考核',
-    STUDENT: '参与学习与技能提升',
+  // Role Configuration - refined style
+  const roleConfigs: Record<string, { bg: string, text: string, icon: React.ReactNode, ring: string }> = {
+    ADMIN: { bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-red-500/20', icon: <Shield className="w-4 h-4" /> },
+    DEPT_MANAGER: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-500/20', icon: <Building2 className="w-4 h-4" /> },
+    MENTOR: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'ring-amber-500/20', icon: <Briefcase className="w-4 h-4" /> },
+    TEAM_MANAGER: { bg: 'bg-cyan-50', text: 'text-cyan-600', ring: 'ring-cyan-500/20', icon: <Users className="w-4 h-4" /> },
+    STUDENT: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-500/20', icon: <User className="w-4 h-4" /> },
   };
 
-  const roleIcons: Record<string, React.ReactNode> = {
-    ADMIN: <Shield className="w-5 h-5" />,
-    DEPT_MANAGER: <Building2 className="w-5 h-5" />,
-    MENTOR: <Users className="w-5 h-5" />,
-    TEAM_MANAGER: <Users className="w-5 h-5" />,
-    STUDENT: <User className="w-5 h-5" />,
-  };
-
-  const getRoleColor = (code: string) => {
-    const colors: Record<string, string> = {
-      ADMIN: 'rgb(239, 68, 68)',
-      DEPT_MANAGER: 'rgb(168, 85, 247)',
-      MENTOR: 'rgb(245, 158, 11)',
-      TEAM_MANAGER: 'rgb(6, 182, 212)',
-      STUDENT: 'rgb(77, 108, 255)',
-    };
-    return colors[code] || 'rgb(77, 108, 255)';
-  };
-
-  const toggleRole = (roleCode: RoleCode) => {
+  const toggleRole = (code: RoleCode) => {
     setFormData(prev => ({
       ...prev,
-      role_codes: prev.role_codes.includes(roleCode)
-        ? prev.role_codes.filter(c => c !== roleCode)
-        : [...prev.role_codes, roleCode],
+      role_codes: prev.role_codes.includes(code)
+        ? prev.role_codes.filter(c => c !== code)
+        : [...prev.role_codes, code],
     }));
   };
 
   const isLoading = createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogPortal>
-        <DialogOverlay className="bg-black/40 backdrop-blur-sm" />
-        <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-180 -translate-x-1/2 -translate-y-1/2">
-          <div className="bg-white rounded-xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
-            <button onClick={onClose} className="absolute right-4 top-4 z-10 rounded-sm opacity-70 hover:opacity-100">
-              <X className="h-4 w-4 text-gray-400" />
-            </button>
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+      {/* 
+        Modified: 
+        1. max-w-3xl for a more focused modal width (4xl was too wide).
+        2. Added [&>button]:hidden to DialogContent to hide default close button if desired, 
+           BUT user complained about 'double X', so we keep default and REMOVE our custom one.
+      */}
+      <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px] border-none shadow-2xl h-[85vh] flex flex-col bg-white">
 
-            {/* Header */}
-            <div className="px-10 pt-10 pb-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f8faff 0%, #ffffff 100%)', borderBottom: '1px solid rgb(243, 244, 246)' }}>
-              <div className="absolute -top-5 -right-5 w-36 h-36 rounded-full" style={{ background: 'radial-gradient(circle, rgba(77, 108, 255, 0.1) 0%, transparent 70%)' }} />
-              <div className="flex items-center relative z-1">
-                <div className="relative">
-                  <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
-                    <AvatarFallback className="text-3xl font-bold text-white" style={{ background: 'linear-gradient(135deg, rgb(99, 130, 255), rgb(77, 108, 255))' }}>
-                      {getAvatarText(formData.username || userDetail?.username)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEdit && (
-                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full border-[3px] border-white flex items-center justify-center" style={{ background: 'rgb(34, 197, 94)' }}>
-                      <CheckCircle2 className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  )}
-                </div>
-                <div className="ml-6">
-                  <h2 className="text-2xl font-bold tracking-tight m-0">{isEdit ? '编辑详细资料' : '创建新成员'}</h2>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-500">
-                      {isEdit ? (<><IdCard className="inline w-3.5 h-3.5 mr-1" />{userDetail?.employee_id || 'ID LOADING...'}</>) : '请完善下方基础信息以邀请新成员'}
-                    </span>
-                    {isEdit && <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(77, 108, 255, 0.1)', color: 'rgb(77, 108, 255)' }}>已激活</span>}
-                  </div>
-                </div>
-              </div>
+        {/* Header - Simplified to match page headers */}
+        <DialogHeader className="px-6 py-4 shrink-0 bg-white border-b border-gray-100">
+          <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
+            {isEdit ? '编辑成员档案' : '邀请新成员'}
+            {isEdit && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-xs font-bold bg-green-50 text-green-600 border border-green-100">
+                active
+              </span>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Scrollable Content - Clean White Background */}
+        <div className="flex-1 overflow-y-auto bg-white p-6 space-y-6">
+
+          {/* 1. Basic Info Card */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-1 h-5 rounded-full bg-blue-500" />
+              <h3 className="text-base font-bold text-gray-900">基础信息</h3>
             </div>
 
-
-            <form onSubmit={handleSubmit} className="px-10 pt-8 pb-10">
-              {/* Basic Info */}
-              <div className="mb-8">
-                <div className="flex items-center mb-5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(77, 108, 255, 0.1)', color: 'rgb(77, 108, 255)' }}>
-                    <User className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-base font-semibold m-0">核心身份信息</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">真实姓名</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="username" placeholder="例如: 张三" className="pl-9 h-11 rounded-lg" value={formData.username} onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))} />
-                    </div>
-                    {errors.username && <p className="text-sm font-medium text-red-500">{errors.username}</p>}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="employee_id">工号</Label>
-                    <div className="relative">
-                      <IdCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="employee_id" placeholder="例如: EMP888" className="pl-9 h-11 rounded-lg" value={formData.employee_id} onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))} />
-                    </div>
-                    {errors.employee_id && <p className="text-sm font-medium text-red-500">{errors.employee_id}</p>}
-                  </div>
-                </div>
-                {!isEdit && (
-                  <div className="mt-4 space-y-2">
-                    <Label htmlFor="password">初始密码</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input id="password" type="password" placeholder="设置一个安全的初始密码" className="pl-9 h-11 rounded-lg" value={formData.password} onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} />
-                    </div>
-                    {errors.password && <p className="text-sm font-medium text-red-500">{errors.password}</p>}
-                  </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <Input
+                  value={formData.username}
+                  onChange={e => setFormData({ ...formData, username: e.target.value })}
+                  className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
+                  placeholder="真实姓名"
+                />
+                {errors.username && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.username}</p>}
               </div>
 
-              {/* Role Configuration */}
-              <div className="mb-8">
-                <div className="flex items-center mb-5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(34, 197, 94, 0.1)', color: 'rgb(34, 197, 94)' }}>
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-base font-semibold m-0">角色与权限分配</h3>
+              <div>
+                <Input
+                  value={formData.employee_id}
+                  onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
+                  className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-mono font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
+                  placeholder="员工工号 (E.g. EMP001)"
+                />
+                {errors.employee_id && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.employee_id}</p>}
+              </div>
+
+              {!isEdit && (
+                <div className="md:col-span-2">
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] focus:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-primary-500/10 transition-all font-bold text-gray-900 placeholder:text-gray-400 placeholder:font-medium px-4"
+                    placeholder="设置初始密码"
+                  />
+                  {errors.password && <p className="text-xs font-bold text-red-500 mt-1 ml-1">{errors.password}</p>}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Organization Card */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-1 h-5 rounded-full bg-purple-500" />
+              <h3 className="text-base font-bold text-gray-900">组织归属</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-3">
+                {/* No Label, context provided by icon/layout */}
                 <div className="grid grid-cols-2 gap-3">
-                  {roles.map((role) => {
-                    const isSelected = formData.role_codes.includes(role.code as RoleCode);
-                    const roleColor = getRoleColor(role.code);
+                  {departments.map(dept => {
+                    const active = formData.department_id === dept.id;
                     return (
-                      <Card key={role.code} onClick={() => toggleRole(role.code as RoleCode)} className="cursor-pointer p-4 transition-all duration-300" style={{ borderWidth: '2px', borderColor: isSelected ? roleColor : 'rgb(243, 244, 246)', backgroundColor: isSelected ? `${roleColor}08` : '#fff', boxShadow: isSelected ? `0 8px 16px ${roleColor}15` : 'none' }}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-[10px] flex items-center justify-center text-xl transition-all duration-300" style={{ background: isSelected ? roleColor : 'rgb(249, 250, 251)', color: isSelected ? '#fff' : 'rgb(107, 114, 128)' }}>
-                            {roleIcons[role.code] || <User className="w-5 h-5" />}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-semibold text-sm" style={{ color: isSelected ? 'rgb(17, 24, 39)' : 'rgb(55, 65, 81)' }}>{role.name}</div>
-                            <div className="text-xs text-gray-400 mt-0.5">{roleDescriptions[role.code] || '基础操作权限'}</div>
-                          </div>
-                          {isSelected && <CheckCircle2 className="w-4.5 h-4.5" style={{ color: roleColor }} />}
+                      <div
+                        key={dept.id}
+                        onClick={() => setFormData({ ...formData, department_id: dept.id })}
+                        className={cn(
+                          "cursor-pointer group relative flex flex-1 items-center justify-center gap-2 px-4 h-14 rounded-2xl transition-all duration-300 ease-out min-w-[100px]",
+                          active
+                            ? "bg-purple-50 shadow-lg shadow-purple-500/20 -translate-y-0.5"
+                            : "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-7 h-7 rounded-full flex items-center justify-center transition-colors shrink-0",
+                          active ? "bg-white text-purple-600 shadow-sm" : "bg-purple-50 text-purple-400 group-hover:bg-purple-100"
+                        )}>
+                          <Building2 className="w-4 h-4" />
                         </div>
-                      </Card>
-                    );
-                  })}
-                  <Card className="p-4 cursor-default opacity-80" style={{ borderWidth: '2px', borderColor: 'rgb(77, 108, 255)', backgroundColor: 'rgba(77, 108, 255, 0.05)' }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center text-xl text-white" style={{ background: 'rgb(77, 108, 255)' }}><User className="w-5 h-5" /></div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-sm text-gray-900">学员</div>
-                        <div className="text-xs text-gray-500 mt-0.5">核心学习权限 (内置)</div>
+                        <span className={cn(
+                          "text-sm font-bold transition-colors whitespace-nowrap",
+                          active ? "text-purple-900" : "text-gray-600 group-hover:text-gray-900"
+                        )}>
+                          {dept.name}
+                        </span>
                       </div>
-                      <CheckCircle2 className="w-4.5 h-4.5" style={{ color: 'rgb(77, 108, 255)' }} />
+                    )
+                  })}
+                </div>
+                {errors.department_id && <p className="text-xs font-bold text-red-500 ml-1">{errors.department_id}</p>}
+              </div>
+
+              <div>
+                {/* No Label */}
+                <Select
+                  value={formData.mentor_id?.toString() || ''}
+                  onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
+                >
+                  <SelectTrigger className="h-14 rounded-2xl bg-white border-none shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] focus:ring-2 focus:ring-purple-500/10 transition-all font-medium text-gray-700 px-4">
+                    <SelectValue placeholder="带教导师 (可选)" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 rounded-xl border border-gray-100 shadow-xl z-[9999]" sideOffset={5}>
+                    <div className="p-1">
+                      {mentors.filter(m => !userId || m.id !== userId).map(m => (
+                        <SelectItem key={m.id} value={m.id.toString()} className="rounded-lg py-2.5 px-3 my-0.5 cursor-pointer focus:bg-purple-50 focus:text-purple-900 data-[state=checked]:bg-purple-50 data-[state=checked]:text-purple-900">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-8 h-8 border border-gray-100">
+                              <AvatarFallback className="bg-purple-50 text-purple-600 text-[10px] font-bold">
+                                {getAvatarText(m.username)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-bold text-sm">{m.username}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </div>
-                  </Card>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Roles Card */}
+          <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100/60">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-1 h-5 rounded-full bg-green-500" />
+              <h3 className="text-base font-bold text-gray-900">系统权限</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Default Role */}
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50/80 border border-transparent">
+                <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 text-gray-400 flex items-center justify-center shrink-0">
+                  <User className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-gray-500">普通学员</span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">基础权限</span>
                 </div>
               </div>
 
-              {/* Organization & Mentorship */}
-              <div className="mb-10">
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <div className="flex items-center mb-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'rgb(168, 85, 247)' }}><Building2 className="w-4 h-4" /></div>
-                      <h3 className="text-[15px] font-semibold m-0">所属组织架构</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {departments.map((dept) => {
-                        const isSelected = formData.department_id === dept.id;
-                        return (
-                          <button key={dept.id} type="button" onClick={() => setFormData(prev => ({ ...prev, department_id: dept.id }))} className="px-4 py-2 rounded-full text-sm transition-all duration-200 border active:scale-95" style={{ background: isSelected ? 'rgb(77, 108, 255)' : 'rgb(249, 250, 251)', color: isSelected ? '#fff' : 'rgb(75, 85, 99)', fontWeight: isSelected ? 600 : 400, borderColor: isSelected ? 'rgb(77, 108, 255)' : 'rgb(243, 244, 246)', boxShadow: isSelected ? '0 4px 10px rgba(77, 108, 255, 0.2)' : 'none' }}>
-                            {dept.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {errors.department_id && <p className="text-sm font-medium text-red-500 mt-2">{errors.department_id}</p>}
-                  </div>
-                  <div>
-                    <div className="flex items-center mb-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center mr-3" style={{ background: 'rgba(6, 182, 212, 0.1)', color: 'rgb(6, 182, 212)' }}><Users className="w-4 h-4" /></div>
-                      <h3 className="text-[15px] font-semibold m-0">师徒关系绑定</h3>
-                    </div>
-                    <Select value={formData.mentor_id?.toString() || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, mentor_id: value ? Number(value) : null }))}>
-                      <SelectTrigger className="h-11 rounded-lg"><SelectValue placeholder="点击搜索并指定导师" /></SelectTrigger>
-                      <SelectContent>
-                        {mentors.filter((m) => !isEdit || m.id !== userId).map((mentor) => (
-                          <SelectItem key={mentor.id} value={mentor.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6"><AvatarFallback className="text-xs font-semibold text-white" style={{ background: 'rgb(6, 182, 212)' }}>{getAvatarText(mentor.username)}</AvatarFallback></Avatar>
-                              <span>{mentor.username}</span>
-                              <span className="text-xs text-gray-400">({mentor.employee_id})</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+              {/* Selectable Roles */}
+              {roles.filter(r => r.code !== 'STUDENT').map(role => {
+                const config = roleConfigs[role.code] || roleConfigs.STUDENT;
+                const active = formData.role_codes.includes(role.code as RoleCode);
 
-              {/* Footer */}
-              <div className="flex justify-end gap-4 pt-8" style={{ borderTop: '1px solid rgb(243, 244, 246)' }}>
-                <Button type="button" variant="ghost" onClick={onClose} className="px-8 h-12 rounded-lg font-medium text-gray-500 bg-gray-50 hover:bg-gray-100">取消</Button>
-                <Button type="submit" disabled={isLoading} className="px-12 h-12 rounded-lg font-semibold" style={{ background: 'rgb(77, 108, 255)', boxShadow: '0 0 20px rgba(77, 108, 255, 0.3)' }}>
-                  {isLoading ? '处理中...' : isEdit ? '保存更改' : '立即创建'}
-                </Button>
-              </div>
-            </form>
+                // Map role codes to specific solid colors for active state borders/text
+                const colorMap: Record<string, string> = {
+                  ADMIN: "red",
+                  MENTOR: "amber", // Changed to amber to match config
+                  TEAM_MANAGER: "cyan",
+                  DEPT_MANAGER: "purple", // Fixed key from ROOM_MANAGER to DEPT_MANAGER to match roleConfigs
+                  ROOM_MANAGER: "purple"  // Kept for fallback
+                };
+                const color = colorMap[role.code] || "blue";
+
+                return (
+                  <div
+                    key={role.code}
+                    onClick={() => toggleRole(role.code as RoleCode)}
+                    className={cn(
+                      "group cursor-pointer relative flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 ease-out",
+                      active
+                        ? `bg-${color}-50 shadow-lg shadow-${color}-500/20 -translate-y-0.5`
+                        : "bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                      active
+                        ? `bg-white text-${color}-600 shadow-sm`
+                        : `bg-${color}-50 text-${color}-500 group-hover:bg-${color}-100`
+                    )}>
+                      {config.icon}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className={cn(
+                        "text-sm font-bold transition-colors",
+                        active ? `text-${color}-900` : "text-gray-700"
+                      )}>
+                        {role.name}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
-      </DialogPortal>
+
+        {/* Footer */}
+        <DialogFooter className="px-8 py-5 border-t border-gray-100 bg-white shrink-0 sm:justify-end">
+          {/* Removed redundant 'Cancel' to minimize noise as requested by user */}
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="w-full sm:w-auto h-12 px-8 rounded-xl bg-gradient-to-r from-primary-600 to-indigo-600 text-white font-bold text-base hover:from-primary-700 hover:to-indigo-700 hover:scale-[1.02] transition-all shadow-xl shadow-primary-500/20"
+          >
+            {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即创建成员"}
+          </Button>
+        </DialogFooter>
+
+      </DialogContent>
     </Dialog>
   );
 };

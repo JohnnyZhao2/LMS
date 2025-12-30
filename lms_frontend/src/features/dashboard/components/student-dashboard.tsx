@@ -5,37 +5,30 @@ import {
   Clock,
   Rocket,
   Trophy,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react';
 import { useStudentDashboard } from '../api/student-dashboard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import dayjs from '@/lib/dayjs';
 import { Card, Skeleton } from '@/components/ui';
-import { StatusBadge, StaggeredList } from '@/components/ui';
+import { StatusBadge } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-
-/**
- * 任务类型配色
- */
-const taskConfig = {
-  color: 'var(--color-primary-500)',
-  bg: 'var(--color-primary-50)',
-  icon: <FileText className="w-4 h-4" />,
-  label: '任务',
-};
+import { cn } from '@/lib/utils';
 
 /**
  * 空状态组件
  */
 const EmptyState: React.FC<{ icon?: React.ReactNode; description: string }> = ({ icon, description }) => (
-  <div className="flex flex-col items-center justify-center py-12 text-center">
-    {icon && <div className="mb-2">{icon}</div>}
-    <span style={{ color: 'var(--color-gray-500)' }}>{description}</span>
+  <div className="flex flex-col items-center justify-center py-12 text-center reveal-item">
+    {icon && <div className="mb-4 transform hover:scale-110 transition-transform duration-500">{icon}</div>}
+    <span className="text-gray-500 font-medium">{description}</span>
   </div>
 );
 
 /**
- * 进度环组件
+ * 进度环组件 - 极致视觉增强
  */
 const ProgressCircle: React.FC<{
   percent: number;
@@ -43,7 +36,7 @@ const ProgressCircle: React.FC<{
   gradientEnd: string;
   size?: number;
   label: string;
-}> = ({ percent, gradientStart, gradientEnd, size = 120, label }) => {
+}> = ({ percent, gradientStart, gradientEnd, size = 100, label }) => {
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -51,70 +44,63 @@ const ProgressCircle: React.FC<{
   const gradientId = `progress-gradient-${label.replace(/\s/g, '-')}`;
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={gradientStart} />
-            <stop offset="100%" stopColor={gradientEnd} />
-          </linearGradient>
-        </defs>
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--color-gray-200)"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={`url(#${gradientId})`}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-        />
-        {/* Center text */}
-        <text
-          x={size / 2}
-          y={size / 2}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          style={{
-            transform: 'rotate(90deg)',
-            transformOrigin: 'center',
-            fontSize: '24px',
-            fontWeight: 700,
-            fill: 'var(--color-gray-900)',
-          }}
-        >
-          {percent}%
-        </text>
-      </svg>
-      <div style={{ marginTop: 'var(--spacing-2)' }}>
-        <span style={{ color: 'var(--color-gray-500)' }}>{label}</span>
+    <div className="flex flex-col items-center group">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          <defs>
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={gradientStart} />
+              <stop offset="100%" stopColor={gradientEnd} />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="var(--color-gray-100)"
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className="transition-all duration-1000 ease-out"
+            filter="url(#glow)"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-xl font-bold text-gray-900 group-hover:scale-110 transition-transform">
+            {percent}%
+          </span>
+        </div>
       </div>
+      <span className="mt-3 text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</span>
     </div>
   );
 };
 
 /**
- * 学员仪表盘组件
- * Migrated from Ant Design to ShadCN UI
+ * 学员仪表盘组件 - 极致美学重构
  */
 export const StudentDashboard: React.FC = () => {
   const { data, isLoading } = useStudentDashboard();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // 获取问候语
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return '早上好';
@@ -123,326 +109,210 @@ export const StudentDashboard: React.FC = () => {
   };
 
   return (
-    <div>
-      {/* Hero 欢迎区 */}
+    <div className="space-y-8 pb-10">
+      {/* Hero 欢迎区 - 玻璃拟态结合强渐变 */}
       <div
-        className="animate-fadeInDown"
+        className="reveal-item relative overflow-hidden rounded-[2rem] p-10 md:p-14 shadow-2xl border-none"
         style={{
-          marginBottom: 'var(--spacing-8)',
-          padding: 'var(--spacing-8)',
-          borderRadius: 'var(--radius-xl)',
-          background: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-          position: 'relative',
-          overflow: 'hidden',
+          background: 'linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-purple-600) 100%)',
         }}
       >
-        {/* 装饰背景 */}
-        <div
-          style={{
-            position: 'absolute',
-            right: -50,
-            top: -50,
-            width: 200,
-            height: 200,
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.1)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            right: 50,
-            bottom: -30,
-            width: 100,
-            height: 100,
-            borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
-          }}
-        />
+        {/* 背景装饰球 */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 blur-3xl rounded-full" />
+        <div className="absolute top-1/2 -left-12 w-48 h-48 bg-cyan-400/10 blur-2xl rounded-full" />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-2)' }}>
-            <Rocket className="w-6 h-6" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
-            <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 'var(--font-size-base)' }}>
-              {getGreeting()}
-            </span>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-end gap-8">
+          <div className="max-w-xl">
+            <div className="flex items-center gap-3 mb-4 bg-white/10 w-fit px-4 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+              <Rocket className="w-4 h-4 text-cyan-300 animate-pulse" />
+              <span className="text-white/90 text-sm font-bold tracking-wide">
+                {getGreeting()}
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl text-white mb-6 leading-[1.1]">
+              你好, <span className="font-black italic underline decoration-cyan-400/50 underline-offset-8">{user?.username || '学员'}</span>
+              <br />
+              <span className="text-white/80">又是一个进步的好时机！</span>
+            </h1>
+            <p className="text-white/60 text-lg max-w-md font-medium">
+              你已经连续学习 12 天了，今天也要全力以赴哦。完成下面的任务领取你的今日成就。
+            </p>
           </div>
-          <h2
-            style={{
-              margin: 0,
-              marginBottom: 'var(--spacing-2)',
-              color: 'white',
-              fontSize: 'var(--font-size-4xl)',
-              fontWeight: 700,
-            }}
-          >
-            {user?.username || '学员'}，继续加油！
-          </h2>
-          <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 'var(--font-size-base)' }}>
-            今天是学习的好日子，让我们一起进步吧
-          </span>
+
+          <div className="hidden lg:flex items-center gap-6 bg-white/5 backdrop-blur-xl p-6 rounded-3xl border border-white/10">
+            <div className="text-center px-4">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">本月完成</p>
+              <p className="text-white text-3xl font-black">{data?.pending_tasks ? 24 - data.pending_tasks.length : '--'}</p>
+            </div>
+            <div className="w-[1px] h-10 bg-white/10" />
+            <div className="text-center px-4">
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">学习时长</p>
+              <p className="text-white text-3xl font-black">42h</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-24 gap-6">
-        {/* 待办任务 */}
-        <div className="lg:col-span-14">
-          <Card className="hover:shadow-md transition-shadow h-full">
-            <div className="p-5">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 'var(--spacing-5)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 'var(--radius-lg)',
-                      background: 'var(--color-primary-50)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--color-primary-500)',
-                    }}
-                  >
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                      待办任务
-                    </span>
-                    {data?.pending_tasks && (
-                      <span style={{ marginLeft: 'var(--spacing-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
-                        {data.pending_tasks.length} 项待完成
-                      </span>
-                    )}
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        {/* 待办任务 - 极致列表 */}
+        <div className="lg:col-span-7">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-glow">
+                <FileText className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">待办任务</h3>
+                <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Ongoing Tasks</p>
+              </div>
+            </div>
+            {data?.pending_tasks && data.pending_tasks.length > 0 && (
+              <span className="bg-primary-50 text-primary-600 px-3 py-1 rounded-full text-xs font-bold">
+                {data.pending_tasks.length}
+              </span>
+            )}
+          </div>
 
+          <Card className="card-premium overflow-hidden border-none shadow-premium h-[calc(100%-4rem)]">
+            <div className="p-2">
               {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-16" />
+                <div className="space-y-3 p-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-20 rounded-2xl" />
                   ))}
                 </div>
               ) : data?.pending_tasks && data.pending_tasks.length > 0 ? (
-                <StaggeredList staggerDelay={60} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
-                  {data.pending_tasks.map((task) => {
-                    const typeConfig = taskConfig;
+                <div className="space-y-2">
+                  {data.pending_tasks.map((task, index) => {
                     const isUrgent = dayjs(task.deadline).diff(dayjs(), 'day') <= 1;
 
                     return (
                       <div
                         key={task.id}
                         onClick={() => navigate(`${ROUTES.TASKS}/${task.task_id}`)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 'var(--spacing-4)',
-                          padding: 'var(--spacing-4)',
-                          borderRadius: 'var(--radius-lg)',
-                          background: 'var(--color-gray-50)',
-                          cursor: 'pointer',
-                          transition: 'all var(--transition-fast)',
-                          borderLeft: `4px solid ${typeConfig.color}`,
-                        }}
-                        className="hover:bg-gray-100 hover:translate-x-1"
+                        className={cn(
+                          "reveal-item flex items-center gap-5 p-5 rounded-2xl hover:bg-gray-50 cursor-pointer transition-all duration-300 group",
+                          `stagger-delay-${(index % 4) + 1}`
+                        )}
                       >
-                        <div
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 'var(--radius-md)',
-                            background: typeConfig.bg,
-                            color: typeConfig.color,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 16,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {typeConfig.icon}
+                        <div className={cn(
+                          "w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold transition-transform group-hover:scale-110",
+                          isUrgent ? "bg-red-50 text-red-500" : "bg-primary-50 text-primary-500"
+                        )}>
+                          {isUrgent ? '!' : '#'}
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', marginBottom: 4 }}>
-                            <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="font-bold text-gray-900 text-base truncate">
                               {task.task_title}
                             </span>
-                            <StatusBadge
-                              status={'processing'}
-                              text={'进行中'}
-                              size="small"
-                              showIcon={false}
-                            />
+                            <StatusBadge status="processing" text="进行中" size="small" showIcon={false} className="opacity-70" />
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-                            <Clock className="w-3 h-3" style={{ color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-400)' }} />
-                            <span
-                              style={{
-                                fontSize: 'var(--font-size-sm)',
-                                color: isUrgent ? 'var(--color-error-500)' : 'var(--color-gray-500)',
-                              }}
-                            >
-                              截止: {dayjs(task.deadline).format('MM-DD HH:mm')}
-                            </span>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                              <Clock className={cn("w-3.5 h-3.5", isUrgent && "text-red-500 animate-pulse")} />
+                              <span className={isUrgent ? "text-red-500 font-bold" : ""}>
+                                {dayjs(task.deadline).format('MM-DD HH:mm')} 截止
+                              </span>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-gray-300 group-hover:bg-primary-500 group-hover:text-white group-hover:border-primary-500 transition-all">
+                          <ArrowRight className="w-4 h-4" />
                         </div>
                       </div>
                     );
                   })}
-                </StaggeredList>
+                </div>
               ) : (
                 <EmptyState
-                  icon={<Trophy className="w-8 h-8" style={{ color: 'var(--color-success-500)', marginBottom: 'var(--spacing-2)' }} />}
-                  description="太棒了！暂无待办任务"
+                  icon={<Trophy className="w-12 h-12 text-warning-500" />}
+                  description="暂无待办，去休息一下吧"
                 />
               )}
             </div>
           </Card>
         </div>
 
-        {/* 最新知识 */}
-        <div className="lg:col-span-10">
-          <Card className="hover:shadow-md transition-shadow h-full">
-            <div className="p-5">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--spacing-3)',
-                  marginBottom: 'var(--spacing-5)',
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'var(--color-success-50)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-success-500)',
-                  }}
-                >
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                  最新知识
-                </span>
+        {/* 最新知识 & 学习进度 */}
+        <div className="lg:col-span-5 space-y-8">
+          {/* 最新知识 */}
+          <div>
+            <div className="flex items-center gap-3 mb-6 px-2">
+              <div className="w-10 h-10 bg-success-500 rounded-xl flex items-center justify-center shadow-lg shadow-success-500/20">
+                <BookOpen className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">最新资源</h3>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recent Knowledge</p>
+              </div>
+            </div>
 
+            <Card className="card-premium border-none shadow-premium p-6">
               {isLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-20" />
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <Skeleton key={i} className="h-24 rounded-2xl" />
                   ))}
                 </div>
               ) : data?.latest_knowledge && data.latest_knowledge.length > 0 ? (
-                <StaggeredList staggerDelay={60} initialDelay={100} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
-                  {data.latest_knowledge.map((knowledge) => (
+                <div className="space-y-4">
+                  {data.latest_knowledge.map((knowledge, index) => (
                     <div
                       key={knowledge.id}
                       onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${knowledge.id}`)}
-                      style={{
-                        padding: 'var(--spacing-4)',
-                        borderRadius: 'var(--radius-lg)',
-                        background: 'var(--color-gray-50)',
-                        cursor: 'pointer',
-                        transition: 'all var(--transition-fast)',
-                      }}
-                      className="hover:bg-gray-100 hover:-translate-y-0.5"
+                      className={cn(
+                        "reveal-item p-4 rounded-xl hover:bg-success-50/30 border border-transparent hover:border-success-100 cursor-pointer transition-all group",
+                        `stagger-delay-${(index % 4) + 1}`
+                      )}
                     >
-                      <span style={{ fontWeight: 600, display: 'block', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="font-bold text-gray-900 block mb-2 group-hover:text-success-600 transition-colors">
                         {knowledge.title}
                       </span>
-                      <p
-                        style={{
-                          fontSize: 'var(--font-size-sm)',
-                          color: 'var(--color-gray-500)',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          margin: 0,
-                          marginBottom: 'var(--spacing-2)',
-                        }}
-                      >
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">
                         {knowledge.summary}
                       </p>
-                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-400)' }}>
-                        {dayjs(knowledge.updated_at).format('YYYY-MM-DD')}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {dayjs(knowledge.updated_at).format('YYYY-MM-DD')}
+                        </span>
+                        <TrendingUp className="w-3.5 h-3.5 text-success-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   ))}
-                </StaggeredList>
+                </div>
               ) : (
                 <EmptyState description="暂无最新知识" />
               )}
+            </Card>
+          </div>
+
+          {/* 统计指标 */}
+          <Card className="card-premium border-none shadow-xl bg-gray-900 p-8 flex justify-between items-center overflow-hidden relative">
+            {/* 背景修饰 */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-2xl -mr-16 -mt-16" />
+
+            <div className="flex flex-col gap-8 flex-1">
+              <ProgressCircle
+                percent={75}
+                gradientStart="var(--color-primary-400)"
+                gradientEnd="var(--color-primary-600)"
+                label="本月进度"
+                size={70}
+              />
+              <div className="space-y-1">
+                <p className="text-primary-400 text-[10px] font-bold uppercase tracking-tighter">Your Score</p>
+                <p className="text-white text-3xl font-black italic">A+ <span className="text-sm font-normal text-white/40 not-italic ml-2">Top 5%</span></p>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 flex items-center justify-center p-4 bg-white/5 rounded-2xl backdrop-blur-md">
+              <Trophy className="w-12 h-12 text-warning-500 animate-float" />
             </div>
           </Card>
         </div>
-      </div>
-
-      {/* 学习进度概览 */}
-      <div className="mt-6">
-        <Card className="hover:shadow-md transition-shadow">
-          <div className="p-5">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-5)' }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-pink-500) 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                }}
-              >
-                <Trophy className="w-5 h-5" />
-              </div>
-              <span style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
-                学习进度
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div style={{ textAlign: 'center' }}>
-                <ProgressCircle
-                  percent={75}
-                  gradientStart="var(--color-primary-500)"
-                  gradientEnd="var(--color-purple-500)"
-                  label="本月完成率"
-                />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <ProgressCircle
-                  percent={88}
-                  gradientStart="var(--color-success-500)"
-                  gradientEnd="var(--color-cyan-500)"
-                  label="平均得分"
-                />
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <ProgressCircle
-                  percent={60}
-                  gradientStart="var(--color-orange-500)"
-                  gradientEnd="var(--color-error-500)"
-                  label="知识覆盖"
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   );
