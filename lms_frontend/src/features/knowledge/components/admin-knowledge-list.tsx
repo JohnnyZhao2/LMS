@@ -139,13 +139,13 @@ export const AdminKnowledgeList: React.FC = () => {
 
   const statusFilters: Array<{ key: KnowledgeFilterType; label: string; dotClass?: string; showIcon?: boolean }> = [
     { key: 'ALL', label: '全部文档', showIcon: true },
-    { key: 'PUBLISHED_CLEAN', label: '已发布', dotClass: 'bg-success-500' },
-    { key: 'REVISING', label: '修订中', dotClass: 'bg-warning-500' },
-    { key: 'UNPUBLISHED', label: '草稿', dotClass: 'bg-gray-400' },
+    { key: 'PUBLISHED_CLEAN', label: '已发布', dotClass: 'bg-[#10B981]' },
+    { key: 'REVISING', label: '修订中', dotClass: 'bg-[#F59E0B]' },
+    { key: 'UNPUBLISHED', label: '草稿', dotClass: 'bg-[#9CA3AF]' },
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
       <PageHeader
         title="知识库管理"
         subtitle="Repository & Content Management"
@@ -153,18 +153,18 @@ export const AdminKnowledgeList: React.FC = () => {
         extra={
           <div className="flex items-center gap-4">
             <div className="relative group min-w-[300px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
               <Input
                 placeholder="搜索知识文档..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-11 h-12 bg-white/50 border-none rounded-xl focus:ring-4 ring-primary-50 shadow-inner text-sm"
+                className="pl-11 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-sm shadow-none"
               />
             </div>
             <Button
               onClick={handleCreate}
-              className="btn-gradient h-12 px-6 rounded-xl text-white font-bold shadow-md shadow-primary-500/20 hover:scale-105 transition-all duration-300"
+              className="h-14 px-6 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition-all duration-200 hover:scale-105 shadow-none"
             >
               <Plus className="mr-2 h-5 w-5" />
               新建知识
@@ -175,17 +175,17 @@ export const AdminKnowledgeList: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8 items-start">
         {/* 左侧侧边栏 */}
-        <div className="glass-card rounded-[2rem] p-6 space-y-8 sticky top-24">
+        <div className="bg-white rounded-lg p-6 space-y-8 sticky top-24 border-0 shadow-none">
           <div>
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 px-2">条线分类</h4>
+            <h4 className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-6 px-2">条线分类</h4>
             <nav className="space-y-2">
               <button
                 onClick={() => handleLineTypeSelect(undefined)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200 shadow-none",
                   !selectedLineTypeId
-                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-[#3B82F6] text-white"
+                    : "text-[#111827] hover:bg-[#F3F4F6]"
                 )}
               >
                 <Home className="w-4 h-4" />
@@ -196,10 +196,10 @@ export const AdminKnowledgeList: React.FC = () => {
                   key={tag.id}
                   onClick={() => handleLineTypeSelect(tag.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200 shadow-none",
                     selectedLineTypeId === tag.id
-                      ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-[#3B82F6] text-white"
+                      : "text-[#111827] hover:bg-[#F3F4F6]"
                   )}
                 >
                   {getLineTypeIcon(tag.name)}
@@ -210,17 +210,17 @@ export const AdminKnowledgeList: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 px-2">状态筛选</h4>
+            <h4 className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 px-2">状态筛选</h4>
             <div className="space-y-1 px-1">
               {statusFilters.map((filter) => (
                 <button
                   key={filter.key}
                   onClick={() => setFilterType(filter.key)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
                     filterType === filter.key
-                      ? "bg-gray-900 text-white shadow-md shadow-gray-900/10"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      ? "bg-[#111827] text-white"
+                      : "text-[#111827] hover:bg-[#F3F4F6]"
                   )}
                 >
                   {filter.showIcon ? <LayoutGrid className="w-3.5 h-3.5" /> : <div className={cn("w-2 h-2 rounded-full", filter.dotClass)} />}
@@ -234,8 +234,8 @@ export const AdminKnowledgeList: React.FC = () => {
         {/* 右侧列表区 */}
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <span className="text-sm font-bold text-gray-400">
-              找到 <span className="text-gray-900">{data?.count || 0}</span> 篇相关知识
+            <span className="text-sm font-semibold text-[#6B7280]">
+              找到 <span className="text-[#111827] font-bold">{data?.count || 0}</span> 篇相关知识
             </span>
           </div>
 
@@ -246,8 +246,8 @@ export const AdminKnowledgeList: React.FC = () => {
           ) : data?.results && data.results.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {data.results.map((item, index) => (
-                  <div key={item.id} className={cn("reveal-item", `stagger-delay-${(index % 4) + 1}`)}>
+                {data.results.map((item) => (
+                  <div key={item.id} className="group">
                     <SharedKnowledgeCard
                       item={item}
                       variant="admin"
@@ -273,9 +273,9 @@ export const AdminKnowledgeList: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-32 bg-white/30 rounded-[2rem] border-2 border-dashed border-gray-100">
-              <Inbox className="w-16 h-16 text-gray-200 mb-4" />
-              <span className="text-lg font-bold text-gray-400">暂无知识文档</span>
+            <div className="flex flex-col items-center justify-center py-32 bg-[#F3F4F6] rounded-lg border-0">
+              <Inbox className="w-16 h-16 text-[#9CA3AF] mb-4" />
+              <span className="text-lg font-bold text-[#6B7280]">暂无知识文档</span>
             </div>
           )}
         </div>
@@ -283,24 +283,24 @@ export const AdminKnowledgeList: React.FC = () => {
 
       {/* 取消发布确认对话框 */}
       <Dialog open={unpublishDialog.open} onOpenChange={(open) => setUnpublishDialog({ open })}>
-        <DialogContent className="rounded-[2rem] max-w-md p-10 border-none shadow-2xl">
+        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
           <DialogHeader>
-            <div className="w-20 h-20 bg-warning-50 text-warning-500 rounded-3xl flex items-center justify-center mb-8 mx-auto">
+            <div className="w-20 h-20 bg-[#F59E0B] text-white rounded-lg flex items-center justify-center mb-8 mx-auto">
               <Shield className="h-10 w-10" />
             </div>
-            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">确认下线此知识？</DialogTitle>
-            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+            <DialogTitle className="text-2xl font-bold text-[#111827] mb-2 text-center">确认下线此知识？</DialogTitle>
+            <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
               取消发布后，该知识将变为草稿状态，学员将无法查看，也无法用于任务分配。确定要取消发布吗？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button variant="ghost" className="flex-1 rounded-2xl h-14 font-bold" onClick={() => setUnpublishDialog({ open: false })}>
+            <Button variant="outline" className="flex-1 rounded-md h-14 font-semibold border-4 border-[#E5E7EB] shadow-none" onClick={() => setUnpublishDialog({ open: false })}>
               取消
             </Button>
             <Button
               onClick={confirmUnpublish}
               disabled={unpublishKnowledge.isPending}
-              className="flex-1 bg-gray-900 text-white rounded-2xl h-14 font-bold shadow-xl shadow-gray-900/20"
+              className="flex-1 bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] transition-all duration-200 shadow-none"
             >
               {unpublishKnowledge.isPending ? '正在处理...' : '下线文档'}
             </Button>

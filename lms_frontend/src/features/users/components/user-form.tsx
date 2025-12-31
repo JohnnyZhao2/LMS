@@ -35,7 +35,7 @@ import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
 
-interface UserFormModalProps {
+interface UserFormProps {
   open: boolean;
   userId?: number;
   onClose: () => void;
@@ -58,7 +58,10 @@ interface FormErrors {
   department_id?: string;
 }
 
-export const UserFormModal: React.FC<UserFormModalProps> = ({
+/**
+ * 用户表单组件
+ */
+export const UserForm: React.FC<UserFormProps> = ({
   open,
   userId,
   onClose,

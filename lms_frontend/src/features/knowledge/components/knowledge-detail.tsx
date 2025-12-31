@@ -96,9 +96,9 @@ const renderMarkdown = (markdown: string): string => {
     return `__CODE_BLOCK_${index}__`;
   });
 
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-3 text-gray-900">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold mt-6 mb-4 pb-2 border-b border-gray-200 text-gray-900">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 pb-3 border-b border-gray-200 text-gray-900">$1</h1>');
+  html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-6 mb-3 text-gray-900">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-4 pb-2 border-b-2 border-gray-200 text-gray-900">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 pb-3 border-b-2 border-gray-200 text-gray-900">$1</h1>');
 
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em class="italic">$1</em>');
@@ -109,9 +109,9 @@ const renderMarkdown = (markdown: string): string => {
   html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-lg" />');
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:underline">$1</a>');
 
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-200 text-gray-600 my-4">$1</blockquote>');
+  html = html.replace(/^> (.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 text-gray-600 my-4">$1</blockquote>');
 
-  html = html.replace(/^---$/gm, '<hr class="my-6 border-gray-200" />');
+  html = html.replace(/^---$/gm, '<hr class="my-6 border-t-2 border-gray-200" />');
 
   html = html.replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>');
   html = html.replace(/^\* (.+)$/gm, '<li class="ml-4">$1</li>');
@@ -209,55 +209,50 @@ export const KnowledgeDetail: React.FC = () => {
       if (knowledge.fault_scenario) {
         sections.push(`
           <div class="mb-6">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 pb-2 border-b-2 border-primary-100">
-              <span class="w-1 h-5 bg-gradient-to-b from-primary-500 to-purple-500 rounded"></span>
+            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
               故障场景
             </h3>
-            <div class="p-4 bg-gray-50 rounded-lg">${renderMarkdown(knowledge.fault_scenario)}</div>
+            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.fault_scenario)}</div>
           </div>
         `);
       }
       if (knowledge.trigger_process) {
         sections.push(`
           <div class="mb-6">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 pb-2 border-b-2 border-primary-100">
-              <span class="w-1 h-5 bg-gradient-to-b from-primary-500 to-purple-500 rounded"></span>
+            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
               触发流程
             </h3>
-            <div class="p-4 bg-gray-50 rounded-lg">${renderMarkdown(knowledge.trigger_process)}</div>
+            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.trigger_process)}</div>
           </div>
         `);
       }
       if (knowledge.solution) {
         sections.push(`
           <div class="mb-6">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 pb-2 border-b-2 border-primary-100">
-              <span class="w-1 h-5 bg-gradient-to-b from-primary-500 to-purple-500 rounded"></span>
+            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
               解决方案
             </h3>
-            <div class="p-4 bg-gray-50 rounded-lg">${renderMarkdown(knowledge.solution)}</div>
+            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.solution)}</div>
           </div>
         `);
       }
       if (knowledge.verification_plan) {
         sections.push(`
           <div class="mb-6">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 pb-2 border-b-2 border-primary-100">
-              <span class="w-1 h-5 bg-gradient-to-b from-primary-500 to-purple-500 rounded"></span>
+            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
               验证方案
             </h3>
-            <div class="p-4 bg-gray-50 rounded-lg">${renderMarkdown(knowledge.verification_plan)}</div>
+            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.verification_plan)}</div>
           </div>
         `);
       }
       if (knowledge.recovery_plan) {
         sections.push(`
           <div class="mb-6">
-            <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-3 pb-2 border-b-2 border-primary-100">
-              <span class="w-1 h-5 bg-gradient-to-b from-primary-500 to-purple-500 rounded"></span>
+            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
               恢复方案
             </h3>
-            <div class="p-4 bg-gray-50 rounded-lg">${renderMarkdown(knowledge.recovery_plan)}</div>
+            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.recovery_plan)}</div>
           </div>
         `);
       }
@@ -321,10 +316,10 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50">
-        <div className="flex items-center justify-between p-4 px-6 bg-white border-b border-gray-100">
+      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <div className="flex items-center justify-between p-4 px-6 bg-white border-b-2 border-gray-200">
           <div className="flex items-center gap-4">
-            <Skeleton className="w-9 h-9 rounded-lg" />
+            <Skeleton className="w-9 h-9 rounded-md" />
             <div>
               <Skeleton className="h-6 w-48 mb-2" />
               <Skeleton className="h-4 w-64" />
@@ -332,7 +327,7 @@ export const KnowledgeDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="flex-1 m-4 bg-white rounded-xl shadow-sm">
+          <div className="flex-1 m-4 bg-white rounded-lg">
             <div className="p-6">
               <Skeleton className="h-6 w-full mb-4" />
               <Skeleton className="h-4 w-3/4 mb-2" />
@@ -346,19 +341,19 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (!knowledge) {
     return (
-      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50">
-        <div className="flex items-center justify-center h-full text-gray-500">知识文档不存在</div>
+      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <div className="flex items-center justify-center h-full text-gray-600 font-semibold">知识文档不存在</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部栏 */}
-      <div className="flex items-center justify-between p-4 px-6 bg-white border-b border-gray-100 shrink-0">
+      <div className="flex items-center justify-between p-4 px-6 bg-white border-b-2 border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
           <button
-            className="flex items-center justify-center w-9 h-9 bg-gray-50 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
+            className="flex items-center justify-center w-9 h-9 bg-gray-100 rounded-md text-gray-600 hover:bg-gray-200 transition-all duration-200"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -367,12 +362,12 @@ export const KnowledgeDetail: React.FC = () => {
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900 m-0">{knowledge.title}</h1>
               {isAdminRoute && (
-                <Badge variant={isPublished ? 'success' : 'secondary'} className="text-xs">
+                <Badge variant={isPublished ? 'success' : 'secondary'} className="text-xs rounded-md">
                   {knowledge.status_display}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-4 text-sm text-gray-600">
               {knowledge.updated_by_name && (
                 <span className="flex items-center gap-1">
                   <User className="w-3.5 h-3.5" />
@@ -393,22 +388,22 @@ export const KnowledgeDetail: React.FC = () => {
 
         {isAdminRoute && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleEdit}>
+            <Button variant="outline" size="sm" onClick={handleEdit} className="border-2 rounded-md">
               <Edit className="w-4 h-4 mr-1" />
               编辑
             </Button>
             {isPublished ? (
-              <Button variant="outline" size="sm" onClick={handleUnpublish}>
+              <Button variant="outline" size="sm" onClick={handleUnpublish} className="border-2 rounded-md">
                 <XCircle className="w-4 h-4 mr-1" />
                 取消发布
               </Button>
             ) : (
-              <Button size="sm" onClick={handlePublish}>
+              <Button size="sm" onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700 rounded-md">
                 <CheckCircle className="w-4 h-4 mr-1" />
                 发布
               </Button>
             )}
-            <Button variant="destructive" size="sm" onClick={handleDelete}>
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 rounded-md">
               <Trash2 className="w-4 h-4 mr-1" />
               删除
             </Button>
@@ -422,21 +417,21 @@ export const KnowledgeDetail: React.FC = () => {
         <div className="flex flex-col m-4 mr-2 shrink-0 max-lg:hidden">
           {outlineCollapsed ? (
             <button
-              className="flex items-center justify-center w-8 h-8 bg-white rounded-lg shadow-sm text-gray-500 hover:bg-gray-50 hover:text-primary-500 hover:shadow-md transition-all"
+              className="flex items-center justify-center w-8 h-8 bg-white rounded-md text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition-all duration-200 border-2 border-gray-200"
               onClick={() => setOutlineCollapsed(false)}
               title="展开目录"
             >
               <PanelLeft className="w-4 h-4" />
             </button>
           ) : (
-            <div className="w-56 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[200px] max-h-[500px]">
-              <div className="flex items-center justify-between p-3 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="w-56 bg-white rounded-lg overflow-hidden flex flex-col min-h-[200px] max-h-[500px] border-2 border-gray-200">
+              <div className="flex items-center justify-between p-3 border-b-2 border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
                 <div className="flex items-center">
                   <List className="w-3.5 h-3.5 mr-2" />
                   目录
                 </div>
                 <button
-                  className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
+                  className="flex items-center justify-center w-6 h-6 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200"
                   onClick={() => setOutlineCollapsed(true)}
                   title="折叠目录"
                 >
@@ -448,7 +443,7 @@ export const KnowledgeDetail: React.FC = () => {
                   outline.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-2 py-2 cursor-pointer transition-all text-gray-600 text-sm hover:bg-gray-50 hover:text-primary-500 ${
+                      className={`flex items-center gap-2 py-2 cursor-pointer transition-all text-gray-700 text-sm hover:bg-gray-100 hover:text-blue-600 ${
                         item.level === 1 ? 'pl-3 font-semibold' : item.level === 2 ? 'pl-5' : 'pl-7 text-xs'
                       }`}
                     >
@@ -459,7 +454,7 @@ export const KnowledgeDetail: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="p-4 text-xs text-gray-400 text-center">暂无目录</div>
+                  <div className="p-4 text-xs text-gray-500 text-center">暂无目录</div>
                 )}
               </div>
             </div>
@@ -467,21 +462,17 @@ export const KnowledgeDetail: React.FC = () => {
         </div>
 
         {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col m-4 ml-2 bg-white rounded-xl shadow-sm overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col m-4 ml-2 bg-white rounded-lg overflow-hidden min-w-0 border-2 border-gray-200">
           {/* 标签栏 */}
           {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className="flex items-center gap-2 p-3 px-5 border-b border-gray-100 flex-wrap">
+            <div className="flex items-center gap-2 p-3 px-5 border-b-2 border-gray-200 flex-wrap">
               {knowledge.system_tags?.map((tag) => (
-                <span
-                  key={tag.id}
-                  className="px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: 'rgba(155, 0, 255, 0.08)', color: '#9B00FF' }}
-                >
+                <Badge key={tag.id} variant="info" className="text-xs rounded-md">
                   {tag.name}
-                </span>
+                </Badge>
               ))}
               {knowledge.operation_tags?.map((tag) => (
-                <Badge key={tag.id} variant="info" className="text-xs">
+                <Badge key={tag.id} variant="secondary" className="text-xs rounded-md">
                   {tag.name}
                 </Badge>
               ))}
@@ -500,17 +491,18 @@ export const KnowledgeDetail: React.FC = () => {
 
       {/* 确认弹窗 */}
       <Dialog open={confirmModal.visible} onOpenChange={(open) => setConfirmModal({ visible: open, type: null })}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-lg border-2 border-gray-200">
           <DialogHeader>
-            <DialogTitle>{getConfirmModalContent().title}</DialogTitle>
-            <DialogDescription>{getConfirmModalContent().content}</DialogDescription>
+            <DialogTitle className="font-bold">{getConfirmModalContent().title}</DialogTitle>
+            <DialogDescription className="text-gray-600">{getConfirmModalContent().content}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setConfirmModal({ visible: false, type: null })}>
+            <Button variant="outline" className="border-2 rounded-md" onClick={() => setConfirmModal({ visible: false, type: null })}>
               取消
             </Button>
             <Button
               variant={confirmModal.type === 'delete' ? 'destructive' : 'default'}
+              className={confirmModal.type === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}
               onClick={executeConfirmAction}
             >
               确定

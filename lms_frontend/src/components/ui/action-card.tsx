@@ -54,34 +54,39 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     tertiary: 'bg-md-tertiary/10 text-md-tertiary',
   };
 
+  const iconBgColors = {
+    primary: 'bg-blue-600 text-white',
+    success: 'bg-emerald-500 text-white',
+    warning: 'bg-amber-500 text-white',
+    error: 'bg-red-600 text-white',
+    tertiary: 'bg-amber-500 text-white',
+  };
+
   return (
     <div
       onClick={handleClick}
       className={cn(
-        'group relative bg-md-surface-container p-6 rounded-3xl shadow-md-1',
-        'border border-md-outline-variant hover:border-md-primary',
-        'hover:shadow-md-2 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)]',
-        'cursor-pointer overflow-hidden hover:scale-[1.02] hover:-translate-y-1',
+        'group relative bg-white p-6 rounded-lg border-2 border-gray-200',
+        'hover:border-blue-600 transition-all duration-200',
+        'cursor-pointer hover:scale-[1.02]',
         className
       )}
+      style={{ fontFamily: "'Outfit', sans-serif" }}
     >
-      {/* 装饰性模糊形状背景 */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-md-primary/5 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <div className={cn(
-          'w-14 h-14 rounded-full flex items-center justify-center',
-          'transition-transform duration-300 group-hover:scale-110',
-          iconBgClasses[iconVariant]
+          'w-14 h-14 rounded-md flex items-center justify-center',
+          'transition-transform duration-200 group-hover:scale-110',
+          iconBgColors[iconVariant]
         )}>
           <Icon className="w-7 h-7" />
         </div>
         <div>
-          <div className="text-lg font-medium text-md-on-surface-container mb-1 group-hover:text-md-primary transition-colors duration-300">
+          <div className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">
             {title}
           </div>
           {description && (
-            <div className="text-xs font-normal text-md-on-surface-variant uppercase tracking-wide">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               {description}
             </div>
           )}

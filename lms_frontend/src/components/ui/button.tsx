@@ -5,28 +5,28 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-clay-primary/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 active:scale-95",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 active:scale-95",
   {
     variants: {
       variant: {
         default:
-          "bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] text-white shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 active:shadow-clay-pressed",
+          "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105",
         destructive:
-          "bg-gradient-to-br from-red-400 to-red-600 text-white shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 active:shadow-clay-pressed",
+          "bg-red-600 text-white hover:bg-red-700 hover:scale-105",
         outline:
-          "border-2 border-clay-primary/20 bg-transparent text-clay-primary hover:bg-clay-primary/5 hover:border-clay-primary shadow-sm hover:-translate-y-0.5",
+          "border-4 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-600 hover:text-white",
         secondary:
-          "bg-white text-clay-foreground shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 active:shadow-clay-pressed",
-        ghost: "text-clay-foreground hover:bg-clay-primary/10 hover:text-clay-primary",
-        link: "text-clay-primary underline-offset-4 hover:underline",
+          "bg-gray-100 text-gray-900 hover:bg-gray-200 hover:scale-105",
+        ghost: "text-gray-900 hover:bg-gray-100",
+        link: "text-blue-600 underline-offset-4 hover:underline",
         success:
-          "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 active:shadow-clay-pressed",
+          "bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-105",
       },
       size: {
-        default: "h-14 px-8 py-4 text-base rounded-2xl [&_svg]:size-5",
-        sm: "h-11 px-6 text-sm rounded-xl [&_svg]:size-4",
-        lg: "h-16 px-10 text-lg rounded-3xl [&_svg]:size-6",
-        icon: "h-14 w-14 rounded-2xl",
+        default: "h-14 px-8 py-4 text-base rounded-md [&_svg]:size-5",
+        sm: "h-11 px-6 text-sm rounded-md [&_svg]:size-4",
+        lg: "h-16 px-10 text-lg rounded-lg [&_svg]:size-6",
+        icon: "h-14 w-14 rounded-md",
       },
     },
     defaultVariants: {

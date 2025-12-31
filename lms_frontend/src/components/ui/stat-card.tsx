@@ -32,37 +32,38 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => (
     <Card
         className={cn(
-            "reveal-item border-none p-8 relative overflow-hidden group transition-all duration-500",
+            "p-8 relative overflow-hidden group transition-all duration-200 hover:scale-[1.02]",
             delay,
             className
         )}
+        style={{ fontFamily: "'Outfit', sans-serif" }}
     >
-        {/* 背景装饰球 - Ambient Light Effect */}
+        {/* Flat Design 背景装饰 */}
         <div
-            className="absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-[0.08] blur-xl group-hover:scale-150 transition-transform duration-700 pointer-events-none"
+            className="absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-5 pointer-events-none"
             style={{ background: color }}
         />
 
         <div className="flex items-center gap-6 relative z-10">
             <div
-                className="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-clay-btn animate-breathe transition-transform duration-500 group-hover:scale-110"
-                style={{ background: gradient }}
+                className="w-16 h-16 rounded-md flex items-center justify-center text-white transition-transform duration-200 group-hover:scale-110"
+                style={{ background: color }}
             >
                 <Icon className="h-8 w-8" />
             </div>
 
             <div className="flex flex-col">
-                <p className="text-xs font-black text-clay-muted uppercase tracking-[0.2em] mb-1 font-display leading-none">
+                <p className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-1 leading-none">
                     {title}
                 </p>
                 <div className="flex items-baseline gap-2">
-                    <h3 className="text-4xl font-black text-clay-foreground tracking-tighter leading-none" style={{ fontFamily: "Nunito, sans-serif" }}>
+                    <h3 className="text-4xl font-bold text-[#111827] tracking-tight leading-none">
                         {value}
                     </h3>
                     {trend && (
                         <span className={cn(
-                            "text-[10px] font-black px-2 py-0.5 rounded-full select-none",
-                            trend.isUp ? "text-clay-success bg-clay-success/10" : "text-clay-secondary bg-clay-secondary/10"
+                            "text-[10px] font-bold px-2 py-0.5 rounded-md select-none border-0 shadow-none",
+                            trend.isUp ? "text-[#10B981] bg-[#D1FAE5]" : "text-[#DC2626] bg-[#FEE2E2]"
                         )}>
                             {trend.isUp ? '↑' : '↓'} {trend.value}
                         </span>

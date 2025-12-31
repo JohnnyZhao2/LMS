@@ -97,14 +97,14 @@ export const TaskManagement: React.FC = () => {
             id: "title",
             cell: ({ row }) => (
                 <div className="flex items-center gap-4 py-1 min-w-[240px]">
-                    <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 rounded-md bg-[#DBEAFE] text-[#3B82F6] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                         <Layout className="h-5 w-5" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="font-bold text-gray-900 hover:text-primary-600 cursor-pointer transition-colors line-clamp-1">
+                        <span className="font-bold text-[#111827] hover:text-[#3B82F6] cursor-pointer transition-colors line-clamp-1">
                             {row.original.title}
                         </span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                        <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
                             ID: {row.original.id} • {row.original.created_by_name}
                         </span>
                     </div>
@@ -117,16 +117,16 @@ export const TaskManagement: React.FC = () => {
             cell: ({ row }) => {
                 const kCount = row.original.knowledge_count || 0
                 const qCount = row.original.quiz_count || 0
-                if (kCount === 0 && qCount === 0) return <span className="text-gray-300 italic text-xs">无资源</span>
+                if (kCount === 0 && qCount === 0) return <span className="text-[#9CA3AF] italic text-xs">无资源</span>
                 return (
                     <div className="flex items-center gap-1.5 min-w-[120px]">
                         {kCount > 0 && (
-                            <div className="bg-success-50 text-success-600 px-2 py-0.5 rounded-lg text-[10px] font-bold whitespace-nowrap">
+                            <div className="bg-[#D1FAE5] text-[#10B981] px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap border-0 shadow-none">
                                 {kCount} 知识
                             </div>
                         )}
                         {qCount > 0 && (
-                            <div className="bg-primary-50 text-primary-600 px-2 py-0.5 rounded-lg text-[10px] font-bold whitespace-nowrap">
+                            <div className="bg-[#DBEAFE] text-[#3B82F6] px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap border-0 shadow-none">
                                 {qCount} 测验
                             </div>
                         )}
@@ -144,17 +144,16 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="w-32 group/progress">
                         <div className="flex items-center justify-between mb-1.5 px-0.5">
-                            <span className="text-[10px] font-black text-gray-900 italic">
-                                {percent}% <span className="text-gray-400 font-medium ml-1">({completed}/{total})</span>
+                            <span className="text-[10px] font-bold text-[#111827]">
+                                {percent}% <span className="text-[#9CA3AF] font-medium ml-1">({completed}/{total})</span>
                             </span>
-                            <TrendingUp className="w-3 h-3 text-success-500 opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                            <TrendingUp className="w-3 h-3 text-[#10B981] opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-1.5 w-full bg-[#F3F4F6] rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-primary-500 rounded-full transition-all duration-1000 ease-out"
+                                className="h-full bg-[#3B82F6] rounded-full transition-all duration-1000 ease-out"
                                 style={{
-                                    width: `${percent}%`,
-                                    background: "linear-gradient(90deg, var(--color-primary-500), var(--color-purple-500))"
+                                    width: `${percent}%`
                                 }}
                             />
                         </div>
@@ -166,10 +165,10 @@ export const TaskManagement: React.FC = () => {
             header: "及格率",
             id: "pass_rate",
             cell: ({ row }) => (
-                <div className="text-center font-black italic min-w-[80px]">
+                <div className="text-center font-bold min-w-[80px]">
                     <span className={cn(
                         "text-sm",
-                        (row.original.pass_rate || 0) >= 80 ? "text-success-500" : "text-gray-700"
+                        (row.original.pass_rate || 0) >= 80 ? "text-[#10B981]" : "text-[#111827]"
                     )}>
                         {row.original.pass_rate ? `${row.original.pass_rate.toFixed(0)}%` : '-'}
                     </span>
@@ -185,12 +184,12 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
-                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-error-500" : "text-gray-400")} />
-                            <span className={cn("text-xs font-bold", isUrgent ? "text-error-500" : "text-gray-700")}>
+                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-[#DC2626]" : "text-[#9CA3AF]")} />
+                            <span className={cn("text-xs font-bold", isUrgent ? "text-[#DC2626]" : "text-[#111827]")}>
                                 {date.format("MM-DD")}
                             </span>
                         </div>
-                        <span className="text-[10px] text-gray-400 font-medium">{date.format("HH:mm")}</span>
+                        <span className="text-[10px] text-[#9CA3AF] font-medium">{date.format("HH:mm")}</span>
                     </div>
                 )
             }
@@ -204,8 +203,8 @@ export const TaskManagement: React.FC = () => {
                     <div className="min-w-[80px]">
                         <Badge
                             className={cn(
-                                "badge-pill border-none",
-                                !isClosed ? "bg-success-500/10 text-success-600" : "bg-gray-100 text-gray-500"
+                                "border-0 shadow-none",
+                                !isClosed ? "bg-[#D1FAE5] text-[#10B981]" : "bg-[#F3F4F6] text-[#6B7280]"
                             )}
                         >
                             {!isClosed ? "进行中" : "已结束"}
@@ -225,7 +224,7 @@ export const TaskManagement: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 rounded-xl hover:bg-primary-50 hover:text-primary-600 text-gray-400"
+                                className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
                                 onClick={() => navigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
@@ -237,7 +236,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-xl hover:bg-purple-50 hover:text-purple-600 text-gray-400"
+                                        className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
                                         disabled={row.original.is_closed}
                                         onClick={() => navigate(`/tasks/${row.original.id}/edit`)}
                                     >
@@ -248,7 +247,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-xl hover:bg-error-50 hover:text-error-600 text-gray-400"
+                                        className="h-9 w-9 rounded-md hover:bg-[#FEE2E2] hover:text-[#DC2626] text-[#9CA3AF] shadow-none"
                                         onClick={() => setDeleteId(row.original.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -272,7 +271,7 @@ export const TaskManagement: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <Button
                             variant="outline"
-                            className="h-auto py-3 px-6 rounded-2xl border-2 border-gray-100 font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                            className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
                             onClick={() => refetch()}
                         >
                             <RefreshCw className="h-4 w-4" />
@@ -280,7 +279,7 @@ export const TaskManagement: React.FC = () => {
                         </Button>
                         <Button
                             onClick={() => navigate("/tasks/create")}
-                            className="btn-gradient h-12 px-6 rounded-xl text-white font-bold shadow-md shadow-primary-500/20 hover:scale-105 transition-all duration-300"
+                            className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
                         >
                             <Plus className="mr-2 h-5 w-5" />
                             发布新任务
@@ -295,60 +294,60 @@ export const TaskManagement: React.FC = () => {
                     title="活跃任务"
                     value={stats.active}
                     icon={Timer}
-                    color="var(--color-primary-500)"
-                    gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
+                    color="#3B82F6"
+                    gradient=""
                     delay="stagger-delay-1"
                 />
                 <StatCard
                     title="待批改"
                     value={stats.pending}
                     icon={CheckCircle2}
-                    color="var(--color-purple-500)"
-                    gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
+                    color="#3B82F6"
+                    gradient=""
                     delay="stagger-delay-2"
                 />
                 <StatCard
                     title="总任务数"
                     value={stats.total}
                     icon={FileText}
-                    color="var(--color-orange-500)"
-                    gradient="linear-gradient(135deg, var(--color-orange-500) 0%, var(--color-orange-300) 100%)"
+                    color="#F59E0B"
+                    gradient=""
                     delay="stagger-delay-3"
                 />
                 <StatCard
                     title="平均及格率"
                     value={typeof stats.total === 'number' && stats.total > 0 ? '82%' : '-'}
                     icon={Layout}
-                    color="var(--color-success-500)"
-                    gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
+                    color="#10B981"
+                    gradient=""
                     delay="stagger-delay-4"
                 />
             </div>
 
             {/* 列表主体 */}
             <div className="reveal-item stagger-delay-2">
-                <div className="glass-card rounded-[2.5rem] p-8 border-none">
+                <div className="bg-white rounded-lg p-8 border-0 shadow-none">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
                             <Input
                                 placeholder="搜索任务标题或编号..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-14 h-16 bg-gray-50/50 border-none rounded-[1.25rem] focus:ring-4 ring-primary-50 shadow-inner text-base font-medium"
+                                className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
                             />
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center bg-gray-100/50 p-1.5 rounded-[1.25rem]">
+                            <div className="flex items-center bg-[#F3F4F6] p-1.5 rounded-md">
                                 {['all', 'open', 'closed'].map((s) => (
                                     <button
                                         key={s}
                                         onClick={() => setStatusFilter(s)}
                                         className={cn(
-                                            "px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300",
-                                            statusFilter === s ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                                            "px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 shadow-none",
+                                            statusFilter === s ? "bg-white text-[#111827]" : "text-[#6B7280] hover:text-[#111827]"
                                         )}
                                     >
                                         {s === 'all' ? '全部' : s === 'open' ? '进行中' : '已结束'}
@@ -361,8 +360,8 @@ export const TaskManagement: React.FC = () => {
                                 size="icon"
                                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                                 className={cn(
-                                    "h-14 w-14 rounded-[1.25rem] transition-all duration-300",
-                                    showAdvancedFilters ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"
+                                    "h-14 w-14 rounded-md transition-all duration-200 shadow-none",
+                                    showAdvancedFilters ? "bg-[#111827] text-white" : "bg-[#F3F4F6] text-[#6B7280]"
                                 )}
                             >
                                 <Filter className="h-5 w-5" />
@@ -371,11 +370,11 @@ export const TaskManagement: React.FC = () => {
                     </div>
 
                     {/* 表格 */}
-                    <div className="overflow-hidden rounded-[1.5rem] border border-gray-100/50">
+                    <div className="overflow-hidden rounded-lg border-0">
                         {isLoading ? (
                             <div className="p-10 space-y-5">
                                 {[1, 2, 3, 4, 5].map((i) => (
-                                    <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+                                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
                                 ))}
                             </div>
                         ) : (
@@ -389,7 +388,7 @@ export const TaskManagement: React.FC = () => {
                                     return matchesSearch && matchesStatus;
                                 }) || []}
                                 className="border-none"
-                                rowClassName="hover:bg-primary-50/30 transition-colors cursor-pointer group"
+                                rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
                                 onRowClick={(row) => navigate(`/tasks/${row.id}`)}
                             />
                         )}
@@ -399,13 +398,13 @@ export const TaskManagement: React.FC = () => {
 
             {/* 删除确认对话框 */}
             <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-                <DialogContent className="rounded-[2rem] max-w-md p-10 border-none shadow-2xl">
+                <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
                     <DialogHeader>
-                        <div className="w-20 h-20 bg-error-50 text-error-500 rounded-3xl flex items-center justify-center mb-8 mx-auto">
+                        <div className="w-20 h-20 bg-[#FEE2E2] text-[#DC2626] rounded-lg flex items-center justify-center mb-8 mx-auto">
                             <Trash2 className="h-10 w-10" />
                         </div>
-                        <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">确认删除此任务？</DialogTitle>
-                        <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+                        <DialogTitle className="text-2xl font-bold text-[#111827] mb-2 text-center">确认删除此任务？</DialogTitle>
+                        <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
                             此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。
                         </DialogDescription>
                     </DialogHeader>
@@ -413,14 +412,14 @@ export const TaskManagement: React.FC = () => {
                         <Button
                             variant="ghost"
                             onClick={() => setDeleteId(null)}
-                            className="flex-1 rounded-2xl h-14 font-bold text-gray-500 hover:bg-gray-100"
+                            className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] shadow-none"
                         >
                             取消
                         </Button>
                         <Button
                             onClick={handleDeleteTask}
                             disabled={isDeleting}
-                            className="flex-1 bg-error-500 hover:bg-error-600 text-white rounded-2xl h-14 font-bold shadow-xl shadow-error-500/20"
+                            className="flex-1 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-md h-14 font-semibold shadow-none hover:scale-105 transition-all duration-200"
                         >
                             {isDeleting ? "正在删除..." : "确认删除"}
                         </Button>

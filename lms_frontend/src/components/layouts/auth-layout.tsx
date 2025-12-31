@@ -21,30 +21,28 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   className,
 }) => {
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-950 font-sans selection:bg-primary-500/20 selection:text-primary-400">
-      {/* 动态背景几何体 */}
-      <div className="absolute top-0 -left-20 w-[600px] h-[600px] bg-primary-600/20 rounded-full blur-[120px] animate-pulse pointer-events-none" />
-      <div className="absolute bottom-0 -right-20 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* 背景点阵 */}
-      <div className="absolute inset-0 bg-dots opacity-[0.15] pointer-events-none" />
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      {/* 扁平几何背景装饰 */}
+      <div className="absolute top-0 -left-20 w-[600px] h-[600px] bg-blue-600/5 rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 -right-20 w-[500px] h-[500px] bg-emerald-500/5 rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/5 rounded-full pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-[480px] px-6 py-12">
         {/* Logo 装饰 */}
-        <div className="flex flex-col items-center mb-10 reveal-item">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-600 to-purple-600 flex items-center justify-center shadow-2xl shadow-primary-500/30 mb-6 group cursor-default">
-            <Sparkles className="text-white w-8 h-8 group-hover:scale-110 transition-transform duration-500" />
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-16 h-16 rounded-lg bg-blue-600 flex items-center justify-center mb-6 group cursor-default transition-transform duration-200 hover:scale-110">
+            <Sparkles className="text-white w-8 h-8" />
           </div>
           <div className="text-center">
-            <h1 className="text-white text-3xl font-black tracking-tight mb-2">SyncLearn</h1>
-            <div className="h-1 w-12 bg-primary-500 mx-auto rounded-full" />
+            <h1 className="text-gray-900 text-3xl font-bold tracking-tight mb-2">SyncLearn</h1>
+            <div className="h-1 w-12 bg-blue-600 mx-auto rounded-full" />
           </div>
         </div>
 
         {/* 认证卡片 */}
         <div
           className={cn(
-            "glass-card border border-white/10 rounded-[2.5rem] p-10 md:p-12 shadow-2xl reveal-item stagger-delay-1",
+            "bg-white rounded-lg p-10 md:p-12 border-2 border-gray-200",
             className
           )}
         >
@@ -52,24 +50,24 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           {(title || description) && (
             <div className="mb-10 text-left">
               {title && (
-                <h2 className="text-2xl font-black text-white tracking-tight mb-3">
+                <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-3">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="text-gray-400 font-medium leading-relaxed">{description}</p>
+                <p className="text-gray-600 font-medium leading-relaxed">{description}</p>
               )}
             </div>
           )}
 
           {/* 内容区域 */}
-          <div className="reveal-item stagger-delay-2">
+          <div>
             {children}
           </div>
         </div>
 
         {/* 底部版权/装饰 */}
-        <p className="mt-12 text-center text-gray-500 text-xs font-bold uppercase tracking-[0.2em] reveal-item stagger-delay-3">
+        <p className="mt-12 text-center text-gray-500 text-xs font-bold uppercase tracking-wider">
           &copy; 2024 SyncLearn Digital Academy
         </p>
       </div>

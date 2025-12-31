@@ -45,14 +45,11 @@ export const SpotCheckList: React.FC = () => {
         return (
           <div className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-              style={{
-                background: 'linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%)',
-              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-[#3B82F6]"
             >
               {record.student_name?.charAt(0) || <User className="w-4 h-4" />}
             </div>
-            <span className="font-semibold">{record.student_name}</span>
+            <span className="font-semibold text-[#111827]">{record.student_name}</span>
           </div>
         );
       },
@@ -77,7 +74,7 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         const scoreNum = Number(record.score);
         const stars = Math.round(scoreNum / 20);
-        const scoreColor = scoreNum >= 80 ? 'var(--color-success-500)' : scoreNum >= 60 ? 'var(--color-warning-500)' : 'var(--color-error-500)';
+        const scoreColor = scoreNum >= 80 ? '#10B981' : scoreNum >= 60 ? '#F59E0B' : '#DC2626';
         return (
           <div className="flex items-center gap-2">
             <StarRating value={stars} />
@@ -96,15 +93,11 @@ export const SpotCheckList: React.FC = () => {
         return (
           <div className="flex items-center gap-2">
             <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
-              style={{
-                background: 'var(--color-success-50)',
-                color: 'var(--color-success-500)',
-              }}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-[#D1FAE5] text-[#10B981]"
             >
               <User className="w-3 h-3" />
             </div>
-            <span>{record.checker_name}</span>
+            <span className="text-[#111827]">{record.checker_name}</span>
           </div>
         );
       },
@@ -116,7 +109,7 @@ export const SpotCheckList: React.FC = () => {
       cell: ({ row }) => {
         const record = row.original;
         return (
-          <div className="flex items-center gap-2 text-gray-500">
+          <div className="flex items-center gap-2 text-[#6B7280]">
             <Clock className="w-3 h-3" />
             <span>{dayjs(record.checked_at).format('YYYY-MM-DD HH:mm')}</span>
           </div>
@@ -134,7 +127,7 @@ export const SpotCheckList: React.FC = () => {
         extra={
           <Button
             onClick={() => navigate('/spot-checks/create')}
-            className="h-12 px-6 rounded-xl bg-gradient-to-r from-error-500 to-pink-500 hover:from-error-600 hover:to-pink-600 text-white font-bold shadow-md shadow-error-500/20 hover:scale-105 transition-all duration-300"
+            className="h-14 px-8 rounded-md bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold shadow-none hover:scale-105 transition-all duration-200"
           >
             <Plus className="w-5 h-5 mr-2" />
             发起抽查
@@ -142,7 +135,7 @@ export const SpotCheckList: React.FC = () => {
         }
       />
 
-      <Card>
+      <Card className="shadow-none">
         <CardContent className="p-6">
           <Spinner spinning={isLoading}>
             {data?.results && data.results.length > 0 ? (
@@ -152,8 +145,8 @@ export const SpotCheckList: React.FC = () => {
                   data={data.results}
                 />
                 {/* 分页 */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <span className="text-sm text-gray-500">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#E5E7EB]">
+                  <span className="text-sm text-[#6B7280]">
                     共 {data.count || 0} 条抽查记录
                   </span>
                   <div className="flex gap-2">
@@ -162,6 +155,7 @@ export const SpotCheckList: React.FC = () => {
                       size="sm"
                       disabled={page === 1}
                       onClick={() => setPage(page - 1)}
+                      className="shadow-none border-4 border-[#E5E7EB]"
                     >
                       上一页
                     </Button>
@@ -170,6 +164,7 @@ export const SpotCheckList: React.FC = () => {
                       size="sm"
                       disabled={!data.next}
                       onClick={() => setPage(page + 1)}
+                      className="shadow-none border-4 border-[#E5E7EB]"
                     >
                       下一页
                     </Button>
@@ -177,10 +172,13 @@ export const SpotCheckList: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <Search className="w-12 h-12 text-gray-300 mb-4" />
+              <div className="flex flex-col items-center justify-center py-12 text-[#6B7280]">
+                <Search className="w-12 h-12 text-[#9CA3AF] mb-4" />
                 <span className="text-base mb-4">暂无抽查记录</span>
-                <Button onClick={() => navigate('/spot-checks/create')}>
+                <Button 
+                  onClick={() => navigate('/spot-checks/create')}
+                  className="bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-none"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   发起第一次抽查
                 </Button>

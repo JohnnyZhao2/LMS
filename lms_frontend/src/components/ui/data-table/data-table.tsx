@@ -100,11 +100,11 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border-none bg-transparent">
+      <div className="rounded-lg border-0 bg-white shadow-none">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-none hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
@@ -125,7 +125,7 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   onClick={() => onRowClick?.(row.original)}
-                  className={onRowClick ? `cursor-pointer hover:bg-gray-50 ${rowClassName || ''}` : rowClassName}
+                  className={onRowClick ? `cursor-pointer hover:bg-[#F3F4F6] ${rowClassName || ''}` : rowClassName}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -141,7 +141,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-gray-500"
+                  className="h-24 text-center text-[#6B7280]"
                 >
                   暂无数据
                 </TableCell>

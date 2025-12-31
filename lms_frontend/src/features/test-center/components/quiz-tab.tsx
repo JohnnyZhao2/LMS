@@ -94,7 +94,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
         <Checkbox
           checked={data?.results && data.results.length > 0 && selectedRowKeys.length === data.results.length}
           onCheckedChange={toggleSelectAll}
-          className="rounded-md border-gray-300 data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500"
+          className="rounded-md border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 shadow-none"
         />
       ),
       size: 60,
@@ -103,7 +103,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
           checked={selectedRowKeys.includes(row.original.id)}
           onCheckedChange={() => toggleSelection(row.original.id)}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
-          className="rounded-md border-gray-300 data-[state=checked]:bg-primary-500 data-[state=checked]:border-primary-500"
+          className="rounded-md border-gray-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 shadow-none"
         />
       ),
     },
@@ -112,12 +112,16 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       header: '试卷信息',
       cell: ({ row }) => (
         <div className="flex items-center gap-4 py-1">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
-            <Layout className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-none">
+            <Layout className="w-5 h-5" strokeWidth={2} />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-gray-900 line-clamp-1">{row.original.title}</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">ID: {row.original.id} • {row.original.created_by_name}</span>
+            <span className="font-bold text-gray-900 line-clamp-1" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              {row.original.title}
+            </span>
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              ID: {row.original.id} • {row.original.created_by_name}
+            </span>
           </div>
         </div>
       )
@@ -128,13 +132,21 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       cell: ({ row }) => (
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <span className="text-xs font-black text-gray-900 italic">{row.original.question_count} Qs</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Questions</span>
+            <span className="text-xs font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              {row.original.question_count} Qs
+            </span>
+            <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              Questions
+            </span>
           </div>
-          <div className="w-[1px] h-6 bg-gray-100" />
+          <div className="w-[1px] h-6 bg-gray-200" />
           <div className="flex flex-col">
-            <span className="text-xs font-black text-primary-600 italic">{row.original.total_score} Pts</span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase">Total Score</span>
+            <span className="text-xs font-bold text-blue-600" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              {row.original.total_score} Pts
+            </span>
+            <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              Total Score
+            </span>
           </div>
         </div>
       )
@@ -144,8 +156,12 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       header: '构建时间',
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-gray-700">{dayjs(row.original.created_at).format('YYYY.MM.DD')}</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase">{dayjs(row.original.created_at).format('HH:mm:ss')}</span>
+          <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            {dayjs(row.original.created_at).format('YYYY.MM.DD')}
+          </span>
+          <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            {dayjs(row.original.created_at).format('HH:mm:ss')}
+          </span>
         </div>
       ),
     },
@@ -157,29 +173,38 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
         return (
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
-              className="h-9 px-4 rounded-xl bg-primary-500 text-white font-bold text-[11px] uppercase tracking-wider hover:bg-primary-600 shadow-lg shadow-primary-500/10"
+              className="h-9 px-4 rounded-md bg-blue-600 text-white font-bold text-[11px] uppercase tracking-wider hover:bg-blue-700 shadow-none hover:scale-105 transition-all duration-200"
               onClick={() => {
                 setSelectedRowKeys([record.id]);
                 setQuickPublishModalVisible(true);
               }}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
             >
-              <Send className="h-3.5 w-3.5 mr-2" />
+              <Send className="h-3.5 w-3.5 mr-2" strokeWidth={2} />
               Publish
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md shadow-none">
+                  <MoreHorizontal className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 border-none shadow-premium animate-fadeIn">
-                <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold cursor-pointer" onClick={() => navigate(`/test-center/quizzes/${record.id}/edit`)}>
-                  <Pencil className="w-3.5 h-3.5 mr-2" /> 编辑试卷
+              <DropdownMenuContent align="end" className="w-48 rounded-lg p-2 border-2 border-gray-200 shadow-none bg-white">
+                <DropdownMenuItem 
+                  className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors" 
+                  onClick={() => navigate(`/test-center/quizzes/${record.id}/edit`)}
+                  style={{ fontFamily: "'Outfit', sans-serif" }}
+                >
+                  <Pencil className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑试卷
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-50 mx-2" />
-                <DropdownMenuItem className="rounded-xl px-3 py-2.5 font-bold text-error-500 focus:bg-error-50 cursor-pointer" onClick={() => setDeleteId(record.id)}>
-                  <Trash2 className="w-3.5 h-3.5 mr-2" /> 彻底删除
+                <DropdownMenuSeparator className="bg-gray-200 mx-2" />
+                <DropdownMenuItem 
+                  className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors" 
+                  onClick={() => setDeleteId(record.id)}
+                  style={{ fontFamily: "'Outfit', sans-serif" }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 彻底删除
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -190,28 +215,28 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 批量操作悬浮条 */}
       {selectedRowKeys.length > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-fadeInUp">
-          <div className="bg-gray-900 text-white px-8 py-4 rounded-[2rem] shadow-2xl flex items-center gap-8 border border-white/10 backdrop-blur-xl">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-gray-900 text-white px-8 py-4 rounded-lg shadow-none flex items-center gap-8 border-none">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center text-white font-black">
+              <div className="w-10 h-10 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold shadow-none">
                 {selectedRowKeys.length}
               </div>
-              <span className="text-sm font-black uppercase tracking-widest">Items Selected</span>
+              <span className="text-sm font-bold uppercase tracking-wider">Items Selected</span>
             </div>
-            <div className="w-[1px] h-8 bg-white/10" />
+            <div className="w-[1px] h-8 bg-white/20" />
             <Button
               onClick={() => setQuickPublishModalVisible(true)}
-              className="bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-black text-xs px-6"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold text-xs px-6 shadow-none hover:scale-105 transition-all duration-200"
             >
               快速发布新任务
             </Button>
             <Button
               variant="ghost"
               onClick={() => setSelectedRowKeys([])}
-              className="text-gray-400 hover:text-white font-black text-xs"
+              className="text-gray-300 hover:text-white font-bold text-xs shadow-none"
             >
               取消选择
             </Button>
@@ -220,17 +245,17 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       )}
 
       {/* 表格 */}
-      <div className="overflow-hidden rounded-[1.5rem] border border-gray-100">
+      <div className="overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-none">
         {isLoading ? (
           <div className="p-10 space-y-5">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
           </div>
         ) : (
           <DataTable
             columns={columns}
             data={data?.results || []}
             className="border-none"
-            rowClassName="hover:bg-primary-50/20 transition-colors cursor-pointer group"
+            rowClassName="hover:bg-blue-50 transition-colors cursor-pointer group"
             onRowClick={(row) => navigate(`/test-center/quizzes/${row.id}/edit`)}
           />
         )}
@@ -238,18 +263,18 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
 
       {/* 分页 */}
       {data && data.count > 0 && (
-        <div className="flex justify-center mt-10">
-          <div className="flex items-center gap-4 bg-white p-3 rounded-2xl shadow-premium border border-gray-50">
-            <Button variant="ghost" size="icon" disabled={page === 1} onClick={() => setPage(page - 1)}>
-              <ChevronLeft className="w-5 h-5 text-gray-400" />
+        <div className="flex justify-center mt-8">
+          <div className="flex items-center gap-4 bg-white p-3 rounded-lg shadow-none border-2 border-gray-200">
+            <Button variant="ghost" size="icon" disabled={page === 1} onClick={() => setPage(page - 1)} className="shadow-none">
+              <ChevronLeft className="w-5 h-5 text-gray-500" />
             </Button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-gray-900">{page}</span>
-              <span className="text-gray-200">/</span>
-              <span className="text-sm font-bold text-gray-400">{Math.ceil(data.count / 10)}</span>
+              <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>{page}</span>
+              <span className="text-gray-300">/</span>
+              <span className="text-sm font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>{Math.ceil(data.count / 10)}</span>
             </div>
-            <Button variant="ghost" size="icon" disabled={!data.next} onClick={() => setPage(page + 1)}>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
+            <Button variant="ghost" size="icon" disabled={!data.next} onClick={() => setPage(page + 1)} className="shadow-none">
+              <ChevronRight className="w-5 h-5 text-gray-500" />
             </Button>
           </div>
         </div>
@@ -257,19 +282,32 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
 
       {/* 快速发布确认弹窗 */}
       <Dialog open={quickPublishModalVisible} onOpenChange={setQuickPublishModalVisible}>
-        <DialogContent className="rounded-[2.5rem] max-w-md p-10 border-none shadow-2xl">
+        <DialogContent className="rounded-lg max-w-md p-10 border-2 border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
           <DialogHeader>
-            <div className="w-20 h-20 bg-primary-50 text-primary-500 rounded-[1.5rem] flex items-center justify-center mb-8 mx-auto">
-              <Send className="w-10 h-10" />
+            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-8 mx-auto shadow-none">
+              <Send className="w-10 h-10" strokeWidth={2} />
             </div>
-            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">确认批量发布？</DialogTitle>
-            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+            <DialogTitle className="text-2xl font-bold text-gray-900 mb-2 text-center" style={{ fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
+              确认批量发布？
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 font-semibold text-center leading-relaxed" style={{ fontFamily: "'Outfit', sans-serif" }}>
               系统将为选中的 {selectedRowKeys.length} 份试卷各创建一个全新的学习任务。确认并继续？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button variant="ghost" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setQuickPublishModalVisible(false)}>取消</Button>
-            <Button className="flex-1 h-14 rounded-2xl bg-primary-500 hover:bg-primary-600 text-white font-bold shadow-xl shadow-primary-500/20" onClick={handleQuickPublish}>
+            <Button 
+              variant="ghost" 
+              className="flex-1 h-14 rounded-md font-bold shadow-none" 
+              onClick={() => setQuickPublishModalVisible(false)}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              取消
+            </Button>
+            <Button 
+              className="flex-1 h-14 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200" 
+              onClick={handleQuickPublish}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
               立即发布
             </Button>
           </DialogFooter>
@@ -278,19 +316,32 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
 
       {/* 删除确认对话框 */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent className="rounded-[2.5rem] max-w-md p-10 border-none shadow-2xl">
+        <DialogContent className="rounded-lg max-w-md p-10 border-2 border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
           <DialogHeader>
-            <div className="w-20 h-20 bg-error-50 text-error-500 rounded-[1.5rem] flex items-center justify-center mb-8 mx-auto">
-              <Trash2 className="w-10 h-10" />
+            <div className="w-20 h-20 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mb-8 mx-auto shadow-none">
+              <Trash2 className="w-10 h-10" strokeWidth={2} />
             </div>
-            <DialogTitle className="text-2xl font-black text-gray-900 mb-2 text-center">彻底移除此试卷？</DialogTitle>
-            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+            <DialogTitle className="text-2xl font-bold text-gray-900 mb-2 text-center" style={{ fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
+              彻底移除此试卷？
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 font-semibold text-center leading-relaxed" style={{ fontFamily: "'Outfit', sans-serif" }}>
               此操作将永久删除试卷及其所有数据映射，不可撤销。确认继续吗？
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button variant="ghost" className="flex-1 h-14 rounded-2xl font-bold" onClick={() => setDeleteId(null)}>取消</Button>
-            <Button className="flex-1 h-14 rounded-2xl bg-error-500 hover:bg-error-600 text-white font-bold shadow-xl shadow-error-500/20" onClick={handleDelete}>
+            <Button 
+              variant="ghost" 
+              className="flex-1 h-14 rounded-md font-bold shadow-none" 
+              onClick={() => setDeleteId(null)}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              取消
+            </Button>
+            <Button 
+              className="flex-1 h-14 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200" 
+              onClick={handleDelete}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
               确认删除
             </Button>
           </DialogFooter>

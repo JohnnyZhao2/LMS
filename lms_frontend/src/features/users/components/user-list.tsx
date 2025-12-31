@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import { useUsers } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
-import { UserFormModal } from "./user-form-modal"
+import { UserForm } from "./user-form"
 import { DataTable } from "@/components/ui/data-table/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -150,10 +150,10 @@ export const UserList: React.FC = () => {
             <Badge
               key={role.code}
               className={cn(
-                "border-none",
+                "border-0 shadow-none",
                 role.code === 'ADMIN' ? "bg-[#FEE2E2] text-[#DC2626]" :
                   role.code === 'MENTOR' ? "bg-[#DBEAFE] text-[#3B82F6]" :
-                    "bg-[#E0F2FE] text-[#0EA5E9]"
+                    "bg-[#DBEAFE] text-[#3B82F6]"
               )}
             >
               {role.name}
@@ -202,7 +202,7 @@ export const UserList: React.FC = () => {
         <Badge
           variant={row.original.is_active ? "success" : "secondary"}
           className={cn(
-            "border-none",
+            "border-0 shadow-none",
             row.original.is_active
               ? "bg-[#D1FAE5] text-[#10B981]"
               : "bg-[#F3F4F6] text-[#6B7280]"
@@ -218,16 +218,16 @@ export const UserList: React.FC = () => {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-md hover:bg-[#F3F4F6] hover:text-[#3B82F6]">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-md hover:bg-[#F3F4F6] hover:text-[#3B82F6] shadow-none">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-lg p-2 border border-[#E5E7EB] bg-white">
+          <DropdownMenuContent align="end" className="w-56 rounded-lg p-2 border-0 bg-white shadow-none">
             <DropdownMenuLabel className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider px-4 py-2">账号控制台</DropdownMenuLabel>
 
             <div className="space-y-1">
               <DropdownMenuItem
-                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#DBEAFE] focus:text-[#3B82F6] cursor-pointer transition-colors"
+                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#F3F4F6] focus:text-[#3B82F6] cursor-pointer transition-colors"
                 onClick={() => {
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
@@ -236,7 +236,7 @@ export const UserList: React.FC = () => {
                 <Pencil className="mr-3 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#DBEAFE] focus:text-[#3B82F6] cursor-pointer transition-colors"
+                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#F3F4F6] focus:text-[#3B82F6] cursor-pointer transition-colors"
                 onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
               >
                 <Lock className="mr-3 h-4 w-4" /> 重置密码
@@ -276,7 +276,7 @@ export const UserList: React.FC = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              className="h-14 px-6 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#3B82F6] transition-all duration-200"
+              className="h-14 px-6 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#3B82F6] transition-all duration-200 shadow-none"
               onClick={() => refetch()}
             >
               <RefreshCw className="h-5 w-5 mr-2" />
@@ -287,7 +287,7 @@ export const UserList: React.FC = () => {
                 setEditingUserId(undefined)
                 setFormModalOpen(true)
               }}
-              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
+              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
             >
               <Plus className="mr-2 h-5 w-5" />
               新增用户
@@ -298,7 +298,7 @@ export const UserList: React.FC = () => {
 
       {/* 统计网格 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white">
               <UserCheck className="h-7 w-7" />
@@ -309,9 +309,9 @@ export const UserList: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#DC2626] flex items-center justify-center text-white">
+            <div className="w-14 h-14 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white">
               <ShieldCheck className="h-7 w-7" />
             </div>
             <div>
@@ -320,7 +320,7 @@ export const UserList: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-lg bg-[#F59E0B] flex items-center justify-center text-white">
               <Users className="h-7 w-7" />
@@ -331,7 +331,7 @@ export const UserList: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-lg bg-[#10B981] flex items-center justify-center text-white">
               <Plus className="h-7 w-7" />
@@ -346,7 +346,7 @@ export const UserList: React.FC = () => {
 
       {/* 列表主体 */}
       <div>
-        <div className="bg-white rounded-lg p-8 border-0 overflow-hidden">
+        <div className="bg-white rounded-lg p-8 border-0 shadow-none overflow-hidden">
           {/* 搜索和筛选 */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
             <div className="relative flex-1 max-w-lg">
@@ -356,14 +356,14 @@ export const UserList: React.FC = () => {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium"
+                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
               />
             </div>
 
             <div className="flex items-center gap-6">
               <Button
                 onClick={handleSearch}
-                className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
+                className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
               >
                 搜索
               </Button>
@@ -393,7 +393,7 @@ export const UserList: React.FC = () => {
       </div>
 
       {/* 用户表单弹窗 */}
-      <UserFormModal
+      <UserForm
         open={formModalOpen}
         userId={editingUserId}
         onClose={() => {
@@ -410,7 +410,7 @@ export const UserList: React.FC = () => {
         open={resetPasswordDialog.open}
         onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
       >
-        <DialogContent className="rounded-lg max-w-md p-10 border border-[#E5E7EB] bg-white">
+        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
           <DialogHeader>
             <div className="w-20 h-20 bg-[#DBEAFE] text-[#3B82F6] rounded-full flex items-center justify-center mb-8 mx-auto">
               <Lock className="h-10 w-10" />
@@ -425,14 +425,14 @@ export const UserList: React.FC = () => {
             <Button
               variant="ghost"
               onClick={() => setResetPasswordDialog({ open: false })}
-              className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
+              className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] shadow-none"
             >
               取消
             </Button>
             <Button
               onClick={handleResetPassword}
               disabled={resetPassword.isPending}
-              className="flex-1 bg-[#DC2626] text-white rounded-md h-14 font-semibold hover:bg-[#B91C1C] hover:scale-105 transition-all duration-200"
+              className="flex-1 bg-[#DC2626] text-white rounded-md h-14 font-semibold hover:bg-[#B91C1C] hover:scale-105 transition-all duration-200 shadow-none"
             >
               {resetPassword.isPending ? "处理中..." : "确认重置"}
             </Button>
@@ -445,7 +445,7 @@ export const UserList: React.FC = () => {
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-lg max-w-md p-10 border border-[#E5E7EB] bg-white">
+        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
           <DialogHeader>
             <div className="w-20 h-20 bg-[#D1FAE5] text-[#10B981] rounded-full flex items-center justify-center mb-8 mx-auto">
               <ShieldCheck className="h-10 w-10" />
@@ -460,7 +460,7 @@ export const UserList: React.FC = () => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="relative bg-[#F3F4F6] rounded-lg p-8 text-center transition-all duration-200 hover:scale-[1.02]">
+            <div className="relative bg-[#F3F4F6] rounded-lg p-8 text-center transition-all duration-200 hover:scale-[1.02] shadow-none">
               <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3 block">临时密码</span>
               <code className="text-3xl font-bold text-[#3B82F6] tracking-widest font-mono">
                 {tempPasswordDialog.password}
@@ -474,7 +474,7 @@ export const UserList: React.FC = () => {
           <DialogFooter className="mt-10">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] hover:scale-105 transition-all duration-200"
+              className="w-full bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] hover:scale-105 transition-all duration-200 shadow-none"
             >
               完成并关闭
             </Button>

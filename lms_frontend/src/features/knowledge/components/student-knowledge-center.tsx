@@ -97,7 +97,7 @@ export const StudentKnowledgeCenter: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
       <PageHeader
         title="知识中心"
         subtitle="Knowledge & Resources"
@@ -105,18 +105,18 @@ export const StudentKnowledgeCenter: React.FC = () => {
         extra={
           <div className="flex items-center gap-4">
             <div className="relative group min-w-[300px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
               <Input
                 placeholder="搜索知识文档..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="pl-11 h-12 bg-white/50 border-none rounded-xl focus:ring-4 ring-primary-50 shadow-inner text-sm"
+                className="pl-11 h-14 bg-gray-100 border-none rounded-md focus:bg-white focus:border-2 focus:border-blue-600 text-sm"
               />
             </div>
             <Button
               onClick={submitSearch}
-              className="h-12 px-6 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 shadow-md shadow-primary-500/20 transition-all duration-300 transform hover:scale-105"
+              className="h-14 px-6 rounded-md bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all duration-200 hover:scale-105"
             >
               搜索
             </Button>
@@ -126,17 +126,17 @@ export const StudentKnowledgeCenter: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8 items-start">
         {/* 左侧筛选侧边栏 */}
-        <div className="glass-card rounded-[2rem] p-6 space-y-8 sticky top-24">
+        <div className="bg-white rounded-lg p-6 space-y-8 sticky top-24">
           <div>
-            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 px-2">条线分类</h4>
+            <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-6 px-2">条线分类</h4>
             <nav className="space-y-2">
               <button
                 onClick={() => handleLineTypeSelect(undefined)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200",
                   !selectedLineTypeId
-                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
                 )}
               >
                 <Home className="w-4 h-4" />
@@ -147,10 +147,10 @@ export const StudentKnowledgeCenter: React.FC = () => {
                   key={tag.id}
                   onClick={() => handleLineTypeSelect(tag.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200",
                     selectedLineTypeId === tag.id
-                      ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                      : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
                   {getLineTypeIcon(tag.name)}
@@ -161,16 +161,16 @@ export const StudentKnowledgeCenter: React.FC = () => {
           </div>
 
           {selectedLineTypeId && systemTags.length > 0 && (
-            <div className="reveal-item">
-              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 px-2">系统详情</h4>
+            <div>
+              <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-4 px-2">系统详情</h4>
               <div className="flex flex-wrap gap-2 px-1">
                 <button
                   onClick={() => toggleSystemTag(-1)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                    "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200",
                     selectedSystemTagIds.length === 0
                       ? "bg-gray-900 text-white"
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   )}
                 >
                   全部系统
@@ -180,10 +180,10 @@ export const StudentKnowledgeCenter: React.FC = () => {
                     key={tag.id}
                     onClick={() => toggleSystemTag(tag.id)}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                      "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200",
                       selectedSystemTagIds.includes(tag.id)
                         ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     )}
                   >
                     {tag.name}
@@ -197,8 +197,8 @@ export const StudentKnowledgeCenter: React.FC = () => {
         {/* 右侧列表区 */}
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <span className="text-sm font-bold text-gray-400">
-              找到 <span className="text-gray-900">{data?.count || 0}</span> 篇相关知识
+            <span className="text-sm font-semibold text-gray-500">
+              找到 <span className="text-gray-900 font-bold">{data?.count || 0}</span> 篇相关知识
             </span>
           </div>
 
@@ -208,8 +208,8 @@ export const StudentKnowledgeCenter: React.FC = () => {
             </div>
           ) : data?.results && data.results.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {data.results.map((item, index) => (
-                <div key={item.id} className={cn("reveal-item", `stagger-delay-${(index % 4) + 1}`)}>
+              {data.results.map((item) => (
+                <div key={item.id} className="group">
                   <SharedKnowledgeCard
                     item={item}
                     variant="student"
@@ -219,9 +219,9 @@ export const StudentKnowledgeCenter: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-32 bg-white/30 rounded-[2rem] border-2 border-dashed border-gray-100">
-              <Inbox className="w-16 h-16 text-gray-200 mb-4" />
-              <span className="text-lg font-bold text-gray-400">暂无知识文档</span>
+            <div className="flex flex-col items-center justify-center py-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+              <Inbox className="w-16 h-16 text-gray-400 mb-4" />
+              <span className="text-lg font-bold text-gray-500">暂无知识文档</span>
             </div>
           )}
 

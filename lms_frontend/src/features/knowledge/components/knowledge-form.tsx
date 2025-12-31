@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
@@ -577,23 +576,23 @@ export const KnowledgeForm: React.FC = () => {
   if (isEdit && detailLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-100 z-[1000]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
 
   return createPortal(
-    <div className="fixed inset-0 flex flex-col bg-gray-100 z-[1000] animate-fadeIn">
+    <div className="fixed inset-0 flex flex-col bg-gray-100 z-[1000] animate-fadeIn" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部导航栏 */}
-      <div className="flex items-center justify-between h-14 px-5 bg-white border-b border-gray-200 shrink-0">
+      <div className="flex items-center justify-between h-16 px-6 bg-white border-b-2 border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
           <button
-            className="w-9 h-9 flex items-center justify-center bg-transparent border border-gray-200 rounded-lg text-gray-600 cursor-pointer transition-all hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300"
+            className="w-10 h-10 flex items-center justify-center bg-gray-100 border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-gray-900 hover:scale-105"
             onClick={handleClose}
             title="返回"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 text-sm">
             <span
@@ -615,9 +614,9 @@ export const KnowledgeForm: React.FC = () => {
             {(['edit', 'split', 'preview'] as EditorMode[]).map((mode) => (
               <button
                 key={mode}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${editorMode === mode
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${editorMode === mode
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                   }`}
                 onClick={() => setEditorMode(mode)}
               >
@@ -629,13 +628,13 @@ export const KnowledgeForm: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <div
-            className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusInfo.isDraft
-              ? 'bg-yellow-50 text-yellow-700'
-              : 'bg-green-50 text-green-600'
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold ${statusInfo.isDraft
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-emerald-100 text-emerald-700'
               }`}
           >
             <span
-              className="w-1.5 h-1.5 rounded-full"
+              className="w-2 h-2 rounded-full"
               style={{ background: 'currentColor' }}
             />
             <span>{statusInfo.label}</span>
@@ -646,7 +645,7 @@ export const KnowledgeForm: React.FC = () => {
             size="sm"
             onClick={handleSave}
             disabled={isSubmitting}
-            className="h-9 px-4 font-medium"
+            className="h-14 px-6 font-semibold"
           >
             <Save className="w-4 h-4 mr-2" />
             保存草稿
@@ -656,7 +655,7 @@ export const KnowledgeForm: React.FC = () => {
             size="sm"
             onClick={handlePublish}
             disabled={isSubmitting}
-            className="h-9 px-4 font-medium"
+            className="h-14 px-6 font-semibold"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -674,21 +673,21 @@ export const KnowledgeForm: React.FC = () => {
         <div className="flex flex-col m-4 mr-2 shrink-0">
           {outlineCollapsed ? (
             <button
-              className="flex items-center justify-center w-8 h-8 bg-white border-none rounded-lg shadow-sm cursor-pointer text-gray-500 transition-all hover:bg-gray-50 hover:text-primary-500 hover:shadow-md"
+              className="flex items-center justify-center w-10 h-10 bg-white border-none rounded-md cursor-pointer text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-blue-600 hover:scale-105"
               onClick={() => setOutlineCollapsed(false)}
               title="展开目录"
             >
-              <PanelLeft className="w-4 h-4" />
+              <PanelLeft className="w-5 h-5" />
             </button>
           ) : (
-            <div className="w-[200px] bg-white rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0 min-h-[200px] max-h-[400px]">
-              <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider shrink-0">
+            <div className="w-[200px] bg-white rounded-lg border-2 border-gray-200 overflow-hidden flex flex-col shrink-0 min-h-[200px] max-h-[400px]">
+              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-gray-200 text-xs font-bold text-gray-700 uppercase tracking-wider shrink-0 bg-gray-50">
                 <div className="flex items-center whitespace-nowrap overflow-hidden">
                   <ListOrdered className="w-4 h-4 mr-2" />
                   目录
                 </div>
                 <button
-                  className="flex items-center justify-center w-6 h-6 p-0 border-none bg-transparent text-gray-400 cursor-pointer rounded-md transition-all hover:bg-gray-100 hover:text-gray-600 shrink-0"
+                  className="flex items-center justify-center w-6 h-6 p-0 border-none bg-transparent text-gray-500 cursor-pointer rounded-md transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 shrink-0"
                   onClick={() => setOutlineCollapsed(true)}
                   title="折叠目录"
                 >
@@ -700,9 +699,9 @@ export const KnowledgeForm: React.FC = () => {
                   outline.map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-2 py-2 text-sm text-gray-600 cursor-pointer transition-all border-l-2 border-transparent hover:bg-gray-50 hover:text-gray-900 ${item.level === 1 ? 'px-4 font-medium' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
+                      className={`flex items-center gap-2 py-2.5 text-sm text-gray-700 cursor-pointer transition-all duration-200 border-l-2 border-transparent hover:bg-blue-50 hover:text-blue-600 ${item.level === 1 ? 'px-4 font-semibold' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
                         } ${knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id
-                          ? 'bg-primary-50 text-primary-600 border-l-primary-500'
+                          ? 'bg-blue-100 text-blue-700 border-l-blue-600'
                           : ''
                         }`}
                       onClick={() => {
@@ -718,7 +717,7 @@ export const KnowledgeForm: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="p-4 text-xs text-gray-400 text-center">
+                  <div className="p-4 text-xs text-gray-500 text-center font-medium">
                     {knowledgeType === 'EMERGENCY'
                       ? '选择章节开始编辑'
                       : '使用 # ## ### 创建标题'}
@@ -730,39 +729,39 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 中间编辑区 */}
-        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-xl shadow-sm min-h-0">
+        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-lg border-2 border-gray-200 min-h-0">
           {/* 编辑器头部 */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-            <span className="text-sm font-semibold text-gray-900">
+          <div className="flex items-center justify-between px-6 py-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
+            <span className="text-sm font-bold text-gray-900">
               {knowledgeType === 'EMERGENCY' ? '应急知识内容' : '知识内容'}
             </span>
             {editorMode !== 'preview' && (
               <div className="flex items-center gap-1">
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="标题" onClick={handleHeading}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="标题" onClick={handleHeading}>
                   <FileText className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="加粗" onClick={handleBold}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="加粗" onClick={handleBold}>
                   <Bold className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="斜体" onClick={handleItalic}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="斜体" onClick={handleItalic}>
                   <Italic className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="删除线" onClick={handleStrikethrough}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="删除线" onClick={handleStrikethrough}>
                   <Strikethrough className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="代码" onClick={handleCode}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="代码" onClick={handleCode}>
                   <Code className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="链接" onClick={handleLink}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="链接" onClick={handleLink}>
                   <Link className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="无序列表" onClick={handleList}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="无序列表" onClick={handleList}>
                   <List className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="有序列表" onClick={handleOrderedList}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="有序列表" onClick={handleOrderedList}>
                   <ListOrdered className="w-4 h-4" />
                 </button>
-                <button className="w-8 h-8 flex items-center justify-center bg-transparent border-none rounded-md text-gray-500 cursor-pointer transition-all hover:bg-gray-100 hover:text-gray-700" title="表格" onClick={handleTable}>
+                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="表格" onClick={handleTable}>
                   <Table className="w-4 h-4" />
                 </button>
               </div>
@@ -772,12 +771,12 @@ export const KnowledgeForm: React.FC = () => {
           {/* 编辑内容 */}
           {knowledgeType === 'EMERGENCY' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex px-5 border-b border-gray-100 overflow-x-auto gap-1">
+              <div className="flex px-6 border-b-2 border-gray-200 overflow-x-auto gap-1 bg-gray-50">
                 {EMERGENCY_TABS.map((tab) => (
                   <button
                     key={tab.key}
-                    className={`px-4 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-500 text-sm font-medium cursor-pointer transition-all whitespace-nowrap hover:text-gray-700 ${activeEmergencyTab === tab.key
-                      ? 'text-primary-500 border-b-primary-500'
+                    className={`px-5 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-600 text-sm font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:text-blue-600 ${activeEmergencyTab === tab.key
+                      ? 'text-blue-600 border-b-blue-600 bg-blue-50'
                       : ''
                       }`}
                     onClick={() => setActiveEmergencyTab(tab.key)}
@@ -805,7 +804,7 @@ export const KnowledgeForm: React.FC = () => {
                       onChange={(e) => setCurrentEmergencyContent(e.target.value)}
                       placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
                     />
-                    <Separator orientation="vertical" className="mx-4" />
+                    <div className="w-[2px] bg-gray-200 mx-4" />
                     <div
                       ref={splitEmergencyPreviewRef}
                       className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
@@ -825,7 +824,7 @@ export const KnowledgeForm: React.FC = () => {
                   />
                 )}
               </div>
-              {errors.emergency && <div className="text-[11px] text-red-500 px-5 pb-5">{errors.emergency}</div>}
+              {errors.emergency && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.emergency}</div>}
             </div>
           ) : (
             <div className="flex-1 overflow-hidden flex flex-col relative">
@@ -847,7 +846,7 @@ export const KnowledgeForm: React.FC = () => {
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="在此输入知识内容，支持 Markdown 格式..."
                   />
-                  <Separator orientation="vertical" className="mx-4" />
+                  <div className="w-[2px] bg-gray-200 mx-4" />
                   <div
                     ref={splitPreviewRef}
                     className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
@@ -866,58 +865,62 @@ export const KnowledgeForm: React.FC = () => {
                   placeholder="在此输入知识内容，支持 Markdown 格式..."
                 />
               )}
-              {errors.content && <div className="text-[11px] text-red-500 mt-2">{errors.content}</div>}
+              {errors.content && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.content}</div>}
             </div>
           )}
         </div>
 
         {/* 右侧元数据面板 */}
-        <div className="w-[360px] flex flex-col bg-white m-4 ml-2 rounded-xl shadow-sm overflow-y-auto shrink-0">
+        <div className="w-[360px] flex flex-col bg-white m-4 ml-2 rounded-lg border-2 border-gray-200 overflow-y-auto shrink-0">
           {/* 基本信息 */}
-          <div className="p-5 border-b border-gray-100">
+          <div className="p-6 border-b-2 border-gray-200 bg-gray-50">
             <div className="flex items-center gap-2 mb-4">
-              <FileText className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-semibold text-gray-900">基本信息</span>
+              <div className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-md">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-gray-900">基本信息</span>
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-600 mb-2">标题</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">标题</label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="输入知识文档标题"
-                className="h-9"
               />
-              {errors.title && <div className="text-[11px] text-red-500 mt-1">{errors.title}</div>}
+              {errors.title && <div className="text-sm font-semibold text-red-600 mt-2">{errors.title}</div>}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-2">知识概要</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">知识概要</label>
               <textarea
-                className="w-full p-3 bg-white border border-gray-200 rounded-md text-sm leading-relaxed resize-y min-h-[80px] transition-all focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/10"
+                className="w-full p-4 bg-gray-100 border-none rounded-md text-sm leading-relaxed resize-y min-h-[100px] transition-all duration-200 focus:outline-none focus:bg-white focus:border-2 focus:border-blue-600"
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="简要描述这篇知识的核心内容（用于卡片预览展示）"
                 rows={2}
                 maxLength={500}
+                style={{ fontFamily: "'Outfit', sans-serif" }}
               />
-              <div className="text-xs text-gray-400 mt-1 text-right">{summary.length}/500 字符</div>
+              <div className="text-xs text-gray-500 mt-2 text-right font-medium">{summary.length}/500 字符</div>
             </div>
           </div>
 
           {/* 分类信息 */}
-          <div className="p-5 border-b border-gray-100">
+          <div className="p-6 border-b-2 border-gray-200">
             <div className="flex items-center gap-2 mb-4">
-              <Settings className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-semibold text-gray-900">分类信息</span>
+              <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-md">
+                <Settings className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-gray-900">分类信息</span>
             </div>
 
             <div className="flex flex-col gap-5">
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">文档类型</label>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">文档类型</label>
                   <Select value={knowledgeType} onValueChange={(v) => setKnowledgeType(v as KnowledgeType)}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger>
                       <SelectValue placeholder="选择类型" />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
@@ -928,9 +931,9 @@ export const KnowledgeForm: React.FC = () => {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">条线类型</label>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">条线类型</label>
                   <Select value={lineTypeId?.toString() || ''} onValueChange={(v) => setLineTypeId(Number(v))}>
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger>
                       <SelectValue placeholder="选择" />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
@@ -939,22 +942,22 @@ export const KnowledgeForm: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.lineTypeId && <div className="text-[11px] text-red-500">{errors.lineTypeId}</div>}
+                  {errors.lineTypeId && <div className="text-sm font-semibold text-red-600 mt-1">{errors.lineTypeId}</div>}
                 </div>
               </div>
 
               {/* 系统标签 */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">系统标签</label>
-                <div className="flex flex-wrap gap-1.5 min-h-[24px] p-2 bg-gray-50 rounded-md border border-gray-100 border-dashed transition-all hover:bg-white hover:border-gray-300">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">系统标签</label>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
                   {systemTagNames.length > 0 ? systemTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
+                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 rounded-md">
                       {tag}
                       <button
-                        className="ml-1 hover:text-red-500 transition-colors"
+                        className="ml-1.5 hover:text-red-600 transition-colors"
                         onClick={() => setSystemTagNames(prev => prev.filter(t => t !== tag))}
                       >
-                        ×
+                        <X className="w-3 h-3" />
                       </button>
                     </Badge>
                   )) : (
@@ -970,7 +973,7 @@ export const KnowledgeForm: React.FC = () => {
                       }
                     }}
                   >
-                    <SelectTrigger className="h-8 text-xs text-gray-500">
+                    <SelectTrigger className="h-14 text-sm">
                       <SelectValue placeholder="选择已有..." />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
@@ -979,7 +982,7 @@ export const KnowledgeForm: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     <Input
                       placeholder="新建..."
                       value={systemTagInput}
@@ -990,10 +993,10 @@ export const KnowledgeForm: React.FC = () => {
                           handleAddSystemTag();
                         }
                       }}
-                      className="h-8 text-xs flex-1"
+                      className="flex-1"
                     />
-                    <Button variant="ghost" size="sm" onClick={handleAddSystemTag} className="h-8 w-8 p-0 border border-gray-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200">
-                      <Plus className="w-3 h-3" />
+                    <Button variant="outline" size="sm" onClick={handleAddSystemTag} className="h-14 w-14">
+                      <Plus className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -1001,16 +1004,16 @@ export const KnowledgeForm: React.FC = () => {
 
               {/* 操作标签 */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">操作标签</label>
-                <div className="flex flex-wrap gap-1.5 min-h-[24px] p-2 bg-gray-50 rounded-md border border-gray-100 border-dashed transition-all hover:bg-white hover:border-gray-300">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">操作标签</label>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
                   {operationTagNames.length > 0 ? operationTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs bg-white border-gray-200 text-gray-700 hover:bg-gray-50">
+                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 rounded-md">
                       {tag}
                       <button
-                        className="ml-1 hover:text-red-500 transition-colors"
+                        className="ml-1.5 hover:text-red-600 transition-colors"
                         onClick={() => setOperationTagNames(prev => prev.filter(t => t !== tag))}
                       >
-                        ×
+                        <X className="w-3 h-3" />
                       </button>
                     </Badge>
                   )) : (
@@ -1026,7 +1029,7 @@ export const KnowledgeForm: React.FC = () => {
                       }
                     }}
                   >
-                    <SelectTrigger className="h-8 text-xs text-gray-500">
+                    <SelectTrigger className="h-14 text-sm">
                       <SelectValue placeholder="选择已有..." />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
@@ -1035,7 +1038,7 @@ export const KnowledgeForm: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2">
                     <Input
                       placeholder="新建..."
                       value={operationTagInput}
@@ -1046,10 +1049,10 @@ export const KnowledgeForm: React.FC = () => {
                           handleAddOperationTag();
                         }
                       }}
-                      className="h-8 text-xs flex-1"
+                      className="flex-1"
                     />
-                    <Button variant="ghost" size="sm" onClick={handleAddOperationTag} className="h-8 w-8 p-0 border border-gray-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200">
-                      <Plus className="w-3 h-3" />
+                    <Button variant="outline" size="sm" onClick={handleAddOperationTag} className="h-14 w-14">
+                      <Plus className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -1058,21 +1061,23 @@ export const KnowledgeForm: React.FC = () => {
           </div>
 
           {/* 发布状态 */}
-          <div className="p-5">
+          <div className="p-6 bg-gray-50">
             <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-semibold text-gray-900">发布状态</span>
+              <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-md">
+                <CheckCircle className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-bold text-gray-900">发布状态</span>
             </div>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">当前状态</span>
-                <span className={`flex items-center gap-1 text-xs font-semibold ${statusInfo.isDraft ? 'text-yellow-500' : 'text-green-500'}`}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
+            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-700">当前状态</span>
+                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold ${statusInfo.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
                   {statusInfo.isDraft ? '待发布' : '已发布'}
                 </span>
               </div>
-              <div className="text-xs text-gray-500 leading-relaxed">
+              <div className="text-xs text-gray-600 leading-relaxed font-medium">
                 {statusInfo.isDraft
                   ? '当前为草稿状态，保存后可以继续编辑。点击「保存并发布」后，该知识将对所有用户可见。'
                   : '该知识已发布，修改后需要重新发布才能更新内容。'

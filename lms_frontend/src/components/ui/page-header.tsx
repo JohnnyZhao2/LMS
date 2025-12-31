@@ -76,19 +76,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 标题区域 */}
         <div className="flex items-center gap-6">
           {icon && (
-            <div className="w-20 h-20 bg-gradient-to-br from-clay-primary to-clay-secondary rounded-3xl flex items-center justify-center shadow-clay-btn relative overflow-hidden group animate-breathe">
+            <div className="w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "text-white w-10 h-10 relative z-10")
+                className: cn(icon.props.className, "text-white w-10 h-10")
               }) : icon}
             </div>
           )}
           <div>
-            <h2 className="text-4xl md:text-5xl font-black text-clay-foreground tracking-tighter leading-none font-display">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
               {title}
             </h2>
             {subtitle && (
-              <p className="text-lg font-bold text-clay-muted uppercase tracking-widest mt-2 flex items-center gap-3 leading-none italic opacity-60">
-                <span className="w-10 h-[3px] bg-clay-primary/30 rounded-full" />
+              <p className="text-lg font-semibold text-gray-600 uppercase tracking-wider mt-2 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="w-10 h-1 bg-blue-600 rounded-full" />
                 {subtitle}
               </p>
             )}

@@ -34,30 +34,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [currentRole])
 
   return (
-    <div className={cn("min-h-screen relative selection:bg-primary-500/10 selection:text-primary-600", themeClass)}>
-      {/* 动态渐变背景 */}
-      <div className="bg-mesh" aria-hidden="true" />
-
-      {/* 背景点状装饰 */}
-      <div className="fixed inset-0 bg-dots opacity-[0.03] pointer-events-none" aria-hidden="true" />
+    <div className={cn("min-h-screen relative bg-gray-100", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
+      {/* 扁平几何背景装饰 */}
+      <div className="fixed top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full pointer-events-none" aria-hidden="true" />
+      <div className="fixed bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full pointer-events-none" aria-hidden="true" />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/5 rounded-full pointer-events-none" aria-hidden="true" />
 
       {/* Header */}
       <Header />
 
       {/* Main content area */}
       <main
-        className="reveal-item pt-24 px-6 pb-12 mx-auto w-full transition-all duration-500"
+        className="pt-24 px-6 pb-12 mx-auto w-full"
         style={{
           maxWidth: "var(--container-max-width, 1400px)"
         }}
       >
         {children}
       </main>
-
-      {/* 装饰性光晕 - 右下角 */}
-      <div className="fixed -bottom-32 -right-32 w-96 h-96 bg-primary-500/5 blur-[120px] rounded-full pointer-events-none transition-colors duration-1000" />
-      {/* 装饰性光晕 - 左中 */}
-      <div className="fixed top-1/2 -left-32 w-80 h-80 bg-primary-500/5 blur-[100px] rounded-full pointer-events-none transition-colors duration-1000" />
     </div>
   )
 }
