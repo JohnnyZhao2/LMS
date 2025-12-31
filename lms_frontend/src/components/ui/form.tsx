@@ -73,6 +73,12 @@ const FormItemContext = React.createContext<FormItemContextValue>(
   {} as FormItemContextValue
 )
 
+/**
+ * FormItem 组件 - 平面设计系统
+ * 
+ * 特性：
+ * - 内部元素间距 space-y-2 (8px)
+ */
 const FormItem = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -87,6 +93,13 @@ const FormItem = React.forwardRef<
 })
 FormItem.displayName = "FormItem"
 
+/**
+ * FormLabel 组件 - 平面设计系统
+ * 
+ * 特性：
+ * - 默认使用 Label 的标准变体（uppercase, tracking-wider）
+ * - 错误状态显示红色
+ */
 const FormLabel = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
@@ -96,7 +109,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={cn(error && "text-error-500", className)}
+      className={cn(error && "text-red-600", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -126,6 +139,13 @@ const FormControl = React.forwardRef<
 })
 FormControl.displayName = "FormControl"
 
+/**
+ * FormDescription 组件 - 平面设计系统
+ * 
+ * 特性：
+ * - 小号文本，灰色
+ * - 用于字段说明
+ */
 const FormDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -136,13 +156,21 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-[0.8rem] text-gray-500", className)}
+      className={cn("text-xs font-normal text-gray-500", className)}
       {...props}
     />
   )
 })
 FormDescription.displayName = "FormDescription"
 
+/**
+ * FormMessage 组件 - 平面设计系统
+ * 
+ * 特性：
+ * - 错误消息样式
+ * - 红色文本，中等字重
+ * - 小号字体
+ */
 const FormMessage = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -158,7 +186,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-[0.8rem] font-medium text-error-500", className)}
+      className={cn("text-xs font-medium text-red-600", className)}
       {...props}
     >
       {body}

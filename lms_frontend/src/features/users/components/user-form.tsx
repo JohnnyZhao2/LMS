@@ -213,7 +213,6 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <Input
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
-                  className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-base px-4"
                   placeholder="请输入姓名"
                 />
                 {errors.username && <p className="text-xs font-medium text-[#DC2626]">{errors.username}</p>}
@@ -224,7 +223,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <Input
                   value={formData.employee_id}
                   onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                  className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-mono font-medium text-base px-4"
+                  className="font-mono"
                   placeholder="E.g. EMP001"
                 />
                 {errors.employee_id && <p className="text-xs font-medium text-[#DC2626]">{errors.employee_id}</p>}
@@ -237,7 +236,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                     type="password"
                     value={formData.password}
                     onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-base px-4 tracking-widest"
+                    className="tracking-widest"
                     placeholder="••••••••"
                   />
                   {errors.password && <p className="text-xs font-medium text-[#DC2626]">{errors.password}</p>}
@@ -266,7 +265,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                         key={dept.id}
                         onClick={() => setFormData({ ...formData, department_id: dept.id })}
                         className={cn(
-                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-12 rounded-md transition-all duration-200",
+                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-14 rounded-md transition-all duration-200",
                           active
                             ? "bg-[#10B981] text-white"
                             : "bg-[#F3F4F6] border-0 text-[#111827] hover:bg-[#E5E7EB]"
@@ -289,12 +288,12 @@ export const UserForm: React.FC<UserFormProps> = ({
                   value={formData.mentor_id?.toString() || ''}
                   onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
                 >
-                  <SelectTrigger className="h-14 rounded-md bg-[#F3F4F6] border-0 hover:bg-[#E5E7EB] focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-[#111827] px-4 text-base">
+                  <SelectTrigger>
                     <SelectValue placeholder="选择带教导师..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-md border border-[#E5E7EB] z-[9999] bg-white p-2" sideOffset={8}>
+                  <SelectContent className="max-h-60 z-[9999]" sideOffset={8}>
                     {mentors.filter(m => !userId || m.id !== userId).map(m => (
-                      <SelectItem key={m.id} value={m.id.toString()} className="rounded-md py-3 px-4 my-0.5 cursor-pointer focus:bg-[#DBEAFE] data-[state=checked]:bg-[#DBEAFE]">
+                      <SelectItem key={m.id} value={m.id.toString()}>
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8 rounded-full">
                             <AvatarFallback className="bg-[#3B82F6] text-white text-xs font-bold">
