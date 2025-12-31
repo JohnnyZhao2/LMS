@@ -134,13 +134,6 @@ class SubmitExamView(APIView):
     def post(self, request, pk):
         submission = self.get_submission(pk, request.user)
         
-        # Check it's an exam submission
-        if not submission.is_exam:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='此接口仅支持考试任务'
-            )
-        
         # Check submission is in progress
         if submission.status != 'IN_PROGRESS':
             raise BusinessError(
@@ -148,8 +141,8 @@ class SubmitExamView(APIView):
                 message='此答卷已提交'
             )
         
-        # Submit the exam
-        submission.submit()
+        # Submit the exam (is_practice=False)
+        submission.submit(is_practice=False)
         
         # Refresh to get updated data
         submission.refresh_from_db()

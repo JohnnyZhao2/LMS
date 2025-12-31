@@ -13,12 +13,12 @@ import {
   RotateCw
 } from 'lucide-react';
 import { useMentorDashboard } from '../api/mentor-dashboard';
-import { useNavigate } from 'react-router-dom';
+
 import { ROUTES } from '@/config/routes';
-import { Card, Button, StatCard, PageHeader, StatusBadge, Skeleton } from '@/components/ui';
+import { Card, Button, StatCard, PageHeader, StatusBadge, Skeleton, ActionCard } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
-import { cn } from '@/lib/utils';
+
 
 /**
  * STUDIO ADMIN DASHBOARD
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 export const AdminDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
   const { data: knowledgeStats, isLoading: knowledgeStatsLoading } = useKnowledgeStats();
-  const navigate = useNavigate();
+
   const { user } = useAuth();
 
   // Mock chart heights for aesthetics
@@ -110,29 +110,38 @@ export const AdminDashboard: React.FC = () => {
             快捷操作
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { label: '成员管理', description: '管理权限与身份', icon: Users, route: ROUTES.USERS, color: 'text-primary-500', bg: 'bg-primary-50' },
-              { label: '资源库', description: '编排知识与文档', icon: Database, route: ROUTES.ADMIN_KNOWLEDGE, color: 'text-purple-500', bg: 'bg-purple-50' },
-              { label: '测评引擎', description: '试卷与题库维护', icon: ClipboardCheck, route: ROUTES.TEST_CENTER, color: 'text-pink-500', bg: 'bg-pink-50' },
-              { label: '系统审计', description: '查看操作与日志', icon: Shield, route: ROUTES.ANALYTICS, color: 'text-orange-500', bg: 'bg-orange-50' },
-            ].map((cmd, i) => (
-              <div
-                key={i}
-                onClick={() => navigate(cmd.route)}
-                className="group relative bg-white p-6 rounded-[2rem] shadow-sm border border-transparent hover:border-primary-100 hover:shadow-xl hover:shadow-primary-500/5 transition-all duration-300 cursor-pointer overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full translate-x-10 -translate-y-10 group-hover:scale-110 transition-transform duration-500" />
-                <div className="relative z-10 flex flex-col gap-4">
-                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:rotate-12", cmd.bg)}>
-                    <cmd.icon className={cn("w-7 h-7", cmd.color)} />
-                  </div>
-                  <div>
-                    <div className="text-lg font-black text-gray-900 mb-1 group-hover:text-primary-600 transition-colors">{cmd.label}</div>
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wide">{cmd.description}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <ActionCard
+              title="成员管理"
+              description="管理权限与身份"
+              icon={Users}
+              route={ROUTES.USERS}
+              iconColor="text-[#3B82F6]"
+              iconBg="bg-[#DBEAFE]"
+            />
+            <ActionCard
+              title="资源库"
+              description="编排知识与文档"
+              icon={Database}
+              route={ROUTES.ADMIN_KNOWLEDGE}
+              iconColor="text-[#8B5CF6]"
+              iconBg="bg-[#EDE9FE]"
+            />
+            <ActionCard
+              title="测评引擎"
+              description="试卷与题库维护"
+              icon={ClipboardCheck}
+              route={ROUTES.TEST_CENTER}
+              iconColor="text-[#EC4899]"
+              iconBg="bg-[#FCE7F3]"
+            />
+            <ActionCard
+              title="系统审计"
+              description="查看操作与日志"
+              icon={Shield}
+              route={ROUTES.ANALYTICS}
+              iconColor="text-[#F97316]"
+              iconBg="bg-[#FFEDD5]"
+            />
           </div>
         </div>
 

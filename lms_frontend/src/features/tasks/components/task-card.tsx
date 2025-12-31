@@ -12,6 +12,7 @@ import {
   StopCircle,
   BarChart3,
   ChevronRight,
+  Activity,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -100,20 +101,32 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const managerTask = !isStudentView ? (task as TaskListItem) : null;
 
   const hasQuiz = managerTask ? managerTask.quiz_count > 0 : (studentTask?.has_quiz ?? false);
+  const hasKnowledge = managerTask ? managerTask.knowledge_count > 0 : (studentTask?.has_knowledge ?? false);
 
-  const typeConfig = hasQuiz
-    ? {
-      icon: FileText,
-      color: 'var(--color-primary-500)',
-      gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
-      label: '考核',
+  const missionConfig = React.useMemo(() => {
+    if (hasQuiz && hasKnowledge) {
+      return {
+        icon: Activity,
+        color: 'var(--color-primary-500)',
+        gradient: 'linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-purple-500) 100%)',
+        label: '综合任务',
+      };
     }
-    : {
+    if (hasQuiz) {
+      return {
+        icon: FileText,
+        color: 'var(--color-purple-500)',
+        gradient: 'linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-pink-500) 100%)',
+        label: '考核任务',
+      };
+    }
+    return {
       icon: BookOpen,
       color: 'var(--color-success-500)',
       gradient: 'linear-gradient(135deg, var(--color-success-500) 0%, var(--color-cyan-500) 100%)',
-      label: '知识',
+      label: '知识任务',
     };
+  }, [hasQuiz, hasKnowledge]);
 
   const managerClosed = managerTask?.is_closed ?? false;
   const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
@@ -134,19 +147,19 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
       onClick={() => navigate(`/tasks/${targetTaskId}`)}
     >
       {/* 装饰性背景光效 */}
-      <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-3xl pointer-events-none" style={{ background: typeConfig.color }} />
+      <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-0 group-hover:opacity-20 transition-opacity blur-3xl pointer-events-none" style={{ background: missionConfig.color }} />
 
       {/* 状态排布 */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:rotate-6"
-            style={{ background: typeConfig.gradient }}
+            style={{ background: missionConfig.gradient }}
           >
-            <typeConfig.icon className="w-6 h-6" />
+            <missionConfig.icon className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">{typeConfig.label}</span>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">{missionConfig.label}</span>
             <span className="text-[10px] font-bold text-gray-300">ID: {targetTaskId}</span>
           </div>
         </div>
@@ -197,7 +210,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-primary-500" />
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">进度</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">进度同步</span>
               </div>
               <span className="text-lg font-black text-gray-900 italic">{progress?.percentage ?? 0}<span className="text-xs font-bold text-gray-300 ml-0.5">%</span></span>
             </div>
@@ -206,12 +219,15 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 className="h-full bg-primary-500 rounded-full transition-all duration-1000 ease-out"
                 style={{
                   width: `${progress?.percentage ?? 0}%`,
-                  background: typeConfig.gradient
+                  background: missionConfig.gradient
                 }}
               />
             </div>
             <div className="flex justify-between items-center text-[10px] font-black text-gray-400 uppercase">
-              <span>模块同步</span>
+              <div className="flex gap-4">
+                {hasKnowledge && <span>知识: {progress?.knowledge_completed ?? 0}/{progress?.knowledge_total ?? 0}</span>}
+                {hasQuiz && <span>测验: {progress?.quiz_completed ?? 0}/{progress?.quiz_total ?? 0}</span>}
+              </div>
               <span className="text-gray-900">{progress?.completed ?? 0} / {progress?.total ?? 0}</span>
             </div>
           </div>

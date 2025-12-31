@@ -8,6 +8,7 @@ import { QuizTab } from './quiz-tab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { ContentPanel } from '@/components/ui';
 
 /**
  * 测试治理中心 - 扁平设计系统版本
@@ -40,8 +41,8 @@ export const TestCenter: React.FC = () => {
   };
 
   return (
-    <div 
-      className="flex flex-col gap-8" 
+    <div
+      className="flex flex-col gap-8"
       style={{ fontFamily: "'Outfit', sans-serif" }}
     >
       {/* 顶部控制面板 */}
@@ -49,7 +50,7 @@ export const TestCenter: React.FC = () => {
         {/* 标题区域 */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-3">
-            <h2 
+            <h2
               className="text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-4"
               style={{ fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}
             >
@@ -58,7 +59,7 @@ export const TestCenter: React.FC = () => {
               </div>
               测试治理中心
             </h2>
-            <p 
+            <p
               className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-3"
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >
@@ -96,8 +97,8 @@ export const TestCenter: React.FC = () => {
               onClick={() => handleTabChange('questions')}
               className={cn(
                 "flex items-center gap-3 px-6 py-3 rounded-md text-sm font-bold transition-all duration-200",
-                activeTab === 'questions' 
-                  ? "bg-white text-gray-900 shadow-none" 
+                activeTab === 'questions'
+                  ? "bg-white text-gray-900 shadow-none"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
               style={{ fontFamily: "'Outfit', sans-serif" }}
@@ -109,8 +110,8 @@ export const TestCenter: React.FC = () => {
               onClick={() => handleTabChange('quizzes')}
               className={cn(
                 "flex items-center gap-3 px-6 py-3 rounded-md text-sm font-bold transition-all duration-200",
-                activeTab === 'quizzes' 
-                  ? "bg-white text-gray-900 shadow-none" 
+                activeTab === 'quizzes'
+                  ? "bg-white text-gray-900 shadow-none"
                   : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               )}
               style={{ fontFamily: "'Outfit', sans-serif" }}
@@ -124,17 +125,17 @@ export const TestCenter: React.FC = () => {
 
       {/* 动态内容区域 */}
       <div className="flex-1">
-        <div className="bg-white rounded-lg p-8 min-h-[600px] shadow-none relative overflow-hidden">
+        <ContentPanel padding="lg" className="min-h-[600px] relative overflow-hidden">
           {/* 背景装饰几何形状 */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -mr-32 -mt-32 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/5 rounded-full -ml-24 -mb-24 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#3B82F6]/5 rounded-full -mr-32 -mt-32 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#10B981]/5 rounded-full -ml-24 -mb-24 pointer-events-none" />
 
           {activeTab === 'questions' ? (
             <QuestionTab search={search} />
           ) : (
             <QuizTab onQuickPublish={handleQuickPublish} search={search} />
           )}
-        </div>
+        </ContentPanel>
       </div>
     </div>
   );

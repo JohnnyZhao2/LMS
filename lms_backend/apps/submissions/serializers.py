@@ -82,6 +82,9 @@ class SubmissionListSerializer(serializers.ModelSerializer):
 class SubmissionDetailSerializer(serializers.ModelSerializer):
     """Serializer for submission detail view."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
+    quiz_type = serializers.CharField(source='quiz.quiz_type', read_only=True)
+    quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
+    quiz_duration = serializers.IntegerField(source='quiz.duration', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     task_title = serializers.CharField(source='task.title', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -92,8 +95,8 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = [
-            'id', 'quiz', 'quiz_title', 'user', 'user_name',
-            'task_title', 'attempt_number',
+            'id', 'quiz', 'quiz_title', 'quiz_type', 'quiz_type_display', 'quiz_duration',
+            'user', 'user_name', 'task_title', 'attempt_number',
             'status', 'status_display',
             'total_score', 'obtained_score', 'is_passed', 'pass_score',
             'started_at', 'submitted_at', 'remaining_seconds',
@@ -418,6 +421,139 @@ class SubmitExamSerializer(serializers.Serializer):
     - Property 32: 纯客观题直接完成
     """
     pass  # No additional fields needed
+
+
+class StartQuizSerializer(serializers.Serializer):
+    """
+    统一的开始答题 Serializer，根据 quiz_type 自动判断行为。
+    
+    - PRACTICE: 允许多次提交，任务完成后仍可继续
+    - EXAM: 只能提交一次，检查时间窗口
+    """
+    assignment_id = serializers.IntegerField(help_text='任务分配ID')
+    quiz_id = serializers.IntegerField(help_text='试卷ID')
+    
+    def validate(self, attrs):
+        """Validate and prepare for starting a quiz."""
+        request = self.context.get('request')
+        user = request.user
+        assignment_id = attrs['assignment_id']
+        quiz_id = attrs['quiz_id']
+        
+        # Check task assignment exists
+        try:
+            assignment = TaskAssignment.objects.select_related('task').get(
+                id=assignment_id,
+                assignee=user,
+                task__is_deleted=False
+            )
+        except TaskAssignment.DoesNotExist:
+            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
+        
+        # Check it's a task with quizzes
+        if not assignment.task.has_quiz:
+            raise serializers.ValidationError({'assignment_id': '此任务不包含试卷'})
+        
+        # Check quiz is part of the task
+        try:
+            task_quiz = TaskQuiz.objects.select_related('quiz').get(
+                task_id=assignment.task_id, quiz_id=quiz_id
+            )
+        except TaskQuiz.DoesNotExist:
+            raise serializers.ValidationError({'quiz_id': '该试卷不在此任务中'})
+        
+        quiz = task_quiz.quiz
+        if quiz.is_deleted:
+            raise serializers.ValidationError({'quiz_id': '试卷不存在'})
+        
+        is_exam = quiz.quiz_type == 'EXAM'
+        task = assignment.task
+        
+        if is_exam:
+            # 考试模式：检查时间窗口和提交限制
+            now = timezone.now()
+            if now > task.deadline:
+                raise serializers.ValidationError({'assignment_id': '任务已结束'})
+            
+            # 检查是否已提交过
+            existing_submission = Submission.objects.filter(
+                task_assignment=assignment,
+                quiz_id=quiz_id,
+                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            ).first()
+            if existing_submission:
+                raise serializers.ValidationError({'quiz_id': '您已提交过此考试，无法重新作答'})
+            
+            # 检查是否有进行中的
+            in_progress = Submission.objects.filter(
+                task_assignment=assignment,
+                quiz_id=quiz_id,
+                status='IN_PROGRESS'
+            ).first()
+            attrs['in_progress_submission'] = in_progress
+        else:
+            attrs['in_progress_submission'] = None
+        
+        attrs['assignment'] = assignment
+        attrs['quiz'] = quiz
+        attrs['task'] = task
+        attrs['task_quiz'] = task_quiz
+        attrs['is_exam'] = is_exam
+        return attrs
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        """Create or return existing submission."""
+        assignment = validated_data['assignment']
+        task_quiz = validated_data['task_quiz']
+        quiz = validated_data['quiz']
+        is_exam = validated_data['is_exam']
+        in_progress = validated_data.get('in_progress_submission')
+        user = self.context['request'].user
+        
+        # 如果是考试模式且有进行中的提交，直接返回
+        if is_exam and in_progress:
+            return in_progress
+        
+        # 获取特定版本的试卷
+        quiz_version = task_quiz.get_versioned_quiz()
+        total_score = quiz_version.total_score
+        
+        # 计算 attempt_number
+        if is_exam:
+            attempt_number = 1
+        else:
+            existing_count = Submission.objects.filter(
+                task_assignment=assignment,
+                quiz=quiz_version
+            ).count()
+            attempt_number = existing_count + 1
+        
+        # 计算 remaining_seconds（考试模式使用 quiz.duration）
+        remaining_seconds = None
+        if is_exam and quiz.duration:
+            remaining_seconds = quiz.duration * 60  # 分钟转秒
+        
+        # Create submission
+        submission = Submission.objects.create(
+            task_assignment=assignment,
+            quiz=quiz_version,
+            user=user,
+            attempt_number=attempt_number,
+            status='IN_PROGRESS',
+            total_score=total_score,
+            remaining_seconds=remaining_seconds
+        )
+        
+        # 创建答案记录
+        questions = quiz_version.get_ordered_questions()
+        for relation in questions:
+            Answer.objects.create(
+                submission=submission,
+                question_id=relation.question_id
+            )
+        
+        return submission
 
 
 # Grading serializers

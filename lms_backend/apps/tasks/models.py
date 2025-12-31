@@ -233,6 +233,61 @@ class TaskAssignment(TimestampMixin, models.Model):
         """检查并更新逾期状态"""
         if self.is_overdue and self.status not in ['COMPLETED', 'OVERDUE']:
             self.mark_overdue()
+            
+    def get_progress_data(self):
+        """
+        计算详细进度数据，包括知识点和测验。
+        """
+        task = self.task
+        total_knowledge = task.task_knowledge.count()
+        total_quizzes = task.task_quizzes.count()
+        total = total_knowledge + total_quizzes
+        
+        if total == 0:
+            return {
+                'completed': 0,
+                'total': 0,
+                'percentage': 100,
+                'knowledge_total': 0,
+                'knowledge_completed': 0,
+                'quiz_total': 0,
+                'quiz_completed': 0
+            }
+        
+        # 1. 知识文档进度
+        completed_knowledge = self.knowledge_progress.filter(is_completed=True).count()
+        
+        # 2. 试卷完成统计
+        # 每个关联的试卷只要有至少一个非答题中的 submission 就算该项完成
+        from apps.submissions.models import Submission
+        completed_quizzes = Submission.objects.filter(
+            task_assignment=self,
+            status__in=['SUBMITTED', 'GRADING', 'GRADED']
+        ).values('quiz_id').distinct().count()
+        
+        completed = completed_knowledge + completed_quizzes
+        
+        return {
+            'completed': completed,
+            'total': total,
+            'knowledge_total': total_knowledge,
+            'knowledge_completed': completed_knowledge,
+            'quiz_total': total_quizzes,
+            'quiz_completed': completed_quizzes,
+            'percentage': round(completed / total * 100, 1)
+        }
+
+    def check_completion(self):
+        """
+        检查并更新任务完成状态。
+        如果所有子项（知识点+测验）都已完成，则标记任务为已完成。
+        """
+        progress = self.get_progress_data()
+        if progress['completed'] >= progress['total'] and progress['total'] > 0:
+            if self.status != 'COMPLETED':
+                self.mark_completed()
+            return True
+        return False
 
 
 class TaskKnowledge(TimestampMixin, models.Model):
@@ -423,20 +478,4 @@ class KnowledgeLearningProgress(TimestampMixin, models.Model):
     
     def _check_task_completion(self):
         """检查任务是否应该自动完成"""
-        assignment = self.assignment
-        task = assignment.task
-        
-        # 检查所有知识是否都已完成
-        total_knowledge = task.task_knowledge.count()
-        completed_knowledge = assignment.knowledge_progress.filter(
-            is_completed=True
-        ).count()
-        
-        # 检查所有试卷是否都已完成（通过 submission 检查）
-        total_quizzes = task.task_quizzes.count()
-        # TODO: 需要检查试卷提交状态
-        
-        # 如果没有试卷，只检查知识完成情况
-        if total_quizzes == 0:
-            if total_knowledge > 0 and completed_knowledge >= total_knowledge:
-                assignment.mark_completed()
+        self.assignment.check_completion()

@@ -8,10 +8,8 @@ import {
   CheckCircle,
   FileText,
 } from 'lucide-react';
-import { useStartPractice } from '../api/start-practice';
-import { useStartExam } from '../api/start-exam';
+import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';
 import { useSaveAnswer } from '../api/save-answer';
-import { useSubmit } from '../api/submit';
 import { QuestionCard } from './question-card';
 import { Timer } from './timer';
 import {
@@ -32,16 +30,11 @@ import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';
 
-interface QuizPlayerProps {
-  type: 'practice' | 'exam';
-}
-
 /**
  * 答题界面组件
- * 全新设计，更现代、更沉浸
- * 已迁移至 ShadCN UI + Tailwind CSS
+ * 统一处理练习和考试，根据 quiz_type 自动判断行为
  */
-export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
+export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -54,26 +47,23 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showTimeUpDialog, setShowTimeUpDialog] = useState(false);
 
-  const { mutateAsync: startPracticeMutation } = useStartPractice();
-  const { mutateAsync: startExamMutation } = useStartExam();
+  const { mutateAsync: startQuizMutation } = useStartQuiz();
   const { mutateAsync: saveAnswerMutation } = useSaveAnswer();
-  const { mutateAsync: submitMutation, isPending: isSubmitPending } = useSubmit();
+  const { mutateAsync: submitMutation, isPending: isSubmitPending } = useSubmitQuiz();
 
   const startAttemptKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const key = `${assignmentId}-${quizId}-${type}`;
+    const key = `${assignmentId}-${quizId}`;
     if (startAttemptKeyRef.current === key) {
       return;
     }
-    
+
     const start = async () => {
       try {
-        const result = type === 'practice' 
-          ? await startPracticeMutation({ assignmentId, quizId })
-          : await startExamMutation({ assignmentId });
+        const result = await startQuizMutation({ assignmentId, quizId });
         setSubmission(result);
-        
+
         // 初始化已有答案
         const existingAnswers: Record<number, unknown> = {};
         result.answers.forEach((a) => {
@@ -88,22 +78,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
         navigate(-1);
       }
     };
-    
-    if (!Number.isFinite(assignmentId) || (type === 'practice' && !Number.isFinite(quizId))) {
+
+    if (!Number.isFinite(assignmentId) || !Number.isFinite(quizId)) {
       toast.error('缺少必要的任务参数');
       navigate(-1);
       return;
     }
     startAttemptKeyRef.current = key;
     start();
-  }, [assignmentId, navigate, quizId, startExamMutation, startPracticeMutation, type]);
+  }, [assignmentId, navigate, quizId, startQuizMutation]);
 
   const handleAnswerChange = async (questionId: number, value: unknown) => {
     if (!submission) {
       return;
     }
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
-    
+
     // 自动保存
     try {
       await saveAnswerMutation({
@@ -120,7 +110,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
       return;
     }
     try {
-      await submitMutation({ submissionId: submission.id, type });
+      await submitMutation(submission.id);
       toast.success('提交成功');
       setShowSubmitDialog(false);
       navigate(`/tasks`);
@@ -138,7 +128,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
     if (!submission) {
       return;
     }
-    await submitMutation({ submissionId: submission.id, type });
+    await submitMutation(submission.id);
     setShowTimeUpDialog(false);
     navigate(`/tasks`);
   };
@@ -154,7 +144,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
   const currentQuestion = submission.answers[currentIndex];
   const answeredCount = Object.keys(answers).length;
   const progressPercent = Math.round((answeredCount / submission.answers.length) * 100);
-  const isExam = type === 'exam';
+  // 从 submission 中获取 quiz_type 判断是否是考试
+  const isExam = submission.quiz_type === 'EXAM';
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
@@ -257,7 +248,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
                   {submission.answers.map((a, i) => {
                     const isAnswered = !!answers[a.question];
                     const isCurrent = currentIndex === i;
-                    
+
                     return (
                       <button
                         key={a.question}
@@ -266,20 +257,20 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
                           'w-10 h-10 rounded-md font-semibold text-sm transition-all flex items-center justify-center',
                           isCurrent
                             ? cn(
-                                'text-white border-none',
-                                isExam ? 'bg-error-500' : 'bg-primary-500'
-                              )
+                              'text-white border-none',
+                              isExam ? 'bg-error-500' : 'bg-primary-500'
+                            )
                             : isAnswered
                               ? cn(
-                                  isExam
-                                    ? 'bg-green-500/20 border border-green-500/40 text-green-400'
-                                    : 'bg-success-50 border border-success-300 text-success-500'
-                                )
+                                isExam
+                                  ? 'bg-green-500/20 border border-green-500/40 text-green-400'
+                                  : 'bg-success-50 border border-success-300 text-success-500'
+                              )
                               : cn(
-                                  isExam
-                                    ? 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'
-                                    : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'
-                                )
+                                isExam
+                                  ? 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'
+                                  : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'
+                              )
                         )}
                       >
                         {isAnswered && !isCurrent ? (
@@ -421,7 +412,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({ type }) => {
                   </div>
                 )}
                 <div>
-                  {type === 'exam' ? '考试提交后无法重做，确定要提交吗？' : '确定要提交吗？'}
+                  {isExam ? '考试提交后无法重做，确定要提交吗？' : '确定要提交吗？'}
                 </div>
               </div>
             </DialogDescription>

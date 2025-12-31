@@ -40,7 +40,7 @@ import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
-import { PageHeader, StatCard } from "@/components/ui"
+import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
 
 /**
  * 辅助组件: 趋势图标
@@ -326,7 +326,7 @@ export const TaskManagement: React.FC = () => {
 
             {/* 列表主体 */}
             <div className="reveal-item stagger-delay-2">
-                <div className="bg-white rounded-lg p-8 border-0 shadow-none">
+                <ContentPanel className="overflow-hidden">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
@@ -393,7 +393,7 @@ export const TaskManagement: React.FC = () => {
                             />
                         )}
                     </div>
-                </div>
+                </ContentPanel>
             </div>
 
             {/* 删除确认对话框 */}

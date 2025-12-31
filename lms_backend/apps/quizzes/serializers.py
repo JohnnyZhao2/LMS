@@ -44,6 +44,7 @@ class QuizListSerializer(serializers.ModelSerializer):
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
+    quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
     
     class Meta:
         model = Quiz
@@ -51,6 +52,7 @@ class QuizListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title', 'description', 'question_count', 'total_score',
             'has_subjective_questions',
+            'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'status', 'is_current', 'published_at',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
@@ -70,6 +72,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     objective_question_count = serializers.ReadOnlyField()
     subjective_question_count = serializers.ReadOnlyField()
     questions = serializers.SerializerMethodField()
+    quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
     
     class Meta:
         model = Quiz
@@ -78,6 +81,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             'title', 'description', 'question_count', 'total_score',
             'has_subjective_questions', 'objective_question_count',
             'subjective_question_count', 'questions',
+            'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'status', 'is_current', 'published_at',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
@@ -192,7 +196,17 @@ class QuizCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Quiz
-        fields = ['title', 'description', 'existing_question_ids', 'new_questions']
+        fields = ['title', 'description', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids', 'new_questions']
+    
+    def validate(self, attrs):
+        """Validate quiz_type specific fields."""
+        quiz_type = attrs.get('quiz_type', 'PRACTICE')
+        if quiz_type == 'EXAM':
+            if not attrs.get('duration'):
+                raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
+            if not attrs.get('pass_score'):
+                raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
+        return attrs
     
     def validate_existing_question_ids(self, value):
         """Validate that all question IDs exist and are not deleted."""
@@ -273,7 +287,19 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Quiz
-        fields = ['title', 'description', 'existing_question_ids']
+        fields = ['title', 'description', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids']
+    
+    def validate(self, attrs):
+        """Validate quiz_type specific fields."""
+        quiz_type = attrs.get('quiz_type', self.instance.quiz_type if self.instance else 'PRACTICE')
+        if quiz_type == 'EXAM':
+            duration = attrs.get('duration', getattr(self.instance, 'duration', None))
+            pass_score = attrs.get('pass_score', getattr(self.instance, 'pass_score', None))
+            if not duration:
+                raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
+            if not pass_score:
+                raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
+        return attrs
     
     def validate_existing_question_ids(self, value):
         """Validate provided question ids."""

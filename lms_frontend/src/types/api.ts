@@ -463,6 +463,10 @@ export interface TaskQuiz {
   order: number;
   resource_uuid: string;
   version_number: number;
+  quiz_type: QuizType;
+  quiz_type_display: string;
+  duration?: number | null;
+  pass_score?: string | null;
 }
 
 /**
@@ -493,6 +497,10 @@ export interface LearningTaskProgress {
   completed: number;
   total: number;
   percentage: number;
+  knowledge_total?: number;
+  knowledge_completed?: number;
+  quiz_total?: number;
+  quiz_completed?: number;
 }
 
 /**
@@ -501,13 +509,13 @@ export interface LearningTaskProgress {
 export interface LearningTaskKnowledgeItem {
   id: number;
   knowledge_id: number;
-  title?: string;
+  title: string;
   knowledge_type: string;
-  knowledge_type_display?: string;
-  summary?: string;
+  knowledge_type_display: string;
+  summary: string;
   order: number;
   is_completed: boolean;
-  completed_at?: string | null;
+  completed_at?: string;
 }
 
 /**
@@ -515,14 +523,21 @@ export interface LearningTaskKnowledgeItem {
  */
 export interface LearningTaskQuizItem {
   id: number;
+  quiz: number;
   quiz_id: number;
-  title: string;
+  quiz_title: string;
+  quiz_type: string;
+  quiz_type_display: string;
   description?: string;
   question_count: number;
   total_score: number;
+  duration?: number | null;
+  pass_score?: number | string | null;
   order: number;
   is_completed: boolean;
   score?: number | null;
+  latest_submission_id?: number | null;
+  latest_status?: string | null;
 }
 
 /**
@@ -606,6 +621,10 @@ export interface TaskProgress {
   completed: number;
   total: number;
   percentage: number;
+  knowledge_total?: number;
+  knowledge_completed?: number;
+  quiz_total?: number;
+  quiz_completed?: number;
 }
 
 export interface StudentTaskCenterItem {
@@ -732,6 +751,11 @@ export interface QuizQuestion {
 }
 
 /**
+ * 试卷类型
+ */
+export type QuizType = 'PRACTICE' | 'EXAM';
+
+/**
  * 试卷列表项
  */
 export interface QuizListItem {
@@ -741,6 +765,10 @@ export interface QuizListItem {
   question_count: number;
   total_score: string;
   has_subjective_questions: boolean;
+  quiz_type: QuizType;
+  quiz_type_display: string;
+  duration?: number | null;
+  pass_score?: string | null;
   created_by?: number;
   created_by_name?: string;
   created_at: string;
@@ -760,6 +788,10 @@ export interface QuizDetail {
   has_subjective_questions?: boolean;
   objective_question_count?: number;
   subjective_question_count?: number;
+  quiz_type: QuizType;
+  quiz_type_display: string;
+  duration?: number | null;
+  pass_score?: string | null;
   created_by?: number;
   created_by_name?: string;
   created_at: string;
@@ -772,6 +804,9 @@ export interface QuizDetail {
 export interface QuizCreateRequest {
   title: string;
   description?: string;
+  quiz_type: QuizType;
+  duration?: number;       // 考试类型必填
+  pass_score?: number;     // 考试类型必填
   existing_question_ids?: number[];
   new_questions?: QuestionCreateRequest[];
 }
@@ -825,6 +860,9 @@ export interface SubmissionDetail {
   id: number;
   quiz: number;
   quiz_title: string;
+  quiz_type: QuizType;
+  quiz_type_display: string;
+  quiz_duration?: number | null;
   user: number;
   user_name: string;
   task_title: string;

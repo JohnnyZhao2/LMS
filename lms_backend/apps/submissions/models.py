@@ -154,33 +154,9 @@ class Submission(TimestampMixin, models.Model):
         return self.task_assignment.task
     
     @property
-    def is_exam(self):
-        """是否为考试提交"""
-        return self.task.task_type == 'EXAM'
-    
-    @property
-    def is_practice(self):
-        """是否为练习提交"""
-        return self.task.task_type == 'PRACTICE'
-    
-    @property
     def has_subjective_questions(self):
         """是否包含主观题"""
         return self.quiz.has_subjective_questions
-    
-    @property
-    def pass_score(self):
-        """获取及格分数（仅考试任务）"""
-        if self.is_exam:
-            return self.task.pass_score
-        return None
-    
-    @property
-    def is_passed(self):
-        """是否及格（仅考试任务）"""
-        if not self.is_exam or self.obtained_score is None:
-            return None
-        return self.obtained_score >= self.task.pass_score
     
     @property
     def objective_score(self):
@@ -213,9 +189,12 @@ class Submission(TimestampMixin, models.Model):
         """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
     
-    def submit(self):
+    def submit(self, is_practice=False):
         """
         提交答卷
+        
+        Args:
+            is_practice: 是否为练习模式（练习可多次提交，考试只能提交一次）
         
         Requirements:
         - 10.3: 客观题自动评分
@@ -251,7 +230,7 @@ class Submission(TimestampMixin, models.Model):
         self.save()
         
         # 检查练习任务是否应该自动完成
-        if self.is_practice:
+        if is_practice:
             self._check_practice_completion()
     
     def _auto_grade_objective_questions(self):
@@ -286,27 +265,7 @@ class Submission(TimestampMixin, models.Model):
         
         Property 25: 练习任务自动完成
         """
-        if not self.is_practice:
-            return
-        
-        assignment = self.task_assignment
-        task = assignment.task
-        
-        # 获取任务关联的所有试卷
-        task_quiz_ids = task.task_quizzes.values_list('quiz_id', flat=True)
-        
-        # 检查每个试卷是否都至少有一次提交
-        for quiz_id in task_quiz_ids:
-            if not Submission.objects.filter(
-                task_assignment=assignment,
-                quiz_id=quiz_id,
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            ).exists():
-                return  # 还有试卷未完成
-        
-        # 所有试卷都至少完成一次，标记任务为已完成
-        if assignment.status != 'COMPLETED':
-            assignment.mark_completed(score=assignment.score)
+        self.task_assignment.check_completion()
     
     def complete_grading(self):
         """
@@ -330,10 +289,6 @@ class Submission(TimestampMixin, models.Model):
         
         # 更新任务分配
         self._update_task_assignment()
-        
-        # 考试任务：标记任务分配为已完成
-        if self.is_exam:
-            self.task_assignment.mark_completed(score=self.obtained_score)
 
 
 class Answer(TimestampMixin, models.Model):

@@ -82,12 +82,19 @@ class TaskQuizSerializer(serializers.ModelSerializer):
     subjective_question_count = serializers.IntegerField(source='quiz.subjective_question_count', read_only=True)
     objective_question_count = serializers.IntegerField(source='quiz.objective_question_count', read_only=True)
     
+    # Quiz type info
+    quiz_type = serializers.CharField(source='quiz.quiz_type', read_only=True)
+    quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
+    duration = serializers.IntegerField(source='quiz.duration', read_only=True)
+    pass_score = serializers.DecimalField(source='quiz.pass_score', max_digits=5, decimal_places=2, read_only=True)
+    
     class Meta:
         model = TaskQuiz
         fields = [
             'id', 'quiz', 'quiz_title', 'question_count', 'total_score',
             'subjective_question_count', 'objective_question_count',
-            'resource_uuid', 'version_number', 'order'
+            'resource_uuid', 'version_number', 'order',
+            'quiz_type', 'quiz_type_display', 'duration', 'pass_score'
         ]
         read_only_fields = ['order']
 
@@ -616,30 +623,14 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
         ]
     
     def get_has_quiz(self, obj):
-        return obj.task.quiz_count > 0
+        return obj.task.task_quizzes.exists()
     
     def get_has_knowledge(self, obj):
-        return obj.task.knowledge_count > 0
+        return obj.task.task_knowledge.exists()
     
     def get_progress(self, obj):
-        """计算进度"""
-        task = obj.task
-        total_knowledge = task.task_knowledge.count()
-        total_quizzes = task.task_quizzes.count()
-        total = total_knowledge + total_quizzes
-        
-        if total == 0:
-            return {'completed': 0, 'total': 0, 'percentage': 0}
-        
-        completed_knowledge = obj.knowledge_progress.filter(is_completed=True).count()
-        # TODO: 计算试卷完成数
-        completed = completed_knowledge
-        
-        return {
-            'completed': completed,
-            'total': total,
-            'percentage': round(completed / total * 100, 1) if total > 0 else 0
-        }
+        """获取详细进度记录"""
+        return obj.get_progress_data()
 
 
 class StudentTaskDetailSerializer(serializers.ModelSerializer):
@@ -671,23 +662,8 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         ]
     
     def get_progress(self, obj):
-        """计算进度"""
-        task = obj.task
-        total_knowledge = task.task_knowledge.count()
-        total_quizzes = task.task_quizzes.count()
-        total = total_knowledge + total_quizzes
-        
-        if total == 0:
-            return {'completed': 0, 'total': 0, 'percentage': 0}
-        
-        completed_knowledge = obj.knowledge_progress.filter(is_completed=True).count()
-        completed = completed_knowledge
-        
-        return {
-            'completed': completed,
-            'total': total,
-            'percentage': round(completed / total * 100, 1) if total > 0 else 0
-        }
+        """获取详细进度数据"""
+        return obj.get_progress_data()
     
     def get_knowledge_items(self, obj):
         """获取知识文档及其学习进度"""
@@ -733,24 +709,49 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         return text[:160] if text else ''
     
     def get_quiz_items(self, obj):
-        """获取试卷列表"""
+        """获取试卷列表及提交状态"""
+        from apps.submissions.models import Submission
         task_quiz_items = obj.task.task_quizzes.select_related('quiz').all()
+        
+        # 获取学员对这些试卷的最近/最高分提交
+        all_submissions = Submission.objects.filter(
+            task_assignment=obj,
+            status__in=['SUBMITTED', 'GRADING', 'GRADED']
+        )
+        
+        # 按 quiz 分类
+        submission_map = {}
+        for s in all_submissions:
+            if s.quiz_id not in submission_map:
+                submission_map[s.quiz_id] = []
+            submission_map[s.quiz_id].append(s)
         
         result = []
         for tq in task_quiz_items:
             quiz = tq.quiz
+            quiz_subs = submission_map.get(quiz.id, [])
+            
+            is_completed = len(quiz_subs) > 0
+            best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
+            latest_sub = max(quiz_subs, key=lambda x: x.submitted_at) if is_completed else None
             
             item = {
                 'id': tq.id,
+                'quiz': quiz.id, # 保持与管理端一致，返回 quiz ID
                 'quiz_id': quiz.id,
-                'title': quiz.title,
+                'quiz_title': quiz.title,
+                'quiz_type': quiz.quiz_type,
+                'quiz_type_display': quiz.get_quiz_type_display(),
                 'description': quiz.description,
                 'question_count': quiz.question_count,
                 'total_score': float(quiz.total_score) if quiz.total_score else 0,
+                'duration': quiz.duration,
+                'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
                 'order': tq.order,
-                # TODO: 添加提交状态
-                'is_completed': False,
-                'score': None,
+                'is_completed': is_completed,
+                'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,
+                'latest_submission_id': latest_sub.id if latest_sub else None,
+                'latest_status': latest_sub.status if latest_sub else None,
             }
             result.append(item)
         

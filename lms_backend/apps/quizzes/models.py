@@ -95,6 +95,35 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='是否当前版本'
     )
     
+    QUIZ_TYPE_CHOICES = [
+        ('PRACTICE', '练习'),
+        ('EXAM', '考试'),
+    ]
+    
+    # 试卷类型
+    quiz_type = models.CharField(
+        max_length=20,
+        choices=QUIZ_TYPE_CHOICES,
+        default='PRACTICE',
+        verbose_name='试卷类型'
+    )
+    
+    # 考试时长（分钟），仅考试类型有效
+    duration = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='考试时长(分钟)'
+    )
+    
+    # 及格分数，仅考试类型有效
+    pass_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='及格分数'
+    )
+    
     class Meta:
         db_table = 'lms_quiz'
         verbose_name = '试卷'
@@ -226,7 +255,10 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             version_number=self.next_version_number(self.resource_uuid),
             source_version=self,
             published_at=timezone.now(),
-            is_current=True
+            is_current=True,
+            quiz_type=self.quiz_type,
+            duration=self.duration,
+            pass_score=self.pass_score,
         )
         for relation in self.get_ordered_questions():
             QuizQuestion.objects.create(

@@ -42,7 +42,7 @@ import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
-import { PageHeader } from "@/components/ui"
+import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
 
 export const UserList: React.FC = () => {
   const [search, setSearch] = React.useState("")
@@ -298,99 +298,85 @@ export const UserList: React.FC = () => {
 
       {/* 统计网格 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white">
-              <UserCheck className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">活跃用户</p>
-              <h3 className="text-3xl font-bold text-[#111827]">{stats.active}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white">
-              <ShieldCheck className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">管理员</p>
-              <h3 className="text-3xl font-bold text-[#111827]">{stats.admins}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#F59E0B] flex items-center justify-center text-white">
-              <Users className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">总用户数</p>
-              <h3 className="text-3xl font-bold text-[#111827]">{stats.total}</h3>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-6 border-0 shadow-none transition-all duration-200 hover:scale-[1.02]">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-lg bg-[#10B981] flex items-center justify-center text-white">
-              <Plus className="h-7 w-7" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">近一周新增</p>
-              <h3 className="text-3xl font-bold text-[#111827]">{stats.new}</h3>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="活跃用户"
+          value={stats.active}
+          icon={UserCheck}
+          color="#3B82F6"
+          gradient=""
+          delay="stagger-delay-1"
+        />
+        <StatCard
+          title="管理员"
+          value={stats.admins}
+          icon={ShieldCheck}
+          color="#3B82F6"
+          gradient=""
+          delay="stagger-delay-2"
+        />
+        <StatCard
+          title="总用户数"
+          value={stats.total}
+          icon={Users}
+          color="#F59E0B"
+          gradient=""
+          delay="stagger-delay-3"
+        />
+        <StatCard
+          title="近一周新增"
+          value={stats.new}
+          icon={Plus}
+          color="#10B981"
+          gradient=""
+          delay="stagger-delay-4"
+        />
       </div>
 
       {/* 列表主体 */}
-      <div>
-        <div className="bg-white rounded-lg p-8 border-0 shadow-none overflow-hidden">
-          {/* 搜索和筛选 */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
-            <div className="relative flex-1 max-w-lg">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-              <Input
-                placeholder="搜索姓名、工号、电子邮箱..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
-              />
-            </div>
-
-            <div className="flex items-center gap-6">
-              <Button
-                onClick={handleSearch}
-                className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
-              >
-                搜索
-              </Button>
-              <div className="h-12 w-[1px] bg-[#E5E7EB] mx-2" />
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
-                <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 表格容器 */}
-          <div className="overflow-hidden rounded-lg">
-            <DataTable
-              columns={columns}
-              data={data || []}
-              isLoading={isLoading}
-              className="border-none"
-              rowClassName="group cursor-pointer"
-              onRowClick={(row) => {
-                setEditingUserId(row.id)
-                setFormModalOpen(true)
-              }}
+      <ContentPanel className="overflow-hidden">
+        {/* 搜索和筛选 */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+          <div className="relative flex-1 max-w-lg">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
+            <Input
+              placeholder="搜索姓名、工号、电子邮箱..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
             />
           </div>
+
+          <div className="flex items-center gap-6">
+            <Button
+              onClick={handleSearch}
+              className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
+            >
+              搜索
+            </Button>
+            <div className="h-12 w-[1px] bg-[#E5E7EB] mx-2" />
+            <div className="text-right">
+              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
+              <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* 表格容器 */}
+        <div className="overflow-hidden rounded-lg">
+          <DataTable
+            columns={columns}
+            data={data || []}
+            isLoading={isLoading}
+            className="border-none"
+            rowClassName="group cursor-pointer"
+            onRowClick={(row) => {
+              setEditingUserId(row.id)
+              setFormModalOpen(true)
+            }}
+          />
+        </div>
+      </ContentPanel>
 
       {/* 用户表单弹窗 */}
       <UserForm

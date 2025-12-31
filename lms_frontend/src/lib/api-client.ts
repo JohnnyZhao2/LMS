@@ -125,9 +125,14 @@ class ApiClient {
     if (!response.ok) {
       let errorData: unknown;
       try {
-        errorData = await response.json();
+        const text = await response.text();
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = text;
+        }
       } catch {
-        errorData = await response.text();
+        errorData = undefined;
       }
       throw new ApiError(response.status, response.statusText, errorData);
     }

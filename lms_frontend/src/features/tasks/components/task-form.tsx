@@ -329,7 +329,7 @@ export const TaskForm: React.FC = () => {
                 className="flex-1"
                 onClick={() => setResourceType(type)}
               >
-                {type === 'ALL' ? '全部' : type === 'DOCUMENT' ? '文档' : '测验'}
+                {type === 'ALL' ? '全部' : type === 'DOCUMENT' ? '文档' : '试卷'}
               </Button>
             ))}
           </div>
@@ -355,8 +355,8 @@ export const TaskForm: React.FC = () => {
                     <div
                       className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
                       style={{
-                        background: res.resourceType === 'DOCUMENT' ? 'var(--color-success-50)' : 'var(--color-primary-50)',
-                        color: res.resourceType === 'DOCUMENT' ? 'var(--color-success-500)' : 'var(--color-primary-500)',
+                        background: res.resourceType === 'DOCUMENT' ? '#D1FAE5' : 'var(--color-primary-50)',
+                        color: res.resourceType === 'DOCUMENT' ? '#10B981' : 'var(--color-primary-500)',
                       }}
                     >
                       {res.resourceType === 'DOCUMENT' ? <BookOpen className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
@@ -402,7 +402,7 @@ export const TaskForm: React.FC = () => {
                           className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md"
                           style={{
                             background: item.resourceType === 'DOCUMENT'
-                              ? 'var(--color-success-500)'
+                              ? '#10B981'
                               : 'var(--color-primary-500)',
                           }}
                         >
@@ -585,9 +585,8 @@ export const TaskForm: React.FC = () => {
               return (
                 <div
                   key={user.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                    checked ? 'bg-primary-50' : 'hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-primary-50' : 'hover:bg-gray-50'
+                    }`}
                   onClick={() => toggleUser(user.id)}
                 >
                   <Checkbox checked={checked} />

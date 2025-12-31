@@ -142,3 +142,7 @@ export { AnimatedContainer, StaggeredList } from './animated-container';
 export type { AnimatedContainerProps, StaggeredListProps, AnimationType } from './animated-container';
 
 export * from "./stat-card";
+
+// Card System - Claymorphism 统一样式
+export { ActionCard } from './action-card';
+export { ContentPanel } from './content-panel';

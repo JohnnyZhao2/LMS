@@ -127,6 +127,33 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       )
     },
     {
+      id: 'quiz_type',
+      header: '类型',
+      cell: ({ row }) => {
+        const isExam = row.original.quiz_type === 'EXAM';
+        return (
+          <div className="flex flex-col gap-1">
+            <span
+              className={cn(
+                "inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider",
+                isExam
+                  ? "bg-red-50 text-red-600"
+                  : "bg-blue-50 text-blue-600"
+              )}
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              {row.original.quiz_type_display || (isExam ? '考试' : '练习')}
+            </span>
+            {isExam && row.original.duration && (
+              <span className="text-[10px] font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                {row.original.duration}分钟 / 及格{row.original.pass_score}分
+              </span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       id: 'metrics',
       header: '构成指标',
       cell: ({ row }) => (
@@ -191,16 +218,16 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-lg p-2 border-2 border-gray-200 shadow-none bg-white">
-                <DropdownMenuItem 
-                  className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors" 
+                <DropdownMenuItem
+                  className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => navigate(`/test-center/quizzes/${record.id}/edit`)}
                   style={{ fontFamily: "'Outfit', sans-serif" }}
                 >
                   <Pencil className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑试卷
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-gray-200 mx-2" />
-                <DropdownMenuItem 
-                  className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors" 
+                <DropdownMenuItem
+                  className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors"
                   onClick={() => setDeleteId(record.id)}
                   style={{ fontFamily: "'Outfit', sans-serif" }}
                 >
@@ -295,16 +322,16 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button 
-              variant="ghost" 
-              className="flex-1 h-14 rounded-md font-bold shadow-none" 
+            <Button
+              variant="ghost"
+              className="flex-1 h-14 rounded-md font-bold shadow-none"
               onClick={() => setQuickPublishModalVisible(false)}
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >
               取消
             </Button>
-            <Button 
-              className="flex-1 h-14 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200" 
+            <Button
+              className="flex-1 h-14 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200"
               onClick={handleQuickPublish}
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >
@@ -329,16 +356,16 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button 
-              variant="ghost" 
-              className="flex-1 h-14 rounded-md font-bold shadow-none" 
+            <Button
+              variant="ghost"
+              className="flex-1 h-14 rounded-md font-bold shadow-none"
               onClick={() => setDeleteId(null)}
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >
               取消
             </Button>
-            <Button 
-              className="flex-1 h-14 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200" 
+            <Button
+              className="flex-1 h-14 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold shadow-none hover:scale-105 transition-all duration-200"
               onClick={handleDelete}
               style={{ fontFamily: "'Outfit', sans-serif" }}
             >

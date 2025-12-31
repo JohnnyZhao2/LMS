@@ -42,7 +42,7 @@ import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { useCreateQuestion } from '@/features/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
-import type { QuizCreateRequest, Question, QuestionType, QuestionCreateRequest } from '@/types/api';
+import type { QuizCreateRequest, Question, QuestionType, QuestionCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
 /**
@@ -117,9 +117,8 @@ const SortableQuestionRow: React.FC<{
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 ${
-        isDragging ? 'bg-blue-50' : 'bg-white'
-      }`}
+      className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 ${isDragging ? 'bg-blue-50' : 'bg-white'
+        }`}
       {...attributes}
     >
       {/* 拖拽手柄 */}
@@ -205,6 +204,9 @@ export const QuizForm: React.FC = () => {
   // 表单状态
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [quizType, setQuizType] = useState<QuizType>('PRACTICE');
+  const [duration, setDuration] = useState<number | undefined>();
+  const [passScore, setPassScore] = useState<number | undefined>();
 
   // 已选题目列表（带顺序和分值）
   const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestionItem[]>([]);
@@ -272,6 +274,10 @@ export const QuizForm: React.FC = () => {
       } else {
         setSelectedQuestions([]);
       }
+      // Initialize quiz type and exam settings
+      setQuizType(quizData.quiz_type || 'PRACTICE');
+      setDuration(quizData.duration ?? undefined);
+      setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
       initializedFromQuizRef.current = true;
     } else if (!isEdit && questionsData?.results && !initializedFromUrlRef.current) {
       const questionIdsParam = searchParams.get('question_ids');
@@ -328,11 +334,24 @@ export const QuizForm: React.FC = () => {
       toast.warning('请至少添加一道题目');
       return;
     }
+    if (quizType === 'EXAM') {
+      if (!duration || duration <= 0) {
+        toast.error('考试类型必须设置考试时长');
+        return;
+      }
+      if (!passScore || passScore < 0) {
+        toast.error('考试类型必须设置及格分数');
+        return;
+      }
+    }
 
     try {
       const submitData: QuizCreateRequest = {
         title,
         description: description || undefined,
+        quiz_type: quizType,
+        duration: quizType === 'EXAM' ? duration : undefined,
+        pass_score: quizType === 'EXAM' ? passScore : undefined,
         existing_question_ids: selectedQuestions.map(q => q.id),
       };
 
@@ -543,6 +562,74 @@ export const QuizForm: React.FC = () => {
                   rows={2}
                 />
               </div>
+
+              {/* 试卷类型选择 */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  试卷类型 <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex gap-2 mt-1.5">
+                  <Button
+                    type="button"
+                    variant={quizType === 'PRACTICE' ? 'default' : 'outline'}
+                    onClick={() => setQuizType('PRACTICE')}
+                    className="flex-1"
+                    style={quizType === 'PRACTICE' ? { background: 'rgb(77, 108, 255)' } : {}}
+                  >
+                    练习
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={quizType === 'EXAM' ? 'default' : 'outline'}
+                    onClick={() => setQuizType('EXAM')}
+                    className="flex-1"
+                    style={quizType === 'EXAM' ? { background: '#EF4444' } : {}}
+                  >
+                    考试
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {quizType === 'PRACTICE'
+                    ? '练习模式：学员可多次提交，即时查看结果'
+                    : '考试模式：限时作答，只能提交一次，有及格分数线'}
+                </p>
+              </div>
+
+              {/* 考试配置（仅考试类型显示） */}
+              {quizType === 'EXAM' && (
+                <div className="p-4 bg-red-50 rounded-lg border border-red-100 space-y-4">
+                  <h4 className="text-sm font-semibold text-red-700">考试配置</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        考试时长（分钟）<span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={duration ?? ''}
+                        onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="如 60"
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">
+                        及格分数 <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        value={passScore ?? ''}
+                        onChange={(e) => setPassScore(e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="如 60"
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -635,7 +722,7 @@ export const QuizForm: React.FC = () => {
         <div className="col-span-1">
           <Card className="p-6 sticky top-4">
             <h3 className="text-base font-semibold text-gray-900 mb-4">试卷统计</h3>
-            
+
             <div className="mb-6">
               <div className="text-sm text-gray-500 mb-1">总分</div>
               <div className="text-4xl font-bold" style={{ color: 'rgb(77, 108, 255)' }}>
@@ -695,7 +782,7 @@ export const QuizForm: React.FC = () => {
           <DialogHeader>
             <DialogTitle>新建题目</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
               <Label className="text-sm font-medium">
@@ -936,9 +1023,8 @@ const QuestionSelector: React.FC<{
               <div
                 key={q.id}
                 onClick={() => toggleSelect(q.id)}
-                className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors ${
-                  selectedIds.includes(q.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors ${selectedIds.includes(q.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
               >
                 <Checkbox
                   checked={selectedIds.includes(q.id)}

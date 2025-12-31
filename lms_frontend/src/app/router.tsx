@@ -160,15 +160,7 @@ export const AppRouter: React.FC = () => {
         path="/quiz/:id"
         element={
           <ProtectedRoute>
-            <QuizPlayer type="practice" />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/exam/:id"
-        element={
-          <ProtectedRoute>
-            <QuizPlayer type="exam" />
+            <QuizPlayer />
           </ProtectedRoute>
         }
       />
