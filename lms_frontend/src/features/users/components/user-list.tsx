@@ -42,7 +42,7 @@ import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
-import { PageHeader, StatCard } from "@/components/ui"
+import { PageHeader } from "@/components/ui"
 
 export const UserList: React.FC = () => {
   const [search, setSearch] = React.useState("")
@@ -118,23 +118,23 @@ export const UserList: React.FC = () => {
         <div className="flex items-center gap-4 py-2">
           <div className="relative">
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-clay-btn transition-transform duration-300 hover:scale-110"
+              className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-black text-xl transition-transform duration-200 hover:scale-110"
               style={{
-                background: "linear-gradient(135deg, var(--color-clay-primary) 0%, var(--color-clay-secondary) 100%)",
+                backgroundColor: "#3B82F6",
               }}
             >
               {row.original.username?.charAt(0) || "?"}
             </div>
             <div className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm",
-              row.original.is_active ? "bg-clay-success" : "bg-clay-muted"
+              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
+              row.original.is_active ? "bg-[#10B981]" : "bg-[#9CA3AF]"
             )} />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-lg text-clay-foreground group-hover:text-clay-primary transition-colors">
+            <span className="font-bold text-lg text-[#111827] group-hover:text-[#3B82F6] transition-colors">
               {row.original.username}
             </span>
-            <span className="text-xs font-bold text-clay-muted uppercase tracking-wider flex items-center gap-1">
+            <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider flex items-center gap-1">
               {row.original.employee_id || 'NO ID'}
             </span>
           </div>
@@ -150,10 +150,10 @@ export const UserList: React.FC = () => {
             <Badge
               key={role.code}
               className={cn(
-                "border-none shadow-sm",
-                role.code === 'ADMIN' ? "bg-clay-secondary/10 text-clay-secondary" :
-                  role.code === 'MENTOR' ? "bg-clay-primary/10 text-clay-primary" :
-                    "bg-clay-tertiary/10 text-clay-tertiary"
+                "border-none",
+                role.code === 'ADMIN' ? "bg-[#FEE2E2] text-[#DC2626]" :
+                  role.code === 'MENTOR' ? "bg-[#DBEAFE] text-[#3B82F6]" :
+                    "bg-[#E0F2FE] text-[#0EA5E9]"
               )}
             >
               {role.name}
@@ -167,12 +167,12 @@ export const UserList: React.FC = () => {
       header: "所属部门",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-clay-muted/5 text-clay-muted">
+          <div className="p-1.5 rounded-md bg-[#F3F4F6] text-[#6B7280]">
             <Building2 className="w-4 h-4" />
           </div>
           <span className={cn(
             "text-sm font-bold",
-            row.original.department ? "text-clay-foreground" : "text-clay-muted italic"
+            row.original.department ? "text-[#111827]" : "text-[#6B7280] italic"
           )}>
             {row.original.department?.name || "未分配"}
           </span>
@@ -184,13 +184,13 @@ export const UserList: React.FC = () => {
       header: "指导老师",
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-clay-muted/50 italic text-xs font-bold uppercase tracking-wider">未分配</span>
+        if (!mentor) return <span className="text-[#9CA3AF] italic text-xs font-bold uppercase tracking-wider">未分配</span>
         return (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-clay-tertiary/10 text-clay-tertiary flex items-center justify-center text-xs font-black border border-clay-tertiary/20">
+            <div className="w-8 h-8 rounded-full bg-[#E0F2FE] text-[#0EA5E9] flex items-center justify-center text-xs font-black border-0">
               {mentor.username?.charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm font-bold text-clay-foreground">{mentor.username}</span>
+            <span className="text-sm font-bold text-[#111827]">{mentor.username}</span>
           </div>
         )
       },
@@ -204,8 +204,8 @@ export const UserList: React.FC = () => {
           className={cn(
             "border-none",
             row.original.is_active
-              ? "bg-clay-success/10 text-clay-success"
-              : "bg-clay-muted/10 text-clay-muted"
+              ? "bg-[#D1FAE5] text-[#10B981]"
+              : "bg-[#F3F4F6] text-[#6B7280]"
           )}
         >
           {row.original.is_active ? "活跃" : "已停用"}
@@ -218,16 +218,16 @@ export const UserList: React.FC = () => {
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-10 w-10 circle hover:bg-clay-primary/10 hover:text-clay-primary">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-md hover:bg-[#F3F4F6] hover:text-[#3B82F6]">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-[24px] p-2 border-none shadow-clay-card bg-white/80 backdrop-blur-xl animate-fadeIn">
-            <DropdownMenuLabel className="text-[10px] font-black text-clay-muted uppercase tracking-widest px-4 py-2">账号控制台</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-56 rounded-lg p-2 border border-[#E5E7EB] bg-white">
+            <DropdownMenuLabel className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider px-4 py-2">账号控制台</DropdownMenuLabel>
 
             <div className="space-y-1">
               <DropdownMenuItem
-                className="rounded-xl px-4 py-3 font-bold text-clay-foreground focus:bg-clay-primary/10 focus:text-clay-primary cursor-pointer transition-colors"
+                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#DBEAFE] focus:text-[#3B82F6] cursor-pointer transition-colors"
                 onClick={() => {
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
@@ -236,21 +236,21 @@ export const UserList: React.FC = () => {
                 <Pencil className="mr-3 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="rounded-xl px-4 py-3 font-bold text-clay-foreground focus:bg-clay-secondary/10 focus:text-clay-secondary cursor-pointer transition-colors"
+                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#DBEAFE] focus:text-[#3B82F6] cursor-pointer transition-colors"
                 onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
               >
                 <Lock className="mr-3 h-4 w-4" /> 重置密码
               </DropdownMenuItem>
             </div>
 
-            <DropdownMenuSeparator className="bg-clay-muted/10 my-2 mx-4" />
+            <DropdownMenuSeparator className="bg-[#E5E7EB] my-2 mx-4" />
 
             <DropdownMenuItem
               className={cn(
-                "rounded-xl px-4 py-3 font-bold cursor-pointer transition-colors",
+                "rounded-md px-4 py-3 font-medium cursor-pointer transition-colors",
                 row.original.is_active
-                  ? "text-red-500 focus:bg-red-50 focus:text-red-600"
-                  : "text-clay-success focus:bg-clay-success/10 focus:text-clay-success"
+                  ? "text-[#DC2626] focus:bg-[#FEE2E2] focus:text-[#DC2626]"
+                  : "text-[#10B981] focus:bg-[#D1FAE5] focus:text-[#10B981]"
               )}
               onClick={() => handleToggleActive(row.original)}
             >
@@ -267,7 +267,7 @@ export const UserList: React.FC = () => {
   ]
 
   return (
-    <div className="space-y-10 animate-fadeIn overflow-x-hidden pb-20">
+    <div className="space-y-8 pb-20 min-h-[calc(100vh-8rem)]">
       <PageHeader
         title="用户管理"
         subtitle="Accounts & Permissions"
@@ -276,7 +276,7 @@ export const UserList: React.FC = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              className="h-14 px-6 rounded-2xl font-bold text-clay-muted hover:bg-white/50 hover:text-clay-primary"
+              className="h-14 px-6 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#3B82F6] transition-all duration-200"
               onClick={() => refetch()}
             >
               <RefreshCw className="h-5 w-5 mr-2" />
@@ -287,7 +287,7 @@ export const UserList: React.FC = () => {
                 setEditingUserId(undefined)
                 setFormModalOpen(true)
               }}
-              className="shadow-clay-btn hover:shadow-clay-btn-hover"
+              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
             >
               <Plus className="mr-2 h-5 w-5" />
               新增用户
@@ -296,78 +296,87 @@ export const UserList: React.FC = () => {
         }
       />
 
-      {/* 统计网格 - 使用语义化变量 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        <StatCard
-          title="活跃用户"
-          value={stats.active}
-          icon={UserCheck}
-          color="var(--color-clay-primary)"
-          gradient="linear-gradient(135deg, var(--color-clay-primary) 0%, #A78BFA 100%)"
-          delay="stagger-delay-1"
-        />
-        <StatCard
-          title="管理员"
-          value={stats.admins}
-          icon={ShieldCheck}
-          color="var(--color-clay-secondary)"
-          gradient="linear-gradient(135deg, var(--color-clay-secondary) 0%, #F472B6 100%)"
-          delay="stagger-delay-2"
-        />
-        <StatCard
-          title="总用户数"
-          value={stats.total}
-          icon={Users}
-          color="var(--color-clay-warning)"
-          gradient="linear-gradient(135deg, var(--color-clay-warning) 0%, #FCD34D 100%)"
-          delay="stagger-delay-3"
-        />
-        <StatCard
-          title="近一周新增"
-          value={stats.new}
-          icon={Plus}
-          color="var(--color-clay-success)"
-          gradient="linear-gradient(135deg, var(--color-clay-success) 0%, #34D399 100%)"
-          delay="stagger-delay-4"
-        />
+      {/* 统计网格 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white">
+              <UserCheck className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">活跃用户</p>
+              <h3 className="text-3xl font-bold text-[#111827]">{stats.active}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-lg bg-[#DC2626] flex items-center justify-center text-white">
+              <ShieldCheck className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">管理员</p>
+              <h3 className="text-3xl font-bold text-[#111827]">{stats.admins}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-lg bg-[#F59E0B] flex items-center justify-center text-white">
+              <Users className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">总用户数</p>
+              <h3 className="text-3xl font-bold text-[#111827]">{stats.total}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg p-6 border-0 transition-all duration-200 hover:scale-[1.02]">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-lg bg-[#10B981] flex items-center justify-center text-white">
+              <Plus className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-1">近一周新增</p>
+              <h3 className="text-3xl font-bold text-[#111827]">{stats.new}</h3>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 列表主体 - 使用 glass-card 与测试中心一致 */}
-      <div className="reveal-item stagger-delay-2">
-        <div className="glass-card rounded-[2.5rem] p-8 border-none overflow-hidden relative">
-          {/* 装饰性光晕 */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-clay-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-
+      {/* 列表主体 */}
+      <div>
+        <div className="bg-white rounded-lg p-8 border-0 overflow-hidden">
           {/* 搜索和筛选 */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 relative z-10">
-            <div className="relative flex-1 max-w-lg group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-clay-primary transition-colors" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+            <div className="relative flex-1 max-w-lg">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
               <Input
                 placeholder="搜索姓名、工号、电子邮箱..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="h-16 pl-14 pr-8 bg-white rounded-[1.25rem] border-none shadow-premium focus:ring-4 ring-primary-50 text-base font-medium"
+                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium"
               />
             </div>
 
             <div className="flex items-center gap-6">
               <Button
                 onClick={handleSearch}
-                className="h-14 px-10 rounded-2xl font-bold shadow-clay-btn hover:scale-105 transition-transform"
+                className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
               >
                 搜索
               </Button>
-              <div className="h-12 w-[2px] bg-gray-200 mx-2" />
+              <div className="h-12 w-[1px] bg-[#E5E7EB] mx-2" />
               <div className="text-right">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Total Users</span>
-                <span className="text-2xl font-black text-gray-900 tracking-tight">{data?.length || 0}</span>
+                <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
+                <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
               </div>
             </div>
           </div>
 
           {/* 表格容器 */}
-          <div className="overflow-hidden rounded-[2rem] relative z-10">
+          <div className="overflow-hidden rounded-lg">
             <DataTable
               columns={columns}
               data={data || []}
@@ -396,19 +405,19 @@ export const UserList: React.FC = () => {
         }}
       />
 
-      {/* 重置密码确认对话框 - Clay Style */}
+      {/* 重置密码确认对话框 */}
       <Dialog
         open={resetPasswordDialog.open}
         onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
       >
-        <DialogContent className="rounded-[40px] max-w-md p-10 border-white/60 bg-clay-cardBg/95 backdrop-blur-2xl shadow-clay-deep">
+        <DialogContent className="rounded-lg max-w-md p-10 border border-[#E5E7EB] bg-white">
           <DialogHeader>
-            <div className="w-24 h-24 bg-clay-secondary/10 text-clay-secondary rounded-full flex items-center justify-center mb-8 mx-auto shadow-clay-pressed">
+            <div className="w-20 h-20 bg-[#DBEAFE] text-[#3B82F6] rounded-full flex items-center justify-center mb-8 mx-auto">
               <Lock className="h-10 w-10" />
             </div>
-            <DialogTitle className="text-3xl font-black text-clay-foreground mb-4 text-center tracking-tight">重置密码？</DialogTitle>
-            <DialogDescription className="text-clay-muted font-medium text-center text-lg leading-relaxed">
-              系统将生成一个<span className="text-clay-primary font-bold">临时密码</span>。<br />
+            <DialogTitle className="text-2xl font-bold text-[#111827] mb-4 text-center tracking-tight">重置密码？</DialogTitle>
+            <DialogDescription className="text-[#6B7280] font-medium text-center text-base leading-relaxed">
+              系统将生成一个<span className="text-[#3B82F6] font-semibold">临时密码</span>。<br />
               用户下次登录时必须修改。
             </DialogDescription>
           </DialogHeader>
@@ -416,14 +425,14 @@ export const UserList: React.FC = () => {
             <Button
               variant="ghost"
               onClick={() => setResetPasswordDialog({ open: false })}
-              className="flex-1 rounded-2xl h-16 font-bold text-clay-muted hover:bg-clay-muted/10 hover:text-clay-foreground"
+              className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]"
             >
               取消
             </Button>
             <Button
               onClick={handleResetPassword}
               disabled={resetPassword.isPending}
-              className="flex-1 bg-gradient-to-r from-clay-secondary to-pink-600 text-white rounded-2xl h-16 font-bold shadow-clay-btn hover:shadow-clay-btn-hover"
+              className="flex-1 bg-[#DC2626] text-white rounded-md h-14 font-semibold hover:bg-[#B91C1C] hover:scale-105 transition-all duration-200"
             >
               {resetPassword.isPending ? "处理中..." : "确认重置"}
             </Button>
@@ -431,19 +440,19 @@ export const UserList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 临时密码显示对话框 - Clay Style */}
+      {/* 临时密码显示对话框 */}
       <Dialog
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-[40px] max-w-md p-10 border-white/60 bg-clay-bg/95 backdrop-blur-2xl shadow-clay-deep">
+        <DialogContent className="rounded-lg max-w-md p-10 border border-[#E5E7EB] bg-white">
           <DialogHeader>
-            <div className="w-24 h-24 bg-clay-success/10 text-clay-success rounded-full flex items-center justify-center mb-8 mx-auto shadow-clay-pressed">
-              <ShieldCheck className="h-12 w-12" />
+            <div className="w-20 h-20 bg-[#D1FAE5] text-[#10B981] rounded-full flex items-center justify-center mb-8 mx-auto">
+              <ShieldCheck className="h-10 w-10" />
             </div>
-            <DialogTitle className="text-3xl font-black text-clay-foreground mb-3 text-center tracking-tight">重置成功</DialogTitle>
-            <DialogDescription className="text-clay-muted font-medium text-center text-lg">
-              请务必将此密码<span className="text-clay-foreground font-bold">安全地</span>转交给用户
+            <DialogTitle className="text-2xl font-bold text-[#111827] mb-3 text-center tracking-tight">重置成功</DialogTitle>
+            <DialogDescription className="text-[#6B7280] font-medium text-center text-base">
+              请务必将此密码<span className="text-[#111827] font-semibold">安全地</span>转交给用户
             </DialogDescription>
           </DialogHeader>
 
@@ -451,22 +460,21 @@ export const UserList: React.FC = () => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="absolute inset-0 bg-clay-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div className="relative bg-white border-none rounded-3xl p-8 text-center shadow-clay-card hover:-translate-y-1 transition-transform duration-300">
-              <span className="text-xs font-black text-clay-muted uppercase tracking-[0.2em] mb-3 block">临时密码</span>
-              <code className="text-4xl font-black text-clay-primary tracking-widest font-mono">
+            <div className="relative bg-[#F3F4F6] rounded-lg p-8 text-center transition-all duration-200 hover:scale-[1.02]">
+              <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3 block">临时密码</span>
+              <code className="text-3xl font-bold text-[#3B82F6] tracking-widest font-mono">
                 {tempPasswordDialog.password}
               </code>
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-clay-muted uppercase tracking-wider opacity-60 group-hover:opacity-100 transition-opacity">
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">
                 点击复制
               </div>
             </div>
           </div>
 
-          <DialogFooter className="mt-12">
+          <DialogFooter className="mt-10">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-clay-foreground text-white rounded-2xl h-16 font-bold shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1"
+              className="w-full bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] hover:scale-105 transition-all duration-200"
             >
               完成并关闭
             </Button>

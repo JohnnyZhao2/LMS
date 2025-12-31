@@ -21,8 +21,6 @@ import { TestCenter } from '@/features/test-center/components/test-center';
 import { SpotCheckList } from '@/features/spot-checks/components/spot-check-list';
 import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
 import { UserList } from '@/features/users/components/user-list';
-import { UserForm } from '@/features/users/components/user-form';
-import { UserDetail } from '@/features/users/components/user-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
 
@@ -275,30 +273,6 @@ export const AppRouter: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <UserList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={`${ROUTES.USERS}/create`}
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <UserForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={`${ROUTES.USERS}/:id/edit`}
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <UserForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={`${ROUTES.USERS}/:id`}
-        element={
-          <ProtectedRoute allowedRoles={['ADMIN']}>
-            <UserDetail />
           </ProtectedRoute>
         }
       />

@@ -174,20 +174,20 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2.5rem] border-none h-[85vh] flex flex-col bg-white shadow-2xl">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-[#E5E7EB] h-[85vh] flex flex-col bg-white">
 
-        {/* Header - Clean White */}
-        <DialogHeader className="px-10 py-8 shrink-0 border-b border-gray-100">
-          <DialogTitle className="text-2xl font-black text-gray-900 flex items-center gap-4 tracking-tight" style={{ fontFamily: "Nunito, sans-serif" }}>
+        {/* Header */}
+        <DialogHeader className="px-8 py-6 shrink-0 border-b border-[#E5E7EB]">
+          <DialogTitle className="text-2xl font-bold text-[#111827] flex items-center gap-4 tracking-tight">
             <div className={cn(
-              "w-14 h-14 rounded-2xl flex items-center justify-center text-white",
-              isEdit ? "bg-gradient-to-br from-purple-400 to-purple-600" : "bg-gradient-to-br from-emerald-400 to-emerald-600"
+              "w-14 h-14 rounded-lg flex items-center justify-center text-white",
+              isEdit ? "bg-[#DC2626]" : "bg-[#10B981]"
             )}>
               {isEdit ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
             </div>
             {isEdit ? '编辑成员档案' : '邀请新成员'}
             {isEdit && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600">
+              <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-[#D1FAE5] text-[#10B981]">
                 Active
               </span>
             )}
@@ -195,66 +195,66 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-10 py-8 space-y-8 scrollbar-hide bg-white">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-white">
 
           {/* 1. Basic Info */}
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-purple-500" />
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">基础信息</h3>
+              <div className="w-1 h-5 rounded-full bg-[#3B82F6]" />
+              <h3 className="text-sm font-semibold text-[#111827] uppercase tracking-wider">基础信息</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">真实姓名</label>
+                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">真实姓名</label>
                 <Input
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
-                  className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-base px-4"
+                  className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-base px-4"
                   placeholder="请输入姓名"
                 />
-                {errors.username && <p className="text-xs font-medium text-red-500 ml-1">{errors.username}</p>}
+                {errors.username && <p className="text-xs font-medium text-[#DC2626]">{errors.username}</p>}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">员工工号</label>
+                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">员工工号</label>
                 <Input
                   value={formData.employee_id}
                   onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                  className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-mono font-medium text-base px-4"
+                  className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-mono font-medium text-base px-4"
                   placeholder="E.g. EMP001"
                 />
-                {errors.employee_id && <p className="text-xs font-medium text-red-500 ml-1">{errors.employee_id}</p>}
+                {errors.employee_id && <p className="text-xs font-medium text-[#DC2626]">{errors.employee_id}</p>}
               </div>
 
               {!isEdit && (
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">初始密码</label>
+                  <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">初始密码</label>
                   <Input
                     type="password"
                     value={formData.password}
                     onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    className="h-14 rounded-xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-base px-4 tracking-widest"
+                    className="h-14 rounded-md bg-[#F3F4F6] border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-base px-4 tracking-widest"
                     placeholder="••••••••"
                   />
-                  {errors.password && <p className="text-xs font-medium text-red-500 ml-1">{errors.password}</p>}
+                  {errors.password && <p className="text-xs font-medium text-[#DC2626]">{errors.password}</p>}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-100" />
+          <div className="h-px w-full bg-[#E5E7EB]" />
 
           {/* 2. Organization */}
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-pink-500" />
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">组织归属</h3>
+              <div className="w-1 h-5 rounded-full bg-[#10B981]" />
+              <h3 className="text-sm font-semibold text-[#111827] uppercase tracking-wider">组织归属</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">选择部门</label>
+                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">选择部门</label>
                 <div className="grid grid-cols-2 gap-3">
                   {departments.map(dept => {
                     const active = formData.department_id === dept.id;
@@ -263,42 +263,42 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                         key={dept.id}
                         onClick={() => setFormData({ ...formData, department_id: dept.id })}
                         className={cn(
-                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-12 rounded-xl transition-all",
+                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-12 rounded-md transition-all duration-200",
                           active
-                            ? "bg-pink-500 text-white shadow-md"
-                            : "bg-gray-50 border border-gray-100 text-gray-700 hover:border-pink-200 hover:bg-pink-50"
+                            ? "bg-[#10B981] text-white"
+                            : "bg-[#F3F4F6] border-0 text-[#111827] hover:bg-[#E5E7EB]"
                         )}
                       >
                         <Building2 className="w-4 h-4" />
-                        <span className="text-sm font-bold whitespace-nowrap">
+                        <span className="text-sm font-semibold whitespace-nowrap">
                           {dept.name}
                         </span>
                       </div>
                     )
                   })}
                 </div>
-                {errors.department_id && <p className="text-xs font-medium text-red-500 ml-1">{errors.department_id}</p>}
+                {errors.department_id && <p className="text-xs font-medium text-[#DC2626]">{errors.department_id}</p>}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">分配导师 (可选)</label>
+                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">分配导师 (可选)</label>
                 <Select
                   value={formData.mentor_id?.toString() || ''}
                   onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
                 >
-                  <SelectTrigger className="h-14 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 focus:ring-4 focus:ring-purple-100 transition-all font-medium text-gray-900 px-4 text-base">
+                  <SelectTrigger className="h-14 rounded-md bg-[#F3F4F6] border-0 hover:bg-[#E5E7EB] focus:border-2 focus:border-[#3B82F6] transition-all font-medium text-[#111827] px-4 text-base">
                     <SelectValue placeholder="选择带教导师..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-60 rounded-xl border border-gray-100 shadow-xl z-[9999] bg-white p-2" sideOffset={8}>
+                  <SelectContent className="max-h-60 rounded-md border border-[#E5E7EB] z-[9999] bg-white p-2" sideOffset={8}>
                     {mentors.filter(m => !userId || m.id !== userId).map(m => (
-                      <SelectItem key={m.id} value={m.id.toString()} className="rounded-lg py-3 px-4 my-0.5 cursor-pointer focus:bg-purple-50 data-[state=checked]:bg-purple-50">
+                      <SelectItem key={m.id} value={m.id.toString()} className="rounded-md py-3 px-4 my-0.5 cursor-pointer focus:bg-[#DBEAFE] data-[state=checked]:bg-[#DBEAFE]">
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8 rounded-full">
-                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white text-xs font-bold">
+                            <AvatarFallback className="bg-[#3B82F6] text-white text-xs font-bold">
                               {getAvatarText(m.username)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium text-gray-900">{m.username}</span>
+                          <span className="font-medium text-[#111827]">{m.username}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -308,24 +308,24 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-100" />
+          <div className="h-px w-full bg-[#E5E7EB]" />
 
-          {/* 3. Roles - Clay Style */}
-          <div className="space-y-6">
+          {/* 3. Roles */}
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1.5 h-7 rounded-full bg-gradient-to-b from-clay-tertiary to-sky-400" />
-              <h3 className="text-lg font-black text-clay-foreground tracking-tight" style={{ fontFamily: "Nunito, sans-serif" }}>系统权限</h3>
+              <div className="w-1 h-5 rounded-full bg-[#F59E0B]" />
+              <h3 className="text-base font-bold text-[#111827] tracking-tight">系统权限</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pl-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Default Role */}
-              <div className="flex items-center gap-4 p-5 rounded-3xl bg-clay-muted/8 opacity-60">
-                <div className="w-12 h-12 rounded-2xl bg-white shadow-sm text-clay-muted flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-5 rounded-lg bg-[#F3F4F6] opacity-60">
+                <div className="w-12 h-12 rounded-lg bg-white text-[#9CA3AF] flex items-center justify-center shrink-0">
                   <User className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-clay-muted" style={{ fontFamily: "Nunito, sans-serif" }}>普通学员</span>
-                  <span className="text-xs text-clay-muted/80 font-bold uppercase mt-0.5 tracking-widest">Default</span>
+                  <span className="text-base font-bold text-[#6B7280]">普通学员</span>
+                  <span className="text-xs text-[#9CA3AF] font-semibold uppercase mt-0.5 tracking-wider">Default</span>
                 </div>
               </div>
 
@@ -334,48 +334,51 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                 const config = roleConfigs[role.code] || roleConfigs.STUDENT;
                 const active = formData.role_codes.includes(role.code as RoleCode);
 
-                // Map role codes to candy-shop gradient colors
-                const colorMap: Record<string, { gradient: string; text: string }> = {
-                  ADMIN: { gradient: "from-red-400 to-red-600", text: "text-red-500" },
-                  MENTOR: { gradient: "from-amber-400 to-amber-600", text: "text-amber-500" },
-                  TEAM_MANAGER: { gradient: "from-cyan-400 to-cyan-600", text: "text-cyan-500" },
-                  DEPT_MANAGER: { gradient: "from-purple-400 to-purple-600", text: "text-purple-500" },
-                  ROOM_MANAGER: { gradient: "from-purple-400 to-fuchsia-600", text: "text-purple-500" }
+                // Map role codes to flat design colors
+                const colorMap: Record<string, { bg: string; text: string; iconBg: string }> = {
+                  ADMIN: { bg: "#DC2626", text: "#DC2626", iconBg: "#DC2626" },
+                  MENTOR: { bg: "#F59E0B", text: "#F59E0B", iconBg: "#F59E0B" },
+                  TEAM_MANAGER: { bg: "#0EA5E9", text: "#0EA5E9", iconBg: "#0EA5E9" },
+                  DEPT_MANAGER: { bg: "#7C3AED", text: "#7C3AED", iconBg: "#7C3AED" },
+                  ROOM_MANAGER: { bg: "#7C3AED", text: "#7C3AED", iconBg: "#7C3AED" }
                 };
-                const colorConfig = colorMap[role.code] || { gradient: "from-clay-primary to-purple-600", text: "text-clay-primary" };
+                const colorConfig = colorMap[role.code] || { bg: "#3B82F6", text: "#3B82F6", iconBg: "#3B82F6" };
 
                 return (
                   <div
                     key={role.code}
                     onClick={() => toggleRole(role.code as RoleCode)}
                     className={cn(
-                      "group cursor-pointer relative flex items-center gap-4 p-5 rounded-3xl transition-all duration-300 ease-out",
+                      "group cursor-pointer relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
                       active
-                        ? "bg-white shadow-clay-card -translate-y-1"
-                        : "bg-white/60 hover:bg-white hover:shadow-clay-card hover:-translate-y-0.5"
+                        ? "bg-white border-2"
+                        : "bg-[#F3F4F6] border-2 border-transparent hover:bg-white hover:scale-[1.02]"
                     )}
+                    style={active ? { borderColor: colorConfig.bg } : {}}
                   >
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0",
+                      "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
                       active
-                        ? `bg-gradient-to-br ${colorConfig.gradient} text-white shadow-clay-btn scale-110 rotate-3`
-                        : "bg-white shadow-sm text-clay-muted group-hover:text-clay-foreground"
-                    )}>
+                        ? "text-white"
+                        : "bg-white text-[#6B7280] group-hover:text-[#111827]"
+                    )}
+                    style={active ? { backgroundColor: colorConfig.iconBg } : {}}
+                    >
                       {config.icon}
                     </div>
 
                     <div className="flex-1">
                       <div className={cn(
-                        "text-base font-black transition-colors",
-                        active ? colorConfig.text : "text-clay-muted group-hover:text-clay-foreground"
-                      )} style={{ fontFamily: "Nunito, sans-serif" }}>
+                        "text-base font-bold transition-colors",
+                        active ? colorConfig.text : "text-[#6B7280] group-hover:text-[#111827]"
+                      )}>
                         {role.name}
                       </div>
-                      {active && <div className="text-[10px] font-bold uppercase text-clay-muted tracking-widest animate-fadeIn">Enabled</div>}
+                      {active && <div className="text-[10px] font-semibold uppercase text-[#6B7280] tracking-wider">Enabled</div>}
                     </div>
 
                     {active && (
-                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full bg-clay-success shadow-sm animate-breathe" />
+                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full" style={{ backgroundColor: "#10B981" }} />
                     )}
                   </div>
                 )
@@ -384,20 +387,19 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </div>
         </div>
 
-        {/* Footer - Clay Style */}
-        <DialogFooter className="px-10 py-8 border-t border-white/60 bg-gradient-to-r from-white/40 to-white/20 shrink-0 sm:justify-end gap-4">
+        {/* Footer */}
+        <DialogFooter className="px-8 py-6 border-t border-[#E5E7EB] bg-white shrink-0 sm:justify-end gap-4">
           <Button
             variant="ghost"
             onClick={onClose}
-            className="h-14 px-8 rounded-2xl font-bold text-clay-muted hover:bg-clay-muted/10 hover:text-clay-foreground transition-all"
+            className="h-14 px-8 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] transition-all duration-200"
           >
             取消
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="w-full sm:w-auto h-14 px-10 rounded-2xl bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] text-white font-black text-lg shadow-clay-btn hover:shadow-clay-btn-hover hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 active:scale-[0.92] active:shadow-clay-pressed"
-            style={{ fontFamily: "Nunito, sans-serif" }}
+            className="w-full sm:w-auto h-14 px-10 rounded-md bg-[#3B82F6] text-white font-semibold text-base hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
           >
             {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即邀请"}
           </Button>
