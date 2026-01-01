@@ -31,8 +31,12 @@ import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';
 
 /**
- * 答题界面组件
- * 统一处理练习和考试，根据 quiz_type 自动判断行为
+ * 答题界面组件 - Flat Design 版本
+ * 
+ * 设计规范：
+ * - 无阴影 (shadow-none)
+ * - 无渐变 (no gradient)
+ * - 实心背景色区分考试/练习模式
  */
 export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
@@ -64,7 +68,6 @@ export const QuizPlayer: React.FC = () => {
         const result = await startQuizMutation({ assignmentId, quizId });
         setSubmission(result);
 
-        // 初始化已有答案
         const existingAnswers: Record<number, unknown> = {};
         result.answers.forEach((a) => {
           if (a.user_answer !== null && a.user_answer !== undefined) {
@@ -94,7 +97,6 @@ export const QuizPlayer: React.FC = () => {
     }
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
 
-    // 自动保存
     try {
       await saveAnswerMutation({
         submissionId: submission.id,
@@ -144,35 +146,30 @@ export const QuizPlayer: React.FC = () => {
   const currentQuestion = submission.answers[currentIndex];
   const answeredCount = Object.keys(answers).length;
   const progressPercent = Math.round((answeredCount / submission.answers.length) * 100);
-  // 从 submission 中获取 quiz_type 判断是否是考试
   const isExam = submission.quiz_type === 'EXAM';
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
     <div
       className={cn(
-        'animate-fadeIn -m-6 min-h-[calc(100vh-var(--header-height))] p-6',
-        isExam
-          ? 'bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f0f23]'
-          : 'bg-gray-50'
+        '-m-6 min-h-[calc(100vh-var(--header-height))] p-6',
+        isExam ? 'bg-[#111827]' : 'bg-[#F3F4F6]'
       )}
     >
-      {/* 顶部信息栏 */}
+      {/* 顶部信息栏 - Flat Design */}
       <div
         className={cn(
-          'flex justify-between items-center mb-6 px-5 py-4 rounded-xl',
+          'flex justify-between items-center mb-6 px-5 py-4 rounded-lg',
           isExam
-            ? 'bg-white/5 backdrop-blur-lg border border-white/10'
-            : 'bg-white border border-gray-100'
+            ? 'bg-white/10'
+            : 'bg-white'
         )}
       >
         <div className="flex items-center gap-4">
           <div
             className={cn(
-              'w-11 h-11 rounded-lg flex items-center justify-center text-white text-xl',
-              isExam
-                ? 'bg-gradient-to-br from-error-500 to-pink-500'
-                : 'bg-gradient-to-br from-primary-500 to-purple-500'
+              'w-11 h-11 rounded-md flex items-center justify-center text-white text-xl',
+              isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
             )}
           >
             <FileText className="w-5 h-5" />
@@ -181,14 +178,14 @@ export const QuizPlayer: React.FC = () => {
             <h4
               className={cn(
                 'text-lg font-semibold m-0',
-                isExam ? 'text-white' : 'text-gray-900'
+                isExam ? 'text-white' : 'text-[#111827]'
               )}
             >
               {submission.quiz_title}
             </h4>
             <span className={cn(
               'text-sm',
-              isExam ? 'text-white/60' : 'text-gray-500'
+              isExam ? 'text-white/60' : 'text-[#6B7280]'
             )}>
               总分：{submission.total_score}分 · {submission.answers.length} 道题
             </span>
@@ -212,7 +209,8 @@ export const QuizPlayer: React.FC = () => {
           <div className="sticky top-[88px]">
             <Card
               className={cn(
-                isExam && 'bg-white/5 border-white/10'
+                'rounded-lg',
+                isExam ? 'bg-white/10' : 'bg-white'
               )}
             >
               <CardContent className="p-5">
@@ -220,27 +218,27 @@ export const QuizPlayer: React.FC = () => {
                   <div className="flex justify-between mb-2">
                     <span className={cn(
                       'text-sm',
-                      isExam ? 'text-white/60' : 'text-gray-600'
+                      isExam ? 'text-white/60' : 'text-[#6B7280]'
                     )}>
                       答题进度
                     </span>
                     <span className={cn(
                       'font-semibold',
-                      isExam ? 'text-white' : 'text-primary-500'
+                      isExam ? 'text-white' : 'text-[#3B82F6]'
                     )}>
                       {answeredCount}/{submission.answers.length}
                     </span>
                   </div>
                   <Progress
                     percent={progressPercent}
-                    strokeColor={isExam ? 'var(--color-error-500)' : 'var(--color-primary-500)'}
-                    trailColor={isExam ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-gray-100)'}
+                    strokeColor={isExam ? '#EF4444' : '#3B82F6'}
+                    trailColor={isExam ? 'rgba(255, 255, 255, 0.1)' : '#E5E7EB'}
                   />
                 </div>
 
                 <span className={cn(
                   'text-xs block mb-3',
-                  isExam ? 'text-white/50' : 'text-gray-500'
+                  isExam ? 'text-white/50' : 'text-[#6B7280]'
                 )}>
                   题目导航
                 </span>
@@ -254,22 +252,22 @@ export const QuizPlayer: React.FC = () => {
                         key={a.question}
                         onClick={() => setCurrentIndex(i)}
                         className={cn(
-                          'w-10 h-10 rounded-md font-semibold text-sm transition-all flex items-center justify-center',
+                          'w-10 h-10 rounded-md font-semibold text-sm transition-all duration-200 flex items-center justify-center hover:scale-105',
                           isCurrent
                             ? cn(
-                              'text-white border-none',
-                              isExam ? 'bg-error-500' : 'bg-primary-500'
+                              'text-white',
+                              isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
                             )
                             : isAnswered
                               ? cn(
                                 isExam
-                                  ? 'bg-green-500/20 border border-green-500/40 text-green-400'
-                                  : 'bg-success-50 border border-success-300 text-success-500'
+                                  ? 'bg-[#065F46] text-[#34D399]'
+                                  : 'bg-[#D1FAE5] text-[#10B981]'
                               )
                               : cn(
                                 isExam
-                                  ? 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'
-                                  : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'
+                                  ? 'bg-white/10 text-white/60 hover:bg-white/20'
+                                  : 'bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]'
                               )
                         )}
                       >
@@ -291,37 +289,36 @@ export const QuizPlayer: React.FC = () => {
         <div className="lg:col-span-3">
           <Card
             className={cn(
-              isExam && 'bg-white/5 border-white/10'
+              'rounded-lg',
+              isExam ? 'bg-white/10' : 'bg-white'
             )}
           >
             <CardContent className="p-6">
               {/* 题号指示 */}
               <div
                 className={cn(
-                  'flex justify-between items-center mb-5 pb-4 border-b',
-                  isExam ? 'border-white/10' : 'border-gray-100'
+                  'flex justify-between items-center mb-5 pb-4 border-b-2',
+                  isExam ? 'border-white/10' : 'border-[#F3F4F6]'
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
                       'w-9 h-9 rounded-md flex items-center justify-center text-white font-bold text-lg',
-                      isExam
-                        ? 'bg-gradient-to-br from-error-500 to-pink-500'
-                        : 'bg-gradient-to-br from-primary-500 to-purple-500'
+                      isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
                     )}
                   >
                     {currentIndex + 1}
                   </div>
                   <span className={cn(
-                    isExam ? 'text-white/60' : 'text-gray-500'
+                    isExam ? 'text-white/60' : 'text-[#6B7280]'
                   )}>
                     第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
                   </span>
                 </div>
                 {currentQuestion && (
                   <span className={cn(
-                    isExam ? 'text-white/60' : 'text-gray-500'
+                    isExam ? 'text-white/60' : 'text-[#6B7280]'
                   )}>
                     分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                   </span>
@@ -343,8 +340,8 @@ export const QuizPlayer: React.FC = () => {
               {/* 底部操作栏 */}
               <div
                 className={cn(
-                  'flex justify-between mt-8 pt-5 border-t',
-                  isExam ? 'border-white/10' : 'border-gray-100'
+                  'flex justify-between mt-8 pt-5 border-t-2',
+                  isExam ? 'border-white/10' : 'border-[#F3F4F6]'
                 )}
               >
                 <Button
@@ -353,8 +350,8 @@ export const QuizPlayer: React.FC = () => {
                   disabled={currentIndex === 0}
                   onClick={() => setCurrentIndex((prev) => prev - 1)}
                   className={cn(
-                    'h-12 px-5 rounded-lg',
-                    isExam && 'bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white'
+                    'h-12 px-5 rounded-md',
+                    isExam && 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white'
                   )}
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
@@ -366,8 +363,10 @@ export const QuizPlayer: React.FC = () => {
                       size="lg"
                       onClick={() => setCurrentIndex((prev) => prev + 1)}
                       className={cn(
-                        'h-12 px-6 rounded-lg font-semibold',
-                        isExam && 'bg-gradient-to-r from-error-500 to-pink-500 hover:from-error-600 hover:to-pink-600 border-none'
+                        'h-12 px-6 rounded-md font-semibold hover:scale-105',
+                        isExam
+                          ? 'bg-[#EF4444] hover:bg-[#DC2626]'
+                          : 'bg-[#3B82F6] hover:bg-[#2563EB]'
                       )}
                     >
                       下一题
@@ -379,10 +378,7 @@ export const QuizPlayer: React.FC = () => {
                       variant={isExam ? 'destructive' : 'default'}
                       onClick={() => setShowSubmitDialog(true)}
                       disabled={isSubmitPending}
-                      className={cn(
-                        'h-12 px-6 rounded-lg font-semibold',
-                        isExam && 'shadow-[0_4px_14px_rgba(255,61,113,0.4)]'
-                      )}
+                      className="h-12 px-6 rounded-md font-semibold hover:scale-105"
                     >
                       {isSubmitPending ? (
                         <Spinner size="sm" className="mr-2" />
@@ -401,13 +397,13 @@ export const QuizPlayer: React.FC = () => {
 
       {/* 提交确认对话框 */}
       <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-lg">
           <DialogHeader>
             <DialogTitle>确认提交</DialogTitle>
             <DialogDescription asChild>
               <div>
                 {unansweredCount > 0 && (
-                  <div className="mb-3 text-warning-500">
+                  <div className="mb-3 text-[#F59E0B]">
                     ⚠️ 还有 {unansweredCount} 道题未作答
                   </div>
                 )}
@@ -435,7 +431,7 @@ export const QuizPlayer: React.FC = () => {
 
       {/* 时间到对话框 */}
       <Dialog open={showTimeUpDialog} onOpenChange={setShowTimeUpDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-lg">
           <DialogHeader>
             <DialogTitle>⏰ 时间到</DialogTitle>
             <DialogDescription>

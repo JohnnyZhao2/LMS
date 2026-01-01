@@ -1,14 +1,10 @@
 import { Spinner } from '@/components/ui/spinner';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Plus,
   Search,
   Home,
   Database,
-  Cloud,
-  Network,
-  Shield,
-  FileText,
-  Settings,
   Inbox,
   LayoutGrid,
 } from 'lucide-react';
@@ -18,6 +14,7 @@ import { useLineTypeTags } from '../api/get-tags';
 import { SharedKnowledgeCard } from './shared-knowledge-card';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
+import { getLineTypeIcon } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import {
@@ -36,26 +33,7 @@ import type { KnowledgeFilterType, Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-
-/**
- * 条线类型图标映射
- */
-const LINE_TYPE_ICONS: Record<string, React.ReactNode> = {
-  '双云': <Cloud className="w-4.5 h-4.5" />,
-  '数据库': <Database className="w-4.5 h-4.5" />,
-  '网络': <Network className="w-4.5 h-4.5" />,
-  '应用': <LayoutGrid className="w-4.5 h-4.5" />,
-  '应急': <Shield className="w-4.5 h-4.5" />,
-  '规章制度': <FileText className="w-4.5 h-4.5" />,
-  '其他': <Settings className="w-4.5 h-4.5" />,
-};
-
-/**
- * 获取条线类型图标
- */
-const getLineTypeIcon = (name: string): React.ReactNode => {
-  return LINE_TYPE_ICONS[name] || <FileText className="w-4.5 h-4.5" />;
-};
+import { Shield } from 'lucide-react';
 
 /**
  * 管理员知识库列表组件 - 极致美学一致性版
@@ -273,10 +251,11 @@ export const AdminKnowledgeList: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-32 bg-[#F3F4F6] rounded-lg border-0">
-              <Inbox className="w-16 h-16 text-[#9CA3AF] mb-4" />
-              <span className="text-lg font-bold text-[#6B7280]">暂无知识文档</span>
-            </div>
+            <EmptyState
+              icon={Inbox}
+              description="暂无知识文档"
+              className="py-32 bg-[#F3F4F6] rounded-lg"
+            />
           )}
         </div>
       </div>

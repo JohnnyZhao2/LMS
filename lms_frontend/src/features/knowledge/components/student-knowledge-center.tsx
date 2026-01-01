@@ -1,16 +1,11 @@
 import { Spinner } from '@/components/ui/spinner';
 import { Pagination } from '@/components/ui/pagination';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Search,
   Home,
   Database,
-  Cloud,
-  Network,
-  Shield,
-  Settings,
-  FileText,
   Inbox,
-  LayoutGrid,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentKnowledgeList } from '../api/get-student-knowledge-list';
@@ -18,32 +13,13 @@ import { useLineTypeTags, useSystemTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { SharedKnowledgeCard } from './shared-knowledge-card';
+import { getLineTypeIcon } from '../utils';
 import type { Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
-/**
- * 条线类型图标映射
- */
-const LINE_TYPE_ICONS: Record<string, React.ReactNode> = {
-  '双云': <Cloud className="w-4.5 h-4.5" />,
-  '数据库': <Database className="w-4.5 h-4.5" />,
-  '网络': <Network className="w-4.5 h-4.5" />,
-  '应用': <LayoutGrid className="w-4.5 h-4.5" />,
-  '应急': <Shield className="w-4.5 h-4.5" />,
-  '规章制度': <FileText className="w-4.5 h-4.5" />,
-  '其他': <Settings className="w-4.5 h-4.5" />,
-};
-
-/**
- * 获取条线类型图标
- */
-const getLineTypeIcon = (name: string): React.ReactNode => {
-  return LINE_TYPE_ICONS[name] || <FileText className="w-4.5 h-4.5" />;
-};
 
 /**
  * 学员知识中心组件 - 极致美学一致性版
@@ -219,10 +195,11 @@ export const StudentKnowledgeCenter: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
-              <Inbox className="w-16 h-16 text-gray-400 mb-4" />
-              <span className="text-lg font-bold text-gray-500">暂无知识文档</span>
-            </div>
+            <EmptyState
+              icon={Inbox}
+              description="暂无知识文档"
+              className="py-32 bg-gray-100 rounded-lg"
+            />
           )}
 
           {data?.count && data.count > pageSize && (

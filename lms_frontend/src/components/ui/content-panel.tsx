@@ -33,9 +33,8 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
     return (
         <div
             className={cn(
-                // Claymorphism 统一样式
-                'bg-clay-cardBg backdrop-blur-xl rounded-lg',
-                'border-0 shadow-clay-card',
+                // Flat Design 统一样式
+                'bg-white rounded-lg',
                 paddingMap[padding],
                 className
             )}

@@ -1,5 +1,5 @@
 import { AppRouter } from './router';
-import { AppLayout, ClayBackground } from '@/components/layouts';
+import { AppLayout } from '@/components/layouts';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
@@ -30,11 +30,6 @@ export const AppContent: React.FC = () => {
     <AppRouter />
   );
 
-  return (
-    <>
-      <ClayBackground />
-      {content}
-    </>
-  );
+  return content;
 };
 

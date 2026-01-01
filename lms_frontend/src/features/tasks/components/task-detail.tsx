@@ -30,8 +30,6 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
-
-
 const assignmentStatusLabelMap: Record<string, string> = {
   IN_PROGRESS: '进行中',
   PENDING_EXAM: '待考试',
@@ -52,14 +50,20 @@ interface KnowledgeListViewItem {
 }
 
 /**
- * 任务详情组件（ShadCN UI 版本）
+ * 任务详情组件 - Flat Design 版本
+ * 
+ * 设计规范：
+ * - 无阴影 (shadow-none)
+ * - 无渐变 (no gradient)
+ * - 无模糊 (no blur)
+ * - 实心背景色区分层级
+ * - hover:scale 交互反馈
  */
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentRole, user, isLoading: authLoading } = useAuth();
 
-  // 等待 auth 加载完成后再判断角色，避免刷新时 currentRole 为 null 导致误判
   const isStudent = !authLoading && currentRole === 'STUDENT';
   const isAdmin = currentRole === 'ADMIN';
   const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER' || currentRole === 'TEAM_MANAGER';
@@ -73,8 +77,6 @@ export const TaskDetail: React.FC = () => {
     isError: taskError,
   } = useTaskDetail(taskId, { enabled: isValidTaskId && !authLoading });
 
-  // 学员始终需要获取学习详情（包含进度信息）
-  // 等待 auth 加载完成后再判断是否为学员，避免刷新时误判
   const { data: learningDetail, isLoading: learningLoading } = useStudentLearningTaskDetail(taskId, {
     enabled: Boolean(taskId) && isValidTaskId && isStudent,
   });
@@ -82,9 +84,9 @@ export const TaskDetail: React.FC = () => {
   const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
 
   const completeLearning = useCompleteLearning();
-  // 需要等待 auth 加载完成 + 任务数据加载完成 + 学员的学习详情加载完成
   const isLoading = authLoading || !isValidTaskId || taskLoading || (isStudent && learningLoading);
 
+  // Flat Design: 使用纯色而非渐变
   const appearance = useMemo(() => {
     const hasQuiz = (task?.quizzes?.length ?? 0) > 0;
     const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
@@ -92,29 +94,29 @@ export const TaskDetail: React.FC = () => {
 
     if (isExamTask) {
       return {
-        gradient: 'linear-gradient(135deg, #FF3D71 0%, #FF8C52 100%)',
+        bgColor: '#EF4444', // Red 500 - 实心颜色
         icon: <Trophy className="w-5 h-5" />,
-        themeColor: '#FF3D71',
-        bgSoft: 'rgb(254, 242, 242)',
+        themeColor: '#EF4444',
+        bgSoft: '#FEF2F2', // red-50
         missionLabel: 'EXAM MISSION',
       };
     }
 
     if (hasQuiz && hasKnowledge) {
       return {
-        gradient: 'linear-gradient(135deg, #4D6CFF 0%, #A855F7 100%)',
+        bgColor: '#3B82F6', // Blue 500 - 实心颜色
         icon: <Activity className="w-5 h-5" />,
-        themeColor: '#4D6CFF',
-        bgSoft: 'rgb(239, 246, 255)',
+        themeColor: '#3B82F6',
+        bgSoft: '#EFF6FF', // blue-50
         missionLabel: 'HYBRID MISSION',
       };
     }
 
     return {
-      gradient: 'linear-gradient(135deg, #4D6CFF 0%, #A855F7 100%)',
+      bgColor: '#3B82F6', // Blue 500
       icon: <BookOpen className="w-5 h-5" />,
-      themeColor: '#4D6CFF',
-      bgSoft: 'rgb(239, 246, 255)',
+      themeColor: '#3B82F6',
+      bgSoft: '#EFF6FF',
       missionLabel: 'LEARNING MISSION',
     };
   }, [task]);
@@ -150,13 +152,13 @@ export const TaskDetail: React.FC = () => {
   if (!isValidTaskId) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="bg-white/60 backdrop-blur-md rounded-[2rem] p-12 text-center shadow-clay-card border border-white/60">
-          <div className="w-16 h-16 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="bg-[#F3F4F6] rounded-lg p-12 text-center">
+          <div className="w-16 h-16 bg-[#FEE2E2] text-[#EF4444] rounded-md flex items-center justify-center mx-auto mb-4">
             <Info className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-black text-clay-foreground mb-2">Invalid Task ID</h3>
-          <p className="text-clay-muted">无法找到指定的任务编号，请检查后重试。</p>
-          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => navigate(-1)}>
+          <h3 className="text-xl font-bold text-[#111827] mb-2">Invalid Task ID</h3>
+          <p className="text-[#6B7280]">无法找到指定的任务编号，请检查后重试。</p>
+          <Button variant="outline" className="mt-6" onClick={() => navigate(-1)}>
             返回上一页
           </Button>
         </div>
@@ -168,13 +170,8 @@ export const TaskDetail: React.FC = () => {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-6">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-indigo-100 rounded-full animate-spin border-t-indigo-500 shadow-lg"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-white/80 rounded-full backdrop-blur-sm"></div>
-            </div>
-          </div>
-          <span className="text-clay-muted font-bold tracking-widest uppercase text-sm animate-pulse">Loading Mission Data...</span>
+          <div className="w-16 h-16 border-4 border-[#DBEAFE] rounded-full animate-spin border-t-[#3B82F6]"></div>
+          <span className="text-[#6B7280] font-bold tracking-widest uppercase text-sm animate-pulse">Loading Mission Data...</span>
         </div>
       </div>
     );
@@ -183,13 +180,13 @@ export const TaskDetail: React.FC = () => {
   if (taskError || !task) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
-        <div className="bg-white/60 backdrop-blur-md rounded-[2rem] p-12 text-center shadow-clay-card border border-white/60 max-w-md">
-          <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="bg-[#F3F4F6] rounded-lg p-12 text-center max-w-md">
+          <div className="w-16 h-16 bg-[#F3F4F6] text-[#9CA3AF] rounded-md flex items-center justify-center mx-auto mb-4">
             <Info className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-black text-clay-foreground mb-2">Mission Not Found</h3>
-          <p className="text-clay-muted">任务不存在或您没有权限查看，请联系管理员。</p>
-          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => navigate('/tasks')}>
+          <h3 className="text-xl font-bold text-[#111827] mb-2">Mission Not Found</h3>
+          <p className="text-[#6B7280]">任务不存在或您没有权限查看，请联系管理员。</p>
+          <Button variant="outline" className="mt-6" onClick={() => navigate('/tasks')}>
             返回任务中心
           </Button>
         </div>
@@ -197,15 +194,11 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
-  // 对于学员，优先使用 learningDetail 中的状态；对于管理员，使用 task.assignments
   const myAssignment = task.assignments?.find((a) => a.assignee === user?.id);
-  
-  // 学员的任务状态：优先从 learningDetail 获取
   const studentStatus = learningDetail?.status;
   const studentStatusDisplay = learningDetail?.status_display;
-  
-  // 判断是否可以开始答题：学员需要任务状态为进行中
-  const canStartQuiz = isStudent 
+
+  const canStartQuiz = isStudent
     ? (studentStatus === 'IN_PROGRESS')
     : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
@@ -221,10 +214,8 @@ export const TaskDetail: React.FC = () => {
 
   const handleStartQuiz = (quizId: number) => {
     if (!isStudent || !canStartQuiz) return;
-    // 学员使用 learningDetail 中的 assignment id
     const assignmentId = learningDetail?.id;
     if (!assignmentId) return;
-    // 统一使用 /quiz 路由，quiz_type 由后端自动判断
     navigate(`/quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
@@ -232,97 +223,97 @@ export const TaskDetail: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* 顶部 Header 卡片 */}
+      {/* Header - Flat Design: 纯色背景 */}
       <div className="relative mb-8">
         <div
-          className="absolute inset-x-0 top-0 h-64 rounded-[2.5rem] overflow-hidden shadow-clay-card"
-          style={{ background: appearance.gradient }}
+          className="rounded-lg overflow-hidden"
+          style={{ backgroundColor: appearance.bgColor }}
         >
-          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-        </div>
+          <div className="relative pt-10 px-8 pb-8 text-white">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+              <div className="space-y-4 max-w-2xl">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="text-white bg-white/20 hover:bg-white/30 rounded-md mb-2 hover:scale-105 transition-all duration-200"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  返回列表
+                </Button>
 
-        <div className="relative pt-10 px-8 pb-8 z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 text-white text-shadow-sm">
-          <div className="space-y-4 max-w-2xl">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="text-white bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md border border-white/30 shadow-sm transition-all duration-300 hover:scale-105 mb-2"
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              返回列表
-            </Button>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className={cn(
-                  "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md border border-white/40 shadow-sm",
-                  appearance.missionLabel === 'EXAM MISSION' ? "bg-red-500/30 text-white" : "bg-blue-500/30 text-white"
-                )}>
-                  {appearance.missionLabel}
-                </span>
-                {/* 学员使用 learningDetail 状态，管理员使用 myAssignment 状态 */}
-                {isStudent && studentStatus && (
-                  <span className={cn(
-                    "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md border border-white/40 shadow-sm",
-                    studentStatus === 'COMPLETED' ? "bg-green-500/30 text-white" : "bg-white/20 text-white"
-                  )}>
-                    {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
-                  </span>
-                )}
-                {!isStudent && myAssignment && (
-                  <span className={cn(
-                    "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md border border-white/40 shadow-sm",
-                    myAssignment.status === 'COMPLETED' ? "bg-green-500/30 text-white" : "bg-white/20 text-white"
-                  )}>
-                    {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
-                  </span>
-                )}
-              </div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">{task.title}</h1>
-            </div>
-            {task.description && (
-              <p className="text-white/90 text-lg font-medium leading-relaxed backdrop-blur-sm rounded-xl p-2 -ml-2">
-                {task.description}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-3 items-end">
-            <div className="flex items-center gap-3 bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 shadow-lg">
-              <div className="text-right">
-                <div className="text-xs text-white/70 font-bold uppercase tracking-wider">截止时间</div>
-                <div className="font-black text-xl font-mono">{dayjs(task.deadline).format('MM.DD HH:mm')}</div>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs border border-white/30">
-                {task.created_by_name.charAt(0)}
-              </div>
-              发布人: {task.created_by_name}
-
-              {canEditTask && (
-                <div className="ml-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/20 hover:bg-white/30 rounded-full border border-white/30 text-white">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl border-white/50 bg-white/90 backdrop-blur-xl shadow-clay-card">
-                      <DropdownMenuItem onClick={() => navigate(`/tasks/${taskId}/edit`)} className="focus:bg-primary/10 rounded-lg cursor-pointer">
-                        <Edit className="w-4 h-4 mr-2 text-primary" />
-                        <span className="font-bold text-gray-700">编辑任务</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
+                      appearance.missionLabel === 'EXAM MISSION'
+                        ? "bg-white/30 text-white"
+                        : "bg-white/20 text-white"
+                    )}>
+                      {appearance.missionLabel}
+                    </span>
+                    {isStudent && studentStatus && (
+                      <span className={cn(
+                        "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
+                        studentStatus === 'COMPLETED' ? "bg-[#10B981] text-white" : "bg-white/20 text-white"
+                      )}>
+                        {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
+                      </span>
+                    )}
+                    {!isStudent && myAssignment && (
+                      <span className={cn(
+                        "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
+                        myAssignment.status === 'COMPLETED' ? "bg-[#10B981] text-white" : "bg-white/20 text-white"
+                      )}>
+                        {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
+                      </span>
+                    )}
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">{task.title}</h1>
                 </div>
-              )}
+                {task.description && (
+                  <p className="text-white/90 text-lg font-medium leading-relaxed">
+                    {task.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 items-end">
+                <div className="flex items-center gap-3 bg-white/20 rounded-md p-4">
+                  <div className="text-right">
+                    <div className="text-xs text-white/70 font-bold uppercase tracking-wider">截止时间</div>
+                    <div className="font-bold text-xl font-mono">{dayjs(task.deadline).format('MM.DD HH:mm')}</div>
+                  </div>
+                  <div className="w-10 h-10 rounded-md bg-white/20 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm font-medium text-white/80">
+                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                    {task.created_by_name.charAt(0)}
+                  </div>
+                  发布人: {task.created_by_name}
+
+                  {canEditTask && (
+                    <div className="ml-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/20 hover:bg-white/30 rounded-md text-white">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-lg bg-white border-2 border-[#E5E7EB]">
+                          <DropdownMenuItem onClick={() => navigate(`/tasks/${taskId}/edit`)} className="focus:bg-[#F3F4F6] rounded-md cursor-pointer">
+                            <Edit className="w-4 h-4 mr-2 text-[#3B82F6]" />
+                            <span className="font-semibold text-[#111827]">编辑任务</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -330,55 +321,55 @@ export const TaskDetail: React.FC = () => {
 
       <div className={`grid gap-6 ${isStudent ? 'grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
         <div className="flex flex-col gap-6">
-          {/* 知识列表 */}
+          {/* 知识列表 - Flat Design: 实心背景色块 */}
           {hasKnowledge && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 mb-2 px-2">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white shadow-clay-btn">
+                <div className="w-10 h-10 rounded-md bg-[#3B82F6] flex items-center justify-center text-white">
                   <BookOpen className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-black text-clay-foreground tracking-tight">学习章节</h3>
+                <h3 className="text-xl font-bold text-[#111827] tracking-tight">学习章节</h3>
               </div>
 
               <div className="space-y-4">
                 {knowledgeList.map((item, index) => (
                   <div
                     key={item.id}
-                    className="group relative bg-white/60 backdrop-blur-md rounded-[2rem] p-6 border border-white/60 shadow-clay-card hover:transform hover:scale-[1.01] transition-all duration-300"
+                    className="group relative bg-[#F3F4F6] rounded-lg p-6 hover:scale-[1.01] transition-all duration-200"
                   >
                     <div className="flex flex-col md:flex-row md:items-center gap-6">
-                      {/* Index Circle */}
+                      {/* Index Block */}
                       <div className={cn(
-                        "w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-xl font-black shadow-inner",
+                        "w-14 h-14 rounded-md flex-shrink-0 flex items-center justify-center text-xl font-bold",
                         item.isCompleted
-                          ? "bg-gradient-to-br from-green-400 to-emerald-500 text-white shadow-lg shadow-green-200"
-                          : "bg-clay-bg text-clay-muted"
+                          ? "bg-[#10B981] text-white"
+                          : "bg-[#E5E7EB] text-[#6B7280]"
                       )}>
                         {item.isCompleted ? <CheckCircle className="w-7 h-7" /> : index + 1}
                       </div>
 
                       <div className="flex-1 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider border border-indigo-100">
+                          <span className="px-2 py-0.5 rounded-md bg-[#DBEAFE] text-[#3B82F6] text-[10px] font-bold uppercase tracking-wider">
                             {item.knowledgeTypeDisplay || item.knowledgeType}
                           </span>
-                          <h4 className="text-lg font-bold text-clay-foreground">{item.title}</h4>
+                          <h4 className="text-lg font-bold text-[#111827]">{item.title}</h4>
                         </div>
                         {item.summary && (
-                          <p className="text-clay-muted text-sm leading-relaxed">{item.summary}</p>
+                          <p className="text-[#6B7280] text-sm leading-relaxed">{item.summary}</p>
                         )}
                       </div>
 
                       <div className="flex-shrink-0">
                         {isStudent && (
                           item.isCompleted ? (
-                            <div className="px-4 py-2 rounded-xl bg-green-50 text-green-600 font-bold text-sm flex items-center gap-2 border border-green-100">
+                            <div className="px-4 py-2 rounded-md bg-[#D1FAE5] text-[#10B981] font-semibold text-sm flex items-center gap-2">
                               <CheckCircle className="w-4 h-4" />
                               已掌握
                             </div>
                           ) : (
                             <Button
-                              className="w-full md:w-auto rounded-xl bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm hover:shadow-md transition-all font-bold"
+                              className="w-full md:w-auto bg-white hover:bg-[#F3F4F6] text-[#3B82F6] border-2 border-[#3B82F6] hover:scale-105 transition-all font-semibold"
                               disabled={completeLearning.isPending}
                               onClick={() => handleCompleteLearning(item.knowledgeId)}
                             >
@@ -394,14 +385,14 @@ export const TaskDetail: React.FC = () => {
             </div>
           )}
 
-          {/* 试卷列表 */}
+          {/* 试卷列表 - Flat Design: 色块区分 */}
           {displayQuizzes.length > 0 && (
             <div className="space-y-4 mt-8">
               <div className="flex items-center gap-3 mb-2 px-2">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white shadow-clay-btn">
+                <div className="w-10 h-10 rounded-md bg-[#F59E0B] flex items-center justify-center text-white">
                   <Trophy className="w-5 h-5" />
                 </div>
-                <h3 className="text-xl font-black text-clay-foreground tracking-tight">能力评估</h3>
+                <h3 className="text-xl font-bold text-[#111827] tracking-tight">能力评估</h3>
               </div>
 
               <div className="grid grid-cols-1 gap-4">
@@ -414,14 +405,14 @@ export const TaskDetail: React.FC = () => {
                     <div
                       key={item.id}
                       className={cn(
-                        "group relative overflow-hidden rounded-[2.5rem] p-1 border shadow-clay-card transition-all duration-300 hover:shadow-xl",
-                        isExamQuiz ? "bg-gradient-to-br from-red-50 via-white to-orange-50 border-red-100" : "bg-white/60 backdrop-blur-md border-white/60"
+                        "group relative rounded-lg p-6 transition-all duration-200 hover:scale-[1.01]",
+                        isExamQuiz ? "bg-[#FEF2F2]" : "bg-[#F3F4F6]"
                       )}
                     >
-                      <div className="bg-white/50 rounded-[2.2rem] p-6 md:p-8 h-full flex flex-col md:flex-row items-start md:items-center gap-6">
+                      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                         <div className={cn(
-                          "w-16 h-16 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-clay-btn text-white",
-                          isExamQuiz ? "bg-gradient-to-br from-red-400 to-orange-500" : "bg-gradient-to-br from-blue-400 to-indigo-500"
+                          "w-16 h-16 rounded-md flex items-center justify-center flex-shrink-0 text-white",
+                          isExamQuiz ? "bg-[#EF4444]" : "bg-[#3B82F6]"
                         )}>
                           {isExamQuiz ? <Trophy className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
                         </div>
@@ -430,41 +421,41 @@ export const TaskDetail: React.FC = () => {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2 mb-1">
                               <span className={cn(
-                                "px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border",
+                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest",
                                 isExamQuiz
-                                  ? "bg-red-50 text-red-600 border-red-100"
-                                  : "bg-blue-50 text-blue-600 border-blue-100"
+                                  ? "bg-[#FEE2E2] text-[#EF4444]"
+                                  : "bg-[#DBEAFE] text-[#3B82F6]"
                               )}>
                                 {item.quiz_type_display || (isExamQuiz ? 'FINAL EXAM' : 'PRACTICE QUIZ')}
                               </span>
                               {studentQuizItem?.is_completed && (
-                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-green-50 text-green-600 border border-green-100">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-[#D1FAE5] text-[#10B981]">
                                   COMPLETED
                                 </span>
                               )}
                             </div>
-                            <h4 className="text-2xl font-black text-clay-foreground">
+                            <h4 className="text-2xl font-bold text-[#111827]">
                               {studentQuizItem ? studentQuizItem.quiz_title : adminQuizItem?.quiz_title}
                             </h4>
                           </div>
 
-                          <div className="flex flex-wrap gap-4 text-sm font-bold text-clay-muted">
-                            <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-lg">
-                              <Info className="w-4 h-4 text-indigo-400" />
+                          <div className="flex flex-wrap gap-4 text-sm font-semibold text-[#6B7280]">
+                            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
+                              <Info className="w-4 h-4 text-[#3B82F6]" />
                               {item.question_count} 题
                             </div>
-                            <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-lg">
-                              <Trophy className="w-4 h-4 text-orange-400" />
+                            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
+                              <Trophy className="w-4 h-4 text-[#F59E0B]" />
                               总分 {item.total_score}
                             </div>
                             {item.duration && (
-                              <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-lg">
-                                <Clock className="w-4 h-4 text-blue-400" />
+                              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
+                                <Clock className="w-4 h-4 text-[#3B82F6]" />
                                 限时 {item.duration} 分钟
                               </div>
                             )}
                             {studentQuizItem?.is_completed && (
-                              <div className="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded-lg text-green-600 ml-auto">
+                              <div className="flex items-center gap-1.5 bg-[#D1FAE5] px-2 py-1 rounded-md text-[#10B981] ml-auto">
                                 <Trophy className="w-4 h-4" />
                                 最佳成绩: {studentQuizItem.score}
                               </div>
@@ -476,10 +467,10 @@ export const TaskDetail: React.FC = () => {
                           {isStudent && (
                             <Button
                               className={cn(
-                                "w-full md:w-auto h-12 rounded-2xl shadow-clay-btn hover:scale-105 transition-transform font-bold text-base px-8",
+                                "w-full md:w-auto h-12 rounded-md hover:scale-105 transition-transform font-semibold text-base px-8",
                                 isExamQuiz
-                                  ? "bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600"
-                                  : "bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600"
+                                  ? "bg-[#EF4444] text-white hover:bg-[#DC2626]"
+                                  : "bg-[#3B82F6] text-white hover:bg-[#2563EB]"
                               )}
                               disabled={!canStartQuiz || (isExamQuiz && !!studentQuizItem?.is_completed)}
                               onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
@@ -500,12 +491,12 @@ export const TaskDetail: React.FC = () => {
           )}
         </div>
 
-        {/* 学员侧边栏 - 进度与状态 */}
+        {/* 学员侧边栏 - Flat Design: 色块区分 */}
         {isStudent && (
           <div className="flex flex-col gap-6">
-            <div className="bg-white/60 backdrop-blur-md border border-white/60 shadow-clay-card rounded-[2rem] p-6">
-              <h3 className="text-lg font-black text-clay-foreground mb-6 flex items-center gap-2">
-                <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full"></div>
+            <div className="bg-[#F3F4F6] rounded-lg p-6">
+              <h3 className="text-lg font-bold text-[#111827] mb-6 flex items-center gap-2">
+                <div className="w-1 h-6 bg-[#3B82F6] rounded-full"></div>
                 任务进度
               </h3>
 
@@ -513,65 +504,50 @@ export const TaskDetail: React.FC = () => {
                 {learningDetail ? (
                   <>
                     <div className="relative w-48 h-48">
-                      <svg className="w-full h-full transform -rotate-90 drop-shadow-lg" viewBox="0 0 100 100">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         {/* Background circle */}
                         <circle
                           cx="50"
                           cy="50"
                           r="42"
                           fill="none"
-                          stroke="rgba(255,255,255,0.5)"
+                          stroke="#E5E7EB"
                           strokeWidth="12"
                         />
+                        {/* Progress circle - 实心颜色 */}
                         <circle
                           cx="50"
                           cy="50"
                           r="42"
                           fill="none"
-                          stroke="#e5e7eb"
-                          strokeWidth="12"
-                          strokeLinecap="round"
-                        />
-                        {/* Progress circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          fill="none"
-                          stroke="url(#progressGradient)"
+                          stroke="#3B82F6"
                           strokeWidth="12"
                           strokeLinecap="round"
                           strokeDasharray={`${learningDetail.progress.percentage * 2.64} 264`}
                           className="transition-all duration-1000 ease-out"
                         />
-                        <defs>
-                          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#4F46E5" />
-                            <stop offset="100%" stopColor="#9333EA" />
-                          </linearGradient>
-                        </defs>
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-br from-indigo-600 to-purple-600">
+                        <span className="text-4xl font-bold text-[#3B82F6]">
                           {learningDetail.progress.percentage}%
                         </span>
-                        <span className="text-xs font-bold text-clay-muted uppercase tracking-widest mt-1">Total Progress</span>
+                        <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-widest mt-1">Total Progress</span>
                       </div>
                     </div>
 
                     <div className="w-full mt-6 space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-white/50 rounded-xl border border-white/50">
-                        <span className="text-sm font-bold text-clay-muted">完成项目</span>
-                        <span className="font-black text-indigo-600 text-lg">
-                          {learningDetail.progress.completed} <span className="text-gray-400 text-sm font-medium">/ {learningDetail.progress.total}</span>
+                      <div className="flex justify-between items-center p-3 bg-white rounded-md">
+                        <span className="text-sm font-semibold text-[#6B7280]">完成项目</span>
+                        <span className="font-bold text-[#3B82F6] text-lg">
+                          {learningDetail.progress.completed} <span className="text-[#9CA3AF] text-sm font-normal">/ {learningDetail.progress.total}</span>
                         </span>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="text-center py-10 text-clay-muted font-medium">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Activity className="w-5 h-5 text-gray-400" />
+                  <div className="text-center py-10 text-[#6B7280] font-medium">
+                    <div className="w-12 h-12 bg-[#E5E7EB] rounded-md flex items-center justify-center mx-auto mb-3">
+                      <Activity className="w-5 h-5 text-[#9CA3AF]" />
                     </div>
                     暂无详细进度
                   </div>
@@ -579,40 +555,39 @@ export const TaskDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white/60 backdrop-blur-md border border-white/60 shadow-clay-card rounded-[2rem] p-6">
-              <h3 className="text-lg font-black text-clay-foreground mb-6 flex items-center gap-2">
-                <div className="w-1 h-6 bg-gradient-to-b from-orange-500 to-red-500 rounded-full"></div>
+            <div className="bg-[#F3F4F6] rounded-lg p-6">
+              <h3 className="text-lg font-bold text-[#111827] mb-6 flex items-center gap-2">
+                <div className="w-1 h-6 bg-[#F59E0B] rounded-full"></div>
                 当前状态
               </h3>
 
               <div className="flex flex-col gap-4">
                 {learningDetail?.progress?.knowledge_total ? (
-                  <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                    <span className="text-sm font-bold text-blue-400">知识同步</span>
-                    <span className="font-black text-blue-500 text-lg">
+                  <div className="flex items-center justify-between p-4 bg-[#DBEAFE] rounded-md">
+                    <span className="text-sm font-semibold text-[#3B82F6]">知识同步</span>
+                    <span className="font-bold text-[#3B82F6] text-lg">
                       {learningDetail.progress.knowledge_completed} / {learningDetail.progress.knowledge_total}
                     </span>
                   </div>
                 ) : null}
 
                 {learningDetail?.progress?.quiz_total ? (
-                  <div className="flex items-center justify-between p-4 bg-purple-50/50 rounded-xl border border-purple-100">
-                    <span className="text-sm font-bold text-purple-400">试卷同步</span>
-                    <span className="font-black text-purple-500 text-lg">
+                  <div className="flex items-center justify-between p-4 bg-[#F3E8FF] rounded-md">
+                    <span className="text-sm font-semibold text-[#A855F7]">试卷同步</span>
+                    <span className="font-bold text-[#A855F7] text-lg">
                       {learningDetail.progress.quiz_completed} / {learningDetail.progress.quiz_total}
                     </span>
                   </div>
                 ) : null}
 
-                <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-white/50">
-                  <span className="text-sm font-bold text-clay-muted">执行状态</span>
-                  {/* 学员使用 learningDetail 状态 */}
+                <div className="flex items-center justify-between p-4 bg-white rounded-md">
+                  <span className="text-sm font-semibold text-[#6B7280]">执行状态</span>
                   {studentStatus && (
                     <span className={cn(
-                      "px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest",
-                      studentStatus === 'COMPLETED' ? "bg-green-100 text-green-600" :
-                        studentStatus === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600" :
-                          "bg-gray-100 text-gray-600"
+                      "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
+                      studentStatus === 'COMPLETED' ? "bg-[#D1FAE5] text-[#10B981]" :
+                        studentStatus === 'IN_PROGRESS' ? "bg-[#DBEAFE] text-[#3B82F6]" :
+                          "bg-[#F3F4F6] text-[#6B7280]"
                     )}>
                       {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
                     </span>

@@ -71,7 +71,7 @@ export const TeamManagerDashboard: React.FC = () => {
           value="--"
           icon={Users}
           color="var(--color-primary-500)"
-          gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
+          gradient=""
           delay="stagger-delay-1"
         />
         <StatCard
@@ -79,7 +79,7 @@ export const TeamManagerDashboard: React.FC = () => {
           value="--%"
           icon={TrendingUp}
           color="var(--color-success-500)"
-          gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
+          gradient=""
           delay="stagger-delay-2"
         />
         <StatCard
@@ -87,7 +87,7 @@ export const TeamManagerDashboard: React.FC = () => {
           value="--"
           icon={Trophy}
           color="var(--color-purple-500)"
-          gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
+          gradient=""
           delay="stagger-delay-3"
         />
         <StatCard
@@ -95,7 +95,7 @@ export const TeamManagerDashboard: React.FC = () => {
           value="--"
           icon={User}
           color="var(--color-cyan-500)"
-          gradient="linear-gradient(135deg, var(--color-cyan-500) 0%, var(--color-cyan-300) 100%)"
+          gradient=""
           delay="stagger-delay-4"
         />
       </div>
@@ -103,7 +103,7 @@ export const TeamManagerDashboard: React.FC = () => {
       {/* 数据看板占位 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 reveal-item stagger-delay-2">
         <div className="lg:col-span-8">
-          <Card className="h-full border-none shadow-premium p-6 rounded-[2.5rem]">
+          <Card className="h-full bg-[#F3F4F6] p-6 rounded-lg">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
                 <BarChart3 className="w-5 h-5 text-primary-500" />
@@ -120,7 +120,7 @@ export const TeamManagerDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-4">
-          <Card className="h-full border-none shadow-premium p-6 rounded-[2.5rem]">
+          <Card className="h-full bg-[#F3F4F6] p-6 rounded-lg">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-success-50 flex items-center justify-center">
                 <Trophy className="w-5 h-5 text-success-500" />

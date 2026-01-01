@@ -1,26 +1,19 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import {
   X,
-  Bold,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Table,
   FileText,
   Settings,
   CheckCircle,
   Plus,
   Save,
   Send,
-  Code,
-  Strikethrough,
   PanelLeftClose,
   PanelLeft,
   Loader2,
+  ListOrdered,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -37,176 +30,11 @@ import { Badge } from '@/components/ui/badge';
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge, usePublishKnowledge } from '../api/manage-knowledge';
+import { EMERGENCY_TABS, parseOutlineFromHtml } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
-
-/**
- * 编辑模式
- */
-type EditorMode = 'edit' | 'split' | 'preview';
-
-/**
- * 将 HTML 转换回 Markdown（简化版）
- */
-const htmlToMarkdown = (html: string): string => {
-  const markdown = html
-    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1\n\n')
-    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1\n\n')
-    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1\n\n')
-    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, '#### $1\n\n')
-    .replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, '##### $1\n\n')
-    .replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, '###### $1\n\n')
-    .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, content) => {
-      return content.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '> $1\n').trim() + '\n\n';
-    })
-    .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```\n\n')
-    .replace(/<ul[^>]*>([\s\S]*?)<\/ul>/gi, (_, content) => {
-      return content.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1\n').trim() + '\n\n';
-    })
-    .replace(/<ol[^>]*>([\s\S]*?)<\/ol>/gi, (_, content) => {
-      let index = 0;
-      return content.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, () => {
-        index++;
-        return `${index}. $1\n`;
-      }).trim() + '\n\n';
-    })
-    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n')
-    .replace(/<hr[^>]*\/?>/gi, '---\n\n')
-    .replace(/<br[^>]*\/?>/gi, '\n')
-    .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
-    .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
-    .replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
-    .replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*')
-    .replace(/<del[^>]*>([\s\S]*?)<\/del>/gi, '~~$1~~')
-    .replace(/<s[^>]*>([\s\S]*?)<\/s>/gi, '~~$1~~')
-    .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
-    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
-    .replace(/<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*\/?>/gi, '![$2]($1)')
-    .replace(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*\/?>/gi, '![$1]($2)')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  return markdown;
-};
-
-/**
- * 简单的 Markdown 渲染
- */
-const renderMarkdown = (markdown: string): string => {
-  if (!markdown) return '<p style="color: #656d76; font-style: italic;">暂无内容，开始编辑...</p>';
-
-  const codeBlocks: string[] = [];
-  let html = markdown.replace(/```([\s\S]*?)```/g, (_, code) => {
-    codeBlocks.push(code.trim());
-    return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
-  });
-
-  html = html
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  html = html
-    .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
-    .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
-    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-  html = html.replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '<hr/>');
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>');
-  html = html.replace(/<\/blockquote>\s*<blockquote>/g, '');
-
-  html = html
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/___(.+?)___/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/__(.+?)__/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/_(.+?)_/g, '<em>$1</em>');
-
-  html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  html = html
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-  html = html
-    .replace(/^- \[x\] (.+)$/gm, '<li class="task-item"><input type="checkbox" checked disabled /> $1</li>')
-    .replace(/^- \[ \] (.+)$/gm, '<li class="task-item"><input type="checkbox" disabled /> $1</li>');
-
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/^\* (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-
-  html = html.replace(/(<li>[\s\S]*?<\/li>)+/g, (match) => {
-    if (match.includes('task-item')) {
-      return `<ul class="task-list">${match}</ul>`;
-    }
-    return `<ul>${match}</ul>`;
-  });
-
-  const lines = html.split('\n');
-  const processedLines: string[] = [];
-  let inParagraph = false;
-  let paragraphContent = '';
-
-  const blockTags = ['<h', '<ul', '<ol', '<li', '<table', '<thead', '<tbody', '<tr', '<blockquote', '<hr', '<pre'];
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) {
-      if (inParagraph && paragraphContent) {
-        processedLines.push(`<p>${paragraphContent}</p>`);
-        paragraphContent = '';
-        inParagraph = false;
-      }
-      continue;
-    }
-
-    const isBlockElement = blockTags.some(tag => trimmedLine.startsWith(tag));
-
-    if (isBlockElement) {
-      if (inParagraph && paragraphContent) {
-        processedLines.push(`<p>${paragraphContent}</p>`);
-        paragraphContent = '';
-        inParagraph = false;
-      }
-      processedLines.push(trimmedLine);
-    } else {
-      if (inParagraph) {
-        paragraphContent += '<br/>' + trimmedLine;
-      } else {
-        paragraphContent = trimmedLine;
-        inParagraph = true;
-      }
-    }
-  }
-
-  if (inParagraph && paragraphContent) {
-    processedLines.push(`<p>${paragraphContent}</p>`);
-  }
-
-  html = processedLines.join('\n');
-
-  codeBlocks.forEach((code, index) => {
-    const escapedCode = code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    html = html.replace(`__CODE_BLOCK_${index}__`, `<pre><code>${escapedCode}</code></pre>`);
-  });
-
-  return html;
-};
+import { RichTextEditor } from './rich-text-editor';
 
 /**
  * 知识类型选项
@@ -217,61 +45,12 @@ const KNOWLEDGE_TYPE_OPTIONS = [
 ];
 
 /**
- * 应急类知识的结构化标签页
- */
-const EMERGENCY_TABS = [
-  { key: 'fault_scenario', label: '故障场景' },
-  { key: 'trigger_process', label: '触发流程' },
-  { key: 'solution', label: '解决方案' },
-  { key: 'verification_plan', label: '验证方案' },
-  { key: 'recovery_plan', label: '恢复方案' },
-];
-
-/**
- * 目录项接口
- */
-interface OutlineItem {
-  id: string;
-  level: number;
-  text: string;
-}
-
-/**
- * 从 Markdown 内容解析标题生成目录
- */
-const parseOutline = (markdown: string): OutlineItem[] => {
-  if (!markdown) return [];
-
-  const lines = markdown.split('\n');
-  const outline: OutlineItem[] = [];
-
-  lines.forEach((line, index) => {
-    const match = line.match(/^(#{1,3})\s+(.+)$/);
-    if (match) {
-      outline.push({
-        id: `heading-${index}`,
-        level: match[1].length,
-        text: match[2].trim(),
-      });
-    }
-  });
-
-  return outline;
-};
-
-/**
  * 知识表单组件 - ShadCN UI 版本
  */
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const isEdit = !!id;
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const emergencyPreviewRef = useRef<HTMLDivElement>(null);
-  const splitPreviewRef = useRef<HTMLDivElement>(null);
-  const splitEmergencyPreviewRef = useRef<HTMLDivElement>(null);
 
   // API Hooks
   const { data: knowledgeDetail, isLoading: detailLoading } = useKnowledgeDetail(Number(id));
@@ -280,7 +59,6 @@ export const KnowledgeForm: React.FC = () => {
   const updateKnowledge = useUpdateKnowledge();
   const publishKnowledge = usePublishKnowledge();
 
-  const [editorMode, setEditorMode] = useState<EditorMode>('edit');
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
   // 表单状态
@@ -361,65 +139,6 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [activeEmergencyTab]);
 
-  const handlePreviewBlur = useCallback((isEmergency: boolean = false, isSplit: boolean = false) => {
-    let previewElement: HTMLDivElement | null = null;
-
-    if (isEmergency) {
-      previewElement = isSplit ? splitEmergencyPreviewRef.current : emergencyPreviewRef.current;
-    } else {
-      previewElement = isSplit ? splitPreviewRef.current : previewRef.current;
-    }
-
-    if (!previewElement) return;
-
-    const htmlContent = previewElement.innerHTML;
-    const markdownContent = htmlToMarkdown(htmlContent);
-
-    if (isEmergency) {
-      setCurrentEmergencyContent(markdownContent);
-    } else {
-      setContent(markdownContent);
-    }
-  }, [setCurrentEmergencyContent]);
-
-  const insertMarkdown = useCallback((before: string, after: string = '', placeholder: string = '') => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
-    const textToInsert = selectedText || placeholder;
-
-    const newValue =
-      textarea.value.substring(0, start) +
-      before + textToInsert + after +
-      textarea.value.substring(end);
-
-    if (knowledgeType === 'EMERGENCY') {
-      setCurrentEmergencyContent(newValue);
-    } else {
-      setContent(newValue);
-    }
-
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = start + before.length + textToInsert.length + after.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  }, [knowledgeType, setCurrentEmergencyContent]);
-
-  const handleBold = () => insertMarkdown('**', '**', '粗体文字');
-  const handleItalic = () => insertMarkdown('*', '*', '斜体文字');
-  const handleStrikethrough = () => insertMarkdown('~~', '~~', '删除线文字');
-  const handleCode = () => insertMarkdown('`', '`', '代码');
-  const handleLink = () => insertMarkdown('[', '](链接地址)', '链接文字');
-  const handleList = () => insertMarkdown('- ', '', '列表项');
-  const handleOrderedList = () => insertMarkdown('1. ', '', '列表项');
-  const handleTable = () => insertMarkdown(
-    '| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| ', ' |  |  |\n', '内容'
-  );
-  const handleHeading = () => insertMarkdown('## ', '', '标题');
 
   const handleAddSystemTag = useCallback(() => {
     if (!systemTagInput.trim()) return;
@@ -570,7 +289,7 @@ export const KnowledgeForm: React.FC = () => {
         text: tab.label,
       }));
     }
-    return parseOutline(content);
+    return parseOutlineFromHtml(content);
   }, [knowledgeType, content]);
 
   if (isEdit && detailLoading) {
@@ -608,23 +327,7 @@ export const KnowledgeForm: React.FC = () => {
           </div>
         </div>
 
-        {/* 中间：编辑模式切换 */}
-        <div className="flex items-center">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            {(['edit', 'split', 'preview'] as EditorMode[]).map((mode) => (
-              <button
-                key={mode}
-                className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${editorMode === mode
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                  }`}
-                onClick={() => setEditorMode(mode)}
-              >
-                {mode === 'edit' ? '编辑' : mode === 'split' ? '分屏' : '预览'}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* 状态和操作按钮 */}
 
         <div className="flex items-center gap-3">
           <div
@@ -720,7 +423,7 @@ export const KnowledgeForm: React.FC = () => {
                   <div className="p-4 text-xs text-gray-500 text-center font-medium">
                     {knowledgeType === 'EMERGENCY'
                       ? '选择章节开始编辑'
-                      : '使用 # ## ### 创建标题'}
+                      : '使用标题按钮创建标题'}
                   </div>
                 )}
               </div>
@@ -729,43 +432,12 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 中间编辑区 */}
-        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-lg border-2 border-gray-200 min-h-0">
+        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-lg border-2 border-gray-200 min-h-0 overflow-hidden">
           {/* 编辑器头部 */}
-          <div className="flex items-center justify-between px-6 py-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
+          <div className="flex items-center px-6 py-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
             <span className="text-sm font-bold text-gray-900">
               {knowledgeType === 'EMERGENCY' ? '应急知识内容' : '知识内容'}
             </span>
-            {editorMode !== 'preview' && (
-              <div className="flex items-center gap-1">
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="标题" onClick={handleHeading}>
-                  <FileText className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="加粗" onClick={handleBold}>
-                  <Bold className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="斜体" onClick={handleItalic}>
-                  <Italic className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="删除线" onClick={handleStrikethrough}>
-                  <Strikethrough className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="代码" onClick={handleCode}>
-                  <Code className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="链接" onClick={handleLink}>
-                  <Link className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="无序列表" onClick={handleList}>
-                  <List className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="有序列表" onClick={handleOrderedList}>
-                  <ListOrdered className="w-4 h-4" />
-                </button>
-                <button className="w-9 h-9 flex items-center justify-center bg-transparent border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 hover:scale-105" title="表格" onClick={handleTable}>
-                  <Table className="w-4 h-4" />
-                </button>
-              </div>
-            )}
           </div>
 
           {/* 编辑内容 */}
@@ -785,86 +457,22 @@ export const KnowledgeForm: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="flex-1 overflow-hidden flex flex-col relative">
-                {editorMode === 'preview' ? (
-                  <div
-                    ref={emergencyPreviewRef}
-                    className="prose prose-gray max-w-none h-full p-5 overflow-y-auto cursor-text outline-none"
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBlur={() => handlePreviewBlur(true)}
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(getCurrentEmergencyContent()) }}
-                  />
-                ) : editorMode === 'split' ? (
-                  <div className="flex flex-1 min-h-0 gap-6">
-                    <textarea
-                      ref={textareaRef}
-                      className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
-                      value={getCurrentEmergencyContent()}
-                      onChange={(e) => setCurrentEmergencyContent(e.target.value)}
-                      placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
-                    />
-                    <div className="w-[2px] bg-gray-200 mx-4" />
-                    <div
-                      ref={splitEmergencyPreviewRef}
-                      className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={() => handlePreviewBlur(true, true)}
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(getCurrentEmergencyContent()) }}
-                    />
-                  </div>
-                ) : (
-                  <textarea
-                    ref={textareaRef}
-                    className="w-full h-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
-                    value={getCurrentEmergencyContent()}
-                    onChange={(e) => setCurrentEmergencyContent(e.target.value)}
-                    placeholder={`在此输入${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容，支持 Markdown 格式...`}
-                  />
-                )}
+              <div className="flex-1 overflow-y-auto">
+                <RichTextEditor
+                  value={getCurrentEmergencyContent()}
+                  onChange={setCurrentEmergencyContent}
+                  placeholder={`在此编辑${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容...`}
+                />
               </div>
               {errors.emergency && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.emergency}</div>}
             </div>
           ) : (
-            <div className="flex-1 overflow-hidden flex flex-col relative">
-              {editorMode === 'preview' ? (
-                <div
-                  ref={previewRef}
-                  className="prose prose-gray max-w-none h-full p-5 overflow-y-auto cursor-text outline-none"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBlur={() => handlePreviewBlur(false)}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-                />
-              ) : editorMode === 'split' ? (
-                <div className="flex flex-1 min-h-0 gap-6">
-                  <textarea
-                    ref={textareaRef}
-                    className="flex-1 min-h-0 bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="在此输入知识内容，支持 Markdown 格式..."
-                  />
-                  <div className="w-[2px] bg-gray-200 mx-4" />
-                  <div
-                    ref={splitPreviewRef}
-                    className="flex-1 min-h-0 prose prose-gray max-w-none h-full overflow-y-auto cursor-text outline-none p-5"
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBlur={() => handlePreviewBlur(false, true)}
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-                  />
-                </div>
-              ) : (
-                <textarea
-                  ref={textareaRef}
-                  className="w-full h-full bg-transparent border-none outline-none text-gray-900 font-sans text-base leading-relaxed resize-none overflow-y-auto p-5"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="在此输入知识内容，支持 Markdown 格式..."
-                />
-              )}
+            <div className="flex-1 overflow-y-auto">
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder="在此编辑知识内容..."
+              />
               {errors.content && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.content}</div>}
             </div>
           )}

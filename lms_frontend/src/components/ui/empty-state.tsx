@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -49,17 +49,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {Icon && (
         <div className={cn(
           'mb-4 transform hover:scale-110 transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]',
-          'text-md-on-surface-variant/40'
+          'text-[#9CA3AF]'
         )}>
           {React.isValidElement(Icon) ? (
             React.cloneElement(Icon as React.ReactElement<{ className?: string }>, {
-              className: cn(iconSizes[iconSize], Icon.props.className),
+              className: cn(iconSizes[iconSize], (Icon as React.ReactElement<{ className?: string }>).props?.className),
             })
-          ) : typeof Icon === 'function' ? (
-            <Icon className={iconSizes[iconSize]} />
-          ) : (
-            Icon
-          )}
+          ) : (() => {
+            const IconComponent = Icon as React.ElementType;
+            return <IconComponent className={iconSizes[iconSize]} />;
+          })()}
         </div>
       )}
       {title && (

@@ -8,8 +8,6 @@ import {
   XCircle,
   Eye,
   List,
-  User,
-  Clock,
   ArrowUpRight,
 } from 'lucide-react';
 import {
@@ -20,7 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import type { KnowledgeListItem, SimpleTag, TableOfContentsItem } from '@/types/api';
+import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +75,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
     >
       {/* 状态排布 */}
       <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className={cn(
             "w-2.5 h-2.5 rounded-full",
             isEmergency ? "bg-[#DC2626]" : "bg-[#10B981]"

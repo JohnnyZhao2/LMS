@@ -312,3 +312,66 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     title = models.CharField(max_length=200)
     # created_at, updated_at, is_deleted, created_by 自动包含
 ```
+
+---
+
+## 十二、前端代码复用规范
+
+### 12.1 Feature 内共享模块结构
+
+当一个 Feature 内有多个组件共用逻辑时，按以下结构组织：
+
+```
+src/features/{feature}/
+├── api/           # API 请求 hooks
+├── components/    # UI 组件
+├── hooks/         # UI 逻辑 hooks（非 API）
+├── utils/         # 工具函数、常量、图标映射
+│   ├── icons.tsx      # 图标映射（带 JSX）
+│   ├── helpers.ts     # 纯函数工具
+│   └── constants.ts   # 常量定义
+├── types.ts       # Feature 专属类型
+└── index.ts       # 公共导出
+```
+
+### 12.2 共享位置决策
+
+| 共享范围 | 位置 | 示例 |
+|----------|------|------|
+| **单个 Feature 内** | `features/{feature}/utils/` | 条线图标映射、目录解析 |
+| **跨 Feature** | `src/components/ui/` | Button, Badge, EmptyState |
+| **全局工具函数** | `src/utils/` | 日期格式化、错误处理 |
+| **全局类型** | `src/types/` | API 响应类型 |
+
+### 12.3 禁止跨 Feature 导入
+
+```tsx
+// ❌ 错误：跨 Feature 导入
+import { SomeUtil } from '@/features/tasks/utils/helpers';
+
+// ✅ 正确：使用全局共享或复制到当前 Feature
+import { SomeUtil } from '@/utils/helpers';
+```
+
+### 12.4 优先使用现有公共组件
+
+在创建新组件前，检查 `src/components/ui/` 是否已有：
+
+| 组件 | 用途 |
+|------|------|
+| `EmptyState` | 空数据状态展示 |
+| `StatusBadge` | 状态标签（success/warning/error） |
+| `Badge` variants | 不同样式的徽章 |
+| `Spinner` | 加载状态 |
+| `PageHeader` | 页面标题栏 |
+
+### 12.5 重构检查清单
+
+当发现重复代码时：
+
+1. **识别重复模式** - 使用 `rg` 搜索相似代码
+2. **确定共享范围** - Feature 内 or 跨 Feature
+3. **选择目标目录** - 参考 12.2
+4. **提取共享模块** - 创建工具/组件文件
+5. **更新所有引用** - 全局搜索并替换
+6. **验证功能正常** - 检查所有使用位置

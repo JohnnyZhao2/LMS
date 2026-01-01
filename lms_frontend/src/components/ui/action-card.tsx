@@ -54,11 +54,10 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <div
       onClick={handleClick}
       className={cn(
-        // Claymorphism 统一样式
-        'group relative bg-clay-cardBg backdrop-blur-xl p-6 rounded-lg',
-        'border-0 shadow-clay-card',
-        'hover:shadow-clay-card-hover hover:scale-[1.02]',
-        'transition-all duration-300 cursor-pointer overflow-hidden',
+        // Flat Design 统一样式
+        'group relative bg-white p-6 rounded-lg',
+        'hover:scale-[1.02]',
+        'transition-all duration-200 cursor-pointer overflow-hidden',
         className
       )}
     >
