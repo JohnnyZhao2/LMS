@@ -36,7 +36,7 @@ export const useStudentTasks = (
       if (status) searchParams.set('status', status);
 
       return apiClient.get<StudentTaskCenterResponse>(
-        `/analytics/task-center/?${searchParams.toString()}`
+        `/tasks/my-assignments/?${searchParams.toString()}`
       );
     },
     enabled,

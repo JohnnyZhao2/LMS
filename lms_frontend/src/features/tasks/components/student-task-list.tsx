@@ -14,9 +14,8 @@ import { cn } from '@/lib/utils';
 const statusOptions = [
     { value: 'all', label: '全部' },
     { value: 'IN_PROGRESS', label: '进行中' },
-    { value: 'PENDING_EXAM', label: '待评审' },
     { value: 'COMPLETED', label: '已完成' },
-    { value: 'OVERDUE', label: '紧急 / 逾期' },
+    { value: 'OVERDUE', label: '已逾期' },
 ];
 
 /**

@@ -3,8 +3,6 @@ Views for analytics module.
 
 Implements:
 - Student dashboard API (Requirements: 15.1, 15.2, 15.3)
-- Student knowledge center API (Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6)
-- Student task center API (Requirements: 17.1, 17.2, 17.3)
 - Mentor/Department manager dashboard API (Requirements: 19.1, 19.2, 19.3, 19.4)
 - Team manager data board API (Requirements: 21.1, 21.2, 21.3)
 """
@@ -23,9 +21,6 @@ from .serializers import (
     StudentPendingTaskSerializer,
     LatestKnowledgeSerializer,
     StudentDashboardSerializer,
-    StudentKnowledgeListSerializer,
-    StudentKnowledgeDetailSerializer,
-    StudentTaskCenterListSerializer,
     MentorDashboardSerializer,
     MentorDashboardSummarySerializer,
     MentorStudentStatSerializer,
@@ -74,11 +69,11 @@ class StudentDashboardView(APIView):
         pending_limit = int(request.query_params.get('pending_limit', 10))
         knowledge_limit = int(request.query_params.get('knowledge_limit', 5))
         
-        # Get pending tasks (IN_PROGRESS or PENDING_EXAM status)
+        # Get pending tasks (IN_PROGRESS status)
         # Requirements 15.1: 展示待办任务列表（学习/练习/考试）
         pending_tasks = TaskAssignment.objects.filter(
             assignee=user,
-            status__in=['IN_PROGRESS', 'PENDING_EXAM'],
+            status='IN_PROGRESS',
             task__is_deleted=False,
             task__is_closed=False
         ).select_related(
@@ -115,7 +110,7 @@ class StudentDashboardView(APIView):
         Get summary of task counts by status.
         
         Returns counts for:
-        - pending: Tasks in progress or pending exam
+        - pending: Tasks in progress
         - completed: Completed tasks
         - overdue: Overdue tasks
         - total: Total assigned tasks
@@ -126,7 +121,7 @@ class StudentDashboardView(APIView):
         )
         
         pending_count = base_query.filter(
-            status__in=['IN_PROGRESS', 'PENDING_EXAM']
+            status='IN_PROGRESS'
         ).count()
         
         completed_count = base_query.filter(
@@ -146,350 +141,6 @@ class StudentDashboardView(APIView):
             'total': total_count
         }
 
-
-# ============ Student Knowledge Center Views ============
-# Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6
-
-
-class StudentKnowledgeListView(APIView):
-    """
-    Student knowledge center - knowledge list endpoint.
-    
-    GET /api/analytics/knowledge-center/
-    
-    Returns knowledge documents with filtering support.
-    
-    Requirements:
-    - 16.1: 展示知识文档列表，支持一级筛选（领域大类）和二级筛选（系统对象）
-    - 16.3: 以卡片形式展示操作标签、标题、摘要、修改人和修改时间
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取知识中心知识列表',
-        description='获取知识文档列表，支持按条线类型和系统标签筛选',
-        parameters=[
-            OpenApiParameter(
-                name='line_type',
-                type=str,
-                description='条线类型（CLOUD/DATABASE/NETWORK/APPLICATION/EMERGENCY/REGULATION/OTHER）'
-            ),
-            OpenApiParameter(
-                name='system_tag',
-                type=str,
-                description='系统标签'
-            ),
-            OpenApiParameter(
-                name='knowledge_type',
-                type=str,
-                description='知识类型（EMERGENCY/OTHER）'
-            ),
-            OpenApiParameter(
-                name='search',
-                type=str,
-                description='搜索关键词（标题或内容）'
-            ),
-            OpenApiParameter(
-                name='page',
-                type=int,
-                description='页码（默认1）'
-            ),
-            OpenApiParameter(
-                name='page_size',
-                type=int,
-                description='每页数量（默认20）'
-            ),
-        ],
-        responses={200: StudentKnowledgeListSerializer(many=True)},
-        tags=['学员知识中心']
-    )
-    def get(self, request):
-        """
-        Get knowledge list for student knowledge center.
-        
-        Requirements:
-        - 16.1: 展示知识文档列表，支持按条线类型和系统标签筛选
-        - 16.3: 以卡片形式展示操作标签、标题、内容缩略、修改人和修改时间
-        """
-        queryset = Knowledge.objects.filter(
-            is_deleted=False
-        ).select_related(
-            'created_by', 'updated_by'
-        )
-        
-        # Filter by line type (通过ResourceLineType关系表)
-        line_type = request.query_params.get('line_type')
-        if line_type:
-            from django.contrib.contenttypes.models import ContentType
-            from apps.knowledge.models import ResourceLineType, Tag
-            # 如果 line_type 是名称，先查找对应的 Tag
-            try:
-                if isinstance(line_type, str) and not line_type.isdigit():
-                    tag = Tag.objects.get(name=line_type, tag_type='LINE', is_active=True)
-                    line_type_id = tag.id
-                else:
-                    line_type_id = int(line_type)
-                
-                knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
-                queryset = queryset.filter(
-                    id__in=ResourceLineType.objects.filter(
-                        content_type=knowledge_content_type,
-                        line_type_id=line_type_id
-                    ).values_list('object_id', flat=True)
-                )
-            except (Tag.DoesNotExist, ValueError):
-                # 如果找不到对应的条线类型，返回空结果
-                queryset = queryset.none()
-        
-        # Filter by system tag
-        system_tag = request.query_params.get('system_tag')
-        if system_tag:
-            queryset = queryset.filter(system_tags__contains=[system_tag])
-        
-        # Filter by knowledge type
-        knowledge_type = request.query_params.get('knowledge_type')
-        if knowledge_type:
-            queryset = queryset.filter(knowledge_type=knowledge_type)
-        
-        # Search by title or content
-        search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(title__icontains=search) |
-                Q(content__icontains=search)
-            )
-        
-        # Order by updated_at
-        queryset = queryset.order_by('-updated_at')
-        
-        # Pagination
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
-        start = (page - 1) * page_size
-        end = start + page_size
-        
-        total_count = queryset.count()
-        knowledge_list = queryset[start:end]
-        
-        serializer = StudentKnowledgeListSerializer(knowledge_list, many=True)
-        
-        return Response({
-            'results': serializer.data,
-            'count': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
-        })
-
-
-class StudentKnowledgeDetailView(APIView):
-    """
-    Student knowledge center - knowledge detail endpoint.
-    
-    GET /api/analytics/knowledge-center/<pk>/
-    
-    Returns knowledge document detail with table of contents.
-    
-    Requirements:
-    - 16.4: 应急类知识按结构化字段顺序展示已填写内容
-    - 16.5: 其他类型知识展示 Markdown/富文本正文
-    - 16.6: 在右侧展示自动生成的内容目录
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取知识详情',
-        description='获取知识文档详情，包含内容目录',
-        responses={
-            200: StudentKnowledgeDetailSerializer,
-            404: OpenApiResponse(description='知识文档不存在')
-        },
-        tags=['学员知识中心']
-    )
-    def get(self, request, pk):
-        """
-        Get knowledge detail for student knowledge center.
-        
-        Requirements:
-        - 16.4: 应急类知识按结构化字段顺序展示已填写内容
-        - 16.5: 其他类型知识展示 Markdown/富文本正文
-        - 16.6: 在右侧展示自动生成的内容目录
-        """
-        try:
-            knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by'
-            ).get(pk=pk, is_deleted=False)
-        except Knowledge.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='知识文档不存在'
-            )
-        
-        # Increment view count (for analytics)
-        knowledge.increment_view_count()
-        
-        serializer = StudentKnowledgeDetailSerializer(knowledge)
-        return Response(serializer.data)
-
-
-# ============ Student Task Center Views ============
-# Requirements: 17.1, 17.2, 17.3
-
-
-class StudentTaskCenterListView(APIView):
-    """
-    Student task center - task list endpoint.
-    
-    GET /api/analytics/task-center/
-    
-    Returns task assignments with filtering support.
-    
-    Requirements:
-    - 17.1: 展示任务列表，支持按类型（学习/练习/考试）和状态（进行中/已完成/已逾期）筛选
-    - 17.2: 展示任务标题、类型、状态、截止时间和进度
-    - 17.3: 点击任务时根据任务类型跳转到对应的任务详情页
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取学员任务中心任务列表',
-        description='获取学员的任务列表，支持按类型和状态筛选',
-        parameters=[
-            OpenApiParameter(
-                name='status',
-                type=str,
-                description='任务状态（IN_PROGRESS/COMPLETED/OVERDUE/PENDING_EXAM）'
-            ),
-            OpenApiParameter(
-                name='search',
-                type=str,
-                description='搜索关键词（任务标题）'
-            ),
-            OpenApiParameter(
-                name='page',
-                type=int,
-                description='页码（默认1）'
-            ),
-            OpenApiParameter(
-                name='page_size',
-                type=int,
-                description='每页数量（默认20）'
-            ),
-        ],
-        responses={200: StudentTaskCenterListSerializer(many=True)},
-        tags=['学员任务中心']
-    )
-    def get(self, request):
-        """
-        Get task list for student task center.
-        
-        Requirements:
-        - 17.1: 展示任务列表，支持按类型（学习/练习/考试）和状态（进行中/已完成/已逾期）筛选
-        - 17.2: 展示任务标题、类型、状态、截止时间和进度
-        """
-        user = request.user
-        
-        # Base queryset: tasks assigned to the current user
-        queryset = TaskAssignment.objects.filter(
-            assignee=user,
-            task__is_deleted=False
-        ).select_related(
-            'task', 'task__created_by'
-        ).prefetch_related(
-            'task__task_knowledge',
-            'task__task_quizzes',
-            'knowledge_progress'
-        )
-        
-
-        
-        # Filter by status
-        # Requirements 17.1: 支持按状态（进行中/已完成/已逾期）筛选
-        status_filter = request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        # Search by task title
-        search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
-        
-        # Order by deadline (earliest first for pending, latest first for completed)
-        queryset = queryset.order_by('-created_at')
-        
-        # Pagination
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
-        start = (page - 1) * page_size
-        end = start + page_size
-        
-        total_count = queryset.count()
-        task_list = queryset[start:end]
-        
-        serializer = StudentTaskCenterListSerializer(task_list, many=True)
-        
-        return Response({
-            'results': serializer.data,
-            'count': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
-        })
-
-
-class StudentTaskCenterDetailView(APIView):
-    """
-    Student task center - task detail redirect endpoint.
-    
-    GET /api/analytics/task-center/<assignment_id>/
-    
-    Returns task assignment detail with redirect information.
-    
-    Requirements:
-    - 17.3: 点击任务时根据任务类型跳转到对应的任务详情页
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='获取任务详情（含跳转信息）',
-        description='获取任务分配详情，包含根据任务类型的跳转路径',
-        responses={
-            200: StudentTaskCenterListSerializer,
-            404: OpenApiResponse(description='任务不存在')
-        },
-        tags=['学员任务中心']
-    )
-    def get(self, request, assignment_id):
-        """
-        Get task assignment detail with redirect information.
-        
-        Requirements:
-        - 17.3: 点击任务时根据任务类型跳转到对应的任务详情页
-        """
-        user = request.user
-        
-        try:
-            assignment = TaskAssignment.objects.select_related(
-                'task', 'task__created_by'
-            ).prefetch_related(
-                'task__task_knowledge',
-                'task__task_quizzes',
-                'knowledge_progress'
-            ).get(pk=assignment_id, assignee=user, task__is_deleted=False)
-        except TaskAssignment.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='任务不存在或无权访问'
-            )
-        
-        serializer = StudentTaskCenterListSerializer(assignment)
-        
-        redirect_path = f'/tasks/{assignment.task.id}'
-        
-        response_data = serializer.data
-        response_data['redirect_path'] = redirect_path
-        
-        return Response(response_data)
 
 
 # ============ Student Personal Center Views ============
@@ -982,7 +633,7 @@ class MentorDashboardView(APIView):
         # Count by status
         total_tasks = assignments.count()
         completed_tasks = assignments.filter(status='COMPLETED').count()
-        in_progress_tasks = assignments.filter(status__in=['IN_PROGRESS', 'PENDING_EXAM']).count()
+        in_progress_tasks = assignments.filter(status='IN_PROGRESS').count()
         overdue_tasks = assignments.filter(status='OVERDUE').count()
         
         # Calculate completion rate
@@ -1042,7 +693,7 @@ class MentorDashboardView(APIView):
             
             total_tasks = assignments.count()
             completed_tasks = assignments.filter(status='COMPLETED').count()
-            in_progress_tasks = assignments.filter(status__in=['IN_PROGRESS', 'PENDING_EXAM']).count()
+            in_progress_tasks = assignments.filter(status='IN_PROGRESS').count()
             overdue_tasks = assignments.filter(status='OVERDUE').count()
             completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
             
@@ -1191,7 +842,7 @@ class TeamManagerOverviewView(APIView):
         
         total_tasks = assignments.count()
         completed_tasks = assignments.filter(status='COMPLETED').count()
-        in_progress_tasks = assignments.filter(status__in=['IN_PROGRESS', 'PENDING_EXAM']).count()
+        in_progress_tasks = assignments.filter(status='IN_PROGRESS').count()
         overdue_tasks = assignments.filter(status='OVERDUE').count()
         
         # Calculate completion rate
@@ -1306,7 +957,7 @@ class TeamManagerOverviewView(APIView):
             
             total_tasks = assignments.count()
             completed_tasks = assignments.filter(status='COMPLETED').count()
-            in_progress_tasks = assignments.filter(status__in=['IN_PROGRESS', 'PENDING_EXAM']).count()
+            in_progress_tasks = assignments.filter(status='IN_PROGRESS').count()
             overdue_tasks = assignments.filter(status='OVERDUE').count()
             completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
             

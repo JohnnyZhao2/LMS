@@ -57,9 +57,10 @@ interface KnowledgeListViewItem {
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentRole, user } = useAuth();
+  const { currentRole, user, isLoading: authLoading } = useAuth();
 
-  const isStudent = currentRole === 'STUDENT';
+  // 等待 auth 加载完成后再判断角色，避免刷新时 currentRole 为 null 导致误判
+  const isStudent = !authLoading && currentRole === 'STUDENT';
   const isAdmin = currentRole === 'ADMIN';
   const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER' || currentRole === 'TEAM_MANAGER';
 
@@ -70,17 +71,19 @@ export const TaskDetail: React.FC = () => {
     data: task,
     isLoading: taskLoading,
     isError: taskError,
-  } = useTaskDetail(taskId, { enabled: isValidTaskId });
+  } = useTaskDetail(taskId, { enabled: isValidTaskId && !authLoading });
 
-  const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
-  const shouldFetchLearningDetail = isStudent && hasKnowledge;
-
+  // 学员始终需要获取学习详情（包含进度信息）
+  // 等待 auth 加载完成后再判断是否为学员，避免刷新时误判
   const { data: learningDetail, isLoading: learningLoading } = useStudentLearningTaskDetail(taskId, {
-    enabled: Boolean(taskId) && shouldFetchLearningDetail,
+    enabled: Boolean(taskId) && isValidTaskId && isStudent,
   });
 
+  const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
+
   const completeLearning = useCompleteLearning();
-  const isLoading = !isValidTaskId || taskLoading || (shouldFetchLearningDetail && learningLoading);
+  // 需要等待 auth 加载完成 + 任务数据加载完成 + 学员的学习详情加载完成
+  const isLoading = authLoading || !isValidTaskId || taskLoading || (isStudent && learningLoading);
 
   const appearance = useMemo(() => {
     const hasQuiz = (task?.quizzes?.length ?? 0) > 0;
@@ -194,8 +197,17 @@ export const TaskDetail: React.FC = () => {
     );
   }
 
+  // 对于学员，优先使用 learningDetail 中的状态；对于管理员，使用 task.assignments
   const myAssignment = task.assignments?.find((a) => a.assignee === user?.id);
-  const canStartQuiz = !!myAssignment && ['IN_PROGRESS', 'PENDING_EXAM'].includes(myAssignment.status);
+  
+  // 学员的任务状态：优先从 learningDetail 获取
+  const studentStatus = learningDetail?.status;
+  const studentStatusDisplay = learningDetail?.status_display;
+  
+  // 判断是否可以开始答题：学员需要任务状态为进行中
+  const canStartQuiz = isStudent 
+    ? (studentStatus === 'IN_PROGRESS')
+    : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
 
   const handleCompleteLearning = async (knowledgeId: number) => {
@@ -208,9 +220,12 @@ export const TaskDetail: React.FC = () => {
   };
 
   const handleStartQuiz = (quizId: number) => {
-    if (!isStudent || !myAssignment || !canStartQuiz) return;
+    if (!isStudent || !canStartQuiz) return;
+    // 学员使用 learningDetail 中的 assignment id
+    const assignmentId = learningDetail?.id;
+    if (!assignmentId) return;
     // 统一使用 /quiz 路由，quiz_type 由后端自动判断
-    navigate(`/quiz/${quizId}?assignment=${myAssignment.id}&task=${taskId}`);
+    navigate(`/quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
   const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
@@ -247,7 +262,16 @@ export const TaskDetail: React.FC = () => {
                 )}>
                   {appearance.missionLabel}
                 </span>
-                {myAssignment && (
+                {/* 学员使用 learningDetail 状态，管理员使用 myAssignment 状态 */}
+                {isStudent && studentStatus && (
+                  <span className={cn(
+                    "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md border border-white/40 shadow-sm",
+                    studentStatus === 'COMPLETED' ? "bg-green-500/30 text-white" : "bg-white/20 text-white"
+                  )}>
+                    {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
+                  </span>
+                )}
+                {!isStudent && myAssignment && (
                   <span className={cn(
                     "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md border border-white/40 shadow-sm",
                     myAssignment.status === 'COMPLETED' ? "bg-green-500/30 text-white" : "bg-white/20 text-white"
@@ -582,14 +606,15 @@ export const TaskDetail: React.FC = () => {
 
                 <div className="flex items-center justify-between p-4 bg-white/50 rounded-xl border border-white/50">
                   <span className="text-sm font-bold text-clay-muted">执行状态</span>
-                  {myAssignment && (
+                  {/* 学员使用 learningDetail 状态 */}
+                  {studentStatus && (
                     <span className={cn(
                       "px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest",
-                      myAssignment.status === 'COMPLETED' ? "bg-green-100 text-green-600" :
-                        myAssignment.status === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600" :
+                      studentStatus === 'COMPLETED' ? "bg-green-100 text-green-600" :
+                        studentStatus === 'IN_PROGRESS' ? "bg-blue-100 text-blue-600" :
                           "bg-gray-100 text-gray-600"
                     )}>
-                      {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
+                      {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
                     </span>
                   )}
                 </div>

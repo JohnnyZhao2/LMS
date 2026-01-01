@@ -417,32 +417,60 @@ class StudentAssignmentListView(APIView):
         tags=['学员任务执行']
     )
     def get(self, request):
-        # Get assignments for current user
+        """
+        Get task list for student task center.
+        
+        Requirements:
+        - 17.1: 展示任务列表，支持按类型（学习/练习/考试）和状态（进行中/已完成/已逾期）筛选
+        - 17.2: 展示任务标题、类型、状态、截止时间和进度
+        """
+        user = request.user
+        
+        # Base queryset: tasks assigned to the current user
         queryset = TaskAssignment.objects.filter(
-            assignee=request.user,
+            assignee=user,
             task__is_deleted=False
         ).select_related(
             'task', 'task__created_by'
         ).prefetch_related(
-            'task__task_knowledge__knowledge',
-            'task__task_quizzes__quiz',
+            'task__task_knowledge',
+            'task__task_quizzes',
             'knowledge_progress'
         )
         
-        # Apply filters
+        
+        # Filter by status
+        # Requirements 17.1: 支持按状态（进行中/已完成/已逾期）筛选
         status_filter = request.query_params.get('status')
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         
-        # Check and update overdue status for each assignment
-        now = timezone.now()
-        for assignment in queryset:
-            if assignment.status not in ['COMPLETED', 'OVERDUE'] and assignment.task.deadline < now:
-                assignment.mark_overdue()
+        # Search by task title
+        search = request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(task__title__icontains=search)
         
-        queryset = queryset.order_by('-task__created_at')
-        serializer = StudentAssignmentListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Order by deadline (earliest first for pending, latest first for completed)
+        queryset = queryset.order_by('-created_at')
+        
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        total_count = queryset.count()
+        task_list = queryset[start:end]
+        
+        serializer = StudentAssignmentListSerializer(task_list, many=True)
+        
+        return Response({
+            'results': serializer.data,
+            'count': total_count,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_count + page_size - 1) // page_size
+        })
 
 
 class StudentTaskDetailView(APIView):

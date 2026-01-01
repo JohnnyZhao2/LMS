@@ -18,7 +18,7 @@ export type TaskType = 'LEARNING' | 'PRACTICE' | 'EXAM';
 /**
  * 任务状态
  */
-export type TaskStatus = 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE' | 'PENDING_EXAM';
+export type TaskStatus = 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
 
 /**
  * 提交状态
