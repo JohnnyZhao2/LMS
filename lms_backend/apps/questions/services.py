@@ -14,6 +14,9 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Question
 from .repositories import QuestionRepository
 from apps.knowledge.repositories import TagRepository
+from .domain.models import QuestionDomain
+from .domain.services import QuestionDomainService
+from .domain.mappers import QuestionMapper
 
 
 class QuestionService(BaseService):
@@ -22,6 +25,7 @@ class QuestionService(BaseService):
     def __init__(self):
         self.repository = QuestionRepository()
         self.tag_repository = TagRepository()
+        self.domain_service = QuestionDomainService()
     
     def get_by_id(self, pk: int, user=None) -> Question:
         """
@@ -246,6 +250,99 @@ class QuestionService(BaseService):
         self.repository.delete(question, soft=True)
     
     @transaction.atomic
+    def publish(self, pk: int, user) -> Question:
+        """
+        发布题目（使用 Domain Service）
+        
+        Args:
+            pk: 主键
+            user: 发布用户
+            
+        Returns:
+            发布后的题目对象
+            
+        Raises:
+            BusinessError: 如果无法发布
+        """
+        # 获取 Domain Model
+        question_domain = self.repository.get_domain_by_id(pk)
+        self.validate_not_none(
+            question_domain,
+            f'题目 {pk} 不存在'
+        )
+        
+        # 使用 Domain Service 发布
+        try:
+            question_domain = self.domain_service.publish_question(
+                question_domain,
+                published_at=timezone.now(),
+                updated_by_id=user.id
+            )
+        except ValueError as e:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message=str(e)
+            )
+        
+        # 获取 Django Model 并更新
+        question_orm = self.repository.get_by_id(pk)
+        question_orm = QuestionMapper.update_orm_from_domain(question_orm, question_domain)
+        question_orm.save()
+        
+        # 取消其他版本的 is_current 标志
+        Question.objects.filter(
+            resource_uuid=question_domain.resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=pk).update(is_current=False)
+        
+        return question_orm
+    
+    @transaction.atomic
+    def unpublish(self, pk: int, user) -> Question:
+        """
+        取消发布题目（使用 Domain Service）
+        
+        Args:
+            pk: 主键
+            user: 操作用户
+            
+        Returns:
+            取消发布后的题目对象
+            
+        Raises:
+            BusinessError: 如果无法取消发布
+        """
+        # 获取 Domain Model
+        question_domain = self.repository.get_domain_by_id(pk)
+        self.validate_not_none(
+            question_domain,
+            f'题目 {pk} 不存在'
+        )
+        
+        # 检查是否被引用
+        is_referenced = self.repository.is_referenced_by_quiz(pk)
+        
+        # 使用 Domain Service 取消发布
+        try:
+            question_domain = self.domain_service.unpublish_question(
+                question_domain,
+                updated_by_id=user.id,
+                is_referenced=is_referenced
+            )
+        except ValueError as e:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message=str(e)
+            )
+        
+        # 获取 Django Model 并更新
+        question_orm = self.repository.get_by_id(pk)
+        question_orm = QuestionMapper.update_orm_from_domain(question_orm, question_domain)
+        question_orm.save()
+        
+        return question_orm
+    
+    @transaction.atomic
     def import_from_excel(self, file, user) -> dict:
         """
         从 Excel 文件批量导入题目
@@ -421,24 +518,73 @@ class QuestionService(BaseService):
         data: dict,
         user
     ) -> Question:
-        """基于已发布版本创建新版本"""
-        # 使用 Model 的 clone_new_version 方法
-        new_question = source.clone_new_version()
+        """基于已发布版本创建新版本（使用 Domain Service）"""
+        # 获取 Domain Model
+        source_domain = self.repository.get_domain_by_id(source.id)
+        if not source_domain:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message=f'题目 {source.id} 不存在'
+            )
         
-        # 更新字段
-        for key, value in data.items():
-            if hasattr(new_question, key) and key != 'line_type_id':
-                setattr(new_question, key, value)
+        # 计算新版本号
+        existing_versions = list(
+            Question.objects.filter(
+                resource_uuid=source.resource_uuid,
+                is_deleted=False
+            ).values_list('version_number', flat=True)
+        )
+        new_version_number = self.domain_service.calculate_next_version_number(
+            source_domain.version_number,
+            existing_versions
+        )
         
-        new_question.save()
+        # 使用 Domain Service 创建草稿版本
+        try:
+            new_question_domain = self.domain_service.create_draft_from_published(
+                source_domain,
+                new_version_number,
+                user.id
+            )
+        except ValueError as e:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message=str(e)
+            )
         
-        # 更新条线类型
-        line_type_id = data.get('line_type_id')
-        if line_type_id is not None:
-            if line_type_id:
-                self._set_line_type(new_question, line_type_id)
-            else:
-                new_question.set_line_type(None)
+        # 更新数据
+        if 'content' in data:
+            new_question_domain.content = data['content']
+        if 'question_type' in data:
+            from .domain.models import QuestionType
+            new_question_domain.question_type = QuestionType(data['question_type'])
+        if 'options' in data:
+            new_question_domain.options = data['options']
+        if 'answer' in data:
+            new_question_domain.answer = data['answer']
+        if 'explanation' in data:
+            new_question_domain.explanation = data.get('explanation', '')
+        if 'score' in data:
+            from decimal import Decimal
+            new_question_domain.score = Decimal(str(data['score']))
+        if 'difficulty' in data:
+            from .domain.models import Difficulty
+            new_question_domain.difficulty = Difficulty(data['difficulty'])
+        if 'line_type_id' in data:
+            new_question_domain.line_type_id = data.get('line_type_id')
+        
+        # 验证更新后的数据
+        new_question_domain.validate()
+        
+        # 转换为 ORM 数据并创建
+        orm_data = QuestionMapper.to_orm_data(new_question_domain)
+        line_type_id = orm_data.pop('line_type_id', None)
+        
+        new_question = self.repository.create(**orm_data)
+        
+        # 设置条线类型
+        if line_type_id:
+            self._set_line_type(new_question, line_type_id)
         
         return new_question
     

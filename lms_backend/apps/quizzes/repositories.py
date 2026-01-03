@@ -9,12 +9,40 @@ from django.db import models
 
 from core.base_repository import BaseRepository
 from .models import Quiz, QuizQuestion
+from .domain.models import QuizDomain
+from .domain.mappers import QuizMapper
 
 
 class QuizRepository(BaseRepository[Quiz]):
     """试卷仓储"""
     
     model = Quiz
+    
+    def _to_domain_or_none(self, quiz: Optional[Quiz]) -> Optional[QuizDomain]:
+        """
+        将ORM对象转换为Domain对象（统一转换逻辑）
+        
+        Args:
+            quiz: Django Model 实例或 None
+            
+        Returns:
+            Domain Model 实例或 None
+        """
+        if quiz:
+            return QuizMapper.to_domain(quiz)
+        return None
+    
+    def _to_domain_list(self, quiz_list: List[Quiz]) -> List[QuizDomain]:
+        """
+        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
+        
+        Args:
+            quiz_list: Django Model 实例列表
+            
+        Returns:
+            Domain Model 实例列表
+        """
+        return [QuizMapper.to_domain(q) for q in quiz_list]
     
     def get_by_id(
         self,
@@ -96,6 +124,48 @@ class QuizRepository(BaseRepository[Quiz]):
             qs = qs[offset:offset+limit] if offset else qs[:limit]
         
         return qs
+    
+    def get_domain_by_id(
+        self,
+        pk: int,
+        include_deleted: bool = False
+    ) -> Optional[QuizDomain]:
+        """
+        根据 ID 获取试卷（Domain Model）
+        
+        Args:
+            pk: 主键
+            include_deleted: 是否包含已删除的记录
+            
+        Returns:
+            试卷领域模型或 None
+        """
+        quiz = self.get_by_id(pk, include_deleted)
+        return self._to_domain_or_none(quiz)
+    
+    def get_list_domain(
+        self,
+        filters: dict = None,
+        search: str = None,
+        ordering: str = '-created_at',
+        limit: int = None,
+        offset: int = None
+    ) -> List[QuizDomain]:
+        """
+        获取试卷列表（Domain Model）
+        
+        Args:
+            filters: 过滤条件
+            search: 搜索关键词
+            ordering: 排序字段
+            limit: 限制数量
+            offset: 偏移量
+            
+        Returns:
+            Domain Model 列表
+        """
+        qs = self.get_list(filters, search, ordering, limit, offset)
+        return self._to_domain_list(list(qs))
     
     def is_referenced_by_task(self, quiz_id: int) -> bool:
         """

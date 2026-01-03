@@ -3,18 +3,46 @@
 
 负责所有题目相关的数据访问操作。
 """
-from typing import Optional
+from typing import Optional, List
 from django.db.models import QuerySet, Q
 from django.contrib.contenttypes.models import ContentType
 
 from core.base_repository import BaseRepository
 from .models import Question
+from .domain.models import QuestionDomain
+from .domain.mappers import QuestionMapper
 
 
 class QuestionRepository(BaseRepository[Question]):
     """题目仓储"""
     
     model = Question
+    
+    def _to_domain_or_none(self, question: Optional[Question]) -> Optional[QuestionDomain]:
+        """
+        将ORM对象转换为Domain对象（统一转换逻辑）
+        
+        Args:
+            question: Django Model 实例或 None
+            
+        Returns:
+            Domain Model 实例或 None
+        """
+        if question:
+            return QuestionMapper.to_domain(question)
+        return None
+    
+    def _to_domain_list(self, question_list: List[Question]) -> List[QuestionDomain]:
+        """
+        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
+        
+        Args:
+            question_list: Django Model 实例列表
+            
+        Returns:
+            Domain Model 实例列表
+        """
+        return [QuestionMapper.to_domain(q) for q in question_list]
     
     def get_by_id(
         self,
@@ -96,6 +124,48 @@ class QuestionRepository(BaseRepository[Question]):
             qs = qs.order_by(ordering)
         
         return qs.distinct()
+    
+    def get_domain_by_id(
+        self,
+        pk: int,
+        include_deleted: bool = False
+    ) -> Optional[QuestionDomain]:
+        """
+        根据 ID 获取题目（Domain Model）
+        
+        Args:
+            pk: 主键
+            include_deleted: 是否包含已删除的记录
+            
+        Returns:
+            题目领域模型或 None
+        """
+        question = self.get_by_id(pk, include_deleted)
+        return self._to_domain_or_none(question)
+    
+    def get_published_list_domain(
+        self,
+        filters: dict = None,
+        search: str = None,
+        ordering: str = '-created_at',
+        limit: int = None,
+        offset: int = None
+    ) -> List[QuestionDomain]:
+        """
+        获取已发布的题目列表（Domain Model）
+        
+        Args:
+            filters: 过滤条件
+            search: 搜索关键词
+            ordering: 排序字段
+            limit: 限制数量
+            offset: 偏移量
+            
+        Returns:
+            Domain Model 列表
+        """
+        qs = self.get_published_list(filters, search, ordering, limit, offset)
+        return self._to_domain_list(list(qs))
     
     def is_referenced_by_quiz(self, question_id: int) -> bool:
         """

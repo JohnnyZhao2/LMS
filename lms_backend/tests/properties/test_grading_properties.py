@@ -183,7 +183,6 @@ class TestProperty33GradingCompletionStatusTransition:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -376,7 +375,6 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -529,7 +527,6 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
             mentor=mentor,
         )
