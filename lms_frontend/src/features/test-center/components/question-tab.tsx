@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react';
-import { Pencil, CheckCircle, Database, User, Clock, AlertCircle, Sparkles, ChevronLeft, ChevronRight, Box } from 'lucide-react';
+import { Pencil, CheckCircle, Database, User, Clock, AlertCircle, Sparkles, Box } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuestions, useQuestionDetail } from '@/features/questions/api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui';
+import { Skeleton, Pagination } from '@/components/ui';
 
 const QUESTION_TYPE_FILTER_OPTIONS = [
   { label: '全部', value: 'ALL' },
@@ -35,7 +35,7 @@ interface QuestionTabProps {
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const pageSize = 10; // 与 API 默认值一致
+  const pageSize = 7;
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
   const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
@@ -44,7 +44,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const questionType = questionTypeFilter === 'ALL' ? undefined : questionTypeFilter as QuestionType;
   const lineTypeId = lineTypeFilter === 'ALL' ? undefined : Number(lineTypeFilter);
 
-  const { data, isLoading } = useQuestions({
+  const { data, isLoading, isFetching } = useQuestions({
     page,
     pageSize,
     questionType,
@@ -67,7 +67,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-[700px]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="flex flex-col gap-6" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部过滤器 */}
       <div className="flex flex-wrap gap-6 items-center bg-gray-100 p-6 rounded-lg shadow-none">
         <div className="flex flex-col gap-2">
@@ -114,10 +114,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
       </div>
 
       {/* 核心分屏 */}
-      <div className="flex-1 flex gap-6 min-h-0">
+      <div className="flex gap-6">
         {/* 左侧列表 */}
-        <div className="flex-1 bg-white rounded-lg shadow-none flex flex-col overflow-hidden">
-          <div className="p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+        <div className="flex-1 bg-white rounded-lg shadow-none flex flex-col">
+          <div className="h-[57px] p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-blue-600" strokeWidth={2} />
               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -129,13 +129,20 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             </Badge>
           </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            {isLoading ? (
-              <div className="p-6 space-y-4">
-                {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
+          <div className="h-[560px] overflow-hidden flex flex-col relative">
+            {isLoading && !data ? (
+              <div className="p-6 space-y-4 h-full overflow-hidden">
+                {[1, 2, 3, 4, 5, 6, 7].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg flex-shrink-0" />)}
               </div>
             ) : data?.results && data.results.length > 0 ? (
-              data.results.map(q => {
+              <div className="h-full flex flex-col overflow-hidden">
+                {/* 加载指示器 - 仅在后台获取时显示 */}
+                {isFetching && data && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600/20 z-10">
+                    <div className="h-full bg-blue-600 animate-pulse" style={{ width: '40%' }} />
+                  </div>
+                )}
+                {data.results.map(q => {
                 const config = QUESTION_TYPE_CONFIG[q.question_type] || { label: '未知', color: 'text-gray-600', bg: 'bg-gray-100' };
                 const isSelected = selectedQuestionId === q.id;
                 return (
@@ -143,7 +150,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     key={q.id}
                     onClick={() => setSelectedQuestionId(q.id)}
                     className={cn(
-                      "p-4 border-b border-gray-100 cursor-pointer transition-all duration-200 group flex items-start gap-4 hover:bg-gray-50 hover:scale-[1.01]",
+                      "h-[80px] p-4 border-b border-gray-100 cursor-pointer transition-all duration-200 group flex items-start gap-4 hover:bg-gray-50 hover:scale-[1.01] flex-shrink-0",
                       isSelected && "bg-blue-50 border-l-4 border-l-blue-600"
                     )}
                   >
@@ -173,7 +180,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     </div>
                   </div>
                 )
-              })
+              })}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                 <AlertCircle className="w-10 h-10 opacity-30 mb-3" strokeWidth={2} />
@@ -184,73 +192,61 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             )}
           </div>
 
-          {/* 分页按钮 */}
-          {data && data.count > pageSize && (() => {
-            const totalPages = Math.ceil(data.count / pageSize);
-            return (
-              <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-center gap-4">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-10 w-10 rounded-md shadow-none" 
-                  disabled={page === 1} 
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <div className="flex items-center gap-2 text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                  {page} <span className="text-gray-300">/</span> {totalPages}
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-10 w-10 rounded-md shadow-none" 
-                  disabled={page >= totalPages} 
-                  onClick={() => setPage(page + 1)}
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </Button>
-              </div>
-            );
-          })()}
+          {/* 分页 */}
+          {data && data.count > pageSize && (
+            <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-center flex-shrink-0">
+              <Pagination
+                current={page}
+                total={data.count}
+                pageSize={pageSize}
+                onChange={(newPage) => setPage(newPage)}
+              />
+            </div>
+          )}
         </div>
 
         {/* 右侧详情 */}
         <div className="flex-1 bg-white rounded-lg shadow-none flex flex-col overflow-hidden">
-          <div className="p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white">
+          <div className="h-[57px] p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600" strokeWidth={2} />
               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
                 Intelligence Preview
               </span>
             </div>
-            {questionDetail && (
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="rounded-md font-bold text-blue-600 hover:bg-blue-50 shadow-none" 
-                  onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
-                >
-                  <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
-                </Button>
-                <Button
-                  className={cn(
-                    "rounded-md font-bold text-xs uppercase shadow-none transition-all duration-200 hover:scale-105",
-                    selectedRowKeys.includes(questionDetail.id) 
-                      ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
-                      : "bg-gray-900 hover:bg-gray-800 text-white"
-                  )}
-                  size="sm"
-                  onClick={() => {
-                    const id = questionDetail.id;
-                    setSelectedRowKeys(prev => prev.includes(id) ? prev.filter(k => k !== id) : [...prev, id])
-                  }}
-                >
-                  {selectedRowKeys.includes(questionDetail.id) ? <><CheckCircle className="w-3.5 h-3.5 mr-2" /> In Quiz</> : 'Add to Quiz'}
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 h-full">
+              {questionDetail ? (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 rounded-md font-bold text-blue-600 hover:bg-blue-50 shadow-none px-3" 
+                    onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
+                  >
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+                  </Button>
+                  <Button
+                    className={cn(
+                      "h-8 rounded-md font-bold text-xs uppercase shadow-none transition-all duration-200 hover:scale-105 px-3",
+                      selectedRowKeys.includes(questionDetail.id) 
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
+                        : "bg-gray-900 hover:bg-gray-800 text-white"
+                    )}
+                    size="sm"
+                    onClick={() => {
+                      const id = questionDetail.id;
+                      setSelectedRowKeys(prev => prev.includes(id) ? prev.filter(k => k !== id) : [...prev, id])
+                    }}
+                  >
+                    {selectedRowKeys.includes(questionDetail.id) ? <><CheckCircle className="w-3.5 h-3.5 mr-2" /> In Quiz</> : 'Add to Quiz'}
+                  </Button>
+                </>
+              ) : (
+                <Badge variant="secondary" className="bg-gray-100 text-gray-600 font-bold px-3 shadow-none opacity-0 pointer-events-none">
+                  0
+                </Badge>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 no-scrollbar">

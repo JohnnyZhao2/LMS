@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, Send, FileText, CheckCircle2, ChevronLeft, ChevronRight, MoreHorizontal, Layout } from 'lucide-react';
+import { Pencil, Trash2, Send, FileText, CheckCircle2, MoreHorizontal, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '@/features/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quizzes/api/create-quiz';
@@ -28,7 +28,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { Skeleton } from '@/components/ui';
+import { Skeleton, Pagination } from '@/components/ui';
 import { type ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,7 +40,7 @@ interface QuizTabProps {
 
 export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' }) => {
   const [page, setPage] = useState(1);
-  const pageSize = 20; // 与 API 默认值一致
+  const pageSize = 7; // 固定每页显示7条
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [quickPublishModalVisible, setQuickPublishModalVisible] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -275,41 +275,33 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       {/* 表格 */}
       <div className="overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-none">
         {isLoading ? (
-          <div className="p-10 space-y-5">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+          <div className="p-10 space-y-5 h-[560px] overflow-hidden">
+            {[1, 2, 3, 4, 5, 6, 7].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg flex-shrink-0" />)}
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={data?.results || []}
-            className="border-none"
-            rowClassName="hover:bg-blue-50 transition-colors cursor-pointer group"
-            onRowClick={(row) => navigate(`/test-center/quizzes/${row.id}/edit`)}
-          />
+          <div className="h-[560px] overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={data?.results || []}
+              className="border-none"
+              rowClassName="hover:bg-blue-50 transition-colors cursor-pointer group"
+              onRowClick={(row) => navigate(`/test-center/quizzes/${row.id}/edit`)}
+            />
+          </div>
         )}
       </div>
 
       {/* 分页 */}
-      {data && data.count > pageSize && (() => {
-        const totalPages = Math.ceil(data.count / pageSize);
-        return (
-          <div className="flex justify-center mt-8">
-            <div className="flex items-center gap-4 bg-white p-3 rounded-lg shadow-none border-2 border-gray-200">
-              <Button variant="ghost" size="icon" disabled={page === 1} onClick={() => setPage(page - 1)} className="shadow-none">
-                <ChevronLeft className="w-5 h-5 text-gray-500" />
-              </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>{page}</span>
-                <span className="text-gray-300">/</span>
-                <span className="text-sm font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>{totalPages}</span>
-              </div>
-              <Button variant="ghost" size="icon" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="shadow-none">
-                <ChevronRight className="w-5 h-5 text-gray-500" />
-              </Button>
-            </div>
-          </div>
-        );
-      })()}
+      {data && data.count > pageSize && (
+        <div className="flex justify-center mt-8">
+          <Pagination
+            current={page}
+            total={data.count}
+            pageSize={pageSize}
+            onChange={(newPage) => setPage(newPage)}
+          />
+        </div>
+      )}
 
       {/* 快速发布确认弹窗 */}
       <Dialog open={quickPublishModalVisible} onOpenChange={setQuickPublishModalVisible}>

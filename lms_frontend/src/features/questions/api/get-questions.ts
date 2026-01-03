@@ -29,6 +29,8 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<Question>>(`/questions/${queryString}`);
     },
+    // 保持之前的数据，避免翻页时闪烁
+    placeholderData: (previousData) => previousData,
   });
 };
 

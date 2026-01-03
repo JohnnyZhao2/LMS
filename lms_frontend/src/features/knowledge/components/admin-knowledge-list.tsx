@@ -48,7 +48,7 @@ export const AdminKnowledgeList: React.FC = () => {
     page,
     pageSize,
     handlePageChange,
-  } = useKnowledgeFilters({ defaultPageSize: 12 });
+  } = useKnowledgeFilters({ defaultPageSize: 9 });
 
   // 获取条线类型标签
   const { data: lineTypeTags = [] } = useLineTypeTags();
