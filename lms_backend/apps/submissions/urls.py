@@ -16,8 +16,6 @@ from .views import (
     MySubmissionsView,
     StartQuizView,
     SubmitView,
-)
-from .views_exam import (
     StartExamView,
     SubmitExamView,
     ExamResultView,

@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/questions/urls.py
-# hypothesis_version: 6.141.1
-
-['<int:pk>/', 'import/', 'question-detail', 'question-import', 'question-list-create']

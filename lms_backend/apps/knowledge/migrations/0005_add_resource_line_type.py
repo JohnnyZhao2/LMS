@@ -6,15 +6,23 @@ import django.db.models.deletion
 
 
 def check_table_exists(table_name):
-    """检查表是否存在"""
+    """检查表是否存在（支持 MySQL 和 SQLite）"""
     with connection.cursor() as cursor:
-        db_name = connection.settings_dict['NAME']
-        cursor.execute("""
-            SELECT COUNT(*) 
-            FROM information_schema.tables 
-            WHERE table_schema = %s 
-            AND table_name = %s
-        """, [db_name, table_name])
+        vendor = connection.vendor
+        if vendor == 'sqlite':
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM sqlite_master 
+                WHERE type='table' AND name=?
+            """, [table_name])
+        else:  # MySQL/PostgreSQL
+            db_name = connection.settings_dict['NAME']
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM information_schema.tables 
+                WHERE table_schema = %s 
+                AND table_name = %s
+            """, [db_name, table_name])
         return cursor.fetchone()[0] > 0
 
 

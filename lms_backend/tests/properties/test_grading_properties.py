@@ -174,7 +174,6 @@ class TestProperty33GradingCompletionStatusTransition:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -368,7 +367,6 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -522,7 +520,6 @@ class TestProperty34UngradedSubjectiveStatusMaintained:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])

@@ -1,7 +1,7 @@
 """
-Views for spot check management.
+抽查记录视图
 
-Implements spot check record CRUD endpoints with student scope validation.
+只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 
 Requirements: 14.1, 14.2, 14.3, 14.4
 Properties: 35, 36
@@ -13,29 +13,29 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
 from core.exceptions import BusinessError, ErrorCodes
-from apps.users.permissions import (
-    IsMentorOrDeptManager,
-    get_current_role,
-    filter_queryset_by_data_scope,
-)
+from apps.users.permissions import IsMentorOrDeptManager
 
-from .models import SpotCheck
 from .serializers import (
     SpotCheckListSerializer,
     SpotCheckDetailSerializer,
     SpotCheckCreateSerializer,
     SpotCheckUpdateSerializer,
 )
+from .services import SpotCheckService
 
 
 class SpotCheckListCreateView(APIView):
     """
-    Spot check list and create endpoint.
+    抽查记录列表和创建端点
     
     Requirements: 14.1, 14.2, 14.3, 14.4
     Properties: 35, 36
     """
     permission_classes = [IsAuthenticated, IsMentorOrDeptManager]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = SpotCheckService()
     
     @extend_schema(
         summary='获取抽查记录列表',
@@ -52,29 +52,39 @@ class SpotCheckListCreateView(APIView):
     )
     def get(self, request):
         """
-        Get spot check list filtered by user's data scope.
+        获取抽查记录列表
         
         Requirements: 14.4
         Property 36: 抽查记录时间排序
         """
-        queryset = SpotCheck.objects.select_related(
-            'student', 'checker', 'student__department'
-        )
-        
-        # Filter by data scope (mentor sees mentees, dept manager sees dept members)
-        queryset = filter_queryset_by_data_scope(
-            queryset, request.user, student_field='student'
-        )
-        
-        # Filter by student_id if provided
+        # 获取查询参数
         student_id = request.query_params.get('student_id')
         if student_id:
-            queryset = queryset.filter(student_id=student_id)
+            try:
+                student_id = int(student_id)
+            except (ValueError, TypeError):
+                return Response(
+                    {'code': 'VALIDATION_ERROR', 'message': '无效的学员ID'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            student_id = None
         
-        # Order by checked_at descending (Property 36)
-        queryset = queryset.order_by('-checked_at')
+        # 调用 Service
+        try:
+            spot_checks = self.service.get_list(
+                user=request.user,
+                student_id=student_id,
+                ordering='-checked_at'
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
-        serializer = SpotCheckListSerializer(queryset, many=True)
+        # 序列化输出
+        serializer = SpotCheckListSerializer(spot_checks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     @extend_schema(
@@ -90,75 +100,44 @@ class SpotCheckListCreateView(APIView):
     )
     def post(self, request):
         """
-        Create a new spot check record.
+        创建抽查记录
         
         Requirements: 14.1, 14.2, 14.3
         Property 35: 抽查学员范围限制
         """
-        serializer = SpotCheckCreateSerializer(
-            data=request.data,
-            context={'request': request}
-        )
+        # 反序列化输入
+        serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        spot_check = serializer.save()
         
+        # 调用 Service
+        try:
+            spot_check = self.service.create(
+                data=serializer.validated_data,
+                user=request.user
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST if e.code == 'VALIDATION_ERROR'
+                else status.HTTP_403_FORBIDDEN
+            )
+        
+        # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class SpotCheckDetailView(APIView):
     """
-    Spot check detail, update, delete endpoint.
+    抽查记录详情、更新、删除端点
     
     Requirements: 14.1
     """
     permission_classes = [IsAuthenticated, IsMentorOrDeptManager]
     
-    def get_object(self, pk, user):
-        """
-        Get spot check by ID with scope validation.
-        
-        Property 35: 抽查学员范围限制
-        """
-        try:
-            spot_check = SpotCheck.objects.select_related(
-                'student', 'checker', 'student__department'
-            ).get(pk=pk)
-        except SpotCheck.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='抽查记录不存在'
-            )
-        
-        # Validate data scope
-        current_role = get_current_role(user)
-        
-        # Admin can access all
-        if current_role == 'ADMIN':
-            return spot_check
-        
-        # Mentor can only access their mentees' records
-        if current_role == 'MENTOR':
-            if spot_check.student.mentor_id != user.id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该抽查记录'
-                )
-            return spot_check
-        
-        # Department manager can only access department members' records
-        if current_role == 'DEPT_MANAGER':
-            if not user.department_id or spot_check.student.department_id != user.department_id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该抽查记录'
-                )
-            return spot_check
-        
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message='无权访问该抽查记录'
-        )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = SpotCheckService()
     
     @extend_schema(
         summary='获取抽查记录详情',
@@ -171,8 +150,16 @@ class SpotCheckDetailView(APIView):
         tags=['抽查管理']
     )
     def get(self, request, pk):
-        """Get spot check detail."""
-        spot_check = self.get_object(pk, request.user)
+        """获取抽查记录详情"""
+        try:
+            spot_check = self.service.get_by_id(pk, request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND'
+                else status.HTTP_403_FORBIDDEN
+            )
+        
         serializer = SpotCheckDetailSerializer(spot_check)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -190,26 +177,30 @@ class SpotCheckDetailView(APIView):
     )
     def patch(self, request, pk):
         """
-        Update spot check record.
+        更新抽查记录
         
-        Only the creator can update the record.
+        只能更新自己创建的记录（管理员除外）
         """
-        spot_check = self.get_object(pk, request.user)
+        # 反序列化输入
+        serializer = SpotCheckUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
         
-        # Only creator or admin can update
-        current_role = get_current_role(request.user)
-        if current_role != 'ADMIN' and spot_check.checker_id != request.user.id:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只能更新自己创建的抽查记录'
+        # 调用 Service
+        try:
+            spot_check = self.service.update(
+                pk=pk,
+                data=serializer.validated_data,
+                user=request.user
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST if e.code == 'VALIDATION_ERROR'
+                else status.HTTP_403_FORBIDDEN if e.code == 'PERMISSION_DENIED'
+                else status.HTTP_404_NOT_FOUND
             )
         
-        serializer = SpotCheckUpdateSerializer(
-            spot_check, data=request.data, partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        spot_check = serializer.save()
-        
+        # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
     
@@ -225,19 +216,17 @@ class SpotCheckDetailView(APIView):
     )
     def delete(self, request, pk):
         """
-        Delete spot check record.
+        删除抽查记录
         
-        Only the creator or admin can delete the record.
+        只能删除自己创建的记录（管理员除外）
         """
-        spot_check = self.get_object(pk, request.user)
-        
-        # Only creator or admin can delete
-        current_role = get_current_role(request.user)
-        if current_role != 'ADMIN' and spot_check.checker_id != request.user.id:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只能删除自己创建的抽查记录'
+        try:
+            self.service.delete(pk, request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND'
+                else status.HTTP_403_FORBIDDEN
             )
         
-        spot_check.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

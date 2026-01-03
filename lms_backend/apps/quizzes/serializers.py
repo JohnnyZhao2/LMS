@@ -225,45 +225,18 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         return value
     
     def create(self, validated_data):
-        """Create quiz with creator and questions from context."""
-        existing_question_ids = validated_data.pop('existing_question_ids', [])
-        new_questions_data = validated_data.pop('new_questions', [])
+        """
+        创建试卷
         
-        validated_data['created_by'] = self.context['request'].user
-        validated_data.setdefault('status', 'PUBLISHED')
-        validated_data.setdefault('is_current', True)
-        validated_data.setdefault('published_at', timezone.now())
-        validated_data.setdefault(
-            'version_number',
-            Quiz.next_version_number(validated_data.get('resource_uuid'))
+        注意：此方法已废弃，Views 现在使用 QuizService.create()。
+        保留此方法仅用于向后兼容，实际业务逻辑在 Service 层处理。
+        """
+        # 注意：Views 不再调用此方法，而是直接使用 QuizService
+        # 如果确实需要调用，应该通过 Service 层处理
+        raise NotImplementedError(
+            '请使用 QuizService.create() 来创建试卷。'
+            '此方法已废弃，业务逻辑已迁移到 Service 层。'
         )
-        quiz = Quiz.objects.create(**validated_data)
-        
-        # Add existing questions
-        for question_id in existing_question_ids:
-            question = Question.objects.get(pk=question_id)
-            quiz.add_question(question)
-        
-        # Create and add new questions
-        for question_data in new_questions_data:
-            line_type_id = question_data.pop('line_type_id', None)
-            question_attrs = {
-                'created_by': self.context['request'].user,
-                'status': 'PUBLISHED',
-                'is_current': True,
-                'published_at': timezone.now(),
-                'version_number': Question.next_version_number(question_data.get('resource_uuid')),
-                **question_data,
-            }
-            question = Question.objects.create(**question_attrs)
-            # Set line_type if provided
-            if line_type_id:
-                from apps.knowledge.models import Tag
-                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
-                question.set_line_type(line_type)
-            quiz.add_question(question)
-        
-        return quiz
 
 
 class QuizUpdateSerializer(serializers.ModelSerializer):
@@ -317,38 +290,18 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
         return value
     
     def update(self, instance, validated_data):
-        """Update quiz info and synchronize question ordering."""
-        question_ids = validated_data.pop('existing_question_ids', None)
-        instance = instance.clone_new_version()
-        quiz = super().update(instance, validated_data)
+        """
+        更新试卷
         
-        if question_ids is not None:
-            current_relations = {
-                qq.question_id: qq
-                for qq in quiz.quiz_questions.all()
-            }
-            new_id_set = set(question_ids)
-            
-            # Remove questions that are no longer present
-            to_remove = [qid for qid in current_relations.keys() if qid not in new_id_set]
-            if to_remove:
-                QuizQuestion.objects.filter(
-                    quiz=quiz,
-                    question_id__in=to_remove
-                ).delete()
-            
-            # Recreate ordering / add missing questions
-            for order, question_id in enumerate(question_ids, start=1):
-                relation = current_relations.get(question_id)
-                if relation:
-                    if relation.order != order:
-                        relation.order = order
-                        relation.save(update_fields=['order'])
-                else:
-                    question = Question.objects.get(pk=question_id)
-                    quiz.add_question(question, order=order)
-        
-        return quiz
+        注意：此方法已废弃，Views 现在使用 QuizService.update()。
+        保留此方法仅用于向后兼容，实际业务逻辑在 Service 层处理。
+        """
+        # 注意：Views 不再调用此方法，而是直接使用 QuizService
+        # 如果确实需要调用，应该通过 Service 层处理
+        raise NotImplementedError(
+            '请使用 QuizService.update() 来更新试卷。'
+            '此方法已废弃，业务逻辑已迁移到 Service 层。'
+        )
 
 
 

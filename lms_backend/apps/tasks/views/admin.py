@@ -116,6 +116,10 @@ class TaskListView(APIView):
     """Task list endpoint."""
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+    
     @extend_schema(
         summary='获取任务列表',
         description='''
@@ -133,7 +137,7 @@ class TaskListView(APIView):
     )
     def get(self, request):
         # Use TaskService to get queryset based on user role
-        queryset = TaskService.get_task_queryset_for_user(request.user)
+        queryset = self.service.get_task_queryset_for_user(request.user)
         
         is_closed = request.query_params.get('is_closed')
         if is_closed is not None:
@@ -149,6 +153,10 @@ class TaskDetailView(APIView):
     """Task detail, update, and delete endpoint."""
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+    
     @extend_schema(
         summary='获取任务详情',
         description='获取指定任务的详细信息',
@@ -159,8 +167,8 @@ class TaskDetailView(APIView):
         tags=['任务管理']
     )
     def get(self, request, pk):
-        task = TaskService.get_task_by_id(pk)
-        TaskService.check_task_read_permission(task, request.user)
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
         
         serializer = TaskDetailSerializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -178,8 +186,8 @@ class TaskDetailView(APIView):
         tags=['任务管理']
     )
     def patch(self, request, pk):
-        task = TaskService.get_task_by_id(pk)
-        TaskService.check_task_edit_permission(task, request.user)
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_edit_permission(task, request.user)
         
         if task.is_closed:
             raise BusinessError(
@@ -210,10 +218,10 @@ class TaskDetailView(APIView):
         tags=['任务管理']
     )
     def delete(self, request, pk):
-        task = TaskService.get_task_by_id(pk)
-        TaskService.check_task_edit_permission(task, request.user)
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_edit_permission(task, request.user)
         
-        TaskService.delete_task(task)
+        self.service.delete_task(task)
         
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -222,6 +230,10 @@ class TaskCloseView(APIView):
     """Force close task endpoint."""
     permission_classes = [IsAuthenticated]
     serializer_class = TaskDetailSerializer
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
     
     @extend_schema(
         summary='强制结束任务',
@@ -241,8 +253,8 @@ class TaskCloseView(APIView):
                 message='只有管理员可以强制结束任务'
             )
         
-        task = TaskService.get_task_by_id(pk)
-        task = TaskService.close_task(task)
+        task = self.service.get_task_by_id(pk)
+        task = self.service.close_task(task)
         
         serializer = TaskDetailSerializer(task)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -15,7 +15,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.base_service import BaseService
 from .models import User, Role
+from .repositories import (
+    UserRepository,
+    RoleRepository,
+    DepartmentRepository,
+    UserRoleRepository,
+)
 
 
 class AuthenticationService:
@@ -57,16 +64,14 @@ class AuthenticationService:
         # First, check if user exists and is active (Property 3)
         # We need to do this separately because Django's authenticate()
         # returns None for both invalid credentials AND inactive users
-        try:
-            user_obj = User.objects.get(employee_id=employee_id)
-            if not user_obj.is_active:
-                raise BusinessError(
-                    code=ErrorCodes.AUTH_USER_INACTIVE,
-                    message='用户账号已被停用'
-                )
-        except User.DoesNotExist:
-            # User doesn't exist - will be caught by authenticate below
-            pass
+        # Note: AuthenticationService uses static methods, so we create a temporary repository
+        user_repository = UserRepository()
+        user_obj = user_repository.get_by_employee_id(employee_id)
+        if user_obj and not user_obj.is_active:
+            raise BusinessError(
+                code=ErrorCodes.AUTH_USER_INACTIVE,
+                message='用户账号已被停用'
+            )
         
         # Authenticate user using employee_id as username
         user = authenticate(username=employee_id, password=password)
@@ -294,15 +299,17 @@ class AuthenticationService:
         }
 
 
-class UserService:
+class UserService(BaseService):
     """
     User management service.
     
     Provides utility methods for user-related operations.
     """
     
-    @staticmethod
-    def get_user_by_id(user_id: int) -> Optional[User]:
+    def __init__(self):
+        self.user_repository = UserRepository()
+    
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
         """
         Get user by ID.
         
@@ -312,14 +319,9 @@ class UserService:
         Returns:
             User instance or None
         """
-        try:
-            return User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return None
+        return self.user_repository.get_by_id(user_id)
     
-    
-    @staticmethod
-    def get_user_by_employee_id(employee_id: str) -> Optional[User]:
+    def get_user_by_employee_id(self, employee_id: str) -> Optional[User]:
         """
         Get user by employee ID.
         
@@ -329,10 +331,7 @@ class UserService:
         Returns:
             User instance or None
         """
-        try:
-            return User.objects.get(employee_id=employee_id)
-        except User.DoesNotExist:
-            return None
+        return self.user_repository.get_by_employee_id(employee_id)
     
     @staticmethod
     def validate_user_can_login(user: User) -> bool:
@@ -357,7 +356,7 @@ class UserService:
 
 
 
-class UserManagementService:
+class UserManagementService(BaseService):
     """
     User management service.
     
@@ -367,8 +366,12 @@ class UserManagementService:
     Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.4, 3.5, 3.6
     """
     
-    @staticmethod
-    def deactivate_user(user_id: int) -> User:
+    def __init__(self):
+        self.user_repository = UserRepository()
+        self.role_repository = RoleRepository()
+        self.user_role_repository = UserRoleRepository()
+    
+    def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
         
@@ -387,13 +390,8 @@ class UserManagementService:
         Properties:
         - Property 7: 用户停用/启用状态切换
         """
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
+        user = self.user_repository.get_by_id(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
         
         # 防止停用超级用户（Django 的 is_superuser）
         if user.is_superuser:
@@ -402,13 +400,10 @@ class UserManagementService:
                 message='不能停用超级用户账号'
             )
         
-        user.is_active = False
-        # Django 的 auto_now=True 会自动更新 updated_at
-        user.save()
+        user = self.user_repository.update(user, is_active=False)
         return user
     
-    @staticmethod
-    def activate_user(user_id: int) -> User:
+    def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
         
@@ -427,21 +422,13 @@ class UserManagementService:
         Properties:
         - Property 7: 用户停用/启用状态切换
         """
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
+        user = self.user_repository.get_by_id(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
         
-        user.is_active = True
-        # Django 的 auto_now=True 会自动更新 updated_at
-        user.save()
+        user = self.user_repository.update(user, is_active=True)
         return user
     
-    @staticmethod
-    def assign_roles(user_id: int, role_codes: List[str], assigned_by: User) -> User:
+    def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
         
@@ -464,18 +451,13 @@ class UserManagementService:
         Properties:
         - Property 9: 学员角色不可移除
         """
-        from .models import UserRole
+        from .models import UserRole, Role
         
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
+        user = self.user_repository.get_by_id(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
         
         # Get student role (must always be preserved)
-        student_role = Role.objects.get(code='STUDENT')
+        student_role = self.role_repository.get_or_create_student_role()
         
         # Get all roles to assign (including STUDENT)
         roles_to_assign = set(role_codes)
@@ -490,33 +472,34 @@ class UserManagementService:
             roles_to_remove.remove('STUDENT')  # Never remove STUDENT
         
         for role_code in roles_to_remove:
-            UserRole.objects.filter(user=user, role__code=role_code).delete()
+            self.user_role_repository.remove_user_role(user.id, role_code)
         
         # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
         for role_code in roles_to_add:
             # Get or create the role
-            role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
-            role, _ = Role.objects.get_or_create(
-                code=role_code,
-                defaults={'name': role_name, 'description': f'{role_name}角色'}
-            )
-            UserRole.objects.get_or_create(
-                user=user,
-                role=role,
-                defaults={'assigned_by': assigned_by}
-            )
-        
-        # Django 的 auto_now=True 会自动更新 updated_at
-        # 注意：如果使用 update_fields，需要包含 updated_at，或者不使用 update_fields
-        user.save()
+            role = self.role_repository.get_by_code(role_code)
+            if not role:
+                role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
+                role = self.role_repository.create(
+                    code=role_code,
+                    name=role_name,
+                    description=f'{role_name}角色'
+                )
+            
+            # Check if user_role already exists
+            if not self.user_role_repository.user_has_role(user.id, role_code):
+                self.user_role_repository.create_user_role(
+                    user_id=user.id,
+                    role_id=role.id,
+                    assigned_by_id=assigned_by.id
+                )
         
         # Refresh user from database
         user.refresh_from_db()
         return user
     
-    @staticmethod
-    def assign_mentor(user_id: int, mentor_id: Optional[int]) -> User:
+    def assign_mentor(self, user_id: int, mentor_id: Optional[int]) -> User:
         """
         Assign a mentor to a user.
         
@@ -538,28 +521,18 @@ class UserManagementService:
         Properties:
         - Property 10: 师徒关系唯一性
         """
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
+        user = self.user_repository.get_by_id(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
         
         if mentor_id is None:
             # Remove mentor binding
-            user.mentor = None
+            user = self.user_repository.update(user, mentor_id=None)
         else:
             # Validate mentor
-            try:
-                mentor = User.objects.get(pk=mentor_id)
-            except User.DoesNotExist:
-                raise BusinessError(
-                    code=ErrorCodes.RESOURCE_NOT_FOUND,
-                    message='导师不存在'
-                )
+            mentor = self.user_repository.get_by_id(mentor_id)
+            self.validate_not_none(mentor, f'导师 {mentor_id} 不存在')
             
-            if not mentor.has_role('MENTOR'):
+            if not self.user_repository.has_role(mentor.id, 'MENTOR'):
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='指定的用户不是导师'
@@ -578,10 +551,8 @@ class UserManagementService:
                 )
             
             # Assign new mentor (automatically replaces old one due to FK)
-            user.mentor = mentor
+            user = self.user_repository.update(user, mentor_id=mentor_id)
         
-        # Django 的 auto_now=True 会自动更新 updated_at
-        user.save()
         return user
     
     @staticmethod
@@ -632,8 +603,7 @@ class UserManagementService:
         
         return True
     
-    @staticmethod
-    def delete_user(user_id: int) -> bool:
+    def delete_user(self, user_id: int) -> bool:
         """
         Delete a user if allowed.
         
@@ -652,13 +622,8 @@ class UserManagementService:
         Properties:
         - Property 8: 有数据用户删除保护
         """
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
+        user = self.user_repository.get_by_id(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
         
         if not UserManagementService.can_delete_user(user_id):
             raise BusinessError(
@@ -666,5 +631,5 @@ class UserManagementService:
                 message='用户已产生关联数据，无法删除，请使用停用功能'
             )
         
-        user.delete()
+        self.user_repository.delete(user, soft=False)
         return True

@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/config/urls.py
-# hypothesis_version: 6.141.1
-
-['admin/', 'api/analytics/', 'api/auth/', 'api/docs/', 'api/grading/', 'api/knowledge/', 'api/notifications/', 'api/questions/', 'api/quizzes/', 'api/redoc/', 'api/schema.yaml', 'api/schema/', 'api/spot-checks/', 'api/submissions/', 'api/tasks/', 'api/users/', 'apps.analytics.urls', 'apps.knowledge.urls', 'apps.questions.urls', 'apps.quizzes.urls', 'apps.tasks.urls', 'apps.users.urls.auth', 'redoc', 'schema', 'schema-yaml', 'swagger-ui']

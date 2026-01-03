@@ -319,33 +319,8 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                     'content': '其他类型知识必须填写正文内容'
                 })
     
-    def is_referenced_by_task(self):
-        """
-        检查知识文档是否被任务引用
-        
-        Requirements: 4.5
-        Property 12: 被引用知识删除保护
-        
-        Returns:
-            bool: 如果被任务引用则返回 True
-        """
-        try:
-            from apps.tasks.models import TaskKnowledge
-            return TaskKnowledge.objects.filter(knowledge=self).exists()
-        except ImportError:
-            # tasks app 尚未实现
-            return False
-    
-    def delete(self, *args, **kwargs):
-        """
-        重写删除方法，实现删除保护
-        
-        Requirements: 4.5
-        Property 12: 被引用知识删除保护
-        """
-        if self.is_referenced_by_task():
-            raise ValidationError('该知识文档已被任务引用，无法删除')
-        super().delete(*args, **kwargs)
+    # 注意：is_referenced_by_task() 和 delete() 方法已迁移到 KnowledgeService
+    # 业务逻辑应在 Service 层处理，Model 层只保留数据定义
     
     @classmethod
     def next_version_number(cls, resource_uuid):
@@ -379,79 +354,30 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         ).exclude(pk=self.pk).exists():
             self.version_number = self._compute_next_version_number()
     
-    def publish(self):
-        """
-        发布知识文档
-        
-        - 如果当前是草稿且有关联的已发布版本：更新已发布版本，然后删除草稿
-        - 如果当前是新草稿（无已发布版本）：直接将状态改为已发布
-        - 如果当前已是已发布状态：直接返回
-        
-        发布后草稿会被删除，只保留已发布版本。
-        当用户再次编辑已发布的知识时，才会创建新的草稿。
-        """
-        if self.status == 'PUBLISHED':
-            return self
-        
-        if not self.resource_uuid:
-            self.resource_uuid = uuid.uuid4()
-        
-        self.ensure_version_number()
-        self.status = 'PUBLISHED'
-        self.is_current = True
-        self.published_at = timezone.now()
-        self.save()
-        
-        Knowledge.objects.filter(
-            resource_uuid=self.resource_uuid,
-            status='PUBLISHED'
-        ).exclude(pk=self.pk).update(is_current=False)
-        return self
+    # 注意：publish() 方法已迁移到 KnowledgeService.publish()
+    # 业务逻辑应在 Service 层处理
     
     def clone_as_draft(self, user):
         """
-        基于当前已发布版本创建新的草稿版本。
+        [已废弃] 基于当前已发布版本创建新的草稿版本
+        
+        此方法已迁移到 KnowledgeService.create_or_get_draft_from_published()，请使用 Service 层方法。
+        此方法保留仅为向后兼容，将在未来版本中移除。
         """
-        draft = Knowledge.objects.create(
-            title=self.title,
-            knowledge_type=self.knowledge_type,
-            fault_scenario=self.fault_scenario,
-            trigger_process=self.trigger_process,
-            solution=self.solution,
-            verification_plan=self.verification_plan,
-            recovery_plan=self.recovery_plan,
-            content=self.content,
-            summary=self.summary,
-            status='DRAFT',
-            created_by=user,
-            updated_by=user,
-            resource_uuid=self.resource_uuid,
-            version_number=self.next_version_number(self.resource_uuid),
-            source_version=self,
-            is_current=False
+        import warnings
+        warnings.warn(
+            'Knowledge.clone_as_draft() 已废弃，请使用 KnowledgeService.create_or_get_draft_from_published()',
+            DeprecationWarning,
+            stacklevel=2
         )
         
-        if self.line_type:
-            draft.set_line_type(self.line_type)
-        draft.system_tags.set(self.system_tags.all())
-        draft.operation_tags.set(self.operation_tags.all())
-        return draft
+        # 委托给 Service 层
+        from .services import KnowledgeService
+        service = KnowledgeService()
+        return service.create_or_get_draft_from_published(self, user)
     
-    def unpublish(self):
-        """
-        取消发布知识文档
-        
-        将已发布状态改为草稿状态。
-        注意：如果知识已被任务引用，应该在调用此方法前检查。
-        """
-        if self.status == 'DRAFT':
-            return self
-        
-        self.status = 'DRAFT'
-        self.is_current = False
-        self.published_at = None
-        self.save(update_fields=['status', 'is_current', 'published_at'])
-        return self
+    # 注意：unpublish() 方法已迁移到 KnowledgeService.unpublish()
+    # 业务逻辑应在 Service 层处理
     
     def increment_view_count(self):
         """

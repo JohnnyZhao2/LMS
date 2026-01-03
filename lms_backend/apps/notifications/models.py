@@ -131,22 +131,3 @@ class Notification(TimestampMixin, models.Model):
     
     def __str__(self):
         return f"{self.recipient.username} - {self.title}"
-    
-    def mark_as_read(self):
-        """标记为已读"""
-        if not self.is_read:
-            self.is_read = True
-            self.read_at = timezone.now()
-            self.save(update_fields=['is_read', 'read_at'])
-    
-    def mark_as_sent_to_robot(self):
-        """标记为已发送到机器人"""
-        if not self.is_sent_to_robot:
-            self.is_sent_to_robot = True
-            self.sent_to_robot_at = timezone.now()
-            self.save(update_fields=['is_sent_to_robot', 'sent_to_robot_at'])
-    
-    @classmethod
-    def get_unread_count(cls, user):
-        """获取用户未读通知数量"""
-        return cls.objects.filter(recipient=user, is_read=False).count()

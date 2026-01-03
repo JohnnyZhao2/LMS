@@ -17,15 +17,19 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.base_service import BaseService
 from apps.users.models import User
 from apps.users.permissions import get_current_role
 from apps.tasks.models import TaskAssignment, TaskQuiz
+from apps.tasks.repositories import TaskQuizRepository, TaskAssignmentRepository
 from apps.quizzes.models import Quiz
+from django.db.models import Sum
 
 from .models import Submission, Answer
+from .repositories import SubmissionRepository, AnswerRepository
 
 
-class SubmissionService:
+class SubmissionService(BaseService):
     """
     Service for submission management operations.
     
@@ -36,8 +40,13 @@ class SubmissionService:
     - Submission status management
     """
     
-    @staticmethod
-    def get_submission_by_id(pk: int, user: User = None) -> Submission:
+    def __init__(self):
+        self.repository = SubmissionRepository()
+        self.answer_repository = AnswerRepository()
+        self.task_quiz_repository = TaskQuizRepository()
+        self.task_assignment_repository = TaskAssignmentRepository()
+    
+    def get_submission_by_id(self, pk: int, user: User = None) -> Submission:
         """
         Get a submission by ID.
         
@@ -51,23 +60,12 @@ class SubmissionService:
         Raises:
             BusinessError: If submission not found or not owned by user
         """
-        try:
-            queryset = Submission.objects.select_related(
-                'task_assignment__task', 'quiz'
-            ).prefetch_related(
-                'answers__question'
-            )
-            if user:
-                return queryset.get(pk=pk, user=user)
-            return queryset.get(pk=pk)
-        except Submission.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='答题记录不存在'
-            )
+        submission = self.repository.get_by_id(pk=pk, user=user)
+        self.validate_not_none(submission, f'答题记录 {pk} 不存在')
+        return submission
     
-    @staticmethod
     def validate_assignment_for_quiz(
+        self,
         assignment_id: int,
         quiz_id: int,
         user: User
@@ -126,8 +124,8 @@ class SubmissionService:
         
         return assignment, task_quiz, quiz
     
-    @staticmethod
     def check_exam_constraints(
+        self,
         assignment: TaskAssignment,
         quiz_id: int
     ) -> Optional[Submission]:
@@ -155,11 +153,10 @@ class SubmissionService:
             )
         
         # Check if already submitted
-        existing = Submission.objects.filter(
-            task_assignment=assignment,
-            quiz_id=quiz_id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).first()
+        existing = self.repository.get_existing_submitted(
+            task_assignment_id=assignment.id,
+            quiz_id=quiz_id
+        )
         if existing:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
@@ -167,17 +164,16 @@ class SubmissionService:
             )
         
         # Check for in-progress submission
-        in_progress = Submission.objects.filter(
-            task_assignment=assignment,
-            quiz_id=quiz_id,
-            status='IN_PROGRESS'
-        ).first()
+        in_progress = self.repository.get_in_progress(
+            task_assignment_id=assignment.id,
+            quiz_id=quiz_id
+        )
         
         return in_progress
     
-    @staticmethod
     @transaction.atomic
     def start_quiz(
+        self,
         assignment: TaskAssignment,
         task_quiz: TaskQuiz,
         user: User,
@@ -203,10 +199,10 @@ class SubmissionService:
         if is_exam:
             attempt_number = 1
         else:
-            existing_count = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz=quiz_version
-            ).count()
+            existing_count = self.repository.count_attempts(
+                task_assignment_id=assignment.id,
+                quiz_id=quiz_version.id
+            )
             attempt_number = existing_count + 1
         
         # Calculate remaining seconds for exam
@@ -214,8 +210,16 @@ class SubmissionService:
         if is_exam and task_quiz.quiz.duration:
             remaining_seconds = task_quiz.quiz.duration * 60
         
-        # Create submission
-        submission = Submission.objects.create(
+        # Prepare answer data
+        questions = quiz_version.get_ordered_questions()
+        answers_data = [
+            {'question_id': relation.question_id}
+            for relation in questions
+        ]
+        
+        # Create submission with answers
+        submission = self.repository.create_with_answers(
+            answers_data=answers_data,
             task_assignment=assignment,
             quiz=quiz_version,
             user=user,
@@ -225,18 +229,10 @@ class SubmissionService:
             remaining_seconds=remaining_seconds
         )
         
-        # Create answer records
-        questions = quiz_version.get_ordered_questions()
-        for relation in questions:
-            Answer.objects.create(
-                submission=submission,
-                question_id=relation.question_id
-            )
-        
         return submission
     
-    @staticmethod
     def save_answer(
+        self,
         submission: Submission,
         question_id: int,
         user_answer: Any
@@ -261,23 +257,20 @@ class SubmissionService:
                 message='只能在答题中保存答案'
             )
         
-        try:
-            answer = Answer.objects.get(
-                submission=submission,
-                question_id=question_id
-            )
-        except Answer.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='该题目不在此答卷中'
-            )
+        answer = self.answer_repository.get_by_submission_and_question(
+            submission_id=submission.id,
+            question_id=question_id
+        )
+        self.validate_not_none(answer, '该题目不在此答卷中')
         
-        answer.user_answer = user_answer
-        answer.save(update_fields=['user_answer', 'updated_at'])
+        answer = self.answer_repository.update(
+            answer,
+            user_answer=user_answer
+        )
         return answer
     
-    @staticmethod
-    def submit(submission: Submission, is_practice: bool = True) -> Submission:
+    @transaction.atomic
+    def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
         Submit a quiz/exam.
         
@@ -290,19 +283,91 @@ class SubmissionService:
             
         Raises:
             BusinessError: If submission already submitted
+        
+        Requirements:
+        - 10.3: 客观题自动评分
+        - 12.4: 记录提交时间并进行客观题自动评分
+        - 12.5: 包含主观题时状态设为"待评分"
+        - 12.6: 仅包含客观题时直接计算最终成绩
+        
+        Properties:
+        - Property 30: 客观题自动评分
+        - Property 31: 主观题待评分状态
+        - Property 32: 纯客观题直接完成
         """
         if submission.status != 'IN_PROGRESS':
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message='此答卷已提交'
+                message='只能提交答题中的记录'
             )
         
-        submission.submit(is_practice=is_practice)
-        submission.refresh_from_db()
+        # 设置提交时间
+        submission.submitted_at = timezone.now()
+        
+        # 自动评分客观题
+        self._auto_grade_objective_questions(submission)
+        
+        # 计算总分
+        self._calculate_score(submission)
+        
+        # 设置状态
+        if submission.has_subjective_questions:
+            # 包含主观题，需要人工评分
+            submission.status = 'GRADING'
+        else:
+            # 纯客观题，直接完成
+            submission.status = 'GRADED'
+            self._update_task_assignment(submission)
+        
+        submission = self.repository.update(submission, status=submission.status, submitted_at=submission.submitted_at)
+        
+        # 检查练习任务是否应该自动完成
+        if is_practice:
+            self._check_practice_completion(submission)
+        
         return submission
     
-    @staticmethod
+    def _auto_grade_objective_questions(self, submission: Submission) -> None:
+        """
+        自动评分客观题
+        
+        Property 30: 客观题自动评分
+        """
+        objective_answers = self.answer_repository.get_objective_answers(submission.id)
+        
+        for answer in objective_answers:
+            answer.auto_grade()
+            self.answer_repository.update(answer, obtained_score=answer.obtained_score)
+    
+    def _calculate_score(self, submission: Submission) -> None:
+        """计算当前得分"""
+        all_answers = self.answer_repository.get_by_submission(submission.id)
+        total_score = all_answers.aggregate(total=Sum('obtained_score'))['total'] or Decimal('0')
+        
+        submission.obtained_score = total_score
+    
+    def _update_task_assignment(self, submission: Submission) -> None:
+        """更新任务分配的成绩"""
+        assignment = submission.task_assignment
+        
+        # 更新成绩（取最高分）
+        if assignment.score is None or submission.obtained_score > assignment.score:
+            self.task_assignment_repository.update(
+                assignment,
+                score=submission.obtained_score
+            )
+    
+    def _check_practice_completion(self, submission: Submission) -> None:
+        """
+        检查练习任务是否应该自动完成
+        
+        Property 25: 练习任务自动完成
+        """
+        assignment = submission.task_assignment
+        assignment.check_completion()
+    
     def get_practice_history(
+        self,
         assignment: TaskAssignment
     ) -> List[Dict[str, Any]]:
         """
@@ -314,24 +379,23 @@ class SubmissionService:
         Returns:
             List of quiz practice history dicts
         """
-        task_quizzes = TaskQuiz.objects.filter(
-            task=assignment.task
-        ).select_related('quiz')
+        task_quizzes = self.task_quiz_repository.get_by_task(
+            task_id=assignment.task_id
+        )
         
         result = []
         for tq in task_quizzes:
             quiz = tq.quiz
             
-            submissions = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz=quiz,
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            submissions = self.repository.get_practice_history(
+                task_assignment_id=assignment.id,
+                quiz_id=quiz.id
             )
             
             attempt_count = submissions.count()
             
             if attempt_count > 0:
-                latest = submissions.order_by('-submitted_at').first()
+                latest = submissions.first()  # Already ordered by -submitted_at
                 best = submissions.order_by('-obtained_score').first()
                 
                 result.append({
@@ -357,7 +421,7 @@ class SubmissionService:
         return result
 
 
-class GradingService:
+class GradingService(BaseService):
     """
     Service for grading operations.
     
@@ -368,8 +432,11 @@ class GradingService:
     - Grading status management
     """
     
-    @staticmethod
-    def get_grading_queryset(user: User) -> QuerySet:
+    def __init__(self):
+        self.repository = SubmissionRepository()
+        self.answer_repository = AnswerRepository()
+    
+    def get_grading_queryset(self, user: User) -> QuerySet:
         """
         Get submissions pending grading based on user's role.
         
@@ -381,28 +448,23 @@ class GradingService:
         """
         current_role = get_current_role(user)
         
-        queryset = Submission.objects.filter(
-            status='GRADING'
-        ).select_related(
-            'quiz', 'user', 'task_assignment__task'
-        )
-        
         if current_role == 'ADMIN':
-            pass  # Admin can see all
+            queryset = self.repository.get_grading_queryset()
         elif current_role == 'MENTOR':
-            queryset = queryset.filter(user__mentor=user)
+            queryset = self.repository.get_grading_queryset(mentor_id=user.id)
         elif current_role == 'DEPT_MANAGER':
             if user.department_id:
-                queryset = queryset.filter(user__department_id=user.department_id)
+                queryset = self.repository.get_grading_queryset(department_id=user.department_id)
             else:
-                queryset = queryset.none()
+                from django.db.models import QuerySet
+                queryset = Submission.objects.none()
         else:
-            queryset = queryset.none()
+            from django.db.models import QuerySet
+            queryset = Submission.objects.none()
         
-        return queryset.order_by('-submitted_at')
+        return queryset
     
-    @staticmethod
-    def get_submission_for_grading(pk: int, user: User) -> Submission:
+    def get_submission_for_grading(self, pk: int, user: User) -> Submission:
         """
         Get a submission for grading with permission check.
         
@@ -416,25 +478,15 @@ class GradingService:
         Raises:
             BusinessError: If not found or permission denied
         """
-        try:
-            submission = Submission.objects.select_related(
-                'quiz', 'user', 'task_assignment__task'
-            ).prefetch_related(
-                'answers__question', 'answers__graded_by'
-            ).get(pk=pk)
-        except Submission.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='答题记录不存在'
-            )
+        submission = self.repository.get_for_grading(pk=pk)
+        self.validate_not_none(submission, f'答题记录 {pk} 不存在')
         
         # Check permission
-        GradingService._check_grading_permission(submission, user)
+        self._check_grading_permission(submission, user)
         
         return submission
     
-    @staticmethod
-    def _check_grading_permission(submission: Submission, user: User) -> None:
+    def _check_grading_permission(self, submission: Submission, user: User) -> None:
         """
         Check if user has permission to grade a submission.
         
@@ -467,8 +519,8 @@ class GradingService:
                 message='无权访问此答题记录'
             )
     
-    @staticmethod
     def grade_answer(
+        self,
         submission: Submission,
         answer_id: int,
         score: Decimal,
@@ -497,15 +549,14 @@ class GradingService:
                 message='此答卷不在待评分状态'
             )
         
-        try:
-            answer = Answer.objects.select_related('question').get(
-                id=answer_id,
-                submission=submission
-            )
-        except Answer.DoesNotExist:
+        answer = self.answer_repository.get_by_id(pk=answer_id)
+        self.validate_not_none(answer, f'答案 {answer_id} 不存在')
+        
+        # Verify answer belongs to submission
+        if answer.submission_id != submission.id:
             raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='答案不存在'
+                code=ErrorCodes.INVALID_OPERATION,
+                message='答案不属于此答题记录'
             )
         
         # Check it's a subjective question
@@ -518,17 +569,17 @@ class GradingService:
         # Check score range
         if score < 0 or score > answer.question.score:
             raise BusinessError(
-                code=ErrorCodes.INVALID_PARAMS,
+                code=ErrorCodes.VALIDATION_ERROR,
                 message=f'分数必须在 0 到 {answer.question.score} 之间'
             )
         
-        # Grade the answer
+        # Grade the answer (this calls the model's grade method which handles the logic)
         answer.grade(grader, score, comment)
         
         return answer
     
-    @staticmethod
     def batch_grade(
+        self,
         submission: Submission,
         grades: List[Dict[str, Any]],
         grader: User
@@ -555,7 +606,7 @@ class GradingService:
         
         for grade_data in grades:
             try:
-                answer = GradingService.grade_answer(
+                answer = self.grade_answer(
                     submission=submission,
                     answer_id=grade_data.get('answer_id'),
                     score=Decimal(str(grade_data.get('score', 0))),

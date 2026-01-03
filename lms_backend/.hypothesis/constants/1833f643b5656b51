@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/knowledge/serializers.py
-# hypothesis_version: 6.141.1
-
-['EMERGENCY', 'categories', 'category_ids', 'children', 'children_count', 'code', 'content', 'created_at', 'created_by', 'created_by.real_name', 'created_by_name', 'description', 'fault_scenario', 'id', 'is_primary', 'knowledge_type', 'level', 'name', 'operation_tags', 'parent', 'primary_category', 'recovery_plan', 'request', 'secondary_category', 'solution', 'sort_order', 'summary', 'title', 'trigger_process', 'updated_at', 'updated_by_name', 'verification_plan', 'view_count', '其他类型知识必须填写正文内容', '分类ID列表', '分类最多支持两级', '应急类知识必须填写故障场景', '应急类知识必须填写解决方案', '该分类代码已存在']

@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/notifications/migrations/0001_notification_models.py
-# hypothesis_version: 6.141.1
-
-[200, '-created_at', '0001_task_models', 'DEADLINE_REMINDER', 'GRADING_COMPLETED', 'ID', 'Notification', 'SPOT_CHECK', 'TASK_ASSIGNED', 'content', 'created_at', 'db_table', 'id', 'is_read', 'is_sent_to_robot', 'lms_notification', 'notification', 'notification_type', 'notifications', 'ordering', 'read_at', 'recipient', 'sent_to_robot_at', 'spot_check', 'spot_checks', 'submission', 'submissions', 'task', 'tasks', 'tasks.task', 'title', 'updated_at', 'verbose_name', 'verbose_name_plural', '任务分配', '关联任务', '关联抽查记录', '关联答题记录', '创建时间', '已读时间', '截止提醒', '抽查通知', '接收用户', '是否已发送到机器人', '是否已读', '更新时间', '机器人发送时间', '评分完成', '通知', '通知内容', '通知标题', '通知类型']

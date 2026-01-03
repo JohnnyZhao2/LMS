@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/users/services.py
-# hypothesis_version: 6.141.1
-
-['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'STUDENT', 'TEAM_MANAGER', 'access', 'access_token', 'assigned_by', 'available_roles', 'code', 'current_role', 'department', 'description', 'email', 'employee_id', 'id', 'is_active', 'mentor', 'name', 'real_name', 'refresh', 'refresh_token', 'roles', 'user', 'username', '不能将自己设为导师', '导师不存在', '指定的导师已被停用', '指定的用户不是导师', '无效的刷新令牌', '用户不存在', '用户名或密码错误', '用户账号已被停用']

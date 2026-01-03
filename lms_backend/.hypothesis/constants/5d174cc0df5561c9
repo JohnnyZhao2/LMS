@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/notifications/services.py
-# hypothesis_version: 6.141.1
-
-['%Y-%m-%d %H:%M', 'DEADLINE_REMINDER', 'EXAM', 'GRADING_COMPLETED', 'LEARNING', 'PRACTICE', 'SPOT_CHECK', 'TASK_ASSIGNED', 'content', 'title', '任务即将截止', '您有新的学习任务', '您有新的练习任务', '您有新的考试任务', '抽查记录', '考试评分完成']

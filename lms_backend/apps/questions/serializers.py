@@ -152,27 +152,13 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        """Create question with creator from context."""
-        from apps.knowledge.models import Tag
+        """
+        Create question - 实际创建由Service层处理
         
-        line_type_id = validated_data.pop('line_type_id', None)
-        validated_data['created_by'] = self.context['request'].user
-        validated_data.setdefault('status', 'PUBLISHED')
-        validated_data.setdefault('is_current', True)
-        validated_data.setdefault('published_at', timezone.now())
-        validated_data.setdefault(
-            'version_number',
-            Question.next_version_number(validated_data.get('resource_uuid'))
-        )
-        
-        question = Question.objects.create(**validated_data)
-        
-        # 设置条线类型关系
-        if line_type_id:
-            line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
-            question.set_line_type(line_type)
-        
-        return question
+        注意：此方法保留是为了兼容性，实际创建逻辑在Service层
+        """
+        # Service层会处理创建逻辑，这里只返回验证后的数据
+        return validated_data
 
 
 class QuestionUpdateSerializer(serializers.ModelSerializer):
@@ -267,21 +253,13 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         return attrs
     
     def update(self, instance, validated_data):
-        """Update question with line_type handling."""
-        from apps.knowledge.models import Tag
+        """
+        Update question - 实际更新由Service层处理
         
-        line_type_id = validated_data.pop('line_type_id', None)
-        instance = instance.clone_new_version()
-        
-        # 更新条线类型关系
-        if line_type_id is not None:
-            if line_type_id:
-                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
-                instance.set_line_type(line_type)
-            else:
-                instance.set_line_type(None)
-        
-        return super().update(instance, validated_data)
+        注意：此方法保留是为了兼容性，实际更新逻辑在Service层
+        """
+        # Service层会处理更新逻辑，这里只返回验证后的数据
+        return validated_data
 
 
 class QuestionImportSerializer(serializers.Serializer):

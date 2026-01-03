@@ -18,7 +18,7 @@ from apps.analytics.services import MentorDashboardService
 
 class MentorDashboardView(APIView):
     """
-    Mentor/Department Manager dashboard API endpoint.
+    导师/室经理仪表盘 API 端点
     
     GET /api/analytics/dashboard/mentor/
     
@@ -29,6 +29,10 @@ class MentorDashboardView(APIView):
     - 19.4: 用户访问仪表盘时提供新建任务、测试中心、抽查的快捷入口
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = MentorDashboardService()
     
     @extend_schema(
         summary='获取导师/室经理仪表盘数据',
@@ -49,7 +53,7 @@ class MentorDashboardView(APIView):
                 message='只有导师、室经理或管理员可以访问此仪表盘'
             )
         
-        # Use MentorDashboardService to get dashboard data
-        data = MentorDashboardService.get_dashboard_data(user)
+        # 调用 Service 获取仪表盘数据
+        data = self.service.get_dashboard_data(user)
         
         return Response(data)

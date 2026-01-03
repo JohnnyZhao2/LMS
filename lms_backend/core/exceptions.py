@@ -18,30 +18,34 @@ class BusinessError(Exception):
 
 # Error codes
 class ErrorCodes:
-    # Authentication errors
+    """错误码常量"""
+    
+    # 通用错误
+    RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND'
+    PERMISSION_DENIED = 'PERMISSION_DENIED'
+    VALIDATION_ERROR = 'VALIDATION_ERROR'
+    INVALID_OPERATION = 'INVALID_OPERATION'
+    INVALID_INPUT = 'INVALID_INPUT'
+    
+    # 认证错误
     AUTH_INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS'
     AUTH_USER_INACTIVE = 'AUTH_USER_INACTIVE'
     AUTH_INVALID_ROLE = 'AUTH_INVALID_ROLE'
     
-    # User errors
+    # 资源错误
+    RESOURCE_REFERENCED = 'RESOURCE_REFERENCED'
+    RESOURCE_VERSION_MISMATCH = 'RESOURCE_VERSION_MISMATCH'
+    
+    # 用户错误
     USER_HAS_DATA = 'USER_HAS_DATA'
     
-    # Resource errors
-    RESOURCE_REFERENCED = 'RESOURCE_REFERENCED'
-    RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND'
-    
-    # Task errors
+    # 任务错误
     TASK_INVALID_ASSIGNEES = 'TASK_INVALID_ASSIGNEES'
+    TASK_ALREADY_CLOSED = 'TASK_ALREADY_CLOSED'
     
-    # Exam errors
+    # 提交错误
     EXAM_NOT_IN_WINDOW = 'EXAM_NOT_IN_WINDOW'
     EXAM_ALREADY_SUBMITTED = 'EXAM_ALREADY_SUBMITTED'
-    
-    # Permission errors
-    PERMISSION_DENIED = 'PERMISSION_DENIED'
-    
-    # General errors
-    INVALID_OPERATION = 'INVALID_OPERATION'
 
 
 def custom_exception_handler(exc, context):

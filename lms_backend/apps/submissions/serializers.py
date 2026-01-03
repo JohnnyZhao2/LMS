@@ -129,8 +129,9 @@ class StartPracticeSerializer(serializers.Serializer):
         quiz_id = attrs['quiz_id']
         
         # 使用 SubmissionService 验证
+        service = SubmissionService()
         try:
-            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+            assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
                 assignment_id, quiz_id, user
             )
         except Exception as e:
@@ -145,7 +146,8 @@ class StartPracticeSerializer(serializers.Serializer):
     
     def create(self, validated_data):
         """Create a new practice submission - 委托给 SubmissionService"""
-        return SubmissionService.start_quiz(
+        service = SubmissionService()
+        return service.start_quiz(
             assignment=validated_data['assignment'],
             task_quiz=validated_data['task_quiz'],
             user=self.context['request'].user,
@@ -184,8 +186,9 @@ class SaveAnswerSerializer(serializers.Serializer):
     
     def save(self):
         """Save the answer - 委托给 SubmissionService"""
+        service = SubmissionService()
         submission = self.context.get('submission')
-        return SubmissionService.save_answer(
+        return service.save_answer(
             submission=submission,
             question_id=self.validated_data['question_id'],
             user_answer=self.validated_data['user_answer']
@@ -274,8 +277,9 @@ class StartExamSerializer(serializers.Serializer):
         quiz_id = attrs['quiz_id']
         
         # 使用 SubmissionService 验证
+        service = SubmissionService()
         try:
-            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+            assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
                 assignment_id, quiz_id, user
             )
         except Exception as e:
@@ -283,7 +287,7 @@ class StartExamSerializer(serializers.Serializer):
         
         # 检查考试约束
         try:
-            in_progress = SubmissionService.check_exam_constraints(assignment, quiz_id)
+            in_progress = service.check_exam_constraints(assignment, quiz_id)
         except Exception as e:
             raise serializers.ValidationError({'assignment_id': str(e)})
         
@@ -296,13 +300,14 @@ class StartExamSerializer(serializers.Serializer):
     
     def create(self, validated_data):
         """Create or return existing exam submission - 委托给 SubmissionService"""
+        service = SubmissionService()
         in_progress = validated_data.get('in_progress_submission')
         
         # 如果有进行中的提交，直接返回
         if in_progress:
             return in_progress
         
-        return SubmissionService.start_quiz(
+        return service.start_quiz(
             assignment=validated_data['assignment'],
             task_quiz=validated_data['task_quiz'],
             user=self.context['request'].user,
@@ -348,8 +353,9 @@ class StartQuizSerializer(serializers.Serializer):
         quiz_id = attrs['quiz_id']
         
         # 使用 SubmissionService 验证
+        service = SubmissionService()
         try:
-            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+            assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
                 assignment_id, quiz_id, user
             )
         except Exception as e:
@@ -360,7 +366,7 @@ class StartQuizSerializer(serializers.Serializer):
         if is_exam:
             # 检查考试约束
             try:
-                in_progress = SubmissionService.check_exam_constraints(assignment, quiz_id)
+                in_progress = service.check_exam_constraints(assignment, quiz_id)
             except Exception as e:
                 raise serializers.ValidationError(str(e))
             attrs['in_progress_submission'] = in_progress
@@ -376,6 +382,7 @@ class StartQuizSerializer(serializers.Serializer):
     
     def create(self, validated_data):
         """Create or return existing submission - 委托给 SubmissionService"""
+        service = SubmissionService()
         is_exam = validated_data['is_exam']
         in_progress = validated_data.get('in_progress_submission')
         
@@ -383,7 +390,7 @@ class StartQuizSerializer(serializers.Serializer):
         if is_exam and in_progress:
             return in_progress
         
-        return SubmissionService.start_quiz(
+        return service.start_quiz(
             assignment=validated_data['assignment'],
             task_quiz=validated_data['task_quiz'],
             user=self.context['request'].user,
@@ -500,10 +507,11 @@ class GradeAnswerSerializer(serializers.Serializer):
     
     def save(self):
         """Save the grade - 委托给 GradingService"""
+        service = GradingService()
         submission = self.context.get('submission')
         grader = self.context['request'].user
         
-        return GradingService.grade_answer(
+        return service.grade_answer(
             submission=submission,
             answer_id=self.validated_data['answer_id'],
             score=self.validated_data['score'],

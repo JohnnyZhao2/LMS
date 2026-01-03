@@ -1,26 +1,18 @@
 """
-Views for quiz management.
+试卷视图
 
-Implements quiz CRUD endpoints with ownership control.
-
-Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
-Properties:
-- Property 14: 被引用试卷删除保护
-- Property 16: 试卷所有权编辑控制
+只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 """
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
-from core.exceptions import BusinessError, ErrorCodes
+from core.exceptions import BusinessError
 from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from apps.questions.models import Question
-
-from .models import Quiz, QuizQuestion
+from .services import QuizService
 from .serializers import (
     QuizListSerializer,
     QuizDetailSerializer,
@@ -34,11 +26,15 @@ from .serializers import (
 
 class QuizListCreateView(APIView):
     """
-    Quiz list and create endpoint.
+    试卷列表和创建
     
     Requirements: 6.1, 6.4
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='获取试卷列表',
@@ -46,6 +42,7 @@ class QuizListCreateView(APIView):
         parameters=[
             OpenApiParameter(name='search', type=str, description='搜索试卷标题'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
+            OpenApiParameter(name='status', type=str, description='状态（DRAFT/PUBLISHED）'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
@@ -54,42 +51,41 @@ class QuizListCreateView(APIView):
     )
     def get(self, request):
         """
-        Get quiz list with pagination.
+        获取试卷列表
         
         Requirements: 6.4 - 导师或室经理查看试卷列表时展示所有试卷
         """
-        queryset = Quiz.objects.filter(
-            is_deleted=False
-        ).select_related('created_by')
+        # 1. 获取查询参数
+        filters = {}
+        if request.query_params.get('created_by'):
+            filters['created_by_id'] = int(request.query_params.get('created_by'))
+        if request.query_params.get('status'):
+            filters['status'] = request.query_params.get('status')
         
-        # Search by title
         search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(title__icontains=search)
         
-        # Filter by creator
-        created_by = request.query_params.get('created_by')
-        if created_by:
-            queryset = queryset.filter(created_by_id=created_by)
+        # 2. 调用 Service
+        try:
+            quiz_list = self.service.get_list(
+                filters=filters,
+                search=search,
+                ordering='-created_at'
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        status_param = request.query_params.get('status')
-        if status_param in ['DRAFT', 'PUBLISHED']:
-            queryset = queryset.filter(status=status_param)
-            if status_param == 'PUBLISHED':
-                queryset = queryset.filter(is_current=True)
-        else:
-            queryset = queryset.filter(status='PUBLISHED', is_current=True)
-        
-        queryset = queryset.order_by('-created_at')
-        
-        # Apply pagination
+        # 3. 分页
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(queryset, request)
+        page = paginator.paginate_queryset(quiz_list, request)
         if page is not None:
             serializer = QuizListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
         
-        serializer = QuizListSerializer(queryset, many=True)
+        # 4. 序列化输出
+        serializer = QuizListSerializer(quiz_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     @extend_schema(
@@ -105,25 +101,44 @@ class QuizListCreateView(APIView):
     )
     def post(self, request):
         """
-        Create a new quiz.
+        创建试卷
         
         Requirements: 6.1 - 创建试卷时存储试卷名称、描述，并记录创建者
         """
+        # 1. 反序列化输入
         serializer = QuizCreateSerializer(
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        quiz = serializer.save()
         
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
+        # 2. 提取数据
+        validated_data = serializer.validated_data
+        existing_question_ids = validated_data.pop('existing_question_ids', [])
+        new_questions_data = validated_data.pop('new_questions', [])
+        
+        # 3. 调用 Service
+        try:
+            quiz = self.service.create(
+                data=validated_data,
+                user=request.user,
+                existing_question_ids=existing_question_ids,
+                new_questions_data=new_questions_data
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 4. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_201_CREATED)
 
 
 class QuizDetailView(APIView):
     """
-    Quiz detail, update, delete endpoint.
+    试卷详情、更新、删除
     
     Requirements: 6.5, 6.6, 6.7, 6.8
     Properties:
@@ -132,36 +147,9 @@ class QuizDetailView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     
-    def get_object(self, pk):
-        """Get quiz by ID."""
-        try:
-            return Quiz.objects.select_related('created_by').get(
-                pk=pk, is_deleted=False
-            )
-        except Quiz.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不存在'
-            )
-    
-    def check_edit_permission(self, request, quiz):
-        """
-        Check if user can edit/delete the quiz.
-        
-        Requirements: 6.5, 6.6, 6.7
-        Property 16: 试卷所有权编辑控制
-        
-        - Admin can edit/delete any quiz
-        - Mentor/DeptManager can only edit/delete their own quizzes
-        """
-        # Admin can edit/delete any quiz
-        if request.user.is_admin:
-            return True
-        if hasattr(request.user, 'current_role') and request.user.current_role == 'ADMIN':
-            return True
-        
-        # Others can only edit/delete their own quizzes
-        return quiz.created_by_id == request.user.id
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='获取试卷详情',
@@ -173,8 +161,15 @@ class QuizDetailView(APIView):
         tags=['试卷管理']
     )
     def get(self, request, pk):
-        """Get quiz detail."""
-        quiz = self.get_object(pk)
+        """获取试卷详情"""
+        try:
+            quiz = self.service.get_by_id(pk)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
         serializer = QuizDetailSerializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -192,28 +187,36 @@ class QuizDetailView(APIView):
     )
     def patch(self, request, pk):
         """
-        Update quiz.
+        更新试卷
         
         Requirements: 6.5, 6.7
         Property 16: 试卷所有权编辑控制
         """
-        quiz = self.get_object(pk)
+        # 1. 反序列化输入
+        serializer = QuizUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
         
-        # Check edit permission
-        if not self.check_edit_permission(request, quiz):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有试卷创建者或管理员可以编辑此试卷'
+        # 2. 提取数据
+        validated_data = serializer.validated_data
+        question_ids = validated_data.pop('existing_question_ids', None)
+        
+        # 3. 调用 Service
+        try:
+            quiz = self.service.update(
+                pk=pk,
+                data=validated_data,
+                user=request.user,
+                question_ids=question_ids
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        serializer = QuizUpdateSerializer(
-            quiz, data=request.data, partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        quiz = serializer.save()
-        
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        # 4. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_200_OK)
     
     @extend_schema(
         summary='删除试卷',
@@ -228,60 +231,34 @@ class QuizDetailView(APIView):
     )
     def delete(self, request, pk):
         """
-        Delete quiz.
+        删除试卷
         
         Requirements: 6.6, 6.7, 6.8
         Property 14: 被引用试卷删除保护
         Property 16: 试卷所有权编辑控制
         """
-        quiz = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, quiz):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有试卷创建者或管理员可以删除此试卷'
+        try:
+            self.service.delete(pk, request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if referenced by task (Property 14)
-        if quiz.is_referenced_by_task():
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该试卷已被任务引用，无法删除'
-            )
-        
-        # Soft delete
-        quiz.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class QuizAddQuestionsView(APIView):
     """
-    Add questions to a quiz endpoint.
+    向试卷添加题目
     
     Requirements: 6.2, 6.3
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     
-    def get_object(self, pk):
-        """Get quiz by ID."""
-        try:
-            return Quiz.objects.select_related('created_by').get(
-                pk=pk, is_deleted=False
-            )
-        except Quiz.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不存在'
-            )
-    
-    def check_edit_permission(self, request, quiz):
-        """Check if user can edit the quiz."""
-        if request.user.is_admin:
-            return True
-        if hasattr(request.user, 'current_role') and request.user.current_role == 'ADMIN':
-            return True
-        return quiz.created_by_id == request.user.id
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='向试卷添加题目',
@@ -297,87 +274,49 @@ class QuizAddQuestionsView(APIView):
     )
     def post(self, request, pk):
         """
-        Add questions to quiz.
+        向试卷添加题目
         
         Requirements:
         - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目或新建题目
         - 6.3: 在创建试卷时新建的题目纳入题库，题目作者为当前用户
         """
-        quiz = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, quiz):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有试卷创建者或管理员可以编辑此试卷'
-            )
-        
+        # 1. 反序列化输入
         serializer = AddQuestionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        existing_question_ids = serializer.validated_data.get('existing_question_ids', [])
-        new_questions_data = serializer.validated_data.get('new_questions', [])
-        quiz = quiz.clone_new_version()
+        # 2. 提取数据
+        validated_data = serializer.validated_data
+        existing_question_ids = validated_data.get('existing_question_ids', [])
+        new_questions_data = validated_data.get('new_questions', [])
         
-        # Get existing questions that are already in the quiz
-        existing_quiz_question_ids = set(
-            quiz.quiz_questions.values_list('question_id', flat=True)
-        )
+        # 3. 调用 Service
+        try:
+            quiz = self.service.add_questions(
+                pk=pk,
+                user=request.user,
+                existing_question_ids=existing_question_ids,
+                new_questions_data=new_questions_data
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        # Add existing questions
-        for question_id in existing_question_ids:
-            if question_id not in existing_quiz_question_ids:
-                question = Question.objects.get(pk=question_id)
-                quiz.add_question(question)
-        
-        # Create and add new questions
-        for question_data in new_questions_data:
-            line_type_id = question_data.pop('line_type_id', None)
-            question_attrs = {
-                'created_by': request.user,
-                'status': 'PUBLISHED',
-                'is_current': True,
-                'published_at': timezone.now(),
-                'version_number': Question.next_version_number(question_data.get('resource_uuid')),
-                **question_data,
-            }
-            question = Question.objects.create(**question_attrs)
-            # Set line_type if provided
-            if line_type_id:
-                from apps.knowledge.models import Tag
-                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE', is_active=True)
-                question.set_line_type(line_type)
-            quiz.add_question(question)
-        
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        # 4. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_200_OK)
 
 
 class QuizRemoveQuestionsView(APIView):
     """
-    Remove questions from a quiz endpoint.
+    从试卷移除题目
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     
-    def get_object(self, pk):
-        """Get quiz by ID."""
-        try:
-            return Quiz.objects.select_related('created_by').get(
-                pk=pk, is_deleted=False
-            )
-        except Quiz.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不存在'
-            )
-    
-    def check_edit_permission(self, request, quiz):
-        """Check if user can edit the quiz."""
-        if request.user.is_admin:
-            return True
-        if hasattr(request.user, 'current_role') and request.user.current_role == 'ADMIN':
-            return True
-        return quiz.created_by_id == request.user.id
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='从试卷移除题目',
@@ -392,57 +331,41 @@ class QuizRemoveQuestionsView(APIView):
         tags=['试卷管理']
     )
     def post(self, request, pk):
-        """Remove questions from quiz."""
-        quiz = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, quiz):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有试卷创建者或管理员可以编辑此试卷'
-            )
-        
+        """从试卷移除题目"""
+        # 1. 反序列化输入
         serializer = RemoveQuestionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
+        # 2. 提取数据
         question_ids = serializer.validated_data['question_ids']
         
-        quiz = quiz.clone_new_version()
-        # Remove questions from quiz
-        QuizQuestion.objects.filter(
-            quiz=quiz,
-            question_id__in=question_ids
-        ).delete()
+        # 3. 调用 Service
+        try:
+            quiz = self.service.remove_questions(
+                pk=pk,
+                user=request.user,
+                question_ids=question_ids
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        # 4. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_200_OK)
 
 
 class QuizReorderQuestionsView(APIView):
     """
-    Reorder questions in a quiz endpoint.
+    重新排序试卷题目
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     
-    def get_object(self, pk):
-        """Get quiz by ID."""
-        try:
-            return Quiz.objects.select_related('created_by').get(
-                pk=pk, is_deleted=False
-            )
-        except Quiz.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='试卷不存在'
-            )
-    
-    def check_edit_permission(self, request, quiz):
-        """Check if user can edit the quiz."""
-        if request.user.is_admin:
-            return True
-        if hasattr(request.user, 'current_role') and request.user.current_role == 'ADMIN':
-            return True
-        return quiz.created_by_id == request.user.id
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='重新排序试卷题目',
@@ -457,36 +380,43 @@ class QuizReorderQuestionsView(APIView):
         tags=['试卷管理']
     )
     def post(self, request, pk):
-        """Reorder questions in quiz."""
-        quiz = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, quiz):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有试卷创建者或管理员可以编辑此试卷'
-            )
-        
+        """重新排序试卷题目"""
+        # 1. 反序列化输入
         serializer = ReorderQuestionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
+        # 2. 提取数据
         question_ids = serializer.validated_data['question_ids']
         
-        quiz = quiz.clone_new_version()
-        # Reorder questions
-        quiz.reorder_questions(question_ids)
+        # 3. 调用 Service
+        try:
+            quiz = self.service.reorder_questions(
+                pk=pk,
+                user=request.user,
+                question_ids=question_ids
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        # 4. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_200_OK)
 
 
 class QuizCreateFromQuestionsView(APIView):
     """
-    Create a quiz from selected questions endpoint.
+    从题目创建试卷
     
-    Allows users to select multiple questions and create a quiz with them.
+    允许用户选择多个题目并创建试卷。
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuizService()
     
     @extend_schema(
         summary='从题目创建试卷',
@@ -513,57 +443,31 @@ class QuizCreateFromQuestionsView(APIView):
     )
     def post(self, request):
         """
-        Create a quiz from selected questions.
+        从题目创建试卷
         
         Requirements:
         - 6.1: 创建试卷时存储试卷名称、描述，并记录创建者
         - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目
         """
+        # 1. 获取数据
         title = request.data.get('title')
         description = request.data.get('description', '')
         question_ids = request.data.get('question_ids', [])
         
-        if not title:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_INPUT,
-                message='试卷名称不能为空'
+        # 2. 调用 Service
+        try:
+            quiz = self.service.create_from_questions(
+                title=title,
+                description=description,
+                user=request.user,
+                question_ids=question_ids
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        if not question_ids:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_INPUT,
-                message='必须选择至少一道题目'
-            )
-        
-        # Validate all questions exist
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=question_ids,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(question_ids) - existing_ids
-        if invalid_ids:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_INPUT,
-                message=f'题目不存在: {list(invalid_ids)}'
-            )
-        
-        # Create quiz
-        quiz = Quiz.objects.create(
-            title=title,
-            description=description,
-            created_by=request.user,
-            status='PUBLISHED',
-            is_current=True,
-            published_at=timezone.now(),
-            version_number=Quiz.next_version_number(None)
-        )
-        
-        # Add questions to quiz
-        for question_id in question_ids:
-            question = Question.objects.get(pk=question_id)
-            quiz.add_question(question)
-        
-        response_serializer = QuizDetailSerializer(quiz)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        # 3. 序列化输出
+        output = QuizDetailSerializer(quiz)
+        return Response(output.data, status=status.HTTP_201_CREATED)

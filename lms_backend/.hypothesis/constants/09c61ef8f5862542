@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/spot_checks/views.py
-# hypothesis_version: 6.141.1
-
-[200, 201, 204, 400, 403, 404, '-checked_at', 'ADMIN', 'DEPT_MANAGER', 'MENTOR', 'checker', 'request', 'student', 'student__department', 'student_id', '创建抽查记录', '删除成功', '删除抽查记录', '删除抽查记录（只能删除自己创建的记录）', '参数错误', '参数错误或学员不在权限范围内', '只能删除自己创建的抽查记录', '只能更新自己创建的抽查记录', '抽查管理', '抽查记录不存在', '按学员ID筛选', '无权访问该抽查记录', '无权限', '更新抽查记录', '获取抽查记录列表', '获取抽查记录详情', '获取指定抽查记录的详细信息']

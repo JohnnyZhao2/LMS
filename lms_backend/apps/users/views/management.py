@@ -188,6 +188,10 @@ class UserDeactivateView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailSerializer
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = UserManagementService()
+    
     @extend_schema(
         summary='停用用户',
         description='停用指定用户，用户将无法登录',
@@ -205,7 +209,7 @@ class UserDeactivateView(APIView):
                 message='只有管理员可以停用用户'
             )
         
-        user = UserManagementService.deactivate_user(pk)
+        user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -219,6 +223,10 @@ class UserActivateView(APIView):
     """
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailSerializer
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = UserManagementService()
     
     @extend_schema(
         summary='启用用户',
@@ -237,7 +245,7 @@ class UserActivateView(APIView):
                 message='只有管理员可以启用用户'
             )
         
-        user = UserManagementService.activate_user(pk)
+        user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -250,6 +258,10 @@ class UserAssignRolesView(APIView):
     - 2.6: 在保留默认学员角色的基础上附加其他角色
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = UserManagementService()
     
     @extend_schema(
         summary='分配角色',
@@ -273,7 +285,7 @@ class UserAssignRolesView(APIView):
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        user = UserManagementService.assign_roles(
+        user = self.service.assign_roles(
             user_id=pk,
             role_codes=serializer.validated_data['role_codes'],
             assigned_by=request.user
@@ -293,6 +305,10 @@ class UserAssignMentorView(APIView):
     - 3.6: 一个学员同时只能绑定一个导师
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = UserManagementService()
     
     @extend_schema(
         summary='指定导师',
@@ -316,7 +332,7 @@ class UserAssignMentorView(APIView):
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        user = UserManagementService.assign_mentor(
+        user = self.service.assign_mentor(
             user_id=pk,
             mentor_id=serializer.validated_data.get('mentor_id')
         )

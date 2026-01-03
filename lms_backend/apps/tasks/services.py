@@ -16,6 +16,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.base_service import BaseService
 from apps.users.models import User
 from apps.users.permissions import (
     get_current_role,
@@ -26,9 +27,19 @@ from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
+from .repositories import (
+    TaskRepository,
+    TaskAssignmentRepository,
+    TaskKnowledgeRepository,
+    TaskQuizRepository,
+    KnowledgeLearningProgressRepository,
+)
+from .domain.models import TaskDomain, TaskAssignmentDomain
+from .domain.services import TaskDomainService
+from .domain.mappers import TaskMapper, TaskAssignmentMapper
 
 
-class TaskService:
+class TaskService(BaseService):
     """
     Service for task management operations.
     
@@ -39,8 +50,14 @@ class TaskService:
     - Permission checks for task operations
     """
     
-    @staticmethod
-    def get_task_queryset_for_user(user: User) -> QuerySet:
+    def __init__(self):
+        self.task_repository = TaskRepository()
+        self.task_assignment_repository = TaskAssignmentRepository()
+        self.task_knowledge_repository = TaskKnowledgeRepository()
+        self.task_quiz_repository = TaskQuizRepository()
+        self.domain_service = TaskDomainService()
+    
+    def get_task_queryset_for_user(self, user: User) -> QuerySet:
         """
         Get task queryset based on user's role.
         
@@ -50,21 +67,9 @@ class TaskService:
         Returns:
             QuerySet of tasks accessible to the user
         """
-        current_role = get_current_role(user)
-        
-        if current_role == 'ADMIN':
-            return Task.objects.filter(is_deleted=False)
-        elif current_role in ['MENTOR', 'DEPT_MANAGER']:
-            return Task.objects.filter(is_deleted=False, created_by=user)
-        else:
-            # Student: only assigned tasks
-            assigned_task_ids = TaskAssignment.objects.filter(
-                assignee=user
-            ).values_list('task_id', flat=True)
-            return Task.objects.filter(is_deleted=False, id__in=assigned_task_ids)
+        return self.task_repository.get_queryset_for_user(user, include_deleted=False)
     
-    @staticmethod
-    def get_task_by_id(pk: int, include_deleted: bool = False) -> Task:
+    def get_task_by_id(self, pk: int, include_deleted: bool = False) -> Task:
         """
         Get a task by ID.
         
@@ -78,25 +83,11 @@ class TaskService:
         Raises:
             BusinessError: If task not found
         """
-        try:
-            queryset = Task.objects.select_related(
-                'created_by'
-            ).prefetch_related(
-                'task_knowledge__knowledge',
-                'task_quizzes__quiz',
-                'assignments__assignee'
-            )
-            if not include_deleted:
-                queryset = queryset.filter(is_deleted=False)
-            return queryset.get(pk=pk)
-        except Task.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='任务不存在'
-            )
+        task = self.task_repository.get_by_id(pk, include_deleted=include_deleted)
+        self.validate_not_none(task, f'任务 {pk} 不存在')
+        return task
     
-    @staticmethod
-    def check_task_read_permission(task: Task, user: User) -> bool:
+    def check_task_read_permission(self, task: Task, user: User) -> bool:
         """
         Check if user has permission to read a task.
         
@@ -130,8 +121,7 @@ class TaskService:
                 )
             return True
     
-    @staticmethod
-    def check_task_edit_permission(task: Task, user: User) -> bool:
+    def check_task_edit_permission(self, task: Task, user: User) -> bool:
         """
         Check if user has permission to edit a task.
         
@@ -173,11 +163,10 @@ class TaskService:
         Returns:
             True if task is closed
         """
-        if task.is_closed:
-            return True
-        return timezone.now() > task.deadline
+        # 使用 Domain Service 检查
+        task_domain = TaskMapper.to_domain(task)
+        return TaskDomainService.is_task_closed(task_domain, timezone.now())
     
-    @staticmethod
     @transaction.atomic
     def create_task(
         title: str,
@@ -208,7 +197,7 @@ class TaskService:
         assignee_ids = assignee_ids or []
         
         # Create task
-        task = Task.objects.create(
+        task = self.task_repository.create(
             title=title,
             description=description,
             deadline=deadline,
@@ -217,23 +206,22 @@ class TaskService:
         
         # Create knowledge associations
         if knowledge_ids:
-            TaskService._create_knowledge_associations(task, knowledge_ids)
+            self._create_knowledge_associations(task, knowledge_ids)
         
         # Create quiz associations
         if quiz_ids:
-            TaskService._create_quiz_associations(task, quiz_ids)
+            self._create_quiz_associations(task, quiz_ids)
         
         # Create assignments
         for assignee_id in assignee_ids:
-            TaskAssignment.objects.create(
-                task=task,
+            self.task_assignment_repository.create_assignment(
+                task_id=task.id,
                 assignee_id=assignee_id
             )
         
         return task
     
-    @staticmethod
-    def _create_knowledge_associations(task: Task, knowledge_ids: List[int]) -> None:
+    def _create_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         """Create TaskKnowledge associations for a task."""
         knowledge_queryset = Knowledge.objects.filter(
             id__in=knowledge_ids,
@@ -246,16 +234,15 @@ class TaskService:
             knowledge = knowledge_map.get(knowledge_id)
             if not knowledge:
                 continue
-            TaskKnowledge.objects.create(
-                task=task,
-                knowledge=knowledge,
+            self.task_knowledge_repository.create_association(
+                task_id=task.id,
+                knowledge_id=knowledge_id,
                 order=order,
                 resource_uuid=knowledge.resource_uuid,
                 version_number=knowledge.version_number
             )
     
-    @staticmethod
-    def _create_quiz_associations(task: Task, quiz_ids: List[int]) -> None:
+    def _create_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
         """Create TaskQuiz associations for a task."""
         quiz_queryset = Quiz.objects.filter(
             id__in=quiz_ids,
@@ -268,15 +255,14 @@ class TaskService:
             quiz = quiz_map.get(quiz_id)
             if not quiz:
                 continue
-            TaskQuiz.objects.create(
-                task=task,
-                quiz=quiz,
+            self.task_quiz_repository.create_association(
+                task_id=task.id,
+                quiz_id=quiz_id,
                 order=order,
                 resource_uuid=quiz.resource_uuid,
                 version_number=quiz.version_number
             )
     
-    @staticmethod
     @transaction.atomic
     def update_task(
         task: Task,
@@ -299,80 +285,70 @@ class TaskService:
             Updated Task instance
         """
         # Update basic fields
-        for attr, value in kwargs.items():
-            if hasattr(task, attr):
-                setattr(task, attr, value)
-        task.save()
+        task = self.task_repository.update(task, **kwargs)
         
         # Update knowledge associations
         if knowledge_ids is not None:
-            TaskService._update_knowledge_associations(task, knowledge_ids)
+            self._update_knowledge_associations(task, knowledge_ids)
         
         # Update quiz associations
         if quiz_ids is not None:
-            TaskService._update_quiz_associations(task, quiz_ids)
+            self._update_quiz_associations(task, quiz_ids)
         
         # Update assignments
         if assignee_ids is not None:
-            TaskService._update_assignments(task, assignee_ids)
+            self._update_assignments(task, assignee_ids)
         
         return task
     
-    @staticmethod
-    def _update_knowledge_associations(task: Task, knowledge_ids: List[int]) -> None:
+    def _update_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         """Update TaskKnowledge associations for a task."""
-        existing_ids = list(
-            task.task_knowledge.order_by('order').values_list('knowledge_id', flat=True)
-        )
+        existing_ids = self.task_knowledge_repository.get_existing_ids(task.id)
         if existing_ids != list(knowledge_ids):
-            TaskKnowledge.objects.filter(task=task).delete()
+            self.task_knowledge_repository.delete_by_task(task.id)
             if knowledge_ids:
-                TaskService._create_knowledge_associations(task, knowledge_ids)
+                self._create_knowledge_associations(task, knowledge_ids)
     
-    @staticmethod
-    def _update_quiz_associations(task: Task, quiz_ids: List[int]) -> None:
+    def _update_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
         """Update TaskQuiz associations for a task."""
-        existing_ids = list(
-            task.task_quizzes.order_by('order').values_list('quiz_id', flat=True)
-        )
+        existing_ids = self.task_quiz_repository.get_existing_ids(task.id)
         if existing_ids != list(quiz_ids):
-            TaskQuiz.objects.filter(task=task).delete()
+            self.task_quiz_repository.delete_by_task(task.id)
             if quiz_ids:
-                TaskService._create_quiz_associations(task, quiz_ids)
+                self._create_quiz_associations(task, quiz_ids)
     
-    @staticmethod
-    def _update_assignments(task: Task, assignee_ids: List[int]) -> None:
+    def _update_assignments(self, task: Task, assignee_ids: List[int]) -> None:
         """Update TaskAssignment records for a task."""
-        existing_ids = set(
-            TaskAssignment.objects.filter(task=task).values_list('assignee_id', flat=True)
-        )
+        existing_assignments = self.task_assignment_repository.get_by_task(task.id)
+        existing_ids = set(existing_assignments.values_list('assignee_id', flat=True))
         new_ids = set(assignee_ids)
         
         # Remove assignments
         to_remove = existing_ids - new_ids
         if to_remove:
-            TaskAssignment.objects.filter(task=task, assignee_id__in=to_remove).delete()
+            for assignment in existing_assignments.filter(assignee_id__in=to_remove):
+                self.task_assignment_repository.delete(assignment, soft=False)
         
         # Add new assignments
         to_add = new_ids - existing_ids
         for assignee_id in to_add:
-            TaskAssignment.objects.create(task=task, assignee_id=assignee_id)
+            self.task_assignment_repository.create_assignment(
+                task_id=task.id,
+                assignee_id=assignee_id
+            )
     
-    @staticmethod
-    def delete_task(task: Task) -> None:
+    def delete_task(self, task: Task) -> None:
         """
         Soft delete a task.
         
         Args:
             task: Task to delete
         """
-        task.is_deleted = True
-        task.save(update_fields=['is_deleted'])
+        self.task_repository.delete(task, soft=True)
     
-    @staticmethod
-    def close_task(task: Task) -> Task:
+    def close_task(self, task: Task) -> Task:
         """
-        Force close a task.
+        Force close a task (使用 Domain Service).
         
         Args:
             task: Task to close
@@ -383,13 +359,30 @@ class TaskService:
         Raises:
             BusinessError: If task is already closed
         """
-        if task.is_closed:
+        # 转换为 Domain Model
+        task_domain = TaskMapper.to_domain(task)
+        
+        # 使用 Domain Service 关闭任务
+        try:
+            task_domain = self.domain_service.close_task(
+                task_domain,
+                closed_at=timezone.now()
+            )
+        except ValueError as e:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message='任务已经结束'
+                message=str(e)
             )
         
-        task.close()
+        # 更新 Django Model
+        task = self.task_repository.update_from_domain(task, task_domain)
+        task.save()
+        
+        # 将未完成的分配记录标记为已逾期
+        task.assignments.filter(
+            status='IN_PROGRESS'
+        ).update(status='OVERDUE')
+        
         task.refresh_from_db()
         return task
     
@@ -473,7 +466,7 @@ class TaskService:
         return len(invalid_ids) == 0, invalid_ids
 
 
-class StudentTaskService:
+class StudentTaskService(BaseService):
     """
     Service for student task execution operations.
     
@@ -483,10 +476,15 @@ class StudentTaskService:
     - Task completion logic
     """
     
-    @staticmethod
-    def get_student_assignment(task_id: int, user: User) -> TaskAssignment:
+    def __init__(self):
+        self.task_assignment_repository = TaskAssignmentRepository()
+        self.knowledge_progress_repository = KnowledgeLearningProgressRepository()
+        self.task_knowledge_repository = TaskKnowledgeRepository()
+        self.domain_service = TaskDomainService()
+    
+    def get_student_assignment(self, task_id: int, user: User) -> TaskAssignment:
         """
-        Get a student's task assignment.
+        Get a student's task assignment (使用 Domain Service 检查逾期状态).
         
         Args:
             task_id: Task ID
@@ -498,51 +496,50 @@ class StudentTaskService:
         Raises:
             BusinessError: If assignment not found
         """
-        try:
-            assignment = TaskAssignment.objects.select_related(
-                'task', 'task__created_by'
-            ).prefetch_related(
-                'task__task_knowledge__knowledge',
-                'task__task_quizzes__quiz',
-                'knowledge_progress__task_knowledge__knowledge'
-            ).get(
-                task_id=task_id,
-                assignee=user,
-                task__is_deleted=False
+        assignment = self.task_assignment_repository.get_student_assignment(
+            task_id=task_id,
+            user_id=user.id
+        )
+        self.validate_not_none(assignment, '任务不存在或未分配给您')
+        
+        # 使用 Domain Service 检查并更新逾期状态
+        assignment_domain = TaskAssignmentMapper.to_domain(assignment)
+        assignment_domain = self.domain_service.check_and_update_overdue(
+            assignment_domain,
+            current_time=timezone.now(),
+            task_deadline=assignment.task.deadline
+        )
+        
+        # 如果状态有变化，更新 Django Model
+        if assignment_domain.status.value != assignment.status:
+            assignment = self.task_assignment_repository.update_from_domain(
+                assignment,
+                assignment_domain
             )
-            
-            # Check and update overdue status
-            assignment.check_and_update_overdue()
-            
-            return assignment
-        except TaskAssignment.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='任务不存在或未分配给您'
-            )
+            assignment.save()
+        
+        return assignment
     
-    @staticmethod
-    def ensure_knowledge_progress(assignment: TaskAssignment) -> None:
+    def ensure_knowledge_progress(self, assignment: TaskAssignment) -> None:
         """
         Ensure KnowledgeLearningProgress records exist for all task knowledge items.
         
         Args:
             assignment: The task assignment
         """
-        task_knowledge_items = assignment.task.task_knowledge.all()
+        task_knowledge_items = self.task_knowledge_repository.get_by_task(assignment.task.id)
         existing_progress = set(
-            assignment.knowledge_progress.values_list('task_knowledge_id', flat=True)
+            self.knowledge_progress_repository.get_by_assignment(assignment.id)
+            .values_list('task_knowledge_id', flat=True)
         )
         
         for tk in task_knowledge_items:
             if tk.id not in existing_progress:
-                KnowledgeLearningProgress.objects.create(
-                    assignment=assignment,
-                    task_knowledge=tk,
-                    is_completed=False
+                self.knowledge_progress_repository.create_progress(
+                    assignment_id=assignment.id,
+                    task_knowledge_id=tk.id
                 )
     
-    @staticmethod
     def complete_knowledge_learning(
         assignment: TaskAssignment,
         knowledge_id: int
@@ -576,22 +573,23 @@ class StudentTaskService:
             )
         
         # Find task knowledge
-        try:
-            task_knowledge = TaskKnowledge.objects.get(
-                task=assignment.task,
-                knowledge_id=knowledge_id
-            )
-        except TaskKnowledge.DoesNotExist:
+        task_knowledge_items = self.task_knowledge_repository.get_by_task(assignment.task.id)
+        task_knowledge = None
+        for tk in task_knowledge_items:
+            if tk.knowledge_id == knowledge_id:
+                task_knowledge = tk
+                break
+        
+        if not task_knowledge:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='该知识文档不在此任务中'
             )
         
         # Get or create progress
-        progress, created = KnowledgeLearningProgress.objects.get_or_create(
-            assignment=assignment,
-            task_knowledge=task_knowledge,
-            defaults={'is_completed': False}
+        progress, created = self.knowledge_progress_repository.get_or_create_progress(
+            assignment_id=assignment.id,
+            task_knowledge_id=task_knowledge.id
         )
         
         if progress.is_completed:
@@ -601,12 +599,11 @@ class StudentTaskService:
             )
         
         # Mark as completed
-        progress.mark_completed()
+        progress = self.knowledge_progress_repository.mark_completed(progress)
         progress.refresh_from_db()
         
         return progress
     
-    @staticmethod
     def get_student_assignments_queryset(
         user: User,
         status_filter: str = None,
@@ -623,21 +620,8 @@ class StudentTaskService:
         Returns:
             Filtered QuerySet of TaskAssignment
         """
-        queryset = TaskAssignment.objects.filter(
-            assignee=user,
-            task__is_deleted=False
-        ).select_related(
-            'task', 'task__created_by'
-        ).prefetch_related(
-            'task__task_knowledge',
-            'task__task_quizzes',
-            'knowledge_progress'
+        return self.task_assignment_repository.get_student_assignments(
+            user_id=user.id,
+            status=status_filter,
+            search=search
         )
-        
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        if search:
-            queryset = queryset.filter(task__title__icontains=search)
-        
-        return queryset.order_by('-created_at')

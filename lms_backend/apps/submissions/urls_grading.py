@@ -6,7 +6,7 @@ Implements URL routing for grading endpoints:
 """
 from django.urls import path
 
-from .views_grading import (
+from .views import (
     GradingListView,
     GradingDetailView,
     GradeAnswerView,

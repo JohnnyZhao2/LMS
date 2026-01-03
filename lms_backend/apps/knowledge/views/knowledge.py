@@ -22,6 +22,7 @@ from rest_framework import serializers as drf_serializers
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from apps.knowledge.models import Knowledge, ResourceLineType
+from apps.knowledge.services import KnowledgeService
 from apps.knowledge.serializers import (
     KnowledgeListSerializer,
     KnowledgeDetailSerializer,
@@ -43,6 +44,10 @@ class KnowledgeListCreateView(APIView):
     Requirements: 4.1, 4.2, 4.3
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='获取知识文档列表',
@@ -72,100 +77,41 @@ class KnowledgeListCreateView(APIView):
         tags=['知识管理']
     )
     def get(self, request):
-        queryset = Knowledge.objects.filter(
-            is_deleted=False
-        ).select_related(
-            'created_by', 'updated_by', 'source_version'
-        ).prefetch_related(
-            'system_tags', 'operation_tags'
-        )
-        
-        # 权限过滤
-        if not request.user.is_admin:
-            queryset = queryset.filter(status='PUBLISHED', is_current=True)
-        else:
-            filter_type = request.query_params.get('filter_type', 'ALL')
-            
-            draft_of_published_ids = Knowledge.objects.filter(
-                is_deleted=False,
-                status='DRAFT',
-                source_version__isnull=False
-            ).values_list('id', flat=True)
-            
-            published_with_draft_ids = Knowledge.objects.filter(
-                is_deleted=False,
-                status='DRAFT',
-                source_version__isnull=False
-            ).values_list('source_version_id', flat=True)
-            
-            if filter_type == 'PUBLISHED_CLEAN':
-                queryset = queryset.filter(
-                    status='PUBLISHED',
-                    is_current=True
-                ).exclude(id__in=published_with_draft_ids)
-            elif filter_type == 'REVISING':
-                queryset = queryset.filter(
-                    status='PUBLISHED',
-                    is_current=True,
-                    id__in=published_with_draft_ids
-                )
-            elif filter_type == 'UNPUBLISHED':
-                queryset = queryset.filter(
-                    status='DRAFT',
-                    source_version__isnull=True
-                )
-            else:  # ALL
-                queryset = queryset.filter(
-                    models.Q(status='PUBLISHED', is_current=True) |
-                    models.Q(status='DRAFT', source_version__isnull=True)
-                )
-            
-            status_param = request.query_params.get('status')
-            if status_param and filter_type == 'ALL':
-                if status_param == 'DRAFT':
-                    queryset = queryset.filter(status='DRAFT')
-                elif status_param == 'PUBLISHED':
-                    queryset = queryset.filter(status='PUBLISHED', is_current=True)
-        
-        # Apply filters
-        knowledge_type = request.query_params.get('knowledge_type')
-        if knowledge_type:
-            queryset = queryset.filter(knowledge_type=knowledge_type)
-        
-        line_type_id = request.query_params.get('line_type_id')
-        if line_type_id:
-            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
-            queryset = queryset.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=knowledge_content_type,
-                    line_type_id=line_type_id
-                ).values_list('object_id', flat=True)
-            )
-        
-        system_tag_id = request.query_params.get('system_tag_id')
-        if system_tag_id:
-            queryset = queryset.filter(system_tags__id=system_tag_id)
-        
-        operation_tag_id = request.query_params.get('operation_tag_id')
-        if operation_tag_id:
-            queryset = queryset.filter(operation_tags__id=operation_tag_id)
-        
+        # 1. 获取查询参数
+        filters = {
+            'knowledge_type': request.query_params.get('knowledge_type'),
+            'line_type_id': request.query_params.get('line_type_id'),
+            'system_tag_id': request.query_params.get('system_tag_id'),
+            'operation_tag_id': request.query_params.get('operation_tag_id'),
+        }
+        filters = {k: v for k, v in filters.items() if v}
         search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                models.Q(title__icontains=search) |
-                models.Q(content__icontains=search)
+        filter_type = request.query_params.get('filter_type', 'ALL') if request.user.is_admin else None
+        status_param = request.query_params.get('status')
+        if status_param and filter_type == 'ALL':
+            filters['status'] = status_param
+        
+        # 2. 调用 Service
+        if request.user.is_admin:
+            knowledge_list = self.service.get_all_with_filters(
+                filters=filters,
+                search=search,
+                filter_type=filter_type
+            )
+        else:
+            knowledge_list = self.service.get_published_list(
+                filters=filters,
+                search=search
             )
         
-        queryset = queryset.distinct().order_by('-updated_at')
-        
+        # 3. 分页和序列化
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(queryset, request)
+        page = paginator.paginate_queryset(knowledge_list, request)
         if page is not None:
             serializer = KnowledgeListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
         
-        serializer = KnowledgeListSerializer(queryset, many=True)
+        serializer = KnowledgeListSerializer(knowledge_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -180,19 +126,33 @@ class KnowledgeListCreateView(APIView):
         tags=['知识管理']
     )
     def post(self, request):
+        # 1. 权限检查
         if not request.user.is_admin:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建知识文档'
             )
         
+        # 2. 反序列化输入
         serializer = KnowledgeCreateSerializer(
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        knowledge = serializer.save()
         
+        # 3. 调用 Service
+        try:
+            knowledge = self.service.create(
+                data=serializer.validated_data,
+                user=request.user
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -205,35 +165,9 @@ class KnowledgeDetailView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
-    def get_object(self, pk, request=None):
-        """Get knowledge by ID."""
-        try:
-            knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by', 'source_version'
-            ).prefetch_related(
-                'system_tags', 'operation_tags'
-            ).get(pk=pk, is_deleted=False)
-            
-            if knowledge.status == 'PUBLISHED':
-                draft = Knowledge.objects.filter(
-                    source_version=knowledge,
-                    status='DRAFT',
-                    is_deleted=False
-                ).select_related(
-                    'created_by', 'updated_by', 'source_version'
-                ).prefetch_related(
-                    'system_tags', 'operation_tags'
-                ).first()
-                
-                if draft and request and request.user.is_admin:
-                    return draft
-            
-            return knowledge
-        except Knowledge.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='知识文档不存在'
-            )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='获取知识文档详情',
@@ -246,14 +180,16 @@ class KnowledgeDetailView(APIView):
         tags=['知识管理']
     )
     def get(self, request, pk):
-        knowledge = self.get_object(pk, request)
-        
-        if not request.user.is_admin and knowledge.status != 'PUBLISHED':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问该知识文档'
+        # 1. 调用 Service
+        try:
+            knowledge = self.service.get_by_id(pk, user=request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == ErrorCodes.RESOURCE_NOT_FOUND else status.HTTP_403_FORBIDDEN
             )
         
+        # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -270,20 +206,34 @@ class KnowledgeDetailView(APIView):
         tags=['知识管理']
     )
     def patch(self, request, pk):
+        # 1. 权限检查
         if not request.user.is_admin:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以更新知识文档'
             )
         
-        knowledge = self.get_object(pk, request)
+        # 2. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
-            knowledge, data=request.data, partial=True,
+            data=request.data, partial=True,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        knowledge = serializer.save()
         
+        # 3. 调用 Service
+        try:
+            knowledge = self.service.update(
+                pk=pk,
+                data=serializer.validated_data,
+                user=request.user
+            )
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
@@ -299,27 +249,32 @@ class KnowledgeDetailView(APIView):
         tags=['知识管理']
     )
     def delete(self, request, pk):
+        # 1. 权限检查
         if not request.user.is_admin:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以删除知识文档'
             )
         
-        knowledge = self.get_object(pk, request)
-        
-        if knowledge.is_referenced_by_task():
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该知识文档已被任务引用，无法删除'
+        # 2. 调用 Service
+        try:
+            self.service.delete(pk)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        knowledge.soft_delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class KnowledgePublishView(APIView):
     """Knowledge publish endpoint."""
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='发布知识文档',
@@ -333,42 +288,34 @@ class KnowledgePublishView(APIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
+        # 1. 权限检查
         if not request.user.is_admin:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以发布知识文档'
             )
         
+        # 2. 调用 Service
         try:
-            knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by', 'source_version'
-            ).prefetch_related(
-                'system_tags', 'operation_tags'
-            ).get(pk=pk, is_deleted=False)
-        except Knowledge.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='知识文档不存在'
+            knowledge = self.service.publish(pk, request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        knowledge.updated_by = request.user
-        knowledge.save(update_fields=['updated_by'])
-        
-        published = knowledge.publish()
-        
-        published = Knowledge.objects.select_related(
-            'created_by', 'updated_by'
-        ).prefetch_related(
-            'system_tags', 'operation_tags'
-        ).get(pk=published.pk, is_deleted=False)
-        
-        response_serializer = KnowledgeDetailSerializer(published)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        # 3. 序列化输出
+        serializer = KnowledgeDetailSerializer(knowledge)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class KnowledgeUnpublishView(APIView):
     """Knowledge unpublish endpoint."""
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='取消发布知识文档',
@@ -382,33 +329,23 @@ class KnowledgeUnpublishView(APIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
+        # 1. 权限检查
         if not request.user.is_admin:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以取消发布知识文档'
             )
         
+        # 2. 调用 Service
         try:
-            knowledge = Knowledge.objects.select_related(
-                'created_by', 'updated_by'
-            ).prefetch_related(
-                'system_tags', 'operation_tags'
-            ).get(pk=pk, is_deleted=False)
-        except Knowledge.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='知识文档不存在'
+            knowledge = self.service.unpublish(pk, request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message, 'details': e.details},
+                status=status.HTTP_400_BAD_REQUEST
             )
         
-        if knowledge.is_referenced_by_task():
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该知识文档已被任务引用，无法取消发布'
-            )
-        
-        knowledge.updated_by = request.user
-        knowledge.unpublish()
-        
+        # 3. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
@@ -416,6 +353,10 @@ class KnowledgeUnpublishView(APIView):
 class KnowledgeStatsView(APIView):
     """知识统计端点"""
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='获取知识统计',
@@ -431,60 +372,43 @@ class KnowledgeStatsView(APIView):
         tags=['知识管理']
     )
     def get(self, request):
-        queryset = Knowledge.objects.filter(is_deleted=False)
-        
-        if not request.user.is_admin:
-            queryset = queryset.filter(status='PUBLISHED', is_current=True)
-        else:
-            queryset = queryset.filter(
-                models.Q(status='DRAFT') |
-                models.Q(status='PUBLISHED', is_current=True)
-            )
-        
-        # Apply filters
-        knowledge_type = request.query_params.get('knowledge_type')
-        if knowledge_type:
-            queryset = queryset.filter(knowledge_type=knowledge_type)
-        
-        line_type_id = request.query_params.get('line_type_id')
-        if line_type_id:
-            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
-            queryset = queryset.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=knowledge_content_type,
-                    line_type_id=line_type_id
-                ).values_list('object_id', flat=True)
-            )
-        
-        system_tag_id = request.query_params.get('system_tag_id')
-        if system_tag_id:
-            queryset = queryset.filter(system_tags__id=system_tag_id)
-        
-        operation_tag_id = request.query_params.get('operation_tag_id')
-        if operation_tag_id:
-            queryset = queryset.filter(operation_tags__id=operation_tag_id)
-        
+        # 1. 获取查询参数
+        filters = {
+            'knowledge_type': request.query_params.get('knowledge_type'),
+            'line_type_id': request.query_params.get('line_type_id'),
+            'system_tag_id': request.query_params.get('system_tag_id'),
+            'operation_tag_id': request.query_params.get('operation_tag_id'),
+        }
+        filters = {k: v for k, v in filters.items() if v}
         search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                models.Q(title__icontains=search) |
-                models.Q(content__icontains=search)
+        filter_type = request.query_params.get('filter_type', 'ALL') if request.user.is_admin else None
+        
+        # 2. 调用 Service 获取知识列表
+        if request.user.is_admin:
+            knowledge_list = self.service.get_all_with_filters(
+                filters=filters,
+                search=search,
+                filter_type=filter_type
+            )
+        else:
+            knowledge_list = self.service.get_published_list(
+                filters=filters,
+                search=search
             )
         
-        queryset = queryset.distinct()
-        
-        # Calculate stats
+        # 3. 计算统计信息
         from django.utils import timezone
         now = timezone.now()
         first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
         stats = {
-            'total': queryset.count(),
-            'published': queryset.filter(status='PUBLISHED', is_current=True).count(),
-            'emergency': queryset.filter(knowledge_type='EMERGENCY').count(),
-            'monthly_new': queryset.filter(created_at__gte=first_day_of_month).count(),
+            'total': len(knowledge_list),
+            'published': len([k for k in knowledge_list if k.status == 'PUBLISHED' and k.is_current]),
+            'emergency': len([k for k in knowledge_list if k.knowledge_type == 'EMERGENCY']),
+            'monthly_new': len([k for k in knowledge_list if k.created_at >= first_day_of_month]),
         }
         
+        # 4. 序列化输出
         serializer = KnowledgeStatsSerializer(stats)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -492,6 +416,10 @@ class KnowledgeStatsView(APIView):
 class StudentKnowledgeListView(APIView):
     """学员知识列表端点 - 强制只返回已发布的知识"""
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='获取学员知识列表',
@@ -509,55 +437,30 @@ class StudentKnowledgeListView(APIView):
         tags=['知识管理']
     )
     def get(self, request):
-        queryset = Knowledge.objects.filter(
-            is_deleted=False,
-            status='PUBLISHED',
-            is_current=True
-        ).select_related(
-            'created_by', 'updated_by'
-        ).prefetch_related(
-            'system_tags', 'operation_tags'
+        # 1. 获取查询参数
+        filters = {
+            'knowledge_type': request.query_params.get('knowledge_type'),
+            'line_type_id': request.query_params.get('line_type_id'),
+            'system_tag_id': request.query_params.get('system_tag_id'),
+            'operation_tag_id': request.query_params.get('operation_tag_id'),
+        }
+        filters = {k: v for k, v in filters.items() if v}
+        search = request.query_params.get('search')
+        
+        # 2. 调用 Service（学员只能看到已发布的知识）
+        knowledge_list = self.service.get_published_list(
+            filters=filters,
+            search=search
         )
         
-        # Apply filters
-        knowledge_type = request.query_params.get('knowledge_type')
-        if knowledge_type:
-            queryset = queryset.filter(knowledge_type=knowledge_type)
-        
-        line_type_id = request.query_params.get('line_type_id')
-        if line_type_id:
-            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
-            queryset = queryset.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=knowledge_content_type,
-                    line_type_id=line_type_id
-                ).values_list('object_id', flat=True)
-            )
-        
-        system_tag_id = request.query_params.get('system_tag_id')
-        if system_tag_id:
-            queryset = queryset.filter(system_tags__id=system_tag_id)
-        
-        operation_tag_id = request.query_params.get('operation_tag_id')
-        if operation_tag_id:
-            queryset = queryset.filter(operation_tags__id=operation_tag_id)
-        
-        search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                models.Q(title__icontains=search) |
-                models.Q(content__icontains=search)
-            )
-        
-        queryset = queryset.distinct().order_by('-updated_at')
-        
+        # 3. 分页和序列化
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(queryset, request)
+        page = paginator.paginate_queryset(knowledge_list, request)
         if page is not None:
             serializer = KnowledgeListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
         
-        serializer = KnowledgeListSerializer(queryset, many=True)
+        serializer = KnowledgeListSerializer(knowledge_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -565,6 +468,10 @@ class KnowledgeIncrementViewCountView(APIView):
     """Increment knowledge view count endpoint."""
     permission_classes = [IsAuthenticated]
     serializer_class = ViewCountResponseSerializer
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
     
     @extend_schema(
         summary='增加知识阅读次数',
@@ -576,19 +483,22 @@ class KnowledgeIncrementViewCountView(APIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
+        # 1. 权限检查（先获取知识文档）
         try:
-            knowledge = Knowledge.objects.get(pk=pk, is_deleted=False)
-        except Knowledge.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='知识文档不存在'
+            knowledge = self.service.get_by_id(pk, user=request.user)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == ErrorCodes.RESOURCE_NOT_FOUND else status.HTTP_403_FORBIDDEN
             )
         
-        if not request.user.is_admin and knowledge.status != 'PUBLISHED':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问该知识文档'
+        # 2. 调用 Service
+        try:
+            view_count = self.service.increment_view_count(pk)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND
             )
         
-        view_count = knowledge.increment_view_count()
         return Response({'view_count': view_count}, status=status.HTTP_200_OK)

@@ -18,7 +18,7 @@ from apps.analytics.services import TeamManagerDashboardService
 
 class TeamManagerOverviewView(APIView):
     """
-    Team Manager data board - overview endpoint.
+    团队经理数据看板 - 概览端点
     
     GET /api/analytics/team-overview/
     
@@ -29,6 +29,10 @@ class TeamManagerOverviewView(APIView):
     Property 41: 团队经理只读访问
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TeamManagerDashboardService()
     
     @extend_schema(
         summary='获取团队经理数据看板概览',
@@ -49,8 +53,8 @@ class TeamManagerOverviewView(APIView):
                 message='只有团队经理或管理员可以访问此数据看板'
             )
         
-        # Use TeamManagerDashboardService
-        data = TeamManagerDashboardService.get_overview_data()
+        # 调用 Service
+        data = self.service.get_overview_data()
         data['current_role'] = current_role
         
         return Response(data)
@@ -58,7 +62,7 @@ class TeamManagerOverviewView(APIView):
 
 class KnowledgeHeatView(APIView):
     """
-    Team Manager data board - knowledge heat endpoint.
+    团队经理数据看板 - 知识热度端点
     
     GET /api/analytics/knowledge-heat/
     
@@ -69,6 +73,10 @@ class KnowledgeHeatView(APIView):
     Property 41: 团队经理只读访问
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TeamManagerDashboardService()
     
     @extend_schema(
         summary='获取知识热度统计',
@@ -97,8 +105,8 @@ class KnowledgeHeatView(APIView):
         limit = int(request.query_params.get('limit', 20))
         knowledge_type = request.query_params.get('knowledge_type')
         
-        # Use TeamManagerDashboardService
-        data = TeamManagerDashboardService.get_knowledge_heat(
+        # 调用 Service
+        data = self.service.get_knowledge_heat(
             limit=limit,
             knowledge_type=knowledge_type
         )

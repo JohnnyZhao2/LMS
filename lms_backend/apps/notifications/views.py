@@ -1,7 +1,7 @@
 """
-Notification views for LMS.
+通知视图
 
-Implements notification API endpoints.
+只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 
 Requirements: 7.5, 9.5, 11.6
 """
@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from apps.notifications.models import Notification
+from core.exceptions import BusinessError
 from apps.notifications.serializers import (
     NotificationSerializer,
     NotificationDetailSerializer,
@@ -19,7 +19,7 @@ from apps.notifications.serializers import (
 from apps.notifications.services import NotificationService
 
 
-class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+class NotificationViewSet(viewsets.ViewSet):
     """
     通知视图集
     
@@ -33,15 +33,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /api/notifications/unread-count/ - 未读数量
     """
     permission_classes = [IsAuthenticated]
-    serializer_class = NotificationSerializer
     
-    def get_queryset(self):
-        """
-        获取当前用户的通知列表
-        """
-        return Notification.objects.filter(
-            recipient=self.request.user
-        ).select_related('task', 'submission', 'spot_check')
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = NotificationService()
     
     def get_serializer_class(self):
         """
@@ -51,6 +46,46 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             return NotificationDetailSerializer
         return NotificationSerializer
     
+    def list(self, request):
+        """
+        获取当前用户的通知列表
+        
+        GET /api/notifications/
+        """
+        # 获取查询参数
+        is_read = request.query_params.get('is_read')
+        if is_read is not None:
+            is_read = is_read.lower() == 'true'
+        
+        # 调用 Service
+        notifications = self.service.get_list_for_user(
+            user_id=request.user.id,
+            is_read=is_read if is_read is not None else None,
+            ordering='-created_at'
+        )
+        
+        # 序列化输出
+        serializer = self.get_serializer_class()(notifications, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, pk=None):
+        """
+        获取通知详情
+        
+        GET /api/notifications/{id}/
+        """
+        try:
+            notification = self.service.get_by_id(pk, request.user.id)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND' 
+                else status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = self.get_serializer_class()(notification)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['post'])
     def read(self, request, pk=None):
         """
@@ -58,11 +93,17 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         
         POST /api/notifications/{id}/read/
         """
-        notification = self.get_object()
-        notification.mark_as_read()
+        try:
+            notification = self.service.mark_as_read(pk, request.user.id)
+        except BusinessError as e:
+            return Response(
+                {'code': e.code, 'message': e.message},
+                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND' 
+                else status.HTTP_403_FORBIDDEN
+            )
         
-        serializer = self.get_serializer(notification)
-        return Response(serializer.data)
+        serializer = self.get_serializer_class()(notification)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['post'], url_path='read-all')
     def read_all(self, request):
@@ -71,11 +112,11 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         
         POST /api/notifications/read-all/
         """
-        count = NotificationService.mark_all_as_read(request.user)
+        count = self.service.mark_all_as_read(request.user.id)
         return Response({
             'message': f'已标记 {count} 条通知为已读',
             'count': count
-        })
+        }, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'], url_path='unread-count')
     def unread_count(self, request):
@@ -84,6 +125,6 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         
         GET /api/notifications/unread-count/
         """
-        count = NotificationService.get_unread_count(request.user)
+        count = self.service.get_unread_count(request.user.id)
         serializer = UnreadCountSerializer({'unread_count': count})
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)

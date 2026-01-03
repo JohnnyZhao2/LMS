@@ -271,28 +271,46 @@ curl -X POST http://127.0.0.1:8000/api/auth/refresh/ \
 
 ## 运行测试
 
+### 运行所有测试
+
 ```bash
 # 运行所有测试
 python -m pytest tests/ -v --tb=short
 
-# 运行单元测试
-python -m pytest tests/unit/ -v
-
-# 运行属性测试
-python -m pytest tests/properties/ -v
-
 # 运行集成测试
 python -m pytest tests/integration/ -v
+
+# 运行属性测试（需要安装 hypothesis）
+python -m pytest tests/properties/ -v
 
 # 查看测试覆盖率
 python -m pytest tests/ --cov=apps --cov-report=html
 ```
+
+### 安装测试依赖
+
+```bash
+# 安装所有依赖（包括测试依赖）
+pip install -r requirements.txt
+
+# 如果缺少 hypothesis（用于属性测试）
+pip install hypothesis>=6.92,<7.0
+```
+
+### 测试说明
+
+- **集成测试**：验证端到端的业务流程
+- **属性测试**：使用 Hypothesis 进行属性测试（需要安装 hypothesis）
+- **测试数据库**：测试使用 SQLite 内存数据库
 
 ## 项目结构
 
 ```
 ├── apps/
 │   ├── users/          # 用户、角色、部门
+│   │   ├── repositories.py  # 数据访问层
+│   │   ├── services.py      # 业务逻辑层
+│   │   └── views/           # 视图层
 │   ├── knowledge/      # 知识文档
 │   ├── questions/      # 题库
 │   ├── quizzes/        # 试卷
@@ -301,9 +319,35 @@ python -m pytest tests/ --cov=apps --cov-report=html
 │   ├── spot_checks/    # 抽查
 │   ├── notifications/  # 通知
 │   └── analytics/      # 统计分析
+├── core/
+│   ├── base_repository.py  # Repository 基类
+│   ├── base_service.py     # Service 基类
+│   ├── exceptions.py       # 统一异常定义
+│   ├── mixins.py           # 通用 Mixin
+│   └── permissions.py      # 权限控制
 ├── config/
 │   ├── settings/       # 配置文件
 │   └── urls.py         # URL 路由
+├── tests/              # 测试文件
+│   ├── integration/    # 集成测试
+│   └── properties/     # 属性测试
+└── docs/               # 文档
+    ├── ARCHITECTURE.md              # 架构设计
+    ├── ARCHITECTURE_IMPLEMENTATION_PLAN.md  # 实施计划
+    ├── STAGE4_CODE_REVIEW.md        # 代码审查报告
+    └── QUICK_START.md               # 快速开始
+```
+
+## 架构说明
+
+本项目采用 **Clean Architecture（清洁架构）** 设计：
+
+- **Repository 层**：封装所有数据访问逻辑
+- **Service 层**：包含所有业务逻辑
+- **View 层**：只处理 HTTP 请求/响应
+- **Model 层**：只定义数据模型和字段
+
+详细架构说明请参见 [ARCHITECTURE.md](./ARCHITECTURE.md)
 ├── core/               # 公共组件
 ├── tests/              # 测试
 └── manage.py

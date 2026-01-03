@@ -8,8 +8,6 @@ Properties:
 - Property 13: 被引用题目删除保护
 - Property 15: 题目所有权编辑控制
 """
-from django.db import models
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,10 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
-from core.exceptions import BusinessError, ErrorCodes
 from apps.users.permissions import IsAdminOrMentorOrDeptManager, IsAdmin
 
-from .models import Question
 from .serializers import (
     QuestionListSerializer,
     QuestionDetailSerializer,
@@ -28,6 +24,7 @@ from .serializers import (
     QuestionUpdateSerializer,
     QuestionImportSerializer,
 )
+from .services import QuestionService
 
 
 class QuestionListCreateView(APIView):
@@ -37,6 +34,10 @@ class QuestionListCreateView(APIView):
     Requirements: 5.1, 5.2
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuestionService()
     
     @extend_schema(
         summary='获取题目列表',
@@ -48,6 +49,9 @@ class QuestionListCreateView(APIView):
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
             OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='status', type=str, description='状态（DRAFT/PUBLISHED）'),
+            OpenApiParameter(name='page', type=int, description='页码'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
         responses={200: QuestionListSerializer(many=True)},
         tags=['题库管理']
@@ -58,69 +62,42 @@ class QuestionListCreateView(APIView):
         
         Requirements: 5.2 - 导师或室经理查看题库时展示所有题目
         """
-        queryset = Question.objects.filter(
-            is_deleted=False
-        ).select_related('created_by')
+        # 构建过滤条件
+        filters = {}
+        if request.query_params.get('question_type'):
+            filters['question_type'] = request.query_params.get('question_type')
+        if request.query_params.get('difficulty'):
+            filters['difficulty'] = request.query_params.get('difficulty')
+        if request.query_params.get('created_by'):
+            filters['created_by_id'] = int(request.query_params.get('created_by'))
+        if request.query_params.get('line_type_id'):
+            filters['line_type_id'] = int(request.query_params.get('line_type_id'))
+        if request.query_params.get('status'):
+            filters['status'] = request.query_params.get('status')
         
-        # Filter by question type
-        question_type = request.query_params.get('question_type')
-        if question_type:
-            queryset = queryset.filter(question_type=question_type)
-        
-        # Filter by difficulty
-        difficulty = request.query_params.get('difficulty')
-        if difficulty:
-            queryset = queryset.filter(difficulty=difficulty)
-        
-        # Filter by creator
-        created_by = request.query_params.get('created_by')
-        if created_by:
-            queryset = queryset.filter(created_by_id=created_by)
-        
-        status_param = request.query_params.get('status')
-        if status_param in ['DRAFT', 'PUBLISHED']:
-            queryset = queryset.filter(status=status_param)
-            if status_param == 'PUBLISHED':
-                queryset = queryset.filter(is_current=True)
-        else:
-            queryset = queryset.filter(status='PUBLISHED', is_current=True)
-        
-        # Search by content
         search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(content__icontains=search)
-        
-        # Filter by line_type (通过ResourceLineType关系表)
-        line_type_id = request.query_params.get('line_type_id')
-        if line_type_id:
-            from django.contrib.contenttypes.models import ContentType
-            from apps.knowledge.models import ResourceLineType
-            question_content_type = ContentType.objects.get_for_model(Question)
-            queryset = queryset.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=question_content_type,
-                    line_type_id=line_type_id
-                ).values_list('object_id', flat=True)
-            )
-        
-        queryset = queryset.select_related('created_by').order_by('-created_at')
-        
-        # 分页处理
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
-        total_count = queryset.count()
-        start = (page - 1) * page_size
-        end = start + page_size
         
-        questions = queryset[start:end]
-        serializer = QuestionListSerializer(questions, many=True)
+        # 使用Service获取题目列表
+        result = self.service.get_list(
+            filters=filters if filters else None,
+            search=search,
+            ordering='-created_at',
+            page=page,
+            page_size=page_size,
+            user=request.user
+        )
+        
+        # 序列化
+        serializer = QuestionListSerializer(result['results'], many=True)
         
         return Response({
-            'count': total_count,
+            'count': result['count'],
             'results': serializer.data,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
+            'page': result['page'],
+            'page_size': result['page_size'],
+            'total_pages': result['total_pages']
         }, status=status.HTTP_200_OK)
     
     @extend_schema(
@@ -145,7 +122,12 @@ class QuestionListCreateView(APIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        question = serializer.save()
+        
+        # 使用Service创建题目
+        question = self.service.create(
+            data=serializer.validated_data,
+            user=request.user
+        )
         
         response_serializer = QuestionDetailSerializer(question)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
@@ -162,36 +144,9 @@ class QuestionDetailView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     
-    def get_object(self, pk):
-        """Get question by ID."""
-        try:
-            return Question.objects.select_related('created_by').get(
-                pk=pk, is_deleted=False
-            )
-        except Question.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='题目不存在'
-            )
-    
-    def check_edit_permission(self, request, question):
-        """
-        Check if user can edit/delete the question.
-        
-        Requirements: 5.3, 5.4, 5.5
-        Property 15: 题目所有权编辑控制
-        
-        - Admin can edit/delete any question
-        - Mentor/DeptManager can only edit/delete their own questions
-        """
-        # Admin can edit/delete any question
-        if request.user.is_admin:
-            return True
-        if hasattr(request.user, 'current_role') and request.user.current_role == 'ADMIN':
-            return True
-        
-        # Others can only edit/delete their own questions
-        return question.created_by_id == request.user.id
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuestionService()
     
     @extend_schema(
         summary='获取题目详情',
@@ -204,7 +159,7 @@ class QuestionDetailView(APIView):
     )
     def get(self, request, pk):
         """Get question detail."""
-        question = self.get_object(pk)
+        question = self.service.get_by_id(pk, user=request.user)
         serializer = QuestionDetailSerializer(question)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -227,22 +182,24 @@ class QuestionDetailView(APIView):
         Requirements: 5.3, 5.5
         Property 15: 题目所有权编辑控制
         """
-        question = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, question):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有题目创建者或管理员可以编辑此题目'
-            )
+        # 先获取题目对象用于验证
+        question = self.service.get_by_id(pk, user=request.user)
         
         serializer = QuestionUpdateSerializer(
-            question, data=request.data, partial=True
+            instance=question,
+            data=request.data,
+            partial=True
         )
         serializer.is_valid(raise_exception=True)
-        question = serializer.save()
         
-        response_serializer = QuestionDetailSerializer(question)
+        # 使用Service更新题目（权限检查在Service中完成）
+        updated_question = self.service.update(
+            pk=pk,
+            data=serializer.validated_data,
+            user=request.user
+        )
+        
+        response_serializer = QuestionDetailSerializer(updated_question)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
     
     @extend_schema(
@@ -264,24 +221,8 @@ class QuestionDetailView(APIView):
         Property 13: 被引用题目删除保护
         Property 15: 题目所有权编辑控制
         """
-        question = self.get_object(pk)
-        
-        # Check edit permission
-        if not self.check_edit_permission(request, question):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有题目创建者或管理员可以删除此题目'
-            )
-        
-        # Check if referenced by quiz (Property 13)
-        if question.is_referenced_by_quiz():
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该题目已被试卷引用，无法删除'
-            )
-        
-        # Soft delete
-        question.soft_delete()
+        # 使用Service删除题目（权限检查和引用检查在Service中完成）
+        self.service.delete(pk=pk, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -293,6 +234,10 @@ class QuestionImportView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdmin]
     parser_classes = [MultiPartParser, FormParser]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = QuestionService()
     
     @extend_schema(
         summary='批量导入题目',
@@ -319,167 +264,7 @@ class QuestionImportView(APIView):
         
         file = serializer.validated_data['file']
         
-        try:
-            import openpyxl
-        except ImportError:
-            raise BusinessError(
-                code='IMPORT_ERROR',
-                message='服务器未安装 openpyxl 库，无法处理 Excel 文件'
-            )
+        # 使用Service导入题目
+        result = self.service.import_from_excel(file=file, user=request.user)
         
-        try:
-            workbook = openpyxl.load_workbook(file)
-            sheet = workbook.active
-        except Exception as e:
-            raise BusinessError(
-                code='IMPORT_ERROR',
-                message=f'无法读取 Excel 文件: {str(e)}'
-            )
-        
-        # Parse questions from Excel
-        questions_data = []
-        errors = []
-        
-        # Skip header row
-        for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            if not row or not row[0]:  # Skip empty rows
-                continue
-            
-            try:
-                question_data = self._parse_row(row, row_num)
-                questions_data.append(question_data)
-            except ValueError as e:
-                errors.append(f'第 {row_num} 行: {str(e)}')
-        
-        if errors:
-            raise BusinessError(
-                code='IMPORT_ERROR',
-                message='导入数据存在错误',
-                details={'errors': errors}
-            )
-        
-        # Create questions
-        created_questions = []
-        for data in questions_data:
-            data['created_by'] = request.user
-            data['status'] = 'PUBLISHED'
-            data['is_current'] = True
-            data['published_at'] = timezone.now()
-            data.setdefault('version_number', Question.next_version_number(data.get('resource_uuid')))
-            question = Question.objects.create(**data)
-            created_questions.append(question)
-        
-        return Response(
-            {
-                'message': f'成功导入 {len(created_questions)} 道题目',
-                'count': len(created_questions)
-            },
-            status=status.HTTP_201_CREATED
-        )
-    
-    def _parse_row(self, row, row_num):
-        """
-        Parse a single row from Excel.
-        
-        Expected columns:
-        0: 题目内容
-        1: 题目类型 (单选/多选/判断/简答)
-        2-5: 选项A-D (for choice questions)
-        6: 答案
-        7: 解析
-        8: 分值
-        9: 难度 (简单/中等/困难)
-        10: 标签 (逗号分隔)
-        """
-        content = row[0]
-        if not content:
-            raise ValueError('题目内容不能为空')
-        
-        # Parse question type
-        type_map = {
-            '单选': 'SINGLE_CHOICE',
-            '单选题': 'SINGLE_CHOICE',
-            '多选': 'MULTIPLE_CHOICE',
-            '多选题': 'MULTIPLE_CHOICE',
-            '判断': 'TRUE_FALSE',
-            '判断题': 'TRUE_FALSE',
-            '简答': 'SHORT_ANSWER',
-            '简答题': 'SHORT_ANSWER',
-        }
-        question_type_str = str(row[1]).strip() if row[1] else ''
-        question_type = type_map.get(question_type_str)
-        if not question_type:
-            raise ValueError(f'无效的题目类型: {question_type_str}')
-        
-        # Parse options for choice questions
-        options = []
-        if question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
-            for i, key in enumerate(['A', 'B', 'C', 'D']):
-                option_value = row[2 + i] if len(row) > 2 + i else None
-                if option_value:
-                    options.append({'key': key, 'value': str(option_value)})
-            
-            if not options:
-                raise ValueError('选择题必须设置选项')
-        
-        # Parse answer
-        answer_str = str(row[6]).strip() if len(row) > 6 and row[6] else ''
-        if not answer_str:
-            raise ValueError('答案不能为空')
-        
-        if question_type == 'SINGLE_CHOICE':
-            answer = answer_str.upper()
-            option_keys = [opt['key'] for opt in options]
-            if answer not in option_keys:
-                raise ValueError(f'单选题答案 {answer} 不在选项范围内')
-        elif question_type == 'MULTIPLE_CHOICE':
-            # Multiple answers separated by comma or space
-            answer = [a.strip().upper() for a in answer_str.replace(',', ' ').replace('，', ' ').split()]
-            option_keys = [opt['key'] for opt in options]
-            for a in answer:
-                if a not in option_keys:
-                    raise ValueError(f'多选题答案 {a} 不在选项范围内')
-        elif question_type == 'TRUE_FALSE':
-            true_values = ['TRUE', '对', '正确', 'T', '是', '1']
-            false_values = ['FALSE', '错', '错误', 'F', '否', '0']
-            if answer_str.upper() in true_values:
-                answer = 'TRUE'
-            elif answer_str.upper() in false_values:
-                answer = 'FALSE'
-            else:
-                raise ValueError(f'判断题答案无效: {answer_str}')
-        else:  # SHORT_ANSWER
-            answer = answer_str
-        
-        # Parse explanation
-        explanation = str(row[7]).strip() if len(row) > 7 and row[7] else ''
-        
-        # Parse score
-        score = 1.0
-        if len(row) > 8 and row[8]:
-            try:
-                score = float(row[8])
-            except (ValueError, TypeError):
-                raise ValueError(f'分值格式错误: {row[8]}')
-        
-        # Parse difficulty
-        difficulty_map = {
-            '简单': 'EASY',
-            '中等': 'MEDIUM',
-            '困难': 'HARD',
-            'EASY': 'EASY',
-            'MEDIUM': 'MEDIUM',
-            'HARD': 'HARD',
-        }
-        difficulty_str = str(row[9]).strip() if len(row) > 9 and row[9] else '中等'
-        difficulty = difficulty_map.get(difficulty_str, 'MEDIUM')
-        
-        return {
-            'content': str(content),
-            'question_type': question_type,
-            'options': options,
-            'answer': answer,
-            'explanation': explanation,
-            'score': score,
-            'difficulty': difficulty,
-        }
+        return Response(result, status=status.HTTP_201_CREATED)

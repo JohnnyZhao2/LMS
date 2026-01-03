@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/urls.py
-# hypothesis_version: 6.141.1
-
-['<int:pk>/result/', 'exam-result', 'exam/start/', 'my-submissions', 'my/', 'practice-history', 'practice/start/', 'save-answer', 'start-exam', 'start-practice', 'submission-result', 'submit-exam', 'submit-practice']

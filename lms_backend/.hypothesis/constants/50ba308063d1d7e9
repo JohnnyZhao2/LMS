@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/spot_checks/models.py
-# hypothesis_version: 6.141.1
-
-[100, '-checked_at', 'lms_spot_check', 'spot_checks_created', 'spot_checks_received', 'users.User', '抽查人', '抽查内容', '抽查时间', '抽查记录', '被抽查学员', '评分', '评语']

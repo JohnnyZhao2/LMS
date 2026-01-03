@@ -1,180 +1,145 @@
 """
-Analytics services.
+Analytics 应用服务
 
-Provides business logic for:
-- Dashboard statistics calculation
-- Student progress tracking
-- Department/team analytics
-- Knowledge heat statistics
+提供业务逻辑：
+- 仪表盘统计计算
+- 学员进度跟踪
+- 部门/团队分析
+- 知识热度统计
 
-This service layer separates business logic from Views and Serializers,
-improving code reusability and testability.
+此服务层通过 Repository 访问数据，将业务逻辑与数据访问分离，
+提高代码可重用性和可测试性。
 """
 from typing import List, Optional, Dict, Any
-from decimal import Decimal
-from django.db.models import QuerySet, Avg, Count, Sum, Max
-from django.db.models.functions import Coalesce
+from django.db.models import QuerySet
 
-from apps.users.models import User, Department
+from core.base_service import BaseService
+from apps.users.models import User
 from apps.users.permissions import get_current_role, get_accessible_students
-from apps.tasks.models import TaskAssignment
-from apps.knowledge.models import Knowledge
-from apps.submissions.models import Submission, Answer
+from .repositories import (
+    TaskAssignmentAnalyticsRepository,
+    KnowledgeAnalyticsRepository,
+    SubmissionAnalyticsRepository,
+    AnswerAnalyticsRepository,
+    UserAnalyticsRepository,
+    DepartmentAnalyticsRepository,
+)
 
 
-def calculate_task_stats(assignments: QuerySet) -> dict:
+class StudentDashboardService(BaseService):
     """
-    Calculate task statistics from a queryset of TaskAssignment objects.
+    学员仪表盘服务
     
-    Args:
-        assignments: QuerySet of TaskAssignment objects
-        
-    Returns:
-        dict with keys:
-            - total_tasks: int
-            - completed_tasks: int
-            - in_progress_tasks: int
-            - overdue_tasks: int
-            - completion_rate: float (percentage, rounded to 1 decimal)
-    """
-    total_tasks = assignments.count()
-    completed_tasks = assignments.filter(status='COMPLETED').count()
-    in_progress_tasks = assignments.filter(status='IN_PROGRESS').count()
-    overdue_tasks = assignments.filter(status='OVERDUE').count()
-    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0.0
-    
-    return {
-        'total_tasks': total_tasks,
-        'completed_tasks': completed_tasks,
-        'in_progress_tasks': in_progress_tasks,
-        'overdue_tasks': overdue_tasks,
-        'completion_rate': round(completion_rate, 1)
-    }
-
-
-class StudentDashboardService:
-    """
-    Service for student dashboard analytics.
-    
-    Handles:
-    - Pending tasks retrieval
-    - Latest knowledge retrieval
-    - Task summary statistics
+    处理：
+    - 待办任务获取
+    - 最新知识获取
+    - 任务摘要统计
     """
     
-    @staticmethod
-    def get_pending_tasks(user: User, limit: int = 10) -> QuerySet:
+    def __init__(self):
+        self.task_assignment_repo = TaskAssignmentAnalyticsRepository()
+        self.knowledge_repo = KnowledgeAnalyticsRepository()
+    
+    def get_pending_tasks(self, user: User, limit: int = 10) -> QuerySet:
         """
-        Get pending tasks for a student.
+        获取学员的待办任务
         
         Args:
-            user: Student user
-            limit: Maximum number of tasks to return
+            user: 学员用户
+            limit: 最大返回数量
             
         Returns:
-            QuerySet of pending TaskAssignment
+            待办任务 QuerySet
         """
-        return TaskAssignment.objects.filter(
-            assignee=user,
-            status='IN_PROGRESS',
-            task__is_deleted=False,
-            task__is_closed=False
-        ).select_related(
-            'task', 'task__created_by'
-        ).prefetch_related(
-            'task__task_knowledge',
-            'task__task_quizzes',
-            'knowledge_progress'
-        ).order_by('task__deadline')[:limit]
+        return self.task_assignment_repo.get_pending_tasks(
+            user_id=user.id,
+            limit=limit
+        )
     
-    @staticmethod
-    def get_latest_knowledge(limit: int = 5) -> QuerySet:
+    def get_latest_knowledge(self, limit: int = 5) -> QuerySet:
         """
-        Get latest published knowledge documents.
+        获取最新发布的知识文档
         
         Args:
-            limit: Maximum number of documents to return
+            limit: 最大返回数量
             
         Returns:
-            QuerySet of Knowledge
+            知识文档 QuerySet
         """
-        return Knowledge.objects.filter(
-            is_deleted=False
-        ).select_related(
-            'created_by', 'updated_by'
-        ).order_by('-created_at')[:limit]
+        return self.knowledge_repo.get_latest_knowledge(limit=limit)
     
-    @staticmethod
-    def get_task_summary(user: User) -> Dict[str, int]:
+    def get_task_summary(self, user: User) -> Dict[str, int]:
         """
-        Get task summary statistics for a student.
+        获取学员任务摘要统计
         
         Args:
-            user: Student user
+            user: 学员用户
             
         Returns:
-            Dict with pending, completed, overdue, total counts
+            包含待办、已完成、逾期、总数量的字典
         """
-        base_query = TaskAssignment.objects.filter(
-            assignee=user,
-            task__is_deleted=False
+        assignments = self.task_assignment_repo.get_student_assignments(
+            user_id=user.id
         )
         
+        stats = self.task_assignment_repo.calculate_task_stats(assignments)
+        
         return {
-            'pending': base_query.filter(status='IN_PROGRESS').count(),
-            'completed': base_query.filter(status='COMPLETED').count(),
-            'overdue': base_query.filter(status='OVERDUE').count(),
-            'total': base_query.count()
+            'pending': stats['in_progress_tasks'],
+            'completed': stats['completed_tasks'],
+            'overdue': stats['overdue_tasks'],
+            'total': stats['total_tasks']
         }
 
 
-class StudentProfileService:
+class StudentProfileService(BaseService):
     """
-    Service for student personal center analytics.
+    学员个人中心服务
     
-    Handles:
-    - Score history retrieval
-    - Wrong answers book
-    - Score statistics
+    处理：
+    - 成绩历史获取
+    - 错题本
+    - 成绩统计
     """
     
-    @staticmethod
+    def __init__(self):
+        self.submission_repo = SubmissionAnalyticsRepository()
+        self.answer_repo = AnswerAnalyticsRepository()
+    
     def get_score_history(
+        self,
         user: User,
         status_filter: str = None,
         page: int = 1,
         page_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Get student's score history with pagination.
+        获取学员成绩历史（带分页）
         
         Args:
-            user: Student user
-            status_filter: Optional status filter
-            page: Page number
-            page_size: Items per page
+            user: 学员用户
+            status_filter: 可选的状态过滤
+            page: 页码
+            page_size: 每页数量
             
         Returns:
-            Dict with results, count, pagination info, and summary
+            包含结果、数量、分页信息和摘要的字典
         """
-        queryset = Submission.objects.filter(
-            user=user,
-            task_assignment__task__is_deleted=False,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).select_related(
-            'task_assignment__task',
-            'quiz'
-        ).order_by('-submitted_at', '-created_at')
-        
+        status_list = ['SUBMITTED', 'GRADING', 'GRADED']
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            status_list = [status_filter]
+        
+        queryset = self.submission_repo.get_student_submissions(
+            user_id=user.id,
+            status_filter=status_list
+        )
         
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
         submissions = queryset[start:end]
         
-        summary = StudentProfileService._get_score_summary(user)
+        summary = self.submission_repo.get_score_summary(user_id=user.id)
         
         return {
             'submissions': submissions,
@@ -185,72 +150,36 @@ class StudentProfileService:
             'summary': summary
         }
     
-    @staticmethod
-    def _get_score_summary(user: User) -> Dict[str, Any]:
-        """Calculate score summary statistics."""
-        quiz_stats = Submission.objects.filter(
-            user=user,
-            task_assignment__task__is_deleted=False,
-            status='GRADED'
-        ).aggregate(
-            total_count=Count('id'),
-            avg_score=Avg('obtained_score'),
-            max_score=Max('obtained_score')
-        )
-        
-        return {
-            'practice': {
-                'total_count': quiz_stats['total_count'] or 0,
-                'avg_score': float(quiz_stats['avg_score']) if quiz_stats['avg_score'] else None,
-                'max_score': float(quiz_stats['max_score']) if quiz_stats['max_score'] else None,
-            },
-            'exam': {
-                'total_count': 0,
-                'avg_score': None,
-                'max_score': None,
-                'passed_count': 0,
-            }
-        }
-    
-    @staticmethod
     def get_wrong_answers(
+        self,
         user: User,
         question_type: str = None,
         page: int = 1,
         page_size: int = 20
     ) -> Dict[str, Any]:
         """
-        Get student's wrong answers with pagination.
+        获取学员错题（带分页）
         
         Args:
-            user: Student user
-            question_type: Optional question type filter
-            page: Page number
-            page_size: Items per page
+            user: 学员用户
+            question_type: 可选的题目类型过滤
+            page: 页码
+            page_size: 每页数量
             
         Returns:
-            Dict with results, count, pagination info, and summary
+            包含结果、数量、分页信息和摘要的字典
         """
-        queryset = Answer.objects.filter(
-            submission__user=user,
-            submission__task_assignment__task__is_deleted=False,
-            submission__status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-            is_correct=False
-        ).select_related(
-            'submission__task_assignment__task',
-            'submission__quiz',
-            'question'
-        ).order_by('-submission__submitted_at', '-created_at')
-        
-        if question_type:
-            queryset = queryset.filter(question__question_type=question_type)
+        queryset = self.answer_repo.get_wrong_answers(
+            user_id=user.id,
+            question_type=question_type
+        )
         
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
         wrong_answers = queryset[start:end]
         
-        summary = StudentProfileService._get_wrong_answer_summary(user)
+        summary = self.answer_repo.get_wrong_answer_summary(user_id=user.id)
         
         return {
             'wrong_answers': wrong_answers,
@@ -260,62 +189,39 @@ class StudentProfileService:
             'total_pages': (total_count + page_size - 1) // page_size if total_count > 0 else 0,
             'summary': summary
         }
-    
-    @staticmethod
-    def _get_wrong_answer_summary(user: User) -> Dict[str, Any]:
-        """Calculate wrong answer summary statistics."""
-        by_type = Answer.objects.filter(
-            submission__user=user,
-            submission__task_assignment__task__is_deleted=False,
-            submission__status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-            is_correct=False
-        ).values('question__question_type').annotate(count=Count('id'))
-        
-        type_counts = {
-            'SINGLE_CHOICE': 0,
-            'MULTIPLE_CHOICE': 0,
-            'TRUE_FALSE': 0,
-            'SHORT_ANSWER': 0,
-        }
-        for item in by_type:
-            q_type = item['question__question_type']
-            if q_type in type_counts:
-                type_counts[q_type] = item['count']
-        
-        return {
-            'total_count': sum(type_counts.values()),
-            'by_type': type_counts
-        }
 
 
-class MentorDashboardService:
+class MentorDashboardService(BaseService):
     """
-    Service for mentor/department manager dashboard analytics.
+    导师/室经理仪表盘服务
     
-    Handles:
-    - Summary statistics for accessible students
-    - Individual student statistics
-    - Quick links generation
+    处理：
+    - 可访问学员的摘要统计
+    - 单个学员统计
+    - 快捷链接生成
     """
     
-    @staticmethod
-    def get_dashboard_data(user: User) -> Dict[str, Any]:
+    def __init__(self):
+        self.task_assignment_repo = TaskAssignmentAnalyticsRepository()
+        self.submission_repo = SubmissionAnalyticsRepository()
+    
+    def get_dashboard_data(self, user: User) -> Dict[str, Any]:
         """
-        Get complete dashboard data for mentor/dept manager.
+        获取导师/室经理的完整仪表盘数据
         
         Args:
-            user: Mentor or department manager user
+            user: 导师或室经理用户
             
         Returns:
-            Dict with summary, students, quick_links, current_role
+            包含摘要、学员、快捷链接、当前角色的字典
         """
         current_role = get_current_role(user)
         students = get_accessible_students(user, current_role)
         student_ids = list(students.values_list('id', flat=True))
         
-        summary = MentorDashboardService._calculate_summary(student_ids, user, current_role)
-        student_stats = MentorDashboardService._calculate_student_stats(students)
-        quick_links = MentorDashboardService._generate_quick_links(current_role)
+        summary = self._calculate_summary(student_ids, current_role)
+        student_stats = self._calculate_student_stats(students)
+        quick_links = self._generate_quick_links(current_role)
         
         return {
             'summary': summary,
@@ -324,13 +230,12 @@ class MentorDashboardService:
             'current_role': current_role
         }
     
-    @staticmethod
     def _calculate_summary(
+        self,
         student_ids: List[int],
-        user: User,
         current_role: str
     ) -> Dict[str, Any]:
-        """Calculate overall summary statistics."""
+        """计算总体摘要统计"""
         if not student_ids:
             return {
                 'total_students': 0,
@@ -346,25 +251,19 @@ class MentorDashboardService:
                 'exam_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0, 'avg_score': None}
             }
         
-        assignments = TaskAssignment.objects.filter(
-            assignee_id__in=student_ids,
-            task__is_deleted=False
-        ).select_related('task')
+        assignments = self.task_assignment_repo.get_assignments_by_students(
+            student_ids=student_ids
+        )
         
-        stats = calculate_task_stats(assignments)
+        stats = self.task_assignment_repo.calculate_task_stats(assignments)
         
-        avg_score_result = Submission.objects.filter(
-            user_id__in=student_ids,
-            status='GRADED',
-            task_assignment__task__is_deleted=False
-        ).aggregate(avg_score=Avg('obtained_score'))
-        overall_avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
+        overall_avg_score = self.submission_repo.calculate_avg_score(
+            student_ids=student_ids
+        )
         
-        pending_grading_count = Submission.objects.filter(
-            user_id__in=student_ids,
-            status='GRADING',
-            task_assignment__task__is_deleted=False
-        ).count()
+        pending_grading_count = self.submission_repo.get_pending_grading_count(
+            student_ids=student_ids
+        )
         
         default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         
@@ -382,25 +281,20 @@ class MentorDashboardService:
             'exam_tasks': {**default_stats, 'avg_score': None}
         }
     
-    @staticmethod
-    def _calculate_student_stats(students: QuerySet) -> List[Dict[str, Any]]:
-        """Calculate statistics for each student."""
+    def _calculate_student_stats(self, students: QuerySet) -> List[Dict[str, Any]]:
+        """计算每个学员的统计"""
         student_stats = []
         
         for student in students.select_related('department'):
-            assignments = TaskAssignment.objects.filter(
-                assignee=student,
-                task__is_deleted=False
+            assignments = self.task_assignment_repo.get_student_assignments(
+                user_id=student.id
             )
             
-            stats = calculate_task_stats(assignments)
+            stats = self.task_assignment_repo.calculate_task_stats(assignments)
             
-            avg_score_result = Submission.objects.filter(
-                user=student,
-                status='GRADED',
-                task_assignment__task__is_deleted=False
-            ).aggregate(avg_score=Avg('obtained_score'))
-            avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
+            avg_score = self.submission_repo.calculate_avg_score(
+                user_id=student.id
+            )
             
             student_stats.append({
                 'id': student.id,
@@ -422,7 +316,7 @@ class MentorDashboardService:
     
     @staticmethod
     def _generate_quick_links(current_role: str) -> Dict[str, str]:
-        """Generate quick access links."""
+        """生成快捷访问链接"""
         return {
             'create_learning_task': '/tasks/learning/create',
             'create_practice_task': '/tasks/practice/create',
@@ -435,48 +329,51 @@ class MentorDashboardService:
         }
 
 
-class TeamManagerDashboardService:
+class TeamManagerDashboardService(BaseService):
     """
-    Service for team manager data board analytics.
+    团队经理数据看板服务
     
-    Handles:
-    - Overview statistics across all departments
-    - Department-level statistics
-    - Knowledge heat statistics
+    处理：
+    - 跨部门的概览统计
+    - 部门级别统计
+    - 知识热度统计
     """
     
-    @staticmethod
-    def get_overview_data() -> Dict[str, Any]:
+    def __init__(self):
+        self.task_assignment_repo = TaskAssignmentAnalyticsRepository()
+        self.submission_repo = SubmissionAnalyticsRepository()
+        self.knowledge_repo = KnowledgeAnalyticsRepository()
+        self.user_repo = UserAnalyticsRepository()
+        self.department_repo = DepartmentAnalyticsRepository()
+    
+    def get_overview_data(self) -> Dict[str, Any]:
         """
-        Get team manager overview data.
+        获取团队经理概览数据
         
         Returns:
-            Dict with overview and departments statistics
+            包含概览和部门统计的字典
         """
-        departments = Department.objects.all()
+        departments = self.department_repo.get_all_departments()
         
-        overview = TeamManagerDashboardService._calculate_overview()
-        department_stats = TeamManagerDashboardService._calculate_department_stats(departments)
+        overview = self._calculate_overview()
+        department_stats = self._calculate_department_stats(departments)
         
         return {
             'overview': overview,
             'departments': department_stats
         }
     
-    @staticmethod
-    def _calculate_overview() -> Dict[str, Any]:
-        """Calculate overall statistics across all departments."""
-        total_departments = Department.objects.count()
-        total_students = User.objects.filter(is_active=True).count()
+    def _calculate_overview(self) -> Dict[str, Any]:
+        """计算跨部门的总体统计"""
+        total_departments = self.department_repo.count_departments()
+        total_students = self.user_repo.get_all_active_users().count()
         
+        # 获取所有任务分配（不限制学生）
+        from apps.tasks.models import TaskAssignment
         assignments = TaskAssignment.objects.filter(task__is_deleted=False)
-        stats = calculate_task_stats(assignments)
+        stats = self.task_assignment_repo.calculate_task_stats(assignments)
         
-        avg_score_result = Submission.objects.filter(
-            status='GRADED',
-            task_assignment__task__is_deleted=False
-        ).aggregate(avg_score=Avg('obtained_score'))
-        overall_avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
+        overall_avg_score = self.submission_repo.calculate_avg_score()
         
         return {
             'total_departments': total_departments,
@@ -492,13 +389,12 @@ class TeamManagerDashboardService:
             'exam_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0, 'avg_score': None}
         }
     
-    @staticmethod
-    def _calculate_department_stats(departments: QuerySet) -> List[Dict[str, Any]]:
-        """Calculate statistics for each department."""
+    def _calculate_department_stats(self, departments: QuerySet) -> List[Dict[str, Any]]:
+        """计算每个部门的统计"""
         department_stats = []
         
         for dept in departments:
-            students = User.objects.filter(department=dept, is_active=True)
+            students = self.user_repo.get_users_by_department(dept.id)
             student_ids = list(students.values_list('id', flat=True))
             total_students = len(student_ids)
             
@@ -520,19 +416,15 @@ class TeamManagerDashboardService:
                 })
                 continue
             
-            assignments = TaskAssignment.objects.filter(
-                assignee_id__in=student_ids,
-                task__is_deleted=False
+            assignments = self.task_assignment_repo.get_assignments_by_students(
+                student_ids=student_ids
             )
             
-            stats = calculate_task_stats(assignments)
+            stats = self.task_assignment_repo.calculate_task_stats(assignments)
             
-            avg_score_result = Submission.objects.filter(
-                user_id__in=student_ids,
-                status='GRADED',
-                task_assignment__task__is_deleted=False
-            ).aggregate(avg_score=Avg('obtained_score'))
-            avg_score = float(avg_score_result['avg_score']) if avg_score_result['avg_score'] else None
+            avg_score = self.submission_repo.calculate_avg_score(
+                student_ids=student_ids
+            )
             
             department_stats.append({
                 'id': dept.id,
@@ -552,29 +444,25 @@ class TeamManagerDashboardService:
         
         return department_stats
     
-    @staticmethod
     def get_knowledge_heat(
+        self,
         limit: int = 20,
         knowledge_type: str = None
     ) -> Dict[str, Any]:
         """
-        Get knowledge heat statistics.
+        获取知识热度统计
         
         Args:
-            limit: Maximum number of results
-            knowledge_type: Optional knowledge type filter
+            limit: 最大返回数量
+            knowledge_type: 可选的知识类型过滤
             
         Returns:
-            Dict with results and summary
+            包含结果和摘要的字典
         """
-        queryset = Knowledge.objects.filter(
-            is_deleted=False
-        ).select_related('created_by')
-        
-        if knowledge_type:
-            queryset = queryset.filter(knowledge_type=knowledge_type)
-        
-        queryset = queryset.order_by('-view_count')[:limit]
+        queryset = self.knowledge_repo.get_knowledge_heat(
+            limit=limit,
+            knowledge_type=knowledge_type
+        )
         
         heat_data = []
         for knowledge in queryset:
@@ -593,17 +481,9 @@ class TeamManagerDashboardService:
                 'updated_at': knowledge.updated_at
             })
         
-        total_views = Knowledge.objects.filter(is_deleted=False).aggregate(
-            total=Sum('view_count')
-        )['total'] or 0
-        
-        total_knowledge = Knowledge.objects.filter(is_deleted=False).count()
+        summary = self.knowledge_repo.get_knowledge_statistics()
         
         return {
             'results': heat_data,
-            'summary': {
-                'total_knowledge': total_knowledge,
-                'total_views': total_views,
-                'avg_views': round(total_views / total_knowledge, 1) if total_knowledge > 0 else 0
-            }
+            'summary': summary
         }

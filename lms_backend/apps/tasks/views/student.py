@@ -27,6 +27,10 @@ class StudentAssignmentListView(APIView):
     """Student's task assignment list endpoint."""
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentTaskService()
+    
     @extend_schema(
         summary='获取我的任务列表',
         description='''
@@ -48,7 +52,7 @@ class StudentAssignmentListView(APIView):
         search = request.query_params.get('search')
         
         # Use StudentTaskService to get queryset
-        queryset = StudentTaskService.get_student_assignments_queryset(
+        queryset = self.service.get_student_assignments_queryset(
             user=user,
             status_filter=status_filter,
             search=search
@@ -78,6 +82,10 @@ class StudentTaskDetailView(APIView):
     """Student's task detail endpoint."""
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentTaskService()
+    
     @extend_schema(
         summary='获取任务详情',
         description='''
@@ -95,10 +103,10 @@ class StudentTaskDetailView(APIView):
     )
     def get(self, request, task_id):
         # Use StudentTaskService to get assignment
-        assignment = StudentTaskService.get_student_assignment(task_id, request.user)
+        assignment = self.service.get_student_assignment(task_id, request.user)
         
         # Ensure knowledge progress records exist
-        StudentTaskService.ensure_knowledge_progress(assignment)
+        self.service.ensure_knowledge_progress(assignment)
         
         serializer = StudentTaskDetailSerializer(assignment)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -107,6 +115,10 @@ class StudentTaskDetailView(APIView):
 class CompleteKnowledgeLearningView(APIView):
     """Complete knowledge learning endpoint."""
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentTaskService()
     
     @extend_schema(
         summary='完成知识学习',
@@ -126,7 +138,7 @@ class CompleteKnowledgeLearningView(APIView):
     )
     def post(self, request, task_id):
         # Get assignment using service
-        assignment = StudentTaskService.get_student_assignment(task_id, request.user)
+        assignment = self.service.get_student_assignment(task_id, request.user)
         
         serializer = CompleteKnowledgeLearningSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -134,7 +146,7 @@ class CompleteKnowledgeLearningView(APIView):
         knowledge_id = serializer.validated_data['knowledge_id']
         
         # Use service to complete knowledge learning
-        progress = StudentTaskService.complete_knowledge_learning(assignment, knowledge_id)
+        progress = self.service.complete_knowledge_learning(assignment, knowledge_id)
         
         # Refresh assignment to get updated status
         assignment.refresh_from_db()

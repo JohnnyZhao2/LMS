@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/submissions/views.py
-# hypothesis_version: 6.141.1
-
-[200, 201, 400, 404, '-created_at', '-obtained_score', '-submitted_at', 'GRADED', 'GRADING', 'IN_PROGRESS', 'PRACTICE', 'SUBMITTED', 'answers__question', 'attempt_count', 'best_score', 'best_submission_id', 'latest_score', 'latest_submission_id', 'message', 'question_id', 'quiz', 'quiz_id', 'quiz_title', 'request', 'status', 'submission', 'task', 'task_assignment', 'task_id', 'user_answer', '任务ID', '任务不存在', '任务不存在或未分配给您', '任务或试卷不存在', '保存成功', '保存答案', '参数错误', '只能在答题中保存答案', '开始练习', '我的答题记录', '提交练习', '查看练习历史', '查看练习结果', '此接口仅支持练习任务', '此答卷已提交', '状态', '答卷尚未提交', '答题记录不存在', '练习答题', '考试答题', '获取当前用户的所有答题记录']

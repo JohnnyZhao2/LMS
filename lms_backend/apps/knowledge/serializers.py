@@ -398,17 +398,9 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         
         # 如果当前是已发布状态，需要创建或更新草稿而不是直接修改原记录
         if instance.status == 'PUBLISHED':
-            existing_draft = Knowledge.objects.filter(
-                source_version=instance,
-                status='DRAFT',
-                is_deleted=False
-            ).first()
-            
-            if existing_draft:
-                instance = existing_draft
-                instance.updated_by = user
-            else:
-                instance = instance.clone_as_draft(user)
+            from .services import KnowledgeService
+            service = KnowledgeService()
+            instance = service.create_or_get_draft_from_published(instance, user)
         
         # 处理条线类型
         line_type_id = validated_data.pop('line_type_id', None)

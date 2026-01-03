@@ -148,7 +148,6 @@ class TestProperty37MentorDataScopeRestriction:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -231,7 +230,6 @@ class TestProperty37MentorDataScopeRestriction:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])
@@ -651,7 +649,6 @@ class TestProperty40UnauthorizedRequestRejection:
             username=f'mentor_{unique_suffix}',
             password='testpass123',
             employee_id=f'MNT_{unique_suffix}',
-            username='导师',
             department=dept,
         )
         UserRole.objects.get_or_create(user=mentor, role=setup_roles['MENTOR'])

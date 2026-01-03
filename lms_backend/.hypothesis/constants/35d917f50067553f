@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/analytics/urls.py
-# hypothesis_version: 6.141.1
-
-['dashboard/mentor/', 'dashboard/student/', 'knowledge-center/', 'knowledge-heat', 'knowledge-heat/', 'mentor-dashboard', 'student-dashboard', 'student-profile', 'student-score-export', 'task-center/', 'team-overview/']

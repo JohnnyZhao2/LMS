@@ -191,47 +191,27 @@ class Submission(TimestampMixin, models.Model):
     
     def submit(self, is_practice=False):
         """
-        提交答卷
+        [已废弃] 提交答卷
+        
+        此方法已迁移到 SubmissionService.submit()，请使用 Service 层方法。
+        此方法保留仅为向后兼容，将在未来版本中移除。
         
         Args:
             is_practice: 是否为练习模式（练习可多次提交，考试只能提交一次）
-        
-        Requirements:
-        - 10.3: 客观题自动评分
-        - 12.4: 记录提交时间并进行客观题自动评分
-        - 12.5: 包含主观题时状态设为"待评分"
-        - 12.6: 仅包含客观题时直接计算最终成绩
-        
-        Properties:
-        - Property 30: 客观题自动评分
-        - Property 31: 主观题待评分状态
-        - Property 32: 纯客观题直接完成
         """
-        if self.status not in ['IN_PROGRESS']:
-            raise ValidationError('只能提交答题中的记录')
+        import warnings
+        warnings.warn(
+            'Submission.submit() 已废弃，请使用 SubmissionService.submit()',
+            DeprecationWarning,
+            stacklevel=2
+        )
         
-        self.submitted_at = timezone.now()
-        
-        # 自动评分客观题
-        self._auto_grade_objective_questions()
-        
-        # 计算总分
-        self._calculate_score()
-        
-        # 设置状态
-        if self.has_subjective_questions:
-            # 包含主观题，需要人工评分
-            self.status = 'GRADING'
-        else:
-            # 纯客观题，直接完成
-            self.status = 'GRADED'
-            self._update_task_assignment()
-        
-        self.save()
-        
-        # 检查练习任务是否应该自动完成
-        if is_practice:
-            self._check_practice_completion()
+        # 委托给 Service 层
+        from .services import SubmissionService
+        service = SubmissionService()
+        updated = service.submit(self, is_practice=is_practice)
+        # 刷新当前实例
+        self.refresh_from_db()
     
     def _auto_grade_objective_questions(self):
         """

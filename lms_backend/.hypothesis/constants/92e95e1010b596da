@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/questions/serializers.py
-# hypothesis_version: 6.141.1
-
-[1.0, '.xls', '.xlsx', 'Excel 文件', 'FALSE', 'MEDIUM', 'MULTIPLE_CHOICE', 'SHORT_ANSWER', 'SINGLE_CHOICE', 'TRUE', 'TRUE_FALSE', 'answer', 'content', 'created_at', 'created_by', 'created_by.real_name', 'created_by_name', 'difficulty', 'difficulty_display', 'explanation', 'id', 'is_objective', 'is_subjective', 'key', 'options', 'question_type', 'request', 'score', 'tags', 'updated_at', 'value', '单选题答案必须是字符串', '单选题答案必须是有效的选项', '多选题答案必须是列表', '简答题答案必须是字符串', '选择题必须设置选项']

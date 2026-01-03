@@ -129,15 +129,13 @@ class TestProperty5NewUserDefaultStudentRole:
     @given(
         username=valid_username_strategy(),
         employee_id=valid_employee_id_strategy(),
-        username=valid_username_strategy(),
     )
     def test_new_user_has_student_role(
         self, 
         setup_roles, 
         setup_department,
         username, 
-        employee_id, 
-        username
+        employee_id
     ):
         """
         **Feature: lms-backend, Property 5: 新用户默认学员角色**

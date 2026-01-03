@@ -173,7 +173,6 @@ class TestProperty24PracticeAllowsMultipleSubmissions:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -318,7 +317,6 @@ class TestProperty25PracticeTaskAutoCompletion:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -463,7 +461,6 @@ class TestProperty26CompletedPracticeCanContinue:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -611,7 +608,6 @@ class TestProperty30ObjectiveQuestionAutoGrading:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -767,7 +763,6 @@ class TestProperty30ObjectiveQuestionAutoGrading:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])

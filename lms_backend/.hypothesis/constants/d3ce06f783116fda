@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/quizzes/serializers.py
-# hypothesis_version: 6.141.1
-
-[1.0, 'FALSE', 'MEDIUM', 'MULTIPLE_CHOICE', 'SHORT_ANSWER', 'SINGLE_CHOICE', 'TRUE', 'TRUE_FALSE', 'answer', 'created_at', 'created_by', 'created_by.real_name', 'created_by_name', 'description', 'id', 'key', 'new_questions', 'options', 'order', 'question', 'question_count', 'question_type', 'questions', 'request', 'title', 'total_score', 'updated_at', 'value', '单选题答案必须是字符串', '单选题答案必须是有效的选项', '多选题答案必须是列表', '必须添加至少一道题目', '按新顺序排列的题目ID列表', '简答题答案必须是字符串', '要新建的题目列表', '要添加的已有题目ID列表', '要添加的题目ID列表', '要移除的题目ID列表', '选择题必须设置选项']

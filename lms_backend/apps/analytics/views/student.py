@@ -27,7 +27,7 @@ from apps.analytics.services import StudentDashboardService, StudentProfileServi
 
 class StudentDashboardView(APIView):
     """
-    Student dashboard API endpoint.
+    学员仪表盘 API 端点
     
     GET /api/analytics/dashboard/student/
     
@@ -37,6 +37,10 @@ class StudentDashboardView(APIView):
     - 15.3: 学员点击待办任务时跳转到对应任务详情页
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentDashboardService()
     
     @extend_schema(
         summary='获取学员仪表盘数据',
@@ -54,10 +58,10 @@ class StudentDashboardView(APIView):
         pending_limit = int(request.query_params.get('pending_limit', 10))
         knowledge_limit = int(request.query_params.get('knowledge_limit', 5))
         
-        # Use StudentDashboardService
-        pending_tasks = StudentDashboardService.get_pending_tasks(user, pending_limit)
-        latest_knowledge = StudentDashboardService.get_latest_knowledge(knowledge_limit)
-        task_summary = StudentDashboardService.get_task_summary(user)
+        # 调用 Service
+        pending_tasks = self.service.get_pending_tasks(user, pending_limit)
+        latest_knowledge = self.service.get_latest_knowledge(knowledge_limit)
+        task_summary = self.service.get_task_summary(user)
         
         pending_tasks_data = StudentPendingTaskSerializer(pending_tasks, many=True).data
         latest_knowledge_data = LatestKnowledgeSerializer(latest_knowledge, many=True).data
@@ -91,12 +95,16 @@ class StudentProfileView(APIView):
 
 class StudentScoreHistoryView(APIView):
     """
-    Student personal center - score history endpoint.
+    学员个人中心 - 历史成绩端点
     
     Requirements:
     - 18.2: 学员查看历史成绩时展示练习和考试的成绩记录
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentProfileService()
     
     @extend_schema(
         summary='获取学员历史成绩',
@@ -116,8 +124,8 @@ class StudentScoreHistoryView(APIView):
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
         
-        # Use StudentProfileService
-        result = StudentProfileService.get_score_history(
+        # 调用 Service
+        result = self.service.get_score_history(
             user=user,
             status_filter=status_filter,
             page=page,
@@ -138,12 +146,16 @@ class StudentScoreHistoryView(APIView):
 
 class StudentWrongAnswersView(APIView):
     """
-    Student personal center - wrong answers book endpoint.
+    学员个人中心 - 错题本端点
     
     Requirements:
     - 18.3: 学员查看错题本时展示练习和考试中答错的题目
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentProfileService()
     
     @extend_schema(
         summary='获取学员错题本',
@@ -163,8 +175,8 @@ class StudentWrongAnswersView(APIView):
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
         
-        # Use StudentProfileService
-        result = StudentProfileService.get_wrong_answers(
+        # 调用 Service
+        result = self.service.get_wrong_answers(
             user=user,
             question_type=question_type,
             page=page,
@@ -185,12 +197,16 @@ class StudentWrongAnswersView(APIView):
 
 class StudentScoreExportView(APIView):
     """
-    Student personal center - score export endpoint.
+    学员个人中心 - 成绩导出端点
     
     Requirements:
     - 18.4: 学员导出记录时生成包含历史成绩的导出文件
     """
     permission_classes = [IsAuthenticated]
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = StudentProfileService()
     
     @extend_schema(
         summary='导出学员历史成绩',
@@ -204,21 +220,26 @@ class StudentScoreExportView(APIView):
     def get(self, request):
         import csv
         from django.http import HttpResponse
-        from apps.submissions.models import Submission
+        from apps.submissions.repositories import SubmissionRepository
         
         user = request.user
+        task_type = request.query_params.get('task_type')
         
-        queryset = Submission.objects.filter(
-            user=user,
+        # 使用 Repository 获取数据
+        submission_repo = SubmissionRepository()
+        queryset = submission_repo.get_by_user_and_task(
+            user_id=user.id,
+            status=None,
+            ordering='-submitted_at'
+        ).filter(
             task_assignment__task__task_type__in=['PRACTICE', 'EXAM'],
             task_assignment__task__is_deleted=False,
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
         ).select_related(
             'task_assignment__task',
             'quiz'
-        ).order_by('-submitted_at', '-created_at')
+        )
         
-        task_type = request.query_params.get('task_type')
         if task_type:
             queryset = queryset.filter(task_assignment__task__task_type=task_type)
         

@@ -10,8 +10,6 @@ Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
 import uuid
 
 from django.db import models
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -199,137 +197,12 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             question__question_type='SHORT_ANSWER'
         ).count()
     
-    def is_referenced_by_task(self):
-        """
-        检查试卷是否被任务引用
-        
-        Requirements: 6.8
-        Property 14: 被引用试卷删除保护
-        
-        Returns:
-            bool: 如果被任务引用则返回 True
-        """
-        # 延迟导入避免循环依赖
-        # TaskQuiz 模型将在 tasks app 中定义
-        try:
-            from apps.tasks.models import TaskQuiz
-            return TaskQuiz.objects.filter(quiz=self).exists()
-        except ImportError:
-            # tasks app 尚未实现
-            return False
-    
-    def delete(self, *args, **kwargs):
-        """
-        重写删除方法，实现删除保护
-        
-        Requirements: 6.8
-        Property 14: 被引用试卷删除保护
-        """
-        if self.is_referenced_by_task():
-            raise ValidationError('该试卷已被任务引用，无法删除')
-        super().delete(*args, **kwargs)
-    
-    @classmethod
-    def next_version_number(cls, resource_uuid):
-        if not resource_uuid:
-            return 1
-        aggregate = cls.objects.filter(
-            resource_uuid=resource_uuid,
-            is_deleted=False
-        ).aggregate(
-            max_version=models.Max('version_number')
-        )
-        max_version = aggregate['max_version'] or 0
-        return max_version + 1
-    
-    def clone_new_version(self):
-        """
-        创建当前试卷的新版本，复制现有题目顺序。
-        """
-        new_quiz = Quiz.objects.create(
-            title=self.title,
-            description=self.description,
-            created_by=self.created_by,
-            status='PUBLISHED',
-            resource_uuid=self.resource_uuid,
-            version_number=self.next_version_number(self.resource_uuid),
-            source_version=self,
-            published_at=timezone.now(),
-            is_current=True,
-            quiz_type=self.quiz_type,
-            duration=self.duration,
-            pass_score=self.pass_score,
-        )
-        for relation in self.get_ordered_questions():
-            QuizQuestion.objects.create(
-                quiz=new_quiz,
-                question=relation.question,
-                order=relation.order
-            )
-        Quiz.objects.filter(
-            resource_uuid=self.resource_uuid,
-            status='PUBLISHED'
-        ).exclude(pk=new_quiz.pk).update(is_current=False)
-        return new_quiz
-    
-    def add_question(self, question, order=None):
-        """
-        向试卷添加题目
-        
-        Requirements: 6.2
-        
-        Args:
-            question: Question 实例
-            order: 题目顺序，如果为 None 则自动追加到末尾
-            
-        Returns:
-            QuizQuestion: 创建的关联记录
-        """
-        if order is None:
-            # 获取当前最大顺序号
-            max_order = self.quiz_questions.aggregate(
-                max_order=models.Max('order')
-            )['max_order']
-            order = (max_order or 0) + 1
-        
-        return QuizQuestion.objects.create(
-            quiz=self,
-            question=question,
-            order=order
-        )
-    
-    def remove_question(self, question):
-        """
-        从试卷移除题目
-        
-        Args:
-            question: Question 实例
-            
-        Returns:
-            bool: 是否成功移除
-        """
-        deleted_count, _ = QuizQuestion.objects.filter(
-            quiz=self,
-            question=question
-        ).delete()
-        return deleted_count > 0
-    
-    def reorder_questions(self, question_ids):
-        """
-        重新排序试卷中的题目
-        
-        Args:
-            question_ids: 按新顺序排列的题目 ID 列表
-        """
-        for index, question_id in enumerate(question_ids, start=1):
-            QuizQuestion.objects.filter(
-                quiz=self,
-                question_id=question_id
-            ).update(order=index)
-    
     def get_ordered_questions(self):
         """
         获取按顺序排列的题目列表
+        
+        注意：这是一个便捷查询方法，不包含业务逻辑。
+        业务逻辑应在 Service 层处理。
         
         Returns:
             QuerySet: 按 order 排序的 QuizQuestion 查询集

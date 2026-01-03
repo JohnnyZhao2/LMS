@@ -1,4 +1,0 @@
-# file: /Users/johnnyzhao/Documents/LMS/lms_backend/apps/tasks/urls.py
-# hypothesis_version: 6.141.1
-
-['<int:pk>/', '<int:pk>/close/', 'exam-task-create', 'exam/', 'learning-task-create', 'learning/', 'my-assignments/', 'practice-task-create', 'practice/', 'task-close', 'task-detail', 'task-list']

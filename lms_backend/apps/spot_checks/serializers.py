@@ -60,7 +60,9 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
 
 class SpotCheckCreateSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating spot check records.
+    创建抽查记录序列化器
+    
+    业务验证逻辑已移至 Service 层。
     
     Requirements:
     - 14.1: 存储被抽查学员、抽查内容、评分和评语
@@ -73,77 +75,16 @@ class SpotCheckCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpotCheck
         fields = ['student', 'content', 'score', 'comment', 'checked_at']
-    
-    def validate_student(self, value):
-        """
-        Validate that the student is within the checker's scope.
-        
-        Requirements: 14.2, 14.3
-        Property 35: 抽查学员范围限制
-        """
-        request = self.context.get('request')
-        if not request or not request.user:
-            raise serializers.ValidationError('无法验证用户权限')
-        
-        user = request.user
-        
-        # Get current role
-        current_role = None
-        if hasattr(user, 'current_role') and user.current_role:
-            current_role = user.current_role
-        else:
-            if user.is_admin:
-                current_role = 'ADMIN'
-            elif user.is_dept_manager:
-                current_role = 'DEPT_MANAGER'
-            elif user.is_mentor:
-                current_role = 'MENTOR'
-        
-        # Admin can create spot checks for any student
-        if current_role == 'ADMIN':
-            return value
-        
-        # Mentor can only create for their mentees
-        if current_role == 'MENTOR':
-            if value.mentor_id != user.id:
-                raise serializers.ValidationError('只能为名下学员创建抽查记录')
-            return value
-        
-        # Department manager can only create for department members
-        if current_role == 'DEPT_MANAGER':
-            if not user.department_id:
-                raise serializers.ValidationError('您未分配部门，无法创建抽查记录')
-            if value.department_id != user.department_id:
-                raise serializers.ValidationError('只能为本室学员创建抽查记录')
-            return value
-        
-        raise serializers.ValidationError('无权创建抽查记录')
-    
-    def validate_checked_at(self, value):
-        """Validate that checked_at is not in the future."""
-        if value > timezone.now():
-            raise serializers.ValidationError('抽查时间不能是未来时间')
-        return value
-    
-    def create(self, validated_data):
-        """Create spot check with checker from context."""
-        validated_data['checker'] = self.context['request'].user
-        return SpotCheck.objects.create(**validated_data)
 
 
 class SpotCheckUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer for updating spot check records.
+    更新抽查记录序列化器
     
-    Note: student and checker cannot be changed after creation.
+    注意：student 和 checker 在创建后不能修改。
+    业务验证逻辑已移至 Service 层。
     """
     
     class Meta:
         model = SpotCheck
         fields = ['content', 'score', 'comment', 'checked_at']
-    
-    def validate_checked_at(self, value):
-        """Validate that checked_at is not in the future."""
-        if value > timezone.now():
-            raise serializers.ValidationError('抽查时间不能是未来时间')
-        return value

@@ -1,8 +1,8 @@
 """
-Notification services for LMS.
+通知应用服务
 
-Implements notification creation and delivery logic,
-including integration with company robot.
+编排业务逻辑，协调 Repository 和 Domain Service。
+负责创建和发送各类通知，预留公司机器人对接接口。
 
 Requirements: 7.5, 9.5, 11.6
 """
@@ -12,19 +12,22 @@ from typing import List, Optional
 from django.db import transaction
 from django.utils import timezone
 
+from core.base_service import BaseService
+from core.exceptions import BusinessError, ErrorCodes
 from apps.notifications.models import Notification
 from apps.users.models import User
 from apps.tasks.models import Task
 from apps.submissions.models import Submission
 from apps.spot_checks.models import SpotCheck
+from .repositories import NotificationRepository
 
 
 logger = logging.getLogger(__name__)
 
 
-class NotificationService:
+class NotificationService(BaseService):
     """
-    通知服务
+    通知应用服务
     
     负责创建和发送各类通知，预留公司机器人对接接口。
     
@@ -33,6 +36,9 @@ class NotificationService:
     - 9.5: 练习任务创建成功后通知学员
     - 11.6: 考试任务创建成功后通知学员
     """
+    
+    def __init__(self):
+        self.repository = NotificationRepository()
     
     # 通知模板
     TEMPLATES = {
@@ -54,8 +60,8 @@ class NotificationService:
         },
     }
     
-    @classmethod
-    def send_task_assigned(cls, task: Task, assignee_ids: List[int]) -> List[Notification]:
+    @transaction.atomic
+    def send_task_assigned(self, task: Task, assignee_ids: List[int]) -> List[Notification]:
         """
         发送任务分配通知
         
@@ -71,7 +77,7 @@ class NotificationService:
         notifications = []
         
         # 获取模板
-        template = cls.TEMPLATES['TASK_ASSIGNED']
+        template = self.TEMPLATES['TASK_ASSIGNED']
         
         # 格式化内容
         deadline_str = task.deadline.strftime('%Y-%m-%d %H:%M')
@@ -81,24 +87,25 @@ class NotificationService:
         )
         
         # 批量创建通知
+        notifications_data = []
+        for user_id in assignee_ids:
+            notifications_data.append({
+                'recipient_id': user_id,
+                'notification_type': 'TASK_ASSIGNED',
+                'title': template['title'],
+                'content': content,
+                'task': task
+            })
+        
         with transaction.atomic():
-            for user_id in assignee_ids:
-                notification = Notification.objects.create(
-                    recipient_id=user_id,
-                    notification_type='TASK_ASSIGNED',
-                    title=template['title'],
-                    content=content,
-                    task=task
-                )
-                notifications.append(notification)
+            notifications = self.repository.batch_create(notifications_data)
         
         # 尝试发送到机器人
-        cls._send_to_robot_batch(notifications)
+        self._send_to_robot_batch(notifications)
         
         return notifications
     
-    @classmethod
-    def send_deadline_reminder(cls, task: Task, user_id: int) -> Optional[Notification]:
+    def send_deadline_reminder(self, task: Task, user_id: int) -> Optional[Notification]:
         """
         发送截止时间提醒
         
@@ -109,7 +116,7 @@ class NotificationService:
         Returns:
             创建的通知实例
         """
-        template = cls.TEMPLATES['DEADLINE_REMINDER']
+        template = self.TEMPLATES['DEADLINE_REMINDER']
         deadline_str = task.deadline.strftime('%Y-%m-%d %H:%M')
         
         content = template['content'].format(
@@ -117,7 +124,7 @@ class NotificationService:
             deadline=deadline_str
         )
         
-        notification = Notification.objects.create(
+        notification = self.repository.create(
             recipient_id=user_id,
             notification_type='DEADLINE_REMINDER',
             title=template['title'],
@@ -126,12 +133,11 @@ class NotificationService:
         )
         
         # 尝试发送到机器人
-        cls._send_to_robot(notification)
+        self._send_to_robot(notification)
         
         return notification
     
-    @classmethod
-    def send_grading_completed(cls, submission: Submission) -> Optional[Notification]:
+    def send_grading_completed(self, submission: Submission) -> Optional[Notification]:
         """
         发送评分完成通知
         
@@ -141,14 +147,14 @@ class NotificationService:
         Returns:
             创建的通知实例
         """
-        template = cls.TEMPLATES['GRADING_COMPLETED']
+        template = self.TEMPLATES['GRADING_COMPLETED']
         
         content = template['content'].format(
             task_title=submission.task.title,
             score=submission.obtained_score
         )
         
-        notification = Notification.objects.create(
+        notification = self.repository.create(
             recipient=submission.user,
             notification_type='GRADING_COMPLETED',
             title=template['title'],
@@ -158,12 +164,11 @@ class NotificationService:
         )
         
         # 尝试发送到机器人
-        cls._send_to_robot(notification)
+        self._send_to_robot(notification)
         
         return notification
     
-    @classmethod
-    def send_spot_check_notification(cls, spot_check: SpotCheck) -> Optional[Notification]:
+    def send_spot_check_notification(self, spot_check: SpotCheck) -> Optional[Notification]:
         """
         发送抽查通知
         
@@ -173,13 +178,13 @@ class NotificationService:
         Returns:
             创建的通知实例
         """
-        template = cls.TEMPLATES['SPOT_CHECK']
+        template = self.TEMPLATES['SPOT_CHECK']
         
         content = template['content'].format(
             score=spot_check.score
         )
         
-        notification = Notification.objects.create(
+        notification = self.repository.create(
             recipient=spot_check.student,
             notification_type='SPOT_CHECK',
             title=template['title'],
@@ -188,12 +193,11 @@ class NotificationService:
         )
         
         # 尝试发送到机器人
-        cls._send_to_robot(notification)
+        self._send_to_robot(notification)
         
         return notification
     
-    @classmethod
-    def _send_to_robot(cls, notification: Notification) -> bool:
+    def _send_to_robot(self, notification: Notification) -> bool:
         """
         发送单条通知到公司机器人
         
@@ -205,10 +209,9 @@ class NotificationService:
         Returns:
             是否发送成功
         """
-        return cls._send_to_robot_batch([notification])
+        return self._send_to_robot_batch([notification])
     
-    @classmethod
-    def _send_to_robot_batch(cls, notifications: List[Notification]) -> bool:
+    def _send_to_robot_batch(self, notifications: List[Notification]) -> bool:
         """
         批量发送通知到公司机器人
         
@@ -230,7 +233,7 @@ class NotificationService:
         #         user = notification.recipient
         #         message = f"{notification.title}\n{notification.content}"
         #         robot_api.send_message(user.employee_id, message)
-        #         notification.mark_as_sent_to_robot()
+        #         self.repository.mark_as_sent_to_robot(notification)
         #     return True
         # except Exception as e:
         #     logger.error(f"Failed to send notifications to robot: {e}")
@@ -239,8 +242,7 @@ class NotificationService:
         logger.info(f"Robot integration not implemented. {len(notifications)} notifications pending.")
         return False
     
-    @classmethod
-    def send_to_robot(cls, user_ids: List[int], message: str) -> bool:
+    def send_to_robot(self, user_ids: List[int], message: str) -> bool:
         """
         直接发送消息到公司机器人
         
@@ -267,34 +269,103 @@ class NotificationService:
         logger.info(f"Robot integration not implemented. Message to {len(user_ids)} users pending.")
         return False
     
-    @classmethod
-    def mark_all_as_read(cls, user: User) -> int:
+    def get_by_id(self, pk: int, user_id: int) -> Notification:
+        """
+        获取通知详情
+        
+        Args:
+            pk: 主键
+            user_id: 用户 ID（用于权限验证）
+            
+        Returns:
+            通知对象
+            
+        Raises:
+            BusinessError: 如果不存在或无权限
+        """
+        notification = self.repository.get_by_id(pk)
+        self.validate_not_none(
+            notification,
+            f'通知 {pk} 不存在'
+        )
+        
+        # 验证权限：只能访问自己的通知
+        if notification.recipient_id != user_id:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权访问该通知'
+            )
+        
+        return notification
+    
+    def get_list_for_user(
+        self,
+        user_id: int,
+        is_read: Optional[bool] = None,
+        ordering: str = '-created_at'
+    ) -> List[Notification]:
+        """
+        获取用户的通知列表
+        
+        Args:
+            user_id: 用户 ID
+            is_read: 是否已读（可选）
+            ordering: 排序字段
+            
+        Returns:
+            通知列表
+        """
+        filters = {}
+        if is_read is not None:
+            filters['is_read'] = is_read
+        
+        return list(self.repository.get_for_user(
+            user_id=user_id,
+            filters=filters if filters else None,
+            ordering=ordering
+        ))
+    
+    def mark_as_read(self, pk: int, user_id: int) -> Notification:
+        """
+        标记单条通知为已读
+        
+        Args:
+            pk: 通知主键
+            user_id: 用户 ID
+            
+        Returns:
+            更新后的通知对象
+            
+        Raises:
+            BusinessError: 如果不存在或无权限
+        """
+        notification = self.get_by_id(pk, user_id)
+        
+        if notification.is_read:
+            return notification
+        
+        return self.repository.mark_as_read(notification)
+    
+    def mark_all_as_read(self, user_id: int) -> int:
         """
         标记用户所有通知为已读
         
         Args:
-            user: 用户实例
+            user_id: 用户 ID
             
         Returns:
             更新的通知数量
         """
-        return Notification.objects.filter(
-            recipient=user,
-            is_read=False
-        ).update(
-            is_read=True,
-            read_at=timezone.now()
-        )
+        return self.repository.mark_all_as_read(user_id)
     
-    @classmethod
-    def get_unread_count(cls, user: User) -> int:
+    def get_unread_count(self, user_id: int) -> int:
         """
         获取用户未读通知数量
         
         Args:
-            user: 用户实例
+            user_id: 用户 ID
             
         Returns:
             未读通知数量
         """
-        return Notification.get_unread_count(user)
+        return self.repository.get_unread_count(user_id)
