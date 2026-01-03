@@ -400,9 +400,73 @@ class TaskAssignmentRepository(BaseRepository[TaskAssignment]):
         
         assignment.save(update_fields=update_fields)
         return assignment
+    
+    def get_by_id_for_user(
+        self,
+        assignment_id: int,
+        user: 'User'
+    ) -> Optional[TaskAssignment]:
+        """
+        根据ID和用户获取任务分配（用于验证所有权）
+        
+        Args:
+            assignment_id: 任务分配 ID
+            user: 用户对象
+            
+        Returns:
+            任务分配对象或 None
+        """
+        return self.model.objects.select_related('task').filter(
+            id=assignment_id,
+            assignee=user,
+            task__is_deleted=False
+        ).first()
 
 
-class TaskKnowledgeRepository(BaseRepository[TaskKnowledge]):
+class TaskAssociationRepositoryMixin:
+    """
+    任务关联仓储混入类
+    
+    提供通用的关联创建方法，减少重复代码
+    """
+    
+    def create_association_generic(
+        self,
+        task_id: int,
+        resource_id: int,
+        order: int,
+        resource_id_field: str,
+        resource_uuid: str = None,
+        version_number: int = None
+    ):
+        """
+        通用的关联创建方法
+        
+        Args:
+            task_id: 任务 ID
+            resource_id: 资源 ID（knowledge_id 或 quiz_id）
+            order: 顺序
+            resource_id_field: 资源ID字段名（'knowledge_id' 或 'quiz_id'）
+            resource_uuid: 资源 UUID（可选）
+            version_number: 版本号（可选）
+            
+        Returns:
+            创建的关联对象
+        """
+        data = {
+            'task_id': task_id,
+            resource_id_field: resource_id,
+            'order': order,
+        }
+        if resource_uuid:
+            data['resource_uuid'] = resource_uuid
+        if version_number:
+            data['version_number'] = version_number
+        
+        return self.model.objects.create(**data)
+
+
+class TaskKnowledgeRepository(BaseRepository[TaskKnowledge], TaskAssociationRepositoryMixin):
     """任务知识关联仓储"""
     
     model = TaskKnowledge
@@ -442,17 +506,14 @@ class TaskKnowledgeRepository(BaseRepository[TaskKnowledge]):
         Returns:
             创建的任务知识关联对象
         """
-        data = {
-            'task_id': task_id,
-            'knowledge_id': knowledge_id,
-            'order': order,
-        }
-        if resource_uuid:
-            data['resource_uuid'] = resource_uuid
-        if version_number:
-            data['version_number'] = version_number
-        
-        return self.model.objects.create(**data)
+        return self.create_association_generic(
+            task_id=task_id,
+            resource_id=knowledge_id,
+            order=order,
+            resource_id_field='knowledge_id',
+            resource_uuid=resource_uuid,
+            version_number=version_number
+        )
     
     def delete_by_task(self, task_id: int) -> None:
         """
@@ -480,7 +541,7 @@ class TaskKnowledgeRepository(BaseRepository[TaskKnowledge]):
         )
 
 
-class TaskQuizRepository(BaseRepository[TaskQuiz]):
+class TaskQuizRepository(BaseRepository[TaskQuiz], TaskAssociationRepositoryMixin):
     """任务试卷关联仓储"""
     
     model = TaskQuiz
@@ -520,17 +581,14 @@ class TaskQuizRepository(BaseRepository[TaskQuiz]):
         Returns:
             创建的任务试卷关联对象
         """
-        data = {
-            'task_id': task_id,
-            'quiz_id': quiz_id,
-            'order': order,
-        }
-        if resource_uuid:
-            data['resource_uuid'] = resource_uuid
-        if version_number:
-            data['version_number'] = version_number
-        
-        return self.model.objects.create(**data)
+        return self.create_association_generic(
+            task_id=task_id,
+            resource_id=quiz_id,
+            order=order,
+            resource_id_field='quiz_id',
+            resource_uuid=resource_uuid,
+            version_number=version_number
+        )
     
     def delete_by_task(self, task_id: int) -> None:
         """
@@ -556,6 +614,26 @@ class TaskQuizRepository(BaseRepository[TaskQuiz]):
             .order_by('order')
             .values_list('quiz_id', flat=True)
         )
+    
+    def get_by_task_and_quiz(
+        self,
+        task_id: int,
+        quiz_id: int
+    ) -> Optional[TaskQuiz]:
+        """
+        根据任务ID和试卷ID获取任务试卷关联
+        
+        Args:
+            task_id: 任务 ID
+            quiz_id: 试卷 ID
+            
+        Returns:
+            任务试卷关联对象或 None
+        """
+        return self.model.objects.select_related('quiz').filter(
+            task_id=task_id,
+            quiz_id=quiz_id
+        ).first()
 
 
 class KnowledgeLearningProgressRepository(BaseRepository[KnowledgeLearningProgress]):

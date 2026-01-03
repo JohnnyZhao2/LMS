@@ -3,6 +3,7 @@
 
 编排业务逻辑，协调 Repository 和 Domain Service。
 """
+import uuid
 from typing import Optional, List
 from django.db import transaction
 from django.db.models import QuerySet
@@ -12,6 +13,7 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from .models import Question
 from .repositories import QuestionRepository
+from apps.knowledge.repositories import TagRepository
 
 
 class QuestionService(BaseService):
@@ -19,6 +21,7 @@ class QuestionService(BaseService):
     
     def __init__(self):
         self.repository = QuestionRepository()
+        self.tag_repository = TagRepository()
     
     def get_by_id(self, pk: int, user=None) -> Question:
         """
@@ -41,12 +44,7 @@ class QuestionService(BaseService):
         )
         
         # 权限检查：非管理员只能访问已发布的题目
-        if user and not user.is_admin:
-            if question.status != 'PUBLISHED' or not question.is_current:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该题目'
-                )
+        self.check_published_resource_access(question, user, '题目')
         
         return question
     
@@ -156,10 +154,7 @@ class QuestionService(BaseService):
         data.setdefault('published_at', timezone.now())
         
         # 处理版本号
-        import uuid
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = Question.next_version_number(data.get('resource_uuid'))
+        self._prepare_version_data(data)
         
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
@@ -311,13 +306,7 @@ class QuestionService(BaseService):
             data['status'] = 'PUBLISHED'
             data['is_current'] = True
             data['published_at'] = timezone.now()
-            import uuid
-            if not data.get('resource_uuid'):
-                data['resource_uuid'] = uuid.uuid4()
-            data.setdefault(
-                'version_number',
-                Question.next_version_number(data.get('resource_uuid'))
-            )
+            self._prepare_version_data(data)
             question = self.repository.create(**data)
             created_questions.append(question)
         
@@ -326,9 +315,9 @@ class QuestionService(BaseService):
             'count': len(created_questions)
         }
     
-    def _validate_question_data(self, data: dict, question_type: str = None) -> None:
+    def _validate_question_data(self, data: dict) -> None:
         """验证题目数据"""
-        question_type = question_type or data.get('question_type')
+        question_type = data.get('question_type')
         options = data.get('options', [])
         answer = data.get('answer')
         
@@ -392,13 +381,19 @@ class QuestionService(BaseService):
                 )
     
     def _set_line_type(self, question: Question, line_type_id: int) -> None:
-        """设置条线类型"""
-        from apps.knowledge.models import Tag
+        """
+        设置条线类型
         
-        line_type = Tag.objects.filter(
-            id=line_type_id,
-            tag_type='LINE',
-            is_active=True
+        Args:
+            question: 题目对象
+            line_type_id: 条线类型ID
+            
+        Raises:
+            BusinessError: 如果条线类型无效
+        """
+        # 通过Repository获取条线类型标签
+        line_type = self.tag_repository.get_all(
+            filters={'id': line_type_id, 'tag_type': 'LINE', 'is_active': True}
         ).first()
         
         if not line_type:
@@ -408,6 +403,17 @@ class QuestionService(BaseService):
             )
         
         question.set_line_type(line_type)
+    
+    def _prepare_version_data(self, data: dict) -> None:
+        """
+        准备版本号相关数据
+        
+        Args:
+            data: 题目数据字典（会被修改）
+        """
+        if not data.get('resource_uuid'):
+            data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = Question.next_version_number(data.get('resource_uuid'))
     
     def _create_new_version(
         self,

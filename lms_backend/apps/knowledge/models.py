@@ -356,25 +356,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     
     # 注意：publish() 方法已迁移到 KnowledgeService.publish()
     # 业务逻辑应在 Service 层处理
-    
-    def clone_as_draft(self, user):
-        """
-        [已废弃] 基于当前已发布版本创建新的草稿版本
-        
-        此方法已迁移到 KnowledgeService.create_or_get_draft_from_published()，请使用 Service 层方法。
-        此方法保留仅为向后兼容，将在未来版本中移除。
-        """
-        import warnings
-        warnings.warn(
-            'Knowledge.clone_as_draft() 已废弃，请使用 KnowledgeService.create_or_get_draft_from_published()',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        
-        # 委托给 Service 层
-        from .services import KnowledgeService
-        service = KnowledgeService()
-        return service.create_or_get_draft_from_published(self, user)
+    # clone_as_draft() 方法已移除，请使用 KnowledgeService.create_or_get_draft_from_published()
     
     # 注意：unpublish() 方法已迁移到 KnowledgeService.unpublish()
     # 业务逻辑应在 Service 层处理

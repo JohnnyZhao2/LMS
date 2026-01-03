@@ -10,7 +10,7 @@ Provides business logic for:
 This service layer separates business logic from Views and Serializers,
 improving code reusability and testability.
 """
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Callable
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
@@ -18,13 +18,16 @@ from django.utils import timezone
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User
+from apps.users.repositories import UserRepository
 from apps.users.permissions import (
     get_current_role,
     get_accessible_students,
     validate_students_in_scope,
 )
 from apps.knowledge.models import Knowledge
+from apps.knowledge.repositories import KnowledgeRepository
 from apps.quizzes.models import Quiz
+from apps.quizzes.repositories import QuizRepository
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 from .repositories import (
@@ -55,6 +58,8 @@ class TaskService(BaseService):
         self.task_assignment_repository = TaskAssignmentRepository()
         self.task_knowledge_repository = TaskKnowledgeRepository()
         self.task_quiz_repository = TaskQuizRepository()
+        self.knowledge_repository = KnowledgeRepository()
+        self.quiz_repository = QuizRepository()
         self.domain_service = TaskDomainService()
     
     def get_task_queryset_for_user(self, user: User) -> QuerySet:
@@ -169,6 +174,7 @@ class TaskService(BaseService):
     
     @transaction.atomic
     def create_task(
+        self,
         title: str,
         description: str,
         deadline,
@@ -221,50 +227,87 @@ class TaskService(BaseService):
         
         return task
     
+    def _create_associations(
+        self,
+        task: Task,
+        resource_ids: List[int],
+        repository: Any,
+        association_repository: Any,
+        resource_type: str
+    ) -> None:
+        """
+        通用的关联创建方法
+        
+        Args:
+            task: 任务对象
+            resource_ids: 资源ID列表（knowledge_ids 或 quiz_ids）
+            repository: 资源仓储对象（KnowledgeRepository 或 QuizRepository）
+            association_repository: 关联仓储对象（TaskKnowledgeRepository 或 TaskQuizRepository）
+            resource_type: 资源类型（'knowledge' 或 'quiz'）
+        """
+        # 通过Repository获取已发布的资源
+        if resource_type == 'knowledge':
+            # Knowledge需要prefetch_related
+            queryset = repository.model.objects.filter(
+                id__in=resource_ids,
+                is_deleted=False,
+                status='PUBLISHED'
+            ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+        else:  # quiz
+            queryset = repository.model.objects.filter(
+                id__in=resource_ids,
+                is_deleted=False,
+                status='PUBLISHED'
+            )
+        
+        resource_map = {r.id: r for r in queryset}
+        
+        for order, resource_id in enumerate(resource_ids, start=1):
+            resource = resource_map.get(resource_id)
+            if not resource:
+                continue
+            
+            # 根据资源类型创建关联
+            if resource_type == 'knowledge':
+                association_repository.create_association(
+                    task_id=task.id,
+                    knowledge_id=resource_id,
+                    order=order,
+                    resource_uuid=resource.resource_uuid,
+                    version_number=resource.version_number
+                )
+            else:  # quiz
+                association_repository.create_association(
+                    task_id=task.id,
+                    quiz_id=resource_id,
+                    order=order,
+                    resource_uuid=resource.resource_uuid,
+                    version_number=resource.version_number
+                )
+    
     def _create_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         """Create TaskKnowledge associations for a task."""
-        knowledge_queryset = Knowledge.objects.filter(
-            id__in=knowledge_ids,
-            is_deleted=False,
-            status='PUBLISHED'
-        ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
-        knowledge_map = {k.id: k for k in knowledge_queryset}
-        
-        for order, knowledge_id in enumerate(knowledge_ids, start=1):
-            knowledge = knowledge_map.get(knowledge_id)
-            if not knowledge:
-                continue
-            self.task_knowledge_repository.create_association(
-                task_id=task.id,
-                knowledge_id=knowledge_id,
-                order=order,
-                resource_uuid=knowledge.resource_uuid,
-                version_number=knowledge.version_number
-            )
+        self._create_associations(
+            task=task,
+            resource_ids=knowledge_ids,
+            repository=self.knowledge_repository,
+            association_repository=self.task_knowledge_repository,
+            resource_type='knowledge'
+        )
     
     def _create_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
         """Create TaskQuiz associations for a task."""
-        quiz_queryset = Quiz.objects.filter(
-            id__in=quiz_ids,
-            is_deleted=False,
-            status='PUBLISHED'
+        self._create_associations(
+            task=task,
+            resource_ids=quiz_ids,
+            repository=self.quiz_repository,
+            association_repository=self.task_quiz_repository,
+            resource_type='quiz'
         )
-        quiz_map = {q.id: q for q in quiz_queryset}
-        
-        for order, quiz_id in enumerate(quiz_ids, start=1):
-            quiz = quiz_map.get(quiz_id)
-            if not quiz:
-                continue
-            self.task_quiz_repository.create_association(
-                task_id=task.id,
-                quiz_id=quiz_id,
-                order=order,
-                resource_uuid=quiz.resource_uuid,
-                version_number=quiz.version_number
-            )
     
     @transaction.atomic
     def update_task(
+        self,
         task: Task,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
@@ -301,21 +344,45 @@ class TaskService(BaseService):
         
         return task
     
+    def _update_associations(
+        self,
+        task: Task,
+        resource_ids: List[int],
+        repository: Any,
+        create_method: Callable[[Task, List[int]], None]
+    ) -> None:
+        """
+        通用的关联更新方法
+        
+        Args:
+            task: 任务对象
+            resource_ids: 资源ID列表（knowledge_ids 或 quiz_ids）
+            repository: 关联仓储对象（TaskKnowledgeRepository 或 TaskQuizRepository）
+            create_method: 创建关联的方法（_create_knowledge_associations 或 _create_quiz_associations）
+        """
+        existing_ids = repository.get_existing_ids(task.id)
+        if existing_ids != list(resource_ids):
+            repository.delete_by_task(task.id)
+            if resource_ids:
+                create_method(task, resource_ids)
+    
     def _update_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         """Update TaskKnowledge associations for a task."""
-        existing_ids = self.task_knowledge_repository.get_existing_ids(task.id)
-        if existing_ids != list(knowledge_ids):
-            self.task_knowledge_repository.delete_by_task(task.id)
-            if knowledge_ids:
-                self._create_knowledge_associations(task, knowledge_ids)
+        self._update_associations(
+            task=task,
+            resource_ids=knowledge_ids,
+            repository=self.task_knowledge_repository,
+            create_method=self._create_knowledge_associations
+        )
     
     def _update_quiz_associations(self, task: Task, quiz_ids: List[int]) -> None:
         """Update TaskQuiz associations for a task."""
-        existing_ids = self.task_quiz_repository.get_existing_ids(task.id)
-        if existing_ids != list(quiz_ids):
-            self.task_quiz_repository.delete_by_task(task.id)
-            if quiz_ids:
-                self._create_quiz_associations(task, quiz_ids)
+        self._update_associations(
+            task=task,
+            resource_ids=quiz_ids,
+            repository=self.task_quiz_repository,
+            create_method=self._create_quiz_associations
+        )
     
     def _update_assignments(self, task: Task, assignee_ids: List[int]) -> None:
         """Update TaskAssignment records for a task."""
@@ -387,6 +454,52 @@ class TaskService(BaseService):
         return task
     
     @staticmethod
+    def _validate_published_resources(
+        resource_ids: List[int],
+        repository: Any,
+        check_draft: bool = False
+    ) -> Tuple[bool, List[int], List[int]]:
+        """
+        通用的已发布资源验证方法
+        
+        Args:
+            resource_ids: 资源ID列表
+            repository: 资源仓储对象
+            check_draft: 是否检查草稿版本（用于Knowledge）
+            
+        Returns:
+            Tuple of (is_valid, draft_ids_or_empty, not_found_ids)
+        """
+        if not resource_ids:
+            return True, [], []
+        
+        # 通过Repository获取已发布的资源
+        published = repository.model.objects.filter(
+            id__in=resource_ids,
+            is_deleted=False,
+            status='PUBLISHED'
+        )
+        published_ids = set(published.values_list('id', flat=True))
+        invalid_ids = set(resource_ids) - published_ids
+        
+        if not invalid_ids:
+            return True, [], []
+        
+        # 如果检查草稿版本（Knowledge特有）
+        if check_draft:
+            draft = repository.model.objects.filter(
+                id__in=invalid_ids,
+                is_deleted=False,
+                status='DRAFT'
+            )
+            draft_ids = list(draft.values_list('id', flat=True))
+            not_found_ids = list(invalid_ids - set(draft_ids))
+            return False, draft_ids, not_found_ids
+        else:
+            # Quiz和User不需要检查草稿
+            return False, [], list(invalid_ids)
+    
+    @staticmethod
     def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int], List[int]]:
         """
         Validate knowledge document IDs.
@@ -397,29 +510,12 @@ class TaskService(BaseService):
         Returns:
             Tuple of (is_valid, draft_ids, not_found_ids)
         """
-        if not knowledge_ids:
-            return True, [], []
-        
-        published = Knowledge.objects.filter(
-            id__in=knowledge_ids,
-            is_deleted=False,
-            status='PUBLISHED'
+        knowledge_repo = KnowledgeRepository()
+        return TaskService._validate_published_resources(
+            knowledge_ids,
+            knowledge_repo,
+            check_draft=True
         )
-        published_ids = set(published.values_list('id', flat=True))
-        invalid_ids = set(knowledge_ids) - published_ids
-        
-        if not invalid_ids:
-            return True, [], []
-        
-        draft = Knowledge.objects.filter(
-            id__in=invalid_ids,
-            is_deleted=False,
-            status='DRAFT'
-        )
-        draft_ids = list(draft.values_list('id', flat=True))
-        not_found_ids = list(invalid_ids - set(draft_ids))
-        
-        return False, draft_ids, not_found_ids
     
     @staticmethod
     def validate_quiz_ids(quiz_ids: List[int]) -> Tuple[bool, List[int]]:
@@ -432,18 +528,13 @@ class TaskService(BaseService):
         Returns:
             Tuple of (is_valid, invalid_ids)
         """
-        if not quiz_ids:
-            return True, []
-        
-        existing = Quiz.objects.filter(
-            id__in=quiz_ids,
-            is_deleted=False,
-            status='PUBLISHED'
+        quiz_repo = QuizRepository()
+        is_valid, _, invalid_ids = TaskService._validate_published_resources(
+            quiz_ids,
+            quiz_repo,
+            check_draft=False
         )
-        existing_ids = set(existing.values_list('id', flat=True))
-        invalid_ids = list(set(quiz_ids) - existing_ids)
-        
-        return len(invalid_ids) == 0, invalid_ids
+        return is_valid, invalid_ids
     
     @staticmethod
     def validate_assignee_ids(assignee_ids: List[int]) -> Tuple[bool, List[int]]:
@@ -459,7 +550,12 @@ class TaskService(BaseService):
         if not assignee_ids:
             return False, []
         
-        existing = User.objects.filter(id__in=assignee_ids, is_active=True)
+        user_repo = UserRepository()
+        # 用户验证逻辑不同：检查is_active而不是status
+        existing = user_repo.model.objects.filter(
+            id__in=assignee_ids,
+            is_active=True
+        )
         existing_ids = set(existing.values_list('id', flat=True))
         invalid_ids = list(set(assignee_ids) - existing_ids)
         

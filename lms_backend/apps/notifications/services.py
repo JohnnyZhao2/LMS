@@ -97,8 +97,7 @@ class NotificationService(BaseService):
                 'task': task
             })
         
-        with transaction.atomic():
-            notifications = self.repository.batch_create(notifications_data)
+        notifications = self.repository.batch_create(notifications_data)
         
         # 尝试发送到机器人
         self._send_to_robot_batch(notifications)

@@ -13,6 +13,8 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Quiz
 from .repositories import QuizRepository, QuizQuestionRepository
 from apps.questions.models import Question
+from apps.questions.repositories import QuestionRepository
+from apps.knowledge.repositories import TagRepository
 
 
 class QuizService(BaseService):
@@ -21,6 +23,8 @@ class QuizService(BaseService):
     def __init__(self):
         self.repository = QuizRepository()
         self.quiz_question_repository = QuizQuestionRepository()
+        self.question_repository = QuestionRepository()
+        self.tag_repository = TagRepository()
     
     def get_by_id(self, pk: int) -> Quiz:
         """
@@ -129,11 +133,7 @@ class QuizService(BaseService):
         data.setdefault('published_at', timezone.now())
         
         # 处理版本号
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = self.repository.next_version_number(
-            data.get('resource_uuid')
-        )
+        self._prepare_quiz_version_data(data)
         
         # 3. 创建试卷
         quiz = self.repository.create(**data)
@@ -151,33 +151,7 @@ class QuizService(BaseService):
         
         # 创建并添加新题目
         for question_data in new_questions_data:
-            line_type_id = question_data.pop('line_type_id', None)
-            question_attrs = {
-                'created_by': user,
-                'status': 'PUBLISHED',
-                'is_current': True,
-                'published_at': timezone.now(),
-                'version_number': Question.next_version_number(
-                    question_data.get('resource_uuid')
-                ),
-                **question_data,
-            }
-            question = Question.objects.create(**question_attrs)
-            
-            # 设置 line_type 如果提供
-            if line_type_id:
-                from apps.knowledge.models import Tag
-                line_type = Tag.objects.get(
-                    id=line_type_id,
-                    tag_type='LINE',
-                    is_active=True
-                )
-                question.set_line_type(line_type)
-            
-            self.quiz_question_repository.add_question(
-                quiz_id=quiz.id,
-                question_id=question.id
-            )
+            self._create_and_add_question(quiz, question_data, user)
         
         return quiz
     
@@ -313,10 +287,8 @@ class QuizService(BaseService):
         for question_id in existing_question_ids:
             if question_id not in existing_quiz_question_ids:
                 # 验证题目存在
-                if not Question.objects.filter(
-                    id=question_id,
-                    is_deleted=False
-                ).exists():
+                question = self.question_repository.get_by_id(question_id)
+                if not question:
                     raise BusinessError(
                         code=ErrorCodes.RESOURCE_NOT_FOUND,
                         message=f'题目 {question_id} 不存在'
@@ -328,33 +300,7 @@ class QuizService(BaseService):
         
         # 创建并添加新题目
         for question_data in new_questions_data:
-            line_type_id = question_data.pop('line_type_id', None)
-            question_attrs = {
-                'created_by': user,
-                'status': 'PUBLISHED',
-                'is_current': True,
-                'published_at': timezone.now(),
-                'version_number': Question.next_version_number(
-                    question_data.get('resource_uuid')
-                ),
-                **question_data,
-            }
-            question = Question.objects.create(**question_attrs)
-            
-            # 设置 line_type 如果提供
-            if line_type_id:
-                from apps.knowledge.models import Tag
-                line_type = Tag.objects.get(
-                    id=line_type_id,
-                    tag_type='LINE',
-                    is_active=True
-                )
-                question.set_line_type(line_type)
-            
-            self.quiz_question_repository.add_question(
-                quiz_id=quiz.id,
-                question_id=question.id
-            )
+            self._create_and_add_question(quiz, question_data, user)
         
         return quiz
     
@@ -478,29 +424,28 @@ class QuizService(BaseService):
             )
         
         # 验证所有题目存在
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=question_ids,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(question_ids) - existing_ids
+        invalid_ids = []
+        for question_id in question_ids:
+            question = self.question_repository.get_by_id(question_id)
+            if not question:
+                invalid_ids.append(question_id)
         if invalid_ids:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message=f'题目不存在: {list(invalid_ids)}'
+                message=f'题目不存在: {invalid_ids}'
             )
         
         # 创建试卷
-        quiz = self.repository.create(
-            title=title,
-            description=description,
-            created_by=user,
-            status='PUBLISHED',
-            is_current=True,
-            published_at=timezone.now(),
-            version_number=self.repository.next_version_number(None)
-        )
+        quiz_data = {
+            'title': title,
+            'description': description,
+            'created_by': user,
+            'status': 'PUBLISHED',
+            'is_current': True,
+            'published_at': timezone.now(),
+        }
+        self._prepare_quiz_version_data(quiz_data)
+        quiz = self.repository.create(**quiz_data)
         
         # 添加题目
         for order, question_id in enumerate(question_ids, start=1):
@@ -511,6 +456,101 @@ class QuizService(BaseService):
             )
         
         return quiz
+    
+    def _create_and_add_question(
+        self,
+        quiz: Quiz,
+        question_data: dict,
+        user
+    ) -> Question:
+        """
+        创建题目并添加到试卷
+        
+        Args:
+            quiz: 试卷对象
+            question_data: 题目数据字典（会被修改，line_type_id 会被弹出）
+            user: 创建用户
+            
+        Returns:
+            创建的题目对象
+        """
+        line_type_id = question_data.pop('line_type_id', None)
+        
+        # 准备版本数据
+        self._prepare_question_version_data(question_data)
+        
+        # 准备题目属性
+        question_attrs = {
+            'created_by': user,
+            'status': 'PUBLISHED',
+            'is_current': True,
+            'published_at': timezone.now(),
+            **question_data,
+        }
+        
+        # 创建题目
+        question = self.question_repository.create(**question_attrs)
+        
+        # 设置条线类型
+        if line_type_id:
+            self._set_question_line_type(question, line_type_id)
+        
+        # 添加到试卷
+        self.quiz_question_repository.add_question(
+            quiz_id=quiz.id,
+            question_id=question.id
+        )
+        
+        return question
+    
+    def _prepare_quiz_version_data(self, data: dict) -> None:
+        """
+        准备试卷版本号相关数据
+        
+        Args:
+            data: 试卷数据字典（会被修改）
+        """
+        if not data.get('resource_uuid'):
+            data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = self.repository.next_version_number(
+            data.get('resource_uuid')
+        )
+    
+    def _prepare_question_version_data(self, data: dict) -> None:
+        """
+        准备题目版本号相关数据
+        
+        Args:
+            data: 题目数据字典（会被修改）
+        """
+        if not data.get('resource_uuid'):
+            data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = Question.next_version_number(
+            data.get('resource_uuid')
+        )
+    
+    def _set_question_line_type(self, question: Question, line_type_id: int) -> None:
+        """
+        设置题目的条线类型
+        
+        Args:
+            question: 题目对象
+            line_type_id: 条线类型ID
+            
+        Raises:
+            BusinessError: 如果条线类型无效
+        """
+        line_type = self.tag_repository.get_all(
+            filters={'id': line_type_id, 'tag_type': 'LINE', 'is_active': True}
+        ).first()
+        
+        if not line_type:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='无效的条线类型ID'
+            )
+        
+        question.set_line_type(line_type)
     
     def _validate_quiz_data(self, data: dict) -> None:
         """验证试卷数据"""
@@ -580,10 +620,10 @@ class QuizService(BaseService):
             )
         
         # 取消其他版本的 is_current 标志
-        self.repository.model.objects.filter(
+        self.repository.unset_current_flag_for_others(
             resource_uuid=source.resource_uuid,
-            status='PUBLISHED'
-        ).exclude(pk=new_quiz.pk).update(is_current=False)
+            exclude_pk=new_quiz.pk
+        )
         
         return new_quiz
     
@@ -625,10 +665,8 @@ class QuizService(BaseService):
                     relation.save(update_fields=['order'])
             else:
                 # 验证题目存在
-                if not Question.objects.filter(
-                    id=question_id,
-                    is_deleted=False
-                ).exists():
+                question = self.question_repository.get_by_id(question_id)
+                if not question:
                     raise BusinessError(
                         code=ErrorCodes.RESOURCE_NOT_FOUND,
                         message=f'题目 {question_id} 不存在'

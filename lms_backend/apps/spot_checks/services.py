@@ -14,7 +14,8 @@ from django.utils import timezone
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.models import User
-from apps.users.permissions import get_current_role, filter_queryset_by_data_scope
+from apps.users.permissions import get_current_role, filter_queryset_by_data_scope, is_student_in_scope
+from apps.users.repositories import UserRepository
 from .models import SpotCheck
 from .repositories import SpotCheckRepository
 
@@ -22,8 +23,9 @@ from .repositories import SpotCheckRepository
 class SpotCheckService(BaseService):
     """抽查记录应用服务"""
     
-    def __init__(self):
+    def __init__(self, user_repository: UserRepository = None):
         self.repository = SpotCheckRepository()
+        self.user_repository = user_repository or UserRepository()
     
     def get_by_id(self, pk: int, user: User) -> SpotCheck:
         """
@@ -106,9 +108,7 @@ class SpotCheckService(BaseService):
         
         # 如果传入的是 ID，需要获取用户对象
         if isinstance(student, int):
-            from apps.users.repositories import UserRepository
-            user_repo = UserRepository()
-            student = user_repo.get_by_id(student)
+            student = self.user_repository.get_by_id(student)
             self.validate_not_none(student, f'学员 {data.get("student")} 不存在')
         
         if not isinstance(student, User):
@@ -120,12 +120,7 @@ class SpotCheckService(BaseService):
         self._validate_student_scope(student, user)
         
         # 2. 验证抽查时间
-        checked_at = data.get('checked_at')
-        if checked_at and checked_at > timezone.now():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='抽查时间不能是未来时间'
-            )
+        self._validate_checked_at(data.get('checked_at'))
         
         # 3. 准备数据
         data['student'] = student
@@ -140,11 +135,22 @@ class SpotCheckService(BaseService):
             from apps.notifications.services import NotificationService
             notification_service = NotificationService()
             notification_service.send_spot_check_notification(spot_check)
-        except Exception:
+        except (BusinessError, ValueError, AttributeError, KeyError, TypeError) as e:
             # 通知发送失败不应影响抽查记录的创建
+            # 捕获业务异常、值错误、属性错误、键错误和类型错误等常见异常
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to send notification for spot check {spot_check.id}")
+            logger.warning(f"Failed to send notification for spot check {spot_check.id}: {str(e)}")
+        except (ConnectionError, TimeoutError) as e:
+            # 捕获网络连接相关异常
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Network error sending notification for spot check {spot_check.id}: {str(e)}")
+        except Exception as e:
+            # 捕获其他未预期的异常（如数据库错误等），但不影响业务逻辑
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Unexpected error sending notification for spot check {spot_check.id}: {str(e)}", exc_info=True)
         
         return spot_check
     
@@ -179,12 +185,7 @@ class SpotCheckService(BaseService):
             )
         
         # 验证抽查时间
-        checked_at = data.get('checked_at')
-        if checked_at and checked_at > timezone.now():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='抽查时间不能是未来时间'
-            )
+        self._validate_checked_at(data.get('checked_at'))
         
         # 不允许修改 student 和 checker
         data.pop('student', None)
@@ -293,35 +294,27 @@ class SpotCheckService(BaseService):
         Raises:
             BusinessError: 如果权限不足
         """
-        current_role = get_current_role(user)
+        if not is_student_in_scope(user, spot_check.student_id):
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权访问该抽查记录'
+            )
+    
+    def _validate_checked_at(self, checked_at) -> None:
+        """
+        验证抽查时间
         
-        # 管理员可以访问所有记录
-        if current_role == 'ADMIN':
-            return
-        
-        # 导师只能访问名下学员的记录
-        if current_role == 'MENTOR':
-            if spot_check.student.mentor_id != user.id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该抽查记录'
-                )
-            return
-        
-        # 室经理只能访问本室学员的记录
-        if current_role == 'DEPT_MANAGER':
-            if not user.department_id or spot_check.student.department_id != user.department_id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该抽查记录'
-                )
-            return
-        
-        # 其他角色无权访问
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message='无权访问该抽查记录'
-        )
+        Args:
+            checked_at: 抽查时间
+            
+        Raises:
+            BusinessError: 如果时间为未来时间
+        """
+        if checked_at and checked_at > timezone.now():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='抽查时间不能是未来时间'
+            )
     
     def _validate_student_scope(self, student: User, user: User) -> None:
         """
@@ -337,37 +330,27 @@ class SpotCheckService(BaseService):
         Requirements: 14.2, 14.3
         Property 35: 抽查学员范围限制
         """
-        current_role = get_current_role(user)
-        
-        # 管理员可以为任何学员创建
-        if current_role == 'ADMIN':
-            return
-        
-        # 导师只能为名下学员创建
-        if current_role == 'MENTOR':
-            if student.mentor_id != user.id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='只能为名下学员创建抽查记录'
-                )
-            return
-        
-        # 室经理只能为本室学员创建
-        if current_role == 'DEPT_MANAGER':
-            if not user.department_id:
+        if not is_student_in_scope(user, student.id):
+            current_role = get_current_role(user)
+            
+            # 根据角色提供更具体的错误消息
+            if current_role == 'DEPT_MANAGER' and not user.department_id:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='您未分配部门，无法创建抽查记录'
                 )
-            if student.department_id != user.department_id:
+            elif current_role == 'MENTOR':
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='只能为名下学员创建抽查记录'
+                )
+            elif current_role == 'DEPT_MANAGER':
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='只能为本室学员创建抽查记录'
                 )
-            return
-        
-        # 其他角色无权创建
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message='无权创建抽查记录'
-        )
+            else:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权创建抽查记录'
+                )

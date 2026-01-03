@@ -87,6 +87,16 @@ class Role(TimestampMixin, models.Model):
         ('TEAM_MANAGER', '团队经理'),
     ]
     
+    # 角色优先级顺序（从高到低）
+    # 用于确定用户的默认角色
+    ROLE_PRIORITY_ORDER = [
+        'ADMIN',
+        'DEPT_MANAGER',
+        'MENTOR',
+        'TEAM_MANAGER',
+        'STUDENT',
+    ]
+    
     code = models.CharField(
         max_length=20, 
         unique=True, 

@@ -3,6 +3,7 @@
 
 编排业务逻辑，协调 Repository 和 Domain Service。
 """
+import uuid
 from typing import Optional, List
 from django.db import transaction
 from django.utils import timezone
@@ -45,12 +46,13 @@ class KnowledgeService(BaseService):
             f'知识文档 {pk} 不存在'
         )
         
-        # 权限检查：非管理员只能访问已发布的知识
-        if user and not user.is_admin and knowledge.status != 'PUBLISHED':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问该知识文档'
-            )
+        # 权限检查：非管理员只能访问已发布且当前版本的知识
+        if user and not user.is_admin:
+            if knowledge.status != 'PUBLISHED' or not knowledge.is_current:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权访问该知识文档'
+                )
         
         # 如果是已发布版本，检查是否有草稿（管理员可见）
         if knowledge.status == 'PUBLISHED' and user and user.is_admin:
@@ -80,12 +82,13 @@ class KnowledgeService(BaseService):
             f'知识文档 {pk} 不存在'
         )
         
-        # 权限检查：非管理员只能访问已发布的知识
-        if user and not user.is_admin and not knowledge_domain.is_published():
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问该知识文档'
-            )
+        # 权限检查：非管理员只能访问已发布且当前版本的知识
+        if user and not user.is_admin:
+            if not knowledge_domain.is_published() or not knowledge_domain.is_current:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权访问该知识文档'
+                )
         
         # 如果是已发布版本，检查是否有草稿（管理员可见）
         if knowledge_domain.is_published() and user and user.is_admin:
@@ -172,7 +175,6 @@ class KnowledgeService(BaseService):
         
         # 处理版本号
         if not data.get('resource_uuid'):
-            import uuid
             data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
         
@@ -269,10 +271,10 @@ class KnowledgeService(BaseService):
         knowledge_orm.save()
         
         # 取消其他版本的 is_current 标志
-        Knowledge.objects.filter(
+        self.repository.unset_current_flag_for_others(
             resource_uuid=knowledge_domain.resource_uuid,
-            status='PUBLISHED'
-        ).exclude(pk=pk).update(is_current=False)
+            exclude_pk=pk
+        )
         
         return knowledge_orm
     
@@ -390,25 +392,6 @@ class KnowledgeService(BaseService):
                     message='其他类型知识必须填写正文内容'
                 )
     
-    def _validate_for_publish(self, knowledge: Knowledge) -> None:
-        """验证知识文档是否可发布"""
-        if not knowledge.title.strip():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='标题不能为空'
-            )
-        
-        # 可以添加更多验证规则
-        self._validate_knowledge_data({
-            'knowledge_type': knowledge.knowledge_type,
-            'content': knowledge.content,
-            'fault_scenario': knowledge.fault_scenario,
-            'trigger_process': knowledge.trigger_process,
-            'solution': knowledge.solution,
-            'verification_plan': knowledge.verification_plan,
-            'recovery_plan': knowledge.recovery_plan,
-        })
-    
     def _set_tags(
         self,
         knowledge: Knowledge,
@@ -456,6 +439,28 @@ class KnowledgeService(BaseService):
         # 创建新草稿
         return self._create_draft_from_published(published, user)
     
+    def _calculate_next_version_number(
+        self,
+        source: Knowledge
+    ) -> int:
+        """
+        计算下一个版本号
+        
+        Args:
+            source: 源知识文档
+            
+        Returns:
+            下一个版本号
+        """
+        existing_versions = self.repository.get_version_numbers(
+            resource_uuid=source.resource_uuid
+        )
+        source_domain = KnowledgeMapper.to_domain(source)
+        return self.domain_service.calculate_next_version_number(
+            source_domain.version_number,
+            existing_versions
+        )
+    
     def _create_draft_from_published(
         self,
         source: Knowledge,
@@ -466,16 +471,7 @@ class KnowledgeService(BaseService):
         source_domain = KnowledgeMapper.to_domain(source)
         
         # 获取下一个版本号
-        existing_versions = list(
-            Knowledge.objects.filter(
-                resource_uuid=source.resource_uuid,
-                is_deleted=False
-            ).values_list('version_number', flat=True)
-        )
-        next_version = self.domain_service.calculate_next_version_number(
-            source_domain.version_number,
-            existing_versions
-        )
+        next_version = self._calculate_next_version_number(source)
         
         # 使用 Domain Service 创建草稿
         draft_domain = self.domain_service.create_draft_from_published(
@@ -500,16 +496,7 @@ class KnowledgeService(BaseService):
         source_domain = KnowledgeMapper.to_domain(source)
         
         # 获取下一个版本号
-        existing_versions = list(
-            Knowledge.objects.filter(
-                resource_uuid=source.resource_uuid,
-                is_deleted=False
-            ).values_list('version_number', flat=True)
-        )
-        next_version = self.domain_service.calculate_next_version_number(
-            source_domain.version_number,
-            existing_versions
-        )
+        next_version = self._calculate_next_version_number(source)
         
         # 使用 Domain Service 创建草稿
         draft_domain = self.domain_service.create_draft_from_published(
@@ -523,15 +510,14 @@ class KnowledgeService(BaseService):
             if hasattr(draft_domain, key) and key not in ['line_type_id', 'system_tag_ids', 'operation_tag_ids']:
                 setattr(draft_domain, key, value)
         
-        # 更新标签
-        if 'line_type_id' in data:
-            draft_domain.line_type_id = data['line_type_id']
-        if 'system_tag_ids' in data:
-            draft_domain.system_tag_ids = data['system_tag_ids']
-        if 'operation_tag_ids' in data:
-            draft_domain.operation_tag_ids = data['operation_tag_ids']
-        
         # 创建 Django Model
         draft_orm = self.repository.create_from_domain(draft_domain)
+        
+        # 统一使用_set_tags方法设置标签
+        line_type_id = data.get('line_type_id')
+        system_tag_ids = data.get('system_tag_ids')
+        operation_tag_ids = data.get('operation_tag_ids')
+        if line_type_id is not None or system_tag_ids is not None or operation_tag_ids is not None:
+            self._set_tags(draft_orm, line_type_id, system_tag_ids, operation_tag_ids)
         
         return draft_orm

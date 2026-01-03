@@ -698,3 +698,53 @@ def validate_students_in_scope(user, student_ids, current_role=None):
     invalid_ids = student_id_set - accessible_ids
     
     return len(invalid_ids) == 0, list(invalid_ids)
+
+
+def check_grading_permission(user, student_user, error_message='无权访问此答题记录'):
+    """
+    检查用户是否有权限对指定学员的答题记录进行评分。
+    
+    这是一个通用的权限检查工具函数，用于评分相关的操作。
+    
+    Args:
+        user: 执行评分的用户
+        student_user: 学员用户对象（答题记录的拥有者）
+        error_message: 权限被拒绝时的错误消息
+        
+    Raises:
+        BusinessError: 如果权限不足
+        
+    Requirements: 22.1, 22.2, 22.3, 22.5
+    Properties: 37, 38, 39, 40
+    """
+    from core.exceptions import BusinessError, ErrorCodes
+    
+    current_role = get_current_role(user)
+    
+    # 管理员可以访问所有数据
+    if current_role == 'ADMIN':
+        return
+    
+    # 导师只能访问其名下学员的数据
+    if current_role == 'MENTOR':
+        if student_user.mentor_id != user.id:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message=error_message
+            )
+        return
+    
+    # 室经理只能访问本室成员的数据
+    if current_role == 'DEPT_MANAGER':
+        if student_user.department_id != user.department_id:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message=error_message
+            )
+        return
+    
+    # 其他角色无权访问
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message
+    )

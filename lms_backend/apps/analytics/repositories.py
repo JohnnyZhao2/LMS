@@ -22,8 +22,8 @@ class TaskAssignmentAnalyticsRepository:
     提供用于分析统计的任务分配查询方法。
     """
     
-    @staticmethod
     def get_pending_tasks(
+        self,
         user_id: int,
         limit: int = 10
     ) -> QuerySet[TaskAssignment]:
@@ -50,8 +50,8 @@ class TaskAssignmentAnalyticsRepository:
             'knowledge_progress'
         ).order_by('task__deadline')[:limit]
     
-    @staticmethod
     def get_student_assignments(
+        self,
         user_id: int,
         task_deleted: bool = False
     ) -> QuerySet[TaskAssignment]:
@@ -70,8 +70,8 @@ class TaskAssignmentAnalyticsRepository:
             qs = qs.filter(task__is_deleted=False)
         return qs
     
-    @staticmethod
     def get_assignments_by_students(
+        self,
         student_ids: List[int],
         task_deleted: bool = False
     ) -> QuerySet[TaskAssignment]:
@@ -90,8 +90,22 @@ class TaskAssignmentAnalyticsRepository:
             qs = qs.filter(task__is_deleted=False)
         return qs.select_related('task')
     
-    @staticmethod
-    def calculate_task_stats(assignments: QuerySet) -> Dict[str, Any]:
+    def get_all_assignments(self, task_deleted: bool = False) -> QuerySet[TaskAssignment]:
+        """
+        获取所有任务分配
+        
+        Args:
+            task_deleted: 是否包含已删除的任务
+            
+        Returns:
+            QuerySet
+        """
+        qs = TaskAssignment.objects.all()
+        if not task_deleted:
+            qs = qs.filter(task__is_deleted=False)
+        return qs
+    
+    def calculate_task_stats(self, assignments: QuerySet) -> Dict[str, Any]:
         """
         计算任务统计信息
         
@@ -123,8 +137,7 @@ class KnowledgeAnalyticsRepository:
     提供用于分析统计的知识文档查询方法。
     """
     
-    @staticmethod
-    def get_latest_knowledge(limit: int = 5) -> QuerySet[Knowledge]:
+    def get_latest_knowledge(self, limit: int = 5) -> QuerySet[Knowledge]:
         """
         获取最新发布的知识文档
         
@@ -140,8 +153,8 @@ class KnowledgeAnalyticsRepository:
             'created_by', 'updated_by'
         ).order_by('-created_at')[:limit]
     
-    @staticmethod
     def get_knowledge_heat(
+        self,
         limit: int = 20,
         knowledge_type: str = None
     ) -> QuerySet[Knowledge]:
@@ -164,8 +177,7 @@ class KnowledgeAnalyticsRepository:
         
         return qs.order_by('-view_count')[:limit]
     
-    @staticmethod
-    def get_knowledge_statistics() -> Dict[str, Any]:
+    def get_knowledge_statistics(self) -> Dict[str, Any]:
         """
         获取知识文档总体统计
         
@@ -192,8 +204,8 @@ class SubmissionAnalyticsRepository:
     提供用于分析统计的答题记录查询方法。
     """
     
-    @staticmethod
     def get_student_submissions(
+        self,
         user_id: int,
         status_filter: List[str] = None,
         task_deleted: bool = False
@@ -222,8 +234,8 @@ class SubmissionAnalyticsRepository:
             'quiz'
         ).order_by('-submitted_at', '-created_at')
     
-    @staticmethod
     def get_student_graded_submissions(
+        self,
         user_id: int,
         task_deleted: bool = False
     ) -> QuerySet[Submission]:
@@ -237,14 +249,14 @@ class SubmissionAnalyticsRepository:
         Returns:
             QuerySet
         """
-        return SubmissionAnalyticsRepository.get_student_submissions(
+        return self.get_student_submissions(
             user_id=user_id,
             status_filter=['GRADED'],
             task_deleted=task_deleted
         )
     
-    @staticmethod
     def get_submissions_by_students(
+        self,
         student_ids: List[int],
         status: str = None,
         task_deleted: bool = False
@@ -270,8 +282,8 @@ class SubmissionAnalyticsRepository:
         
         return qs
     
-    @staticmethod
     def calculate_avg_score(
+        self,
         student_ids: List[int] = None,
         user_id: int = None,
         task_deleted: bool = False
@@ -300,8 +312,8 @@ class SubmissionAnalyticsRepository:
         result = qs.aggregate(avg_score=Avg('obtained_score'))
         return float(result['avg_score']) if result['avg_score'] else None
     
-    @staticmethod
     def get_pending_grading_count(
+        self,
         student_ids: List[int] = None,
         task_deleted: bool = False
     ) -> int:
@@ -325,8 +337,8 @@ class SubmissionAnalyticsRepository:
         
         return qs.count()
     
-    @staticmethod
     def get_score_summary(
+        self,
         user_id: int,
         task_deleted: bool = False
     ) -> Dict[str, Any]:
@@ -376,8 +388,8 @@ class AnswerAnalyticsRepository:
     提供用于分析统计的答案记录查询方法。
     """
     
-    @staticmethod
     def get_wrong_answers(
+        self,
         user_id: int,
         question_type: str = None,
         task_deleted: bool = False
@@ -411,8 +423,8 @@ class AnswerAnalyticsRepository:
             'question'
         ).order_by('-submission__submitted_at', '-created_at')
     
-    @staticmethod
     def get_wrong_answer_summary(
+        self,
         user_id: int,
         task_deleted: bool = False
     ) -> Dict[str, Any]:
@@ -462,8 +474,7 @@ class UserAnalyticsRepository:
     提供用于分析统计的用户查询方法。
     """
     
-    @staticmethod
-    def get_all_active_users() -> QuerySet[User]:
+    def get_all_active_users(self) -> QuerySet[User]:
         """
         获取所有活跃用户
         
@@ -472,8 +483,7 @@ class UserAnalyticsRepository:
         """
         return User.objects.filter(is_active=True)
     
-    @staticmethod
-    def get_users_by_department(department_id: int) -> QuerySet[User]:
+    def get_users_by_department(self, department_id: int) -> QuerySet[User]:
         """
         获取部门下的所有用户
         
@@ -496,8 +506,7 @@ class DepartmentAnalyticsRepository:
     提供用于分析统计的部门查询方法。
     """
     
-    @staticmethod
-    def get_all_departments() -> QuerySet[Department]:
+    def get_all_departments(self) -> QuerySet[Department]:
         """
         获取所有部门
         
@@ -506,8 +515,7 @@ class DepartmentAnalyticsRepository:
         """
         return Department.objects.all()
     
-    @staticmethod
-    def count_departments() -> int:
+    def count_departments(self) -> int:
         """
         统计部门数量
         

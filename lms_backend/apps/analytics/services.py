@@ -369,8 +369,7 @@ class TeamManagerDashboardService(BaseService):
         total_students = self.user_repo.get_all_active_users().count()
         
         # 获取所有任务分配（不限制学生）
-        from apps.tasks.models import TaskAssignment
-        assignments = TaskAssignment.objects.filter(task__is_deleted=False)
+        assignments = self.task_assignment_repo.get_all_assignments()
         stats = self.task_assignment_repo.calculate_task_stats(assignments)
         
         overall_avg_score = self.submission_repo.calculate_avg_score()

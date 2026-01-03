@@ -18,6 +18,32 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
     
     model = Knowledge
     
+    def _to_domain_or_none(self, knowledge: Optional[Knowledge]) -> Optional[KnowledgeDomain]:
+        """
+        将ORM对象转换为Domain对象（统一转换逻辑）
+        
+        Args:
+            knowledge: Django Model 实例或 None
+            
+        Returns:
+            Domain Model 实例或 None
+        """
+        if knowledge:
+            return KnowledgeMapper.to_domain(knowledge)
+        return None
+    
+    def _to_domain_list(self, knowledge_list: List[Knowledge]) -> List[KnowledgeDomain]:
+        """
+        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
+        
+        Args:
+            knowledge_list: Django Model 实例列表
+            
+        Returns:
+            Domain Model 实例列表
+        """
+        return [KnowledgeMapper.to_domain(k) for k in knowledge_list]
+    
     def get_by_id(
         self,
         pk: int,
@@ -63,9 +89,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             知识文档领域模型或 None
         """
         knowledge = self.get_by_id(pk, include_deleted)
-        if knowledge:
-            return KnowledgeMapper.to_domain(knowledge)
-        return None
+        return self._to_domain_or_none(knowledge)
     
     def get_published_list(
         self,
@@ -151,7 +175,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             知识文档领域模型列表
         """
         qs = self.get_published_list(filters, search, ordering, limit, offset)
-        return [KnowledgeMapper.to_domain(k) for k in qs]
+        return self._to_domain_list(list(qs))
     
     def get_draft_for_resource(
         self,
@@ -186,9 +210,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             草稿版本领域模型或 None
         """
         knowledge = self.get_draft_for_resource(resource_uuid)
-        if knowledge:
-            return KnowledgeMapper.to_domain(knowledge)
-        return None
+        return self._to_domain_or_none(knowledge)
     
     def is_referenced_by_task(self, knowledge_id: int) -> bool:
         """
@@ -243,9 +265,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             当前已发布版本领域模型或 None
         """
         knowledge = self.get_current_published_version(resource_uuid)
-        if knowledge:
-            return KnowledgeMapper.to_domain(knowledge)
-        return None
+        return self._to_domain_or_none(knowledge)
     
     def get_all_with_filters(
         self,
@@ -382,9 +402,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             草稿版本领域模型或 None
         """
         knowledge = self.get_draft_for_published(published_knowledge_id)
-        if knowledge:
-            return KnowledgeMapper.to_domain(knowledge)
-        return None
+        return self._to_domain_or_none(knowledge)
     
     def create_from_domain(
         self,
@@ -432,6 +450,43 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
             更新后的 Django Model 实例
         """
         return KnowledgeMapper.update_orm_from_domain(knowledge_orm, knowledge_domain)
+    
+    def get_version_numbers(
+        self,
+        resource_uuid: str
+    ) -> List[int]:
+        """
+        获取资源的所有版本号列表
+        
+        Args:
+            resource_uuid: 资源 UUID
+            
+        Returns:
+            版本号列表
+        """
+        return list(
+            self.model.objects.filter(
+                resource_uuid=resource_uuid,
+                is_deleted=False
+            ).values_list('version_number', flat=True)
+        )
+    
+    def unset_current_flag_for_others(
+        self,
+        resource_uuid: str,
+        exclude_pk: int
+    ) -> None:
+        """
+        取消其他版本的 is_current 标志
+        
+        Args:
+            resource_uuid: 资源 UUID
+            exclude_pk: 要排除的主键（保持 is_current=True）
+        """
+        self.model.objects.filter(
+            resource_uuid=resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=exclude_pk).update(is_current=False)
 
 
 class TagRepository(BaseRepository[Tag]):

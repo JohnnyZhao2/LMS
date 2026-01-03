@@ -71,3 +71,32 @@ class BaseService:
                 code=ErrorCodes.PERMISSION_DENIED,
                 message=error_message
             )
+    
+    def check_published_resource_access(
+        self,
+        resource,
+        user,
+        resource_name: str = '资源'
+    ) -> None:
+        """
+        检查已发布资源的访问权限
+        
+        非管理员只能访问已发布且当前版本的资源。
+        
+        Args:
+            resource: 资源对象（必须有 status 和 is_current 属性）
+            user: 当前用户
+            resource_name: 资源名称（用于错误消息）
+            
+        Raises:
+            BusinessError: 如果权限不足
+        """
+        if user and not user.is_admin:
+            if not hasattr(resource, 'status') or not hasattr(resource, 'is_current'):
+                return  # 如果资源没有这些属性，跳过检查
+            
+            if resource.status != 'PUBLISHED' or not resource.is_current:
+                raise BusinessError(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message=f'无权访问该{resource_name}'
+                )

@@ -12,11 +12,13 @@ Requirements: 1.1, 1.2, 1.3, 1.5
 from typing import Optional, Dict, Any, List
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from .models import User, Role
+from .serializers import UserInfoSerializer
 from .repositories import (
     UserRepository,
     RoleRepository,
@@ -36,8 +38,11 @@ class AuthenticationService:
     - 1.5: Reject login for inactive users
     """
     
-    @staticmethod
-    def login(employee_id: str, password: str) -> Dict[str, Any]:
+    def __init__(self):
+        """初始化服务，注入依赖"""
+        self.user_repository = UserRepository()
+    
+    def login(self, employee_id: str, password: str) -> Dict[str, Any]:
         """
         Authenticate user and generate JWT tokens.
         
@@ -64,9 +69,7 @@ class AuthenticationService:
         # First, check if user exists and is active (Property 3)
         # We need to do this separately because Django's authenticate()
         # returns None for both invalid credentials AND inactive users
-        # Note: AuthenticationService uses static methods, so we create a temporary repository
-        user_repository = UserRepository()
-        user_obj = user_repository.get_by_employee_id(employee_id)
+        user_obj = self.user_repository.get_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
             raise BusinessError(
                 code=ErrorCodes.AUTH_USER_INACTIVE,
@@ -88,24 +91,26 @@ class AuthenticationService:
         user.save(update_fields=['last_login'])
         
         # Generate JWT tokens
-        tokens = AuthenticationService._generate_tokens(user)
+        tokens = self._generate_tokens(user)
         
         # Get available roles (Property 2)
-        available_roles = AuthenticationService._get_user_roles(user)
+        available_roles = self._get_user_roles(user)
         
         # Determine default/current role (highest privilege role)
-        current_role = AuthenticationService._get_default_role(available_roles)
+        current_role = self._get_default_role(available_roles)
+        
+        # Use serializer to build user info
+        user_info = UserInfoSerializer(user).data
         
         return {
             'access_token': tokens['access'],
             'refresh_token': tokens['refresh'],
-            'user': AuthenticationService._get_user_info(user),
+            'user': user_info,
             'available_roles': available_roles,
             'current_role': current_role,
         }
     
-    @staticmethod
-    def logout(user: User, refresh_token: Optional[str] = None) -> bool:
+    def logout(self, user: User, refresh_token: Optional[str] = None) -> bool:
         """
         Logout user by blacklisting their refresh token.
         
@@ -120,13 +125,13 @@ class AuthenticationService:
             try:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
-            except Exception:
+            except (TokenError, InvalidToken, ValueError) as e:
                 # Token might already be blacklisted or invalid
+                # These are expected errors during logout, so we silently ignore them
                 pass
         return True
     
-    @staticmethod
-    def refresh_token(refresh_token: str) -> Dict[str, str]:
+    def refresh_token(self, refresh_token: str) -> Dict[str, str]:
         """
         Refresh access token using refresh token.
         
@@ -151,8 +156,7 @@ class AuthenticationService:
                 message='无效的刷新令牌'
             )
     
-    @staticmethod
-    def switch_role(user: User, role_code: str) -> Dict[str, Any]:
+    def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
         """
         Switch user's current active role.
         
@@ -181,21 +185,23 @@ class AuthenticationService:
             )
         
         # Generate new tokens with role claim
-        tokens = AuthenticationService._generate_tokens(user, current_role=role_code)
+        tokens = self._generate_tokens(user, current_role=role_code)
         
         # Get available roles
-        available_roles = AuthenticationService._get_user_roles(user)
+        available_roles = self._get_user_roles(user)
+        
+        # Use serializer to build user info
+        user_info = UserInfoSerializer(user).data
         
         return {
             'access_token': tokens['access'],
             'refresh_token': tokens['refresh'],
-            'user': AuthenticationService._get_user_info(user),
+            'user': user_info,
             'available_roles': available_roles,
             'current_role': role_code,
         }
     
-    @staticmethod
-    def _generate_tokens(user: User, current_role: Optional[str] = None) -> Dict[str, str]:
+    def _generate_tokens(self, user: User, current_role: Optional[str] = None) -> Dict[str, str]:
         """
         Generate JWT tokens for user.
         
@@ -217,8 +223,8 @@ class AuthenticationService:
             refresh['current_role'] = current_role
         else:
             # Set default role
-            refresh['current_role'] = AuthenticationService._get_default_role(
-                AuthenticationService._get_user_roles(user)
+            refresh['current_role'] = self._get_default_role(
+                self._get_user_roles(user)
             )
         
         return {
@@ -226,8 +232,7 @@ class AuthenticationService:
             'refresh': str(refresh),
         }
     
-    @staticmethod
-    def _get_user_roles(user: User) -> List[Dict[str, str]]:
+    def _get_user_roles(self, user: User) -> List[Dict[str, str]]:
         """
         Get all roles for a user.
         
@@ -242,17 +247,11 @@ class AuthenticationService:
             for role in user.roles.all()
         ]
     
-    @staticmethod
-    def _get_default_role(roles: List[Dict[str, str]]) -> str:
+    def _get_default_role(self, roles: List[Dict[str, str]]) -> str:
         """
         Determine the default role for a user based on role priority.
         
-        Priority order (highest to lowest):
-        1. ADMIN
-        2. DEPT_MANAGER
-        3. MENTOR
-        4. TEAM_MANAGER
-        5. STUDENT
+        Uses Role.ROLE_PRIORITY_ORDER to determine priority.
         
         Args:
             roles: List of role dicts
@@ -260,43 +259,16 @@ class AuthenticationService:
         Returns:
             The highest priority role code
         """
-        priority_order = ['ADMIN', 'DEPT_MANAGER', 'MENTOR', 'TEAM_MANAGER', 'STUDENT']
         role_codes = {r['code'] for r in roles}
         
-        for role in priority_order:
-            if role in role_codes:
-                return role
+        # Use the priority order from Role model
+        for role_code in Role.ROLE_PRIORITY_ORDER:
+            if role_code in role_codes:
+                return role_code
         
         # Fallback to STUDENT if no roles found (shouldn't happen)
         return 'STUDENT'
     
-    @staticmethod
-    def _get_user_info(user: User) -> Dict[str, Any]:
-        """
-        Get user information for response.
-        
-        Args:
-            user: The user to get info for
-            
-        Returns:
-            Dict containing user information
-        """
-        return {
-            'id': user.id,
-            'employee_id': user.employee_id,
-            'username': user.username,  # username 字段存储显示名称
-            'department': {
-                'id': user.department.id,
-                'name': user.department.name,
-                'code': user.department.code,
-            } if user.department else None,
-            'mentor': {
-                'id': user.mentor.id,
-                'username': user.mentor.username,
-                'employee_id': user.mentor.employee_id,
-            } if user.mentor else None,
-            'is_active': user.is_active,
-        }
 
 
 class UserService(BaseService):

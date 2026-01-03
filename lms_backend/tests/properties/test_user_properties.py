@@ -608,10 +608,11 @@ class TestProperty7UserActivationDeactivation:
             # Deactivate user
             UserManagementService.deactivate_user(user.id)
             
-            # Property assertion: login should fail
+            # Property assertion: login should fail (use employee_id, not username)
+            auth_service = AuthenticationService()
             with pytest.raises(BusinessError) as exc_info:
-                AuthenticationService.login(
-                    username=f'test_user_{unique_suffix}',
+                auth_service.login(
+                    employee_id=f'EMP_{unique_suffix}',
                     password=password
                 )
             
@@ -656,9 +657,10 @@ class TestProperty7UserActivationDeactivation:
             # Activate user
             UserManagementService.activate_user(user.id)
             
-            # Property assertion: login should succeed
-            result = AuthenticationService.login(
-                username=f'test_user_{unique_suffix}',
+            # Property assertion: login should succeed (use employee_id, not username)
+            auth_service = AuthenticationService()
+            result = auth_service.login(
+                employee_id=f'EMP_{unique_suffix}',
                 password=password
             )
             

@@ -148,8 +148,9 @@ class TestProperty1ValidCredentialsLoginSuccess:
         )
         
         try:
-            # Attempt login with valid credentials
-            result = AuthenticationService.login(unique_username, password)
+            # Attempt login with valid credentials (use employee_id, not username)
+            auth_service = AuthenticationService()
+            result = auth_service.login(unique_employee_id, password)
             
             # Property assertions: login should return valid tokens and user info
             assert 'access_token' in result, "Login should return access_token"
@@ -215,8 +216,9 @@ class TestProperty2LoginReturnsCompleteRoleList:
             # Expected roles: STUDENT (default) + additional roles
             expected_role_codes = set(['STUDENT'] + additional_roles)
             
-            # Login
-            result = AuthenticationService.login(f'user_{unique_suffix}', 'testpass123')
+            # Login (use employee_id, not username)
+            auth_service = AuthenticationService()
+            result = auth_service.login(f'EMP_{unique_suffix}', 'testpass123')
             
             # Property assertion: available_roles should contain all assigned roles
             returned_role_codes = set(r['code'] for r in result['available_roles'])
@@ -284,9 +286,10 @@ class TestProperty3InactiveUserLoginRejected:
         )
         
         try:
-            # Property assertion: login should be rejected for inactive user
+            # Property assertion: login should be rejected for inactive user (use employee_id, not username)
+            auth_service = AuthenticationService()
             with pytest.raises(BusinessError) as exc_info:
-                AuthenticationService.login(unique_username, password)
+                auth_service.login(unique_employee_id, password)
             
             assert exc_info.value.code == ErrorCodes.AUTH_USER_INACTIVE, \
                 f"Expected AUTH_USER_INACTIVE error, got {exc_info.value.code}"
@@ -341,7 +344,8 @@ class TestProperty4RoleSwitchPermissionEffective:
                 UserRole.objects.get_or_create(user=user, role=role)
             
             # Switch to target role
-            result = AuthenticationService.switch_role(user, target_role)
+            auth_service = AuthenticationService()
+            result = auth_service.switch_role(user, target_role)
             
             # Property assertions
             assert result['current_role'] == target_role, \
@@ -414,8 +418,9 @@ class TestProperty4RoleSwitchPermissionEffective:
                 UserRole.objects.get_or_create(user=user, role=role)
             
             # Property assertion: switching to unassigned role should fail
+            auth_service = AuthenticationService()
             with pytest.raises(BusinessError) as exc_info:
-                AuthenticationService.switch_role(user, target_role)
+                auth_service.switch_role(user, target_role)
             
             assert exc_info.value.code == ErrorCodes.AUTH_INVALID_ROLE, \
                 f"Expected AUTH_INVALID_ROLE error, got {exc_info.value.code}"

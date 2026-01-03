@@ -177,6 +177,23 @@ class QuizRepository(BaseRepository[Quiz]):
             status='DRAFT',
             is_deleted=False
         ).first()
+    
+    def unset_current_flag_for_others(
+        self,
+        resource_uuid: str,
+        exclude_pk: int
+    ) -> None:
+        """
+        取消其他版本的 is_current 标志
+        
+        Args:
+            resource_uuid: 资源 UUID
+            exclude_pk: 要排除的主键（保持 is_current=True）
+        """
+        self.model.objects.filter(
+            resource_uuid=resource_uuid,
+            status='PUBLISHED'
+        ).exclude(pk=exclude_pk).update(is_current=False)
 
 
 class QuizQuestionRepository(BaseRepository[QuizQuestion]):

@@ -19,7 +19,11 @@ from django.utils import timezone
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User
-from apps.users.permissions import get_current_role
+from apps.users.permissions import (
+    get_current_role,
+    check_grading_permission,
+    filter_queryset_by_data_scope
+)
 from apps.tasks.models import TaskAssignment, TaskQuiz
 from apps.tasks.repositories import TaskQuizRepository, TaskAssignmentRepository
 from apps.quizzes.models import Quiz
@@ -85,13 +89,11 @@ class SubmissionService(BaseService):
             BusinessError: If validation fails
         """
         # Check task assignment exists
-        try:
-            assignment = TaskAssignment.objects.select_related('task').get(
-                id=assignment_id,
-                assignee=user,
-                task__is_deleted=False
-            )
-        except TaskAssignment.DoesNotExist:
+        assignment = self.task_assignment_repository.get_by_id_for_user(
+            assignment_id=assignment_id,
+            user=user
+        )
+        if not assignment:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='任务不存在或未分配给您'
@@ -105,11 +107,11 @@ class SubmissionService(BaseService):
             )
         
         # Check quiz is part of the task
-        try:
-            task_quiz = TaskQuiz.objects.select_related('quiz').get(
-                task_id=assignment.task_id, quiz_id=quiz_id
-            )
-        except TaskQuiz.DoesNotExist:
+        task_quiz = self.task_quiz_repository.get_by_task_and_quiz(
+            task_id=assignment.task_id,
+            quiz_id=quiz_id
+        )
+        if not task_quiz:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='该试卷不在此任务中'
@@ -446,23 +448,11 @@ class GradingService(BaseService):
         Returns:
             QuerySet of submissions pending grading
         """
-        current_role = get_current_role(user)
+        # 获取所有待评分的答题记录
+        queryset = self.repository.get_grading_queryset()
         
-        if current_role == 'ADMIN':
-            queryset = self.repository.get_grading_queryset()
-        elif current_role == 'MENTOR':
-            queryset = self.repository.get_grading_queryset(mentor_id=user.id)
-        elif current_role == 'DEPT_MANAGER':
-            if user.department_id:
-                queryset = self.repository.get_grading_queryset(department_id=user.department_id)
-            else:
-                from django.db.models import QuerySet
-                queryset = Submission.objects.none()
-        else:
-            from django.db.models import QuerySet
-            queryset = Submission.objects.none()
-        
-        return queryset
+        # 使用通用的数据范围过滤工具
+        return filter_queryset_by_data_scope(queryset, user, student_field='user')
     
     def get_submission_for_grading(self, pk: int, user: User) -> Submission:
         """
@@ -497,27 +487,8 @@ class GradingService(BaseService):
         Raises:
             BusinessError: If permission denied
         """
-        current_role = get_current_role(user)
-        
-        if current_role == 'ADMIN':
-            return
-        elif current_role == 'MENTOR':
-            if submission.user.mentor != user:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问此答题记录'
-                )
-        elif current_role == 'DEPT_MANAGER':
-            if submission.user.department_id != user.department_id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问此答题记录'
-                )
-        else:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问此答题记录'
-            )
+        # 使用通用的权限检查工具函数
+        check_grading_permission(user, submission.user)
     
     def grade_answer(
         self,

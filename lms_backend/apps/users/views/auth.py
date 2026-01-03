@@ -32,6 +32,7 @@ from apps.users.serializers import (
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
     ChangePasswordRequestSerializer,
+    UserInfoSerializer,
 )
 from apps.users.models import User
 
@@ -47,6 +48,10 @@ class LoginView(APIView):
     """
     permission_classes = [AllowAny]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
+    
     @extend_schema(
         summary='用户登录',
         description='验证用户凭证并返回JWT令牌和用户信息',
@@ -61,7 +66,7 @@ class LoginView(APIView):
         serializer = LoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        result = AuthenticationService.login(
+        result = self.auth_service.login(
             employee_id=serializer.validated_data['employee_id'],
             password=serializer.validated_data['password']
         )
@@ -77,6 +82,10 @@ class LogoutView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
+    
     @extend_schema(
         summary='用户登出',
         description='登出当前用户，使刷新令牌失效',
@@ -91,7 +100,7 @@ class LogoutView(APIView):
         serializer.is_valid(raise_exception=True)
         
         refresh_token = serializer.validated_data.get('refresh_token')
-        AuthenticationService.logout(request.user, refresh_token)
+        self.auth_service.logout(request.user, refresh_token)
         
         return Response(
             {'message': '登出成功'},
@@ -107,6 +116,10 @@ class RefreshTokenView(APIView):
     """
     permission_classes = [AllowAny]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
+    
     @extend_schema(
         summary='刷新令牌',
         description='使用刷新令牌获取新的访问令牌',
@@ -121,7 +134,7 @@ class RefreshTokenView(APIView):
         serializer = RefreshTokenRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        result = AuthenticationService.refresh_token(
+        result = self.auth_service.refresh_token(
             refresh_token=serializer.validated_data['refresh_token']
         )
         
@@ -138,6 +151,10 @@ class SwitchRoleView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
+    
     @extend_schema(
         summary='切换角色',
         description='切换当前用户的生效角色，返回新的令牌',
@@ -152,7 +169,7 @@ class SwitchRoleView(APIView):
         serializer = SwitchRoleRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        result = AuthenticationService.switch_role(
+        result = self.auth_service.switch_role(
             user=request.user,
             role_code=serializer.validated_data['role_code']
         )
@@ -168,6 +185,10 @@ class MeView(APIView):
     """
     permission_classes = [IsAuthenticated]
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
+    
     @extend_schema(
         summary='获取当前用户信息',
         description='获取当前登录用户的最新信息和角色列表',
@@ -179,15 +200,18 @@ class MeView(APIView):
     )
     def get(self, request):
         user = request.user
-        available_roles = AuthenticationService._get_user_roles(user)
+        available_roles = self.auth_service._get_user_roles(user)
         
         # 获取当前角色（从 JWT token 中）
         current_role = getattr(request.user, 'current_role', None)
         if not current_role:
-            current_role = AuthenticationService._get_default_role(available_roles)
+            current_role = self.auth_service._get_default_role(available_roles)
+        
+        # Use serializer to build user info
+        user_info = UserInfoSerializer(user).data
         
         return Response({
-            'user': AuthenticationService._get_user_info(user),
+            'user': user_info,
             'available_roles': available_roles,
             'current_role': current_role,
         }, status=status.HTTP_200_OK)
