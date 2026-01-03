@@ -26,6 +26,7 @@ import {
 import { useCreateQuestion, useUpdateQuestion } from '../api/create-question';
 import { useQuestionDetail } from '../api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
+import { ROUTES } from '@/config/routes';
 import type { QuestionCreateRequest, QuestionType, Difficulty } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
@@ -117,7 +118,7 @@ export const QuestionForm: React.FC = () => {
    * 关闭/返回
    */
   const handleClose = useCallback(() => {
-    navigate('/test-center?tab=questions');
+    navigate(`${ROUTES.TEST_CENTER}?tab=questions`);
   }, [navigate]);
 
   /**
@@ -236,7 +237,7 @@ export const QuestionForm: React.FC = () => {
         await createQuestion.mutateAsync(submitData);
         toast.success('创建成功');
       }
-      navigate('/test-center?tab=questions');
+      navigate(`${ROUTES.TEST_CENTER}?tab=questions`);
     } catch (error) {
       showApiError(error, isEdit ? '更新失败' : '创建失败');
     }

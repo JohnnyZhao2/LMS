@@ -3,6 +3,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Pencil, User, FileText, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePendingGrading } from '../api/get-pending-grading';
+import { ROUTES } from '@/config/routes';
 import { PageHeader, StatusBadge } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import dayjs from '@/lib/dayjs';
  */
 export const GradingList: React.FC = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = usePendingGrading(page);
+  const { data, isLoading } = usePendingGrading({ page });
   const navigate = useNavigate();
 
   const columns: ColumnDef<GradingListType>[] = [
@@ -83,7 +84,7 @@ export const GradingList: React.FC = () => {
         const record = row.original;
         return (
           <Button
-            onClick={() => navigate(`/grading/${record.submission}`)}
+            onClick={() => navigate(`${ROUTES.GRADING}/${record.submission}`)}
             className="font-semibold rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
           >
             <Pencil className="w-4 h-4 mr-2" />

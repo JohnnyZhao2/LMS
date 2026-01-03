@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { Spinner } from '@/components/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
 
 interface ProtectedRouteProps {
@@ -23,11 +24,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
   if (allowedRoles && currentRole && !allowedRoles.includes(currentRole)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
 
   return <>{children}</>;

@@ -18,6 +18,7 @@ import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
 import { usePendingGrading } from "@/features/grading/api/get-pending-grading"
 import { useAuth } from "@/features/auth/hooks/use-auth"
+import { ROUTES } from "@/config/routes"
 import {
     Button,
     Input,
@@ -62,7 +63,7 @@ export const TaskManagement: React.FC = () => {
     const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
 
     const { data: tasks, isLoading, refetch } = useTaskList({})
-    const { data: pendingGradingData } = usePendingGrading(1)
+    const { data: pendingGradingData } = usePendingGrading({ page: 1 })
     const deleteTask = useDeleteTask()
 
     // 统计逻辑
@@ -278,7 +279,7 @@ export const TaskManagement: React.FC = () => {
                             刷新
                         </Button>
                         <Button
-                            onClick={() => navigate("/tasks/create")}
+                            onClick={() => navigate(`${ROUTES.TASKS}/create`)}
                             className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
                         >
                             <Plus className="mr-2 h-5 w-5" />

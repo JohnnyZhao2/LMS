@@ -4,6 +4,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { Plus, Search, User, Clock, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSpotChecks } from '../api/get-spot-checks';
+import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  */
 export const SpotCheckList: React.FC = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useSpotChecks(page);
+  const { data, isLoading } = useSpotChecks({ page });
   const navigate = useNavigate();
 
   const columns: ColumnDef<SpotCheck>[] = [
@@ -126,7 +127,7 @@ export const SpotCheckList: React.FC = () => {
         icon={<Search className="w-5 h-5" />}
         extra={
           <Button
-            onClick={() => navigate('/spot-checks/create')}
+            onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
             className="h-14 px-8 rounded-md bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold shadow-none hover:scale-105 transition-all duration-200"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -176,7 +177,7 @@ export const SpotCheckList: React.FC = () => {
                 <Search className="w-12 h-12 text-[#9CA3AF] mb-4" />
                 <span className="text-base mb-4">暂无抽查记录</span>
                 <Button 
-                  onClick={() => navigate('/spot-checks/create')}
+                  onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
                   className="bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-none"
                 >
                   <Plus className="w-4 h-4 mr-2" />

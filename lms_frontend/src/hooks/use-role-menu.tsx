@@ -11,6 +11,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
+import { ROUTES } from '@/config/routes';
 
 interface MenuItem {
   key: string;
@@ -36,7 +37,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
 
     const baseMenu: MenuItem[] = [
       {
-        key: '/dashboard',
+        key: ROUTES.DASHBOARD,
         icon: <LayoutGrid className="w-4 h-4" />,
         label: '概览',
       },
@@ -47,17 +48,17 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: '/knowledge',
+            key: ROUTES.KNOWLEDGE,
             icon: <BookOpen className="w-4 h-4" />,
             label: '知识库',
           },
           {
-            key: '/tasks',
+            key: ROUTES.TASKS,
             icon: <FileText className="w-4 h-4" />,
             label: '任务',
           },
           {
-            key: '/personal',
+            key: ROUTES.PERSONAL,
             icon: <User className="w-4 h-4" />,
             label: '个人中心',
           },
@@ -68,22 +69,22 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: '/test-center',
+            key: ROUTES.TEST_CENTER,
             icon: <HelpCircle className="w-4 h-4" />,
             label: '测试中心',
           },
           {
-            key: '/tasks',
+            key: ROUTES.TASKS,
             icon: <FileText className="w-4 h-4" />,
             label: '任务',
           },
           {
-            key: '/grading',
+            key: ROUTES.GRADING,
             icon: <CheckCircle className="w-4 h-4" />,
             label: '评分',
           },
           {
-            key: '/spot-checks',
+            key: ROUTES.SPOT_CHECKS,
             icon: <FileSearch className="w-4 h-4" />,
             label: '抽查',
           },
@@ -93,27 +94,27 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: '/admin/knowledge',
+            key: ROUTES.ADMIN_KNOWLEDGE,
             icon: <BookOpen className="w-4 h-4" />,
             label: '知识库',
           },
           {
-            key: '/test-center',
+            key: ROUTES.TEST_CENTER,
             icon: <HelpCircle className="w-4 h-4" />,
             label: '测试中心',
           },
           {
-            key: '/tasks',
+            key: ROUTES.TASKS,
             icon: <FileText className="w-4 h-4" />,
             label: '任务',
           },
           {
-            key: '/grading',
+            key: ROUTES.GRADING,
             icon: <CheckCircle className="w-4 h-4" />,
             label: '评分',
           },
           {
-            key: '/users',
+            key: ROUTES.USERS,
             icon: <Users className="w-4 h-4" />,
             label: '用户管理',
           },
@@ -123,7 +124,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: '/analytics',
+            key: ROUTES.ANALYTICS,
             icon: <BarChart3 className="w-4 h-4" />,
             label: '数据看板',
           },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Home, ChevronRight } from 'lucide-react';
+import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
 
 export interface BreadcrumbItem {
@@ -52,7 +53,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 面包屑 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
-            <Link to="/dashboard" className="text-gray-400 hover:text-primary-500 transition-colors">
+            <Link to={ROUTES.DASHBOARD} className="text-gray-400 hover:text-primary-500 transition-colors">
               <Home className="w-3.5 h-3.5" />
             </Link>
             {breadcrumbs.map((item, index) => (

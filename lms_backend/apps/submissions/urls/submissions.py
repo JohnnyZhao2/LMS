@@ -7,7 +7,7 @@ Implements URL routing for:
 """
 from django.urls import path
 
-from .views import (
+from ..views import (
     StartPracticeView,
     SaveAnswerView,
     SubmitPracticeView,

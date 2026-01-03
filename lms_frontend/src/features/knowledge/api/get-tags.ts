@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString } from '@/lib/api-utils';
 import type { Tag, TagType } from '@/types/api';
 
 /**
@@ -31,18 +32,15 @@ export const useTags = (params: GetTagsParams = {}) => {
   return useQuery({
     queryKey: ['tags', tag_type, line_type_id, search, limit, active_only],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (tag_type) searchParams.set('tag_type', tag_type);
-      if (line_type_id) searchParams.set('line_type_id', String(line_type_id));
-      if (search) searchParams.set('search', search);
-      if (limit) searchParams.set('limit', String(limit));
-      searchParams.set('active_only', String(active_only));
-
-      const queryString = searchParams.toString();
-      const url = queryString 
-        ? `/knowledge/tags/?${queryString}` 
-        : `/knowledge/tags/`;
-      return apiClient.get<Tag[]>(url);
+      const queryParams = {
+        ...(tag_type && { tag_type }),
+        ...(line_type_id && { line_type_id: String(line_type_id) }),
+        ...(search && { search }),
+        ...(limit && { limit: String(limit) }),
+        active_only: String(active_only),
+      };
+      const queryString = buildQueryString(queryParams);
+      return apiClient.get<Tag[]>(`/knowledge/tags${queryString}`);
     },
     staleTime: 2 * 60 * 1000, // 2分钟内不重新获取
   });

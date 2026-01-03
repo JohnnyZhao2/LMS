@@ -27,6 +27,7 @@ import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-det
 import { useCompleteLearning } from '../api/complete-learning';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
@@ -186,7 +187,7 @@ export const TaskDetail: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-[#111827] mb-2">Mission Not Found</h3>
           <p className="text-[#6B7280]">任务不存在或您没有权限查看，请联系管理员。</p>
-          <Button variant="outline" className="mt-6" onClick={() => navigate('/tasks')}>
+          <Button variant="outline" className="mt-6" onClick={() => navigate(ROUTES.TASKS)}>
             返回任务中心
           </Button>
         </div>
@@ -216,7 +217,7 @@ export const TaskDetail: React.FC = () => {
     if (!isStudent || !canStartQuiz) return;
     const assignmentId = learningDetail?.id;
     if (!assignmentId) return;
-    navigate(`/quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`);
+    navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
   const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
@@ -304,7 +305,7 @@ export const TaskDetail: React.FC = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-lg bg-white border-2 border-[#E5E7EB]">
-                          <DropdownMenuItem onClick={() => navigate(`/tasks/${taskId}/edit`)} className="focus:bg-[#F3F4F6] rounded-md cursor-pointer">
+                          <DropdownMenuItem onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)} className="focus:bg-[#F3F4F6] rounded-md cursor-pointer">
                             <Edit className="w-4 h-4 mr-2 text-[#3B82F6]" />
                             <span className="font-semibold text-[#111827]">编辑任务</span>
                           </DropdownMenuItem>

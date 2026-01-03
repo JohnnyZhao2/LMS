@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type { QuizDetail, QuizListItem, PaginatedResponse } from '@/types/api';
 
 interface UseQuizzesParams {
@@ -11,20 +12,18 @@ interface UseQuizzesParams {
 /**
  * 获取试卷列表
  */
-export const useQuizzes = (params: UseQuizzesParams | number = {}) => {
-  // 兼容旧的调用方式 useQuizzes(page)
-  const { page = 1, pageSize = 20, search } = typeof params === 'number' 
-    ? { page: params, pageSize: 20, search: undefined } 
-    : params;
+export const useQuizzes = (params: UseQuizzesParams = {}) => {
+  const { page = 1, pageSize = 20, search } = params;
 
   return useQuery({
     queryKey: ['quizzes', page, pageSize, search],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      searchParams.set('page', String(page));
-      searchParams.set('page_size', String(pageSize));
-      if (search) searchParams.set('search', search);
-      return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/?${searchParams.toString()}`);
+      const queryParams = {
+        ...buildPaginationParams(page, pageSize),
+        ...(search && { search }),
+      };
+      const queryString = buildQueryString(queryParams);
+      return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/${queryString}`);
     },
   });
 };

@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
 import { cn } from "@/lib/utils"
+import { ROUTES } from "@/config/routes"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,16 +55,16 @@ const ROLE_COLORS: Record<RoleCode, string> = {
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
 
 const MENU_ICONS: Record<string, React.ReactNode> = {
-  "/dashboard": <LayoutGrid className="h-4 w-4" />,
-  "/knowledge": <BookOpen className="h-4 w-4" />,
-  "/admin/knowledge": <BookOpen className="h-4 w-4" />,
-  "/tasks": <FileText className="h-4 w-4" />,
-  "/grading": <CheckCircle className="h-4 w-4" />,
-  "/users": <Users className="h-4 w-4" />,
-  "/test-center": <HelpCircle className="h-4 w-4" />,
-  "/spot-checks": <FileSearch className="h-4 w-4" />,
-  "/analytics": <BarChart3 className="h-4 w-4" />,
-  "/personal": <User className="h-4 w-4" />,
+  [ROUTES.DASHBOARD]: <LayoutGrid className="h-4 w-4" />,
+  [ROUTES.KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
+  [ROUTES.ADMIN_KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
+  [ROUTES.TASKS]: <FileText className="h-4 w-4" />,
+  [ROUTES.GRADING]: <CheckCircle className="h-4 w-4" />,
+  [ROUTES.USERS]: <Users className="h-4 w-4" />,
+  [ROUTES.TEST_CENTER]: <HelpCircle className="h-4 w-4" />,
+  [ROUTES.SPOT_CHECKS]: <FileSearch className="h-4 w-4" />,
+  [ROUTES.ANALYTICS]: <BarChart3 className="h-4 w-4" />,
+  [ROUTES.PERSONAL]: <User className="h-4 w-4" />,
 }
 
 /**
@@ -77,14 +78,14 @@ export const Header: React.FC = () => {
 
   const handleLogout = async () => {
     await logout()
-    navigate("/login")
+    navigate(ROUTES.LOGIN)
   }
 
   const handleRoleChange = async (roleCode: RoleCode) => {
     if (roleCode !== currentRole) {
       try {
         await switchRole(roleCode)
-        navigate("/dashboard")
+        navigate(ROUTES.DASHBOARD)
       } catch (error) {
         console.error("切换角色失败:", error)
       }
@@ -124,7 +125,7 @@ export const Header: React.FC = () => {
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate(ROUTES.DASHBOARD)}
         >
           <div
             className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
@@ -252,7 +253,7 @@ export const Header: React.FC = () => {
               </div>
 
               <DropdownMenuItem
-                onClick={() => navigate("/personal")}
+                onClick={() => navigate(ROUTES.PERSONAL)}
                 className="rounded-md py-2.5 focus:bg-blue-50 focus:text-blue-600 cursor-pointer"
               >
                 <User className="mr-3 h-4 w-4" />

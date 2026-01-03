@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 
 import { useGradingDetail } from '../api/get-grading-detail';
 import { useSubmitGrade } from '../api/submit-grade';
+import { ROUTES } from '@/config/routes';
 import type { Answer } from '@/types/api';
 
 /**
@@ -92,7 +93,7 @@ export const GradingForm: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate('/grading')}>
+        <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.GRADING)}>
           <ArrowLeft className="w-4 h-4 mr-1" />
           返回列表
         </Button>

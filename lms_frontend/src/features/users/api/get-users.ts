@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString } from '@/lib/api-utils';
 import type { UserList, Mentor, Role, Department } from '@/types/api';
 
 const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
@@ -41,13 +42,13 @@ export const useUsers = (params: GetUsersParams = {}) => {
   return useQuery({
     queryKey: ['users', departmentId, isActive, search],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (departmentId) searchParams.set('department_id', String(departmentId));
-      if (isActive !== undefined) searchParams.set('is_active', String(isActive));
-      if (search) searchParams.set('search', search);
-
-      const queryString = searchParams.toString();
-      return apiClient.get<UserList[]>(`/users/${queryString ? `?${queryString}` : ''}`);
+      const queryParams = {
+        ...(departmentId && { department_id: String(departmentId) }),
+        ...(isActive !== undefined && { is_active: String(isActive) }),
+        ...(search && { search }),
+      };
+      const queryString = buildQueryString(queryParams);
+      return apiClient.get<UserList[]>(`/users${queryString}`);
     },
   });
 };

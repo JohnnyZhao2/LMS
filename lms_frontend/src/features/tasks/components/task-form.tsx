@@ -38,6 +38,7 @@ import { useTaskDetail } from '../api/get-task-detail';
 import { useAssignableUsers } from '../api/get-assignable-users';
 import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
 import { useQuizDetail } from '@/features/quizzes/api/get-quizzes';
+import { ROUTES } from '@/config/routes';
 import type {
   KnowledgeListItem,
   PaginatedResponse,
@@ -244,7 +245,7 @@ export const TaskForm: React.FC = () => {
         await createTask.mutateAsync(payload);
         toast.success('任务发布成功');
       }
-      navigate('/tasks');
+      navigate(ROUTES.TASKS);
     } catch (error) {
       showApiError(error, 'Operation failed');
     }
@@ -261,7 +262,7 @@ export const TaskForm: React.FC = () => {
       <div className="flex flex-col items-center justify-center py-16">
         <FileText className="w-12 h-12 text-gray-300 mb-4" />
         <span className="text-gray-500 mb-4">加载任务失败</span>
-        <Button onClick={() => navigate('/tasks')}>返回</Button>
+        <Button onClick={() => navigate(ROUTES.TASKS)}>返回</Button>
       </div>
     );
   }
@@ -275,7 +276,7 @@ export const TaskForm: React.FC = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/tasks')}
+            onClick={() => navigate(ROUTES.TASKS)}
             className="text-gray-600 hover:text-primary-500"
           >
             <ArrowLeft className="w-5 h-5" />

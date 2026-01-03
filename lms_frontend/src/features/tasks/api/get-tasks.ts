@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type {
   StudentTaskCenterResponse,
   TaskListItem,
@@ -30,13 +31,13 @@ export const useStudentTasks = (
   return useQuery({
     queryKey: ['student-tasks', page, pageSize, status],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (page) searchParams.set('page', String(page));
-      if (pageSize) searchParams.set('page_size', String(pageSize));
-      if (status) searchParams.set('status', status);
-
+      const queryParams = {
+        ...buildPaginationParams(page, pageSize),
+        ...(status && { status }),
+      };
+      const queryString = buildQueryString(queryParams);
       return apiClient.get<StudentTaskCenterResponse>(
-        `/tasks/my-assignments/?${searchParams.toString()}`
+        `/tasks/my-assignments/${queryString}`
       );
     },
     enabled,
@@ -56,15 +57,13 @@ export const useTaskList = (
   return useQuery({
     queryKey: ['tasks', page, pageSize, isClosed],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (page) searchParams.set('page', String(page));
-      if (pageSize) searchParams.set('page_size', String(pageSize));
-      if (typeof isClosed === 'boolean') {
-        searchParams.set('is_closed', isClosed ? 'true' : 'false');
-      }
-
+      const queryParams = {
+        ...buildPaginationParams(page, pageSize),
+        ...(typeof isClosed === 'boolean' && { is_closed: isClosed ? 'true' : 'false' }),
+      };
+      const queryString = buildQueryString(queryParams);
       return apiClient.get<TaskListItem[]>(
-        `/tasks/?${searchParams.toString()}`
+        `/tasks/${queryString}`
       );
     },
     enabled,

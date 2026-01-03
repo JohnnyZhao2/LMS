@@ -7,6 +7,7 @@ import { QuestionTab } from './question-tab';
 import { QuizTab } from './quiz-tab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
 import { ContentPanel } from '@/components/ui';
 
@@ -34,9 +35,9 @@ export const TestCenter: React.FC = () => {
 
   const handleAdd = () => {
     if (activeTab === 'questions') {
-      navigate('/test-center/questions/create');
+      navigate(`${ROUTES.TEST_CENTER_QUESTIONS}/create`);
     } else {
-      navigate('/test-center/quizzes/create');
+      navigate(`${ROUTES.TEST_CENTER_QUIZZES}/create`);
     }
   };
 

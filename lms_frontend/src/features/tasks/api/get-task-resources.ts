@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString } from '@/lib/api-utils';
 import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
 
 interface UseResourceOptions {
@@ -18,18 +19,15 @@ export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
   return useQuery({
     queryKey: ['task-knowledge-options', search],
     queryFn: () => {
-      const params = new URLSearchParams();
-      if (search) {
-        params.set('search', search);
-      }
-      params.set('status', 'PUBLISHED');
-      params.set('include_drafts', 'false');
-      // 设置较大的 page_size 以获取更多数据
-      params.set('page_size', '100');
-      const query = params.toString();
-      const suffix = query ? `?${query}` : '';
+      const queryParams = {
+        status: 'PUBLISHED',
+        include_drafts: 'false',
+        page_size: '100',
+        ...(search && { search }),
+      };
+      const queryString = buildQueryString(queryParams);
       // 后端可能返回数组或分页响应，使用联合类型
-      return apiClient.get<KnowledgeListItem[] | PaginatedResponse<KnowledgeListItem>>(`/knowledge/${suffix}`);
+      return apiClient.get<KnowledgeListItem[] | PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
     },
     enabled,
     staleTime: 60_000,
@@ -45,15 +43,13 @@ export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
   return useQuery({
     queryKey: ['task-quiz-options', search],
     queryFn: () => {
-      const params = new URLSearchParams();
-      params.set('page_size', '50');
-      params.set('status', 'PUBLISHED');
-      if (search) {
-        params.set('search', search);
-      }
-      const query = params.toString();
-      const suffix = query ? `?${query}` : '';
-      return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes/${suffix}`);
+      const queryParams = {
+        page_size: '50',
+        status: 'PUBLISHED',
+        ...(search && { search }),
+      };
+      const queryString = buildQueryString(queryParams);
+      return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes${queryString}`);
     },
     enabled,
     staleTime: 60_000,

@@ -18,6 +18,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 
 import { useCreateSpotCheck } from '../api/create-spot-check';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
+import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 
 /**
@@ -61,7 +62,7 @@ export const SpotCheckForm: React.FC = () => {
         checked_at: checkedAt!.toISOString(),
       });
       toast.success('抽查记录创建成功');
-      navigate('/spot-checks');
+      navigate(ROUTES.SPOT_CHECKS);
     } catch (error) {
       showApiError(error, '创建失败');
     }
@@ -146,7 +147,7 @@ export const SpotCheckForm: React.FC = () => {
               {createSpotCheck.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               提交
             </Button>
-            <Button variant="outline" onClick={() => navigate('/spot-checks')}>
+            <Button variant="outline" onClick={() => navigate(ROUTES.SPOT_CHECKS)}>
               取消
             </Button>
           </div>

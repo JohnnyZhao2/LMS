@@ -42,6 +42,7 @@ import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { useCreateQuestion } from '@/features/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
+import { ROUTES } from '@/config/routes';
 import type { QuizCreateRequest, Question, QuestionType, QuestionCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
@@ -358,7 +359,7 @@ export const QuizForm: React.FC = () => {
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data: submitData });
         toast.success('更新成功');
-        navigate('/test-center?tab=quizzes');
+        navigate(`${ROUTES.TEST_CENTER}?tab=quizzes`);
       } else {
         const quiz = await createQuiz.mutateAsync(submitData);
         toast.success('创建成功');
@@ -383,7 +384,7 @@ export const QuizForm: React.FC = () => {
    */
   const handleLater = () => {
     setPublishModalVisible(false);
-    navigate('/test-center?tab=quizzes');
+    navigate(`${ROUTES.TEST_CENTER}?tab=quizzes`);
   };
 
   /**
@@ -701,7 +702,7 @@ export const QuizForm: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate('/test-center?tab=quizzes')}
+              onClick={() => navigate(`${ROUTES.TEST_CENTER}?tab=quizzes`)}
             >
               取消
             </Button>

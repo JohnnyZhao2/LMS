@@ -4,11 +4,28 @@
 
 ## 技术栈
 
-- Python 3.9+
-- Django 4.2
-- Django REST Framework 3.14
-- MySQL 8.0
-- JWT 认证 (SimpleJWT)
+### 核心框架
+- **Python** 3.9+
+- **Django** 4.2
+- **Django REST Framework** 3.14
+- **MySQL** 8.0
+
+### 认证与安全
+- **djangorestframework-simplejwt** 5.3+ - JWT 认证
+- **django-cors-headers** 4.3+ - 跨域支持
+
+### API 文档
+- **drf-spectacular** 0.27+ - OpenAPI 3.0 文档生成
+
+### 测试框架
+- **pytest** 7.4+ - 测试框架
+- **pytest-django** 4.7+ - Django 集成
+- **pytest-cov** 4.1+ - 测试覆盖率
+- **hypothesis** 6.92+ - 属性测试
+- **factory-boy** 3.3+ - 测试数据工厂
+
+### 开发工具
+- **python-dotenv** 1.0+ - 环境变量管理
 
 ## 快速开始
 
@@ -85,7 +102,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/ \
   "user": {
     "id": 1,
     "username": "admin",
-    "username": "系统管理员",
+    "name": "系统管理员",
     "roles": ["STUDENT", "ADMIN"]
   }
 }
@@ -111,7 +128,8 @@ curl -X POST http://127.0.0.1:8000/api/auth/refresh/ \
 | POST | /refresh/ | 刷新 token |
 | POST | /switch-role/ | 切换当前角色 |
 | GET | /me/ | 获取当前用户信息 |
-| POST | /change-password/ | 修改密码 |
+| POST | /change-password/ | 修改密码（当前用户） |
+| POST | /reset-password/ | 重置密码（管理员） |
 
 ### 用户管理 `/api/users/`
 
@@ -280,78 +298,238 @@ python -m pytest tests/ -v --tb=short
 # 运行集成测试
 python -m pytest tests/integration/ -v
 
-# 运行属性测试（需要安装 hypothesis）
+# 运行属性测试（基于 Hypothesis）
 python -m pytest tests/properties/ -v
+
+# 运行领域层测试
+python -m pytest tests/test_domain_layer.py -v
 
 # 查看测试覆盖率
 python -m pytest tests/ --cov=apps --cov-report=html
+
+# 生成覆盖率报告（HTML）
+python -m pytest tests/ --cov=apps --cov-report=html
+# 报告位置：htmlcov/index.html
 ```
 
 ### 安装测试依赖
 
+所有测试依赖已包含在 `requirements.txt` 中：
+
 ```bash
 # 安装所有依赖（包括测试依赖）
 pip install -r requirements.txt
-
-# 如果缺少 hypothesis（用于属性测试）
-pip install hypothesis>=6.92,<7.0
 ```
+
+主要测试依赖：
+- `pytest>=7.4,<8.0` - 测试框架
+- `pytest-django>=4.7,<5.0` - Django 集成
+- `pytest-cov>=4.1,<5.0` - 覆盖率工具
+- `hypothesis>=6.92,<7.0` - 属性测试
+- `factory-boy>=3.3,<4.0` - 测试数据工厂
 
 ### 测试说明
 
-- **集成测试**：验证端到端的业务流程
-- **属性测试**：使用 Hypothesis 进行属性测试（需要安装 hypothesis）
-- **测试数据库**：测试使用 SQLite 内存数据库
+- **集成测试** (`tests/integration/`)：验证端到端的业务流程，包括：
+  - 学习任务流程
+  - 练习任务流程
+  - 考试任务流程
+  - 权限控制流程
+  - 用户管理流程
+  - 资源保护流程
+
+- **属性测试** (`tests/properties/`)：使用 Hypothesis 进行基于属性的测试，覆盖：
+  - 认证属性
+  - 权限属性
+  - 任务执行属性
+  - 提交属性
+  - 评分属性
+  - 资源管理属性
+
+- **领域层测试** (`tests/test_domain_layer.py`)：验证 Domain 层的业务逻辑
+
+- **测试数据库**：测试使用 SQLite 内存数据库（配置在 `config/settings/test.py`）
 
 ## 项目结构
 
 ```
-├── apps/
-│   ├── users/          # 用户、角色、部门
-│   │   ├── repositories.py  # 数据访问层
-│   │   ├── services.py      # 业务逻辑层
-│   │   └── views/           # 视图层
-│   ├── knowledge/      # 知识文档
-│   ├── questions/      # 题库
-│   ├── quizzes/        # 试卷
-│   ├── tasks/          # 任务
-│   ├── submissions/    # 答题提交、评分
-│   ├── spot_checks/    # 抽查
-│   ├── notifications/  # 通知
-│   └── analytics/      # 统计分析
-├── core/
-│   ├── base_repository.py  # Repository 基类
-│   ├── base_service.py     # Service 基类
-│   ├── exceptions.py       # 统一异常定义
-│   ├── mixins.py           # 通用 Mixin
-│   └── permissions.py      # 权限控制
-├── config/
-│   ├── settings/       # 配置文件
-│   └── urls.py         # URL 路由
-├── tests/              # 测试文件
-│   ├── integration/    # 集成测试
-│   └── properties/     # 属性测试
-└── docs/               # 文档
-    ├── ARCHITECTURE.md              # 架构设计
-    ├── ARCHITECTURE_IMPLEMENTATION_PLAN.md  # 实施计划
-    ├── STAGE4_CODE_REVIEW.md        # 代码审查报告
-    └── QUICK_START.md               # 快速开始
+lms_backend/
+├── apps/                      # 业务应用模块
+│   ├── users/                # 用户、角色、部门
+│   │   ├── models.py         # Django ORM 模型
+│   │   ├── repositories.py   # 数据访问层
+│   │   ├── services.py       # 应用服务层
+│   │   ├── views/            # 视图层
+│   │   │   ├── auth.py       # 认证视图
+│   │   │   └── management.py # 用户管理视图
+│   │   ├── permissions.py   # 权限控制
+│   │   └── management/       # 管理命令
+│   │       └── commands/
+│   │           ├── init_data.py
+│   │           └── reset_admin_password.py
+│   │
+│   ├── knowledge/            # 知识文档
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   ├── domain/           # 领域层
+│   │   │   ├── models.py     # 领域模型
+│   │   │   ├── services.py   # 领域服务
+│   │   │   └── mappers.py    # 映射器
+│   │   └── views/
+│   │       ├── knowledge.py
+│   │       └── tags.py
+│   │
+│   ├── questions/            # 题库
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   └── domain/           # 领域层
+│   │
+│   ├── quizzes/              # 试卷
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   └── domain/           # 领域层
+│   │
+│   ├── tasks/                # 任务
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   └── domain/           # 领域层
+│   │
+│   ├── submissions/          # 答题提交、评分
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   ├── domain/           # 领域层
+│   │   └── views/
+│   │       ├── common.py
+│   │       ├── exam.py
+│   │       ├── grading.py
+│   │       └── practice.py
+│   │
+│   ├── spot_checks/          # 抽查
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   └── views.py
+│   │
+│   ├── notifications/        # 通知
+│   │   ├── models.py
+│   │   ├── repositories.py
+│   │   ├── services.py
+│   │   └── views.py
+│   │
+│   └── analytics/            # 统计分析
+│       ├── services.py
+│       └── views/
+│           ├── student.py
+│           ├── mentor.py
+│           └── team_manager.py
+│
+├── core/                     # 核心公共组件
+│   ├── base_repository.py   # Repository 基类
+│   ├── base_service.py      # Service 基类
+│   ├── exceptions.py        # 统一异常定义
+│   ├── permissions.py        # 权限控制基类
+│   ├── mixins.py            # 通用 Mixin
+│   ├── pagination.py        # 分页工具
+│   └── utils.py             # 工具函数
+│
+├── config/                   # 项目配置
+│   ├── settings/            # 环境配置
+│   │   ├── base.py          # 基础配置
+│   │   ├── development.py   # 开发环境
+│   │   ├── production.py    # 生产环境
+│   │   └── test.py          # 测试环境
+│   ├── urls.py              # URL 路由
+│   ├── wsgi.py
+│   └── asgi.py
+│
+├── tests/                    # 测试文件
+│   ├── integration/         # 集成测试
+│   │   ├── test_exam_task_flow.py
+│   │   ├── test_learning_task_flow.py
+│   │   ├── test_practice_task_flow.py
+│   │   ├── test_permission_flow.py
+│   │   ├── test_user_management_flow.py
+│   │   └── test_resource_protection_flow.py
+│   └── properties/          # 属性测试（基于 Hypothesis）
+│       ├── test_auth_properties.py
+│       ├── test_exam_submission_properties.py
+│       ├── test_grading_properties.py
+│       ├── test_learning_task_execution_properties.py
+│       ├── test_permission_properties.py
+│       ├── test_practice_submission_properties.py
+│       ├── test_question_properties.py
+│       ├── test_quiz_properties.py
+│       ├── test_spot_check_properties.py
+│       ├── test_task_properties.py
+│       └── test_user_properties.py
+│
+├── ARCHITECTURE.md                    # 架构设计文档
+├── ARCHITECTURE_IMPLEMENTATION_PLAN.md # 架构实施计划
+├── CODE_QUALITY_ANALYSIS.md           # 代码质量分析
+├── QUICK_START.md                     # 快速开始指南
+├── README.md                          # 本文档
+├── requirements.txt                   # Python 依赖
+├── pytest.ini                         # pytest 配置
+└── manage.py                          # Django 管理脚本
 ```
 
 ## 架构说明
 
-本项目采用 **Clean Architecture（清洁架构）** 设计：
+本项目采用 **Clean Architecture（清洁架构）** 设计，遵循领域驱动设计（DDD）原则：
 
-- **Repository 层**：封装所有数据访问逻辑
-- **Service 层**：包含所有业务逻辑
-- **View 层**：只处理 HTTP 请求/响应
-- **Model 层**：只定义数据模型和字段
+### 架构层次
+
+```
+┌─────────────────────────────────────┐
+│   Presentation Layer (视图层)        │
+│   - Views (APIView / ViewSet)       │
+│   - Serializers                     │
+│   - Permissions                     │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│   Application Layer (应用层)         │
+│   - Services (业务逻辑编排)          │
+│   - DTOs (数据传输对象)              │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│   Domain Layer (领域层)              │
+│   - Domain Models (领域模型)        │
+│   - Domain Services (领域服务)      │
+│   - Value Objects (值对象)           │
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│   Infrastructure Layer (基础设施层)  │
+│   - Repositories (数据访问)          │
+│   - Database Models (Django ORM)     │
+└──────────────────────────────────────┘
+```
+
+### 各层职责
+
+- **Repository 层**：封装所有数据访问逻辑，提供领域友好的查询接口
+- **Service 层（应用服务）**：编排业务逻辑，协调多个 Repository 和 Domain Service
+- **Domain 层**：包含领域模型和领域服务，实现核心业务规则（部分核心模块已实现）
+- **View 层**：只处理 HTTP 请求/响应，调用 Service 层
+- **Model 层**：只定义数据模型和字段，不包含业务逻辑
+
+### 已实现 Domain 层的模块
+
+以下核心模块已引入 Domain 层：
+- ✅ `knowledge` - 知识文档模块
+- ✅ `questions` - 题库模块
+- ✅ `quizzes` - 试卷模块
+- ✅ `tasks` - 任务模块
+- ✅ `submissions` - 提交模块
 
 详细架构说明请参见 [ARCHITECTURE.md](./ARCHITECTURE.md)
-├── core/               # 公共组件
-├── tests/              # 测试
-└── manage.py
-```
 
 ## 管理命令
 
@@ -398,6 +576,72 @@ python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.s
 ### Q: 如何处理跨域？
 
 开发环境已配置 `CORS_ALLOW_ALL_ORIGINS = True`，生产环境需要配置具体的允许域名。
+
+### Q: 如何查看 API 文档？
+
+启动服务后访问：
+- **Swagger UI**: http://127.0.0.1:8000/api/docs/
+- **ReDoc**: http://127.0.0.1:8000/api/redoc/
+- **OpenAPI Schema**: http://127.0.0.1:8000/api/schema/
+
+### Q: 项目使用什么架构？
+
+项目采用 **Clean Architecture（清洁架构）**，包含以下层次：
+- **Presentation Layer**（视图层）：处理 HTTP 请求/响应
+- **Application Layer**（应用层）：业务逻辑编排
+- **Domain Layer**（领域层）：核心业务规则（部分模块已实现）
+- **Infrastructure Layer**（基础设施层）：数据访问和外部服务
+
+详细说明请参见 [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+### Q: 如何添加新的业务模块？
+
+1. 在 `apps/` 下创建新的应用目录
+2. 创建 `models.py`（Django ORM 模型）
+3. 创建 `repositories.py`（继承 `BaseRepository`）
+4. 创建 `services.py`（继承 `BaseService`）
+5. 创建 `views/` 目录和视图文件
+6. 创建 `serializers.py`（DRF 序列化器）
+7. 在 `config/urls.py` 中注册路由
+
+参考现有模块（如 `knowledge`、`tasks`）的实现。
+
+## 开发指南
+
+### 代码规范
+
+- 使用 JSDoc 风格的注释（Python docstring）
+- 遵循 PEP 8 代码风格
+- 使用类型提示（Type Hints）
+- 所有业务逻辑应在 Service 层，不在 View 或 Model 层
+
+### 添加新功能流程
+
+1. **创建数据模型**：在 `models.py` 中定义 Django ORM 模型
+2. **创建 Repository**：在 `repositories.py` 中实现数据访问逻辑
+3. **创建 Service**：在 `services.py` 中实现业务逻辑
+4. **创建 View**：在 `views/` 中处理 HTTP 请求
+5. **创建 Serializer**：在 `serializers.py` 中定义输入/输出格式
+6. **编写测试**：添加单元测试和集成测试
+7. **更新文档**：更新 API 文档和 README
+
+### 架构重构状态
+
+项目已完成架构重构，采用 Clean Architecture：
+
+- ✅ 所有模块已实现 Repository 层
+- ✅ 所有模块已实现 Service 层
+- ✅ View 层职责清晰，无业务逻辑
+- ✅ 核心模块已引入 Domain 层（knowledge, questions, quizzes, tasks, submissions）
+
+详细重构计划请参见 [ARCHITECTURE_IMPLEMENTATION_PLAN.md](./ARCHITECTURE_IMPLEMENTATION_PLAN.md)
+
+## 相关文档
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - 完整架构设计文档
+- [ARCHITECTURE_IMPLEMENTATION_PLAN.md](./ARCHITECTURE_IMPLEMENTATION_PLAN.md) - 架构实施计划
+- [QUICK_START.md](./QUICK_START.md) - 快速开始指南
+- [CODE_QUALITY_ANALYSIS.md](./CODE_QUALITY_ANALYSIS.md) - 代码质量分析
 
 ## License
 

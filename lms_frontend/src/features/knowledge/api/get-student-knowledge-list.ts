@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type { KnowledgeListItem, KnowledgeType, PaginatedResponse } from '@/types/api';
 
 /**
@@ -53,18 +54,17 @@ export const useStudentKnowledgeList = (params: GetStudentKnowledgeListParams = 
       pageSize,
     ],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (knowledge_type) searchParams.set('knowledge_type', knowledge_type);
-      if (line_type_id) searchParams.set('line_type_id', String(line_type_id));
-      if (system_tag_id) searchParams.set('system_tag_id', String(system_tag_id));
-      if (operation_tag_id) searchParams.set('operation_tag_id', String(operation_tag_id));
-      if (search) searchParams.set('search', search);
-      searchParams.set('page', String(page));
-      searchParams.set('page_size', String(pageSize));
-
-      const queryString = searchParams.toString();
+      const queryParams = {
+        ...buildPaginationParams(page, pageSize),
+        ...(knowledge_type && { knowledge_type }),
+        ...(line_type_id && { line_type_id: String(line_type_id) }),
+        ...(system_tag_id && { system_tag_id: String(system_tag_id) }),
+        ...(operation_tag_id && { operation_tag_id: String(operation_tag_id) }),
+        ...(search && { search }),
+      };
+      const queryString = buildQueryString(queryParams);
       // 使用学员专属接口，强制只返回已发布的知识
-      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge/student/${queryString ? `?${queryString}` : ''}`);
+      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge/student${queryString}`);
     },
   });
 };

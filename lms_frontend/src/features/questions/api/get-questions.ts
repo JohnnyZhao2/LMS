@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type { Question, QuestionType, PaginatedResponse } from '@/types/api';
 
 interface GetQuestionsParams {
@@ -19,14 +20,14 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
   return useQuery({
     queryKey: ['questions', page, pageSize, questionType, search, lineTypeId],
     queryFn: () => {
-      const searchParams = new URLSearchParams();
-      if (page) searchParams.set('page', String(page));
-      if (pageSize) searchParams.set('page_size', String(pageSize));
-      if (questionType) searchParams.set('question_type', questionType);
-      if (search) searchParams.set('search', search);
-      if (lineTypeId) searchParams.set('line_type_id', String(lineTypeId));
-
-      return apiClient.get<PaginatedResponse<Question>>(`/questions/?${searchParams.toString()}`);
+      const queryParams = {
+        ...buildPaginationParams(page, pageSize),
+        ...(questionType && { question_type: questionType }),
+        ...(search && { search }),
+        ...(lineTypeId && { line_type_id: String(lineTypeId) }),
+      };
+      const queryString = buildQueryString(queryParams);
+      return apiClient.get<PaginatedResponse<Question>>(`/questions/${queryString}`);
     },
   });
 };

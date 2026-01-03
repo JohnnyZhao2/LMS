@@ -1,5 +1,6 @@
 import { config } from '@/config';
 import { tokenStorage } from './token-storage';
+import { ROUTES } from '@/config/routes';
 
 /**
  * API 错误类
@@ -116,7 +117,7 @@ class ApiClient {
       } catch (error) {
         // 刷新失败，跳转到登录页
         tokenStorage.clearTokens();
-        window.location.href = '/login';
+        window.location.href = ROUTES.LOGIN;
         throw error;
       }
     }
