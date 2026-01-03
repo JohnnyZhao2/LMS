@@ -505,7 +505,12 @@ class KnowledgeService(BaseService):
             created_by_id=user.id
         )
         
-        # 更新字段
+        # 提取标签数据
+        line_type_id = data.pop('line_type_id', None)
+        system_tag_ids = data.pop('system_tag_ids', None)
+        operation_tag_ids = data.pop('operation_tag_ids', None)
+        
+        # 更新字段（排除标签相关字段，这些字段不应该传递给Domain Model）
         for key, value in data.items():
             if hasattr(draft_domain, key) and key not in ['line_type_id', 'system_tag_ids', 'operation_tag_ids']:
                 setattr(draft_domain, key, value)
@@ -514,9 +519,6 @@ class KnowledgeService(BaseService):
         draft_orm = self.repository.create_from_domain(draft_domain)
         
         # 统一使用_set_tags方法设置标签
-        line_type_id = data.get('line_type_id')
-        system_tag_ids = data.get('system_tag_ids')
-        operation_tag_ids = data.get('operation_tag_ids')
         if line_type_id is not None or system_tag_ids is not None or operation_tag_ids is not None:
             self._set_tags(draft_orm, line_type_id, system_tag_ids, operation_tag_ids)
         

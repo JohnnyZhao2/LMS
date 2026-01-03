@@ -5,7 +5,7 @@ import { Plus, Search, User, Clock, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSpotChecks } from '../api/get-spot-checks';
 import { ROUTES } from '@/config/routes';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SimplePagination } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table/data-table';
@@ -145,32 +145,13 @@ export const SpotCheckList: React.FC = () => {
                   columns={columns}
                   data={data.results}
                 />
-                {/* 分页 */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#E5E7EB]">
-                  <span className="text-sm text-[#6B7280]">
-                    共 {data.count || 0} 条抽查记录
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page === 1}
-                      onClick={() => setPage(page - 1)}
-                      className="shadow-none border-4 border-[#E5E7EB]"
-                    >
-                      上一页
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!data.next}
-                      onClick={() => setPage(page + 1)}
-                      className="shadow-none border-4 border-[#E5E7EB]"
-                    >
-                      下一页
-                    </Button>
-                  </div>
-                </div>
+                <SimplePagination
+                  currentPage={page}
+                  hasNext={!!data.next}
+                  totalCount={data.count || 0}
+                  countLabel="条抽查记录"
+                  onPageChange={setPage}
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-[#6B7280]">

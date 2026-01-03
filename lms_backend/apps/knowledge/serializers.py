@@ -170,24 +170,21 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating knowledge documents.
     
-    支持自定义输入标签，自动创建不存在的标签。
-    
     Requirements:
     - 4.1: 创建知识文档时要求指定知识类型
     - 4.2: 应急类知识使用结构化正文字段
     - 4.3: 其他类型知识使用 Markdown/富文本自由正文
     """
-    # 前端传入标签名称/ID
+    # 前端传入标签ID
     line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    line_type_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    system_tag_names = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+    system_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
         required=False,
         default=list
     )
-    operation_tag_names = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+    operation_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
         required=False,
         default=list
@@ -197,8 +194,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title', 'knowledge_type',
-            'line_type_id', 'line_type_name',
-            'system_tag_names', 'operation_tag_names',
+            'line_type_id',
+            'system_tag_ids', 'operation_tag_ids',
             # 应急类知识的结构化字段
             'fault_scenario', 'trigger_process', 'solution',
             'verification_plan', 'recovery_plan',
@@ -217,11 +214,9 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         knowledge_type = attrs.get('knowledge_type')
         
         # 验证条线类型
-        line_type_id = attrs.get('line_type_id')
-        line_type_name = attrs.get('line_type_name')
-        if not line_type_id and not line_type_name:
+        if not attrs.get('line_type_id'):
             raise serializers.ValidationError({
-                'line_type_id': '必须提供条线类型（line_type_id 或 line_type_name）'
+                'line_type_id': '必须提供条线类型ID'
             })
         
         if knowledge_type == 'EMERGENCY':
@@ -245,68 +240,11 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
                 })
         
         return attrs
-    
-    def create(self, validated_data):
-        """Create knowledge document with tag handling."""
-        # 提取标签数据
-        line_type_id = validated_data.pop('line_type_id', None)
-        line_type_name = validated_data.pop('line_type_name', None)
-        system_tag_names = validated_data.pop('system_tag_names', [])
-        operation_tag_names = validated_data.pop('operation_tag_names', [])
-        
-        # 处理条线类型
-        if line_type_id:
-            line_type = Tag.objects.get(id=line_type_id, tag_type='LINE')
-        else:
-            line_type, _ = Tag.objects.get_or_create(
-                name=line_type_name,
-                tag_type='LINE',
-                defaults={'is_active': True}
-            )
-        
-        # Set created_by and updated_by from context
-        user = self.context['request'].user
-        validated_data['created_by'] = user
-        validated_data['updated_by'] = user
-        # 新建知识默认保存为草稿
-        validated_data.setdefault('status', 'DRAFT')
-        validated_data.setdefault('is_current', False)
-        validated_data.setdefault('version_number', Knowledge.next_version_number(validated_data.get('resource_uuid')))
-        
-        knowledge = Knowledge.objects.create(**validated_data)
-        
-        # 设置条线类型关系
-        if line_type:
-            knowledge.set_line_type(line_type)
-        
-        # 处理系统标签 - 不存在则自动创建
-        for name in system_tag_names:
-            if name.strip():
-                tag, _ = Tag.objects.get_or_create(
-                    name=name.strip(),
-                    tag_type='SYSTEM',
-                    defaults={'is_active': True}
-                )
-                knowledge.system_tags.add(tag)
-        
-        # 处理操作标签 - 不存在则自动创建
-        for name in operation_tag_names:
-            if name.strip():
-                tag, _ = Tag.objects.get_or_create(
-                    name=name.strip(),
-                    tag_type='OPERATION',
-                    defaults={'is_active': True}
-                )
-                knowledge.operation_tags.add(tag)
-        
-        return knowledge
 
 
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating knowledge documents.
-    
-    支持自定义输入标签，自动创建不存在的标签。
     
     Requirements:
     - 4.4: 编辑知识文档时更新内容并记录最后更新时间
@@ -314,14 +252,13 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     - 4.3: 其他类型知识使用 Markdown/富文本自由正文
     """
     line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    line_type_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    system_tag_names = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+    system_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
         required=False
     )
-    operation_tag_names = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+    operation_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
         required=False
     )
@@ -330,8 +267,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title', 'knowledge_type',
-            'line_type_id', 'line_type_name',
-            'system_tag_names', 'operation_tag_names',
+            'line_type_id',
+            'system_tag_ids', 'operation_tag_ids',
             # 应急类知识的结构化字段
             'fault_scenario', 'trigger_process', 'solution',
             'verification_plan', 'recovery_plan',
@@ -404,44 +341,18 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         
         # 处理条线类型
         line_type_id = validated_data.pop('line_type_id', None)
-        line_type_name = validated_data.pop('line_type_name', None)
-        
-        if line_type_id or line_type_name:
-            if line_type_id:
-                line_type = Tag.objects.get(id=line_type_id, tag_type='LINE')
-            else:
-                line_type, _ = Tag.objects.get_or_create(
-                    name=line_type_name,
-                    tag_type='LINE',
-                    defaults={'is_active': True}
-                )
-            instance.set_line_type(line_type)
+        if line_type_id is not None:
+            instance.set_line_type(Tag.objects.get(id=line_type_id, tag_type='LINE'))
         
         # 处理系统标签
-        system_tag_names = validated_data.pop('system_tag_names', None)
-        if system_tag_names is not None:
-            instance.system_tags.clear()
-            for name in system_tag_names:
-                if name.strip():
-                    tag, _ = Tag.objects.get_or_create(
-                        name=name.strip(),
-                        tag_type='SYSTEM',
-                        defaults={'is_active': True}
-                    )
-                    instance.system_tags.add(tag)
+        system_tag_ids = validated_data.pop('system_tag_ids', None)
+        if system_tag_ids is not None:
+            instance.system_tags.set(system_tag_ids)
         
         # 处理操作标签
-        operation_tag_names = validated_data.pop('operation_tag_names', None)
-        if operation_tag_names is not None:
-            instance.operation_tags.clear()
-            for name in operation_tag_names:
-                if name.strip():
-                    tag, _ = Tag.objects.get_or_create(
-                        name=name.strip(),
-                        tag_type='OPERATION',
-                        defaults={'is_active': True}
-                    )
-                    instance.operation_tags.add(tag)
+        operation_tag_ids = validated_data.pop('operation_tag_ids', None)
+        if operation_tag_ids is not None:
+            instance.operation_tags.set(operation_tag_ids)
         
         # Update other fields (不包括 status，status 通过发布接口单独处理)
         validated_data.pop('status', None)  # 移除 status，不允许通过更新接口修改

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import type { Tag, TagType } from '@/types/api';
@@ -67,5 +67,31 @@ export const useSystemTags = (lineTypeId?: number, search?: string) => {
  */
 export const useOperationTags = (lineTypeId?: number, search?: string) => {
   return useTags({ tag_type: 'OPERATION', line_type_id: lineTypeId, search });
+};
+
+/**
+ * 创建标签请求
+ */
+interface CreateTagRequest {
+  name: string;
+  tag_type: TagType;
+  parent?: number | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+/**
+ * 创建标签
+ */
+export const useCreateTag = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateTagRequest) => 
+      apiClient.post<Tag>('/knowledge/tags/create/', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+    },
+  });
 };
 

@@ -35,6 +35,7 @@ interface QuestionTabProps {
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const pageSize = 10; // 与 API 默认值一致
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
   const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
@@ -45,6 +46,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
 
   const { data, isLoading } = useQuestions({
     page,
+    pageSize,
     questionType,
     lineTypeId,
     search: search || undefined,
@@ -183,31 +185,34 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
           </div>
 
           {/* 分页按钮 */}
-          {data && data.count > 10 && (
-            <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-10 w-10 rounded-md shadow-none" 
-                disabled={page === 1} 
-                onClick={() => setPage(page - 1)}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <div className="flex items-center gap-2 text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                {page} <span className="text-gray-300">/</span> {Math.ceil(data.count / 10)}
+          {data && data.count > pageSize && (() => {
+            const totalPages = Math.ceil(data.count / pageSize);
+            return (
+              <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-center gap-4">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 rounded-md shadow-none" 
+                  disabled={page === 1} 
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+                <div className="flex items-center gap-2 text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                  {page} <span className="text-gray-300">/</span> {totalPages}
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 rounded-md shadow-none" 
+                  disabled={page >= totalPages} 
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-10 w-10 rounded-md shadow-none" 
-                disabled={!data.next} 
-                onClick={() => setPage(page + 1)}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* 右侧详情 */}

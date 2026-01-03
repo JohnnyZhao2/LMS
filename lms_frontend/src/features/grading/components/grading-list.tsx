@@ -4,7 +4,7 @@ import { Pencil, User, FileText, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePendingGrading } from '../api/get-pending-grading';
 import { ROUTES } from '@/config/routes';
-import { PageHeader, StatusBadge } from '@/components/ui';
+import { PageHeader, StatusBadge, SimplePagination } from '@/components/ui';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table/data-table';
@@ -112,32 +112,13 @@ export const GradingList: React.FC = () => {
                   columns={columns}
                   data={data.results}
                 />
-                {/* 分页 */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#E5E7EB]">
-                  <span className="text-sm text-[#6B7280]">
-                    共 {data.count || 0} 份待评分
-                  </span>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={page === 1}
-                      onClick={() => setPage(page - 1)}
-                      className="shadow-none border-4 border-[#E5E7EB]"
-                    >
-                      上一页
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!data.next}
-                      onClick={() => setPage(page + 1)}
-                      className="shadow-none border-4 border-[#E5E7EB]"
-                    >
-                      下一页
-                    </Button>
-                  </div>
-                </div>
+                <SimplePagination
+                  currentPage={page}
+                  hasNext={!!data.next}
+                  totalCount={data.count || 0}
+                  countLabel="份待评分"
+                  onPageChange={setPage}
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-[#6B7280]">

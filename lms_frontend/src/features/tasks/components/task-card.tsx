@@ -26,14 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
@@ -291,24 +284,22 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
         </DialogContent>
       </Dialog>
 
-      {/* 删除对话框 - Flat Design */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="rounded-lg max-w-md p-8 border-2 border-[#E5E7EB]">
-          <DialogHeader>
-            <div className="w-16 h-16 bg-[#FEE2E2] text-[#EF4444] rounded-md flex items-center justify-center mb-6 mx-auto">
-              <Trash2 className="w-8 h-8" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-[#111827] mb-2 text-center">彻底清除任务？</DialogTitle>
-            <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
-              确定要永久删除任务「{title}」吗？相关的所有提交记录和数据都将被删除。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-8 gap-4 sm:flex-row">
-            <Button variant="secondary" className="flex-1 h-12" onClick={() => setDeleteModalOpen(false)}>取消</Button>
-            <Button className="flex-1 h-12 bg-[#EF4444] hover:bg-[#DC2626] text-white hover:scale-105" onClick={handleDelete}>删除任务</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 删除对话框 */}
+      <ConfirmDialog
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        title="彻底清除任务？"
+        description={`确定要永久删除任务「${title}」吗？相关的所有提交记录和数据都将被删除。`}
+        icon={<Trash2 className="w-8 h-8" />}
+        iconBgColor="bg-[#FEE2E2]"
+        iconColor="text-[#EF4444]"
+        confirmText="删除任务"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleDelete}
+        isConfirming={deleteTask.isPending}
+        contentClassName="rounded-lg max-w-md p-8 border-2 border-[#E5E7EB]"
+      />
     </div>
   );
 };

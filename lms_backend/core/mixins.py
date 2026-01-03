@@ -6,6 +6,10 @@ Properties: 37, 38, 39
 """
 from django.db import models
 from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework import status
+
+from core.exceptions import BusinessError, ErrorCodes
 
 
 class TimestampMixin(models.Model):
@@ -245,3 +249,73 @@ class TaskDataScopeMixin(DataScopeMixin):
             return queryset.filter(**{self.data_scope_user_field: user})
         
         return queryset.none()
+
+
+class BusinessErrorHandlerMixin:
+    """
+    Mixin for APIView that provides unified BusinessError handling.
+    
+    This mixin provides a helper method to convert BusinessError exceptions
+    into proper HTTP responses with appropriate status codes.
+    
+    Usage:
+        class MyView(BusinessErrorHandlerMixin, APIView):
+            def post(self, request):
+                try:
+                    result = self.service.create(...)
+                except BusinessError as e:
+                    return self.handle_business_error(e)
+    """
+    
+    def handle_business_error(self, error: BusinessError) -> Response:
+        """
+        处理 BusinessError 异常，转换为适当的 HTTP 响应
+        
+        Args:
+            error: BusinessError 异常实例
+            
+        Returns:
+            Response: 包含错误信息的 HTTP 响应，状态码根据错误类型自动映射
+        """
+        # 根据错误码映射到相应的 HTTP 状态码
+        status_code = self._get_status_code_for_error(error.code)
+        
+        response_data = {
+            'code': error.code,
+            'message': error.message,
+            'details': error.details,
+        }
+        
+        return Response(response_data, status=status_code)
+    
+    def _get_status_code_for_error(self, error_code: str) -> int:
+        """
+        根据错误码返回相应的 HTTP 状态码
+        
+        Args:
+            error_code: 错误码字符串
+            
+        Returns:
+            int: HTTP 状态码
+        """
+        # 错误码到状态码的映射
+        error_code_mapping = {
+            ErrorCodes.RESOURCE_NOT_FOUND: status.HTTP_404_NOT_FOUND,
+            ErrorCodes.PERMISSION_DENIED: status.HTTP_403_FORBIDDEN,
+            ErrorCodes.VALIDATION_ERROR: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_OPERATION: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.INVALID_INPUT: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.AUTH_INVALID_CREDENTIALS: status.HTTP_401_UNAUTHORIZED,
+            ErrorCodes.AUTH_USER_INACTIVE: status.HTTP_403_FORBIDDEN,
+            ErrorCodes.AUTH_INVALID_ROLE: status.HTTP_403_FORBIDDEN,
+            ErrorCodes.RESOURCE_REFERENCED: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.RESOURCE_VERSION_MISMATCH: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.USER_HAS_DATA: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.TASK_INVALID_ASSIGNEES: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.TASK_ALREADY_CLOSED: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.EXAM_NOT_IN_WINDOW: status.HTTP_400_BAD_REQUEST,
+            ErrorCodes.EXAM_ALREADY_SUBMITTED: status.HTTP_400_BAD_REQUEST,
+        }
+        
+        # 如果错误码在映射中，返回对应的状态码，否则默认返回 400
+        return error_code_mapping.get(error_code, status.HTTP_400_BAD_REQUEST)

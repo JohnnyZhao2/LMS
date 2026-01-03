@@ -17,14 +17,7 @@ import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowle
 import { getLineTypeIcon } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
@@ -239,7 +232,7 @@ export const AdminKnowledgeList: React.FC = () => {
                 ))}
               </div>
 
-              {data.count > pageSize && (
+              {Math.ceil(data.count / pageSize) > 1 && (
                 <div className="flex justify-center pt-8">
                   <Pagination
                     current={page}
@@ -261,31 +254,20 @@ export const AdminKnowledgeList: React.FC = () => {
       </div>
 
       {/* 取消发布确认对话框 */}
-      <Dialog open={unpublishDialog.open} onOpenChange={(open) => setUnpublishDialog({ open })}>
-        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
-          <DialogHeader>
-            <div className="w-20 h-20 bg-[#F59E0B] text-white rounded-lg flex items-center justify-center mb-8 mx-auto">
-              <Shield className="h-10 w-10" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-[#111827] mb-2 text-center">确认下线此知识？</DialogTitle>
-            <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
-              取消发布后，该知识将变为草稿状态，学员将无法查看，也无法用于任务分配。确定要取消发布吗？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button variant="outline" className="flex-1 rounded-md h-14 font-semibold border-4 border-[#E5E7EB] shadow-none" onClick={() => setUnpublishDialog({ open: false })}>
-              取消
-            </Button>
-            <Button
-              onClick={confirmUnpublish}
-              disabled={unpublishKnowledge.isPending}
-              className="flex-1 bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] transition-all duration-200 shadow-none"
-            >
-              {unpublishKnowledge.isPending ? '正在处理...' : '下线文档'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={unpublishDialog.open}
+        onOpenChange={(open) => setUnpublishDialog({ open })}
+        title="确认下线此知识？"
+        description="取消发布后，该知识将变为草稿状态，学员将无法查看，也无法用于任务分配。确定要取消发布吗？"
+        icon={<Shield className="h-10 w-10" />}
+        iconBgColor="bg-[#F59E0B]"
+        iconColor="text-white"
+        confirmText="下线文档"
+        cancelText="取消"
+        confirmVariant="default"
+        onConfirm={confirmUnpublish}
+        isConfirming={unpublishKnowledge.isPending}
+      />
     </div>
   );
 };

@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 
 from core.exceptions import BusinessError
 from core.pagination import StandardResultsSetPagination
+from core.mixins import BusinessErrorHandlerMixin
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from .services import QuizService
 from .serializers import (
@@ -24,7 +25,7 @@ from .serializers import (
 )
 
 
-class QuizListCreateView(APIView):
+class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
     """
     试卷列表和创建
     
@@ -72,10 +73,7 @@ class QuizListCreateView(APIView):
                 ordering='-created_at'
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 3. 分页
         paginator = StandardResultsSetPagination()
@@ -126,17 +124,14 @@ class QuizListCreateView(APIView):
                 new_questions_data=new_questions_data
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_201_CREATED)
 
 
-class QuizDetailView(APIView):
+class QuizDetailView(BusinessErrorHandlerMixin, APIView):
     """
     试卷详情、更新、删除
     
@@ -165,10 +160,7 @@ class QuizDetailView(APIView):
         try:
             quiz = self.service.get_by_id(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return self.handle_business_error(e)
         
         serializer = QuizDetailSerializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -209,10 +201,7 @@ class QuizDetailView(APIView):
                 question_ids=question_ids
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
@@ -240,15 +229,12 @@ class QuizDetailView(APIView):
         try:
             self.service.delete(pk, request.user)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class QuizAddQuestionsView(APIView):
+class QuizAddQuestionsView(BusinessErrorHandlerMixin, APIView):
     """
     向试卷添加题目
     
@@ -298,17 +284,14 @@ class QuizAddQuestionsView(APIView):
                 new_questions_data=new_questions_data
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)
 
 
-class QuizRemoveQuestionsView(APIView):
+class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, APIView):
     """
     从试卷移除题目
     """
@@ -347,17 +330,14 @@ class QuizRemoveQuestionsView(APIView):
                 question_ids=question_ids
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)
 
 
-class QuizReorderQuestionsView(APIView):
+class QuizReorderQuestionsView(BusinessErrorHandlerMixin, APIView):
     """
     重新排序试卷题目
     """
@@ -396,17 +376,14 @@ class QuizReorderQuestionsView(APIView):
                 question_ids=question_ids
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)
 
 
-class QuizCreateFromQuestionsView(APIView):
+class QuizCreateFromQuestionsView(BusinessErrorHandlerMixin, APIView):
     """
     从题目创建试卷
     
@@ -463,10 +440,7 @@ class QuizCreateFromQuestionsView(APIView):
                 question_ids=question_ids
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return self.handle_business_error(e)
         
         # 3. 序列化输出
         output = QuizDetailSerializer(quiz)

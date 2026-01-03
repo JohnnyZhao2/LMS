@@ -28,7 +28,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
-import { useLineTypeTags, useSystemTags, useOperationTags } from '../api/get-tags';
+import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge, usePublishKnowledge } from '../api/manage-knowledge';
 import { EMERGENCY_TABS, parseOutlineFromHtml } from '../utils';
 import { showApiError } from '@/utils/error-handler';
@@ -58,6 +58,7 @@ export const KnowledgeForm: React.FC = () => {
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const publishKnowledge = usePublishKnowledge();
+  const createTag = useCreateTag();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
@@ -65,8 +66,8 @@ export const KnowledgeForm: React.FC = () => {
   const [title, setTitle] = useState('');
   const [knowledgeType, setKnowledgeType] = useState<KnowledgeType>('OTHER');
   const [lineTypeId, setLineTypeId] = useState<number | undefined>();
-  const [systemTagNames, setSystemTagNames] = useState<string[]>([]);
-  const [operationTagNames, setOperationTagNames] = useState<string[]>([]);
+  const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
+  const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
 
   const { data: systemTags = [] } = useSystemTags();
   const { data: operationTags = [] } = useOperationTags();
@@ -90,8 +91,8 @@ export const KnowledgeForm: React.FC = () => {
       setTitle(knowledgeDetail.title || '');
       setKnowledgeType(knowledgeDetail.knowledge_type);
       setLineTypeId(knowledgeDetail.line_type?.id);
-      setSystemTagNames(knowledgeDetail.system_tags?.map((t) => t.name) || []);
-      setOperationTagNames(knowledgeDetail.operation_tags?.map((t) => t.name) || []);
+      setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
+      setOperationTagIds(knowledgeDetail.operation_tags?.map((t) => t.id) || []);
       setContent(knowledgeDetail.content || '');
       setSummary(knowledgeDetail.summary || '');
       setFaultScenario(knowledgeDetail.fault_scenario || '');
@@ -139,22 +140,73 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [activeEmergencyTab]);
 
-
-  const handleAddSystemTag = useCallback(() => {
+  /**
+   * 添加系统标签（如果不存在则先创建）
+   */
+  const handleAddSystemTag = useCallback(async () => {
     if (!systemTagInput.trim()) return;
-    if (!systemTagNames.includes(systemTagInput.trim())) {
-      setSystemTagNames(prev => [...prev, systemTagInput.trim()]);
+    
+    const tagName = systemTagInput.trim();
+    
+    // 检查是否已存在同名标签
+    const existingTag = systemTags.find((tag: Tag) => tag.name === tagName);
+    if (existingTag) {
+      if (!systemTagIds.includes(existingTag.id)) {
+        setSystemTagIds(prev => [...prev, existingTag.id]);
+      }
+      setSystemTagInput('');
+      return;
     }
-    setSystemTagInput('');
-  }, [systemTagInput, systemTagNames]);
+    
+    // 创建新标签
+    try {
+      const newTag = await createTag.mutateAsync({
+        name: tagName,
+        tag_type: 'SYSTEM',
+        is_active: true,
+      });
+      setSystemTagIds(prev => [...prev, newTag.id]);
+      setSystemTagInput('');
+      toast.success('标签创建成功');
+    } catch (error) {
+      showApiError(error, '创建标签失败');
+    }
+  }, [systemTagInput, systemTags, systemTagIds, createTag]);
 
-  const handleAddOperationTag = useCallback(() => {
+  /**
+   * 添加操作标签（如果不存在则先创建）
+   */
+  const handleAddOperationTag = useCallback(async () => {
     if (!operationTagInput.trim()) return;
-    if (!operationTagNames.includes(operationTagInput.trim())) {
-      setOperationTagNames(prev => [...prev, operationTagInput.trim()]);
+    
+    const tagName = operationTagInput.trim();
+    
+    // 检查是否已存在同名标签
+    const existingTag = operationTags.find((tag: Tag) => tag.name === tagName);
+    if (existingTag) {
+      if (!operationTagIds.includes(existingTag.id)) {
+        setOperationTagIds(prev => [...prev, existingTag.id]);
+      }
+      setOperationTagInput('');
+      return;
     }
-    setOperationTagInput('');
-  }, [operationTagInput, operationTagNames]);
+    
+    // 创建新标签
+    try {
+      const newTag = await createTag.mutateAsync({
+        name: tagName,
+        tag_type: 'OPERATION',
+        is_active: true,
+      });
+      setOperationTagIds(prev => [...prev, newTag.id]);
+      setOperationTagInput('');
+      toast.success('标签创建成功');
+    } catch (error) {
+      showApiError(error, '创建标签失败');
+    }
+  }, [operationTagInput, operationTags, operationTagIds, createTag]);
+
+
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -186,8 +238,8 @@ export const KnowledgeForm: React.FC = () => {
       title,
       knowledge_type: knowledgeType,
       line_type_id: lineTypeId!,
-      system_tag_names: systemTagNames,
-      operation_tag_names: operationTagNames,
+      system_tag_ids: systemTagIds,
+      operation_tag_ids: operationTagIds,
       summary,
     };
 
@@ -209,7 +261,7 @@ export const KnowledgeForm: React.FC = () => {
 
     return requestData;
   }, [
-    title, knowledgeType, lineTypeId, systemTagNames, operationTagNames,
+    title, knowledgeType, lineTypeId, systemTagIds, operationTagIds,
     content, summary, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
   ]);
 
@@ -558,17 +610,20 @@ export const KnowledgeForm: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">系统标签</label>
                 <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
-                  {systemTagNames.length > 0 ? systemTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 rounded-md">
-                      {tag}
-                      <button
-                        className="ml-1.5 hover:text-red-600 transition-colors"
-                        onClick={() => setSystemTagNames(prev => prev.filter(t => t !== tag))}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  )) : (
+                  {systemTagIds.length > 0 ? systemTagIds.map((tagId) => {
+                    const tag = systemTags.find((t: Tag) => t.id === tagId);
+                    return tag ? (
+                      <Badge key={tagId} variant="secondary" className="text-xs px-3 py-1 rounded-md">
+                        {tag.name}
+                        <button
+                          className="ml-1.5 hover:text-red-600 transition-colors"
+                          onClick={() => setSystemTagIds(prev => prev.filter(id => id !== tagId))}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  }) : (
                     <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
                   )}
                 </div>
@@ -576,8 +631,9 @@ export const KnowledgeForm: React.FC = () => {
                   <Select
                     value=""
                     onValueChange={(v) => {
-                      if (v && !systemTagNames.includes(v)) {
-                        setSystemTagNames(prev => [...prev, v]);
+                      const tagId = Number(v);
+                      if (tagId && !systemTagIds.includes(tagId)) {
+                        setSystemTagIds(prev => [...prev, tagId]);
                       }
                     }}
                   >
@@ -585,8 +641,8 @@ export const KnowledgeForm: React.FC = () => {
                       <SelectValue placeholder="选择已有..." />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
-                      {systemTags.filter((tag: Tag) => !systemTagNames.includes(tag.name)).map((tag: Tag) => (
-                        <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                      {systemTags.filter((tag: Tag) => !systemTagIds.includes(tag.id)).map((tag: Tag) => (
+                        <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -603,8 +659,18 @@ export const KnowledgeForm: React.FC = () => {
                       }}
                       className="flex-1"
                     />
-                    <Button variant="outline" size="sm" onClick={handleAddSystemTag} className="h-14 w-14">
-                      <Plus className="w-4 h-4" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddSystemTag} 
+                      className="h-14 w-14"
+                      disabled={createTag.isPending}
+                    >
+                      {createTag.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -614,17 +680,20 @@ export const KnowledgeForm: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">操作标签</label>
                 <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
-                  {operationTagNames.length > 0 ? operationTagNames.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 rounded-md">
-                      {tag}
-                      <button
-                        className="ml-1.5 hover:text-red-600 transition-colors"
-                        onClick={() => setOperationTagNames(prev => prev.filter(t => t !== tag))}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  )) : (
+                  {operationTagIds.length > 0 ? operationTagIds.map((tagId) => {
+                    const tag = operationTags.find((t: Tag) => t.id === tagId);
+                    return tag ? (
+                      <Badge key={tagId} variant="secondary" className="text-xs px-3 py-1 rounded-md">
+                        {tag.name}
+                        <button
+                          className="ml-1.5 hover:text-red-600 transition-colors"
+                          onClick={() => setOperationTagIds(prev => prev.filter(id => id !== tagId))}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  }) : (
                     <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
                   )}
                 </div>
@@ -632,8 +701,9 @@ export const KnowledgeForm: React.FC = () => {
                   <Select
                     value=""
                     onValueChange={(v) => {
-                      if (v && !operationTagNames.includes(v)) {
-                        setOperationTagNames(prev => [...prev, v]);
+                      const tagId = Number(v);
+                      if (tagId && !operationTagIds.includes(tagId)) {
+                        setOperationTagIds(prev => [...prev, tagId]);
                       }
                     }}
                   >
@@ -641,8 +711,8 @@ export const KnowledgeForm: React.FC = () => {
                       <SelectValue placeholder="选择已有..." />
                     </SelectTrigger>
                     <SelectContent className="z-[1050]">
-                      {operationTags.filter((tag: Tag) => !operationTagNames.includes(tag.name)).map((tag: Tag) => (
-                        <SelectItem key={tag.name} value={tag.name}>{tag.name}</SelectItem>
+                      {operationTags.filter((tag: Tag) => !operationTagIds.includes(tag.id)).map((tag: Tag) => (
+                        <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -659,8 +729,18 @@ export const KnowledgeForm: React.FC = () => {
                       }}
                       className="flex-1"
                     />
-                    <Button variant="outline" size="sm" onClick={handleAddOperationTag} className="h-14 w-14">
-                      <Plus className="w-4 h-4" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddOperationTag} 
+                      className="h-14 w-14"
+                      disabled={createTag.isPending}
+                    >
+                      {createTag.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>

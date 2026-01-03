@@ -26,14 +26,7 @@ import {
     Tooltip,
     Skeleton,
 } from "@/components/ui"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui"
 import { DataTable } from "@/components/ui/data-table/data-table"
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
@@ -398,35 +391,20 @@ export const TaskManagement: React.FC = () => {
             </div>
 
             {/* 删除确认对话框 */}
-            <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-                <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
-                    <DialogHeader>
-                        <div className="w-20 h-20 bg-[#FEE2E2] text-[#DC2626] rounded-lg flex items-center justify-center mb-8 mx-auto">
-                            <Trash2 className="h-10 w-10" />
-                        </div>
-                        <DialogTitle className="text-2xl font-bold text-[#111827] mb-2 text-center">确认删除此任务？</DialogTitle>
-                        <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
-                            此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="mt-10 gap-4 sm:flex-row">
-                        <Button
-                            variant="ghost"
-                            onClick={() => setDeleteId(null)}
-                            className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] shadow-none"
-                        >
-                            取消
-                        </Button>
-                        <Button
-                            onClick={handleDeleteTask}
-                            disabled={isDeleting}
-                            className="flex-1 bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-md h-14 font-semibold shadow-none hover:scale-105 transition-all duration-200"
-                        >
-                            {isDeleting ? "正在删除..." : "确认删除"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ConfirmDialog
+                open={!!deleteId}
+                onOpenChange={(open) => !open && setDeleteId(null)}
+                title="确认删除此任务？"
+                description="此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。"
+                icon={<Trash2 className="h-10 w-10" />}
+                iconBgColor="bg-[#FEE2E2]"
+                iconColor="text-[#DC2626]"
+                confirmText="确认删除"
+                cancelText="取消"
+                confirmVariant="destructive"
+                onConfirm={handleDeleteTask}
+                isConfirming={isDeleting}
+            />
         </div>
     )
 }

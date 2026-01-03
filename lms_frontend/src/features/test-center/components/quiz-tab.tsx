@@ -40,11 +40,12 @@ interface QuizTabProps {
 
 export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' }) => {
   const [page, setPage] = useState(1);
+  const pageSize = 20; // 与 API 默认值一致
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [quickPublishModalVisible, setQuickPublishModalVisible] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data, isLoading, refetch } = useQuizzes({ page, search: search || undefined });
+  const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined });
   const deleteQuiz = useDeleteQuiz();
   const navigate = useNavigate();
   const { user, currentRole } = useAuth();
@@ -289,23 +290,26 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       </div>
 
       {/* 分页 */}
-      {data && data.count > 0 && (
-        <div className="flex justify-center mt-8">
-          <div className="flex items-center gap-4 bg-white p-3 rounded-lg shadow-none border-2 border-gray-200">
-            <Button variant="ghost" size="icon" disabled={page === 1} onClick={() => setPage(page - 1)} className="shadow-none">
-              <ChevronLeft className="w-5 h-5 text-gray-500" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>{page}</span>
-              <span className="text-gray-300">/</span>
-              <span className="text-sm font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>{Math.ceil(data.count / 10)}</span>
+      {data && data.count > pageSize && (() => {
+        const totalPages = Math.ceil(data.count / pageSize);
+        return (
+          <div className="flex justify-center mt-8">
+            <div className="flex items-center gap-4 bg-white p-3 rounded-lg shadow-none border-2 border-gray-200">
+              <Button variant="ghost" size="icon" disabled={page === 1} onClick={() => setPage(page - 1)} className="shadow-none">
+                <ChevronLeft className="w-5 h-5 text-gray-500" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>{page}</span>
+                <span className="text-gray-300">/</span>
+                <span className="text-sm font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>{totalPages}</span>
+              </div>
+              <Button variant="ghost" size="icon" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className="shadow-none">
+                <ChevronRight className="w-5 h-5 text-gray-500" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" disabled={!data.next} onClick={() => setPage(page + 1)} className="shadow-none">
-              <ChevronRight className="w-5 h-5 text-gray-500" />
-            </Button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 快速发布确认弹窗 */}
       <Dialog open={quickPublishModalVisible} onOpenChange={setQuickPublishModalVisible}>

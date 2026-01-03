@@ -22,13 +22,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
+  ConfirmDialog,
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -392,39 +393,25 @@ export const UserList: React.FC = () => {
       />
 
       {/* 重置密码确认对话框 */}
-      <Dialog
+      <ConfirmDialog
         open={resetPasswordDialog.open}
         onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
-      >
-        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
-          <DialogHeader>
-            <div className="w-20 h-20 bg-[#DBEAFE] text-[#3B82F6] rounded-full flex items-center justify-center mb-8 mx-auto">
-              <Lock className="h-10 w-10" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-[#111827] mb-4 text-center tracking-tight">重置密码？</DialogTitle>
-            <DialogDescription className="text-[#6B7280] font-medium text-center text-base leading-relaxed">
-              系统将生成一个<span className="text-[#3B82F6] font-semibold">临时密码</span>。<br />
-              用户下次登录时必须修改。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-10 gap-4 sm:flex-row">
-            <Button
-              variant="ghost"
-              onClick={() => setResetPasswordDialog({ open: false })}
-              className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] shadow-none"
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleResetPassword}
-              disabled={resetPassword.isPending}
-              className="flex-1 bg-[#DC2626] text-white rounded-md h-14 font-semibold hover:bg-[#B91C1C] hover:scale-105 transition-all duration-200 shadow-none"
-            >
-              {resetPassword.isPending ? "处理中..." : "确认重置"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="重置密码？"
+        description={
+          <>
+            系统将生成一个<span className="text-[#3B82F6] font-semibold">临时密码</span>。<br />
+            用户下次登录时必须修改。
+          </>
+        }
+        icon={<Lock className="h-10 w-10" />}
+        iconBgColor="bg-[#DBEAFE]"
+        iconColor="text-[#3B82F6]"
+        confirmText="确认重置"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleResetPassword}
+        isConfirming={resetPassword.isPending}
+      />
 
       {/* 临时密码显示对话框 */}
       <Dialog

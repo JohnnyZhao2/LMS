@@ -131,6 +131,14 @@ export { Tooltip, TooltipRoot, TooltipTrigger, TooltipContent, TooltipProvider }
 export { Pagination } from './pagination';
 export type { PaginationProps } from './pagination';
 
+// Simple Pagination
+export { SimplePagination } from './simple-pagination';
+export type { SimplePaginationProps } from './simple-pagination';
+
+// Confirm Dialog
+export { ConfirmDialog } from './confirm-dialog';
+export type { ConfirmDialogProps } from './confirm-dialog';
+
 // Legacy components (kept for backward compatibility during migration)
 export { StatusBadge } from './status-badge';
 export type { StatusBadgeProps, StatusType } from './status-badge';

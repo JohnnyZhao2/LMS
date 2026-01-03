@@ -15,17 +15,9 @@ import {
   PanelLeft,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { Button, ConfirmDialog } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
@@ -490,26 +482,20 @@ export const KnowledgeDetail: React.FC = () => {
       </div>
 
       {/* 确认弹窗 */}
-      <Dialog open={confirmModal.visible} onOpenChange={(open) => setConfirmModal({ visible: open, type: null })}>
-        <DialogContent className="sm:max-w-md rounded-lg border-2 border-gray-200">
-          <DialogHeader>
-            <DialogTitle className="font-bold">{getConfirmModalContent().title}</DialogTitle>
-            <DialogDescription className="text-gray-600">{getConfirmModalContent().content}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" className="border-2 rounded-md" onClick={() => setConfirmModal({ visible: false, type: null })}>
-              取消
-            </Button>
-            <Button
-              variant={confirmModal.type === 'delete' ? 'destructive' : 'default'}
-              className={confirmModal.type === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}
-              onClick={executeConfirmAction}
-            >
-              确定
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {confirmModal.type && (
+        <ConfirmDialog
+          open={confirmModal.visible}
+          onOpenChange={(open) => setConfirmModal({ visible: open, type: null })}
+          title={getConfirmModalContent().title}
+          description={getConfirmModalContent().content}
+          confirmText="确定"
+          cancelText="取消"
+          confirmVariant={confirmModal.type === 'delete' ? 'destructive' : 'default'}
+          onConfirm={executeConfirmAction}
+          isConfirming={confirmModal.type === 'delete' ? deleteKnowledge.isPending : unpublishKnowledge.isPending}
+          contentClassName="sm:max-w-md rounded-lg border-2 border-gray-200"
+        />
+      )}
     </div>
   );
 };

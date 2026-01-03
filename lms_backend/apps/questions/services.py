@@ -58,7 +58,7 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
         page: int = 1,
-        page_size: int = 20,
+        page_size: int = 10,
         user=None
     ) -> dict:
         """
