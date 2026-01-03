@@ -386,4 +386,3 @@ class TeamManagerDashboardSerializer(serializers.Serializer):
     """
     overview = TeamManagerOverviewSerializer(read_only=True)
     departments = DepartmentStatSerializer(many=True, read_only=True)
-    knowledge_heat = KnowledgeHeatSerializer(many=True, read_only=True)

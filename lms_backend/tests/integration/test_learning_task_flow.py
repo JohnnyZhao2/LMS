@@ -34,26 +34,26 @@ def setup_learning_flow(db):
     
     # Create admin
     admin = User.objects.create_user(
-        username='admin', password='admin123', employee_id='ADMIN001',
-        username='管理员', department=dept
+        username='管理员', password='admin123', employee_id='ADMIN001',
+        department=dept
     )
     UserRole.objects.create(user=admin, role=admin_role)
     
     # Create mentor
     mentor = User.objects.create_user(
-        username='mentor', password='mentor123', employee_id='MENTOR001',
-        username='导师', department=dept
+        username='导师', password='mentor123', employee_id='MENTOR001',
+        department=dept
     )
     UserRole.objects.create(user=mentor, role=mentor_role)
     
     # Create students under mentor
     student1 = User.objects.create_user(
-        username='student1', password='student123', employee_id='STU001',
-        username='学员一', department=dept, mentor=mentor
+        username='学员一', password='student123', employee_id='STU001',
+        department=dept, mentor=mentor
     )
     student2 = User.objects.create_user(
-        username='student2', password='student123', employee_id='STU002',
-        username='学员二', department=dept, mentor=mentor
+        username='学员二', password='student123', employee_id='STU002',
+        department=dept, mentor=mentor
     )
     
     return {

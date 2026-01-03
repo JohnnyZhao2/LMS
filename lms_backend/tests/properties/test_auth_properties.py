@@ -62,16 +62,6 @@ def valid_employee_id_strategy(draw):
     ))
 
 
-@st.composite
-def valid_username_strategy(draw):
-    """Generate valid real names: 1-50 chars."""
-    return draw(st.text(
-        alphabet='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        min_size=1,
-        max_size=50
-    ))
-
-
 # Non-student roles for testing multi-role scenarios
 non_student_roles_strategy = st.lists(
     st.sampled_from(['MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER']),
@@ -123,7 +113,6 @@ class TestProperty1ValidCredentialsLoginSuccess:
         username=valid_username_strategy(),
         password=valid_password_strategy(),
         employee_id=valid_employee_id_strategy(),
-        username=valid_username_strategy(),
     )
     def test_valid_credentials_return_tokens_and_user_info(
         self,
@@ -132,7 +121,6 @@ class TestProperty1ValidCredentialsLoginSuccess:
         username,
         password,
         employee_id,
-        username,
     ):
         """
         **Feature: lms-backend, Property 1: 有效凭证登录成功**
@@ -156,7 +144,6 @@ class TestProperty1ValidCredentialsLoginSuccess:
             username=unique_username,
             password=password,
             employee_id=unique_employee_id,
-            username=username or 'TestUser',
             department=setup_department,
         )
         
@@ -216,7 +203,6 @@ class TestProperty2LoginReturnsCompleteRoleList:
             username=f'user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -293,7 +279,6 @@ class TestProperty3InactiveUserLoginRejected:
             username=unique_username,
             password=password,
             employee_id=unique_employee_id,
-            username='停用用户',
             department=setup_department,
             is_active=False,
         )
@@ -346,7 +331,6 @@ class TestProperty4RoleSwitchPermissionEffective:
             username=f'multi_role_{unique_suffix}',
             password='testpass123',
             employee_id=f'MR_{unique_suffix}',
-            username='多角色用户',
             department=setup_department,
         )
         
@@ -420,7 +404,6 @@ class TestProperty4RoleSwitchPermissionEffective:
             username=f'partial_role_{unique_suffix}',
             password='testpass123',
             employee_id=f'PR_{unique_suffix}',
-            username='部分角色用户',
             department=setup_department,
         )
         

@@ -34,20 +34,20 @@ def setup_exam_flow(db):
     mentor_role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
     
     admin = User.objects.create_user(
-        username='admin', password='admin123', employee_id='ADMIN001',
-        username='管理员', department=dept
+        username='管理员', password='admin123', employee_id='ADMIN001',
+        department=dept
     )
     UserRole.objects.create(user=admin, role=admin_role)
     
     mentor = User.objects.create_user(
-        username='mentor', password='mentor123', employee_id='MENTOR001',
-        username='导师', department=dept
+        username='导师', password='mentor123', employee_id='MENTOR001',
+        department=dept
     )
     UserRole.objects.create(user=mentor, role=mentor_role)
     
     student = User.objects.create_user(
-        username='student', password='student123', employee_id='STU001',
-        username='学员', department=dept, mentor=mentor
+        username='学员', password='student123', employee_id='STU001',
+        department=dept, mentor=mentor
     )
     
     return {'dept': dept, 'admin': admin, 'mentor': mentor, 'student': student}

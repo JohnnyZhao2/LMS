@@ -17,17 +17,17 @@ Properties:
 - Property 32: 纯客观题直接完成
 - Property 33: 评分完成状态转换
 - Property 34: 未完成评分状态保持
+
+业务逻辑已提取到 services.py，Serializer 仅负责验证和委托。
 """
 from decimal import Decimal
 from rest_framework import serializers
-from django.db import transaction
 from django.utils import timezone
 
-from apps.quizzes.models import Quiz, QuizQuestion
 from apps.tasks.models import TaskAssignment, TaskQuiz
-from apps.questions.models import Question
 
 from .models import Submission, Answer
+from .services import SubmissionService, GradingService
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -116,8 +116,7 @@ class StartPracticeSerializer(serializers.Serializer):
     - Property 24: 练习允许多次提交
     - Property 26: 已完成练习仍可继续
     
-    Note:
-    - 使用 TaskQuiz.snapshot 中的题目数据，确保任务创建时的内容不变
+    业务逻辑委托给 SubmissionService 处理。
     """
     assignment_id = serializers.IntegerField(help_text='任务分配ID')
     quiz_id = serializers.IntegerField(help_text='试卷ID')
@@ -129,86 +128,29 @@ class StartPracticeSerializer(serializers.Serializer):
         assignment_id = attrs['assignment_id']
         quiz_id = attrs['quiz_id']
         
-        # Check task assignment exists
+        # 使用 SubmissionService 验证
         try:
-            assignment = TaskAssignment.objects.select_related('task').get(
-                id=assignment_id,
-                assignee=user,
-                task__is_deleted=False
+            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+                assignment_id, quiz_id, user
             )
-        except TaskAssignment.DoesNotExist:
-            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
-        
-        # Check it's a task with quizzes
-        if not assignment.task.has_quiz:
-            raise serializers.ValidationError({'assignment_id': '此任务不包含试卷'})
-        
-        # Check quiz is part of the task
-        try:
-            task_quiz = TaskQuiz.objects.get(task_id=assignment.task_id, quiz_id=quiz_id)
-        except TaskQuiz.DoesNotExist:
-            raise serializers.ValidationError({'quiz_id': '该试卷不在此任务中'})
-        
-        # Check quiz exists
-        try:
-            quiz = Quiz.objects.get(id=quiz_id, is_deleted=False)
-        except Quiz.DoesNotExist:
-            raise serializers.ValidationError({'quiz_id': '试卷不存在'})
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
         
         # Property 26: 已完成练习仍可继续 - 不检查任务状态
-        # 练习任务即使已完成也可以继续练习
         
         attrs['assignment'] = assignment
         attrs['quiz'] = quiz
         attrs['task_quiz'] = task_quiz
         return attrs
     
-    @transaction.atomic
     def create(self, validated_data):
-        """
-        Create a new practice submission.
-        
-        Requirements: 10.2, 10.5
-        Properties: 24, 26
-        
-        Note: 使用关联版本的题目，确保任务创建时的内容不变
-        """
-        assignment = validated_data['assignment']
-        task_quiz = validated_data['task_quiz']
-        
-        # 获取特定版本的试卷
-        quiz_version = task_quiz.get_versioned_quiz()
-        user = self.context['request'].user
-        
-        # Calculate attempt number
-        # Property 24: 练习允许多次提交
-        existing_count = Submission.objects.filter(
-            task_assignment=assignment,
-            quiz=quiz_version
-        ).count()
-        attempt_number = existing_count + 1
-        
-        total_score = quiz_version.total_score
-        
-        # Create submission
-        submission = Submission.objects.create(
-            task_assignment=assignment,
-            quiz=quiz_version,
-            user=user,
-            attempt_number=attempt_number,
-            status='IN_PROGRESS',
-            total_score=total_score
+        """Create a new practice submission - 委托给 SubmissionService"""
+        return SubmissionService.start_quiz(
+            assignment=validated_data['assignment'],
+            task_quiz=validated_data['task_quiz'],
+            user=self.context['request'].user,
+            is_exam=False
         )
-        
-        # 获取题目
-        questions = quiz_version.get_ordered_questions()
-        for relation in questions:
-            Answer.objects.create(
-                submission=submission,
-                question_id=relation.question_id
-            )
-        
-        return submission
 
 
 class SaveAnswerSerializer(serializers.Serializer):
@@ -217,6 +159,8 @@ class SaveAnswerSerializer(serializers.Serializer):
     
     Requirements:
     - 10.2: 学员开始练习时允许作答
+    
+    业务逻辑委托给 SubmissionService 处理。
     """
     question_id = serializers.IntegerField(help_text='题目ID')
     user_answer = serializers.JSONField(help_text='用户答案', allow_null=True)
@@ -239,11 +183,13 @@ class SaveAnswerSerializer(serializers.Serializer):
         return attrs
     
     def save(self):
-        """Save the answer."""
-        answer = self.validated_data['answer']
-        answer.user_answer = self.validated_data['user_answer']
-        answer.save(update_fields=['user_answer', 'updated_at'])
-        return answer
+        """Save the answer - 委托给 SubmissionService"""
+        submission = self.context.get('submission')
+        return SubmissionService.save_answer(
+            submission=submission,
+            question_id=self.validated_data['question_id'],
+            user_answer=self.validated_data['user_answer']
+        )
 
 
 class SubmitPracticeSerializer(serializers.Serializer):
@@ -315,94 +261,53 @@ class StartExamSerializer(serializers.Serializer):
     - Property 28: 考试时间窗口控制
     - Property 29: 考试单次提交限制
     
-    Note:
-    - 使用 TaskQuiz.snapshot 中的题目数据，确保任务创建时的内容不变
+    业务逻辑委托给 SubmissionService 处理。
     """
     assignment_id = serializers.IntegerField(help_text='任务分配ID')
+    quiz_id = serializers.IntegerField(help_text='试卷ID')
     
     def validate(self, attrs):
         """Validate that the exam can be started."""
         request = self.context.get('request')
         user = request.user
         assignment_id = attrs['assignment_id']
+        quiz_id = attrs['quiz_id']
         
-        # Check task assignment exists
+        # 使用 SubmissionService 验证
         try:
-            assignment = TaskAssignment.objects.select_related('task').get(
-                id=assignment_id,
-                assignee=user,
-                task__is_deleted=False
+            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+                assignment_id, quiz_id, user
             )
-        except TaskAssignment.DoesNotExist:
-            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
         
-        task = assignment.task
-        
-        # Property 28: 考试时间窗口控制
-        now = timezone.now()
-        if now > task.deadline:
-            raise serializers.ValidationError({'assignment_id': '任务已结束'})
-        
-        # Property 29: 考试单次提交限制
-        existing_submission = Submission.objects.filter(
-            task_assignment=assignment,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).first()
-        if existing_submission:
-            raise serializers.ValidationError({'assignment_id': '您已提交过此考试，无法重新作答'})
-        
-        # Check for in-progress submission
-        in_progress = Submission.objects.filter(
-            task_assignment=assignment,
-            status='IN_PROGRESS'
-        ).first()
-        
-        # Get the quiz (exam has only one quiz)
-        task_quiz = TaskQuiz.objects.select_related('quiz').get(task=task)
-        quiz = task_quiz.quiz
+        # 检查考试约束
+        try:
+            in_progress = SubmissionService.check_exam_constraints(assignment, quiz_id)
+        except Exception as e:
+            raise serializers.ValidationError({'assignment_id': str(e)})
         
         attrs['assignment'] = assignment
         attrs['quiz'] = quiz
-        attrs['task'] = task
+        attrs['task'] = assignment.task
         attrs['task_quiz'] = task_quiz
         attrs['in_progress_submission'] = in_progress
         return attrs
     
-    @transaction.atomic
     def create(self, validated_data):
-        """
-        Create or return existing exam submission.
-        
-        Requirements: 12.2
-        
-        Note: 使用关联版本的题目，确保任务创建时的内容不变
-        """
-        assignment = validated_data['assignment']
-        task = validated_data['task']
-        task_quiz = validated_data['task_quiz']
+        """Create or return existing exam submission - 委托给 SubmissionService"""
         in_progress = validated_data.get('in_progress_submission')
-        user = self.context['request'].user
         
-        # Create new submission
-        submission = Submission.objects.create(
-            task_assignment=assignment,
-            quiz=quiz_version,
-            user=user,
-            attempt_number=1,
-            status='IN_PROGRESS',
-            total_score=total_score,
-            remaining_seconds=None  # Untimed for now
+        # 如果有进行中的提交，直接返回
+        if in_progress:
+            return in_progress
+        
+        return SubmissionService.start_quiz(
+            assignment=validated_data['assignment'],
+            task_quiz=validated_data['task_quiz'],
+            user=self.context['request'].user,
+            is_exam=True
         )
-        
-        # 获取题目
-        questions = quiz_version.get_ordered_questions()
-        for relation in questions:
-            Answer.objects.create(
-                submission=submission,
-                question_id=relation.question_id
-            )
-        
-        return submission
 
 
 class SubmitExamSerializer(serializers.Serializer):
@@ -429,6 +334,8 @@ class StartQuizSerializer(serializers.Serializer):
     
     - PRACTICE: 允许多次提交，任务完成后仍可继续
     - EXAM: 只能提交一次，检查时间窗口
+    
+    业务逻辑委托给 SubmissionService 处理。
     """
     assignment_id = serializers.IntegerField(help_text='任务分配ID')
     quiz_id = serializers.IntegerField(help_text='试卷ID')
@@ -440,120 +347,48 @@ class StartQuizSerializer(serializers.Serializer):
         assignment_id = attrs['assignment_id']
         quiz_id = attrs['quiz_id']
         
-        # Check task assignment exists
+        # 使用 SubmissionService 验证
         try:
-            assignment = TaskAssignment.objects.select_related('task').get(
-                id=assignment_id,
-                assignee=user,
-                task__is_deleted=False
+            assignment, task_quiz, quiz = SubmissionService.validate_assignment_for_quiz(
+                assignment_id, quiz_id, user
             )
-        except TaskAssignment.DoesNotExist:
-            raise serializers.ValidationError({'assignment_id': '任务不存在或未分配给您'})
-        
-        # Check it's a task with quizzes
-        if not assignment.task.has_quiz:
-            raise serializers.ValidationError({'assignment_id': '此任务不包含试卷'})
-        
-        # Check quiz is part of the task
-        try:
-            task_quiz = TaskQuiz.objects.select_related('quiz').get(
-                task_id=assignment.task_id, quiz_id=quiz_id
-            )
-        except TaskQuiz.DoesNotExist:
-            raise serializers.ValidationError({'quiz_id': '该试卷不在此任务中'})
-        
-        quiz = task_quiz.quiz
-        if quiz.is_deleted:
-            raise serializers.ValidationError({'quiz_id': '试卷不存在'})
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
         
         is_exam = quiz.quiz_type == 'EXAM'
-        task = assignment.task
         
         if is_exam:
-            # 考试模式：检查时间窗口和提交限制
-            now = timezone.now()
-            if now > task.deadline:
-                raise serializers.ValidationError({'assignment_id': '任务已结束'})
-            
-            # 检查是否已提交过
-            existing_submission = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz_id=quiz_id,
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            ).first()
-            if existing_submission:
-                raise serializers.ValidationError({'quiz_id': '您已提交过此考试，无法重新作答'})
-            
-            # 检查是否有进行中的
-            in_progress = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz_id=quiz_id,
-                status='IN_PROGRESS'
-            ).first()
+            # 检查考试约束
+            try:
+                in_progress = SubmissionService.check_exam_constraints(assignment, quiz_id)
+            except Exception as e:
+                raise serializers.ValidationError(str(e))
             attrs['in_progress_submission'] = in_progress
         else:
             attrs['in_progress_submission'] = None
         
         attrs['assignment'] = assignment
         attrs['quiz'] = quiz
-        attrs['task'] = task
+        attrs['task'] = assignment.task
         attrs['task_quiz'] = task_quiz
         attrs['is_exam'] = is_exam
         return attrs
     
-    @transaction.atomic
     def create(self, validated_data):
-        """Create or return existing submission."""
-        assignment = validated_data['assignment']
-        task_quiz = validated_data['task_quiz']
-        quiz = validated_data['quiz']
+        """Create or return existing submission - 委托给 SubmissionService"""
         is_exam = validated_data['is_exam']
         in_progress = validated_data.get('in_progress_submission')
-        user = self.context['request'].user
         
         # 如果是考试模式且有进行中的提交，直接返回
         if is_exam and in_progress:
             return in_progress
         
-        # 获取特定版本的试卷
-        quiz_version = task_quiz.get_versioned_quiz()
-        total_score = quiz_version.total_score
-        
-        # 计算 attempt_number
-        if is_exam:
-            attempt_number = 1
-        else:
-            existing_count = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz=quiz_version
-            ).count()
-            attempt_number = existing_count + 1
-        
-        # 计算 remaining_seconds（考试模式使用 quiz.duration）
-        remaining_seconds = None
-        if is_exam and quiz.duration:
-            remaining_seconds = quiz.duration * 60  # 分钟转秒
-        
-        # Create submission
-        submission = Submission.objects.create(
-            task_assignment=assignment,
-            quiz=quiz_version,
-            user=user,
-            attempt_number=attempt_number,
-            status='IN_PROGRESS',
-            total_score=total_score,
-            remaining_seconds=remaining_seconds
+        return SubmissionService.start_quiz(
+            assignment=validated_data['assignment'],
+            task_quiz=validated_data['task_quiz'],
+            user=self.context['request'].user,
+            is_exam=is_exam
         )
-        
-        # 创建答案记录
-        questions = quiz_version.get_ordered_questions()
-        for relation in questions:
-            Answer.objects.create(
-                submission=submission,
-                question_id=relation.question_id
-            )
-        
-        return submission
 
 
 # Grading serializers
@@ -622,6 +457,8 @@ class GradeAnswerSerializer(serializers.Serializer):
     Properties:
     - Property 33: 评分完成状态转换
     - Property 34: 未完成评分状态保持
+    
+    业务逻辑委托给 GradingService 处理。
     """
     answer_id = serializers.IntegerField(help_text='答案ID')
     score = serializers.DecimalField(
@@ -662,13 +499,14 @@ class GradeAnswerSerializer(serializers.Serializer):
         return attrs
     
     def save(self):
-        """Save the grade."""
-        answer = self.validated_data['answer']
+        """Save the grade - 委托给 GradingService"""
+        submission = self.context.get('submission')
         grader = self.context['request'].user
-        score = self.validated_data['score']
-        comment = self.validated_data.get('comment', '')
         
-        # Grade the answer (this will also check for completion)
-        answer.grade(grader, score, comment)
-        
-        return answer
+        return GradingService.grade_answer(
+            submission=submission,
+            answer_id=self.validated_data['answer_id'],
+            score=self.validated_data['score'],
+            comment=self.validated_data.get('comment', ''),
+            grader=grader
+        )

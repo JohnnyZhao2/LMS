@@ -32,8 +32,8 @@ def setup_user_management(db):
     
     # Create admin user
     admin = User.objects.create_user(
-        username='admin', password='admin123', employee_id='ADMIN001',
-        username='管理员', department=dept1
+        username='管理员', password='admin123', employee_id='ADMIN001',
+        department=dept1
     )
     UserRole.objects.create(user=admin, role=admin_role)
     

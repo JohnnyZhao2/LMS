@@ -5,9 +5,9 @@ Serializers for task management.
 - 任务不再区分类型，一个任务可以包含任意组合的知识文档和试卷
 - 合并三个创建 Serializer 为一个统一的 TaskCreateSerializer
 - 简化状态逻辑
+- 业务逻辑已提取到 services.py
 """
 from rest_framework import serializers
-from django.db import transaction
 
 from apps.users.models import User
 from apps.users.permissions import (
@@ -18,6 +18,7 @@ from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
+from .services import TaskService
 
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
@@ -162,6 +163,8 @@ class TaskCreateSerializer(serializers.Serializer):
     - knowledge_ids: 知识文档列表（可选）
     - quiz_ids: 试卷列表（可选）
     - 至少需要选择一个知识文档或试卷
+    
+    业务逻辑委托给 TaskService 处理。
     """
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(required=False, allow_blank=True, default='')
@@ -185,71 +188,40 @@ class TaskCreateSerializer(serializers.Serializer):
     )
     
     def validate_knowledge_ids(self, value):
-        """验证知识文档ID"""
+        """验证知识文档ID - 使用 TaskService"""
         if not value:
             return value
         
-        # 查询已发布且未删除的知识文档
-        published_knowledge = Knowledge.objects.filter(
-            id__in=value,
-            is_deleted=False,
-            status='PUBLISHED'
-        )
-        published_ids = set(published_knowledge.values_list('id', flat=True))
-        
-        invalid_ids = set(value) - published_ids
-        if invalid_ids:
-            # 检查是草稿还是不存在
-            draft_knowledge = Knowledge.objects.filter(
-                id__in=invalid_ids,
-                is_deleted=False,
-                status='DRAFT'
-            )
-            draft_ids = set(draft_knowledge.values_list('id', flat=True))
-            not_found_ids = invalid_ids - draft_ids
-            
+        is_valid, draft_ids, not_found_ids = TaskService.validate_knowledge_ids(value)
+        if not is_valid:
             errors = []
             if draft_ids:
-                errors.append(f'以下知识文档为草稿状态，无法用于任务分配: {list(draft_ids)}')
+                errors.append(f'以下知识文档为草稿状态，无法用于任务分配: {draft_ids}')
             if not_found_ids:
-                errors.append(f'知识文档不存在: {list(not_found_ids)}')
-            
+                errors.append(f'知识文档不存在: {not_found_ids}')
             raise serializers.ValidationError('; '.join(errors) if errors else '知识文档不可用')
         
         return value
     
     def validate_quiz_ids(self, value):
-        """验证试卷ID"""
+        """验证试卷ID - 使用 TaskService"""
         if not value:
             return value
         
-        existing_ids = set(
-            Quiz.objects.filter(
-                id__in=value,
-                is_deleted=False,
-                status='PUBLISHED'
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'试卷不存在: {list(invalid_ids)}')
+        is_valid, invalid_ids = TaskService.validate_quiz_ids(value)
+        if not is_valid:
+            raise serializers.ValidationError(f'试卷不存在: {invalid_ids}')
         
         return value
     
     def validate_assignee_ids(self, value):
-        """验证学员ID"""
+        """验证学员ID - 使用 TaskService"""
         if not value:
             raise serializers.ValidationError('请至少选择一个学员')
         
-        existing_ids = set(
-            User.objects.filter(
-                id__in=value,
-                is_active=True
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'学员不存在或已停用: {list(invalid_ids)}')
+        is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
+        if not is_valid:
+            raise serializers.ValidationError(f'学员不存在或已停用: {invalid_ids}')
         
         return value
     
@@ -290,72 +262,19 @@ class TaskCreateSerializer(serializers.Serializer):
         
         return attrs
     
-    @transaction.atomic
     def create(self, validated_data):
-        """创建任务"""
+        """创建任务 - 委托给 TaskService"""
         request = self.context.get('request')
-        knowledge_ids = validated_data.pop('knowledge_ids', [])
-        quiz_ids = validated_data.pop('quiz_ids', [])
-        assignee_ids = validated_data.pop('assignee_ids')
         
-        # 创建任务
-        task = Task.objects.create(
+        return TaskService.create_task(
             title=validated_data['title'],
             description=validated_data.get('description', ''),
             deadline=validated_data['deadline'],
-            created_by=request.user
+            created_by=request.user,
+            knowledge_ids=validated_data.get('knowledge_ids', []),
+            quiz_ids=validated_data.get('quiz_ids', []),
+            assignee_ids=validated_data.get('assignee_ids', []),
         )
-        
-        # 创建知识文档关联
-        if knowledge_ids:
-            knowledge_queryset = Knowledge.objects.filter(
-                id__in=knowledge_ids,
-                is_deleted=False,
-                status='PUBLISHED'
-            ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
-            knowledge_map = {k.id: k for k in knowledge_queryset}
-            
-            for order, knowledge_id in enumerate(knowledge_ids, start=1):
-                knowledge = knowledge_map.get(knowledge_id)
-                if not knowledge:
-                    continue
-                TaskKnowledge.objects.create(
-                    task=task,
-                    knowledge=knowledge,
-                    order=order,
-                    resource_uuid=knowledge.resource_uuid,
-                    version_number=knowledge.version_number
-                )
-        
-        # 创建试卷关联
-        if quiz_ids:
-            quiz_queryset = Quiz.objects.filter(
-                id__in=quiz_ids,
-                is_deleted=False,
-                status='PUBLISHED'
-            )
-            quiz_map = {q.id: q for q in quiz_queryset}
-            
-            for order, quiz_id in enumerate(quiz_ids, start=1):
-                quiz = quiz_map.get(quiz_id)
-                if not quiz:
-                    continue
-                TaskQuiz.objects.create(
-                    task=task,
-                    quiz=quiz,
-                    order=order,
-                    resource_uuid=quiz.resource_uuid,
-                    version_number=quiz.version_number
-                )
-        
-        # 创建任务分配
-        for assignee_id in assignee_ids:
-            TaskAssignment.objects.create(
-                task=task,
-                assignee_id=assignee_id
-            )
-        
-        return task
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
@@ -487,9 +406,8 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         
         return attrs
     
-    @transaction.atomic
     def update(self, instance, validated_data):
-        """更新任务信息"""
+        """更新任务信息 - 委托给 TaskService"""
         # 检查任务是否已关闭
         if instance.is_closed:
             raise serializers.ValidationError('任务已关闭，无法修改')
@@ -499,85 +417,14 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         quiz_ids = validated_data.pop('quiz_ids', None)
         assignee_ids = validated_data.pop('assignee_ids', None)
         
-        # 更新基本字段
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        
-        # 更新关联知识文档
-        if knowledge_ids is not None:
-            existing_knowledge_ids = list(
-                instance.task_knowledge.order_by('order').values_list('knowledge_id', flat=True)
-            )
-            if existing_knowledge_ids != list(knowledge_ids):
-                TaskKnowledge.objects.filter(task=instance).delete()
-                if knowledge_ids:
-                    knowledge_queryset = Knowledge.objects.filter(
-                        id__in=knowledge_ids,
-                        is_deleted=False,
-                        status='PUBLISHED'
-                    ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
-                    knowledge_map = {k.id: k for k in knowledge_queryset}
-                    for order, kid in enumerate(knowledge_ids, start=1):
-                        knowledge = knowledge_map.get(kid)
-                        if knowledge:
-                            TaskKnowledge.objects.create(
-                                task=instance,
-                                knowledge=knowledge,
-                                order=order,
-                                resource_uuid=knowledge.resource_uuid,
-                                version_number=knowledge.version_number
-                            )
-        
-        # 更新关联试卷
-        if quiz_ids is not None:
-            existing_quiz_ids = list(
-                instance.task_quizzes.order_by('order').values_list('quiz_id', flat=True)
-            )
-            if existing_quiz_ids != list(quiz_ids):
-                TaskQuiz.objects.filter(task=instance).delete()
-                if quiz_ids:
-                    quiz_queryset = Quiz.objects.filter(
-                        id__in=quiz_ids,
-                        is_deleted=False,
-                        status='PUBLISHED'
-                    )
-                    quiz_map = {q.id: q for q in quiz_queryset}
-                    for order, qid in enumerate(quiz_ids, start=1):
-                        quiz = quiz_map.get(qid)
-                        if quiz:
-                            TaskQuiz.objects.create(
-                                task=instance,
-                                quiz=quiz,
-                                order=order,
-                                resource_uuid=quiz.resource_uuid,
-                                version_number=quiz.version_number
-                            )
-        
-        # 更新分配学员
-        if assignee_ids is not None:
-            existing_assignee_ids = set(
-                TaskAssignment.objects.filter(task=instance).values_list('assignee_id', flat=True)
-            )
-            new_assignee_ids = set(assignee_ids)
-            
-            # 删除不再分配的学员
-            to_remove = existing_assignee_ids - new_assignee_ids
-            if to_remove:
-                TaskAssignment.objects.filter(
-                    task=instance,
-                    assignee_id__in=to_remove
-                ).delete()
-            
-            # 添加新分配的学员
-            to_add = new_assignee_ids - existing_assignee_ids
-            for assignee_id in to_add:
-                TaskAssignment.objects.create(
-                    task=instance,
-                    assignee_id=assignee_id
-                )
-        
-        return instance
+        # 委托给 TaskService 处理更新
+        return TaskService.update_task(
+            task=instance,
+            knowledge_ids=knowledge_ids,
+            quiz_ids=quiz_ids,
+            assignee_ids=assignee_ids,
+            **validated_data
+        )
 
 
 class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):

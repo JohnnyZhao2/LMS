@@ -37,46 +37,46 @@ def setup_permission_flow(db):
     
     # Create admin
     admin = User.objects.create_user(
-        username='admin', password='admin123', employee_id='ADMIN001',
-        username='管理员', department=dept1
+        username='管理员', password='admin123', employee_id='ADMIN001',
+        department=dept1
     )
     UserRole.objects.create(user=admin, role=admin_role)
     
     # Create mentor in dept1
     mentor1 = User.objects.create_user(
-        username='mentor1', password='mentor123', employee_id='MENTOR001',
-        username='导师一', department=dept1
+        username='导师一', password='mentor123', employee_id='MENTOR001',
+        department=dept1
     )
     UserRole.objects.create(user=mentor1, role=mentor_role)
     
     # Create dept manager in dept1
     dept_mgr1 = User.objects.create_user(
-        username='deptmgr1', password='deptmgr123', employee_id='DEPTMGR001',
-        username='室经理一', department=dept1
+        username='室经理一', password='deptmgr123', employee_id='DEPTMGR001',
+        department=dept1
     )
     UserRole.objects.create(user=dept_mgr1, role=dept_mgr_role)
     
     # Create team manager
     team_mgr = User.objects.create_user(
-        username='teammgr', password='teammgr123', employee_id='TEAMMGR001',
-        username='团队经理', department=dept1
+        username='团队经理', password='teammgr123', employee_id='TEAMMGR001',
+        department=dept1
     )
     UserRole.objects.create(user=team_mgr, role=team_mgr_role)
     
     # Create students
     student1_dept1 = User.objects.create_user(
-        username='student1', password='student123', employee_id='STU001',
-        username='学员一', department=dept1, mentor=mentor1
+        username='学员一', password='student123', employee_id='STU001',
+        department=dept1, mentor=mentor1
     )
     
     student2_dept1 = User.objects.create_user(
-        username='student2', password='student123', employee_id='STU002',
-        username='学员二', department=dept1  # No mentor
+        username='学员二', password='student123', employee_id='STU002',
+        department=dept1  # No mentor
     )
     
     student3_dept2 = User.objects.create_user(
-        username='student3', password='student123', employee_id='STU003',
-        username='学员三', department=dept2
+        username='学员三', password='student123', employee_id='STU003',
+        department=dept2
     )
     
     return {
