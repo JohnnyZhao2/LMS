@@ -11,7 +11,6 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
-from django.utils import timezone
 
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 
@@ -43,11 +42,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         ('TRUE_FALSE', '判断题'),
         ('SHORT_ANSWER', '简答题'),
     ]
-    STATUS_CHOICES = [
-        ('DRAFT', '草稿'),
-        ('PUBLISHED', '已发布'),
-    ]
-    
     # 题目内容
     content = models.TextField(verbose_name='题目内容')
     
@@ -100,12 +94,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default='MEDIUM',
         verbose_name='难度等级'
     )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='PUBLISHED',
-        verbose_name='发布状态'
-    )
     resource_uuid = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -123,11 +111,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         blank=True,
         related_name='question_versions',
         verbose_name='来源版本'
-    )
-    published_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='发布时间'
     )
     is_current = models.BooleanField(
         default=True,
@@ -274,8 +257,14 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """
         创建当前题目的新版本，保持历史版本只读。
         
-        同时更新所有引用旧版本的试卷，指向新版本。
-        已发布任务的快照不受影响（TaskQuiz.snapshot 是独立存储的）。
+        版本隔离机制：
+        - 新版本创建后，QuizQuestion 引用保持不变，不会自动更新
+        - 这确保了已发布试卷的稳定性和可预测性
+        - 已发布任务的快照不受影响（TaskQuiz.snapshot 是独立存储的）
+        
+        Requirements: 4.1, 4.3
+        - 4.1: 创建新版本时不自动更新 QuizQuestion 引用
+        - 4.3: QuizQuestion 继续引用原始题目版本
         """
         new_question = Question.objects.create(
             content=self.content,
@@ -286,41 +275,20 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             score=self.score,
             difficulty=self.difficulty,
             created_by=self.created_by,
-            status='PUBLISHED',
             resource_uuid=self.resource_uuid,
             version_number=self.next_version_number(self.resource_uuid),
             source_version=self,
-            published_at=timezone.now(),
             is_current=True
         )
         if self.line_type:
             new_question.set_line_type(self.line_type)
         Question.objects.filter(
-            resource_uuid=self.resource_uuid,
-            status='PUBLISHED'
+            resource_uuid=self.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
-        
-        # 更新所有引用旧版本的试卷，指向新版本
-        # 这样试卷管理界面和新创建的任务都会使用最新题目
-        # 已发布任务的 TaskQuiz.snapshot 是独立存储的，不受影响
-        self._update_quiz_references(new_question)
         
         return new_question
     
-    def _update_quiz_references(self, new_question):
-        """
-        更新所有引用当前题目的试卷，指向新版本。
-        
-        Args:
-            new_question: 新创建的题目版本
-        """
-        try:
-            from apps.quizzes.models import QuizQuestion
-            # 更新所有引用旧版本的 QuizQuestion，指向新版本
-            QuizQuestion.objects.filter(question=self).update(question=new_question)
-        except ImportError:
-            # quizzes app 尚未实现
-            pass
+
     
     @property
     def is_objective(self):

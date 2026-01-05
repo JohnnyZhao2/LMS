@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
-import { useCreateKnowledge, useUpdateKnowledge, usePublishKnowledge } from '../api/manage-knowledge';
+import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
 import { EMERGENCY_TABS, parseOutlineFromHtml } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
@@ -57,7 +57,6 @@ export const KnowledgeForm: React.FC = () => {
   const { data: lineTypeTags = [] } = useLineTypeTags();
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
-  const publishKnowledge = usePublishKnowledge();
   const createTag = useCreateTag();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
@@ -287,34 +286,8 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate]);
 
-  const handlePublish = useCallback(async () => {
-    if (!validateForm()) {
-      toast.error('请检查表单填写是否完整');
-      return;
-    }
 
-    const requestData = buildRequestData();
-
-    try {
-      let savedId: number;
-
-      if (isEdit && id) {
-        const result = await updateKnowledge.mutateAsync({ id: Number(id), data: requestData });
-        savedId = result.id;
-      } else {
-        const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
-        savedId = result.id;
-      }
-
-      await publishKnowledge.mutateAsync(savedId);
-      toast.success('发布成功');
-      navigate(ROUTES.ADMIN_KNOWLEDGE);
-    } catch (error) {
-      showApiError(error, '发布失败');
-    }
-  }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, publishKnowledge, navigate]);
-
-  const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending || publishKnowledge.isPending;
+  const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending;
 
   const breadcrumbInfo = useMemo(() => {
     const lineType = lineTypeTags.find((t: Tag) => t.id === lineTypeId);
@@ -327,9 +300,10 @@ export const KnowledgeForm: React.FC = () => {
   const statusInfo = useMemo(() => {
     if (!isEdit) return { label: '草稿', isDraft: true };
     if (!knowledgeDetail) return { label: '草稿', isDraft: true };
+    // Status field removed - determine published state from is_current flag
     return {
-      label: knowledgeDetail.status === 'PUBLISHED' ? '已发布' : '草稿',
-      isDraft: knowledgeDetail.status !== 'PUBLISHED',
+      label: knowledgeDetail.is_current ? '当前版本' : '历史版本',
+      isDraft: !knowledgeDetail.is_current,
     };
   }, [isEdit, knowledgeDetail]);
 
@@ -403,12 +377,12 @@ export const KnowledgeForm: React.FC = () => {
             className="h-14 px-6 font-semibold"
           >
             <Save className="w-4 h-4 mr-2" />
-            保存草稿
+            保存
           </Button>
 
           <Button
             size="sm"
-            onClick={handlePublish}
+            onClick={handleSave}
             disabled={isSubmitting}
             className="h-14 px-6 font-semibold"
           >
@@ -417,7 +391,7 @@ export const KnowledgeForm: React.FC = () => {
             ) : (
               <Send className="w-4 h-4 mr-2" />
             )}
-            {isSubmitting ? '处理中...' : '保存并发布'}
+            {isSubmitting ? '处理中...' : '发布新版本'}
           </Button>
         </div>
       </div>
@@ -754,7 +728,7 @@ export const KnowledgeForm: React.FC = () => {
               <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-md">
                 <CheckCircle className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-bold text-gray-900">发布状态</span>
+              <span className="text-sm font-bold text-gray-900">版本状态</span>
             </div>
 
             <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
@@ -762,13 +736,13 @@ export const KnowledgeForm: React.FC = () => {
                 <span className="text-sm font-semibold text-gray-700">当前状态</span>
                 <span className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold ${statusInfo.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                   <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
-                  {statusInfo.isDraft ? '待发布' : '已发布'}
+                  {statusInfo.isDraft ? '编辑中' : '当前版本'}
                 </span>
               </div>
               <div className="text-xs text-gray-600 leading-relaxed font-medium">
                 {statusInfo.isDraft
-                  ? '当前为草稿状态，保存后可以继续编辑。点击「保存并发布」后，该知识将对所有用户可见。'
-                  : '该知识已发布，修改后需要重新发布才能更新内容。'
+                  ? '保存后可以继续编辑。点击「发布新版本」后，将创建新版本并对所有用户可见。'
+                  : '这是当前版本的知识。修改后发布将创建新版本。'
                 }
               </div>
             </div>

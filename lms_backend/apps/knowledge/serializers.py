@@ -46,7 +46,6 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     Requirements: 4.1, 4.6
     """
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
     line_type = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
@@ -67,7 +66,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'knowledge_type', 'knowledge_type_display',
-            'status', 'status_display', 'is_current', 'published_at',
+            'is_current',
             'line_type', 'system_tags', 'operation_tags',
             'view_count', 'summary', 'content_preview', 'table_of_contents',
             # 新增字段
@@ -79,31 +78,31 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     def get_has_pending_draft(self, obj):
         """
         检查已发布版本是否有待发布的草稿修改
-        仅对已发布版本有效
+        仅对当前版本有效
         """
-        if obj.status != 'PUBLISHED':
+        if not obj.is_current:
             return False
         # 使用 prefetch 的数据或查询
         if hasattr(obj, '_pending_draft'):
             return obj._pending_draft is not None
         return Knowledge.objects.filter(
             source_version=obj,
-            status='DRAFT',
+            is_current=False,
             is_deleted=False
         ).exists()
     
     def get_pending_draft_id(self, obj):
         """
         获取待发布草稿的ID
-        仅对已发布版本有效
+        仅对当前版本有效
         """
-        if obj.status != 'PUBLISHED':
+        if not obj.is_current:
             return None
         if hasattr(obj, '_pending_draft'):
             return obj._pending_draft.id if obj._pending_draft else None
         draft = Knowledge.objects.filter(
             source_version=obj,
-            status='DRAFT',
+            is_current=False,
             is_deleted=False
         ).first()
         return draft.id if draft else None
@@ -111,15 +110,15 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     def get_edit_status(self, obj):
         """
         获取编辑状态:
-        - PUBLISHED_CLEAN: 已发布且无待发布修改
-        - REVISING: 已发布但有待发布的草稿修改
+        - PUBLISHED_CLEAN: 当前版本且无待发布修改
+        - REVISING: 当前版本但有待发布的草稿修改
         - UNPUBLISHED: 从未发布过的新草稿
         - DRAFT_OF_PUBLISHED: 某个已发布版本的草稿（不在主列表显示，仅用于判断）
         """
-        if obj.status == 'PUBLISHED':
+        if obj.is_current:
             has_draft = self.get_has_pending_draft(obj)
             return 'REVISING' if has_draft else 'PUBLISHED_CLEAN'
-        else:  # DRAFT
+        else:  # 非当前版本
             if obj.source_version_id:
                 return 'DRAFT_OF_PUBLISHED'
             else:
@@ -135,7 +134,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     Requirements: 4.1, 4.2, 4.3, 4.6
     """
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
     line_type = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
@@ -149,7 +147,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'knowledge_type', 'knowledge_type_display',
-            'status', 'status_display', 'is_current', 'published_at',
+            'is_current',
             'line_type', 'system_tags', 'operation_tags',
             # 应急类知识结构化字段
             'fault_scenario', 'trigger_process', 'solution',
@@ -320,21 +318,21 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         """
         Update knowledge document with tag handling.
         
-        重要：如果知识当前是已发布状态，更新时应该保存为草稿，不影响已发布版本的查看。
+        重要：如果知识当前是当前版本，更新时应该保存为新版本，不影响已发布版本的查看。
         只有通过发布操作才会更新已发布的内容。
         
         实现方式：
-        - 如果当前是已发布状态，检查是否已存在关联的草稿
+        - 如果当前是当前版本，检查是否已存在关联的草稿
         - 如果存在草稿，更新草稿记录；如果不存在，创建新草稿记录
-        - 原记录保持已发布状态不变，其他人仍可查看
+        - 原记录保持当前版本状态不变，其他人仍可查看
         - 新草稿记录保存修改内容，只有发布后才会更新原记录
         """
         # Set updated_by from context
         user = self.context['request'].user
         instance.updated_by = user
         
-        # 如果当前是已发布状态，需要创建或更新草稿而不是直接修改原记录
-        if instance.status == 'PUBLISHED':
+        # 如果当前是当前版本，需要创建或更新草稿而不是直接修改原记录
+        if instance.is_current:
             from .services import KnowledgeService
             service = KnowledgeService()
             instance = service.create_or_get_draft_from_published(instance, user)
@@ -354,8 +352,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         if operation_tag_ids is not None:
             instance.operation_tags.set(operation_tag_ids)
         
-        # Update other fields (不包括 status，status 通过发布接口单独处理)
-        validated_data.pop('status', None)  # 移除 status，不允许通过更新接口修改
+        # Update other fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         

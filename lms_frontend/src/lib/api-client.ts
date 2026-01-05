@@ -3,18 +3,41 @@ import { tokenStorage } from './token-storage';
 import { ROUTES } from '@/config/routes';
 
 /**
+ * 统一 API 响应格式
+ */
+export interface ApiResponse<T> {
+  code: string;
+  message: string;
+  data: T;
+}
+
+/**
  * API 错误类
  */
 export class ApiError extends Error {
   status: number;
   statusText: string;
+  code?: string;
   data?: unknown;
 
   constructor(status: number, statusText: string, data?: unknown) {
-    super(`API Error: ${status} ${statusText}`);
+    // 尝试从响应数据中提取错误信息
+    let message = `API Error: ${status} ${statusText}`;
+    let code: string | undefined;
+    
+    if (data && typeof data === 'object') {
+      const errorData = data as { code?: string; message?: string };
+      if (errorData.message) {
+        message = errorData.message;
+      }
+      code = errorData.code;
+    }
+    
+    super(message);
     this.name = 'ApiError';
     this.status = status;
     this.statusText = statusText;
+    this.code = code;
     this.data = data;
   }
 }
@@ -144,7 +167,15 @@ class ApiClient {
       return null as T;
     }
 
-    return response.json();
+    const json = await response.json();
+    
+    // 自动解包统一响应格式 { code, message, data }
+    if (json && typeof json === 'object' && 'code' in json && 'data' in json) {
+      return json.data as T;
+    }
+    
+    // 兼容旧格式（直接返回数据）
+    return json as T;
   }
 
   /**

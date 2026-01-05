@@ -15,8 +15,6 @@ from .models import (
     TaskQuiz,
     KnowledgeLearningProgress,
 )
-from .domain.models import TaskDomain, TaskAssignmentDomain
-from .domain.mappers import TaskMapper, TaskAssignmentMapper
 
 
 class TaskRepository(BaseRepository[Task]):
@@ -30,7 +28,7 @@ class TaskRepository(BaseRepository[Task]):
         include_deleted: bool = False
     ) -> Optional[Task]:
         """
-        根据 ID 获取任务（Django Model）
+        根据 ID 获取任务
         
         Args:
             pk: 主键
@@ -51,92 +49,6 @@ class TaskRepository(BaseRepository[Task]):
             qs = qs.filter(is_deleted=False)
         
         return qs.filter(pk=pk).first()
-    
-    def get_domain_by_id(
-        self,
-        pk: int,
-        include_deleted: bool = False
-    ) -> Optional[TaskDomain]:
-        """
-        根据 ID 获取任务（Domain Model）
-        
-        Args:
-            pk: 主键
-            include_deleted: 是否包含已删除的记录
-            
-        Returns:
-            任务领域模型或 None
-        """
-        task = self.get_by_id(pk, include_deleted)
-        if task:
-            return TaskMapper.to_domain(task)
-        return None
-    
-    def create_from_domain(
-        self,
-        task_domain: TaskDomain
-    ) -> Task:
-        """
-        从 Domain Model 创建 Django Model
-        
-        Args:
-            task_domain: 任务领域模型
-            
-        Returns:
-            创建的 Django Model 实例
-        """
-        data = TaskMapper.to_orm_data(task_domain)
-        task = self.model.objects.create(**data)
-        
-        # 设置关联关系
-        if task_domain.knowledge_ids:
-            for order, knowledge_id in enumerate(task_domain.knowledge_ids, start=1):
-                from .models import TaskKnowledge
-                TaskKnowledge.objects.create(
-                    task=task,
-                    knowledge_id=knowledge_id,
-                    order=order
-                )
-        
-        if task_domain.quiz_ids:
-            for order, quiz_id in enumerate(task_domain.quiz_ids, start=1):
-                from .models import TaskQuiz
-                TaskQuiz.objects.create(
-                    task=task,
-                    quiz_id=quiz_id,
-                    order=order
-                )
-        
-        return task
-    
-    def update_from_domain(
-        self,
-        task_orm: Task,
-        task_domain: TaskDomain
-    ) -> Task:
-        """
-        使用 Domain Model 更新 Django Model
-        
-        Args:
-            task_orm: Django Model 实例
-            task_domain: 任务领域模型
-            
-        Returns:
-            更新后的 Django Model 实例
-        """
-        data = TaskMapper.to_orm_data(task_domain)
-        
-        # 更新字段
-        for key, value in data.items():
-            if hasattr(task_orm, key):
-                setattr(task_orm, key, value)
-        
-        task_orm.save()
-        
-        # 更新关联关系（如果需要）
-        # 注意：这里可能需要根据业务需求决定是否更新关联关系
-        
-        return task_orm
     
     def get_queryset_for_user(
         self,
@@ -216,7 +128,7 @@ class TaskAssignmentRepository(BaseRepository[TaskAssignment]):
         pk: int
     ) -> Optional[TaskAssignment]:
         """
-        根据 ID 获取任务分配（Django Model）
+        根据 ID 获取任务分配
         
         Args:
             pk: 主键
@@ -233,41 +145,6 @@ class TaskAssignmentRepository(BaseRepository[TaskAssignment]):
             'task__task_quizzes__quiz',
             'knowledge_progress__task_knowledge__knowledge'
         ).filter(pk=pk).first()
-    
-    def get_domain_by_id(
-        self,
-        pk: int
-    ) -> Optional[TaskAssignmentDomain]:
-        """
-        根据 ID 获取任务分配（Domain Model）
-        
-        Args:
-            pk: 主键
-            
-        Returns:
-            任务分配领域模型或 None
-        """
-        assignment = self.get_by_id(pk)
-        if assignment:
-            return TaskAssignmentMapper.to_domain(assignment)
-        return None
-    
-    def update_from_domain(
-        self,
-        assignment_orm: TaskAssignment,
-        assignment_domain: TaskAssignmentDomain
-    ) -> TaskAssignment:
-        """
-        使用 Domain Model 更新 Django Model
-        
-        Args:
-            assignment_orm: Django Model 实例
-            assignment_domain: TaskAssignmentDomain 领域模型
-            
-        Returns:
-            更新后的 Django Model 实例
-        """
-        return TaskAssignmentMapper.update_orm_from_domain(assignment_orm, assignment_domain)
     
     def get_student_assignment(
         self,

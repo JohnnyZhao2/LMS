@@ -28,6 +28,8 @@ export interface QuizQuestion {
  */
 export interface QuizListItem {
   id: number;
+  resource_uuid: string;
+  version_number: number;
   title: string;
   description?: string;
   question_count: number;
@@ -37,6 +39,7 @@ export interface QuizListItem {
   quiz_type_display: string;
   duration?: number | null;
   pass_score?: string | null;
+  is_current: boolean;
   created_by?: number;
   created_by_name?: string;
   created_at: string;
@@ -48,6 +51,8 @@ export interface QuizListItem {
  */
 export interface QuizDetail {
   id: number;
+  resource_uuid: string;
+  version_number: number;
   title: string;
   description?: string;
   questions: QuizQuestion[];
@@ -60,6 +65,7 @@ export interface QuizDetail {
   quiz_type_display: string;
   duration?: number | null;
   pass_score?: number | null;
+  is_current: boolean;
   created_by?: number;
   created_by_name?: string;
   created_at: string;

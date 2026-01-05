@@ -8,40 +8,12 @@ from django.db.models import QuerySet, Q
 
 from core.base_repository import BaseRepository
 from .models import Submission, Answer
-from .domain.models import SubmissionDomain, AnswerDomain
-from .domain.mappers import SubmissionMapper, AnswerMapper
 
 
 class SubmissionRepository(BaseRepository[Submission]):
     """答题记录仓储"""
     
     model = Submission
-    
-    def _to_domain_or_none(self, submission: Optional[Submission]) -> Optional[SubmissionDomain]:
-        """
-        将ORM对象转换为Domain对象（统一转换逻辑）
-        
-        Args:
-            submission: Django Model 实例或 None
-            
-        Returns:
-            Domain Model 实例或 None
-        """
-        if submission:
-            return SubmissionMapper.to_domain(submission)
-        return None
-    
-    def _to_domain_list(self, submission_list: List[Submission]) -> List[SubmissionDomain]:
-        """
-        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
-        
-        Args:
-            submission_list: Django Model 实例列表
-            
-        Returns:
-            Domain Model 实例列表
-        """
-        return [SubmissionMapper.to_domain(s) for s in submission_list]
     
     def get_by_id(
         self,
@@ -261,7 +233,10 @@ class SubmissionRepository(BaseRepository[Submission]):
         创建答题记录及其答案记录
         
         Args:
-            answers_data: 答案数据列表
+            answers_data: 答案数据列表，每个元素包含:
+                - question_id: 题目ID
+                - question_resource_uuid: 题目资源UUID (可选)
+                - question_version_number: 题目版本号 (可选)
             **submission_data: 答题记录数据
             
         Returns:
@@ -269,68 +244,24 @@ class SubmissionRepository(BaseRepository[Submission]):
         """
         submission = self.create(**submission_data)
         
-        # 批量创建答案记录
+        # 批量创建答案记录，记录题目版本信息
         Answer.objects.bulk_create([
             Answer(
                 submission=submission,
-                question_id=answer_data['question_id']
+                question_id=answer_data['question_id'],
+                question_resource_uuid=answer_data.get('question_resource_uuid'),
+                question_version_number=answer_data.get('question_version_number')
             )
             for answer_data in answers_data
         ])
         
         return submission
-    
-    def get_domain_by_id(
-        self,
-        pk: int,
-        user: Optional['User'] = None,
-        include_deleted: bool = False
-    ) -> Optional[SubmissionDomain]:
-        """
-        根据 ID 获取答题记录（Domain Model）
-        
-        Args:
-            pk: 主键
-            user: 可选的用户，用于验证所有权
-            include_deleted: 是否包含已删除的记录
-            
-        Returns:
-            答题记录领域模型或 None
-        """
-        submission = self.get_by_id(pk, user, include_deleted)
-        return self._to_domain_or_none(submission)
 
 
 class AnswerRepository(BaseRepository[Answer]):
     """答案记录仓储"""
     
     model = Answer
-    
-    def _to_domain_or_none(self, answer: Optional[Answer]) -> Optional[AnswerDomain]:
-        """
-        将ORM对象转换为Domain对象（统一转换逻辑）
-        
-        Args:
-            answer: Django Model 实例或 None
-            
-        Returns:
-            Domain Model 实例或 None
-        """
-        if answer:
-            return AnswerMapper.to_domain(answer)
-        return None
-    
-    def _to_domain_list(self, answer_list: List[Answer]) -> List[AnswerDomain]:
-        """
-        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
-        
-        Args:
-            answer_list: Django Model 实例列表
-            
-        Returns:
-            Domain Model 实例列表
-        """
-        return [AnswerMapper.to_domain(a) for a in answer_list]
     
     def get_by_id(
         self,
@@ -427,37 +358,3 @@ class AnswerRepository(BaseRepository[Answer]):
             submission_id=submission_id,
             question__question_type='SHORT_ANSWER'
         ).select_related('question', 'graded_by')
-    
-    def get_domain_by_id(
-        self,
-        pk: int,
-        include_deleted: bool = False
-    ) -> Optional[AnswerDomain]:
-        """
-        根据 ID 获取答案记录（Domain Model）
-        
-        Args:
-            pk: 主键
-            include_deleted: 是否包含已删除的记录
-            
-        Returns:
-            答案记录领域模型或 None
-        """
-        answer = self.get_by_id(pk, include_deleted)
-        return self._to_domain_or_none(answer)
-    
-    def get_domain_by_submission(
-        self,
-        submission_id: int
-    ) -> List[AnswerDomain]:
-        """
-        获取答题记录的所有答案（Domain Model）
-        
-        Args:
-            submission_id: 答题记录 ID
-            
-        Returns:
-            Domain Model 列表
-        """
-        answers = self.get_by_submission(submission_id)
-        return self._to_domain_list(list(answers))

@@ -165,16 +165,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         choices=KNOWLEDGE_TYPE_CHOICES,
         verbose_name='知识类型'
     )
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('DRAFT', '草稿'),
-            ('PUBLISHED', '已发布'),
-        ],
-        default='DRAFT',
-        verbose_name='发布状态',
-        help_text='草稿状态仅创建者和管理员可见，已发布状态可用于任务分配'
-    )
     resource_uuid = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -195,13 +185,8 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='来源版本',
         help_text='从该已发布版本衍生出来的草稿'
     )
-    published_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='发布时间'
-    )
     is_current = models.BooleanField(
-        default=False,
+        default=True,
         verbose_name='是否当前最新发布版本'
     )
     

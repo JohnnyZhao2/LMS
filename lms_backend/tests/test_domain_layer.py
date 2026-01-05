@@ -2,6 +2,10 @@
 Domain 层基础测试
 
 验证新创建的 Domain 层是否正常工作。
+
+版本管理说明：
+- 不再使用 status/published_at 字段
+- 使用 resource_uuid + version_number + is_current 管理版本
 """
 import pytest
 from datetime import datetime
@@ -9,10 +13,10 @@ from decimal import Decimal
 import uuid
 
 from apps.questions.domain.models import (
-    QuestionDomain, QuestionStatus, QuestionType, Difficulty
+    QuestionDomain, QuestionType, Difficulty
 )
 from apps.questions.domain.services import QuestionDomainService
-from apps.quizzes.domain.models import QuizDomain, QuizStatus, QuizType
+from apps.quizzes.domain.models import QuizDomain, QuizType
 from apps.quizzes.domain.services import QuizDomainService
 from apps.submissions.domain.models import (
     SubmissionDomain, AnswerDomain, SubmissionStatus
@@ -41,6 +45,7 @@ class TestQuestionDomain:
         assert question.question_type == QuestionType.SINGLE_CHOICE
         assert question.is_objective is True
         assert question.is_subjective is False
+        assert question.is_current is True
     
     def test_question_domain_validation(self):
         """测试 Question Domain 验证"""
@@ -52,25 +57,27 @@ class TestQuestionDomain:
                 answer='A',
             )
     
-    def test_question_domain_service_publish(self):
-        """测试 Question Domain Service 发布功能"""
+    def test_question_domain_clone_new_version(self):
+        """测试 Question Domain 创建新版本"""
         question = QuestionDomain(
+            id=1,
             content='测试题目',
             question_type=QuestionType.SINGLE_CHOICE,
             options=[{'key': 'A', 'value': '选项A'}],
             answer='A',
-            status=QuestionStatus.DRAFT,
+            is_current=True,
             created_by_id=1,
         )
         
-        published = QuestionDomainService.publish_question(
-            question,
-            published_at=datetime.now(),
-            updated_by_id=1
+        new_version = question.clone_new_version(
+            new_version_number=2,
+            created_by_id=2
         )
         
-        assert published.is_published() is True
-        assert published.published_at is not None
+        assert new_version.version_number == 2
+        assert new_version.source_version_id == 1
+        assert new_version.is_current is True
+        assert new_version.content == question.content
 
 
 @pytest.mark.django_db
@@ -90,6 +97,7 @@ class TestQuizDomain:
         assert quiz.title == '测试试卷'
         assert quiz.quiz_type == QuizType.PRACTICE
         assert quiz.has_questions() is True
+        assert quiz.is_current is True
     
     def test_quiz_domain_validation(self):
         """测试 Quiz Domain 验证"""

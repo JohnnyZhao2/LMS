@@ -6,34 +6,26 @@ import {
   Home,
   Database,
   Inbox,
-  LayoutGrid,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
 import { useLineTypeTags } from '../api/get-tags';
 import { SharedKnowledgeCard } from './shared-knowledge-card';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
-import { usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
 import { getLineTypeIcon } from '../utils';
-import { showApiError } from '@/utils/error-handler';
-import { toast } from 'sonner';
-import { ConfirmDialog } from '@/components/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { PageHeader } from '@/components/ui/page-header';
-import type { KnowledgeFilterType, Tag as TagType } from '@/types/api';
+import type { Tag as TagType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Shield } from 'lucide-react';
 
 /**
  * 管理员知识库列表组件 - 极致美学一致性版
  */
 export const AdminKnowledgeList: React.FC = () => {
   const navigate = useNavigate();
-  const [unpublishDialog, setUnpublishDialog] = useState<{ open: boolean; id?: number }>({ open: false });
 
   // 使用共用的筛选 Hook
   const {
@@ -43,8 +35,6 @@ export const AdminKnowledgeList: React.FC = () => {
     submitSearch,
     selectedLineTypeId,
     handleLineTypeSelect,
-    filterType,
-    setFilterType,
     page,
     pageSize,
     handlePageChange,
@@ -53,16 +43,12 @@ export const AdminKnowledgeList: React.FC = () => {
   // 获取条线类型标签
   const { data: lineTypeTags = [] } = useLineTypeTags();
 
-  const { data, isLoading, refetch } = useAdminKnowledgeList({
+  const { data, isLoading } = useAdminKnowledgeList({
     search: search || undefined,
     line_type_id: selectedLineTypeId,
-    filter_type: filterType,
     page,
     pageSize,
   });
-
-  const publishKnowledge = usePublishKnowledge();
-  const unpublishKnowledge = useUnpublishKnowledge();
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -81,39 +67,6 @@ export const AdminKnowledgeList: React.FC = () => {
   const handleEdit = (id: number) => {
     navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
   };
-
-  const handlePublish = async (id: number) => {
-    try {
-      await publishKnowledge.mutateAsync(id);
-      toast.success('发布成功');
-      refetch();
-    } catch (error) {
-      showApiError(error, '发布失败');
-    }
-  };
-
-  const handleUnpublish = async (id: number) => {
-    setUnpublishDialog({ open: true, id });
-  };
-
-  const confirmUnpublish = async () => {
-    if (!unpublishDialog.id) return;
-    try {
-      await unpublishKnowledge.mutateAsync(unpublishDialog.id);
-      toast.success('取消发布成功');
-      refetch();
-      setUnpublishDialog({ open: false });
-    } catch (error) {
-      showApiError(error, '取消发布失败');
-    }
-  };
-
-  const statusFilters: Array<{ key: KnowledgeFilterType; label: string; dotClass?: string; showIcon?: boolean }> = [
-    { key: 'ALL', label: '全部文档', showIcon: true },
-    { key: 'PUBLISHED_CLEAN', label: '已发布', dotClass: 'bg-[#10B981]' },
-    { key: 'REVISING', label: '修订中', dotClass: 'bg-[#F59E0B]' },
-    { key: 'UNPUBLISHED', label: '草稿', dotClass: 'bg-[#9CA3AF]' },
-  ];
 
   return (
     <div className="space-y-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -179,27 +132,6 @@ export const AdminKnowledgeList: React.FC = () => {
               ))}
             </nav>
           </div>
-
-          <div>
-            <h4 className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-4 px-2">状态筛选</h4>
-            <div className="space-y-1 px-1">
-              {statusFilters.map((filter) => (
-                <button
-                  key={filter.key}
-                  onClick={() => setFilterType(filter.key)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
-                    filterType === filter.key
-                      ? "bg-[#111827] text-white"
-                      : "text-[#111827] hover:bg-[#F3F4F6]"
-                  )}
-                >
-                  {filter.showIcon ? <LayoutGrid className="w-3.5 h-3.5" /> : <div className={cn("w-2 h-2 rounded-full", filter.dotClass)} />}
-                  <span>{filter.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* 右侧列表区 */}
@@ -225,8 +157,6 @@ export const AdminKnowledgeList: React.FC = () => {
                       showActions
                       onView={handleView}
                       onEdit={handleEdit}
-                      onPublish={handlePublish}
-                      onUnpublish={handleUnpublish}
                     />
                   </div>
                 ))}
@@ -252,22 +182,6 @@ export const AdminKnowledgeList: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* 取消发布确认对话框 */}
-      <ConfirmDialog
-        open={unpublishDialog.open}
-        onOpenChange={(open) => setUnpublishDialog({ open })}
-        title="确认下线此知识？"
-        description="取消发布后，该知识将变为草稿状态，学员将无法查看，也无法用于任务分配。确定要取消发布吗？"
-        icon={<Shield className="h-10 w-10" />}
-        iconBgColor="bg-[#F59E0B]"
-        iconColor="text-white"
-        confirmText="下线文档"
-        cancelText="取消"
-        confirmVariant="default"
-        onConfirm={confirmUnpublish}
-        isConfirming={unpublishKnowledge.isPending}
-      />
     </div>
   );
 };

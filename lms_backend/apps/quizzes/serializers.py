@@ -8,7 +8,6 @@ Properties:
 - Property 14: 被引用试卷删除保护
 - Property 16: 试卷所有权编辑控制
 """
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.questions.models import Question
@@ -53,7 +52,7 @@ class QuizListSerializer(serializers.ModelSerializer):
             'title', 'description', 'question_count', 'total_score',
             'has_subjective_questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
-            'status', 'is_current', 'published_at',
+            'is_current',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
@@ -82,7 +81,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             'has_subjective_questions', 'objective_question_count',
             'subjective_question_count', 'questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
-            'status', 'is_current', 'published_at',
+            'is_current',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
     

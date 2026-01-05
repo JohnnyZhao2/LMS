@@ -3,7 +3,6 @@ Serializers for question management.
 
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.knowledge.serializers import TagSimpleSerializer
@@ -29,7 +28,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'content', 'question_type', 'question_type_display',
             'difficulty', 'difficulty_display', 'score',
             'is_objective', 'line_type',
-            'status', 'is_current', 'published_at',
+            'is_current',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
@@ -56,7 +55,7 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'options', 'answer', 'explanation', 'score',
             'difficulty', 'difficulty_display',
             'is_objective', 'is_subjective', 'line_type',
-            'status', 'is_current', 'published_at',
+            'is_current',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]

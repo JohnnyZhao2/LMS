@@ -132,7 +132,6 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                     mentor=mentor,
                 )
@@ -145,7 +144,6 @@ class TestProperty35SpotCheckStudentScopeRestriction:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,
                 )
@@ -231,7 +229,6 @@ class TestProperty35SpotCheckStudentScopeRestriction:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -368,7 +365,6 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentee_{unique_suffix}',
             password='testpass123',
             employee_id=f'MTE_{unique_suffix}',
-            username='学员',
             department=dept,
             mentor=mentor,
         )
@@ -449,7 +445,6 @@ class TestProperty36SpotCheckTimeOrdering:
             username=f'mentee_{unique_suffix}',
             password='testpass123',
             employee_id=f'MTE_{unique_suffix}',
-            username='学员',
             department=dept,
             mentor=mentor,
         )

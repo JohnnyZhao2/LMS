@@ -141,7 +141,6 @@ class TestProperty17MentorTaskStudentScopeRestriction:
                     username=f'mentee_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'MTE_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                     mentor=mentor,
                 )
@@ -154,7 +153,6 @@ class TestProperty17MentorTaskStudentScopeRestriction:
                     username=f'other_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'OTH_{unique_suffix}_{i}',
-                    username=f'其他学员{i}',
                     department=dept,
                     mentor=None,
                 )
@@ -286,7 +284,6 @@ class TestProperty18DeptManagerTaskStudentScopeRestriction:
             username=f'deptmgr_{unique_suffix}',
             password='testpass123',
             employee_id=f'DM_{unique_suffix}',
-            username='室经理',
             department=dept1,
         )
         UserRole.objects.get_or_create(user=dept_manager, role=setup_roles['DEPT_MANAGER'])
@@ -445,7 +442,6 @@ class TestProperty27ExamTaskUniqueQuiz:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -460,7 +456,6 @@ class TestProperty27ExamTaskUniqueQuiz:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)
@@ -548,7 +543,6 @@ class TestProperty27ExamTaskUniqueQuiz:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -630,7 +624,6 @@ class TestProperty27ExamTaskUniqueQuiz:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -645,7 +638,6 @@ class TestProperty27ExamTaskUniqueQuiz:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)
@@ -732,7 +724,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -747,7 +738,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)
@@ -865,7 +855,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -880,7 +869,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)
@@ -950,7 +938,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=dept,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -965,7 +952,6 @@ class TestProperty19TaskAssignmentRecordCompleteness:
                     username=f'student_{unique_suffix}_{i}',
                     password='testpass123',
                     employee_id=f'STU_{unique_suffix}_{i}',
-                    username=f'学员{i}',
                     department=dept,
                 )
                 created_users.append(student)

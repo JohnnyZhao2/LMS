@@ -322,7 +322,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             published_knowledge = Knowledge.objects.filter(
                 id__in=value,
                 is_deleted=False,
-                status='PUBLISHED'
+                is_current=True
             )
             published_ids = set(published_knowledge.values_list('id', flat=True))
             
@@ -342,7 +342,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
                 Quiz.objects.filter(
                     id__in=value,
                     is_deleted=False,
-                    status='PUBLISHED'
+                    is_current=True
                 ).values_list('id', flat=True)
             )
             invalid_ids = set(value) - existing_ids

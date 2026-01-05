@@ -2,22 +2,11 @@
 
 import * as React from 'react';
 import {
-  MoreHorizontal,
   Pencil,
-  CheckCircle,
-  XCircle,
   Eye,
   List,
   ArrowUpRight,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
@@ -32,8 +21,6 @@ export interface SharedKnowledgeCardProps {
   showActions?: boolean;
   showStatus?: boolean;
   onEdit?: (id: number) => void;
-  onPublish?: (id: number) => Promise<void>;
-  onUnpublish?: (id: number) => Promise<void>;
   variant?: 'admin' | 'student';
 }
 
@@ -46,17 +33,15 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   showActions,
   showStatus,
   onEdit,
-  onPublish,
-  onUnpublish,
   variant = 'admin',
 }) => {
   const shouldShowActions = showActions ?? (variant === 'admin');
   const shouldShowStatus = showStatus ?? (variant === 'admin');
 
   const isEmergency = item.knowledge_type === 'EMERGENCY';
-  const isPublished = item.status === 'PUBLISHED';
   const isRevising = item.edit_status === 'REVISING';
-  const isDraft = item.status === 'DRAFT';
+  const isDraft = item.edit_status === 'DRAFT_OF_PUBLISHED' || item.edit_status === 'UNPUBLISHED';
+  const isPublished = item.edit_status === 'PUBLISHED_CLEAN';
 
   const getStatusBadge = () => {
     if (isRevising) return <Badge className="bg-[#F59E0B] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">修订中</Badge>;
@@ -91,29 +76,12 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
           {shouldShowStatus && getStatusBadge()}
           {shouldShowActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#111827] hover:text-white transition-all duration-200 shadow-none">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-lg p-2 border-0 bg-white shadow-none">
-                <DropdownMenuLabel className="text-[10px] font-bold text-[#9CA3AF] uppercase px-3 py-2">管理</DropdownMenuLabel>
-                <DropdownMenuItem className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-[#F3F4F6] text-[#111827]" onClick={() => onEdit?.(item.id)}>
-                  <Pencil className="w-4 h-4 mr-2" /> 编辑内容
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-[#E5E7EB] mx-2" />
-                {isPublished ? (
-                  <DropdownMenuItem className="rounded-md px-3 py-2.5 font-semibold text-[#DC2626] hover:bg-[#FEE2E2] cursor-pointer" onClick={() => onUnpublish?.(item.id)}>
-                    <XCircle className="w-4 h-4 mr-2" /> 取消发布
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem className="rounded-md px-3 py-2.5 font-semibold text-[#10B981] hover:bg-[#D1FAE5] cursor-pointer" onClick={() => onPublish?.(item.id)}>
-                    <CheckCircle className="w-4 h-4 mr-2" /> 发布生效
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button 
+              className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#111827] hover:text-white transition-all duration-200 shadow-none"
+              onClick={() => onEdit?.(item.id)}
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>

@@ -182,7 +182,7 @@ class TestProperty24PracticeAllowsMultipleSubmissions:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
+            display_name='学员',
             department=dept,
         )
         
@@ -326,7 +326,7 @@ class TestProperty25PracticeTaskAutoCompletion:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
+            display_name='学员',
             department=dept,
         )
         
@@ -470,7 +470,7 @@ class TestProperty26CompletedPracticeCanContinue:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
+            display_name='学员',
             department=dept,
         )
         
@@ -617,7 +617,7 @@ class TestProperty30ObjectiveQuestionAutoGrading:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
+            display_name='学员',
             department=dept,
         )
         
@@ -772,7 +772,7 @@ class TestProperty30ObjectiveQuestionAutoGrading:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
+            display_name='学员',
             department=dept,
         )
         

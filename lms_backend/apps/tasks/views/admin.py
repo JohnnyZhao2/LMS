@@ -14,6 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 from django.db.models import Q
 
 from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response, created_response, no_content_response, list_response
 from apps.users.permissions import (
     IsAdminOrMentorOrDeptManager,
     get_current_role,
@@ -75,7 +76,7 @@ class AssignableUserListView(APIView):
         queryset = queryset.order_by('username', 'employee_id')
         
         serializer = UserListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
 
 class TaskCreateView(APIView):
@@ -109,7 +110,7 @@ class TaskCreateView(APIView):
         task = serializer.save()
         
         response_serializer = TaskDetailSerializer(task)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(response_serializer.data)
 
 
 class TaskListView(APIView):
@@ -146,7 +147,7 @@ class TaskListView(APIView):
         
         queryset = queryset.select_related('created_by').order_by('-created_at')
         serializer = TaskListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
 
 class TaskDetailView(APIView):
@@ -171,7 +172,7 @@ class TaskDetailView(APIView):
         self.service.check_task_read_permission(task, request.user)
         
         serializer = TaskDetailSerializer(task)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
     
     @extend_schema(
         summary='更新任务',
@@ -205,7 +206,7 @@ class TaskDetailView(APIView):
         updated_task = serializer.save()
         
         response_serializer = TaskDetailSerializer(updated_task)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
     
     @extend_schema(
         summary='删除任务',
@@ -223,7 +224,7 @@ class TaskDetailView(APIView):
         
         self.service.delete_task(task)
         
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return no_content_response()
 
 
 class TaskCloseView(APIView):
@@ -257,4 +258,4 @@ class TaskCloseView(APIView):
         task = self.service.close_task(task)
         
         serializer = TaskDetailSerializer(task)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)

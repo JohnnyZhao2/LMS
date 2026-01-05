@@ -9,6 +9,8 @@ import type { QuestionType, Difficulty, SimpleTag } from './common';
  */
 export interface Question {
   id: number;
+  resource_uuid: string;
+  version_number: number;
   content: string;
   question_type: QuestionType;
   question_type_display: string;
@@ -21,6 +23,7 @@ export interface Question {
   line_type?: SimpleTag;
   is_objective?: boolean;
   is_subjective?: boolean;
+  is_current: boolean;
   created_by?: number;
   created_by_name?: string;
   created_at: string;

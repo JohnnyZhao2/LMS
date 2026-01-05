@@ -89,10 +89,7 @@ export interface KnowledgeListItem {
   title: string;
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
-  status: KnowledgeStatus;
-  status_display: string;
   is_current: boolean;
-  published_at?: string;
   line_type?: SimpleTag | null;
   /** 知识概要 */
   summary?: string;
@@ -130,10 +127,7 @@ export interface KnowledgeDetail {
   title: string;
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
-  status: KnowledgeStatus;
-  status_display: string;
   is_current: boolean;
-  published_at?: string;
   line_type?: SimpleTag | null;
   // 应急类知识结构化字段
   fault_scenario?: string;

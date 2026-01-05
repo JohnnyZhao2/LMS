@@ -9,40 +9,12 @@ from django.contrib.contenttypes.models import ContentType
 
 from core.base_repository import BaseRepository
 from .models import Question
-from .domain.models import QuestionDomain
-from .domain.mappers import QuestionMapper
 
 
 class QuestionRepository(BaseRepository[Question]):
     """题目仓储"""
     
     model = Question
-    
-    def _to_domain_or_none(self, question: Optional[Question]) -> Optional[QuestionDomain]:
-        """
-        将ORM对象转换为Domain对象（统一转换逻辑）
-        
-        Args:
-            question: Django Model 实例或 None
-            
-        Returns:
-            Domain Model 实例或 None
-        """
-        if question:
-            return QuestionMapper.to_domain(question)
-        return None
-    
-    def _to_domain_list(self, question_list: List[Question]) -> List[QuestionDomain]:
-        """
-        将ORM对象列表转换为Domain对象列表（统一转换逻辑）
-        
-        Args:
-            question_list: Django Model 实例列表
-            
-        Returns:
-            Domain Model 实例列表
-        """
-        return [QuestionMapper.to_domain(q) for q in question_list]
     
     def get_by_id(
         self,
@@ -84,7 +56,8 @@ class QuestionRepository(BaseRepository[Question]):
             QuerySet
         """
         qs = self.model.objects.filter(
-            is_deleted=False
+            is_deleted=False,
+            is_current=True
         ).select_related('created_by')
         
         # 应用过滤条件
@@ -95,14 +68,8 @@ class QuestionRepository(BaseRepository[Question]):
                 qs = qs.filter(difficulty=filters['difficulty'])
             if filters.get('created_by_id'):
                 qs = qs.filter(created_by_id=filters['created_by_id'])
-            if filters.get('status'):
-                if filters['status'] == 'DRAFT':
-                    qs = qs.filter(status='DRAFT')
-                elif filters['status'] == 'PUBLISHED':
-                    qs = qs.filter(status='PUBLISHED', is_current=True)
-            else:
-                # 默认只显示已发布的当前版本
-                qs = qs.filter(status='PUBLISHED', is_current=True)
+            if filters.get('is_current') is not None:
+                qs = qs.filter(is_current=filters['is_current'])
             
             # 过滤条线类型（通过ResourceLineType关系表）
             if filters.get('line_type_id'):
@@ -125,48 +92,6 @@ class QuestionRepository(BaseRepository[Question]):
         
         return qs.distinct()
     
-    def get_domain_by_id(
-        self,
-        pk: int,
-        include_deleted: bool = False
-    ) -> Optional[QuestionDomain]:
-        """
-        根据 ID 获取题目（Domain Model）
-        
-        Args:
-            pk: 主键
-            include_deleted: 是否包含已删除的记录
-            
-        Returns:
-            题目领域模型或 None
-        """
-        question = self.get_by_id(pk, include_deleted)
-        return self._to_domain_or_none(question)
-    
-    def get_published_list_domain(
-        self,
-        filters: dict = None,
-        search: str = None,
-        ordering: str = '-created_at',
-        limit: int = None,
-        offset: int = None
-    ) -> List[QuestionDomain]:
-        """
-        获取已发布的题目列表（Domain Model）
-        
-        Args:
-            filters: 过滤条件
-            search: 搜索关键词
-            ordering: 排序字段
-            limit: 限制数量
-            offset: 偏移量
-            
-        Returns:
-            Domain Model 列表
-        """
-        qs = self.get_published_list(filters, search, ordering, limit, offset)
-        return self._to_domain_list(list(qs))
-    
     def is_referenced_by_quiz(self, question_id: int) -> bool:
         """
         检查题目是否被试卷引用
@@ -188,22 +113,21 @@ class QuestionRepository(BaseRepository[Question]):
             # quizzes app 尚未实现
             return False
     
-    def get_current_published_version(
+    def get_current_version(
         self,
         resource_uuid: str
     ) -> Optional[Question]:
         """
-        获取资源的当前已发布版本
+        获取资源的当前版本
         
         Args:
             resource_uuid: 资源 UUID
             
         Returns:
-            当前已发布版本或 None
+            当前版本或 None
         """
         return self.model.objects.filter(
             resource_uuid=resource_uuid,
-            status='PUBLISHED',
             is_current=True,
             is_deleted=False
         ).select_related('created_by').first()
@@ -213,17 +137,17 @@ class QuestionRepository(BaseRepository[Question]):
         resource_uuid: str
     ) -> Optional[Question]:
         """
-        获取资源的草稿版本
+        获取资源的非当前版本（历史版本）
         
         Args:
             resource_uuid: 资源 UUID
             
         Returns:
-            草稿版本或 None
+            非当前版本或 None
         """
         return self.model.objects.filter(
             resource_uuid=resource_uuid,
-            status='DRAFT',
+            is_current=False,
             is_deleted=False
         ).select_related('created_by').first()
     
@@ -236,7 +160,7 @@ class QuestionRepository(BaseRepository[Question]):
         offset: int = None
     ) -> QuerySet[Question]:
         """
-        获取已发布的题目列表
+        获取当前版本的题目列表
         
         Args:
             filters: 过滤条件
@@ -249,7 +173,6 @@ class QuestionRepository(BaseRepository[Question]):
             QuerySet
         """
         qs = self.model.objects.filter(
-            status='PUBLISHED',
             is_deleted=False,
             is_current=True
         ).select_related('created_by')

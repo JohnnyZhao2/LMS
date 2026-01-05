@@ -45,11 +45,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='试卷描述'
     )
     
-    STATUS_CHOICES = [
-        ('DRAFT', '草稿'),
-        ('PUBLISHED', '已发布'),
-    ]
-    
     # 题目（通过 QuizQuestion 中间表关联）
     questions = models.ManyToManyField(
         'questions.Question',
@@ -59,12 +54,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='题目'
     )
     
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='PUBLISHED',
-        verbose_name='发布状态'
-    )
     resource_uuid = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -82,11 +71,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         blank=True,
         related_name='quiz_versions',
         verbose_name='来源版本'
-    )
-    published_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='发布时间'
     )
     is_current = models.BooleanField(
         default=True,

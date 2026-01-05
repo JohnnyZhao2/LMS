@@ -182,7 +182,6 @@ class TestProperty28ExamTimeWindowControl:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         
@@ -281,7 +280,6 @@ class TestProperty28ExamTimeWindowControl:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         
@@ -380,7 +378,6 @@ class TestProperty28ExamTimeWindowControl:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         
@@ -488,7 +485,6 @@ class TestProperty29ExamSingleSubmissionLimit:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         
@@ -617,7 +613,6 @@ class TestProperty31SubjectiveQuestionGradingStatus:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         
@@ -760,7 +755,6 @@ class TestProperty32ObjectiveOnlyDirectCompletion:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=dept,
         )
         

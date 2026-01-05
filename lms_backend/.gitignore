@@ -50,6 +50,7 @@ venv.bak/
 htmlcov/
 .pytest_cache/
 .tox/
+.hypothesis/
 
 # Celery
 celerybeat-schedule

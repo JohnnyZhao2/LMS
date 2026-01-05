@@ -79,6 +79,18 @@ class Submission(TimestampMixin, models.Model):
         verbose_name='答题用户'
     )
     
+    # 版本追踪字段
+    quiz_resource_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        verbose_name='试卷资源UUID'
+    )
+    quiz_version_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='试卷版本号'
+    )
+    
     # 答题次数（练习任务可多次提交）
     attempt_number = models.PositiveIntegerField(
         default=1,
@@ -131,6 +143,12 @@ class Submission(TimestampMixin, models.Model):
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['quiz_resource_uuid', 'quiz_version_number'],
+                name='idx_submission_quiz_version'
+            )
+        ]
         # 考试任务每个用户只能有一次提交
         # 练习任务可以有多次提交，通过 attempt_number 区分
     
@@ -301,6 +319,18 @@ class Answer(TimestampMixin, models.Model):
         verbose_name='题目'
     )
     
+    # 版本追踪字段
+    question_resource_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        verbose_name='题目资源UUID'
+    )
+    question_version_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='题目版本号'
+    )
+    
     # 用户答案
     # 单选题: "A"
     # 多选题: ["A", "B"]
@@ -353,6 +383,12 @@ class Answer(TimestampMixin, models.Model):
         verbose_name_plural = '答案记录'
         unique_together = ['submission', 'question']
         ordering = ['submission', 'question']
+        indexes = [
+            models.Index(
+                fields=['question_resource_uuid', 'question_version_number'],
+                name='idx_answer_question_version'
+            )
+        ]
     
     def __str__(self):
         return f"{self.submission} - {self.question}"

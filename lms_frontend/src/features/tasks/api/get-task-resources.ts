@@ -20,8 +20,7 @@ export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
     queryKey: ['task-knowledge-options', search],
     queryFn: () => {
       const queryParams = {
-        status: 'PUBLISHED',
-        include_drafts: 'false',
+        is_current: 'true',
         page_size: '100',
         ...(search && { search }),
       };
@@ -45,7 +44,7 @@ export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
     queryFn: () => {
       const queryParams = {
         page_size: '50',
-        status: 'PUBLISHED',
+        is_current: 'true',
         ...(search && { search }),
       };
       const queryString = buildQueryString(queryParams);

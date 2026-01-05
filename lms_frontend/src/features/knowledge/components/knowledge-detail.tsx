@@ -8,8 +8,6 @@ import {
   User,
   Edit,
   Trash2,
-  CheckCircle,
-  XCircle,
   List,
   PanelLeftClose,
   PanelLeft,
@@ -21,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
-import { useDeleteKnowledge, usePublishKnowledge, useUnpublishKnowledge } from '../api/manage-knowledge';
+import { useDeleteKnowledge } from '../api/manage-knowledge';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
@@ -169,7 +167,7 @@ export const KnowledgeDetail: React.FC = () => {
   const navigate = useNavigate();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | 'unpublish' | null }>({
+  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>({
     visible: false,
     type: null,
   });
@@ -181,12 +179,9 @@ export const KnowledgeDetail: React.FC = () => {
   const { data, isLoading, refetch } = isAdminRoute ? adminQuery : studentQuery;
 
   const deleteKnowledge = useDeleteKnowledge();
-  const publishKnowledge = usePublishKnowledge();
-  const unpublishKnowledge = useUnpublishKnowledge();
 
   const knowledge = data as KnowledgeDetailType | undefined;
   const isEmergency = knowledge?.knowledge_type === 'EMERGENCY';
-  const isPublished = knowledge?.status === 'PUBLISHED';
 
   const outline = useMemo(() => {
     if (!knowledge) return [];
@@ -262,47 +257,21 @@ export const KnowledgeDetail: React.FC = () => {
     setConfirmModal({ visible: true, type: 'delete' });
   };
 
-  const handlePublish = async () => {
-    try {
-      await publishKnowledge.mutateAsync(Number(id));
-      toast.success('发布成功');
-      refetch?.();
-    } catch (error) {
-      showApiError(error, '发布失败');
-    }
-  };
-
-  const handleUnpublish = () => {
-    setConfirmModal({ visible: true, type: 'unpublish' });
-  };
-
   const executeConfirmAction = async () => {
     try {
-      if (confirmModal.type === 'delete') {
-        await deleteKnowledge.mutateAsync(Number(id));
-        toast.success('删除成功');
-        navigate(ROUTES.ADMIN_KNOWLEDGE);
-      } else if (confirmModal.type === 'unpublish') {
-        await unpublishKnowledge.mutateAsync(Number(id));
-        toast.success('取消发布成功');
-        refetch?.();
-      }
+      await deleteKnowledge.mutateAsync(Number(id));
+      toast.success('删除成功');
+      navigate(ROUTES.ADMIN_KNOWLEDGE);
     } catch (error) {
-      showApiError(error, confirmModal.type === 'delete' ? '删除失败' : '取消发布失败');
+      showApiError(error, '删除失败');
     }
     setConfirmModal({ visible: false, type: null });
   };
 
   const getConfirmModalContent = () => {
-    if (confirmModal.type === 'delete') {
-      return {
-        title: '确认删除',
-        content: `确定要删除知识文档「${knowledge?.title}」吗？此操作不可撤销。`,
-      };
-    }
     return {
-      title: '确认取消发布',
-      content: '取消发布后，该知识将变为草稿状态。确定要取消发布吗？',
+      title: '确认删除',
+      content: `确定要删除知识文档「${knowledge?.title}」吗？此操作不可撤销。`,
     };
   };
 
@@ -353,11 +322,6 @@ export const KnowledgeDetail: React.FC = () => {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900 m-0">{knowledge.title}</h1>
-              {isAdminRoute && (
-                <Badge variant={isPublished ? 'success' : 'secondary'} className="text-xs rounded-md">
-                  {knowledge.status_display}
-                </Badge>
-              )}
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-600">
               {knowledge.updated_by_name && (
@@ -384,17 +348,6 @@ export const KnowledgeDetail: React.FC = () => {
               <Edit className="w-4 h-4 mr-1" />
               编辑
             </Button>
-            {isPublished ? (
-              <Button variant="outline" size="sm" onClick={handleUnpublish} className="border-2 rounded-md">
-                <XCircle className="w-4 h-4 mr-1" />
-                取消发布
-              </Button>
-            ) : (
-              <Button size="sm" onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700 rounded-md">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                发布
-              </Button>
-            )}
             <Button variant="destructive" size="sm" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 rounded-md">
               <Trash2 className="w-4 h-4 mr-1" />
               删除
@@ -490,9 +443,9 @@ export const KnowledgeDetail: React.FC = () => {
           description={getConfirmModalContent().content}
           confirmText="确定"
           cancelText="取消"
-          confirmVariant={confirmModal.type === 'delete' ? 'destructive' : 'default'}
+          confirmVariant="destructive"
           onConfirm={executeConfirmAction}
-          isConfirming={confirmModal.type === 'delete' ? deleteKnowledge.isPending : unpublishKnowledge.isPending}
+          isConfirming={deleteKnowledge.isPending}
           contentClassName="sm:max-w-md rounded-lg border-2 border-gray-200"
         />
       )}

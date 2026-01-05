@@ -12,7 +12,7 @@ from hypothesis import given, settings, assume, HealthCheck
 from hypothesis import strategies as st
 from django.core.exceptions import ValidationError
 
-from apps.knowledge.models import Knowledge, KnowledgeCategory
+from apps.knowledge.models import Knowledge, Tag
 from apps.tasks.models import Task, TaskKnowledge
 from apps.users.models import User, Department
 

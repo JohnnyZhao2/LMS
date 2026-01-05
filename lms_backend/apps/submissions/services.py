@@ -31,9 +31,6 @@ from django.db.models import Sum
 
 from .models import Submission, Answer
 from .repositories import SubmissionRepository, AnswerRepository
-from .domain.models import SubmissionDomain, AnswerDomain
-from .domain.services import SubmissionDomainService
-from .domain.mappers import SubmissionMapper, AnswerMapper
 
 
 class SubmissionService(BaseService):
@@ -51,7 +48,6 @@ class SubmissionService(BaseService):
         self.repository = SubmissionRepository()
         self.answer_repository = AnswerRepository()
         self.task_quiz_repository = TaskQuizRepository()
-        self.domain_service = SubmissionDomainService()
         self.task_assignment_repository = TaskAssignmentRepository()
     
     def get_submission_by_id(self, pk: int, user: User = None) -> Submission:
@@ -219,7 +215,11 @@ class SubmissionService(BaseService):
         # Prepare answer data
         questions = quiz_version.get_ordered_questions()
         answers_data = [
-            {'question_id': relation.question_id}
+            {
+                'question_id': relation.question_id,
+                'question_resource_uuid': relation.question.resource_uuid,
+                'question_version_number': relation.question.version_number
+            }
             for relation in questions
         ]
         
@@ -232,7 +232,9 @@ class SubmissionService(BaseService):
             attempt_number=attempt_number,
             status='IN_PROGRESS',
             total_score=total_score,
-            remaining_seconds=remaining_seconds
+            remaining_seconds=remaining_seconds,
+            quiz_resource_uuid=quiz_version.resource_uuid,
+            quiz_version_number=quiz_version.version_number
         )
         
         return submission
@@ -278,7 +280,7 @@ class SubmissionService(BaseService):
     @transaction.atomic
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
-        Submit a quiz/exam (使用 Domain Service).
+        Submit a quiz/exam.
         
         Args:
             submission: The submission to submit
@@ -301,16 +303,8 @@ class SubmissionService(BaseService):
         - Property 31: 主观题待评分状态
         - Property 32: 纯客观题直接完成
         """
-        # 获取 Domain Model
-        submission_domain = self.repository.get_domain_by_id(submission.id)
-        if not submission_domain:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message=f'答题记录 {submission.id} 不存在'
-            )
-        
         # 检查是否可以提交
-        if not self.domain_service.can_submit(submission_domain):
+        if submission.status != 'IN_PROGRESS':
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
                 message='只能提交答题中的记录'
@@ -322,25 +316,20 @@ class SubmissionService(BaseService):
         # 计算总分
         self._calculate_score(submission)
         
-        # 使用 Domain Service 提交
-        try:
-            submission_domain = self.domain_service.submit(
-                submission_domain,
-                submitted_at=timezone.now(),
-                has_subjective_questions=submission.has_subjective_questions
-            )
-        except ValueError as e:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message=str(e)
-            )
+        # 设置提交时间
+        submission.submitted_at = timezone.now()
         
-        # 更新 ORM Model
-        submission = SubmissionMapper.update_orm_from_domain(submission, submission_domain)
+        # 根据是否包含主观题设置状态
+        if submission.has_subjective_questions:
+            submission.status = 'GRADING'
+        else:
+            # 纯客观题，直接完成
+            submission.status = 'GRADED'
+        
         submission.save()
         
         # 如果是纯客观题，更新任务分配
-        if submission_domain.is_graded():
+        if submission.status == 'GRADED':
             self._update_task_assignment(submission)
         
         # 检查练习任务是否应该自动完成
@@ -457,7 +446,6 @@ class GradingService(BaseService):
     def __init__(self):
         self.repository = SubmissionRepository()
         self.answer_repository = AnswerRepository()
-        self.domain_service = SubmissionDomainService()
     
     def get_grading_queryset(self, user: User) -> QuerySet:
         """
@@ -565,9 +553,7 @@ class GradingService(BaseService):
                 message=f'分数必须在 0 到 {answer.question.score} 之间'
             )
         
-        # Grade the answer (this calls the model's grade method which handles the logic)
-        # Note: answer.grade() in Model will call submission.complete_grading() if all graded
-        # We'll let that handle the completion, but we could also use Domain Service here
+        # Grade the answer
         answer.grade(grader, score, comment)
         
         # Refresh submission to get updated status

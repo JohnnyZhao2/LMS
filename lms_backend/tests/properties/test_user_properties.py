@@ -210,7 +210,6 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -219,7 +218,6 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'admin_{unique_suffix}',
             password='adminpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -268,7 +266,6 @@ class TestProperty9StudentRoleCannotBeRemoved:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -330,7 +327,6 @@ class TestProperty6UserInfoUpdateConsistency:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='原始姓名',
             department=setup_department,
         )
         
@@ -395,7 +391,6 @@ class TestProperty6UserInfoUpdateConsistency:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -452,7 +447,6 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -500,7 +494,6 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
             is_active=False,
         )
@@ -549,7 +542,6 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -599,7 +591,6 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password=password,
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
             is_active=True,
         )
@@ -648,7 +639,6 @@ class TestProperty7UserActivationDeactivation:
             username=f'test_user_{unique_suffix}',
             password=password,
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
             is_active=False,
         )
@@ -709,7 +699,6 @@ class TestProperty8UserDeleteProtection:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -718,7 +707,6 @@ class TestProperty8UserDeleteProtection:
             username=f'creator_{unique_suffix}',
             password='testpass123',
             employee_id=f'CRE_{unique_suffix}',
-            username='任务创建者',
             department=setup_department,
         )
         
@@ -782,7 +770,6 @@ class TestProperty8UserDeleteProtection:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=setup_department,
         )
         
@@ -791,7 +778,6 @@ class TestProperty8UserDeleteProtection:
             username=f'checker_{unique_suffix}',
             password='testpass123',
             employee_id=f'CHK_{unique_suffix}',
-            username='检查者',
             department=setup_department,
         )
         
@@ -846,7 +832,6 @@ class TestProperty8UserDeleteProtection:
             username=f'test_user_{unique_suffix}',
             password='testpass123',
             employee_id=f'EMP_{unique_suffix}',
-            username='测试用户',
             department=setup_department,
         )
         
@@ -894,7 +879,6 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -904,7 +888,6 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'old_manager_{unique_suffix}',
             password='testpass123',
             employee_id=f'OLD_{unique_suffix}',
-            username='原室经理',
             department=setup_department,
         )
         
@@ -913,7 +896,6 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'new_manager_{unique_suffix}',
             password='testpass123',
             employee_id=f'NEW_{unique_suffix}',
-            username='新室经理',
             department=setup_department,
         )
         
@@ -988,7 +970,6 @@ class TestProperty11DeptManagerPermissionTransfer:
             username=f'admin_{unique_suffix}',
             password='testpass123',
             employee_id=f'ADM_{unique_suffix}',
-            username='管理员',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=admin, role=setup_roles['ADMIN'])
@@ -1077,7 +1058,6 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=setup_department,
         )
         
@@ -1155,7 +1135,6 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'student_{unique_suffix}',
             password='testpass123',
             employee_id=f'STU_{unique_suffix}',
-            username='学员',
             department=setup_department,
         )
         
@@ -1164,7 +1143,6 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'mentor1_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN1_{unique_suffix}',
-            username='导师1',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=mentor1, role=setup_roles['MENTOR'])
@@ -1173,7 +1151,6 @@ class TestProperty10MentorRelationshipUniqueness:
             username=f'mentor2_{unique_suffix}',
             password='testpass123',
             employee_id=f'MEN2_{unique_suffix}',
-            username='导师2',
             department=setup_department,
         )
         UserRole.objects.get_or_create(user=mentor2, role=setup_roles['MENTOR'])

@@ -10,8 +10,6 @@ from django.urls import path
 from .views import (
     KnowledgeListCreateView,
     KnowledgeDetailView,
-    KnowledgePublishView,
-    KnowledgeUnpublishView,
     KnowledgeStatsView,
     KnowledgeIncrementViewCountView,
     StudentKnowledgeListView,
@@ -26,8 +24,6 @@ urlpatterns = [
     path('student/', StudentKnowledgeListView.as_view(), name='student-knowledge-list'),
     path('stats/', KnowledgeStatsView.as_view(), name='knowledge-stats'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),
-    path('<int:pk>/publish/', KnowledgePublishView.as_view(), name='knowledge-publish'),
-    path('<int:pk>/unpublish/', KnowledgeUnpublishView.as_view(), name='knowledge-unpublish'),
     path('<int:pk>/view/', KnowledgeIncrementViewCountView.as_view(), name='knowledge-view'),
     
     # Tag management endpoints

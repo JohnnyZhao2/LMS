@@ -37,9 +37,6 @@ from .repositories import (
     TaskQuizRepository,
     KnowledgeLearningProgressRepository,
 )
-from .domain.models import TaskDomain, TaskAssignmentDomain
-from .domain.services import TaskDomainService
-from .domain.mappers import TaskMapper, TaskAssignmentMapper
 
 
 class TaskService(BaseService):
@@ -60,7 +57,6 @@ class TaskService(BaseService):
         self.task_quiz_repository = TaskQuizRepository()
         self.knowledge_repository = KnowledgeRepository()
         self.quiz_repository = QuizRepository()
-        self.domain_service = TaskDomainService()
     
     def get_task_queryset_for_user(self, user: User) -> QuerySet:
         """
@@ -168,9 +164,9 @@ class TaskService(BaseService):
         Returns:
             True if task is closed
         """
-        # 使用 Domain Service 检查
-        task_domain = TaskMapper.to_domain(task)
-        return TaskDomainService.is_task_closed(task_domain, timezone.now())
+        if task.is_closed:
+            return True
+        return timezone.now() > task.deadline
     
     @transaction.atomic
     def create_task(
@@ -251,13 +247,13 @@ class TaskService(BaseService):
             queryset = repository.model.objects.filter(
                 id__in=resource_ids,
                 is_deleted=False,
-                status='PUBLISHED'
+                is_current=True
             ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
         else:  # quiz
             queryset = repository.model.objects.filter(
                 id__in=resource_ids,
                 is_deleted=False,
-                status='PUBLISHED'
+                is_current=True
             )
         
         resource_map = {r.id: r for r in queryset}
@@ -415,7 +411,7 @@ class TaskService(BaseService):
     
     def close_task(self, task: Task) -> Task:
         """
-        Force close a task (使用 Domain Service).
+        Force close a task.
         
         Args:
             task: Task to close
@@ -426,24 +422,17 @@ class TaskService(BaseService):
         Raises:
             BusinessError: If task is already closed
         """
-        # 转换为 Domain Model
-        task_domain = TaskMapper.to_domain(task)
-        
-        # 使用 Domain Service 关闭任务
-        try:
-            task_domain = self.domain_service.close_task(
-                task_domain,
-                closed_at=timezone.now()
-            )
-        except ValueError as e:
+        # 检查任务是否已关闭
+        if task.is_closed:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message=str(e)
+                message='任务已经结束'
             )
         
-        # 更新 Django Model
-        task = self.task_repository.update_from_domain(task, task_domain)
-        task.save()
+        # 关闭任务
+        task.is_closed = True
+        task.closed_at = timezone.now()
+        task.save(update_fields=['is_closed', 'closed_at'])
         
         # 将未完成的分配记录标记为已逾期
         task.assignments.filter(
@@ -477,7 +466,7 @@ class TaskService(BaseService):
         published = repository.model.objects.filter(
             id__in=resource_ids,
             is_deleted=False,
-            status='PUBLISHED'
+            is_current=True
         )
         published_ids = set(published.values_list('id', flat=True))
         invalid_ids = set(resource_ids) - published_ids
@@ -576,11 +565,10 @@ class StudentTaskService(BaseService):
         self.task_assignment_repository = TaskAssignmentRepository()
         self.knowledge_progress_repository = KnowledgeLearningProgressRepository()
         self.task_knowledge_repository = TaskKnowledgeRepository()
-        self.domain_service = TaskDomainService()
     
     def get_student_assignment(self, task_id: int, user: User) -> TaskAssignment:
         """
-        Get a student's task assignment (使用 Domain Service 检查逾期状态).
+        Get a student's task assignment.
         
         Args:
             task_id: Task ID
@@ -598,23 +586,27 @@ class StudentTaskService(BaseService):
         )
         self.validate_not_none(assignment, '任务不存在或未分配给您')
         
-        # 使用 Domain Service 检查并更新逾期状态
-        assignment_domain = TaskAssignmentMapper.to_domain(assignment)
-        assignment_domain = self.domain_service.check_and_update_overdue(
-            assignment_domain,
-            current_time=timezone.now(),
-            task_deadline=assignment.task.deadline
-        )
-        
-        # 如果状态有变化，更新 Django Model
-        if assignment_domain.status.value != assignment.status:
-            assignment = self.task_assignment_repository.update_from_domain(
-                assignment,
-                assignment_domain
-            )
-            assignment.save()
+        # 检查并更新逾期状态
+        self._check_and_update_overdue(assignment)
         
         return assignment
+    
+    def _check_and_update_overdue(self, assignment: TaskAssignment) -> None:
+        """
+        检查并更新任务分配的逾期状态
+        
+        Args:
+            assignment: 任务分配对象
+        """
+        if assignment.status == 'COMPLETED':
+            return
+        
+        current_time = timezone.now()
+        task_deadline = assignment.task.deadline
+        
+        if current_time > task_deadline and assignment.status != 'OVERDUE':
+            assignment.status = 'OVERDUE'
+            assignment.save(update_fields=['status'])
     
     def ensure_knowledge_progress(self, assignment: TaskAssignment) -> None:
         """
@@ -637,6 +629,7 @@ class StudentTaskService(BaseService):
                 )
     
     def complete_knowledge_learning(
+        self,
         assignment: TaskAssignment,
         knowledge_id: int
     ) -> KnowledgeLearningProgress:
@@ -701,6 +694,7 @@ class StudentTaskService(BaseService):
         return progress
     
     def get_student_assignments_queryset(
+        self,
         user: User,
         status_filter: str = None,
         search: str = None

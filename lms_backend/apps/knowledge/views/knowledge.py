@@ -3,7 +3,6 @@ Knowledge document management views.
 
 Implements:
 - Knowledge CRUD
-- Knowledge publish/unpublish
 - Knowledge stats
 - Student knowledge list
 - View count increment
@@ -268,88 +267,6 @@ class KnowledgeDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class KnowledgePublishView(APIView):
-    """Knowledge publish endpoint."""
-    permission_classes = [IsAuthenticated]
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
-    
-    @extend_schema(
-        summary='发布知识文档',
-        description='将知识文档从草稿状态发布为已发布状态（仅管理员）',
-        responses={
-            200: KnowledgeDetailSerializer,
-            400: OpenApiResponse(description='知识文档已被任务引用，无法取消发布'),
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='知识文档不存在'),
-        },
-        tags=['知识管理']
-    )
-    def post(self, request, pk):
-        # 1. 权限检查
-        if not request.user.is_admin:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以发布知识文档'
-            )
-        
-        # 2. 调用 Service
-        try:
-            knowledge = self.service.publish(pk, request.user)
-        except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 3. 序列化输出
-        serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class KnowledgeUnpublishView(APIView):
-    """Knowledge unpublish endpoint."""
-    permission_classes = [IsAuthenticated]
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
-    
-    @extend_schema(
-        summary='取消发布知识文档',
-        description='将知识文档从已发布状态改为草稿状态（仅管理员）',
-        responses={
-            200: KnowledgeDetailSerializer,
-            400: OpenApiResponse(description='知识文档已被任务引用，无法取消发布'),
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='知识文档不存在'),
-        },
-        tags=['知识管理']
-    )
-    def post(self, request, pk):
-        # 1. 权限检查
-        if not request.user.is_admin:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以取消发布知识文档'
-            )
-        
-        # 2. 调用 Service
-        try:
-            knowledge = self.service.unpublish(pk, request.user)
-        except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 3. 序列化输出
-        response_serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-
 class KnowledgeStatsView(APIView):
     """知识统计端点"""
     permission_classes = [IsAuthenticated]
@@ -403,7 +320,7 @@ class KnowledgeStatsView(APIView):
         
         stats = {
             'total': len(knowledge_list),
-            'published': len([k for k in knowledge_list if k.status == 'PUBLISHED' and k.is_current]),
+            'published': len([k for k in knowledge_list if k.is_current]),
             'emergency': len([k for k in knowledge_list if k.knowledge_type == 'EMERGENCY']),
             'monthly_new': len([k for k in knowledge_list if k.created_at >= first_day_of_month]),
         }

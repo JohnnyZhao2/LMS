@@ -2,7 +2,28 @@
 
 本文档记录了前端路由与后端API的对应关系，便于维护和开发。
 
+## 前后端模块对应关系
+
+| 前端 Feature | 后端 App | 说明 |
+|-------------|----------|------|
+| `auth` | `users` | 认证是用户模块的子功能 |
+| `dashboard` | `analytics` | 仪表盘数据来自分析模块 |
+| `grading` | `submissions` | 评分是提交流程的一部分 |
+| `knowledge` | `knowledge` | 完全对应 |
+| `questions` | `questions` | 完全对应 |
+| `quizzes` | `quizzes` | 完全对应 |
+| `spot-checks` | `spot_checks` | 完全对应 |
+| `submissions` | `submissions` | 完全对应 |
+| `tasks` | `tasks` | 完全对应 |
+| `test-center` | `questions` + `quizzes` | 聚合页面，整合题目和试卷管理 |
+| `users` | `users` | 完全对应 |
+| - | `notifications` | 后端独立模块，前端暂无独立 feature |
+
+---
+
 ## 认证相关
+
+> 注：前端 `auth` feature 对应后端 `users` app 的认证子模块
 
 | 前端路由 | 后端API | 方法 | 说明 |
 |---------|---------|------|------|
@@ -64,6 +85,8 @@
 
 ## 评分相关
 
+> 注：前端 `grading` feature 对应后端 `submissions` app 的评分子模块
+
 | 前端路由 | 后端API | 方法 | 说明 |
 |---------|---------|------|------|
 | `/grading` | `/api/grading/pending/` | GET | 待评分列表 |
@@ -72,6 +95,8 @@
 | - | `/api/grading/{id}/batch-grade/` | POST | 批量评分 |
 
 ## 测试中心相关
+
+> 注：前端 `test-center` feature 是聚合页面，整合后端 `questions` 和 `quizzes` 两个 app
 
 | 前端路由 | 后端API | 方法 | 说明 |
 |---------|---------|------|------|
@@ -115,6 +140,8 @@
 | - | `/api/users/departments/` | GET | 部门列表 |
 
 ## 数据看板相关
+
+> 注：前端 `dashboard` feature 对应后端 `analytics` app
 
 | 前端路由 | 后端API | 方法 | 说明 |
 |---------|---------|------|------|

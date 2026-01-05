@@ -1,7 +1,7 @@
 """
 试卷应用服务
 
-编排业务逻辑，协调 Repository 和 Domain Service。
+编排业务逻辑，协调 Repository。
 """
 from typing import Optional, List
 from django.db import transaction
@@ -15,9 +15,6 @@ from .repositories import QuizRepository, QuizQuestionRepository
 from apps.questions.models import Question
 from apps.questions.repositories import QuestionRepository
 from apps.knowledge.repositories import TagRepository
-from .domain.models import QuizDomain
-from .domain.services import QuizDomainService
-from .domain.mappers import QuizMapper
 
 
 class QuizService(BaseService):
@@ -28,7 +25,6 @@ class QuizService(BaseService):
         self.quiz_question_repository = QuizQuestionRepository()
         self.question_repository = QuestionRepository()
         self.tag_repository = TagRepository()
-        self.domain_service = QuizDomainService()
     
     def get_by_id(self, pk: int) -> Quiz:
         """
@@ -132,9 +128,7 @@ class QuizService(BaseService):
         
         # 2. 准备数据
         data['created_by'] = user
-        data.setdefault('status', 'PUBLISHED')
         data.setdefault('is_current', True)
-        data.setdefault('published_at', timezone.now())
         
         # 处理版本号
         self._prepare_quiz_version_data(data)
@@ -193,8 +187,8 @@ class QuizService(BaseService):
             '只有试卷创建者或管理员可以编辑此试卷'
         )
         
-        # 已发布的试卷需要创建新版本
-        if quiz.status == 'PUBLISHED':
+        # 当前版本需要创建新版本
+        if quiz.is_current:
             quiz = self._create_new_version(quiz, data, user)
         else:
             # 草稿直接更新
@@ -276,7 +270,7 @@ class QuizService(BaseService):
         )
         
         # 已发布的试卷需要创建新版本
-        if quiz.status == 'PUBLISHED':
+        if quiz.is_current:
             quiz = self._create_new_version(quiz, {}, user)
         
         existing_question_ids = existing_question_ids or []
@@ -338,7 +332,7 @@ class QuizService(BaseService):
         )
         
         # 已发布的试卷需要创建新版本
-        if quiz.status == 'PUBLISHED':
+        if quiz.is_current:
             quiz = self._create_new_version(quiz, {}, user)
         
         # 移除题目
@@ -379,7 +373,7 @@ class QuizService(BaseService):
         )
         
         # 已发布的试卷需要创建新版本
-        if quiz.status == 'PUBLISHED':
+        if quiz.is_current:
             quiz = self._create_new_version(quiz, {}, user)
         
         # 重新排序
@@ -444,9 +438,7 @@ class QuizService(BaseService):
             'title': title,
             'description': description,
             'created_by': user,
-            'status': 'PUBLISHED',
             'is_current': True,
-            'published_at': timezone.now(),
         }
         self._prepare_quiz_version_data(quiz_data)
         quiz = self.repository.create(**quiz_data)
@@ -464,7 +456,7 @@ class QuizService(BaseService):
     @transaction.atomic
     def publish(self, pk: int, user) -> Quiz:
         """
-        发布试卷（使用 Domain Service）
+        发布试卷
         
         Args:
             pk: 主键
@@ -476,43 +468,39 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果无法发布
         """
-        # 获取 Domain Model
-        quiz_domain = self.repository.get_domain_by_id(pk)
-        self.validate_not_none(
-            quiz_domain,
-            f'试卷 {pk} 不存在'
-        )
+        quiz = self.get_by_id(pk)
         
-        # 使用 Domain Service 发布
-        try:
-            quiz_domain = self.domain_service.publish_quiz(
-                quiz_domain,
-                published_at=timezone.now(),
-                updated_by_id=user.id
-            )
-        except ValueError as e:
+        # 检查是否已经是当前版本
+        if quiz.is_current:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message=str(e)
+                message='试卷已经是当前版本'
             )
         
-        # 获取 Django Model 并更新
-        quiz_orm = self.repository.get_by_id(pk)
-        quiz_orm = QuizMapper.update_orm_from_domain(quiz_orm, quiz_domain)
-        quiz_orm.save()
+        # 检查是否有题目
+        if not quiz.questions.exists():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='试卷必须至少包含一道题目'
+            )
+        
+        # 设置为当前版本
+        quiz.is_current = True
+        quiz.updated_by = user
+        quiz.save()
         
         # 取消其他版本的 is_current 标志
         self.repository.unset_current_flag_for_others(
-            resource_uuid=quiz_domain.resource_uuid,
+            resource_uuid=quiz.resource_uuid,
             exclude_pk=pk
         )
         
-        return quiz_orm
+        return quiz
     
     @transaction.atomic
     def unpublish(self, pk: int, user) -> Quiz:
         """
-        取消发布试卷（使用 Domain Service）
+        取消发布试卷
         
         Args:
             pk: 主键
@@ -524,35 +512,28 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果无法取消发布
         """
-        # 获取 Domain Model
-        quiz_domain = self.repository.get_domain_by_id(pk)
-        self.validate_not_none(
-            quiz_domain,
-            f'试卷 {pk} 不存在'
-        )
+        quiz = self.get_by_id(pk)
         
-        # 检查是否被引用
-        is_referenced = self.repository.is_referenced_by_task(pk)
-        
-        # 使用 Domain Service 取消发布
-        try:
-            quiz_domain = self.domain_service.unpublish_quiz(
-                quiz_domain,
-                updated_by_id=user.id,
-                is_referenced=is_referenced
-            )
-        except ValueError as e:
+        # 检查是否是当前版本
+        if not quiz.is_current:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message=str(e)
+                message='试卷不是当前版本'
             )
         
-        # 获取 Django Model 并更新
-        quiz_orm = self.repository.get_by_id(pk)
-        quiz_orm = QuizMapper.update_orm_from_domain(quiz_orm, quiz_domain)
-        quiz_orm.save()
+        # 检查是否被引用
+        if self.repository.is_referenced_by_task(pk):
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_REFERENCED,
+                message='该试卷已被任务引用，无法取消发布'
+            )
         
-        return quiz_orm
+        # 取消当前版本标志
+        quiz.is_current = False
+        quiz.updated_by = user
+        quiz.save()
+        
+        return quiz
     
     def _create_and_add_question(
         self,
@@ -579,9 +560,7 @@ class QuizService(BaseService):
         # 准备题目属性
         question_attrs = {
             'created_by': user,
-            'status': 'PUBLISHED',
             'is_current': True,
-            'published_at': timezone.now(),
             **question_data,
         }
         
@@ -672,7 +651,7 @@ class QuizService(BaseService):
         user
     ) -> Quiz:
         """
-        基于已发布版本创建新版本（使用 Domain Service）
+        基于已发布版本创建新版本
         
         Args:
             source: 源试卷
@@ -682,14 +661,6 @@ class QuizService(BaseService):
         Returns:
             新版本的试卷对象
         """
-        # 获取 Domain Model
-        source_domain = self.repository.get_domain_by_id(source.id)
-        if not source_domain:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message=f'试卷 {source.id} 不存在'
-            )
-        
         # 计算新版本号
         existing_versions = list(
             Quiz.objects.filter(
@@ -697,46 +668,24 @@ class QuizService(BaseService):
                 is_deleted=False
             ).values_list('version_number', flat=True)
         )
-        new_version_number = self.domain_service.calculate_next_version_number(
-            source_domain.version_number,
-            existing_versions
-        )
+        new_version_number = max(existing_versions) + 1 if existing_versions else 1
         
-        # 使用 Domain Service 创建草稿版本
-        try:
-            new_quiz_domain = self.domain_service.create_draft_from_published(
-                source_domain,
-                new_version_number,
-                user.id
-            )
-        except ValueError as e:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message=str(e)
-            )
+        # 准备新版本数据
+        new_quiz_data = {
+            'resource_uuid': source.resource_uuid,
+            'version_number': new_version_number,
+            'title': data.get('title', source.title),
+            'description': data.get('description', source.description),
+            'quiz_type': data.get('quiz_type', source.quiz_type),
+            'duration': data.get('duration', source.duration),
+            'pass_score': data.get('pass_score', source.pass_score),
+            'source_version_id': source.id,
+            'is_current': True,
+            'created_by': user,
+            'updated_by': user,
+        }
         
-        # 更新数据
-        if 'title' in data:
-            new_quiz_domain.title = data['title']
-        if 'description' in data:
-            new_quiz_domain.description = data.get('description', '')
-        if 'quiz_type' in data:
-            from .domain.models import QuizType
-            new_quiz_domain.quiz_type = QuizType(data['quiz_type'])
-        if 'duration' in data:
-            new_quiz_domain.duration = data.get('duration')
-        if 'pass_score' in data:
-            from decimal import Decimal
-            new_quiz_domain.pass_score = Decimal(str(data['pass_score'])) if data.get('pass_score') else None
-        
-        # 验证更新后的数据
-        new_quiz_domain.validate()
-        
-        # 转换为 ORM 数据并创建
-        orm_data = QuizMapper.to_orm_data(new_quiz_domain)
-        question_ids = orm_data.pop('question_ids', [])
-        
-        new_quiz = self.repository.create(**orm_data)
+        new_quiz = self.repository.create(**new_quiz_data)
         
         # 复制题目顺序
         source_questions = self.quiz_question_repository.get_ordered_questions(
