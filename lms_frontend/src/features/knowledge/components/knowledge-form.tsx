@@ -9,7 +9,6 @@ import {
   CheckCircle,
   Plus,
   Save,
-  Send,
   PanelLeftClose,
   PanelLeft,
   Loader2,
@@ -29,7 +28,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
-import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
+import { useCreateKnowledge, useUpdateKnowledge} from '../api/manage-knowledge';
 import { EMERGENCY_TABS, parseOutlineFromHtml } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
@@ -286,7 +285,6 @@ export const KnowledgeForm: React.FC = () => {
     }
   }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate]);
 
-
   const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending;
 
   const breadcrumbInfo = useMemo(() => {
@@ -298,14 +296,22 @@ export const KnowledgeForm: React.FC = () => {
   }, [lineTypeTags, lineTypeId, title, isEdit]);
 
   const statusInfo = useMemo(() => {
-    if (!isEdit) return { label: '草稿', isDraft: true };
-    if (!knowledgeDetail) return { label: '草稿', isDraft: true };
-    // Status field removed - determine published state from is_current flag
+    // 新建时显示草稿
+    if (!isEdit) {
+      return { 
+        label: '草稿', 
+        isDraft: true, 
+        description: '保存后将创建新版本并立即对所有用户可见。' 
+      };
+    }
+    
+    // 编辑时都是当前版本（因为管理端只显示当前版本）
     return {
-      label: knowledgeDetail.is_current ? '当前版本' : '历史版本',
-      isDraft: !knowledgeDetail.is_current,
+      label: '当前版本',
+      isDraft: false,
+      description: '保存修改后将创建新版本并立即对所有用户可见。'
     };
-  }, [isEdit, knowledgeDetail]);
+  }, [isEdit]);
 
   const outline = useMemo(() => {
     if (knowledgeType === 'EMERGENCY') {
@@ -354,7 +360,6 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 状态和操作按钮 */}
-
         <div className="flex items-center gap-3">
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold ${statusInfo.isDraft
@@ -370,17 +375,6 @@ export const KnowledgeForm: React.FC = () => {
           </div>
 
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="h-14 px-6 font-semibold"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            保存
-          </Button>
-
-          <Button
             size="sm"
             onClick={handleSave}
             disabled={isSubmitting}
@@ -389,9 +383,9 @@ export const KnowledgeForm: React.FC = () => {
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <Send className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 mr-2" />
             )}
-            {isSubmitting ? '处理中...' : '发布新版本'}
+            {isSubmitting ? '保存中...' : '保存'}
           </Button>
         </div>
       </div>
@@ -736,14 +730,11 @@ export const KnowledgeForm: React.FC = () => {
                 <span className="text-sm font-semibold text-gray-700">当前状态</span>
                 <span className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold ${statusInfo.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                   <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
-                  {statusInfo.isDraft ? '编辑中' : '当前版本'}
+                  {statusInfo.label}
                 </span>
               </div>
               <div className="text-xs text-gray-600 leading-relaxed font-medium">
-                {statusInfo.isDraft
-                  ? '保存后可以继续编辑。点击「发布新版本」后，将创建新版本并对所有用户可见。'
-                  : '这是当前版本的知识。修改后发布将创建新版本。'
-                }
+                {statusInfo.description}
               </div>
             </div>
           </div>

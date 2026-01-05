@@ -36,25 +36,6 @@ export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 
 export type KnowledgeType = 'EMERGENCY' | 'OTHER';
 
 /**
- * 知识发布状态
- */
-export type KnowledgeStatus = 'DRAFT' | 'PUBLISHED';
-
-/**
- * 知识编辑状态
- * - PUBLISHED_CLEAN: 已发布且无待发布修改
- * - REVISING: 修订中（已发布但有待发布的草稿修改）
- * - UNPUBLISHED: 未发布（从未发布过的新草稿）
- * - DRAFT_OF_PUBLISHED: 某个已发布版本的草稿
- */
-export type KnowledgeEditStatus = 'PUBLISHED_CLEAN' | 'REVISING' | 'UNPUBLISHED' | 'DRAFT_OF_PUBLISHED';
-
-/**
- * 知识列表筛选类型
- */
-export type KnowledgeFilterType = 'ALL' | 'PUBLISHED_CLEAN' | 'REVISING' | 'UNPUBLISHED';
-
-/**
  * 通知类型
  */
 export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_COMPLETED' | 'SPOT_CHECK';

@@ -39,21 +39,21 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   const shouldShowStatus = showStatus ?? (variant === 'admin');
 
   const isEmergency = item.knowledge_type === 'EMERGENCY';
-  const isRevising = item.edit_status === 'REVISING';
-  const isDraft = item.edit_status === 'DRAFT_OF_PUBLISHED' || item.edit_status === 'UNPUBLISHED';
-  const isPublished = item.edit_status === 'PUBLISHED_CLEAN';
-
+  
+  // 根据新的版本管理系统，管理端只显示当前版本
+  // 不再需要 edit_status 判断
   const getStatusBadge = () => {
-    if (isRevising) return <Badge className="bg-[#F59E0B] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">修订中</Badge>;
-    if (isPublished) return <Badge className="bg-[#10B981] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">已发布</Badge>;
-    return <Badge className="bg-[#F3F4F6] text-[#6B7280] border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">草稿</Badge>;
+    // 学生视图不显示状态
+    if (variant === 'student') return null;
+    
+    // 管理员视图：所有显示的都是当前版本，显示绿色徽章
+    return <Badge className="bg-[#10B981] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">当前版本</Badge>;
   };
 
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition-all duration-200 cursor-pointer hover:scale-[1.02] border-0 shadow-none",
-        isDraft && "bg-[#F3F4F6]"
+        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition-all duration-200 cursor-pointer hover:scale-[1.02] border-0 shadow-none"
       )}
       style={{ fontFamily: "'Outfit', sans-serif" }}
       onClick={() => onView(item.id)}

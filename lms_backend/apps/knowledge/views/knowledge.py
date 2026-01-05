@@ -52,13 +52,9 @@ class KnowledgeListCreateView(APIView):
         summary='获取知识文档列表',
         description='''获取知识文档列表，支持条线类型、知识类型和系统标签筛选。
         
-普通用户只能看到已发布的知识，管理员可以看到所有（包括草稿）。
+普通用户只能看到当前版本的知识，管理员默认也只看到当前版本。
 
-**filter_type 筛选说明（仅管理员）：**
-- ALL: 全部（已发布+未发布，不含已发布版本的草稿副本）
-- PUBLISHED_CLEAN: 已发布且无待发布修改
-- REVISING: 修订中（已发布但有待发布的草稿修改）
-- UNPUBLISHED: 未发布（从未发布过的新草稿）
+**注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
 ''',
         parameters=[
             OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
@@ -66,9 +62,6 @@ class KnowledgeListCreateView(APIView):
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
-            OpenApiParameter(name='filter_type', type=str, description='筛选类型：ALL/PUBLISHED_CLEAN/REVISING/UNPUBLISHED（仅管理员可用）'),
-            OpenApiParameter(name='status', type=str, description='[已废弃] 发布状态（DRAFT/PUBLISHED），建议使用 filter_type'),
-            OpenApiParameter(name='include_drafts', type=bool, description='[已废弃] 是否包含草稿，建议使用 filter_type'),
             OpenApiParameter(name='page', type=int, description='页码（默认1）'),
             OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
         ],
@@ -85,23 +78,12 @@ class KnowledgeListCreateView(APIView):
         }
         filters = {k: v for k, v in filters.items() if v}
         search = request.query_params.get('search')
-        filter_type = request.query_params.get('filter_type', 'ALL') if request.user.is_admin else None
-        status_param = request.query_params.get('status')
-        if status_param and filter_type == 'ALL':
-            filters['status'] = status_param
         
-        # 2. 调用 Service
-        if request.user.is_admin:
-            knowledge_list = self.service.get_all_with_filters(
-                filters=filters,
-                search=search,
-                filter_type=filter_type
-            )
-        else:
-            knowledge_list = self.service.get_published_list(
-                filters=filters,
-                search=search
-            )
+        # 2. 调用 Service（管理端和学员端都只返回当前版本）
+        knowledge_list = self.service.get_all_with_filters(
+            filters=filters,
+            search=search
+        )
         
         # 3. 分页和序列化
         paginator = StandardResultsSetPagination()
@@ -298,20 +280,12 @@ class KnowledgeStatsView(APIView):
         }
         filters = {k: v for k, v in filters.items() if v}
         search = request.query_params.get('search')
-        filter_type = request.query_params.get('filter_type', 'ALL') if request.user.is_admin else None
         
-        # 2. 调用 Service 获取知识列表
-        if request.user.is_admin:
-            knowledge_list = self.service.get_all_with_filters(
-                filters=filters,
-                search=search,
-                filter_type=filter_type
-            )
-        else:
-            knowledge_list = self.service.get_published_list(
-                filters=filters,
-                search=search
-            )
+        # 2. 调用 Service 获取知识列表（只返回当前版本）
+        knowledge_list = self.service.get_all_with_filters(
+            filters=filters,
+            search=search
+        )
         
         # 3. 计算统计信息
         from django.utils import timezone
@@ -320,7 +294,7 @@ class KnowledgeStatsView(APIView):
         
         stats = {
             'total': len(knowledge_list),
-            'published': len([k for k in knowledge_list if k.is_current]),
+            'published': len(knowledge_list),  # 所有返回的都是当前版本
             'emergency': len([k for k in knowledge_list if k.knowledge_type == 'EMERGENCY']),
             'monthly_new': len([k for k in knowledge_list if k.created_at >= first_day_of_month]),
         }
@@ -331,7 +305,7 @@ class KnowledgeStatsView(APIView):
 
 
 class StudentKnowledgeListView(APIView):
-    """学员知识列表端点 - 强制只返回已发布的知识"""
+    """学员知识列表端点 - 只返回当前版本的知识"""
     permission_classes = [IsAuthenticated]
     
     def __init__(self, **kwargs):
@@ -364,8 +338,8 @@ class StudentKnowledgeListView(APIView):
         filters = {k: v for k, v in filters.items() if v}
         search = request.query_params.get('search')
         
-        # 2. 调用 Service（学员只能看到已发布的知识）
-        knowledge_list = self.service.get_published_list(
+        # 2. 调用 Service（学员只能看到当前版本的知识）
+        knowledge_list = self.service.get_all_with_filters(
             filters=filters,
             search=search
         )

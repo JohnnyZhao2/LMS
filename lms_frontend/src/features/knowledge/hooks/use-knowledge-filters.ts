@@ -1,12 +1,9 @@
 import { useState, useCallback } from 'react';
-import type { KnowledgeFilterType } from '@/types/api';
 
 /**
  * 知识列表筛选状态配置
  */
 export interface KnowledgeFilterConfig {
-  /** 是否启用状态筛选（管理端需要，学员端不需要） */
-  enableStatusFilter?: boolean;
   /** 是否启用操作标签筛选（学员端需要） */
   enableOperationTags?: boolean;
   /** 默认页面大小 */
@@ -27,8 +24,6 @@ export interface KnowledgeFilterState {
   selectedSystemTagIds: number[];
   /** 选中的操作标签 IDs */
   selectedOperationTagIds: number[];
-  /** 状态筛选类型（管理端） */
-  filterType: KnowledgeFilterType;
   /** 当前页码 */
   page: number;
   /** 每页数量 */
@@ -51,8 +46,6 @@ export interface KnowledgeFilterActions {
   toggleSystemTag: (tagId: number) => void;
   /** 切换操作标签 */
   toggleOperationTag: (tagId: number) => void;
-  /** 设置状态筛选 */
-  setFilterType: (type: KnowledgeFilterType) => void;
   /** 处理分页变化 */
   handlePageChange: (page: number, pageSize: number) => void;
   /** 重置所有筛选 */
@@ -77,7 +70,6 @@ export const useKnowledgeFilters = (
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
   const [selectedSystemTagIds, setSelectedSystemTagIds] = useState<number[]>([]);
   const [selectedOperationTagIds, setSelectedOperationTagIds] = useState<number[]>([]);
-  const [filterType, setFilterType] = useState<KnowledgeFilterType>('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 
@@ -137,14 +129,6 @@ export const useKnowledgeFilters = (
   }, []);
 
   /**
-   * 设置状态筛选
-   */
-  const handleFilterTypeChange = useCallback((type: KnowledgeFilterType) => {
-    setFilterType(type);
-    setPage(1);
-  }, []);
-
-  /**
    * 重置所有筛选
    */
   const resetFilters = useCallback(() => {
@@ -153,7 +137,6 @@ export const useKnowledgeFilters = (
     setSelectedLineTypeId(undefined);
     setSelectedSystemTagIds([]);
     setSelectedOperationTagIds([]);
-    setFilterType('ALL');
     setPage(1);
     setPageSize(defaultPageSize);
   }, [defaultPageSize]);
@@ -165,7 +148,6 @@ export const useKnowledgeFilters = (
     selectedLineTypeId,
     selectedSystemTagIds,
     selectedOperationTagIds,
-    filterType,
     page,
     pageSize,
     // 操作
@@ -175,7 +157,6 @@ export const useKnowledgeFilters = (
     handleLineTypeSelect,
     toggleSystemTag,
     toggleOperationTag,
-    setFilterType: handleFilterTypeChange,
     handlePageChange,
     resetFilters,
   };

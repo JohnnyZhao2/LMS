@@ -54,54 +54,20 @@ class KnowledgeService(BaseService):
                     message='无权访问该知识文档'
                 )
         
-        # 如果是当前版本，检查是否有草稿（管理员可见）
-        if knowledge.is_current and user and user.is_admin:
-            draft = self.repository.get_draft_for_published(pk)
-            if draft:
-                return draft
-        
         return knowledge
-    
-    def get_published_list(
-        self,
-        filters: dict = None,
-        search: str = None,
-        limit: int = None,
-        offset: int = None
-    ) -> List[Knowledge]:
-        """
-        获取已发布的知识文档列表
-        
-        Args:
-            filters: 过滤条件
-            search: 搜索关键词
-            limit: 限制数量
-            offset: 偏移量
-            
-        Returns:
-            知识文档列表
-        """
-        return list(self.repository.get_published_list(
-            filters=filters,
-            search=search,
-            limit=limit,
-            offset=offset
-        ))
     
     def get_all_with_filters(
         self,
         filters: dict = None,
         search: str = None,
-        filter_type: str = None,
         ordering: str = '-updated_at'
     ) -> List[Knowledge]:
         """
-        获取所有知识文档（支持管理员筛选）
+        获取所有知识文档（只返回当前版本）
         
         Args:
             filters: 过滤条件
             search: 搜索关键词
-            filter_type: 筛选类型（ALL/PUBLISHED_CLEAN/REVISING/UNPUBLISHED）
             ordering: 排序字段
             
         Returns:
@@ -110,7 +76,6 @@ class KnowledgeService(BaseService):
         return list(self.repository.get_all_with_filters(
             filters=filters,
             search=search,
-            filter_type=filter_type,
             ordering=ordering
         ))
     

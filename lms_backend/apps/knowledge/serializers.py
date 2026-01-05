@@ -36,13 +36,6 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     
     Returns a summary of knowledge documents for list display.
     
-    新增字段用于区分知识状态：
-    - has_pending_draft: 已发布版本是否有待发布的草稿修改
-    - pending_draft_id: 待发布草稿的ID
-    - source_version_id: 草稿对应的来源已发布版本ID
-    - source_version_title: 草稿对应的来源已发布版本标题
-    - edit_status: 编辑状态（PUBLISHED_CLEAN/REVISING/UNPUBLISHED）
-    
     Requirements: 4.1, 4.6
     """
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
@@ -54,13 +47,6 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     content_preview = serializers.CharField(read_only=True)
     table_of_contents = serializers.ListField(read_only=True)
     
-    # 新增：用于区分知识状态的字段
-    has_pending_draft = serializers.SerializerMethodField()
-    pending_draft_id = serializers.SerializerMethodField()
-    source_version_id = serializers.IntegerField(source='source_version.id', read_only=True, allow_null=True)
-    source_version_title = serializers.CharField(source='source_version.title', read_only=True, allow_null=True)
-    edit_status = serializers.SerializerMethodField()
-    
     class Meta:
         model = Knowledge
         fields = [
@@ -69,60 +55,8 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'is_current',
             'line_type', 'system_tags', 'operation_tags',
             'view_count', 'summary', 'content_preview', 'table_of_contents',
-            # 新增字段
-            'has_pending_draft', 'pending_draft_id',
-            'source_version_id', 'source_version_title', 'edit_status',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
-    
-    def get_has_pending_draft(self, obj):
-        """
-        检查已发布版本是否有待发布的草稿修改
-        仅对当前版本有效
-        """
-        if not obj.is_current:
-            return False
-        # 使用 prefetch 的数据或查询
-        if hasattr(obj, '_pending_draft'):
-            return obj._pending_draft is not None
-        return Knowledge.objects.filter(
-            source_version=obj,
-            is_current=False,
-            is_deleted=False
-        ).exists()
-    
-    def get_pending_draft_id(self, obj):
-        """
-        获取待发布草稿的ID
-        仅对当前版本有效
-        """
-        if not obj.is_current:
-            return None
-        if hasattr(obj, '_pending_draft'):
-            return obj._pending_draft.id if obj._pending_draft else None
-        draft = Knowledge.objects.filter(
-            source_version=obj,
-            is_current=False,
-            is_deleted=False
-        ).first()
-        return draft.id if draft else None
-    
-    def get_edit_status(self, obj):
-        """
-        获取编辑状态:
-        - PUBLISHED_CLEAN: 当前版本且无待发布修改
-        - REVISING: 当前版本但有待发布的草稿修改
-        - UNPUBLISHED: 从未发布过的新草稿
-        - DRAFT_OF_PUBLISHED: 某个已发布版本的草稿（不在主列表显示，仅用于判断）
-        """
-        if obj.is_current:
-            has_draft = self.get_has_pending_draft(obj)
-            return 'REVISING' if has_draft else 'PUBLISHED_CLEAN'
-        else:  # 非当前版本
-            if obj.source_version_id:
-                return 'DRAFT_OF_PUBLISHED'
-            else:
-                return 'UNPUBLISHED'
 
 
 class KnowledgeDetailSerializer(serializers.ModelSerializer):

@@ -45,86 +45,6 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
         
         return qs.filter(pk=pk).first()
     
-    def get_published_list(
-        self,
-        filters: dict = None,
-        search: str = None,
-        ordering: str = '-created_at',
-        limit: int = None,
-        offset: int = None
-    ) -> QuerySet[Knowledge]:
-        """
-        获取当前版本的知识文档列表
-        
-        Args:
-            filters: 过滤条件
-            search: 搜索关键词
-            ordering: 排序字段
-            limit: 限制数量
-            offset: 偏移量
-            
-        Returns:
-            QuerySet
-        """
-        qs = self.model.objects.filter(
-            is_deleted=False,
-            is_current=True
-        ).select_related('created_by', 'updated_by')
-        
-        # 应用过滤条件
-        if filters:
-            if filters.get('knowledge_type'):
-                qs = qs.filter(knowledge_type=filters['knowledge_type'])
-            if filters.get('line_type_id'):
-                content_type = ContentType.objects.get_for_model(self.model)
-                qs = qs.filter(
-                    id__in=ResourceLineType.objects.filter(
-                        content_type=content_type,
-                        line_type_id=filters['line_type_id']
-                    ).values_list('object_id', flat=True)
-                )
-            if filters.get('system_tag_id'):
-                qs = qs.filter(system_tags__id=filters['system_tag_id'])
-            if filters.get('operation_tag_id'):
-                qs = qs.filter(operation_tags__id=filters['operation_tag_id'])
-        
-        # 搜索
-        if search:
-            qs = qs.filter(
-                Q(title__icontains=search) |
-                Q(summary__icontains=search) |
-                Q(content__icontains=search)
-            )
-        
-        # 排序
-        if ordering:
-            qs = qs.order_by(ordering)
-        
-        # 分页
-        if limit:
-            qs = qs[offset:offset+limit] if offset else qs[:limit]
-        
-        return qs
-    
-    def get_draft_for_resource(
-        self,
-        resource_uuid: str
-    ) -> Optional[Knowledge]:
-        """
-        获取资源的非当前版本（历史版本）
-        
-        Args:
-            resource_uuid: 资源 UUID
-            
-        Returns:
-            非当前版本或 None
-        """
-        return self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_current=False,
-            is_deleted=False
-        ).first()
-    
     def is_referenced_by_task(self, knowledge_id: int) -> bool:
         """
         检查知识文档是否被任务引用
@@ -167,65 +87,27 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
         self,
         filters: dict = None,
         search: str = None,
-        filter_type: str = None,
         ordering: str = '-updated_at'
     ) -> QuerySet[Knowledge]:
         """
-        获取所有知识文档（支持管理员筛选）
+        获取所有知识文档（只返回当前版本）
         
         Args:
             filters: 过滤条件
             search: 搜索关键词
-            filter_type: 筛选类型（ALL/PUBLISHED_CLEAN/REVISING/UNPUBLISHED）
             ordering: 排序字段
             
         Returns:
             QuerySet
         """
         qs = self.model.objects.filter(
-            is_deleted=False
+            is_deleted=False,
+            is_current=True  # 只返回当前版本
         ).select_related(
-            'created_by', 'updated_by', 'source_version'
+            'created_by', 'updated_by'
         ).prefetch_related(
             'system_tags', 'operation_tags'
         )
-        
-        # 应用 filter_type 筛选
-        if filter_type:
-            non_current_with_source_ids = self.model.objects.filter(
-                is_deleted=False,
-                is_current=False,
-                source_version__isnull=False
-            ).values_list('id', flat=True)
-            
-            current_with_non_current_ids = self.model.objects.filter(
-                is_deleted=False,
-                is_current=False,
-                source_version__isnull=False
-            ).values_list('source_version_id', flat=True)
-            
-            if filter_type == 'PUBLISHED_CLEAN':
-                qs = qs.filter(
-                    is_current=True
-                ).exclude(id__in=current_with_non_current_ids)
-            elif filter_type == 'REVISING':
-                qs = qs.filter(
-                    is_current=True,
-                    id__in=current_with_non_current_ids
-                )
-            elif filter_type == 'UNPUBLISHED':
-                qs = qs.filter(
-                    is_current=False,
-                    source_version__isnull=True
-                )
-            else:  # ALL
-                qs = qs.filter(
-                    Q(is_current=True) |
-                    Q(is_current=False, source_version__isnull=True)
-                )
-        else:
-            # 默认只显示当前版本
-            qs = qs.filter(is_current=True)
         
         # 应用其他过滤条件
         if filters:

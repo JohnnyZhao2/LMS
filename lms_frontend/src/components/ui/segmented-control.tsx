@@ -1,139 +1,62 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
-
 /**
- * SegmentedControl 组件 - Flat Design 分段式选择器
- * 
- * 设计规范：
- * - 无阴影
- * - 实心背景色切换
- * - hover:scale-105 交互反馈
- * - rounded-md 圆角
+ * 分段式控制器组件 - 用于筛选和选项切换
  */
+import { cn } from '@/lib/utils';
 
-interface SegmentedControlOption {
-    value: string
-    label: string
-    icon?: React.ReactNode
+export interface SegmentedOption {
+  label: string;
+  value: string;
 }
 
 interface SegmentedControlProps {
-    options: SegmentedControlOption[]
-    value: string
-    onChange: (value: string) => void
-    className?: string
-    size?: "sm" | "default" | "lg"
-}
-
-const sizeStyles = {
-    sm: "h-10 px-4 text-sm",
-    default: "h-12 px-6 text-base",
-    lg: "h-14 px-8 text-lg",
+  options: SegmentedOption[];
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  className?: string;
+  activeColor?: 'gray' | 'blue';
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
-    options,
-    value,
-    onChange,
-    className,
-    size = "default",
+  options,
+  value,
+  onChange,
+  label,
+  className,
+  activeColor = 'gray',
 }) => {
-    return (
-        <div
-            className={cn(
-                "inline-flex items-center gap-1 p-1 bg-[#F3F4F6] rounded-lg",
-                className
-            )}
+  const activeStyles = {
+    gray: 'bg-gray-900 text-white',
+    blue: 'bg-blue-600 text-white',
+  };
+
+  return (
+    <div className={cn('flex flex-col gap-2', className)}>
+      {label && (
+        <span
+          className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1"
+          style={{ fontFamily: "'Outfit', sans-serif" }}
         >
-            {options.map((option) => {
-                const isSelected = option.value === value
-                return (
-                    <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => onChange(option.value)}
-                        className={cn(
-                            "inline-flex items-center justify-center gap-2 font-semibold rounded-md transition-all duration-200",
-                            sizeStyles[size],
-                            isSelected
-                                ? "bg-[#3B82F6] text-white hover:bg-[#2563EB]"
-                                : "bg-transparent text-[#6B7280] hover:bg-[#E5E7EB] hover:text-[#111827]",
-                            "hover:scale-105 active:scale-95"
-                        )}
-                    >
-                        {option.icon && <span className="[&_svg]:w-4 [&_svg]:h-4">{option.icon}</span>}
-                        {option.label}
-                    </button>
-                )
-            })}
-        </div>
-    )
-}
-
-/**
- * SegmentedControlItem - 色块式分段按钮（用于更强调的场景）
- * 
- * 使用不同背景色区分选项，适合 dashboard 等场景
- */
-interface ColorSegmentOption extends SegmentedControlOption {
-    color?: "primary" | "secondary" | "accent" | "muted"
-}
-
-interface ColorSegmentedControlProps {
-    options: ColorSegmentOption[]
-    value: string
-    onChange: (value: string) => void
-    className?: string
-}
-
-const colorStyles = {
-    primary: {
-        active: "bg-[#3B82F6] text-white",
-        inactive: "bg-[#DBEAFE] text-[#3B82F6]",
-    },
-    secondary: {
-        active: "bg-[#10B981] text-white",
-        inactive: "bg-[#D1FAE5] text-[#10B981]",
-    },
-    accent: {
-        active: "bg-[#F59E0B] text-white",
-        inactive: "bg-[#FEF3C7] text-[#F59E0B]",
-    },
-    muted: {
-        active: "bg-[#111827] text-white",
-        inactive: "bg-[#F3F4F6] text-[#6B7280]",
-    },
-}
-
-export const ColorSegmentedControl: React.FC<ColorSegmentedControlProps> = ({
-    options,
-    value,
-    onChange,
-    className,
-}) => {
-    return (
-        <div className={cn("inline-flex items-center gap-2", className)}>
-            {options.map((option) => {
-                const isSelected = option.value === value
-                const color = option.color || "primary"
-                const styles = colorStyles[color]
-
-                return (
-                    <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => onChange(option.value)}
-                        className={cn(
-                            "inline-flex items-center justify-center gap-2 h-12 px-6 font-semibold rounded-md transition-all duration-200",
-                            isSelected ? styles.active : styles.inactive,
-                            "hover:scale-105 active:scale-95"
-                        )}
-                    >
-                        {option.icon && <span className="[&_svg]:w-4 [&_svg]:h-4">{option.icon}</span>}
-                        {option.label}
-                    </button>
-                )
-            })}
-        </div>
-    )
-}
+          {label}
+        </span>
+      )}
+      <div className="flex bg-white p-1 rounded-md shadow-none overflow-x-auto no-scrollbar">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap',
+              value === opt.value
+                ? `${activeStyles[activeColor]} shadow-none`
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            )}
+            style={{ fontFamily: "'Outfit', sans-serif" }}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};

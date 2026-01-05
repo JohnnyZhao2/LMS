@@ -1,20 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import {
-  Plus,
-  Trash2,
-  Send,
-  GripVertical,
-  ArrowUp,
-  ArrowDown,
-  FileEdit,
-  X,
-  Loader2,
-} from 'lucide-react';
+import { Plus, Send, FileEdit, Loader2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -35,7 +24,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
@@ -43,155 +31,14 @@ import { useQuestions } from '@/features/questions/api/get-questions';
 import { useCreateQuestion } from '@/features/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { ROUTES } from '@/config/routes';
-import type { QuizCreateRequest, Question, QuestionType, QuestionCreateRequest, QuizType } from '@/types/api';
+import type { QuizCreateRequest, QuestionType, QuestionCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
-/**
- * 试卷中的题目项（带排序信息）
- */
-interface QuizQuestionItem {
-  id: number;
-  content: string;
-  question_type: QuestionType;
-  question_type_display: string;
-  score: string;
-  order: number;
-}
-
-/**
- * 获取题目类型显示名称
- */
-const getQuestionTypeDisplay = (type: QuestionType): string => {
-  const labels: Record<QuestionType, string> = {
-    SINGLE_CHOICE: '单选题',
-    MULTIPLE_CHOICE: '多选题',
-    TRUE_FALSE: '判断题',
-    SHORT_ANSWER: '简答题',
-  };
-  return labels[type] || type;
-};
-
-/**
- * 获取题型标签颜色
- */
-const getTypeTagStyle = (type: QuestionType) => {
-  const styles: Record<QuestionType, { bg: string; text: string }> = {
-    SINGLE_CHOICE: { bg: 'bg-blue-100', text: 'text-blue-700' },
-    MULTIPLE_CHOICE: { bg: 'bg-green-100', text: 'text-green-700' },
-    TRUE_FALSE: { bg: 'bg-orange-100', text: 'text-orange-700' },
-    SHORT_ANSWER: { bg: 'bg-purple-100', text: 'text-purple-700' },
-  };
-  return styles[type] || { bg: 'bg-gray-100', text: 'text-gray-700' };
-};
-
-/**
- * 可排序的题目行组件
- */
-const SortableQuestionRow: React.FC<{
-  item: QuizQuestionItem;
-  index: number;
-  onRemove: (id: number) => void;
-  onScoreChange: (id: number, score: number) => void;
-  onMoveUp: (index: number) => void;
-  onMoveDown: (index: number) => void;
-  isFirst: boolean;
-  isLast: boolean;
-}> = ({ item, index, onRemove, onScoreChange, onMoveUp, onMoveDown, isFirst, isLast }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const tagStyle = getTypeTagStyle(item.question_type);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 ${isDragging ? 'bg-blue-50' : 'bg-white'
-        }`}
-      {...attributes}
-    >
-      {/* 拖拽手柄 */}
-      <div {...listeners} className="cursor-grab text-gray-400 p-1">
-        <GripVertical className="w-4 h-4" />
-      </div>
-
-      {/* 序号 */}
-      <div className="w-8 text-gray-600 font-medium text-sm">
-        {index + 1}.
-      </div>
-
-      {/* 题型标签 */}
-      <div className="w-20">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${tagStyle.bg} ${tagStyle.text}`}>
-          {getQuestionTypeDisplay(item.question_type)}
-        </span>
-      </div>
-
-      {/* 题目内容 */}
-      <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-gray-700">
-        {item.content}
-      </div>
-
-      {/* 分值 */}
-      <div className="w-24">
-        <Input
-          type="number"
-          min={0}
-          max={100}
-          step={0.1}
-          value={Number(item.score)}
-          onChange={(e) => onScoreChange(item.id, Number(e.target.value) || 0)}
-          className="h-8 text-sm w-20"
-        />
-      </div>
-
-      {/* 操作按钮 */}
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={isFirst}
-          onClick={() => onMoveUp(index)}
-          className="h-7 w-7 p-0"
-        >
-          <ArrowUp className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={isLast}
-          onClick={() => onMoveDown(index)}
-          className="h-7 w-7 p-0"
-        >
-          <ArrowDown className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => onRemove(item.id)}
-          className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
-      </div>
-    </div>
-  );
-};
+// 导入提取的组件
+import { SortableQuestionRow, type QuizQuestionItem } from './sortable-question-row';
+import { QuestionSelector } from './question-selector';
+import { OptionsInput, AnswerInput } from './question-form-inputs';
+import { getQuestionTypeLabel } from '@/features/questions/constants';
 
 /**
  * 试卷表单组件 - ShadCN UI 版本
@@ -263,14 +110,17 @@ export const QuizForm: React.FC = () => {
       setDescription(quizData.description || '');
 
       if (quizData.questions) {
-        const items: QuizQuestionItem[] = quizData.questions.map((qq) => ({
-          id: qq.question,
-          content: qq.question_content,
-          question_type: qq.question_type as QuestionType,
-          question_type_display: qq.question_type_display || getQuestionTypeDisplay(qq.question_type as QuestionType),
-          score: qq.score,
-          order: qq.order,
-        })).sort((a, b) => a.order - b.order);
+        const items: QuizQuestionItem[] = quizData.questions
+          .map((qq) => ({
+            id: qq.question,
+            content: qq.question_content,
+            question_type: qq.question_type as QuestionType,
+            question_type_display:
+              qq.question_type_display || getQuestionTypeLabel(qq.question_type as QuestionType),
+            score: qq.score,
+            order: qq.order,
+          }))
+          .sort((a, b) => a.order - b.order);
         setSelectedQuestions(items);
       } else {
         setSelectedQuestions([]);
@@ -292,7 +142,8 @@ export const QuizForm: React.FC = () => {
               id: question.id,
               content: question.content,
               question_type: question.question_type,
-              question_type_display: question.question_type_display || getQuestionTypeDisplay(question.question_type),
+              question_type_display:
+                question.question_type_display || getQuestionTypeLabel(question.question_type),
               score: question.score,
               order: index + 1,
             };
@@ -316,8 +167,8 @@ export const QuizForm: React.FC = () => {
    */
   const typeStats = useMemo(() => {
     const stats: Record<string, number> = {};
-    selectedQuestions.forEach(q => {
-      const label = getQuestionTypeDisplay(q.question_type);
+    selectedQuestions.forEach((q) => {
+      const label = getQuestionTypeLabel(q.question_type);
       stats[label] = (stats[label] || 0) + 1;
     });
     return stats;
@@ -496,7 +347,8 @@ export const QuizForm: React.FC = () => {
         id: newQuestion.id,
         content: newQuestion.content,
         question_type: newQuestion.question_type,
-        question_type_display: newQuestion.question_type_display || getQuestionTypeDisplay(newQuestion.question_type),
+        question_type_display:
+          newQuestion.question_type_display || getQuestionTypeLabel(newQuestion.question_type),
         score: newQuestion.score || String(newQuestionScore),
         order: selectedQuestions.length + 1,
       };
@@ -947,273 +799,5 @@ export const QuizForm: React.FC = () => {
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
-
-
-/**
- * 题库选择器组件
- */
-const QuestionSelector: React.FC<{
-  availableQuestions: Question[];
-  onConfirm: (ids: number[]) => void;
-  onCancel: () => void;
-}> = ({ availableQuestions, onConfirm, onCancel }) => {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [filterType, setFilterType] = useState<QuestionType | 'all'>('all');
-
-  const filteredQuestions = filterType === 'all'
-    ? availableQuestions
-    : availableQuestions.filter(q => q.question_type === filterType);
-
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filteredQuestions.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredQuestions.map(q => q.id));
-    }
-  };
-
-  return (
-    <div>
-      <div className="flex items-center gap-4 mb-4">
-        <Select
-          value={filterType}
-          onValueChange={(val) => setFilterType(val as QuestionType | 'all')}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="筛选题型" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部题型</SelectItem>
-            <SelectItem value="SINGLE_CHOICE">单选题</SelectItem>
-            <SelectItem value="MULTIPLE_CHOICE">多选题</SelectItem>
-            <SelectItem value="TRUE_FALSE">判断题</SelectItem>
-            <SelectItem value="SHORT_ANSWER">简答题</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-sm text-gray-500">
-          共 {filteredQuestions.length} 道题目
-        </span>
-      </div>
-
-      <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
-        {/* 表头 */}
-        <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 sticky top-0">
-          <Checkbox
-            checked={selectedIds.length === filteredQuestions.length && filteredQuestions.length > 0}
-            onCheckedChange={toggleSelectAll}
-          />
-          <div className="w-20 text-xs font-medium text-gray-500">题目类型</div>
-          <div className="flex-1 text-xs font-medium text-gray-500">题目内容</div>
-          <div className="w-20 text-xs font-medium text-gray-500">条线类型</div>
-          <div className="w-14 text-xs font-medium text-gray-500">分值</div>
-        </div>
-
-        {/* 题目列表 */}
-        {filteredQuestions.length > 0 ? (
-          filteredQuestions.map((q) => {
-            const tagStyle = getTypeTagStyle(q.question_type);
-            return (
-              <div
-                key={q.id}
-                onClick={() => toggleSelect(q.id)}
-                className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 cursor-pointer transition-colors ${selectedIds.includes(q.id) ? 'bg-blue-50' : 'hover:bg-gray-50'
-                  }`}
-              >
-                <Checkbox
-                  checked={selectedIds.includes(q.id)}
-                  onCheckedChange={() => toggleSelect(q.id)}
-                />
-                <div className="w-20">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${tagStyle.bg} ${tagStyle.text}`}>
-                    {getQuestionTypeDisplay(q.question_type)}
-                  </span>
-                </div>
-                <div className="flex-1 text-sm text-gray-700 truncate">
-                  {q.content}
-                </div>
-                <div className="w-20 text-sm text-gray-500">
-                  {q.line_type?.name || '-'}
-                </div>
-                <div className="w-14 text-sm text-gray-700">
-                  {q.score}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="py-10 text-center text-gray-400">
-            暂无可添加的题目
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-end gap-3 mt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          取消
-        </Button>
-        <Button
-          type="button"
-          disabled={selectedIds.length === 0}
-          onClick={() => onConfirm(selectedIds)}
-          style={{ background: 'rgb(77, 108, 255)' }}
-        >
-          添加已选 ({selectedIds.length})
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-/**
- * 选项输入组件
- */
-const OptionsInput: React.FC<{
-  value: Array<{ key: string; value: string }>;
-  onChange: (value: Array<{ key: string; value: string }>) => void;
-}> = ({ value = [], onChange }) => {
-  const handleAdd = () => {
-    const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
-    const nextKey = keys[value.length] || String.fromCharCode(65 + value.length);
-    onChange([...value, { key: nextKey, value: '' }]);
-  };
-
-  const handleChange = (index: number, field: 'key' | 'value', val: string) => {
-    const newOptions = [...value];
-    newOptions[index] = { ...newOptions[index], [field]: val };
-    onChange(newOptions);
-  };
-
-  const handleRemove = (index: number) => {
-    onChange(value.filter((_, i) => i !== index));
-  };
-
-  return (
-    <div className="mt-1.5 space-y-2">
-      {value.map((opt, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <Input
-            value={opt.key}
-            onChange={(e) => handleChange(index, 'key', e.target.value)}
-            placeholder="选项"
-            className="w-16"
-          />
-          <Input
-            value={opt.value}
-            onChange={(e) => handleChange(index, 'value', e.target.value)}
-            placeholder="选项内容"
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemove(index)}
-            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={handleAdd}
-        className="h-8"
-      >
-        <Plus className="w-3 h-3 mr-1" />
-        添加选项
-      </Button>
-    </div>
-  );
-};
-
-/**
- * 答案输入组件
- */
-const AnswerInput: React.FC<{
-  questionType: QuestionType;
-  options: Array<{ key: string; value: string }>;
-  value: string | string[];
-  onChange: (value: string | string[]) => void;
-}> = ({ questionType, options, value, onChange }) => {
-  if (questionType === 'SINGLE_CHOICE') {
-    return (
-      <Select
-        value={value as string}
-        onValueChange={onChange}
-      >
-        <SelectTrigger className="mt-1.5">
-          <SelectValue placeholder="请选择答案" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt.key} value={opt.key}>
-              {opt.key}: {opt.value}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  if (questionType === 'MULTIPLE_CHOICE') {
-    const selectedKeys = Array.isArray(value) ? value : [];
-    return (
-      <div className="mt-1.5 space-y-2">
-        {options.map((opt) => (
-          <div key={opt.key} className="flex items-center gap-2">
-            <Checkbox
-              checked={selectedKeys.includes(opt.key)}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  onChange([...selectedKeys, opt.key]);
-                } else {
-                  onChange(selectedKeys.filter(k => k !== opt.key));
-                }
-              }}
-            />
-            <span className="text-sm">
-              {opt.key}: {opt.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (questionType === 'TRUE_FALSE') {
-    return (
-      <Select
-        value={value as string}
-        onValueChange={onChange}
-      >
-        <SelectTrigger className="mt-1.5">
-          <SelectValue placeholder="请选择答案" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="TRUE">正确</SelectItem>
-          <SelectItem value="FALSE">错误</SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  return (
-    <Textarea
-      value={value as string}
-      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-      placeholder="请输入参考答案"
-      className="mt-1.5"
-      rows={2}
-    />
   );
 };
