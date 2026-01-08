@@ -4,7 +4,6 @@ Serializers for user authentication and management.
 Requirements: 1.1, 1.2, 1.3, 1.4, 1.6
 """
 from rest_framework import serializers
-from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 
 from .models import User, Role, Department
@@ -157,25 +156,6 @@ class ResetPasswordResponseSerializer(serializers.Serializer):
     """
     temporary_password = serializers.CharField(help_text='临时密码')
     message = serializers.CharField(help_text='提示信息')
-
-
-class ChangePasswordRequestSerializer(serializers.Serializer):
-    """Serializer for user changing their own password."""
-    old_password = serializers.CharField(
-        required=True,
-        write_only=True,
-        help_text='当前密码'
-    )
-    new_password = serializers.CharField(
-        required=True,
-        write_only=True,
-        help_text='新密码'
-    )
-    
-    def validate_new_password(self, value):
-        """Validate new password meets requirements."""
-        validate_password(value)
-        return value
 
 
 # ============ User Management Serializers ============

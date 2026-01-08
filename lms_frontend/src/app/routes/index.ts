@@ -6,7 +6,6 @@ import { dashboardRoutes } from './dashboard';
 import { knowledgeRoutes } from './knowledge';
 import { taskRoutes } from './tasks';
 import { submissionRoutes } from './submissions';
-import { gradingRoutes } from './grading';
 import { testCenterRoutes } from './test-center';
 import { spotCheckRoutes } from './spot-checks';
 import { userRoutes } from './users';
@@ -18,7 +17,6 @@ export const allRoutes = [
   ...knowledgeRoutes,
   ...taskRoutes,
   ...submissionRoutes,
-  ...gradingRoutes,
   ...testCenterRoutes,
   ...spotCheckRoutes,
   ...userRoutes,

@@ -4,7 +4,6 @@ Serializers for submission management.
 Implements serializers for:
 - Practice submissions (Requirements: 10.2, 10.3, 10.4, 10.5, 10.6, 10.7)
 - Exam submissions (Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8)
-- Grading (Requirements: 13.1, 13.2, 13.3, 13.4, 13.5)
 
 Properties:
 - Property 24: 练习允许多次提交
@@ -13,21 +12,15 @@ Properties:
 - Property 28: 考试时间窗口控制
 - Property 29: 考试单次提交限制
 - Property 30: 客观题自动评分
-- Property 31: 主观题待评分状态
-- Property 32: 纯客观题直接完成
-- Property 33: 评分完成状态转换
-- Property 34: 未完成评分状态保持
 
 业务逻辑已提取到 services.py，Serializer 仅负责验证和委托。
 """
-from decimal import Decimal
 from rest_framework import serializers
-from django.utils import timezone
 
 from apps.tasks.models import TaskAssignment, TaskQuiz
 
 from .models import Submission, Answer
-from .services import SubmissionService, GradingService
+from .services import SubmissionService
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -57,25 +50,6 @@ class AnswerSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'is_correct', 'obtained_score', 'graded_by', 'graded_at', 'comment'
-        ]
-
-
-class SubmissionListSerializer(serializers.ModelSerializer):
-    """Serializer for submission list view."""
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    task_title = serializers.CharField(source='task.title', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    
-    class Meta:
-        model = Submission
-        fields = [
-            'id', 'quiz', 'quiz_title', 'user', 'user_name',
-            'task_title', 'attempt_number',
-            'status', 'status_display',
-            'total_score', 'obtained_score',
-            'started_at', 'submitted_at',
-            'created_at', 'updated_at'
         ]
 
 
@@ -232,22 +206,6 @@ class PracticeResultSerializer(serializers.ModelSerializer):
         ]
 
 
-class QuizPracticeHistorySerializer(serializers.Serializer):
-    """
-    Serializer for quiz practice history.
-    
-    Requirements:
-    - 10.4: 展示最近成绩、最佳成绩和作答次数
-    """
-    quiz_id = serializers.IntegerField()
-    quiz_title = serializers.CharField()
-    attempt_count = serializers.IntegerField()
-    latest_score = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
-    best_score = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
-    latest_submission_id = serializers.IntegerField(allow_null=True)
-    best_submission_id = serializers.IntegerField(allow_null=True)
-
-
 # Exam-specific serializers
 
 class StartExamSerializer(serializers.Serializer):
@@ -395,126 +353,4 @@ class StartQuizSerializer(serializers.Serializer):
             task_quiz=validated_data['task_quiz'],
             user=self.context['request'].user,
             is_exam=is_exam
-        )
-
-
-# Grading serializers
-
-class GradingListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for grading list view.
-    
-    Requirements:
-    - 13.1: 导师/室经理查看评分中心时展示所辖学员的待评分考试列表
-    """
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    user_employee_id = serializers.CharField(source='user.employee_id', read_only=True)
-    task_title = serializers.CharField(source='task.title', read_only=True)
-    ungraded_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Submission
-        fields = [
-            'id', 'quiz', 'quiz_title', 'user', 'user_name', 'user_employee_id',
-            'task_title', 'total_score', 'obtained_score',
-            'submitted_at', 'ungraded_count', 'created_at'
-        ]
-    
-    def get_ungraded_count(self, obj):
-        """Get the number of ungraded subjective questions."""
-        return obj.ungraded_subjective_count
-
-
-class GradingDetailSerializer(serializers.ModelSerializer):
-    """
-    Serializer for grading detail view.
-    
-    Requirements:
-    - 13.2: 评分人查看待评分考试时展示学员答案和评分输入界面
-    """
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    task_title = serializers.CharField(source='task.title', read_only=True)
-    answers = AnswerSerializer(many=True, read_only=True)
-    ungraded_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Submission
-        fields = [
-            'id', 'quiz', 'quiz_title', 'user', 'user_name',
-            'task_title', 'status', 'total_score', 'obtained_score',
-            'submitted_at', 'answers', 'ungraded_count', 'created_at'
-        ]
-    
-    def get_ungraded_count(self, obj):
-        """Get the number of ungraded subjective questions."""
-        return obj.ungraded_subjective_count
-
-
-class GradeAnswerSerializer(serializers.Serializer):
-    """
-    Serializer for grading a subjective answer.
-    
-    Requirements:
-    - 13.3: 评分人提交主观题分数和评语时记录评分结果
-    - 13.4: 所有主观题评分完成时计算最终成绩并将考试状态设为"已完成"
-    - 13.5: 考试存在未评分的主观题时保持考试状态为"待评分"
-    
-    Properties:
-    - Property 33: 评分完成状态转换
-    - Property 34: 未完成评分状态保持
-    
-    业务逻辑委托给 GradingService 处理。
-    """
-    answer_id = serializers.IntegerField(help_text='答案ID')
-    score = serializers.DecimalField(
-        max_digits=5, decimal_places=2,
-        help_text='给定分数'
-    )
-    comment = serializers.CharField(
-        required=False, allow_blank=True, default='',
-        help_text='评语'
-    )
-    
-    def validate(self, attrs):
-        """Validate the grading data."""
-        submission = self.context.get('submission')
-        answer_id = attrs['answer_id']
-        score = attrs['score']
-        
-        # Check answer belongs to submission
-        try:
-            answer = Answer.objects.select_related('question').get(
-                id=answer_id,
-                submission=submission
-            )
-        except Answer.DoesNotExist:
-            raise serializers.ValidationError({'answer_id': '答案不存在'})
-        
-        # Check it's a subjective question
-        if answer.is_objective:
-            raise serializers.ValidationError({'answer_id': '客观题不需要人工评分'})
-        
-        # Check score is within range
-        if score < 0 or score > answer.question.score:
-            raise serializers.ValidationError({
-                'score': f'分数必须在 0 到 {answer.question.score} 之间'
-            })
-        
-        attrs['answer'] = answer
-        return attrs
-    
-    def save(self):
-        """Save the grade - 委托给 GradingService"""
-        service = GradingService()
-        submission = self.context.get('submission')
-        grader = self.context['request'].user
-        
-        return service.grade_answer(
-            submission=submission,
-            answer_id=self.validated_data['answer_id'],
-            score=self.validated_data['score'],
-            comment=self.validated_data.get('comment', ''),
-            grader=grader
         )

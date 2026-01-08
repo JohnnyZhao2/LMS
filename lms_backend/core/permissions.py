@@ -26,7 +26,6 @@ from apps.users.permissions import (
     filter_queryset_by_data_scope,
     is_student_in_scope,
     validate_students_in_scope,
-    check_grading_permission,
 )
 
 __all__ = [
@@ -49,5 +48,4 @@ __all__ = [
     'filter_queryset_by_data_scope',
     'is_student_in_scope',
     'validate_students_in_scope',
-    'check_grading_permission',
 ]

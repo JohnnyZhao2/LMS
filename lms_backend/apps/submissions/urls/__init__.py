@@ -1,7 +1,7 @@
 """
 Submissions URL configuration.
 
-Exports URL patterns from submissions and grading modules.
+Exports URL patterns from submissions module.
 """
 from django.urls import path, include
 

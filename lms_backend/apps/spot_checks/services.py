@@ -130,28 +130,6 @@ class SpotCheckService(BaseService):
         # 4. 创建记录
         spot_check = self.repository.create(**data)
         
-        # 5. 发送通知
-        try:
-            from apps.notifications.services import NotificationService
-            notification_service = NotificationService()
-            notification_service.send_spot_check_notification(spot_check)
-        except (BusinessError, ValueError, AttributeError, KeyError, TypeError) as e:
-            # 通知发送失败不应影响抽查记录的创建
-            # 捕获业务异常、值错误、属性错误、键错误和类型错误等常见异常
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to send notification for spot check {spot_check.id}: {str(e)}")
-        except (ConnectionError, TimeoutError) as e:
-            # 捕获网络连接相关异常
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Network error sending notification for spot check {spot_check.id}: {str(e)}")
-        except Exception as e:
-            # 捕获其他未预期的异常（如数据库错误等），但不影响业务逻辑
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Unexpected error sending notification for spot check {spot_check.id}: {str(e)}", exc_info=True)
-        
         return spot_check
     
     def update(

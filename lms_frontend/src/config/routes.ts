@@ -8,7 +8,6 @@ export const ROUTES = {
   ADMIN_KNOWLEDGE: '/admin/knowledge',
   TASKS: '/tasks',
   PERSONAL: '/personal',
-  GRADING: '/grading',
   SPOT_CHECKS: '/spot-checks',
   TEST_CENTER: '/test-center',
   TEST_CENTER_QUESTIONS: '/test-center/questions',
@@ -19,4 +18,3 @@ export const ROUTES = {
   REVIEW_PRACTICE: '/review/practice',
   REVIEW_EXAM: '/review/exam',
 } as const;
-

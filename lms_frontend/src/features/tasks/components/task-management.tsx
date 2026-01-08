@@ -9,14 +9,12 @@ import {
     Trash2,
     Clock,
     Timer,
-    CheckCircle2,
     Layout,
     Pencil,
     RefreshCw,
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
-import { usePendingGrading } from "@/features/grading/api/get-pending-grading"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
 import {
@@ -56,7 +54,6 @@ export const TaskManagement: React.FC = () => {
     const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
 
     const { data: tasks, isLoading, refetch } = useTaskList({})
-    const { data: pendingGradingData } = usePendingGrading({ page: 1 })
     const deleteTask = useDeleteTask()
 
     // 统计逻辑
@@ -65,10 +62,9 @@ export const TaskManagement: React.FC = () => {
         return {
             total: allTasks.length,
             active: allTasks.filter(t => !t.is_closed).length,
-            pending: pendingGradingData?.count || 0,
             completed: allTasks.filter(t => t.is_closed).length
         }
-    }, [tasks, pendingGradingData])
+    }, [tasks])
 
     const handleDeleteTask = async () => {
         if (!deleteId) return
@@ -283,7 +279,7 @@ export const TaskManagement: React.FC = () => {
             />
 
             {/* 统计网格 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard
                     title="活跃任务"
                     value={stats.active}
@@ -293,20 +289,12 @@ export const TaskManagement: React.FC = () => {
                     delay="stagger-delay-1"
                 />
                 <StatCard
-                    title="待批改"
-                    value={stats.pending}
-                    icon={CheckCircle2}
-                    color="#3B82F6"
-                    gradient=""
-                    delay="stagger-delay-2"
-                />
-                <StatCard
                     title="总任务数"
                     value={stats.total}
                     icon={FileText}
                     color="#F59E0B"
                     gradient=""
-                    delay="stagger-delay-3"
+                    delay="stagger-delay-2"
                 />
                 <StatCard
                     title="平均及格率"
@@ -314,7 +302,7 @@ export const TaskManagement: React.FC = () => {
                     icon={Layout}
                     color="#10B981"
                     gradient=""
-                    delay="stagger-delay-4"
+                    delay="stagger-delay-3"
                 />
             </div>
 

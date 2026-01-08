@@ -21,9 +21,7 @@ urlpatterns = [
     path('api/quizzes/', include('apps.quizzes.urls')),
     path('api/tasks/', include('apps.tasks.urls')),
     path('api/submissions/', include('apps.submissions.urls.submissions')),
-    path('api/grading/', include('apps.submissions.urls.grading')),
     path('api/spot-checks/', include('apps.spot_checks.urls')),
-    path('api/notifications/', include('apps.notifications.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
     # API documentation - OpenAPI 3.0
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

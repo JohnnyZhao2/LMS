@@ -33,7 +33,6 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.submissions',
     'apps.spot_checks',
-    'apps.notifications',
     'apps.analytics',
 ]
 

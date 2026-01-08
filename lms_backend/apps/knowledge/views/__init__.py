@@ -15,7 +15,6 @@ from .knowledge import (
 from .tags import (
     TagListView,
     TagCreateView,
-    TagDetailView,
 )
 
 __all__ = [
@@ -28,5 +27,4 @@ __all__ = [
     # Tag views
     'TagListView',
     'TagCreateView',
-    'TagDetailView',
 ]

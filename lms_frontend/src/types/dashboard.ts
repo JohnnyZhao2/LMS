@@ -21,5 +21,4 @@ export interface MentorDashboard {
   mentees_count: number;
   completion_rate: string;
   average_score?: string;
-  pending_grading_count: number;
 }

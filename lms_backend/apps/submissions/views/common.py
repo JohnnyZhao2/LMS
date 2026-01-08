@@ -4,17 +4,15 @@ Common views for submissions.
 Implements unified interfaces and common functionality:
 - Unified quiz interface (StartQuizView, SubmitView)
 - Save answer during quiz
-- List user's submissions
 """
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from ..services import SubmissionService
 from ..serializers import (
-    SubmissionListSerializer,
     SubmissionDetailSerializer,
     SaveAnswerSerializer,
     StartQuizSerializer,
@@ -140,34 +138,3 @@ class SaveAnswerView(APIView):
             'question_id': answer.question_id,
             'user_answer': answer.user_answer
         }, status=status.HTTP_200_OK)
-
-
-class MySubmissionsView(APIView):
-    """
-    List current user's submissions.
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SubmissionService()
-    
-    @extend_schema(
-        summary='我的答题记录',
-        description='获取当前用户的所有答题记录',
-        parameters=[
-            OpenApiParameter(name='task_id', type=int, description='任务ID'),
-            OpenApiParameter(name='status', type=str, description='状态'),
-        ],
-        responses={200: SubmissionListSerializer(many=True)},
-        tags=['练习答题', '考试答题']
-    )
-    def get(self, request):
-        queryset = self.service.repository.get_by_user_and_task(
-            user_id=request.user.id,
-            task_id=request.query_params.get('task_id'),
-            status=request.query_params.get('status')
-        )
-        
-        serializer = SubmissionListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)

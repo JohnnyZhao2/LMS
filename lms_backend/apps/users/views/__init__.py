@@ -12,7 +12,6 @@ from .auth import (
     SwitchRoleView,
     MeView,
     ResetPasswordView,
-    ChangePasswordView,
 )
 from .management import (
     UserListCreateView,
@@ -36,7 +35,6 @@ __all__ = [
     'SwitchRoleView',
     'MeView',
     'ResetPasswordView',
-    'ChangePasswordView',
     # Management views
     'UserListCreateView',
     'UserDetailView',

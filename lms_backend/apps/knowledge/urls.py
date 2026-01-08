@@ -15,7 +15,6 @@ from .views import (
     StudentKnowledgeListView,
     TagListView,
     TagCreateView,
-    TagDetailView,
 )
 
 urlpatterns = [
@@ -29,5 +28,4 @@ urlpatterns = [
     # Tag management endpoints
     path('tags/', TagListView.as_view(), name='tag-list'),
     path('tags/create/', TagCreateView.as_view(), name='tag-create'),
-    path('tags/<int:pk>/', TagDetailView.as_view(), name='tag-detail'),
 ]

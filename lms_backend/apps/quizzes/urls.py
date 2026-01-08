@@ -10,8 +10,6 @@ from .views import (
     QuizDetailView,
     QuizAddQuestionsView,
     QuizRemoveQuestionsView,
-    QuizReorderQuestionsView,
-    QuizCreateFromQuestionsView,
 )
 
 urlpatterns = [
@@ -22,8 +20,5 @@ urlpatterns = [
     # Quiz question management
     path('<int:pk>/add-questions/', QuizAddQuestionsView.as_view(), name='quiz-add-questions'),
     path('<int:pk>/remove-questions/', QuizRemoveQuestionsView.as_view(), name='quiz-remove-questions'),
-    path('<int:pk>/reorder-questions/', QuizReorderQuestionsView.as_view(), name='quiz-reorder-questions'),
     
-    # Create quiz from questions
-    path('create-from-questions/', QuizCreateFromQuestionsView.as_view(), name='quiz-create-from-questions'),
 ]

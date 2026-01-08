@@ -17,15 +17,12 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from core.exceptions import BusinessError, ErrorCodes
-from apps.tasks.models import TaskAssignment
-
 from ..services import SubmissionService
 from ..serializers import (
     SubmissionDetailSerializer,
     StartPracticeSerializer,
     SubmitPracticeSerializer,
     PracticeResultSerializer,
-    QuizPracticeHistorySerializer,
 )
 
 
@@ -157,55 +154,3 @@ class PracticeResultView(APIView):
         
         response_serializer = PracticeResultSerializer(submission)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-
-class PracticeHistoryView(APIView):
-    """
-    View practice history for a task.
-    
-    Requirements:
-    - 10.4: 展示最近成绩、最佳成绩和作答次数
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SubmissionService()
-    
-    @extend_schema(
-        summary='查看练习历史',
-        description='''
-        查看练习任务的历史记录，包括每个试卷的：
-        - 作答次数
-        - 最近成绩
-        - 最佳成绩
-        
-        Requirements: 10.4
-        ''',
-        responses={
-            200: QuizPracticeHistorySerializer(many=True),
-            404: OpenApiResponse(description='任务不存在'),
-        },
-        tags=['练习答题']
-    )
-    def get(self, request, task_id):
-        user = request.user
-        
-        # Check task assignment exists
-        try:
-            assignment = TaskAssignment.objects.select_related('task').get(
-                task_id=task_id,
-                assignee=user,
-                task__is_deleted=False
-            )
-        except TaskAssignment.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='任务不存在或未分配给您'
-            )
-        
-        # Get practice history through service
-        result = self.service.get_practice_history(assignment)
-        
-        serializer = QuizPracticeHistorySerializer(result, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)

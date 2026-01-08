@@ -298,24 +298,6 @@ class QuizQuestionRepository(BaseRepository[QuizQuestion]):
         ).delete()
         return deleted_count
     
-    def reorder_questions(
-        self,
-        quiz_id: int,
-        question_ids: List[int]
-    ) -> None:
-        """
-        重新排序试卷中的题目
-        
-        Args:
-            quiz_id: 试卷 ID
-            question_ids: 按新顺序排列的题目 ID 列表
-        """
-        for index, question_id in enumerate(question_ids, start=1):
-            self.model.objects.filter(
-                quiz_id=quiz_id,
-                question_id=question_id
-            ).update(order=index)
-    
     def get_question_ids(self, quiz_id: int) -> List[int]:
         """
         获取试卷的所有题目 ID 列表（按顺序）

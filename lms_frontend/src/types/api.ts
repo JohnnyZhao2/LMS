@@ -11,7 +11,6 @@
  * - @/types/question - 题目相关
  * - @/types/quiz - 试卷相关
  * - @/types/submission - 答题相关
- * - @/types/grading - 评分相关
  * - @/types/spot-check - 抽查相关
  * - @/types/notification - 通知相关
  */
@@ -39,9 +38,6 @@ export * from './quiz';
 
 // 导出答题相关类型
 export * from './submission';
-
-// 导出评分相关类型
-export * from './grading';
 
 // 导出抽查相关类型
 export * from './spot-check';

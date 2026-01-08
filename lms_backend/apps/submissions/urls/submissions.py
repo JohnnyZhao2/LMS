@@ -12,8 +12,6 @@ from ..views import (
     SaveAnswerView,
     SubmitPracticeView,
     PracticeResultView,
-    PracticeHistoryView,
-    MySubmissionsView,
     StartQuizView,
     SubmitView,
     StartExamView,
@@ -26,9 +24,8 @@ urlpatterns = [
     path('start/', StartQuizView.as_view(), name='start-quiz'),
     path('<int:pk>/submit/', SubmitView.as_view(), name='submit-quiz'),
     
-    # Practice endpoints (keep for backward compatibility)
+    # Practice endpoints
     path('practice/start/', StartPracticeView.as_view(), name='start-practice'),
-    path('practice/history/<int:task_id>/', PracticeHistoryView.as_view(), name='practice-history'),
     
     # Common endpoints
     path('<int:pk>/save-answer/', SaveAnswerView.as_view(), name='save-answer'),
@@ -40,6 +37,4 @@ urlpatterns = [
     path('<int:pk>/submit-exam/', SubmitExamView.as_view(), name='submit-exam'),
     path('exam/<int:pk>/result/', ExamResultView.as_view(), name='exam-result'),
     
-    # My submissions
-    path('my/', MySubmissionsView.as_view(), name='my-submissions'),
 ]

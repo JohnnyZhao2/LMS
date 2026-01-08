@@ -2,13 +2,11 @@
 Mentor/Department Manager analytics views.
 
 Implements:
-- Mentor/Department manager dashboard API (Requirements: 19.1, 19.2, 19.3, 19.4)
+- Mentor/Department manager dashboard API (Requirements: 19.1, 19.2, 19.4)
 """
-from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Avg
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from core.exceptions import BusinessError, ErrorCodes
@@ -25,7 +23,6 @@ class MentorDashboardView(APIView):
     Requirements:
     - 19.1: 导师访问仪表盘时展示名下学员的完成率和平均分
     - 19.2: 室经理访问仪表盘时展示本室学员的完成率和平均分
-    - 19.3: 用户访问仪表盘时展示待评分考试数量
     - 19.4: 用户访问仪表盘时提供新建任务、测试中心、抽查的快捷入口
     """
     permission_classes = [IsAuthenticated]
@@ -36,7 +33,7 @@ class MentorDashboardView(APIView):
     
     @extend_schema(
         summary='获取导师/室经理仪表盘数据',
-        description='获取导师或室经理的仪表盘数据，包括所辖学员的完成率、平均分和待评分考试数量',
+        description='获取导师或室经理的仪表盘数据，包括所辖学员的完成率和平均分',
         responses={
             200: OpenApiResponse(description='仪表盘数据'),
             403: OpenApiResponse(description='无权限访问')

@@ -1,7 +1,7 @@
 """
 Serializers for question management.
 
-Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7
 """
 from rest_framework import serializers
 
@@ -259,35 +259,3 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         """
         # Service层会处理更新逻辑，这里只返回验证后的数据
         return validated_data
-
-
-class QuestionImportSerializer(serializers.Serializer):
-    """
-    Serializer for bulk importing questions from Excel.
-    
-    Requirements:
-    - 5.6: 管理员批量导入题目时解析 Excel 模板并创建题目记录
-    """
-    file = serializers.FileField(help_text='Excel 文件')
-    
-    def validate_file(self, value):
-        """Validate file is an Excel file."""
-        if not value.name.endswith(('.xlsx', '.xls')):
-            raise serializers.ValidationError('请上传 Excel 文件（.xlsx 或 .xls）')
-        return value
-
-
-class QuestionImportItemSerializer(serializers.Serializer):
-    """
-    Serializer for a single question in import data.
-    """
-    content = serializers.CharField()
-    question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES)
-    options = serializers.JSONField(required=False, default=list)
-    answer = serializers.JSONField()
-    explanation = serializers.CharField(required=False, default='')
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    difficulty = serializers.ChoiceField(
-        choices=Question.DIFFICULTY_CHOICES,
-        default='MEDIUM'
-    )

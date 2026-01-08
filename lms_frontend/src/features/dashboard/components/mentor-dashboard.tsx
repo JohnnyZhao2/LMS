@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   CheckCircle,
-  Pencil,
   FileSearch,
   Plus,
   Send,
@@ -32,8 +31,8 @@ export const MentorDashboard: React.FC = () => {
     return (
       <div className="p-10 space-y-6 animate-pulse">
         <Skeleton className="h-20 w-1/3 rounded-2xl" />
-        <div className="grid grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-40 rounded-3xl" />
           ))}
         </div>
@@ -47,18 +46,10 @@ export const MentorDashboard: React.FC = () => {
         title={`${roleName}工作台`}
         subtitle={`欢迎回来，${user?.username || '老师'}。今天各项教学工作正有序进行。`}
         icon={<GraduationCap />}
-        extra={
-          <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-2xl border border-purple-100">
-            <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            <span className="text-xs font-bold text-purple-700">
-              待评分: {data?.pending_grading_count || 0}
-            </span>
-          </div>
-        }
       />
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="学员数量"
           value={data?.mentees_count || 0}
@@ -82,14 +73,6 @@ export const MentorDashboard: React.FC = () => {
           color="var(--color-purple-500)"
           gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
           delay="stagger-delay-3"
-        />
-        <StatCard
-          title="待评分"
-          value={data?.pending_grading_count || 0}
-          icon={Pencil}
-          color="var(--color-orange-500)"
-          gradient="linear-gradient(135deg, var(--color-orange-500) 0%, var(--color-orange-300) 100%)"
-          delay="stagger-delay-4"
         />
       </div>
 
@@ -123,14 +106,6 @@ export const MentorDashboard: React.FC = () => {
             route={ROUTES.TEST_CENTER}
             iconColor="text-[#10B981]"
             iconBg="bg-[#D1FAE5]"
-          />
-          <ActionCard
-            title="批改作业"
-            description="查看待批改的答卷"
-            icon={Pencil}
-            route={ROUTES.GRADING}
-            iconColor="text-[#F97316]"
-            iconBg="bg-[#FFEDD5]"
           />
         </div>
       </div>

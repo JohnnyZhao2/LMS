@@ -3,7 +3,6 @@ import {
   LayoutGrid,
   BookOpen,
   FileText,
-  CheckCircle,
   User,
   Users,
   HelpCircle,
@@ -24,9 +23,9 @@ interface MenuItem {
  * 
  * 角色权限：
  * - 学员：概览、知识库、任务、个人中心
- * - 导师：概览、测试中心、任务、评分、抽查
- * - 室经理：概览、测试中心、任务、评分、抽查
- * - 管理员：概览、知识库管理、测试中心、任务、评分、用户管理
+ * - 导师：概览、测试中心、任务、抽查
+ * - 室经理：概览、测试中心、任务、抽查
+ * - 管理员：概览、知识库管理、测试中心、任务、用户管理
  * - 团队经理：概览、数据看板
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
@@ -79,11 +78,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
             label: '任务',
           },
           {
-            key: ROUTES.GRADING,
-            icon: <CheckCircle className="w-4 h-4" />,
-            label: '评分',
-          },
-          {
             key: ROUTES.SPOT_CHECKS,
             icon: <FileSearch className="w-4 h-4" />,
             label: '抽查',
@@ -107,11 +101,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
             key: ROUTES.TASKS,
             icon: <FileText className="w-4 h-4" />,
             label: '任务',
-          },
-          {
-            key: ROUTES.GRADING,
-            icon: <CheckCircle className="w-4 h-4" />,
-            label: '评分',
           },
           {
             key: ROUTES.USERS,

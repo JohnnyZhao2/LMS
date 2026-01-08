@@ -137,13 +137,17 @@ export const UserForm: React.FC<UserFormProps> = ({
         }
         toast.success("账号信息已更新");
       } else {
-        await createUser.mutateAsync({
+        const newUser = await createUser.mutateAsync({
           username: formData.username,
           employee_id: formData.employee_id,
           password: formData.password,
           department_id: formData.department_id!,
           mentor_id: formData.mentor_id,
         });
+        // 创建成功后分配额外角色
+        if (formData.role_codes.length > 0) {
+          await assignRoles.mutateAsync({ id: newUser.id, roles: formData.role_codes });
+        }
         toast.success("新账号已创建");
       }
       onClose();
@@ -364,7 +368,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                         ? "text-white"
                         : "bg-white text-[#6B7280] group-hover:text-[#111827]"
                     )}
-                    style={active ? { backgroundColor: colorConfig.iconBg } : {}}
+                      style={active ? { backgroundColor: colorConfig.iconBg } : {}}
                     >
                       {config.icon}
                     </div>

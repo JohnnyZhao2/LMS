@@ -3,10 +3,8 @@ Serializers for analytics module.
 
 Implements serializers for:
 - Student dashboard (Requirements: 15.1, 15.2, 15.3)
-- Mentor/Department manager dashboard (Requirements: 19.1, 19.2, 19.3, 19.4)
-- Team manager data board (Requirements: 21.1, 21.2, 21.3)
+- Mentor/Department manager dashboard (Requirements: 19.1, 19.2, 19.4)
 """
-import re
 from rest_framework import serializers
 
 from apps.tasks.models import TaskAssignment
@@ -115,121 +113,8 @@ class StudentDashboardSerializer(serializers.Serializer):
     task_summary = serializers.DictField(read_only=True)
 
 
-# ============ Student Personal Center Serializers ============
-# Requirements: 18.1, 18.2, 18.3, 18.4
-
-
-class StudentProfileSerializer(serializers.Serializer):
-    """
-    Serializer for student personal information.
-    
-    Requirements:
-    - 18.1: 学员访问个人中心时展示姓名、团队、导师信息
-    """
-    id = serializers.IntegerField(read_only=True)
-    username = serializers.CharField(read_only=True)
-    employee_id = serializers.CharField(read_only=True)
-    email = serializers.EmailField(read_only=True)
-    department_id = serializers.IntegerField(source='department.id', read_only=True, allow_null=True)
-    department_name = serializers.CharField(source='department.name', read_only=True, allow_null=True)
-    mentor_id = serializers.IntegerField(source='mentor.id', read_only=True, allow_null=True)
-    mentor_name = serializers.CharField(source='mentor.username', read_only=True, allow_null=True)
-    roles = serializers.SerializerMethodField()
-    date_joined = serializers.DateTimeField(read_only=True)
-    
-    def get_roles(self, obj):
-        """Get user's role list."""
-        return [
-            {'code': role.code, 'name': role.name}
-            for role in obj.roles.all()
-        ]
-
-
-class StudentScoreRecordSerializer(serializers.Serializer):
-    """
-    Serializer for student's historical score records.
-    
-    Requirements:
-    - 18.2: 学员查看历史成绩时展示练习和考试的成绩记录
-    """
-    id = serializers.IntegerField(read_only=True)
-    task_id = serializers.IntegerField(source='task_assignment.task.id', read_only=True)
-    task_title = serializers.CharField(source='task_assignment.task.title', read_only=True)
-    quiz_id = serializers.IntegerField(source='quiz.id', read_only=True)
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    attempt_number = serializers.IntegerField(read_only=True)
-    total_score = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True)
-    obtained_score = serializers.DecimalField(max_digits=6, decimal_places=2, read_only=True, allow_null=True)
-    status = serializers.CharField(read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    is_passed = serializers.SerializerMethodField()
-    pass_score = serializers.SerializerMethodField()
-    submitted_at = serializers.DateTimeField(read_only=True, allow_null=True)
-    created_at = serializers.DateTimeField(read_only=True)
-    
-    def get_is_passed(self, obj):
-        """Check if the submission passed."""
-        # Assume pass if score >= pass_score (if defined)
-        # Or remove this logic if pass_score removed from Task. 
-        # But we assume pass_score is removed. So always return None?
-        # Or if Quiz has pass_score?
-        # For now, return None as Task model doesn't support pass_score
-        return None
-    
-    def get_pass_score(self, obj):
-        return None
-
-
-class WrongAnswerSerializer(serializers.Serializer):
-    """
-    Serializer for wrong answers in student's wrong answer book.
-    
-    Requirements:
-    - 18.3: 学员查看错题本时展示练习和考试中答错的题目
-    """
-    id = serializers.IntegerField(read_only=True)
-    submission_id = serializers.IntegerField(source='submission.id', read_only=True)
-    task_title = serializers.CharField(source='submission.task_assignment.task.title', read_only=True)
-    quiz_title = serializers.CharField(source='submission.quiz.title', read_only=True)
-    
-    # Question details
-    question_id = serializers.IntegerField(source='question.id', read_only=True)
-    question_content = serializers.CharField(source='question.content', read_only=True)
-    question_type = serializers.CharField(source='question.question_type', read_only=True)
-    question_type_display = serializers.CharField(source='question.get_question_type_display', read_only=True)
-    question_options = serializers.JSONField(source='question.options', read_only=True)
-    question_score = serializers.DecimalField(source='question.score', max_digits=5, decimal_places=2, read_only=True)
-    
-    # Answer details
-    user_answer = serializers.JSONField(read_only=True)
-    correct_answer = serializers.JSONField(source='question.answer', read_only=True)
-    explanation = serializers.CharField(source='question.explanation', read_only=True)
-    obtained_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
-    
-    # Timestamps
-    submitted_at = serializers.DateTimeField(source='submission.submitted_at', read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
-
-
-class StudentScoreExportSerializer(serializers.Serializer):
-    """
-    Serializer for exporting student's score records.
-    
-    Requirements:
-    - 18.4: 学员导出记录时生成包含历史成绩的导出文件
-    """
-    task_title = serializers.CharField()
-    quiz_title = serializers.CharField()
-    attempt_number = serializers.IntegerField()
-    total_score = serializers.DecimalField(max_digits=6, decimal_places=2)
-    obtained_score = serializers.DecimalField(max_digits=6, decimal_places=2, allow_null=True)
-    status = serializers.CharField()
-    is_passed = serializers.CharField(allow_null=True)
-    submitted_at = serializers.DateTimeField(allow_null=True)
-
-
 # ============ Mentor/Department Manager Dashboard Serializers ============
-# Requirements: 19.1, 19.2, 19.3, 19.4
+# Requirements: 19.1, 19.2, 19.4
 
 
 class MentorStudentStatSerializer(serializers.Serializer):
@@ -266,7 +151,6 @@ class MentorDashboardSummarySerializer(serializers.Serializer):
     Requirements:
     - 19.1: 导师访问仪表盘时展示名下学员的完成率和平均分
     - 19.2: 室经理访问仪表盘时展示本室学员的完成率和平均分
-    - 19.3: 用户访问仪表盘时展示待评分考试数量
     """
     # Student count
     total_students = serializers.IntegerField(read_only=True)
@@ -280,9 +164,6 @@ class MentorDashboardSummarySerializer(serializers.Serializer):
     
     # Score statistics
     overall_avg_score = serializers.FloatField(read_only=True, allow_null=True)
-    
-    # Grading statistics (Requirements 19.3)
-    pending_grading_count = serializers.IntegerField(read_only=True)
     
     # Task status breakdown
     learning_tasks = serializers.DictField(read_only=True)
@@ -295,94 +176,8 @@ class MentorDashboardSerializer(serializers.Serializer):
     Requirements:
     - 19.1: 导师访问仪表盘时展示名下学员的完成率和平均分
     - 19.2: 室经理访问仪表盘时展示本室学员的完成率和平均分
-    - 19.3: 用户访问仪表盘时展示待评分考试数量
     - 19.4: 用户访问仪表盘时提供新建任务、测试中心、抽查的快捷入口
     """
     summary = MentorDashboardSummarySerializer(read_only=True)
     students = MentorStudentStatSerializer(many=True, read_only=True)
     quick_links = serializers.DictField(read_only=True)
-
-
-# ============ Team Manager Data Board Serializers ============
-# Requirements: 21.1, 21.2, 21.3
-
-
-class DepartmentStatSerializer(serializers.Serializer):
-    """
-    Serializer for department statistics in team manager data board.
-    
-    Requirements:
-    - 21.1: 团队经理访问数据看板时展示各室完成率与成绩对比
-    """
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(read_only=True)
-    code = serializers.CharField(read_only=True)
-    
-    # Student count
-    total_students = serializers.IntegerField(read_only=True)
-    
-    # Task statistics
-    total_tasks = serializers.IntegerField(read_only=True)
-    completed_tasks = serializers.IntegerField(read_only=True)
-    in_progress_tasks = serializers.IntegerField(read_only=True)
-    overdue_tasks = serializers.IntegerField(read_only=True)
-    completion_rate = serializers.FloatField(read_only=True)
-    
-    # Score statistics
-    avg_score = serializers.FloatField(read_only=True, allow_null=True)
-    
-    # Exam statistics
-    exam_count = serializers.IntegerField(read_only=True)
-    exam_passed_count = serializers.IntegerField(read_only=True)
-    exam_pass_rate = serializers.FloatField(read_only=True, allow_null=True)
-
-
-class KnowledgeHeatSerializer(serializers.Serializer):
-    """
-    Serializer for knowledge heat statistics in team manager data board.
-    
-    Requirements:
-    - 21.2: 团队经理查看知识热度时展示知识文档的阅读统计
-    """
-    id = serializers.IntegerField(read_only=True)
-    title = serializers.CharField(read_only=True)
-    knowledge_type = serializers.CharField(read_only=True)
-    knowledge_type_display = serializers.CharField(read_only=True)
-    line_type = serializers.CharField(read_only=True)
-    line_type_display = serializers.CharField(read_only=True)
-    view_count = serializers.IntegerField(read_only=True)
-    created_by_name = serializers.CharField(read_only=True, allow_null=True)
-    created_at = serializers.DateTimeField(read_only=True)
-    updated_at = serializers.DateTimeField(read_only=True)
-
-
-class TeamManagerOverviewSerializer(serializers.Serializer):
-    """
-    Serializer for team manager data board overview.
-    
-    Requirements:
-    - 21.1: 团队经理访问数据看板时展示各室完成率与成绩对比
-    """
-    # Overall statistics
-    total_departments = serializers.IntegerField(read_only=True)
-    total_students = serializers.IntegerField(read_only=True)
-    total_tasks = serializers.IntegerField(read_only=True)
-    completed_tasks = serializers.IntegerField(read_only=True)
-    overall_completion_rate = serializers.FloatField(read_only=True)
-    overall_avg_score = serializers.FloatField(read_only=True, allow_null=True)
-    
-    # Task status breakdown
-    learning_tasks = serializers.DictField(read_only=True)
-
-
-class TeamManagerDashboardSerializer(serializers.Serializer):
-    """
-    Serializer for complete team manager data board.
-    
-    Requirements:
-    - 21.1: 团队经理访问数据看板时展示各室完成率与成绩对比
-    - 21.2: 团队经理查看知识热度时展示知识文档的阅读统计
-    - 21.3: 团队经理查看数据时仅提供只读访问，禁止任何修改操作
-    """
-    overview = TeamManagerOverviewSerializer(read_only=True)
-    departments = DepartmentStatSerializer(many=True, read_only=True)

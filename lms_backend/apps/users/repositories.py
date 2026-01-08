@@ -55,79 +55,6 @@ class UserRepository(BaseRepository[User]):
         except self.model.DoesNotExist:
             return None
     
-    def get_all_active(
-        self,
-        filters: dict = None,
-        search: str = None,
-        ordering: str = None
-    ) -> QuerySet[User]:
-        """
-        获取所有活跃用户
-        
-        Args:
-            filters: 过滤条件（如 is_active, department_id 等）
-            search: 搜索关键词（匹配姓名或工号）
-            ordering: 排序字段
-            
-        Returns:
-            QuerySet
-        """
-        qs = self.model.objects.select_related(
-            'department',
-            'mentor'
-        ).prefetch_related('roles').filter(is_active=True)
-        
-        if filters:
-            if filters.get('is_active') is not None:
-                qs = qs.filter(is_active=filters['is_active'])
-            if filters.get('department_id'):
-                qs = qs.filter(department_id=filters['department_id'])
-            if filters.get('mentor_id'):
-                qs = qs.filter(mentor_id=filters['mentor_id'])
-            if filters.get('role_code'):
-                qs = qs.filter(roles__code=filters['role_code']).distinct()
-        
-        if search:
-            qs = qs.filter(
-                Q(username__icontains=search) |
-                Q(employee_id__icontains=search)
-            )
-        
-        if ordering:
-            qs = qs.order_by(ordering)
-        
-        return qs
-    
-    def get_mentees(self, mentor_id: int) -> QuerySet[User]:
-        """
-        获取指定导师名下的所有学员
-        
-        Args:
-            mentor_id: 导师用户 ID
-            
-        Returns:
-            QuerySet
-        """
-        return self.model.objects.filter(
-            mentor_id=mentor_id,
-            is_active=True
-        ).select_related('department').prefetch_related('roles').order_by('username')
-    
-    def get_department_members(self, department_id: int) -> QuerySet[User]:
-        """
-        获取指定部门的所有成员
-        
-        Args:
-            department_id: 部门 ID
-            
-        Returns:
-            QuerySet
-        """
-        return self.model.objects.filter(
-            department_id=department_id,
-            is_active=True
-        ).select_related('department', 'mentor').prefetch_related('roles').order_by('username')
-    
     def has_role(self, user_id: int, role_code: str) -> bool:
         """
         检查用户是否拥有指定角色
@@ -143,22 +70,6 @@ class UserRepository(BaseRepository[User]):
             pk=user_id,
             roles__code=role_code
         ).exists()
-    
-    def get_users_with_role(self, role_code: str, active_only: bool = True) -> QuerySet[User]:
-        """
-        获取拥有指定角色的所有用户
-        
-        Args:
-            role_code: 角色代码
-            active_only: 是否只返回活跃用户
-            
-        Returns:
-            QuerySet
-        """
-        qs = self.model.objects.filter(roles__code=role_code).distinct()
-        if active_only:
-            qs = qs.filter(is_active=True)
-        return qs.select_related('department', 'mentor').prefetch_related('roles').order_by('username')
 
 
 class RoleRepository(BaseRepository[Role]):
@@ -322,15 +233,3 @@ class UserRoleRepository(BaseRepository[UserRole]):
             user_id=user_id,
             role__code=role_code
         ).delete()
-    
-    def remove_user_roles_except(self, user_id: int, keep_role_codes: List[str]) -> None:
-        """
-        移除用户的角色，保留指定角色
-        
-        Args:
-            user_id: 用户 ID
-            keep_role_codes: 要保留的角色代码列表
-        """
-        self.model.objects.filter(
-            user_id=user_id
-        ).exclude(role__code__in=keep_role_codes).delete()

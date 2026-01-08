@@ -391,13 +391,3 @@ class RemoveQuestionsSerializer(serializers.Serializer):
         help_text='要移除的题目ID列表'
     )
 
-
-class ReorderQuestionsSerializer(serializers.Serializer):
-    """
-    Serializer for reordering questions in a quiz.
-    """
-    question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        min_length=1,
-        help_text='按新顺序排列的题目ID列表'
-    )

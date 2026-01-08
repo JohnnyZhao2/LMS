@@ -4,7 +4,7 @@
 负责所有答题记录和答案相关的数据访问操作。
 """
 from typing import Optional, List
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet
 
 from core.base_repository import BaseRepository
 from .models import Submission, Answer
@@ -45,28 +45,6 @@ class SubmissionRepository(BaseRepository[Submission]):
             qs = qs.filter(user=user)
         
         return qs.filter(pk=pk).first()
-    
-    def get_for_grading(
-        self,
-        pk: int
-    ) -> Optional[Submission]:
-        """
-        获取用于评分的答题记录（包含完整的关联数据）
-        
-        Args:
-            pk: 主键
-            
-        Returns:
-            答题记录对象或 None
-        """
-        return self.model.objects.select_related(
-            'quiz',
-            'user',
-            'task_assignment__task'
-        ).prefetch_related(
-            'answers__question',
-            'answers__graded_by'
-        ).filter(pk=pk).first()
     
     def get_in_progress(
         self,
@@ -109,100 +87,6 @@ class SubmissionRepository(BaseRepository[Submission]):
             quiz_id=quiz_id,
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
         ).first()
-    
-    def get_by_user_and_task(
-        self,
-        user_id: int,
-        task_id: int = None,
-        status: str = None,
-        ordering: str = '-created_at'
-    ) -> QuerySet[Submission]:
-        """
-        获取用户的答题记录列表
-        
-        Args:
-            user_id: 用户 ID
-            task_id: 可选的任务 ID
-            status: 可选的状态过滤
-            ordering: 排序字段
-            
-        Returns:
-            QuerySet
-        """
-        qs = self.model.objects.filter(
-            user_id=user_id
-        ).select_related(
-            'quiz',
-            'task_assignment__task'
-        )
-        
-        if task_id:
-            qs = qs.filter(task_assignment__task_id=task_id)
-        
-        if status:
-            qs = qs.filter(status=status)
-        
-        if ordering:
-            qs = qs.order_by(ordering)
-        
-        return qs
-    
-    def get_practice_history(
-        self,
-        task_assignment_id: int,
-        quiz_id: int
-    ) -> QuerySet[Submission]:
-        """
-        获取练习历史记录（已提交的记录）
-        
-        Args:
-            task_assignment_id: 任务分配 ID
-            quiz_id: 试卷 ID
-            
-        Returns:
-            QuerySet
-        """
-        return self.model.objects.filter(
-            task_assignment_id=task_assignment_id,
-            quiz_id=quiz_id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).order_by('-submitted_at')
-    
-    def get_grading_queryset(
-        self,
-        user_id: int = None,
-        department_id: int = None,
-        mentor_id: int = None
-    ) -> QuerySet[Submission]:
-        """
-        获取待评分的答题记录查询集
-        
-        Args:
-            user_id: 可选的用户 ID（用于限制到特定学员）
-            department_id: 可选的部门 ID（用于限制到特定部门）
-            mentor_id: 可选的导师 ID（用于限制到特定导师的学员）
-            
-        Returns:
-            QuerySet
-        """
-        qs = self.model.objects.filter(
-            status='GRADING'
-        ).select_related(
-            'quiz',
-            'user',
-            'task_assignment__task'
-        )
-        
-        if user_id:
-            qs = qs.filter(user_id=user_id)
-        
-        if department_id:
-            qs = qs.filter(user__department_id=department_id)
-        
-        if mentor_id:
-            qs = qs.filter(user__mentor_id=mentor_id)
-        
-        return qs.order_by('-submitted_at')
     
     def count_attempts(
         self,

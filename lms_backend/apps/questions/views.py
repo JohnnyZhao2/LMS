@@ -3,7 +3,7 @@ Views for question management.
 
 Implements question CRUD endpoints with ownership control.
 
-Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
+Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7
 Properties:
 - Property 13: 被引用题目删除保护
 - Property 15: 题目所有权编辑控制
@@ -12,17 +12,15 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
-from apps.users.permissions import IsAdminOrMentorOrDeptManager, IsAdmin
+from apps.users.permissions import IsAdminOrMentorOrDeptManager
 
 from .serializers import (
     QuestionListSerializer,
     QuestionDetailSerializer,
     QuestionCreateSerializer,
     QuestionUpdateSerializer,
-    QuestionImportSerializer,
 )
 from .services import QuestionService
 
@@ -224,47 +222,3 @@ class QuestionDetailView(APIView):
         # 使用Service删除题目（权限检查和引用检查在Service中完成）
         self.service.delete(pk=pk, user=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class QuestionImportView(APIView):
-    """
-    Bulk import questions from Excel.
-    
-    Requirements: 5.6 - 管理员批量导入题目
-    """
-    permission_classes = [IsAuthenticated, IsAdmin]
-    parser_classes = [MultiPartParser, FormParser]
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = QuestionService()
-    
-    @extend_schema(
-        summary='批量导入题目',
-        description='从 Excel 文件批量导入题目（仅管理员）',
-        request=QuestionImportSerializer,
-        responses={
-            201: OpenApiResponse(description='导入成功'),
-            400: OpenApiResponse(description='文件格式错误或数据无效'),
-            403: OpenApiResponse(description='无权限'),
-        },
-        tags=['题库管理']
-    )
-    def post(self, request):
-        """
-        Import questions from Excel file.
-        
-        Requirements: 5.6 - 管理员批量导入题目时解析 Excel 模板并创建题目记录
-        
-        Expected Excel format:
-        | 题目内容 | 题目类型 | 选项A | 选项B | 选项C | 选项D | 答案 | 解析 | 分值 | 难度 | 标签 |
-        """
-        serializer = QuestionImportSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        file = serializer.validated_data['file']
-        
-        # 使用Service导入题目
-        result = self.service.import_from_excel(file=file, user=request.user)
-        
-        return Response(result, status=status.HTTP_201_CREATED)

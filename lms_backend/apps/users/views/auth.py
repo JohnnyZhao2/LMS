@@ -31,7 +31,6 @@ from apps.users.serializers import (
     SwitchRoleResponseSerializer,
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
-    ChangePasswordRequestSerializer,
     UserInfoSerializer,
 )
 from apps.users.models import User
@@ -271,43 +270,3 @@ class ResetPasswordView(APIView):
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(length))
 
-
-class ChangePasswordView(APIView):
-    """
-    User password change endpoint.
-    
-    Allows authenticated users to change their own password.
-    """
-    permission_classes = [IsAuthenticated]
-    
-    @extend_schema(
-        summary='修改密码',
-        description='用户修改自己的密码',
-        request=ChangePasswordRequestSerializer,
-        responses={
-            200: OpenApiResponse(description='密码修改成功'),
-            400: OpenApiResponse(description='当前密码错误或新密码不符合要求'),
-        },
-        tags=['认证']
-    )
-    def post(self, request):
-        serializer = ChangePasswordRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        user = request.user
-        old_password = serializer.validated_data['old_password']
-        new_password = serializer.validated_data['new_password']
-        
-        if not user.check_password(old_password):
-            raise BusinessError(
-                code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
-                message='当前密码错误'
-            )
-        
-        user.set_password(new_password)
-        user.save()
-        
-        return Response(
-            {'message': '密码修改成功'},
-            status=status.HTTP_200_OK
-        )

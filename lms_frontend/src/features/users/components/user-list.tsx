@@ -14,7 +14,7 @@ import {
   RefreshCw,
   MoreVertical
 } from "lucide-react"
-import { useUsers } from "../api/get-users"
+import { useUsers, useDepartments } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
 import { DataTable } from "@/components/ui/data-table/data-table"
@@ -48,6 +48,7 @@ import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
 export const UserList: React.FC = () => {
   const [search, setSearch] = React.useState("")
   const [searchInput, setSearchInput] = React.useState("")
+  const [departmentFilter, setDepartmentFilter] = React.useState<number | undefined>(undefined)
   const [formModalOpen, setFormModalOpen] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<number | undefined>()
   const [resetPasswordDialog, setResetPasswordDialog] = React.useState<{
@@ -59,7 +60,8 @@ export const UserList: React.FC = () => {
     password?: string
   }>({ open: false })
 
-  const { data, isLoading, refetch } = useUsers({ search })
+  const { data: departments } = useDepartments()
+  const { data, isLoading, refetch } = useUsers({ search, departmentId: departmentFilter })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
   const resetPassword = useResetPassword()
@@ -337,29 +339,61 @@ export const UserList: React.FC = () => {
       <ContentPanel className="overflow-hidden">
         {/* 搜索和筛选 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
-          <div className="relative flex-1 max-w-lg">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-            <Input
-              placeholder="搜索姓名、工号、电子邮箱..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
-            />
+          {/* 部门快捷筛选 */}
+          <div className="flex items-center gap-2 p-1 bg-[#F3F4F6] rounded-lg">
+            <Button
+              variant="ghost"
+              onClick={() => setDepartmentFilter(undefined)}
+              className={cn(
+                "h-10 px-6 rounded-md font-semibold transition-all duration-200 shadow-none",
+                departmentFilter === undefined
+                  ? "bg-white text-[#3B82F6]"
+                  : "text-[#6B7280] hover:text-[#111827]"
+              )}
+            >
+              全部
+            </Button>
+            {departments?.map((dept) => (
+              <Button
+                key={dept.id}
+                variant="ghost"
+                onClick={() => setDepartmentFilter(dept.id)}
+                className={cn(
+                  "h-10 px-6 rounded-md font-semibold transition-all duration-200 shadow-none",
+                  departmentFilter === dept.id
+                    ? "bg-white text-[#3B82F6]"
+                    : "text-[#6B7280] hover:text-[#111827]"
+                )}
+              >
+                {dept.name}
+              </Button>
+            ))}
           </div>
 
-          <div className="flex items-center gap-6">
+          {/* 搜索框 */}
+          <div className="flex items-center gap-4 flex-1 max-w-xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
+              <Input
+                placeholder="搜索姓名、工号、电子邮箱..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
+              />
+            </div>
             <Button
               onClick={handleSearch}
               className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
             >
               搜索
             </Button>
-            <div className="h-12 w-[1px] bg-[#E5E7EB] mx-2" />
-            <div className="text-right">
-              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
-              <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
-            </div>
+          </div>
+
+          {/* 用户计数 */}
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
+            <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
           </div>
         </div>
 
