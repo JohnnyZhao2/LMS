@@ -1,5 +1,5 @@
 """
-Serializers for analytics module.
+Serializers for dashboard module.
 Implements serializers for:
 - Student dashboard
 - Mentor/Department manager dashboard

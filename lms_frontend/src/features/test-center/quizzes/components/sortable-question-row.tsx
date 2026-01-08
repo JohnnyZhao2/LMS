@@ -8,7 +8,7 @@ import { GripVertical, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { QuestionType } from '@/types/api';
-import { getQuestionTypeStyle } from '@/features/questions/constants';
+import { getQuestionTypeStyle } from '@/features/test-center/questions/constants';
 
 export interface QuizQuestionItem {
   id: number;

@@ -8,7 +8,6 @@ import type { MentorDashboard } from '@/types/api';
 export const useMentorDashboard = () => {
   return useQuery({
     queryKey: ['mentor-dashboard'],
-    queryFn: () => apiClient.get<MentorDashboard>('/analytics/dashboard/mentor/'),
+    queryFn: () => apiClient.get<MentorDashboard>('/dashboard/mentor/'),
   });
 };
-

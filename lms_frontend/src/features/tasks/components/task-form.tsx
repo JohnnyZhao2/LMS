@@ -37,7 +37,7 @@ import { useUpdateTask } from '../api/update-task';
 import { useTaskDetail } from '../api/get-task-detail';
 import { useAssignableUsers } from '../api/get-assignable-users';
 import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
-import { useQuizDetail } from '@/features/quizzes/api/get-quizzes';
+import { useQuizDetail } from '@/features/test-center/quizzes/api/get-quizzes';
 import { ROUTES } from '@/config/routes';
 import type {
   KnowledgeListItem,

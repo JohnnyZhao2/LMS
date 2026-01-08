@@ -10,8 +10,7 @@ export const useStudentDashboard = (knowledgeLimit = 5, pendingLimit = 10) => {
     queryKey: ['student-dashboard', knowledgeLimit, pendingLimit],
     queryFn: () =>
       apiClient.get<StudentDashboard>(
-        `/analytics/dashboard/student/?knowledge_limit=${knowledgeLimit}&pending_limit=${pendingLimit}`,
+        `/dashboard/student/?knowledge_limit=${knowledgeLimit}&pending_limit=${pendingLimit}`,
       ),
   });
 };
-

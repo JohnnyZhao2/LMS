@@ -9,7 +9,7 @@ Endpoints:
 - GET /api/auth/me/ - Get current user info
 """
 from django.urls import path
-from apps.users.views import (
+from apps.auth.views import (
     LoginView,
     LogoutView,
     RefreshTokenView,

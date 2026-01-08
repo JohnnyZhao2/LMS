@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Pencil, CheckCircle, Database, User, Clock, AlertCircle, Sparkles, Box } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQuestions, useQuestionDetail } from '@/features/questions/api/get-questions';
+import { useQuestions, useQuestionDetail } from '@/features/test-center/questions/api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import type { QuestionType } from '@/types/api';
 import dayjs from '@/lib/dayjs';

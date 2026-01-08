@@ -1,5 +1,5 @@
 """
-Analytics 应用服务
+Dashboard 应用服务
 提供业务逻辑：
 - 仪表盘统计计算
 - 学员进度跟踪
@@ -14,9 +14,9 @@ from core.base_service import BaseService
 from apps.users.models import User
 from apps.users.permissions import get_current_role, get_accessible_students
 from .repositories import (
-    TaskAssignmentAnalyticsRepository,
-    KnowledgeAnalyticsRepository,
-    SubmissionAnalyticsRepository,
+    TaskAssignmentDashboardRepository,
+    KnowledgeDashboardRepository,
+    SubmissionDashboardRepository,
 )
 class StudentDashboardService(BaseService):
     """
@@ -27,8 +27,8 @@ class StudentDashboardService(BaseService):
     - 任务摘要统计
     """
     def __init__(self):
-        self.task_assignment_repo = TaskAssignmentAnalyticsRepository()
-        self.knowledge_repo = KnowledgeAnalyticsRepository()
+        self.task_assignment_repo = TaskAssignmentDashboardRepository()
+        self.knowledge_repo = KnowledgeDashboardRepository()
     def get_pending_tasks(self, user: User, limit: int = 10) -> QuerySet:
         """
         获取学员的待办任务
@@ -78,8 +78,8 @@ class MentorDashboardService(BaseService):
     - 快捷链接生成
     """
     def __init__(self):
-        self.task_assignment_repo = TaskAssignmentAnalyticsRepository()
-        self.submission_repo = SubmissionAnalyticsRepository()
+        self.task_assignment_repo = TaskAssignmentDashboardRepository()
+        self.submission_repo = SubmissionDashboardRepository()
     def get_dashboard_data(self, user: User) -> Dict[str, Any]:
         """
         获取导师/室经理的完整仪表盘数据

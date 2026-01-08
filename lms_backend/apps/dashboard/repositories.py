@@ -1,7 +1,7 @@
 """
-Analytics 模块仓储实现
-负责所有分析统计相关的数据访问操作。
-封装了跨模块的数据查询，为 Analytics Service 提供统一的数据访问接口。
+Dashboard 模块仓储实现
+负责所有看板统计相关的数据访问操作。
+封装了跨模块的数据查询，为 Dashboard Service 提供统一的数据访问接口。
 """
 from typing import Optional, List, Dict, Any
 from django.db.models import QuerySet, Avg, Count, Sum
@@ -10,7 +10,7 @@ from core.base_repository import BaseRepository
 from apps.tasks.models import TaskAssignment
 from apps.knowledge.models import Knowledge
 from apps.submissions.models import Submission
-class TaskAssignmentAnalyticsRepository:
+class TaskAssignmentDashboardRepository:
     """
     任务分配分析仓储
     提供用于分析统计的任务分配查询方法。
@@ -106,7 +106,7 @@ class TaskAssignmentAnalyticsRepository:
             'overdue_tasks': overdue_tasks,
             'completion_rate': round(completion_rate, 1)
         }
-class KnowledgeAnalyticsRepository:
+class KnowledgeDashboardRepository:
     """
     知识文档分析仓储
     提供用于分析统计的知识文档查询方法。
@@ -158,7 +158,7 @@ class KnowledgeAnalyticsRepository:
             'total_views': total_views,
             'avg_views': round(total_views / total_knowledge, 1) if total_knowledge > 0 else 0
         }
-class SubmissionAnalyticsRepository:
+class SubmissionDashboardRepository:
     """
     答题记录分析仓储
     提供用于分析统计的答题记录查询方法。

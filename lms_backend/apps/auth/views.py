@@ -15,8 +15,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from core.exceptions import BusinessError, ErrorCodes
-from apps.users.services import AuthenticationService
-from apps.users.serializers import (
+from apps.auth.services import AuthenticationService
+from apps.auth.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -26,8 +26,8 @@ from apps.users.serializers import (
     SwitchRoleResponseSerializer,
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
-    UserInfoSerializer,
 )
+from apps.users.serializers import UserInfoSerializer
 from apps.users.models import User
 class LoginView(APIView):
     """

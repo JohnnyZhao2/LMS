@@ -1,5 +1,5 @@
 """
-Student analytics views.
+Student dashboard views.
 Implements:
 - Student dashboard API
 """
@@ -7,16 +7,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from apps.analytics.serializers import (
+from apps.dashboard.serializers import (
     StudentPendingTaskSerializer,
     LatestKnowledgeSerializer,
     StudentDashboardSerializer,
 )
-from apps.analytics.services import StudentDashboardService
+from apps.dashboard.services import StudentDashboardService
 class StudentDashboardView(APIView):
     """
     学员仪表盘 API 端点
-    GET /api/analytics/dashboard/student/
+    GET /api/dashboard/student/
     """
     permission_classes = [IsAuthenticated]
     def __init__(self, **kwargs):

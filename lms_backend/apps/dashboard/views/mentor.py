@@ -1,5 +1,5 @@
 """
-Mentor/Department Manager analytics views.
+Mentor/Department Manager dashboard views.
 Implements:
 - Mentor/Department manager dashboard API
 """
@@ -9,11 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.permissions import get_current_role
-from apps.analytics.services import MentorDashboardService
+from apps.dashboard.services import MentorDashboardService
 class MentorDashboardView(APIView):
     """
     导师/室经理仪表盘 API 端点
-    GET /api/analytics/dashboard/mentor/
+    GET /api/dashboard/mentor/
     """
     permission_classes = [IsAuthenticated]
     def __init__(self, **kwargs):

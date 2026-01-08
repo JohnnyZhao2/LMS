@@ -27,8 +27,8 @@ import { Label } from '@/components/ui/label';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
-import { useQuestions } from '@/features/questions/api/get-questions';
-import { useCreateQuestion } from '@/features/questions/api/create-question';
+import { useQuestions } from '@/features/test-center/questions/api/get-questions';
+import { useCreateQuestion } from '@/features/test-center/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { ROUTES } from '@/config/routes';
 import type { QuizCreateRequest, QuestionType, QuestionCreateRequest, QuizType } from '@/types/api';
@@ -38,7 +38,7 @@ import { showApiError } from '@/utils/error-handler';
 import { SortableQuestionRow, type QuizQuestionItem } from './sortable-question-row';
 import { QuestionSelector } from './question-selector';
 import { OptionsInput, AnswerInput } from './question-form-inputs';
-import { getQuestionTypeLabel } from '@/features/questions/constants';
+import { getQuestionTypeLabel } from '@/features/test-center/questions/constants';
 
 /**
  * 试卷表单组件 - ShadCN UI 版本

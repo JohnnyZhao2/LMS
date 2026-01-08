@@ -1,5 +1,5 @@
 """
-Analytics views module.
+Dashboard views module.
 Split into:
 - student.py: Student dashboard views
 - mentor.py: Mentor/Department manager dashboard views

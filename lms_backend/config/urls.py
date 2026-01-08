@@ -13,7 +13,7 @@ from drf_spectacular.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     # API endpoints
-    path('api/auth/', include('apps.users.urls.auth')),
+    path('api/auth/', include('apps.auth.urls')),
     path('api/users/', include('apps.users.urls.users')),
     path('api/knowledge/', include('apps.knowledge.urls')),
     path('api/questions/', include('apps.questions.urls')),
@@ -21,7 +21,7 @@ urlpatterns = [
     path('api/tasks/', include('apps.tasks.urls')),
     path('api/submissions/', include('apps.submissions.urls.submissions')),
     path('api/spot-checks/', include('apps.spot_checks.urls')),
-    path('api/analytics/', include('apps.analytics.urls')),
+    path('api/dashboard/', include('apps.dashboard.urls')),
     # API documentation - OpenAPI 3.0
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema.yaml', SpectacularAPIView.as_view(renderer_classes=[]), name='schema-yaml'),

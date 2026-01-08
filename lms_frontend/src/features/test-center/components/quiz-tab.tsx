@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { Pencil, Trash2, Send, FileText, CheckCircle2, MoreHorizontal, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQuizzes } from '@/features/quizzes/api/get-quizzes';
-import { useDeleteQuiz } from '@/features/quizzes/api/create-quiz';
+import { useQuizzes } from '@/features/test-center/quizzes/api/get-quizzes';
+import { useDeleteQuiz } from '@/features/test-center/quizzes/api/create-quiz';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { QuizListItem } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';

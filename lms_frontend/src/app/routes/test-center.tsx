@@ -4,8 +4,8 @@
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/protected-route';
 import { TestCenter } from '@/features/test-center/components/test-center';
-import { QuestionForm } from '@/features/questions/components/question-form';
-import { QuizForm } from '@/features/quizzes/components/quiz-form';
+import { QuestionForm } from '@/features/test-center/questions/components/question-form';
+import { QuizForm } from '@/features/test-center/quizzes/components/quiz-form';
 import { ROUTES } from '@/config/routes';
 
 export const testCenterRoutes = [

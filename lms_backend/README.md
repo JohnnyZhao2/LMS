@@ -238,7 +238,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/refresh/ \
 | POST | /{id}/mark-read/ | 标记已读 |
 | POST | /mark-all-read/ | 全部已读 |
 
-### 统计分析 `/api/analytics/`
+### 数据看板 `/api/dashboard/`
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
@@ -421,7 +421,7 @@ lms_backend/
 │   │   ├── services.py
 │   │   └── views.py
 │   │
-│   └── analytics/            # 统计分析
+│   └── dashboard/            # 数据看板
 │       ├── services.py
 │       └── views/
 │           ├── student.py

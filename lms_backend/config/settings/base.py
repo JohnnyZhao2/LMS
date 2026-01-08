@@ -24,13 +24,14 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Local apps
     'apps.users',
+    'apps.auth',
     'apps.knowledge',
     'apps.questions',
     'apps.quizzes',
     'apps.tasks',
     'apps.submissions',
     'apps.spot_checks',
-    'apps.analytics',
+    'apps.dashboard',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

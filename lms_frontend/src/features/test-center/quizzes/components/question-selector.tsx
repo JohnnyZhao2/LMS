@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import type { Question, QuestionType } from '@/types/api';
-import { QUESTION_TYPE_FILTER_OPTIONS, getQuestionTypeStyle } from '@/features/questions/constants';
+import { QUESTION_TYPE_FILTER_OPTIONS, getQuestionTypeStyle } from '@/features/test-center/questions/constants';
 
 interface QuestionSelectorProps {
   availableQuestions: Question[];
