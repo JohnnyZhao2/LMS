@@ -9,6 +9,7 @@ Implements:
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils.functional import cached_property
 from core.mixins import TimestampMixin
 class UserManager(BaseUserManager):
     """自定义 User Manager，支持使用 employee_id 作为用户名字段"""
@@ -135,7 +136,7 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     def is_team_manager(self) -> bool:
         """是否为团队经理"""
         return self.has_role('TEAM_MANAGER')
-    @property
+    @cached_property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""
         return list(self.roles.values_list('code', flat=True))

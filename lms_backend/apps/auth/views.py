@@ -157,7 +157,8 @@ class MeView(APIView):
         available_roles = self.auth_service._get_user_roles(user)
         # 获取当前角色（从 JWT token 中）
         current_role = getattr(request.user, 'current_role', None)
-        if not current_role:
+        role_codes = {role['code'] for role in available_roles}
+        if not current_role or current_role not in role_codes:
             current_role = self.auth_service._get_default_role(available_roles)
         # Use serializer to build user info
         user_info = UserInfoSerializer(user).data
@@ -171,6 +172,9 @@ class ResetPasswordView(APIView):
     Admin password reset endpoint.
     """
     permission_classes = [IsAuthenticated]
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.auth_service = AuthenticationService()
     @extend_schema(
         summary='重置用户密码',
         description='管理员重置指定用户的密码，生成临时密码',
@@ -201,6 +205,7 @@ class ResetPasswordView(APIView):
         temp_password = self._generate_temporary_password()
         target_user.set_password(temp_password)
         target_user.save()
+        self.auth_service.blacklist_all_tokens(target_user)
         return Response({
             'temporary_password': temp_password,
             'message': '密码已重置，请通知用户使用临时密码登录并修改密码'

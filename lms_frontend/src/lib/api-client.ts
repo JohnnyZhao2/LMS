@@ -74,7 +74,7 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refresh: refreshToken }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) {
@@ -82,7 +82,7 @@ class ApiClient {
       }
 
       const data = await response.json();
-      tokenStorage.setTokens(data.access, data.refresh);
+      tokenStorage.setTokens(data.access_token, data.refresh_token);
     } catch (error) {
       tokenStorage.clearTokens();
       throw error;

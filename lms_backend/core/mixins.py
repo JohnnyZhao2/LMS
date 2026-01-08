@@ -4,8 +4,6 @@ Properties: 37, 38, 39
 """
 from django.db import models
 from django.utils import timezone
-from rest_framework.response import Response
-from rest_framework import status
 from core.exceptions import BusinessError, ErrorCodes
 class TimestampMixin(models.Model):
     """
@@ -198,7 +196,7 @@ class BusinessErrorHandlerMixin:
                 except BusinessError as e:
                     return self.handle_business_error(e)
     """
-    def handle_business_error(self, error: BusinessError) -> Response:
+    def handle_business_error(self, error: BusinessError) -> "Response":
         """
         处理 BusinessError 异常，转换为适当的 HTTP 响应
         Args:
@@ -206,6 +204,8 @@ class BusinessErrorHandlerMixin:
         Returns:
             Response: 包含错误信息的 HTTP 响应，状态码根据错误类型自动映射
         """
+        from rest_framework.response import Response
+        from rest_framework import status
         # 根据错误码映射到相应的 HTTP 状态码
         status_code = self._get_status_code_for_error(error.code)
         response_data = {
@@ -222,6 +222,7 @@ class BusinessErrorHandlerMixin:
         Returns:
             int: HTTP 状态码
         """
+        from rest_framework import status
         # 错误码到状态码的映射
         error_code_mapping = {
             ErrorCodes.RESOURCE_NOT_FOUND: status.HTTP_404_NOT_FOUND,

@@ -108,10 +108,24 @@ class AuthenticationService(BaseService):
         """
         try:
             token = RefreshToken(refresh_token)
+            user_id = token['user_id'] if 'user_id' in token else None
+            if not user_id:
+                raise BusinessError(
+                    code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
+                    message='无效的刷新令牌'
+                )
+            user = self.user_repository.get_by_id(user_id)
+            if not user or not user.is_active:
+                raise BusinessError(
+                    code=ErrorCodes.AUTH_USER_INACTIVE,
+                    message='用户账号已被停用'
+                )
             return {
                 'access_token': str(token.access_token),
                 'refresh_token': str(token),
             }
+        except BusinessError:
+            raise
         except Exception:
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
@@ -132,6 +146,11 @@ class AuthenticationService(BaseService):
         - Property 4: 角色切换权限生效
         """
         # Verify user has the requested role
+        if not user.is_active:
+            raise BusinessError(
+                code=ErrorCodes.AUTH_USER_INACTIVE,
+                message='用户账号已被停用'
+            )
         if not user.has_role(role_code):
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_ROLE,

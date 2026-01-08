@@ -1,9 +1,6 @@
 """
 Custom exception handling for LMS API.
 """
-from rest_framework.views import exception_handler
-from rest_framework.response import Response
-from rest_framework import status
 class BusinessError(Exception):
     """Base class for business logic errors."""
     def __init__(self, code: str, message: str, details: dict = None):
@@ -39,6 +36,9 @@ def custom_exception_handler(exc, context):
     """
     Custom exception handler that formats errors consistently.
     """
+    from rest_framework.views import exception_handler
+    from rest_framework.response import Response
+    from rest_framework import status
     # Handle BusinessError
     if isinstance(exc, BusinessError):
         return Response(

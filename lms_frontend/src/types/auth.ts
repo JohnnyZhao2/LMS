@@ -27,15 +27,15 @@ export interface LoginResponse {
  * 刷新令牌请求
  */
 export interface RefreshTokenRequest {
-  refresh: string;
+  refresh_token: string;
 }
 
 /**
  * 刷新令牌响应
  */
 export interface RefreshTokenResponse {
-  access: string;
-  refresh: string;
+  access_token: string;
+  refresh_token: string;
 }
 
 /**

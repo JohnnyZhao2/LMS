@@ -94,7 +94,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Validate username (display name)."""
         if not value or not value.strip():
             raise serializers.ValidationError('姓名不能为空')
-        return value.strip()
+        normalized = value.strip()
+        if User.objects.filter(username=normalized).exists():
+            raise serializers.ValidationError('该姓名已存在')
+        return normalized
     def validate_employee_id(self, value):
         """Validate employee_id is unique."""
         if User.objects.filter(employee_id=value).exists():
@@ -178,7 +181,13 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         """Validate username (display name)."""
         if not value or not value.strip():
             raise serializers.ValidationError('姓名不能为空')
-        return value.strip()
+        normalized = value.strip()
+        queryset = User.objects.filter(username=normalized)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('该姓名已存在')
+        return normalized
     def validate_employee_id(self, value):
         """Validate employee_id is unique (excluding current user)."""
         if value:
