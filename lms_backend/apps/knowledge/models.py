@@ -1,48 +1,36 @@
 """
 Knowledge models for LMS.
-
 Implements:
 - Tag: 统一标签模型（条线类型/系统标签/操作标签）
 - ResourceLineType: 资源条线类型关系表（通用多态关系）
 - Knowledge: 知识文档
-
-Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
 """
 import uuid
-
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
-
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
-
-
 class Tag(TimestampMixin, models.Model):
     """
     统一标签模型
-    
     支持三种标签类型：
     - LINE: 条线类型（一级分类）
     - SYSTEM: 系统标签（二级分类，可关联条线）
     - OPERATION: 操作标签
-    
     Attributes:
         name: 标签名称
         tag_type: 标签类型
         parent: 父标签（系统标签可关联条线类型）
         sort_order: 排序序号
         is_active: 是否启用
-    
-    Requirements: 4.6
     """
     TAG_TYPE_CHOICES = [
         ('LINE', '条线类型'),
         ('SYSTEM', '系统标签'),
         ('OPERATION', '操作标签'),
     ]
-    
     name = models.CharField(max_length=100, verbose_name='标签名称')
     tag_type = models.CharField(
         max_length=20,
@@ -60,7 +48,6 @@ class Tag(TimestampMixin, models.Model):
     )
     sort_order = models.IntegerField(default=0, verbose_name='排序序号')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    
     class Meta:
         db_table = 'lms_tag'
         verbose_name = '标签'
@@ -68,10 +55,8 @@ class Tag(TimestampMixin, models.Model):
         ordering = ['tag_type', 'sort_order', 'name']
         # 同类型下标签名称唯一
         unique_together = [['name', 'tag_type']]
-    
     def __str__(self):
         return f"{self.name} ({self.get_tag_type_display()})"
-    
     def clean(self):
         """验证标签"""
         super().clean()
@@ -85,15 +70,11 @@ class Tag(TimestampMixin, models.Model):
                 raise ValidationError({
                     'parent': '父标签必须是条线类型'
                 })
-
-
 class ResourceLineType(TimestampMixin, models.Model):
     """
     资源条线类型关系表（通用多态关系）
-    
     用于统一管理所有资源（知识、题目等）与条线类型的关系。
     使用Django ContentType实现多态关系，支持未来扩展。
-    
     Attributes:
         content_type: 资源类型（Knowledge, Question等）
         object_id: 资源ID
@@ -107,7 +88,6 @@ class ResourceLineType(TimestampMixin, models.Model):
     )
     object_id = models.PositiveIntegerField(verbose_name='资源ID')
     content_object = GenericForeignKey('content_type', 'object_id')
-    
     line_type = models.ForeignKey(
         Tag,
         on_delete=models.PROTECT,
@@ -115,7 +95,6 @@ class ResourceLineType(TimestampMixin, models.Model):
         verbose_name='条线类型',
         limit_choices_to={'tag_type': 'LINE', 'is_active': True}
     )
-    
     class Meta:
         db_table = 'lms_resource_line_type'
         verbose_name = '资源条线类型'
@@ -124,41 +103,26 @@ class ResourceLineType(TimestampMixin, models.Model):
         indexes = [
             models.Index(fields=['content_type', 'object_id']),
         ]
-    
     def __str__(self):
         return f"{self.content_object} - {self.line_type.name}"
-
-
 class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
     知识文档模型
-    
     知识类型:
     - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
     - OTHER: 其他类型知识 - 使用 Markdown/富文本自由正文
-    
     发布状态:
     - DRAFT: 草稿 - 仅创建者和管理员可见，不能用于任务分配
     - PUBLISHED: 已发布 - 所有人可见，可用于任务分配
-    
     标签关系:
     - line_type: 通过ResourceLineType关联（多态关系，单选）
     - system_tags: 系统标签（多对多，多选）
     - operation_tags: 操作标签（多对多，多选）
-    
-    Requirements:
-    - 4.1: 创建知识文档时要求指定知识类型
-    - 4.2: 应急类知识使用结构化正文字段
-    - 4.3: 其他类型知识使用 Markdown/富文本自由正文
-    - 4.4: 编辑知识文档时更新内容并记录最后更新时间
-    - 4.5: 删除知识文档时检查是否被任务引用
-    - 4.6: 存储所属条线（一级分类）、所属系统（二级分类）和操作类型标签
     """
     KNOWLEDGE_TYPE_CHOICES = [
         ('EMERGENCY', '应急类'),
         ('OTHER', '其他类型'),
     ]
-    
     title = models.CharField(max_length=200, verbose_name='标题')
     knowledge_type = models.CharField(
         max_length=20,
@@ -189,7 +153,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default=True,
         verbose_name='是否当前最新发布版本'
     )
-    
     # 条线类型通过ResourceLineType关联（多态关系）
     # 使用property提供便捷访问
     @property
@@ -200,18 +163,15 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             object_id=self.id
         ).first()
         return relation.line_type if relation else None
-    
     def set_line_type(self, line_type):
         """设置条线类型"""
         if line_type and line_type.tag_type != 'LINE':
             raise ValidationError('只能设置条线类型标签')
-        
         # 删除旧的关系
         ResourceLineType.objects.filter(
             content_type=ContentType.objects.get_for_model(self),
             object_id=self.id
         ).delete()
-        
         # 创建新关系
         if line_type:
             ResourceLineType.objects.create(
@@ -219,7 +179,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 object_id=self.id,
                 line_type=line_type
             )
-    
     # 系统标签（二级分类）- 多对多，多选
     system_tags = models.ManyToManyField(
         Tag,
@@ -228,7 +187,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='系统标签',
         limit_choices_to={'tag_type': 'SYSTEM', 'is_active': True}
     )
-    
     # 操作类型标签 - 多对多，多选
     operation_tags = models.ManyToManyField(
         Tag,
@@ -237,20 +195,16 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='操作标签',
         limit_choices_to={'tag_type': 'OPERATION', 'is_active': True}
     )
-    
-    # 应急类知识的结构化字段（Requirements: 4.2）
+    # 应急类知识的结构化字段
     fault_scenario = models.TextField(blank=True, default='', verbose_name='故障场景')
     trigger_process = models.TextField(blank=True, default='', verbose_name='触发流程')
     solution = models.TextField(blank=True, default='', verbose_name='解决方案')
     verification_plan = models.TextField(blank=True, default='', verbose_name='验证方案')
     recovery_plan = models.TextField(blank=True, default='', verbose_name='恢复方案')
-    
-    # 其他类型知识的正文内容（Requirements: 4.3）
+    # 其他类型知识的正文内容
     content = models.TextField(blank=True, default='', verbose_name='正文内容')
-    
     # 知识概要（用于卡片预览显示）
     summary = models.CharField(max_length=500, blank=True, default='', verbose_name='知识概要')
-    
     # 最后更新者
     updated_by = models.ForeignKey(
         'users.User',
@@ -260,10 +214,8 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         related_name='knowledge_updated',
         verbose_name='最后更新者'
     )
-    
     # 阅读统计
     view_count = models.PositiveIntegerField(default=0, verbose_name='阅读次数')
-    
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
@@ -275,14 +227,11 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 name='uniq_knowledge_resource_version'
             )
         ]
-    
     def __str__(self):
         return self.title
-    
     def clean(self):
         """验证知识文档数据"""
         super().clean()
-        
         # 应急类知识必须至少填写一个结构化字段
         if self.knowledge_type == 'EMERGENCY':
             structured_fields = [
@@ -296,17 +245,14 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 raise ValidationError({
                     'knowledge_type': '应急类知识必须至少填写一个结构化字段'
                 })
-        
         # 其他类型知识必须有正文内容
         elif self.knowledge_type == 'OTHER':
             if not self.content.strip():
                 raise ValidationError({
                     'content': '其他类型知识必须填写正文内容'
                 })
-    
     # 注意：is_referenced_by_task() 和 delete() 方法已迁移到 KnowledgeService
     # 业务逻辑应在 Service 层处理，Model 层只保留数据定义
-    
     @classmethod
     def next_version_number(cls, resource_uuid):
         """
@@ -322,13 +268,11 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         )
         max_version = aggregate['max_version'] or 0
         return max_version + 1
-    
     def _compute_next_version_number(self):
         """
         计算下一个可用版本号。
         """
         return self.next_version_number(self.resource_uuid)
-    
     def ensure_version_number(self):
         """
         确保当前实例拥有正确的版本号。
@@ -338,21 +282,16 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             version_number=self.version_number
         ).exclude(pk=self.pk).exists():
             self.version_number = self._compute_next_version_number()
-    
     # 注意：publish() 方法已迁移到 KnowledgeService.publish()
     # 业务逻辑应在 Service 层处理
     # clone_as_draft() 方法已移除，请使用 KnowledgeService.create_or_get_draft_from_published()
-    
     # 注意：unpublish() 方法已迁移到 KnowledgeService.unpublish()
     # 业务逻辑应在 Service 层处理
-    
     def increment_view_count(self):
         """
         增加知识文档的阅读次数
-        
         使用原子操作确保并发安全，每次调用增加1次计数。
         用于记录学员点击查看知识文档的次数。
-        
         Returns:
             int: 更新后的阅读次数
         """
@@ -362,12 +301,10 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         # 刷新对象以获取最新值
         self.refresh_from_db()
         return self.view_count
-    
     @property
     def content_preview(self):
         """
         生成内容预览（用于列表显示）
-        
         优先使用 summary 字段，如果没有则自动提取：
         - 应急类知识：从结构化字段中提取关键信息
         - 其他类型知识：从 content 字段中提取前150个字符
@@ -375,7 +312,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         # 优先使用手动填写的概要
         if self.summary and self.summary.strip():
             return self.summary.strip()
-        
         if self.knowledge_type == 'EMERGENCY':
             # 应急类知识：优先显示故障场景，如果没有则显示解决方案
             preview_text = self.fault_scenario.strip() or self.solution.strip()
@@ -384,28 +320,22 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         else:
             # 其他类型知识：从 content 字段提取
             preview_text = self.content.strip()
-        
         # 限制长度并去除换行
         if preview_text:
             preview_text = preview_text.replace('\n', ' ').replace('\r', ' ')
             if len(preview_text) > 150:
                 return preview_text[:150] + '...'
             return preview_text
-        
         return ''
-    
     @property
     def table_of_contents(self):
         """
         从 Markdown 内容中提取目录结构（用于卡片预览显示）
-        
         返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
-        
         对于应急类知识：返回结构化字段的标题
         对于其他类型知识：从 Markdown 内容中解析标题
         """
         import re
-        
         if self.knowledge_type == 'EMERGENCY':
             # 应急类知识：返回有内容的结构化字段标题
             toc = []
@@ -421,11 +351,9 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 if value and value.strip():
                     toc.append({'level': 1, 'text': label})
             return toc
-        
         # 其他类型知识：从 Markdown 解析标题
         if not self.content:
             return []
-        
         toc = []
         lines = self.content.split('\n')
         for line in lines:
@@ -437,5 +365,4 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 # 只提取前3级标题，限制数量
                 if level <= 3 and len(toc) < 10:
                     toc.append({'level': level, 'text': text})
-        
         return toc

@@ -1,5 +1,4 @@
 # Core module package
-
 from .responses import (
     success_response,
     created_response,
@@ -8,7 +7,6 @@ from .responses import (
     paginated_response,
     list_response,
 )
-
 __all__ = [
     'success_response',
     'created_response',

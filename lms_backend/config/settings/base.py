@@ -4,13 +4,10 @@ Django base settings for LMS project.
 import os
 from pathlib import Path
 from datetime import timedelta
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-in-production')
-
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -35,7 +32,6 @@ INSTALLED_APPS = [
     'apps.spot_checks',
     'apps.analytics',
 ]
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -46,9 +42,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 ROOT_URLCONF = 'config.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -64,9 +58,7 @@ TEMPLATES = [
         },
     },
 ]
-
 WSGI_APPLICATION = 'config.wsgi.application'
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -74,7 +66,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
-
 # Internationalization
 LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
@@ -82,21 +73,16 @@ USE_I18N = True
 # 设置为 False 以便数据库直接存储本地时间（Asia/Shanghai）
 # 注意：这会失去时区支持，但数据库中的时间会直接显示为本地时间
 USE_TZ = False
-
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 # Media files
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
-
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -110,7 +96,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
-
 # Simple JWT settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
@@ -120,17 +105,13 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
-
 # drf-spectacular settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'LMS API',
     'DESCRIPTION': '''
 # 学习管理系统 (LMS) API 文档
-
 企业级学习管理系统后端 API，实现"学、练、考、评"的能力闭环。
-
 ## 核心功能模块
-
 - **用户认证** - JWT 认证、角色切换
 - **用户管理** - 用户 CRUD、角色分配、师徒关系
 - **知识文档** - 知识库管理、分类管理
@@ -141,9 +122,7 @@ SPECTACULAR_SETTINGS = {
 - **抽查管理** - 线下抽查记录
 - **统计分析** - 仪表盘、数据看板
 - **通知服务** - 任务通知、截止提醒
-
 ## 角色权限
-
 - **学员 (STUDENT)** - 执行任务、查看知识
 - **导师 (MENTOR)** - 管理名下学员、创建任务
 - **室经理 (DEPT_MANAGER)** - 管理本室人员
@@ -202,7 +181,6 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': [],
     'PREPROCESSING_HOOKS': [],
 }
-
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = []

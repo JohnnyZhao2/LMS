@@ -1,6 +1,5 @@
 """
 User views module.
-
 Split into:
 - auth.py: Authentication views (login, logout, token refresh, role switch, password)
 - management.py: User management views (CRUD, roles, mentors, departments)
@@ -26,7 +25,6 @@ from .management import (
     DepartmentsListView,
     RolesListView,
 )
-
 __all__ = [
     # Auth views
     'LoginView',

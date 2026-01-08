@@ -7,29 +7,22 @@ import os
 import sys
 import django
 from pathlib import Path
-
 # 添加项目路径
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
-
 # 设置 Django 环境
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 django.setup()
-
 import pymysql
-
-
 def sync_data():
     """同步数据"""
     print("🔄 同步测试数据...")
-    
     connection = pymysql.connect(
         host='localhost',
         user='root',
         password='15572353184',
         charset='utf8mb4'
     )
-    
     try:
         with connection.cursor() as cursor:
             # 清空测试数据库的数据（保留结构）
@@ -51,7 +44,6 @@ def sync_data():
                 'lms_user_role',
                 'lms_user',
             ]
-            
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
             for table in tables:
                 try:
@@ -59,19 +51,15 @@ def sync_data():
                 except Exception as e:
                     print(f"    ⚠️  清空 {table} 失败: {e}")
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-            
             # 复制最新数据
             print("  → 复制最新数据...")
-            
             cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-            
             # 用户
             cursor.execute("""
                 INSERT INTO lms_test.lms_user 
                 SELECT * FROM lms.lms_user 
                 LIMIT 10
             """)
-            
             # 用户角色
             cursor.execute("""
                 INSERT INTO lms_test.lms_user_role 
@@ -80,28 +68,24 @@ def sync_data():
                     SELECT id FROM lms_test.lms_user
                 )
             """)
-            
             # 知识文档
             cursor.execute("""
                 INSERT INTO lms_test.lms_knowledge 
                 SELECT * FROM lms.lms_knowledge 
                 LIMIT 20
             """)
-            
             # 题目
             cursor.execute("""
                 INSERT INTO lms_test.lms_question 
                 SELECT * FROM lms.lms_question 
                 LIMIT 30
             """)
-            
             # 试卷
             cursor.execute("""
                 INSERT INTO lms_test.lms_quiz 
                 SELECT * FROM lms.lms_quiz 
                 LIMIT 5
             """)
-            
             # 试卷题目
             cursor.execute("""
                 INSERT INTO lms_test.lms_quiz_question 
@@ -110,14 +94,12 @@ def sync_data():
                     SELECT id FROM lms_test.lms_quiz
                 )
             """)
-            
             # 任务
             cursor.execute("""
                 INSERT INTO lms_test.lms_task 
                 SELECT * FROM lms.lms_task 
                 LIMIT 10
             """)
-            
             # 任务分配
             cursor.execute("""
                 INSERT INTO lms_test.lms_task_assignment 
@@ -126,14 +108,12 @@ def sync_data():
                     SELECT id FROM lms_test.lms_task
                 )
             """)
-            
             # 提交记录
             cursor.execute("""
                 INSERT INTO lms_test.lms_submission 
                 SELECT * FROM lms.lms_submission 
                 LIMIT 20
             """)
-            
             # 答案
             cursor.execute("""
                 INSERT INTO lms_test.lms_answer 
@@ -142,9 +122,7 @@ def sync_data():
                     SELECT id FROM lms_test.lms_submission
                 )
             """)
-            
             cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-            
             # 显示统计
             cursor.execute("""
                 SELECT 
@@ -156,7 +134,6 @@ def sync_data():
                   (SELECT COUNT(*) FROM lms_test.lms_submission) as submissions
             """)
             stats = cursor.fetchone()
-            
             print(f"  ✓ 同步完成")
             print(f"    - 用户: {stats[0]}")
             print(f"    - 知识: {stats[1]}")
@@ -164,7 +141,6 @@ def sync_data():
             print(f"    - 试卷: {stats[3]}")
             print(f"    - 任务: {stats[4]}")
             print(f"    - 提交: {stats[5]}")
-        
         connection.commit()
     except Exception as e:
         print(f"  ❌ 错误: {e}")
@@ -173,19 +149,13 @@ def sync_data():
         sys.exit(1)
     finally:
         connection.close()
-
-
 def main():
     """主函数"""
     print("=" * 60)
     print("🔄 同步测试数据")
     print("=" * 60)
-    
     sync_data()
-    
     print("\n✅ 同步完成！")
     print()
-
-
 if __name__ == '__main__':
     main()

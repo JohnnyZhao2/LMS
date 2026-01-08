@@ -1,6 +1,5 @@
 """
 User management URLs.
-
 Endpoints:
 - GET /api/users/ - List all users (admin only)
 - POST /api/users/ - Create new user (admin only)
@@ -15,11 +14,8 @@ Endpoints:
 - GET /api/users/mentors/ - Get all mentors list (admin only)
 - GET /api/users/roles/ - Get all roles list (admin only)
 - GET /api/users/departments/ - Get all departments list (admin only)
-
-Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.4, 3.5, 3.6
 """
 from django.urls import path
-
 from apps.users.views import (
     UserListCreateView,
     UserDetailView,
@@ -33,7 +29,6 @@ from apps.users.views import (
     RolesListView,
     DepartmentsListView,
 )
-
 urlpatterns = [
     path('', UserListCreateView.as_view(), name='user-list-create'),
     path('<int:pk>/', UserDetailView.as_view(), name='user-detail'),

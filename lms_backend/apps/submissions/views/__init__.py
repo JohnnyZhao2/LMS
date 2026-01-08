@@ -1,6 +1,5 @@
 """
 Submissions views module.
-
 Split into:
 - common.py: Common views (unified quiz interface, save answer)
 - practice.py: Practice submission views
@@ -21,7 +20,6 @@ from .exam import (
     SubmitExamView,
     ExamResultView,
 )
-
 __all__ = [
     # Common views
     'StartQuizView',

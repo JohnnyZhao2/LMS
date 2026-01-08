@@ -1,33 +1,16 @@
 """
 Quiz models for LMS.
-
 Implements:
 - Quiz: 试卷模型
 - QuizQuestion: 试卷题目关联模型
-
-Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
 """
 import uuid
-
 from django.db import models
-
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
-
-
 class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
     试卷模型
-    
     试卷是题目的容器，不包含考试规则（考试规则在任务中设置）。
-    
-    Requirements:
-    - 6.1: 创建试卷时存储试卷名称、描述，并记录创建者
-    - 6.4: 导师或室经理可查看所有试卷（包含管理员创建的标准试卷）
-    - 6.5: 导师或室经理仅允许编辑自己创建的试卷
-    - 6.6: 导师或室经理仅允许删除自己创建的试卷
-    - 6.7: 管理员允许查看/创建/编辑/删除所有试卷
-    - 6.8: 试卷被任务引用时禁止删除
-    
     Properties:
     - Property 14: 被引用试卷删除保护
     - Property 16: 试卷所有权编辑控制
@@ -37,14 +20,12 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         max_length=200,
         verbose_name='试卷名称'
     )
-    
     # 试卷描述
     description = models.TextField(
         blank=True,
         default='',
         verbose_name='试卷描述'
     )
-    
     # 题目（通过 QuizQuestion 中间表关联）
     questions = models.ManyToManyField(
         'questions.Question',
@@ -53,7 +34,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         related_name='quizzes',
         verbose_name='题目'
     )
-    
     resource_uuid = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -76,12 +56,10 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default=True,
         verbose_name='是否当前版本'
     )
-    
     QUIZ_TYPE_CHOICES = [
         ('PRACTICE', '练习'),
         ('EXAM', '考试'),
     ]
-    
     # 试卷类型
     quiz_type = models.CharField(
         max_length=20,
@@ -89,14 +67,12 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default='PRACTICE',
         verbose_name='试卷类型'
     )
-    
     # 考试时长（分钟），仅考试类型有效
     duration = models.PositiveIntegerField(
         null=True,
         blank=True,
         verbose_name='考试时长(分钟)'
     )
-    
     # 及格分数，仅考试类型有效
     pass_score = models.DecimalField(
         max_digits=5,
@@ -105,7 +81,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         blank=True,
         verbose_name='及格分数'
     )
-    
     class Meta:
         db_table = 'lms_quiz'
         verbose_name = '试卷'
@@ -117,15 +92,12 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 name='uniq_quiz_resource_version'
             )
         ]
-    
     def __str__(self):
         return self.title
-    
     @property
     def total_score(self):
         """
         计算试卷总分
-        
         Returns:
             Decimal: 试卷所有题目分值之和
         """
@@ -134,77 +106,59 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             total=Sum('question__score')
         )
         return result['total'] or 0
-    
     @property
     def question_count(self):
         """
         获取试卷题目数量
-        
         Returns:
             int: 试卷中的题目数量
         """
         return self.quiz_questions.count()
-    
     @property
     def has_subjective_questions(self):
         """
         检查试卷是否包含主观题
-        
         Returns:
             bool: 如果包含简答题则返回 True
         """
         return self.quiz_questions.filter(
             question__question_type='SHORT_ANSWER'
         ).exists()
-    
     @property
     def objective_question_count(self):
         """
         获取客观题数量
-        
         Returns:
             int: 客观题（单选/多选/判断）数量
         """
         return self.quiz_questions.exclude(
             question__question_type='SHORT_ANSWER'
         ).count()
-    
     @property
     def subjective_question_count(self):
         """
         获取主观题数量
-        
         Returns:
             int: 主观题（简答题）数量
         """
         return self.quiz_questions.filter(
             question__question_type='SHORT_ANSWER'
         ).count()
-    
     def get_ordered_questions(self):
         """
         获取按顺序排列的题目列表
-        
         注意：这是一个便捷查询方法，不包含业务逻辑。
         业务逻辑应在 Service 层处理。
-        
         Returns:
             QuerySet: 按 order 排序的 QuizQuestion 查询集
         """
         return self.quiz_questions.select_related('question').order_by('order')
-
-
 class QuizQuestion(TimestampMixin, models.Model):
     """
     试卷题目关联模型
-    
     实现试卷与题目的多对多关系，支持:
     - 题目顺序
     - 同一题目可被多个试卷引用
-    
-    Requirements:
-    - 6.2: 向试卷添加题目时允许从全平台题库选择已有题目
-    - 6.3: 在创建试卷时新建的题目纳入题库
     """
     quiz = models.ForeignKey(
         Quiz,
@@ -222,17 +176,14 @@ class QuizQuestion(TimestampMixin, models.Model):
         default=1,
         verbose_name='顺序'
     )
-    
     class Meta:
         db_table = 'lms_quiz_question'
         verbose_name = '试卷题目'
         verbose_name_plural = '试卷题目'
         unique_together = ['quiz', 'question']  # 同一试卷中题目不能重复
         ordering = ['quiz', 'order']
-    
     def __str__(self):
         return f"{self.quiz.title} - Q{self.order}: {self.question}"
-    
     def save(self, *args, **kwargs):
         """
         保存时自动设置顺序号

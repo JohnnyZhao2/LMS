@@ -1,6 +1,5 @@
 """
 Analytics views module.
-
 Split into:
 - student.py: Student dashboard views
 - mentor.py: Mentor/Department manager dashboard views
@@ -11,7 +10,6 @@ from .student import (
 from .mentor import (
     MentorDashboardView,
 )
-
 __all__ = [
     # Student views
     'StudentDashboardView',

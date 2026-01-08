@@ -1,11 +1,8 @@
 """
 Tag management views.
-
 Implements:
 - Tag CRUD
 - Tag listing with cascade filtering
-
-Requirements: 4.6
 """
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
@@ -13,27 +10,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-
 from core.exceptions import BusinessError, ErrorCodes
 from apps.knowledge.models import Knowledge, Tag, ResourceLineType
 from apps.knowledge.serializers import TagSerializer
-
-
 class TagListView(APIView):
     """
     统一标签列表端点
-    
     返回标签列表，支持按类型筛选、搜索和分页。
     支持级联筛选：根据已选条线类型，动态返回该条线下知识使用的系统/操作标签。
-    
-    Requirements: 4.6
     """
     permission_classes = [IsAuthenticated]
-    
     @extend_schema(
         summary='获取标签列表',
         description='''获取标签列表，支持按类型筛选和搜索。
-        
 级联筛选：
 - 当 tag_type=SYSTEM 且提供 line_type_id 时，返回该条线下知识使用的系统标签
 - 当 tag_type=OPERATION 且提供 line_type_id 时，返回该条线下知识使用的操作标签
@@ -54,7 +43,6 @@ class TagListView(APIView):
         search = request.query_params.get('search', '').strip()
         limit = int(request.query_params.get('limit', 50))
         active_only = request.query_params.get('active_only', 'true').lower() == 'true'
-        
         # 级联筛选
         if line_type_id and tag_type in ['SYSTEM', 'OPERATION']:
             knowledge_ids = ResourceLineType.objects.filter(
@@ -65,7 +53,6 @@ class TagListView(APIView):
                 is_deleted=False,
                 id__in=knowledge_ids
             )
-            
             if tag_type == 'SYSTEM':
                 tag_ids = knowledge_qs.filter(
                     system_tags__isnull=False
@@ -74,29 +61,21 @@ class TagListView(APIView):
                 tag_ids = knowledge_qs.filter(
                     operation_tags__isnull=False
                 ).values_list('operation_tags__id', flat=True).distinct()
-            
             queryset = Tag.objects.filter(id__in=tag_ids, tag_type=tag_type)
         else:
             queryset = Tag.objects.all()
-            
             if tag_type:
                 queryset = queryset.filter(tag_type=tag_type)
-        
         if active_only:
             queryset = queryset.filter(is_active=True)
-        
         if search:
             queryset = queryset.filter(name__icontains=search)
-        
         queryset = queryset.order_by('sort_order', 'name')[:limit]
         serializer = TagSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
 class TagCreateView(APIView):
     """创建标签端点（仅管理员）"""
     permission_classes = [IsAuthenticated]
-    
     @extend_schema(
         summary='创建标签',
         description='创建新标签（仅管理员）',
@@ -114,9 +93,7 @@ class TagCreateView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建标签'
             )
-        
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-

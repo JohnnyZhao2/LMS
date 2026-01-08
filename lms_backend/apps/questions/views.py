@@ -1,9 +1,6 @@
 """
 Views for question management.
-
 Implements question CRUD endpoints with ownership control.
-
-Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7
 Properties:
 - Property 13: 被引用题目删除保护
 - Property 15: 题目所有权编辑控制
@@ -13,9 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-
 from .serializers import (
     QuestionListSerializer,
     QuestionDetailSerializer,
@@ -23,20 +18,14 @@ from .serializers import (
     QuestionUpdateSerializer,
 )
 from .services import QuestionService
-
-
 class QuestionListCreateView(APIView):
     """
     Question list and create endpoint.
-    
-    Requirements: 5.1, 5.2
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = QuestionService()
-    
     @extend_schema(
         summary='获取题目列表',
         description='获取所有题目，支持类型、难度、标签筛选',
@@ -57,8 +46,6 @@ class QuestionListCreateView(APIView):
     def get(self, request):
         """
         Get question list.
-        
-        Requirements: 5.2 - 导师或室经理查看题库时展示所有题目
         """
         # 构建过滤条件
         filters = {}
@@ -72,11 +59,9 @@ class QuestionListCreateView(APIView):
             filters['line_type_id'] = int(request.query_params.get('line_type_id'))
         if request.query_params.get('status'):
             filters['status'] = request.query_params.get('status')
-        
         search = request.query_params.get('search')
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
-        
         # 使用Service获取题目列表
         result = self.service.get_list(
             filters=filters if filters else None,
@@ -86,10 +71,8 @@ class QuestionListCreateView(APIView):
             page_size=page_size,
             user=request.user
         )
-        
         # 序列化
         serializer = QuestionListSerializer(result['results'], many=True)
-        
         return Response({
             'count': result['count'],
             'results': serializer.data,
@@ -97,7 +80,6 @@ class QuestionListCreateView(APIView):
             'page_size': result['page_size'],
             'total_pages': result['total_pages']
         }, status=status.HTTP_200_OK)
-    
     @extend_schema(
         summary='创建题目',
         description='创建新题目（导师/室经理/管理员）',
@@ -112,40 +94,30 @@ class QuestionListCreateView(APIView):
     def post(self, request):
         """
         Create a new question.
-        
-        Requirements: 5.1 - 创建题目时存储题目内容、类型、答案和解析，并记录创建者
         """
         serializer = QuestionCreateSerializer(
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        
         # 使用Service创建题目
         question = self.service.create(
             data=serializer.validated_data,
             user=request.user
         )
-        
         response_serializer = QuestionDetailSerializer(question)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-
 class QuestionDetailView(APIView):
     """
     Question detail, update, delete endpoint.
-    
-    Requirements: 5.3, 5.4, 5.5, 5.7
     Properties:
     - Property 13: 被引用题目删除保护
     - Property 15: 题目所有权编辑控制
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = QuestionService()
-    
     @extend_schema(
         summary='获取题目详情',
         description='获取指定题目的详细信息',
@@ -160,7 +132,6 @@ class QuestionDetailView(APIView):
         question = self.service.get_by_id(pk, user=request.user)
         serializer = QuestionDetailSerializer(question)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
     @extend_schema(
         summary='更新题目',
         description='更新题目信息（仅创建者或管理员）',
@@ -176,30 +147,24 @@ class QuestionDetailView(APIView):
     def patch(self, request, pk):
         """
         Update question.
-        
-        Requirements: 5.3, 5.5
         Property 15: 题目所有权编辑控制
         """
         # 先获取题目对象用于验证
         question = self.service.get_by_id(pk, user=request.user)
-        
         serializer = QuestionUpdateSerializer(
             instance=question,
             data=request.data,
             partial=True
         )
         serializer.is_valid(raise_exception=True)
-        
         # 使用Service更新题目（权限检查在Service中完成）
         updated_question = self.service.update(
             pk=pk,
             data=serializer.validated_data,
             user=request.user
         )
-        
         response_serializer = QuestionDetailSerializer(updated_question)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-    
     @extend_schema(
         summary='删除题目',
         description='删除题目（仅创建者或管理员，被试卷引用时禁止删除）',
@@ -214,8 +179,6 @@ class QuestionDetailView(APIView):
     def delete(self, request, pk):
         """
         Delete question.
-        
-        Requirements: 5.4, 5.5, 5.7
         Property 13: 被引用题目删除保护
         Property 15: 题目所有权编辑控制
         """

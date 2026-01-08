@@ -1,39 +1,27 @@
 """
 Student analytics views.
-
 Implements:
-- Student dashboard API (Requirements: 15.1, 15.2, 15.3)
+- Student dashboard API
 """
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-
 from apps.analytics.serializers import (
     StudentPendingTaskSerializer,
     LatestKnowledgeSerializer,
     StudentDashboardSerializer,
 )
 from apps.analytics.services import StudentDashboardService
-
-
 class StudentDashboardView(APIView):
     """
     学员仪表盘 API 端点
-    
     GET /api/analytics/dashboard/student/
-    
-    Requirements:
-    - 15.1: 学员访问仪表盘时展示待办任务列表（学习/练习/考试）
-    - 15.2: 学员访问仪表盘时展示最新发布的知识文档
-    - 15.3: 学员点击待办任务时跳转到对应任务详情页
     """
     permission_classes = [IsAuthenticated]
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = StudentDashboardService()
-    
     @extend_schema(
         summary='获取学员仪表盘数据',
         description='获取学员仪表盘数据，包括待办任务、最新知识和任务统计',
@@ -46,21 +34,16 @@ class StudentDashboardView(APIView):
     )
     def get(self, request):
         user = request.user
-        
         pending_limit = int(request.query_params.get('pending_limit', 10))
         knowledge_limit = int(request.query_params.get('knowledge_limit', 5))
-        
         # 调用 Service
         pending_tasks = self.service.get_pending_tasks(user, pending_limit)
         latest_knowledge = self.service.get_latest_knowledge(knowledge_limit)
         task_summary = self.service.get_task_summary(user)
-        
         pending_tasks_data = StudentPendingTaskSerializer(pending_tasks, many=True).data
         latest_knowledge_data = LatestKnowledgeSerializer(latest_knowledge, many=True).data
-        
         return Response({
             'pending_tasks': pending_tasks_data,
             'latest_knowledge': latest_knowledge_data,
             'task_summary': task_summary
         })
-

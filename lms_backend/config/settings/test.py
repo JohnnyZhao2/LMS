@@ -3,9 +3,7 @@ Django test settings for LMS project.
 Uses a separate MySQL test database.
 """
 from .base import *
-
 DEBUG = True
-
 # Use separate MySQL test database
 DATABASES = {
     'default': {
@@ -26,12 +24,10 @@ DATABASES = {
         },
     }
 }
-
 # Faster password hashing for tests
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
-
 # Disable logging during tests
 LOGGING = {
     'version': 1,
