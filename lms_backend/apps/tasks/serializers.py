@@ -161,14 +161,9 @@ class TaskCreateSerializer(serializers.Serializer):
         """验证知识文档ID - 使用 TaskService"""
         if not value:
             return value
-        is_valid, draft_ids, not_found_ids = TaskService.validate_knowledge_ids(value)
+        is_valid, invalid_ids = TaskService.validate_knowledge_ids(value)
         if not is_valid:
-            errors = []
-            if draft_ids:
-                errors.append(f'以下知识文档为草稿状态，无法用于任务分配: {draft_ids}')
-            if not_found_ids:
-                errors.append(f'知识文档不存在: {not_found_ids}')
-            raise serializers.ValidationError('; '.join(errors) if errors else '知识文档不可用')
+            raise serializers.ValidationError(f'知识文档不可用: {invalid_ids}')
         return value
     def validate_quiz_ids(self, value):
         """验证试卷ID - 使用 TaskService"""
@@ -433,10 +428,10 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         result = []
         for tk in task_knowledge_items:
             progress = progress_map.get(tk.id)
-            knowledge = tk.knowledge
+            knowledge = tk.get_versioned_knowledge()
             item = {
                 'id': tk.id,
-                'knowledge_id': knowledge.id,
+                'knowledge_id': tk.knowledge_id,
                 'title': knowledge.title,
                 'knowledge_type': knowledge.knowledge_type,
                 'knowledge_type_display': knowledge.get_knowledge_type_display(),
@@ -478,15 +473,15 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
             submission_map[s.quiz_id].append(s)
         result = []
         for tq in task_quiz_items:
-            quiz = tq.quiz
-            quiz_subs = submission_map.get(quiz.id, [])
+            quiz = tq.get_versioned_quiz()
+            quiz_subs = submission_map.get(tq.quiz_id, [])
             is_completed = len(quiz_subs) > 0
             best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
             latest_sub = max(quiz_subs, key=lambda x: x.submitted_at) if is_completed else None
             item = {
                 'id': tq.id,
-                'quiz': quiz.id, # 保持与管理端一致，返回 quiz ID
-                'quiz_id': quiz.id,
+                'quiz': tq.quiz_id, # 保持与管理端一致，返回 quiz ID
+                'quiz_id': tq.quiz_id,
                 'quiz_title': quiz.title,
                 'quiz_type': quiz.quiz_type,
                 'quiz_type_display': quiz.get_quiz_type_display(),
@@ -513,8 +508,3 @@ class CompleteKnowledgeLearningSerializer(serializers.Serializer):
         if not Knowledge.objects.filter(id=value, is_deleted=False).exists():
             raise serializers.ValidationError('知识文档不存在')
         return value
-# 保留旧的命名以保持向后兼容（但实际上会重定向到新的）
-LearningTaskCreateSerializer = TaskCreateSerializer
-PracticeTaskCreateSerializer = TaskCreateSerializer
-ExamTaskCreateSerializer = TaskCreateSerializer
-StudentLearningTaskDetailSerializer = StudentTaskDetailSerializer

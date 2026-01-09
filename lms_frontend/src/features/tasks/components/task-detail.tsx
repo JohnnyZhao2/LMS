@@ -361,7 +361,15 @@ export const TaskDetail: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex-shrink-0">
+                      <div className="flex-shrink-0 flex flex-col gap-2">
+                        {isStudent && (
+                          <Button
+                            className="w-full md:w-auto bg-white hover:bg-[#F3F4F6] text-[#111827] border-2 border-[#111827] hover:scale-105 transition-all font-semibold"
+                            onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`)}
+                          >
+                            查看内容
+                          </Button>
+                        )}
                         {isStudent && (
                           item.isCompleted ? (
                             <div className="px-4 py-2 rounded-md bg-[#D1FAE5] text-[#10B981] font-semibold text-sm flex items-center gap-2">

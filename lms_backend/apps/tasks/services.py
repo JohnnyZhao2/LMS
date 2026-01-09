@@ -378,9 +378,8 @@ class TaskService(BaseService):
     @staticmethod
     def _validate_published_resources(
         resource_ids: List[int],
-        repository: Any,
-        check_draft: bool = False
-    ) -> Tuple[bool, List[int], List[int]]:
+        repository: Any
+    ) -> Tuple[bool, List[int]]:
         """
         通用的已发布资源验证方法
         Args:
@@ -391,7 +390,7 @@ class TaskService(BaseService):
             Tuple of (is_valid, draft_ids_or_empty, not_found_ids)
         """
         if not resource_ids:
-            return True, [], []
+            return True, []
         # 通过Repository获取已发布的资源
         published = repository.model.objects.filter(
             id__in=resource_ids,
@@ -401,22 +400,10 @@ class TaskService(BaseService):
         published_ids = set(published.values_list('id', flat=True))
         invalid_ids = set(resource_ids) - published_ids
         if not invalid_ids:
-            return True, [], []
-        # 如果检查草稿版本（Knowledge特有）
-        if check_draft:
-            draft = repository.model.objects.filter(
-                id__in=invalid_ids,
-                is_deleted=False,
-                status='DRAFT'
-            )
-            draft_ids = list(draft.values_list('id', flat=True))
-            not_found_ids = list(invalid_ids - set(draft_ids))
-            return False, draft_ids, not_found_ids
-        else:
-            # Quiz和User不需要检查草稿
-            return False, [], list(invalid_ids)
+            return True, []
+        return False, list(invalid_ids)
     @staticmethod
-    def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int], List[int]]:
+    def validate_knowledge_ids(knowledge_ids: List[int]) -> Tuple[bool, List[int]]:
         """
         Validate knowledge document IDs.
         Args:
@@ -427,8 +414,7 @@ class TaskService(BaseService):
         knowledge_repo = KnowledgeRepository()
         return TaskService._validate_published_resources(
             knowledge_ids,
-            knowledge_repo,
-            check_draft=True
+            knowledge_repo
         )
     @staticmethod
     def validate_quiz_ids(quiz_ids: List[int]) -> Tuple[bool, List[int]]:
@@ -440,10 +426,9 @@ class TaskService(BaseService):
             Tuple of (is_valid, invalid_ids)
         """
         quiz_repo = QuizRepository()
-        is_valid, _, invalid_ids = TaskService._validate_published_resources(
+        is_valid, invalid_ids = TaskService._validate_published_resources(
             quiz_ids,
-            quiz_repo,
-            check_draft=False
+            quiz_repo
         )
         return is_valid, invalid_ids
     @staticmethod

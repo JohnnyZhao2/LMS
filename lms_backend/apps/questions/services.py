@@ -123,6 +123,9 @@ class QuestionService(BaseService):
         line_type_id = data.pop('line_type_id', None)
         # 3. 创建题目
         question = self.repository.create(**data)
+        Question.objects.filter(
+            resource_uuid=question.resource_uuid
+        ).exclude(pk=question.pk).update(is_current=False)
         # 4. 设置条线类型
         if line_type_id:
             self._set_line_type(question, line_type_id)
@@ -333,9 +336,9 @@ class QuestionService(BaseService):
         Args:
             data: 题目数据字典（会被修改）
         """
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = Question.next_version_number(data.get('resource_uuid'))
+        data.pop('resource_uuid', None)
+        data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = 1
     def _create_new_version(
         self,
         source: Question,
@@ -378,4 +381,33 @@ class QuestionService(BaseService):
         Question.objects.filter(
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
+        self._bump_related_quiz_versions(source, new_question, user)
         return new_question
+
+    def _bump_related_quiz_versions(
+        self,
+        source: Question,
+        new_question: Question,
+        user
+    ) -> None:
+        """题目更新后，自动生成包含该题目的试卷新版本。"""
+        from apps.quizzes.models import Quiz
+        from apps.quizzes.services import QuizService
+        quiz_service = QuizService()
+        quizzes = Quiz.objects.filter(
+            is_current=True,
+            is_deleted=False,
+            quiz_questions__question_id=source.id
+        ).distinct()
+        for quiz in quizzes:
+            relations = quiz.quiz_questions.select_related('question').order_by('order')
+            updated_question_ids = [
+                (new_question.id if relation.question.resource_uuid == source.resource_uuid else relation.question_id)
+                for relation in relations
+            ]
+            quiz_service._create_new_version(
+                quiz,
+                {},
+                user,
+                question_ids=updated_question_ids
+            )

@@ -169,26 +169,6 @@ class Submission(TimestampMixin, models.Model):
     def all_subjective_graded(self):
         """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
-    def submit(self, is_practice=False):
-        """
-        [已废弃] 提交答卷
-        此方法已迁移到 SubmissionService.submit()，请使用 Service 层方法。
-        此方法保留仅为向后兼容，将在未来版本中移除。
-        Args:
-            is_practice: 是否为练习模式（练习可多次提交，考试只能提交一次）
-        """
-        import warnings
-        warnings.warn(
-            'Submission.submit() 已废弃，请使用 SubmissionService.submit()',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        # 委托给 Service 层
-        from .services import SubmissionService
-        service = SubmissionService()
-        updated = service.submit(self, is_practice=is_practice)
-        # 刷新当前实例
-        self.refresh_from_db()
     def _auto_grade_objective_questions(self):
         """
         自动评分客观题

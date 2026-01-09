@@ -24,7 +24,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { DataTablePagination } from "./data-table-pagination"
+import { cn } from "@/lib/utils"
+import { Pagination } from "@/components/ui/pagination"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -69,7 +70,7 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
+    getPaginationRowModel: getPaginationRowModel(), // Always provide row model for client-side pagination support
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
@@ -99,67 +100,82 @@ export function DataTable<TData, TValue>({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border-0 bg-white shadow-none">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
+    <div className="flex-1 flex flex-col mt-4">
+      <div className="flex-1 overflow-auto">
+        <div className="rounded-lg bg-white shadow-none border-0">
+          <Table className="table-auto">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
+                  {headerGroup.headers.map((header, index) => (
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        index === 0
+                          ? 'rounded-tl-lg'
+                          : index === headerGroup.headers.length - 1
+                            ? 'rounded-tr-lg'
+                            : ''
                       )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => onRowClick?.(row.original)}
-                  className={onRowClick ? `cursor-pointer hover:bg-[#F3F4F6] ${rowClassName || ''}` : rowClassName}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-[#6B7280]"
-                >
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => onRowClick?.(row.original)}
+                    className={onRowClick ? `cursor-pointer hover:bg-[#F9FAFB] ${rowClassName || ''}` : rowClassName}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-[#6B7280]"
+                  >
+                    暂无数据
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       {pagination && (
-        <DataTablePagination
-          pageIndex={pagination.pageIndex}
-          pageSize={pagination.pageSize}
-          pageCount={pagination.pageCount}
-          onPageChange={pagination.onPageChange}
-          onPageSizeChange={pagination.onPageSizeChange}
-          totalRows={table.getFilteredRowModel().rows.length}
-        />
+        <div className="pt-6 mt-4 border-t border-gray-100 bg-white sticky bottom-0 z-10">
+          <Pagination
+            current={pagination.pageIndex + 1}
+            total={pagination.pageCount * pagination.pageSize}
+            pageSize={pagination.pageSize}
+            onChange={(page) => pagination.onPageChange(page - 1)}
+            showSizeChanger
+            onShowSizeChange={(_, size) => pagination.onPageSizeChange(size)}
+            showTotal={(total) => `共 ${total} 条记录`}
+            className="px-6"
+          />
+        </div>
       )}
     </div>
-  )
+  );
 }

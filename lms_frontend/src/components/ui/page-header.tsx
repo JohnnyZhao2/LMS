@@ -23,8 +23,6 @@ export interface PageHeaderProps {
   icon?: React.ReactNode;
   /** 自定义类名 */
   className?: string;
-  /** 是否应用渐进式入场动画 */
-  reveal?: boolean;
 }
 
 /**
@@ -41,12 +39,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   extra,
   icon,
   className = '',
-  reveal = true,
 }) => {
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 px-2",
-      reveal && "reveal-item",
+      "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10",
       className
     )}>
       <div className="flex flex-col gap-4">

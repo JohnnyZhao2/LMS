@@ -17,6 +17,7 @@ from rest_framework import serializers as drf_serializers
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from apps.knowledge.models import Knowledge, ResourceLineType
+from apps.tasks.models import TaskKnowledge, TaskAssignment
 from apps.knowledge.services import KnowledgeService
 from apps.knowledge.serializers import (
     KnowledgeListSerializer,
@@ -302,6 +303,48 @@ class StudentKnowledgeListView(APIView):
             serializer = KnowledgeListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
         serializer = KnowledgeListSerializer(knowledge_list, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class StudentTaskKnowledgeDetailView(APIView):
+    """学员任务知识详情端点 - 允许访问任务锁定版本"""
+    permission_classes = [IsAuthenticated]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = KnowledgeService()
+
+    @extend_schema(
+        summary='获取任务内知识详情',
+        description='根据任务知识关联ID获取知识详情，返回任务锁定版本。',
+        responses={
+            200: KnowledgeDetailSerializer,
+            403: OpenApiResponse(description='无权访问'),
+            404: OpenApiResponse(description='知识文档不存在'),
+        },
+        tags=['知识管理']
+    )
+    def get(self, request, task_knowledge_id):
+        task_knowledge = TaskKnowledge.objects.select_related('task', 'knowledge').filter(
+            id=task_knowledge_id
+        ).first()
+        if not task_knowledge:
+            return Response(
+                {'code': ErrorCodes.RESOURCE_NOT_FOUND, 'message': '任务知识不存在'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not request.user.is_admin:
+            has_assignment = TaskAssignment.objects.filter(
+                task_id=task_knowledge.task_id,
+                assignee=request.user
+            ).exists()
+            if not has_assignment:
+                return Response(
+                    {'code': ErrorCodes.PERMISSION_DENIED, 'message': '无权访问该知识文档'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        knowledge = task_knowledge.get_versioned_knowledge()
+        serializer = KnowledgeDetailSerializer(knowledge)
         return Response(serializer.data, status=status.HTTP_200_OK)
 class KnowledgeIncrementViewCountView(APIView):
     """Increment knowledge view count endpoint."""

@@ -7,6 +7,7 @@ Implements:
 """
 import uuid
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -225,6 +226,11 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             models.UniqueConstraint(
                 fields=['resource_uuid', 'version_number'],
                 name='uniq_knowledge_resource_version'
+            ),
+            models.UniqueConstraint(
+                fields=['resource_uuid'],
+                condition=Q(is_current=True),
+                name='uniq_knowledge_current'
             )
         ]
     def __str__(self):

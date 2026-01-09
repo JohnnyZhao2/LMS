@@ -1,26 +1,37 @@
+/**
+ * 用户管理页面 - 三栏布局
+ * Sidebar（视图切换 + 筛选）| 用户列表（DataTable）| 详情面板
+ */
 import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
-  Users,
   Plus,
+  Search,
+  MoreVertical,
   Pencil,
   Lock,
   Ban,
   CheckCircle,
-  Search,
   ShieldCheck,
-  UserCheck,
-  Building2,
   RefreshCw,
-  MoreVertical
+  Building2,
 } from "lucide-react"
-import { useUsers, useDepartments } from "../api/get-users"
+import { useUsers, useDepartments, useMentors } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
-import { DataTable } from "@/components/ui/data-table/data-table"
+import { UserSidebar, type ViewMode } from "./user-sidebar"
+import { Users as UsersIcon } from "lucide-react"
+import {
+  DataTable,
+  CellWithAvatar,
+  CellTags,
+  CellIconText,
+  CellSmallAvatar,
+  CellStatus,
+} from "@/components/ui/data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { ContentPanel } from "@/components/ui"
 import {
   ConfirmDialog,
   Dialog,
@@ -37,18 +48,26 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  PageHeader,
+} from "@/components/ui"
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
-import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
-import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
 
 export const UserList: React.FC = () => {
+  // 视图模式和筛选状态
+  const [viewMode, setViewMode] = React.useState<ViewMode>('department')
+  const [selectedHierarchyId, setSelectedHierarchyId] = React.useState<number | 'all'>('all')
   const [search, setSearch] = React.useState("")
-  const [searchInput, setSearchInput] = React.useState("")
-  const [departmentFilter, setDepartmentFilter] = React.useState<number | undefined>(undefined)
+
+  // 分页状态
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+
+  // 用户操作状态
   const [formModalOpen, setFormModalOpen] = React.useState(false)
   const [editingUserId, setEditingUserId] = React.useState<number | undefined>()
   const [resetPasswordDialog, setResetPasswordDialog] = React.useState<{
@@ -60,22 +79,33 @@ export const UserList: React.FC = () => {
     password?: string
   }>({ open: false })
 
-  const { data: departments } = useDepartments()
+  // API Hooks
+  const { data: departments = [] } = useDepartments()
+  const { data: mentors = [] } = useMentors()
+  const departmentFilter = viewMode === 'department' && selectedHierarchyId !== 'all'
+    ? selectedHierarchyId as number
+    : undefined
   const { data, isLoading, refetch } = useUsers({ search, departmentId: departmentFilter })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
   const resetPassword = useResetPassword()
 
-  // 统计逻辑
-  const stats = React.useMemo(() => {
-    const users = data || []
-    return {
-      total: users.length,
-      active: users.filter(u => u.is_active).length,
-      admins: users.filter(u => u.roles.some(r => r.code === 'ADMIN')).length,
-      new: users.filter(u => dayjs(u.created_at).isAfter(dayjs().subtract(7, 'day'))).length
+  // 筛选变化时重置页码
+  React.useEffect(() => {
+    setPagination(prev => ({ ...prev, pageIndex: 0 }))
+  }, [search, viewMode, selectedHierarchyId])
+
+  // 根据视图模式过滤用户列表
+  const filteredUsers = React.useMemo(() => {
+    let users = data || []
+
+    // 师徒模式：按导师筛选
+    if (viewMode === 'mentorship' && selectedHierarchyId !== 'all') {
+      users = users.filter(u => u.mentor?.id === selectedHierarchyId)
     }
-  }, [data])
+
+    return users
+  }, [data, viewMode, selectedHierarchyId])
 
   const handleToggleActive = async (user: UserListType) => {
     try {
@@ -103,317 +133,207 @@ export const UserList: React.FC = () => {
     }
   }
 
-  const handleSearch = () => {
-    setSearch(searchInput)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch()
+  // 角色颜色映射
+  const getRoleColor = (code: string) => {
+    const colorMap: Record<string, { bg: string; color: string }> = {
+      ADMIN: { bg: '#FEE2E2', color: '#DC2626' },
+      MENTOR: { bg: '#FEF3C7', color: '#F59E0B' },
+      DEPT_MANAGER: { bg: '#EDE9FE', color: '#7C3AED' },
+      ROOM_MANAGER: { bg: '#EDE9FE', color: '#7C3AED' },
+      TEAM_MANAGER: { bg: '#DBEAFE', color: '#3B82F6' },
     }
+    return colorMap[code] || { bg: '#DBEAFE', color: '#3B82F6' }
   }
 
+  // DataTable 列定义 - 使用共用 Cell 组件
   const columns: ColumnDef<UserListType>[] = [
     {
-      id: "user",
       header: "用户信息",
+      id: "user",
+      size: 400, // 给一个较大的基础参考值，让它倾向于占据更多空间
       cell: ({ row }) => (
-        <div className="flex items-center gap-4 py-2">
-          <div className="relative">
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-black text-xl transition-transform duration-200 hover:scale-110"
-              style={{
-                backgroundColor: "#3B82F6",
-              }}
-            >
-              {row.original.username?.charAt(0) || "?"}
-            </div>
-            <div className={cn(
-              "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white",
-              row.original.is_active ? "bg-[#10B981]" : "bg-[#9CA3AF]"
-            )} />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-lg text-[#111827] group-hover:text-[#3B82F6] transition-colors">
-              {row.original.username}
-            </span>
-            <span className="text-xs font-bold text-[#6B7280] uppercase tracking-wider flex items-center gap-1">
-              {row.original.employee_id || 'NO ID'}
-            </span>
-          </div>
-        </div>
+        <CellWithAvatar
+          name={row.original.username}
+          subtitle={row.original.employee_id || 'NO ID'}
+        />
       ),
     },
     {
-      id: "roles",
       header: "权限角色",
+      id: "roles",
       cell: ({ row }) => (
-        <div className="flex flex-wrap gap-2">
-          {row.original.roles.map((role: Role) => (
-            <Badge
-              key={role.code}
-              className={cn(
-                "border-0 shadow-none",
-                role.code === 'ADMIN' ? "bg-[#FEE2E2] text-[#DC2626]" :
-                  role.code === 'MENTOR' ? "bg-[#DBEAFE] text-[#3B82F6]" :
-                    "bg-[#DBEAFE] text-[#3B82F6]"
-              )}
-            >
-              {role.name}
-            </Badge>
-          ))}
-        </div>
+        <CellTags
+          tags={row.original.roles.map((role: Role) => ({
+            key: role.code,
+            label: role.name,
+            ...getRoleColor(role.code),
+          }))}
+        />
       ),
     },
     {
-      id: "department",
       header: "所属部门",
+      id: "department",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-[#F3F4F6] text-[#6B7280]">
-            <Building2 className="w-4 h-4" />
-          </div>
-          <span className={cn(
-            "text-sm font-bold",
-            row.original.department ? "text-[#111827]" : "text-[#6B7280] italic"
-          )}>
-            {row.original.department?.name || "未分配"}
-          </span>
-        </div>
+        <CellIconText
+          icon={<Building2 className="w-4 h-4" />}
+          text={row.original.department?.name || "未分配"}
+        />
       ),
     },
     {
-      id: "mentor",
       header: "指导老师",
+      id: "mentor",
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-[#9CA3AF] italic text-xs font-bold uppercase tracking-wider">未分配</span>
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#E0F2FE] text-[#0EA5E9] flex items-center justify-center text-xs font-black border-0">
-              {mentor.username?.charAt(0).toUpperCase()}
-            </div>
-            <span className="text-sm font-bold text-[#111827]">{mentor.username}</span>
-          </div>
-        )
+        if (!mentor) return <span className="text-[#9CA3AF] italic text-xs">未分配</span>
+        return <CellSmallAvatar name={mentor.username} />
       },
     },
     {
-      id: "is_active",
       header: "状态",
+      id: "status",
       cell: ({ row }) => (
-        <Badge
-          variant={row.original.is_active ? "success" : "secondary"}
-          className={cn(
-            "border-0 shadow-none",
-            row.original.is_active
-              ? "bg-[#D1FAE5] text-[#10B981]"
-              : "bg-[#F3F4F6] text-[#6B7280]"
-          )}
-        >
-          {row.original.is_active ? "活跃" : "已停用"}
-        </Badge>
+        <CellStatus isActive={row.original.is_active} />
       ),
     },
     {
-      id: "actions",
       header: "操作",
+      id: "actions",
       cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-md hover:bg-[#F3F4F6] hover:text-[#3B82F6] shadow-none">
-              <MoreVertical className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 rounded-lg p-2 border-0 bg-white shadow-none">
-            <DropdownMenuLabel className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider px-4 py-2">账号控制台</DropdownMenuLabel>
+        <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-[#E5E7EB]">
+              <DropdownMenuLabel className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider px-3 py-2">
+                账号控制台
+              </DropdownMenuLabel>
 
-            <div className="space-y-1">
               <DropdownMenuItem
-                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#F3F4F6] focus:text-[#3B82F6] cursor-pointer transition-colors"
+                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                 onClick={() => {
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
                 }}
               >
-                <Pencil className="mr-3 h-4 w-4" /> 编辑资料
+                <Pencil className="mr-2 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="rounded-md px-4 py-3 font-medium text-[#111827] focus:bg-[#F3F4F6] focus:text-[#3B82F6] cursor-pointer transition-colors"
+                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                 onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
               >
-                <Lock className="mr-3 h-4 w-4" /> 重置密码
+                <Lock className="mr-2 h-4 w-4" /> 重置密码
               </DropdownMenuItem>
-            </div>
 
-            <DropdownMenuSeparator className="bg-[#E5E7EB] my-2 mx-4" />
+              <DropdownMenuSeparator className="my-1" />
 
-            <DropdownMenuItem
-              className={cn(
-                "rounded-md px-4 py-3 font-medium cursor-pointer transition-colors",
-                row.original.is_active
-                  ? "text-[#DC2626] focus:bg-[#FEE2E2] focus:text-[#DC2626]"
-                  : "text-[#10B981] focus:bg-[#D1FAE5] focus:text-[#10B981]"
-              )}
-              onClick={() => handleToggleActive(row.original)}
-            >
-              {row.original.is_active ? (
-                <><Ban className="mr-3 h-4 w-4" /> 停用账号</>
-              ) : (
-                <><CheckCircle className="mr-3 h-4 w-4" /> 启用账号</>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
+                  row.original.is_active
+                    ? "text-[#DC2626] focus:bg-[#FEE2E2]"
+                    : "text-[#10B981] focus:bg-[#D1FAE5]"
+                )}
+                onClick={() => handleToggleActive(row.original)}
+              >
+                {row.original.is_active ? (
+                  <><Ban className="mr-2 h-4 w-4" /> 停用账号</>
+                ) : (
+                  <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     },
   ]
 
   return (
-    <div className="space-y-8 pb-20 min-h-[calc(100vh-8rem)]">
+    <div className="space-y-10 animate-fadeIn pb-20">
       <PageHeader
-        title="用户管理"
-        subtitle="Accounts & Permissions"
-        icon={<Users />}
+        title="用户中心"
+        subtitle="组织架构与权限管理"
+        icon={<UsersIcon />}
         extra={
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
-              className="h-14 px-6 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#3B82F6] transition-all duration-200 shadow-none"
+              variant="outline"
+              className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
               onClick={() => refetch()}
             >
-              <RefreshCw className="h-5 w-5 mr-2" />
-              刷新
+              <RefreshCw className="h-4 w-4" />
+              刷新同步
             </Button>
             <Button
               onClick={() => {
                 setEditingUserId(undefined)
                 setFormModalOpen(true)
               }}
-              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
+              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
             >
               <Plus className="mr-2 h-5 w-5" />
-              新增用户
+              快速录入
             </Button>
           </div>
         }
       />
 
-      {/* 统计网格 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="活跃用户"
-          value={stats.active}
-          icon={UserCheck}
-          color="#3B82F6"
-          gradient=""
-          delay="stagger-delay-1"
+      <div className="flex items-start gap-8">
+        {/* Left Sidebar */}
+        <UserSidebar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          departments={departments}
+          mentors={mentors}
+          selectedId={selectedHierarchyId}
+          onSelect={setSelectedHierarchyId}
         />
-        <StatCard
-          title="管理员"
-          value={stats.admins}
-          icon={ShieldCheck}
-          color="#3B82F6"
-          gradient=""
-          delay="stagger-delay-2"
-        />
-        <StatCard
-          title="总用户数"
-          value={stats.total}
-          icon={Users}
-          color="#F59E0B"
-          gradient=""
-          delay="stagger-delay-3"
-        />
-        <StatCard
-          title="近一周新增"
-          value={stats.new}
-          icon={Plus}
-          color="#10B981"
-          gradient=""
-          delay="stagger-delay-4"
-        />
-      </div>
 
-      {/* 列表主体 */}
-      <ContentPanel className="overflow-hidden">
-        {/* 搜索和筛选 */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
-          {/* 部门快捷筛选 */}
-          <div className="flex items-center gap-2 p-1 bg-[#F3F4F6] rounded-lg">
-            <Button
-              variant="ghost"
-              onClick={() => setDepartmentFilter(undefined)}
-              className={cn(
-                "h-10 px-6 rounded-md font-semibold transition-all duration-200 shadow-none",
-                departmentFilter === undefined
-                  ? "bg-white text-[#3B82F6]"
-                  : "text-[#6B7280] hover:text-[#111827]"
-              )}
-            >
-              全部
-            </Button>
-            {departments?.map((dept) => (
-              <Button
-                key={dept.id}
-                variant="ghost"
-                onClick={() => setDepartmentFilter(dept.id)}
-                className={cn(
-                  "h-10 px-6 rounded-md font-semibold transition-all duration-200 shadow-none",
-                  departmentFilter === dept.id
-                    ? "bg-white text-[#3B82F6]"
-                    : "text-[#6B7280] hover:text-[#111827]"
-                )}
-              >
-                {dept.name}
-              </Button>
-            ))}
-          </div>
-
-          {/* 搜索框 */}
-          <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col gap-6 min-w-0">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Search */}
+            <div className="relative flex-1 max-w-lg group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
               <Input
-                placeholder="搜索姓名、工号、电子邮箱..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="h-14 pl-12 pr-4 bg-[#F3F4F6] rounded-md border-0 focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
+                placeholder="检索姓名、工号、部位..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-14 h-14 bg-white border-2 border-[#F3F4F6] rounded-md focus:border-[#3B82F6] text-base font-medium shadow-none transition-all"
               />
             </div>
-            <Button
-              onClick={handleSearch}
-              className="h-14 px-8 rounded-md font-semibold bg-[#3B82F6] text-white hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
-            >
-              搜索
-            </Button>
           </div>
 
-          {/* 用户计数 */}
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block mb-1">Total Users</span>
-            <span className="text-2xl font-bold text-[#111827]">{data?.length || 0}</span>
-          </div>
+          {/* User List - 使用恢复的分页配置 */}
+          <ContentPanel padding="md" className="overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={filteredUsers}
+              isLoading={isLoading}
+              pagination={{
+                pageIndex: pagination.pageIndex,
+                pageSize: pagination.pageSize,
+                pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+                onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
+                onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
+              }}
+              rowClassName="group cursor-pointer hover:bg-[#F9FAFB] transition-colors"
+              onRowClick={(row) => {
+                setEditingUserId(row.id)
+                setFormModalOpen(true)
+              }}
+            />
+          </ContentPanel>
         </div>
+      </div>
 
-        {/* 表格容器 */}
-        <div className="overflow-hidden rounded-lg">
-          <DataTable
-            columns={columns}
-            data={data || []}
-            isLoading={isLoading}
-            className="border-none"
-            rowClassName="group cursor-pointer"
-            onRowClick={(row) => {
-              setEditingUserId(row.id)
-              setFormModalOpen(true)
-            }}
-          />
-        </div>
-      </ContentPanel>
-
-      {/* 用户表单弹窗 */}
+      {/* User Form Modal */}
       <UserForm
         open={formModalOpen}
         userId={editingUserId}
@@ -426,20 +346,20 @@ export const UserList: React.FC = () => {
         }}
       />
 
-      {/* 重置密码确认对话框 */}
+      {/* Reset Password Confirm Dialog */}
       <ConfirmDialog
         open={resetPasswordDialog.open}
         onOpenChange={(open) => setResetPasswordDialog({ open, userId: resetPasswordDialog.userId })}
         title="重置密码？"
         description={
           <>
-            系统将生成一个<span className="text-[#3B82F6] font-semibold">临时密码</span>。<br />
+            系统将生成一个<span className="text-blue-600 font-semibold">临时密码</span>。<br />
             用户下次登录时必须修改。
           </>
         }
         icon={<Lock className="h-10 w-10" />}
-        iconBgColor="bg-[#DBEAFE]"
-        iconColor="text-[#3B82F6]"
+        iconBgColor="bg-blue-100"
+        iconColor="text-blue-600"
         confirmText="确认重置"
         cancelText="取消"
         confirmVariant="destructive"
@@ -447,41 +367,39 @@ export const UserList: React.FC = () => {
         isConfirming={resetPassword.isPending}
       />
 
-      {/* 临时密码显示对话框 */}
+      {/* Temp Password Dialog */}
       <Dialog
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-lg max-w-md p-10 border-0 bg-white shadow-none">
+        <DialogContent className="rounded-lg max-w-md p-8 border border-gray-200">
           <DialogHeader>
-            <div className="w-20 h-20 bg-[#D1FAE5] text-[#10B981] rounded-full flex items-center justify-center mb-8 mx-auto">
-              <ShieldCheck className="h-10 w-10" />
+            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <ShieldCheck className="h-8 w-8" />
             </div>
-            <DialogTitle className="text-2xl font-bold text-[#111827] mb-3 text-center tracking-tight">重置成功</DialogTitle>
-            <DialogDescription className="text-[#6B7280] font-medium text-center text-base">
-              请务必将此密码<span className="text-[#111827] font-semibold">安全地</span>转交给用户
+            <DialogTitle className="text-xl font-bold text-gray-900 text-center">重置成功</DialogTitle>
+            <DialogDescription className="text-gray-500 text-center text-sm">
+              请务必将此密码<span className="text-gray-900 font-semibold">安全地</span>转交给用户
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-8 relative group cursor-pointer" onClick={() => {
+          <div className="mt-6 cursor-pointer" onClick={() => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="relative bg-[#F3F4F6] rounded-lg p-8 text-center transition-all duration-200 hover:scale-[1.02] shadow-none">
-              <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3 block">临时密码</span>
-              <code className="text-3xl font-bold text-[#3B82F6] tracking-widest font-mono">
+            <div className="bg-gray-50 rounded-lg p-6 text-center hover:bg-gray-100 transition-colors">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">临时密码</span>
+              <code className="text-2xl font-bold text-blue-600 tracking-widest font-mono">
                 {tempPasswordDialog.password}
               </code>
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">
-                点击复制
-              </div>
+              <div className="mt-3 text-xs font-medium text-gray-400">点击复制</div>
             </div>
           </div>
 
-          <DialogFooter className="mt-10">
+          <DialogFooter className="mt-6">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-[#111827] text-white rounded-md h-14 font-semibold hover:bg-[#374151] hover:scale-105 transition-all duration-200 shadow-none"
+              className="w-full bg-gray-900 text-white rounded-lg h-11 font-semibold hover:bg-gray-800"
             >
               完成并关闭
             </Button>

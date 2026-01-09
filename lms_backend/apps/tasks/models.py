@@ -262,12 +262,14 @@ class TaskKnowledge(TimestampMixin, models.Model):
         verbose_name='知识文档'
     )
     resource_uuid = models.UUIDField(
-        default=uuid.uuid4,
+        null=True,
+        blank=True,
         editable=False,
         verbose_name='知识资源ID'
     )
     version_number = models.PositiveIntegerField(
-        default=1,
+        null=True,
+        blank=True,
         verbose_name='知识版本号'
     )
     order = models.PositiveIntegerField(
@@ -323,12 +325,14 @@ class TaskQuiz(TimestampMixin, models.Model):
         verbose_name='试卷'
     )
     resource_uuid = models.UUIDField(
-        default=uuid.uuid4,
+        null=True,
+        blank=True,
         editable=False,
         verbose_name='试卷资源ID'
     )
     version_number = models.PositiveIntegerField(
-        default=1,
+        null=True,
+        blank=True,
         verbose_name='试卷版本号'
     )
     order = models.PositiveIntegerField(

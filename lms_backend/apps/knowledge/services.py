@@ -81,9 +81,9 @@ class KnowledgeService(BaseService):
         data['created_by'] = user
         data['updated_by'] = user
         data['is_current'] = True
-        # 处理版本号
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
+        # 处理版本号（创建只允许新资源）
+        data.pop('resource_uuid', None)
+        data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
         # 提取标签数据
         line_type_id = data.pop('line_type_id', None)
@@ -91,6 +91,10 @@ class KnowledgeService(BaseService):
         operation_tag_ids = data.pop('operation_tag_ids', [])
         # 3. 创建知识
         knowledge = self.repository.create(**data)
+        self.repository.unset_current_flag_for_others(
+            resource_uuid=knowledge.resource_uuid,
+            exclude_pk=knowledge.pk
+        )
         # 4. 设置标签
         self._set_tags(knowledge, line_type_id, system_tag_ids, operation_tag_ids)
         return knowledge

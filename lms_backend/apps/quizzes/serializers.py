@@ -179,18 +179,6 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         if invalid_ids:
             raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
         return value
-    def create(self, validated_data):
-        """
-        创建试卷
-        注意：此方法已废弃，Views 现在使用 QuizService.create()。
-        保留此方法仅用于向后兼容，实际业务逻辑在 Service 层处理。
-        """
-        # 注意：Views 不再调用此方法，而是直接使用 QuizService
-        # 如果确实需要调用，应该通过 Service 层处理
-        raise NotImplementedError(
-            '请使用 QuizService.create() 来创建试卷。'
-            '此方法已废弃，业务逻辑已迁移到 Service 层。'
-        )
 class QuizUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
@@ -231,18 +219,6 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
         if invalid_ids:
             raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
         return value
-    def update(self, instance, validated_data):
-        """
-        更新试卷
-        注意：此方法已废弃，Views 现在使用 QuizService.update()。
-        保留此方法仅用于向后兼容，实际业务逻辑在 Service 层处理。
-        """
-        # 注意：Views 不再调用此方法，而是直接使用 QuizService
-        # 如果确实需要调用，应该通过 Service 层处理
-        raise NotImplementedError(
-            '请使用 QuizService.update() 来更新试卷。'
-            '此方法已废弃，业务逻辑已迁移到 Service 层。'
-        )
 class AddExistingQuestionSerializer(serializers.Serializer):
     """
     Serializer for adding existing questions to a quiz.

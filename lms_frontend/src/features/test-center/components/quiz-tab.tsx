@@ -1,11 +1,10 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, Send, FileText, CheckCircle2, MoreHorizontal, Layout } from 'lucide-react';
+import { Pencil, Trash2, Send, MoreHorizontal, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '@/features/test-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/test-center/quizzes/api/create-quiz';
-import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { QuizListItem } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
@@ -24,14 +23,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { DataTable } from '@/components/ui/data-table/data-table';
-import { Skeleton, Pagination } from '@/components/ui';
-import { type ColumnDef } from '@tanstack/react-table';
-import { cn } from '@/lib/utils';
+import { DataTable, CellWithIcon, CellTags } from '@/components/ui/data-table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuizTabProps {
   onQuickPublish: (quizIds: number[]) => void;
@@ -40,7 +36,7 @@ interface QuizTabProps {
 
 export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' }) => {
   const [page, setPage] = useState(1);
-  const pageSize = 7; // 固定每页显示7条
+  const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [quickPublishModalVisible, setQuickPublishModalVisible] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -48,12 +44,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
   const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined });
   const deleteQuiz = useDeleteQuiz();
   const navigate = useNavigate();
-  const { user, currentRole } = useAuth();
 
-  const canEdit = (record: QuizListItem): boolean => {
-    if (currentRole === 'ADMIN') return true;
-    return record.created_by === user?.id;
-  };
+
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -112,19 +104,13 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       id: 'title',
       header: '试卷信息',
       cell: ({ row }) => (
-        <div className="flex items-center gap-4 py-1">
-          <div className="w-10 h-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-none">
-            <Layout className="w-5 h-5" strokeWidth={2} />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-gray-900 line-clamp-1" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              {row.original.title}
-            </span>
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              ID: {row.original.id} • {row.original.created_by_name}
-            </span>
-          </div>
-        </div>
+        <CellWithIcon
+          icon={<Layout className="w-5 h-5" />}
+          title={row.original.title}
+          subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+          iconBg="#EFF6FF"
+          iconColor="#2563EB"
+        />
       )
     },
     {
@@ -133,21 +119,18 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       cell: ({ row }) => {
         const isExam = row.original.quiz_type === 'EXAM';
         return (
-          <div className="flex flex-col gap-1">
-            <span
-              className={cn(
-                "inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider",
-                isExam
-                  ? "bg-red-50 text-red-600"
-                  : "bg-blue-50 text-blue-600"
-              )}
-              style={{ fontFamily: "'Outfit', sans-serif" }}
-            >
-              {row.original.quiz_type_display || (isExam ? '考试' : '练习')}
-            </span>
+          <div className="flex flex-col gap-1.5">
+            <CellTags
+              tags={[{
+                key: row.original.quiz_type,
+                label: row.original.quiz_type_display || (isExam ? '考试' : '练习'),
+                bg: isExam ? '#FEE2E2' : '#EFF6FF',
+                color: isExam ? '#DC2626' : '#2563EB',
+              }]}
+            />
             {isExam && row.original.duration && (
-              <span className="text-[10px] font-semibold text-gray-500" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                {row.original.duration}分钟 / 及格{row.original.pass_score}分
+              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter px-0.5" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                {row.original.duration}min / Pass {row.original.pass_score}
               </span>
             )}
           </div>
@@ -158,22 +141,21 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       id: 'metrics',
       header: '构成指标',
       cell: ({ row }) => (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              {row.original.question_count} Qs
+            <span className="text-sm font-bold text-[#111827]">
+              {row.original.question_count}
             </span>
-            <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
               Questions
             </span>
           </div>
-          <div className="w-[1px] h-6 bg-gray-200" />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-blue-600" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              {row.original.total_score} Pts
+            <span className="text-sm font-bold text-blue-600">
+              {row.original.total_score}
             </span>
-            <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              Total Score
+            <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+              Points
             </span>
           </div>
         </div>
@@ -184,10 +166,10 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
       header: '构建时间',
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="text-xs font-semibold text-gray-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-sm font-bold text-[#111827]">
             {dayjs(row.original.created_at).format('YYYY.MM.DD')}
           </span>
-          <span className="text-[10px] font-semibold text-gray-500 uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
             {dayjs(row.original.created_at).format('HH:mm:ss')}
           </span>
         </div>
@@ -201,7 +183,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
         return (
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
-              className="h-9 px-4 rounded-md bg-blue-600 text-white font-bold text-[11px] uppercase tracking-wider hover:bg-blue-700 shadow-none hover:scale-105 transition-all duration-200"
+              className="h-8 px-4 rounded-md bg-blue-600 text-white font-bold text-[10px] uppercase tracking-wider hover:bg-blue-700 shadow-none hover:scale-105 transition-all duration-200"
               onClick={() => {
                 setSelectedRowKeys([record.id]);
                 setQuickPublishModalVisible(true);
@@ -218,7 +200,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
                   <MoreHorizontal className="w-4 h-4 text-gray-500" strokeWidth={2} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-lg p-2 border-2 border-gray-200 shadow-none bg-white">
+              <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200 shadow-none bg-white">
                 <DropdownMenuItem
                   className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => navigate(`/test-center/quizzes/${record.id}/edit`)}
@@ -272,40 +254,29 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
         </div>
       )}
 
-      {/* 表格 */}
-      <div className="overflow-hidden rounded-lg border-2 border-gray-200 bg-white shadow-none">
-        {isLoading ? (
-          <div className="p-10 space-y-5 h-[560px] overflow-hidden">
-            {[1, 2, 3, 4, 5, 6, 7].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg flex-shrink-0" />)}
-          </div>
-        ) : (
-          <div className="h-[560px] overflow-hidden">
-            <DataTable
-              columns={columns}
-              data={data?.results || []}
-              className="border-none"
-              rowClassName="hover:bg-blue-50 transition-colors cursor-pointer group"
-              onRowClick={(row) => navigate(`/test-center/quizzes/${row.id}/edit`)}
-            />
-          </div>
-        )}
+      <div className="flex-1 flex flex-col animate-fadeIn">
+        <DataTable
+          columns={columns}
+          data={data?.results || []}
+          isLoading={isLoading}
+          pagination={{
+            pageIndex: page - 1,
+            pageSize: pageSize,
+            pageCount: Math.ceil((data?.count || 0) / pageSize),
+            onPageChange: (p) => setPage(p + 1),
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+          }}
+          rowClassName="hover:bg-[#F9FAFB] transition-colors cursor-pointer group"
+          onRowClick={(row) => navigate(`/test-center/quizzes/${row.id}/edit`)}
+        />
       </div>
-
-      {/* 分页 */}
-      {data && data.count > pageSize && (
-        <div className="flex justify-center mt-8">
-          <Pagination
-            current={page}
-            total={data.count}
-            pageSize={pageSize}
-            onChange={(newPage) => setPage(newPage)}
-          />
-        </div>
-      )}
 
       {/* 快速发布确认弹窗 */}
       <Dialog open={quickPublishModalVisible} onOpenChange={setQuickPublishModalVisible}>
-        <DialogContent className="rounded-lg max-w-md p-10 border-2 border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <DialogContent className="rounded-lg max-w-md p-10 border border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
           <DialogHeader>
             <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-8 mx-auto shadow-none">
               <Send className="w-10 h-10" strokeWidth={2} />
@@ -339,7 +310,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ onQuickPublish, search = '' })
 
       {/* 删除确认对话框 */}
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent className="rounded-lg max-w-md p-10 border-2 border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <DialogContent className="rounded-lg max-w-md p-10 border border-gray-200 shadow-none bg-white" style={{ fontFamily: "'Outfit', sans-serif" }}>
           <DialogHeader>
             <div className="w-20 h-20 bg-red-50 text-red-600 rounded-lg flex items-center justify-center mb-8 mx-auto shadow-none">
               <Trash2 className="w-10 h-10" strokeWidth={2} />

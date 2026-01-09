@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
+import { useStudentTaskKnowledgeDetail } from '../api/get-student-task-knowledge-detail';
 import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useDeleteKnowledge } from '../api/manage-knowledge';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
@@ -173,10 +174,14 @@ export const KnowledgeDetail: React.FC = () => {
   });
 
   const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
+  const taskKnowledgeId = Number(new URLSearchParams(location.search).get('taskKnowledgeId') || 0);
   const studentQuery = useStudentKnowledgeDetail(Number(id));
+  const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
   const adminQuery = useAdminKnowledgeDetail(Number(id));
 
-  const { data, isLoading, refetch } = isAdminRoute ? adminQuery : studentQuery;
+  const { data, isLoading, refetch } = isAdminRoute
+    ? adminQuery
+    : (taskKnowledgeId ? studentTaskQuery : studentQuery);
 
   const deleteKnowledge = useDeleteKnowledge();
 

@@ -20,12 +20,16 @@ import { ROUTES } from "@/config/routes"
 import {
     Button,
     Input,
-    Badge,
     Tooltip,
     Skeleton,
 } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui"
-import { DataTable } from "@/components/ui/data-table/data-table"
+import {
+    DataTable,
+    CellWithIcon,
+    CellTags,
+    CellStatus,
+} from "@/components/ui/data-table"
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
@@ -86,19 +90,11 @@ export const TaskManagement: React.FC = () => {
             header: "任务详情",
             id: "title",
             cell: ({ row }) => (
-                <div className="flex items-center gap-4 py-1 min-w-[240px]">
-                    <div className="w-10 h-10 rounded-md bg-[#DBEAFE] text-[#3B82F6] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <Layout className="h-5 w-5" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-bold text-[#111827] hover:text-[#3B82F6] cursor-pointer transition-colors line-clamp-1">
-                            {row.original.title}
-                        </span>
-                        <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
-                            ID: {row.original.id} • {row.original.created_by_name}
-                        </span>
-                    </div>
-                </div>
+                <CellWithIcon
+                    icon={<Layout className="h-5 w-5" />}
+                    title={row.original.title}
+                    subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+                />
             ),
         },
         {
@@ -107,21 +103,10 @@ export const TaskManagement: React.FC = () => {
             cell: ({ row }) => {
                 const kCount = row.original.knowledge_count || 0
                 const qCount = row.original.quiz_count || 0
-                if (kCount === 0 && qCount === 0) return <span className="text-[#9CA3AF] italic text-xs">无资源</span>
-                return (
-                    <div className="flex items-center gap-1.5 min-w-[120px]">
-                        {kCount > 0 && (
-                            <div className="bg-[#D1FAE5] text-[#10B981] px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap border-0 shadow-none">
-                                {kCount} 知识
-                            </div>
-                        )}
-                        {qCount > 0 && (
-                            <div className="bg-[#DBEAFE] text-[#3B82F6] px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap border-0 shadow-none">
-                                {qCount} 测验
-                            </div>
-                        )}
-                    </div>
-                )
+                const tags = []
+                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bg: '#D1FAE5', color: '#10B981' })
+                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bg: '#DBEAFE', color: '#3B82F6' })
+                return <CellTags tags={tags} />
             }
         },
         {
@@ -187,21 +172,13 @@ export const TaskManagement: React.FC = () => {
         {
             header: "状态",
             id: "status",
-            cell: ({ row }) => {
-                const isClosed = row.original.is_closed
-                return (
-                    <div className="min-w-[80px]">
-                        <Badge
-                            className={cn(
-                                "border-0 shadow-none",
-                                !isClosed ? "bg-[#D1FAE5] text-[#10B981]" : "bg-[#F3F4F6] text-[#6B7280]"
-                            )}
-                        >
-                            {!isClosed ? "进行中" : "已结束"}
-                        </Badge>
-                    </div>
-                )
-            },
+            cell: ({ row }) => (
+                <CellStatus
+                    isActive={!row.original.is_closed}
+                    activeText="进行中"
+                    inactiveText="已结束"
+                />
+            ),
         },
         {
             header: "操作",
@@ -369,7 +346,6 @@ export const TaskManagement: React.FC = () => {
                                         (statusFilter === 'closed' && t.is_closed);
                                     return matchesSearch && matchesStatus;
                                 }) || []}
-                                className="border-none"
                                 rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
                                 onRowClick={(row) => navigate(`/tasks/${row.id}`)}
                             />

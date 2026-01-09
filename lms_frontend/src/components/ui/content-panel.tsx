@@ -33,7 +33,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
     return (
         <div
             className={cn(
-                // Flat Design 统一样式
+                // 扁平化风格 - 纯白不透明背景，不添加额外层次感
                 'bg-white rounded-lg',
                 paddingMap[padding],
                 className

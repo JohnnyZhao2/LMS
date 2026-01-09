@@ -121,13 +121,6 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
                     'answer': '简答题答案必须是字符串'
                 })
         return attrs
-    def create(self, validated_data):
-        """
-        Create question - 实际创建由Service层处理
-        注意：此方法保留是为了兼容性，实际创建逻辑在Service层
-        """
-        # Service层会处理创建逻辑，这里只返回验证后的数据
-        return validated_data
 class QuestionUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating questions.
@@ -204,10 +197,3 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
                     'answer': '简答题答案必须是字符串'
                 })
         return attrs
-    def update(self, instance, validated_data):
-        """
-        Update question - 实际更新由Service层处理
-        注意：此方法保留是为了兼容性，实际更新逻辑在Service层
-        """
-        # Service层会处理更新逻辑，这里只返回验证后的数据
-        return validated_data

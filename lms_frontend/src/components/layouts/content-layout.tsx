@@ -23,7 +23,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
   className,
 }) => {
   return (
-    <div className={cn("space-y-10 reveal-item", className)}>
+    <div className={cn("space-y-10", className)}>
       {/* 增强型页面头部 */}
       {(title || description || actions) && (
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-gray-100/50">
@@ -42,7 +42,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
           </div>
 
           {actions && (
-            <div className="flex items-center gap-3 reveal-item stagger-delay-1">
+            <div className="flex items-center gap-3">
               {actions}
             </div>
           )}
@@ -50,7 +50,7 @@ export const ContentLayout: React.FC<ContentLayoutProps> = ({
       )}
 
       {/* 页面内容主体 */}
-      <div className="reveal-item stagger-delay-2">
+      <div>
         {children}
       </div>
     </div>

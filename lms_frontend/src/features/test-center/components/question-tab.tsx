@@ -35,7 +35,7 @@ interface QuestionTabProps {
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const pageSize = 7;
+  const [pageSize, setPageSize] = useState(10);
   const [questionTypeFilter, setQuestionTypeFilter] = useState<string>('ALL');
   const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL');
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
@@ -67,7 +67,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
   };
 
   return (
-    <div className="flex flex-col gap-6" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="flex-1 flex flex-col gap-6" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部过滤器 */}
       <div className="flex flex-wrap gap-6 items-center bg-gray-100 p-6 rounded-lg shadow-none">
         <div className="flex flex-col gap-2">
@@ -79,8 +79,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 onClick={() => setQuestionTypeFilter(opt.value)}
                 className={cn(
                   "px-4 py-2 text-xs font-bold rounded-md transition-all duration-200",
-                  questionTypeFilter === opt.value 
-                    ? "bg-gray-900 text-white shadow-none" 
+                  questionTypeFilter === opt.value
+                    ? "bg-gray-900 text-white shadow-none"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                 )}
                 style={{ fontFamily: "'Outfit', sans-serif" }}
@@ -100,8 +100,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 onClick={() => setLineTypeFilter(opt.value)}
                 className={cn(
                   "px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap",
-                  lineTypeFilter === opt.value 
-                    ? "bg-blue-600 text-white shadow-none" 
+                  lineTypeFilter === opt.value
+                    ? "bg-blue-600 text-white shadow-none"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                 )}
                 style={{ fontFamily: "'Outfit', sans-serif" }}
@@ -114,10 +114,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
       </div>
 
       {/* 核心分屏 */}
-      <div className="flex gap-6">
+      <div className="flex-1 flex gap-6 min-h-0">
         {/* 左侧列表 */}
-        <div className="flex-1 bg-white rounded-lg shadow-none flex flex-col">
-          <div className="h-[57px] p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="h-14 p-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-blue-600" strokeWidth={2} />
               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -129,7 +129,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             </Badge>
           </div>
 
-          <div className="h-[560px] overflow-hidden flex flex-col relative">
+          <div className="flex-1 overflow-hidden flex flex-col relative">
             {isLoading && !data ? (
               <div className="p-6 space-y-4 h-full overflow-hidden">
                 {[1, 2, 3, 4, 5, 6, 7].map(i => <Skeleton key={i} className="h-20 w-full rounded-lg flex-shrink-0" />)}
@@ -143,44 +143,44 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                   </div>
                 )}
                 {data.results.map(q => {
-                const config = QUESTION_TYPE_CONFIG[q.question_type] || { label: '未知', color: 'text-gray-600', bg: 'bg-gray-100' };
-                const isSelected = selectedQuestionId === q.id;
-                return (
-                  <div
-                    key={q.id}
-                    onClick={() => setSelectedQuestionId(q.id)}
-                    className={cn(
-                      "h-[80px] p-4 border-b border-gray-100 cursor-pointer transition-all duration-200 group flex items-start gap-4 hover:bg-gray-50 hover:scale-[1.01] flex-shrink-0",
-                      isSelected && "bg-blue-50 border-l-4 border-l-blue-600"
-                    )}
-                  >
-                    <Checkbox
-                      className="mt-1.5"
-                      checked={selectedRowKeys.includes(q.id)}
-                      onCheckedChange={() => {
-                        setSelectedRowKeys(prev => prev.includes(q.id) ? prev.filter(k => k !== q.id) : [...prev, q.id])
-                      }}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge className={cn("border-none px-2 py-0.5 text-[10px] font-bold uppercase shadow-none", config.bg, config.color)}>
-                          {config.label}
-                        </Badge>
-                        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-tight">
-                          {q.line_type?.name || 'General'}
-                        </span>
+                  const config = QUESTION_TYPE_CONFIG[q.question_type] || { label: '未知', color: 'text-gray-600', bg: 'bg-gray-100' };
+                  const isSelected = selectedQuestionId === q.id;
+                  return (
+                    <div
+                      key={q.id}
+                      onClick={() => setSelectedQuestionId(q.id)}
+                      className={cn(
+                        "h-[80px] p-4 border-b border-gray-100 cursor-pointer transition-all duration-200 group flex items-start gap-4 hover:bg-gray-50 hover:scale-[1.01] flex-shrink-0",
+                        isSelected && "bg-blue-50 border-l-4 border-l-blue-600"
+                      )}
+                    >
+                      <Checkbox
+                        className="mt-1.5"
+                        checked={selectedRowKeys.includes(q.id)}
+                        onCheckedChange={() => {
+                          setSelectedRowKeys(prev => prev.includes(q.id) ? prev.filter(k => k !== q.id) : [...prev, q.id])
+                        }}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className={cn("border-none px-2 py-0.5 text-[10px] font-bold uppercase shadow-none", config.bg, config.color)}>
+                            {config.label}
+                          </Badge>
+                          <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-tight">
+                            {q.line_type?.name || 'General'}
+                          </span>
+                        </div>
+                        <h4 className="text-sm font-bold text-gray-900 line-clamp-2 leading-relaxed" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          {q.content}
+                        </h4>
                       </div>
-                      <h4 className="text-sm font-bold text-gray-900 line-clamp-2 leading-relaxed" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                        {q.content}
-                      </h4>
+                      <div className="text-[10px] font-semibold text-gray-400 mt-1 uppercase whitespace-nowrap">
+                        {dayjs(q.updated_at).format('MM.DD')}
+                      </div>
                     </div>
-                    <div className="text-[10px] font-semibold text-gray-400 mt-1 uppercase whitespace-nowrap">
-                      {dayjs(q.updated_at).format('MM.DD')}
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -194,20 +194,26 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
 
           {/* 分页 */}
           {data && data.count > pageSize && (
-            <div className="p-4 border-t-2 border-gray-100 bg-gray-50 flex justify-center flex-shrink-0">
+            <div className="p-6 border-t border-gray-100 bg-white flex justify-between items-center flex-shrink-0 sticky bottom-0 z-10">
+              <span className="text-sm text-gray-500 font-medium">共 {data.count} 条记录</span>
               <Pagination
                 current={page}
                 total={data.count}
                 pageSize={pageSize}
                 onChange={(newPage) => setPage(newPage)}
+                showSizeChanger
+                onShowSizeChange={(_, size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
               />
             </div>
           )}
         </div>
 
         {/* 右侧详情 */}
-        <div className="flex-1 bg-white rounded-lg shadow-none flex flex-col overflow-hidden">
-          <div className="h-[57px] p-4 border-b-2 border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
+        <div className="flex-1 bg-white rounded-lg border border-gray-100 flex flex-col overflow-hidden">
+          <div className="h-14 p-4 border-b border-gray-100 flex justify-between items-center bg-white flex-shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-600" strokeWidth={2} />
               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -217,10 +223,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             <div className="flex items-center gap-2 h-full">
               {questionDetail ? (
                 <>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 rounded-md font-bold text-blue-600 hover:bg-blue-50 shadow-none px-3" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-md font-bold text-blue-600 hover:bg-blue-50 shadow-none px-3"
                     onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
                   >
                     <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
@@ -228,8 +234,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                   <Button
                     className={cn(
                       "h-8 rounded-md font-bold text-xs uppercase shadow-none transition-all duration-200 hover:scale-105 px-3",
-                      selectedRowKeys.includes(questionDetail.id) 
-                        ? "bg-emerald-500 hover:bg-emerald-600 text-white" 
+                      selectedRowKeys.includes(questionDetail.id)
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white"
                         : "bg-gray-900 hover:bg-gray-800 text-white"
                     )}
                     size="sm"
@@ -281,9 +287,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         <div
                           key={opt.key}
                           className={cn(
-                            "p-4 rounded-lg border-2 flex items-center gap-4 transition-all duration-200 shadow-none",
-                            isCorrect 
-                              ? "bg-emerald-50 border-emerald-500" 
+                            "p-4 rounded-lg border flex items-center gap-4 transition-all duration-200 shadow-none",
+                            isCorrect
+                              ? "bg-emerald-50 border-emerald-500"
                               : "bg-white border-gray-200"
                           )}
                         >
@@ -311,11 +317,11 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     </span>
                     <div className={cn(
                       "inline-flex items-center gap-3 px-6 py-3 rounded-lg font-bold shadow-none",
-                      questionDetail.answer?.toLowerCase() === 'true' 
-                        ? "bg-emerald-50 text-emerald-600 border-2 border-emerald-500" 
-                        : "bg-red-50 text-red-600 border-2 border-red-500"
+                      (typeof questionDetail.answer === 'string' && questionDetail.answer.toLowerCase() === 'true')
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-500"
+                        : "bg-red-50 text-red-600 border border-red-500"
                     )} style={{ fontFamily: "'Outfit', sans-serif" }}>
-                      {questionDetail.answer?.toLowerCase() === 'true' ? 'CORRECT / 正确' : 'WRONG / 错误'}
+                      {(typeof questionDetail.answer === 'string' && questionDetail.answer.toLowerCase() === 'true') ? 'CORRECT / 正确' : 'WRONG / 错误'}
                     </div>
                   </div>
                 )}
@@ -325,13 +331,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-3 px-1" style={{ fontFamily: "'Outfit', sans-serif" }}>
                       Reference Model
                     </span>
-                    <div className="p-6 bg-blue-50 rounded-lg border-2 border-blue-200 text-sm font-semibold text-blue-900 leading-relaxed shadow-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <div className="p-6 bg-blue-50 rounded-lg border border-blue-200 text-sm font-semibold text-blue-900 leading-relaxed shadow-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
                       {questionDetail.answer || 'No reference model provided.'}
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-6 pt-6 border-t-2 border-gray-100">
+                <div className="grid grid-cols-2 gap-6 pt-6 border-t border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-500 shadow-none">
                       <User className="w-5 h-5" strokeWidth={2} />

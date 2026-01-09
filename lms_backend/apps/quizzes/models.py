@@ -6,6 +6,7 @@ Implements:
 """
 import uuid
 from django.db import models
+from django.db.models import Q
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
@@ -90,6 +91,11 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             models.UniqueConstraint(
                 fields=['resource_uuid', 'version_number'],
                 name='uniq_quiz_resource_version'
+            ),
+            models.UniqueConstraint(
+                fields=['resource_uuid'],
+                condition=Q(is_current=True),
+                name='uniq_quiz_current'
             )
         ]
     def __str__(self):

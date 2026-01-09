@@ -8,6 +8,46 @@
 
 ---
 
+## 项目现行规则（基于实现）
+
+### 统一版本模型
+- **适用资源**：Knowledge / Question / Quiz
+- **版本字段**：`resource_uuid + version_number + is_current`
+- **唯一性要求**：同一 `resource_uuid` 只能有一个 `is_current=true`
+- **版本来源**：新版本会记录 `source_version`
+
+### 创建规则
+- 新建资源生成新 `resource_uuid`，`version_number=1`，`is_current=true`
+- 创建接口不接受 `resource_uuid`，如需新版本只能走更新逻辑
+
+### 更新规则
+- 更新当前版本 → 新建版本（旧版本保持不变）
+- 更新历史版本 → 仅限修正，不会成为 current
+
+### 可见性规则
+- 非管理员只可访问 `is_current=true` 的版本
+
+### 任务锁定规则
+- `TaskKnowledge` / `TaskQuiz` 在任务创建时锁定版本：
+  - `resource_uuid + version_number`
+- 任务运行期间不随资源更新而变化
+
+### 答题锁定规则
+- `Submission` 记录试卷版本
+- `Answer` 记录题目版本
+- 评分/复盘必须按版本字段回溯内容
+
+### 试卷与题目关系（当前行为）
+- `QuizQuestion` 仅关联 `question_id`
+- 题目更新会自动生成包含该题目的试卷新版本
+- 新试卷版本会使用最新题目版本替换原题目
+
+### 可选改动（如需新行为）
+- **试卷题目自动跟随最新版本**：创建新试卷版本时，按 `question.resource_uuid` 抽最新版本并替换 `question_id`
+- **任务关联更强一致**：强制 `TaskKnowledge/TaskQuiz` 必须携带版本字段，禁止为空
+
+---
+
 ## 一、知识文档 (Knowledge)
 
 ### 生命周期

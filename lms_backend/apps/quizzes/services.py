@@ -108,6 +108,10 @@ class QuizService(BaseService):
         self._prepare_quiz_version_data(data)
         # 3. 创建试卷
         quiz = self.repository.create(**data)
+        self.repository.unset_current_flag_for_others(
+            resource_uuid=quiz.resource_uuid,
+            exclude_pk=quiz.pk
+        )
         # 4. 添加题目
         existing_question_ids = existing_question_ids or []
         new_questions_data = new_questions_data or []
@@ -363,6 +367,9 @@ class QuizService(BaseService):
         }
         # 创建题目
         question = self.question_repository.create(**question_attrs)
+        Question.objects.filter(
+            resource_uuid=question.resource_uuid
+        ).exclude(pk=question.pk).update(is_current=False)
         # 设置条线类型
         if line_type_id:
             self._set_question_line_type(question, line_type_id)
@@ -378,22 +385,18 @@ class QuizService(BaseService):
         Args:
             data: 试卷数据字典（会被修改）
         """
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = self.repository.next_version_number(
-            data.get('resource_uuid')
-        )
+        data.pop('resource_uuid', None)
+        data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = 1
     def _prepare_question_version_data(self, data: dict) -> None:
         """
         准备题目版本号相关数据
         Args:
             data: 题目数据字典（会被修改）
         """
-        if not data.get('resource_uuid'):
-            data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = Question.next_version_number(
-            data.get('resource_uuid')
-        )
+        data.pop('resource_uuid', None)
+        data['resource_uuid'] = uuid.uuid4()
+        data['version_number'] = 1
     def _set_question_line_type(self, question: Question, line_type_id: int) -> None:
         """
         设置题目的条线类型
@@ -430,7 +433,8 @@ class QuizService(BaseService):
         self,
         source: Quiz,
         data: dict,
-        user
+        user,
+        question_ids: Optional[List[int]] = None
     ) -> Quiz:
         """
         基于已发布版本创建新版本
@@ -465,15 +469,23 @@ class QuizService(BaseService):
         }
         new_quiz = self.repository.create(**new_quiz_data)
         # 复制题目顺序
-        source_questions = self.quiz_question_repository.get_ordered_questions(
-            source.id
-        )
-        for relation in source_questions:
-            self.quiz_question_repository.add_question(
-                quiz_id=new_quiz.id,
-                question_id=relation.question_id,
-                order=relation.order
+        if question_ids is None:
+            source_questions = self.quiz_question_repository.get_ordered_questions(
+                source.id
             )
+            for relation in source_questions:
+                self.quiz_question_repository.add_question(
+                    quiz_id=new_quiz.id,
+                    question_id=relation.question_id,
+                    order=relation.order
+                )
+        else:
+            for order, question_id in enumerate(question_ids, start=1):
+                self.quiz_question_repository.add_question(
+                    quiz_id=new_quiz.id,
+                    question_id=question_id,
+                    order=order
+                )
         # 取消其他版本的 is_current 标志
         self.repository.unset_current_flag_for_others(
             resource_uuid=source.resource_uuid,
