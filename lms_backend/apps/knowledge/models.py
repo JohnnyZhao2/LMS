@@ -112,9 +112,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     知识类型:
     - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
     - OTHER: 其他类型知识 - 使用 Markdown/富文本自由正文
-    发布状态:
-    - DRAFT: 草稿 - 仅创建者和管理员可见，不能用于任务分配
-    - PUBLISHED: 已发布 - 所有人可见，可用于任务分配
     标签关系:
     - line_type: 通过ResourceLineType关联（多态关系，单选）
     - system_tags: 系统标签（多对多，多选）

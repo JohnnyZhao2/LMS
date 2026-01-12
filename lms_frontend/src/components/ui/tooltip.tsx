@@ -33,7 +33,7 @@ const TooltipContent = React.forwardRef<
 TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
 /**
- * Simple Tooltip component - Ant Design compatible wrapper
+ * Simple Tooltip component
  * Usage: <Tooltip title="Tooltip text"><button>Hover me</button></Tooltip>
  */
 interface TooltipProps {

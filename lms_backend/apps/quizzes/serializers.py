@@ -13,7 +13,6 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz-question relationship.
     Shows question details with order in the quiz.
-    Returns flattened structure for frontend compatibility.
     """
     question = serializers.IntegerField(source='question.id', read_only=True)
     question_content = serializers.CharField(source='question.content', read_only=True)

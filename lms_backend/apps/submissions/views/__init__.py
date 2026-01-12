@@ -11,13 +11,9 @@ from .common import (
     SaveAnswerView,
 )
 from .practice import (
-    StartPracticeView,
-    SubmitPracticeView,
     PracticeResultView,
 )
 from .exam import (
-    StartExamView,
-    SubmitExamView,
     ExamResultView,
 )
 __all__ = [
@@ -26,11 +22,7 @@ __all__ = [
     'SubmitView',
     'SaveAnswerView',
     # Practice views
-    'StartPracticeView',
-    'SubmitPracticeView',
     'PracticeResultView',
     # Exam views
-    'StartExamView',
-    'SubmitExamView',
     'ExamResultView',
 ]

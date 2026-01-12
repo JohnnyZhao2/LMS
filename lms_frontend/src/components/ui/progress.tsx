@@ -8,7 +8,6 @@ export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   strokeColor?: string;
   trailColor?: string;
   size?: 'sm' | 'default' | 'lg';
-  // Ant Design compatibility props
   percent?: number;
 }
 
@@ -36,7 +35,6 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     },
     ref
   ) => {
-    // Support both value and percent (Ant Design compatibility)
     const progressValue = percent ?? value ?? 0;
     const percentage = Math.min(Math.max(progressValue, 0), max);
 

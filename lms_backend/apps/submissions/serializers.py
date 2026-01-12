@@ -1,11 +1,7 @@
 """
 Serializers for submission management.
-Implements serializers for:
-- Practice submissions
-- Exam submissions
 Properties:
 - Property 24: 练习允许多次提交
-- Property 25: 练习任务自动完成
 - Property 26: 已完成练习仍可继续
 - Property 28: 考试时间窗口控制
 - Property 29: 考试单次提交限制
@@ -65,44 +61,6 @@ class SubmissionDetailSerializer(serializers.ModelSerializer):
             'started_at', 'submitted_at', 'remaining_seconds',
             'answers', 'created_at', 'updated_at'
         ]
-class StartPracticeSerializer(serializers.Serializer):
-    """
-    Serializer for starting a practice session.
-    Properties:
-    - Property 24: 练习允许多次提交
-    - Property 26: 已完成练习仍可继续
-    业务逻辑委托给 SubmissionService 处理。
-    """
-    assignment_id = serializers.IntegerField(help_text='任务分配ID')
-    quiz_id = serializers.IntegerField(help_text='试卷ID')
-    def validate(self, attrs):
-        """Validate that the task and quiz are valid for practice."""
-        request = self.context.get('request')
-        user = request.user
-        assignment_id = attrs['assignment_id']
-        quiz_id = attrs['quiz_id']
-        # 使用 SubmissionService 验证
-        service = SubmissionService()
-        try:
-            assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
-                assignment_id, quiz_id, user
-            )
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
-        # Property 26: 已完成练习仍可继续 - 不检查任务状态
-        attrs['assignment'] = assignment
-        attrs['quiz'] = quiz
-        attrs['task_quiz'] = task_quiz
-        return attrs
-    def create(self, validated_data):
-        """Create a new practice submission - 委托给 SubmissionService"""
-        service = SubmissionService()
-        return service.start_quiz(
-            assignment=validated_data['assignment'],
-            task_quiz=validated_data['task_quiz'],
-            user=self.context['request'].user,
-            is_exam=False
-        )
 class SaveAnswerSerializer(serializers.Serializer):
     """
     Serializer for saving an answer during practice/exam.
@@ -133,14 +91,6 @@ class SaveAnswerSerializer(serializers.Serializer):
             question_id=self.validated_data['question_id'],
             user_answer=self.validated_data['user_answer']
         )
-class SubmitPracticeSerializer(serializers.Serializer):
-    """
-    Serializer for submitting a practice session.
-    Properties:
-    - Property 25: 练习任务自动完成
-    - Property 30: 客观题自动评分
-    """
-    pass  # No additional fields needed, submission ID comes from URL
 class PracticeResultSerializer(serializers.ModelSerializer):
     """
     Serializer for practice result view.
@@ -157,64 +107,6 @@ class PracticeResultSerializer(serializers.ModelSerializer):
             'started_at', 'submitted_at',
             'answers', 'created_at'
         ]
-# Exam-specific serializers
-class StartExamSerializer(serializers.Serializer):
-    """
-    Serializer for starting an exam.
-    Properties:
-    - Property 28: 考试时间窗口控制
-    - Property 29: 考试单次提交限制
-    业务逻辑委托给 SubmissionService 处理。
-    """
-    assignment_id = serializers.IntegerField(help_text='任务分配ID')
-    quiz_id = serializers.IntegerField(help_text='试卷ID')
-    def validate(self, attrs):
-        """Validate that the exam can be started."""
-        request = self.context.get('request')
-        user = request.user
-        assignment_id = attrs['assignment_id']
-        quiz_id = attrs['quiz_id']
-        # 使用 SubmissionService 验证
-        service = SubmissionService()
-        try:
-            assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
-                assignment_id, quiz_id, user
-            )
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
-        # 检查考试约束
-        try:
-            in_progress = service.check_exam_constraints(assignment, quiz_id)
-        except Exception as e:
-            raise serializers.ValidationError({'assignment_id': str(e)})
-        attrs['assignment'] = assignment
-        attrs['quiz'] = quiz
-        attrs['task'] = assignment.task
-        attrs['task_quiz'] = task_quiz
-        attrs['in_progress_submission'] = in_progress
-        return attrs
-    def create(self, validated_data):
-        """Create or return existing exam submission - 委托给 SubmissionService"""
-        service = SubmissionService()
-        in_progress = validated_data.get('in_progress_submission')
-        # 如果有进行中的提交，直接返回
-        if in_progress:
-            return in_progress
-        return service.start_quiz(
-            assignment=validated_data['assignment'],
-            task_quiz=validated_data['task_quiz'],
-            user=self.context['request'].user,
-            is_exam=True
-        )
-class SubmitExamSerializer(serializers.Serializer):
-    """
-    Serializer for submitting an exam.
-    Properties:
-    - Property 30: 客观题自动评分
-    - Property 31: 主观题待评分状态
-    - Property 32: 纯客观题直接完成
-    """
-    pass  # No additional fields needed
 class StartQuizSerializer(serializers.Serializer):
     """
     统一的开始答题 Serializer，根据 quiz_type 自动判断行为。
