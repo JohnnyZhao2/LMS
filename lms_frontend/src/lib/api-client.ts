@@ -168,7 +168,17 @@ class ApiClient {
     }
 
     const json = await response.json();
-    
+
+    if (
+      json &&
+      typeof json === 'object' &&
+      'code' in json &&
+      'message' in json &&
+      'data' in json
+    ) {
+      return (json as ApiResponse<T>).data;
+    }
+
     return json as T;
   }
 
