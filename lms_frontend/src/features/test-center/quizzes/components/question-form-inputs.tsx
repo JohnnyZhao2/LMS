@@ -14,19 +14,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { QuestionType } from '@/types/api';
 
 /**
  * 选项输入组件
  */
 interface OptionsInputProps {
+  questionType: QuestionType;
   value: Array<{ key: string; value: string }>;
   onChange: (value: Array<{ key: string; value: string }>) => void;
+  answer: string | string[];
+  onAnswerChange: (answer: string | string[]) => void;
 }
 
-export const OptionsInput: React.FC<OptionsInputProps> = ({ value = [], onChange }) => {
+export const OptionsInput: React.FC<OptionsInputProps> = ({
+  questionType,
+  value = [],
+  onChange,
+  answer,
+  onAnswerChange,
+}) => {
   const handleAdd = () => {
-    const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     const nextKey = keys[value.length] || String.fromCharCode(65 + value.length);
     onChange([...value, { key: nextKey, value: '' }]);
   };
@@ -38,31 +48,78 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({ value = [], onChange
   };
 
   const handleRemove = (index: number) => {
+    const removedKey = value[index]?.key;
     onChange(value.filter((_, i) => i !== index));
+
+    // 同步更新答案
+    if (questionType === 'MULTIPLE_CHOICE' && Array.isArray(answer)) {
+      onAnswerChange(answer.filter((k) => k !== removedKey));
+    } else if (answer === removedKey) {
+      onAnswerChange('');
+    }
+  };
+
+  const handleToggleAnswer = (key: string) => {
+    if (questionType === 'SINGLE_CHOICE') {
+      onAnswerChange(key);
+    } else if (questionType === 'MULTIPLE_CHOICE') {
+      const selectedKeys = Array.isArray(answer) ? answer : [];
+      if (selectedKeys.includes(key)) {
+        onAnswerChange(selectedKeys.filter((k) => k !== key));
+      } else {
+        onAnswerChange([...selectedKeys, key]);
+      }
+    }
+  };
+
+  const isSelected = (key: string) => {
+    if (Array.isArray(answer)) {
+      return answer.includes(key);
+    }
+    return answer === key;
   };
 
   return (
     <div className="mt-1.5 space-y-2">
       {value.map((opt, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div
+          key={index}
+          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-green-200 bg-green-50/50' : 'border-gray-100 bg-gray-50/50'
+            }`}
+        >
+          {/* 选择控件 */}
+          <div className="flex-shrink-0 flex items-center justify-center w-8">
+            {questionType === 'SINGLE_CHOICE' ? (
+              <RadioGroup value={isSelected(opt.key) ? opt.key : ''} onValueChange={() => handleToggleAnswer(opt.key)}>
+                <RadioGroupItem value={opt.key} className="border-gray-300" />
+              </RadioGroup>
+            ) : (
+              <Checkbox
+                checked={isSelected(opt.key)}
+                onCheckedChange={() => handleToggleAnswer(opt.key)}
+                className="border-gray-300"
+              />
+            )}
+          </div>
+
           <Input
             value={opt.key}
             onChange={(e) => handleChange(index, 'key', e.target.value)}
             placeholder="选项"
-            className="w-16"
+            className="w-12 h-8 text-center font-bold bg-white"
           />
           <Input
             value={opt.value}
             onChange={(e) => handleChange(index, 'value', e.target.value)}
-            placeholder="选项内容"
-            className="flex-1"
+            placeholder="输入选项内容..."
+            className="flex-1 h-8 bg-white border-transparent focus:border-gray-200"
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => handleRemove(index)}
-            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500"
+            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
           >
             <X className="w-4 h-4" />
           </Button>

@@ -18,6 +18,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
+            'options', 'answer', 'explanation',
             'difficulty', 'difficulty_display', 'score',
             'is_objective', 'line_type',
             'is_current',

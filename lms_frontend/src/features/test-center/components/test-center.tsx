@@ -1,14 +1,12 @@
 "use client"
 
 import React, { useCallback, useState } from 'react';
-import { Plus, Search, Database, Layout, Activity } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { QuestionTab } from './question-tab';
+import { Plus, Search, Activity } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { QuizTab } from './quiz-tab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
-import { cn } from '@/lib/utils';
 import { ContentPanel, PageHeader } from '@/components/ui';
 
 /**
@@ -17,8 +15,6 @@ import { ContentPanel, PageHeader } from '@/components/ui';
  */
 export const TestCenter: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'questions';
   const [search, setSearch] = useState('');
 
   const handleQuickPublish = useCallback((quizIds: number[]) => {
@@ -26,94 +22,47 @@ export const TestCenter: React.FC = () => {
     navigate(`/tasks/create?quiz_ids=${quizIdsParam}`);
   }, [navigate]);
 
-  const handleTabChange = (tab: 'questions' | 'quizzes') => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('tab', tab);
-    setSearchParams(newParams);
-    setSearch('');
-  };
-
   const handleAdd = () => {
-    if (activeTab === 'questions') {
-      navigate(`${ROUTES.TEST_CENTER_QUESTIONS}/create`);
-    } else {
-      navigate(`${ROUTES.TEST_CENTER_QUIZZES}/create`);
-    }
+    navigate(`${ROUTES.TEST_CENTER_QUIZZES}/create`);
   };
 
   return (
     <div className="flex-1 flex flex-col gap-10 animate-fadeIn pb-12">
       <PageHeader
-        title="测试治理中心"
-        subtitle="Intelligence Assessment Engine"
+        title="试卷中心"
+        subtitle="Quiz Management & Assessment Engine"
         icon={<Activity />}
         extra={
           <Button
             onClick={handleAdd}
-            className="h-14 px-8 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 hover:scale-105 transition-all duration-200 shadow-none"
+            className="bg-blue-600 text-white font-semibold hover:bg-blue-700 hover:scale-105 transition-all duration-200 shadow-none"
           >
             <Plus className="mr-2 h-5 w-5" />
-            {activeTab === 'questions' ? '新增治理题目' : '构建全新试卷'}
+            构建全新试卷
           </Button>
         }
       />
 
-      {/* 搜索与导航区域 */}
+      {/* 搜索区域 */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        {/* 核心导航切换器 */}
-        <div className="bg-gray-100 p-1.5 rounded-lg flex gap-2 shadow-none">
-          <button
-            onClick={() => handleTabChange('questions')}
-            className={cn(
-              "flex items-center gap-3 px-6 py-3 rounded-md text-sm font-bold transition-all duration-200",
-              activeTab === 'questions'
-                ? "bg-white text-gray-900 shadow-none border border-gray-100"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-            )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
-          >
-            <Database className={cn("w-5 h-5", activeTab === 'questions' ? "text-blue-600" : "text-gray-400")} strokeWidth={2} />
-            题库治理
-          </button>
-          <button
-            onClick={() => handleTabChange('quizzes')}
-            className={cn(
-              "flex items-center gap-3 px-6 py-3 rounded-md text-sm font-bold transition-all duration-200",
-              activeTab === 'quizzes'
-                ? "bg-white text-gray-900 shadow-none border border-gray-100"
-                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-            )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
-          >
-            <Layout className={cn("w-5 h-5", activeTab === 'quizzes' ? "text-blue-600" : "text-gray-400")} strokeWidth={2} />
-            试卷管理
-          </button>
-        </div>
-
-        {/* 动态搜索建议框 */}
         <div className="relative group flex-1 max-w-lg">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-blue-600 transition-colors" />
           <Input
-            className="h-14 pl-14 bg-white border-2 border-gray-100 rounded-md focus:border-blue-600 text-base font-medium shadow-none transition-all"
-            placeholder={activeTab === 'questions' ? '检索库内题目名称或类型...' : '搜索试卷标题或编号...'}
+            className="pl-14 bg-white border-2 border-gray-100 rounded-md focus:border-blue-600 text-base font-medium shadow-none transition-all"
+            placeholder="搜索试卷标题或编号..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      {/* 动态内容区域 */}
+      {/* 内容区域 */}
       <div className="flex-1 flex flex-col min-h-0">
         <ContentPanel padding="md" className="flex-1 flex flex-col relative overflow-hidden">
-          {/* 背景装饰几何形状 */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-[#3B82F6]/5 rounded-full -mr-32 -mt-32 pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#10B981]/5 rounded-full -ml-24 -mb-24 pointer-events-none" />
 
-          {activeTab === 'questions' ? (
-            <QuestionTab search={search} />
-          ) : (
-            <QuizTab onQuickPublish={handleQuickPublish} search={search} />
-          )}
+          <QuizTab onQuickPublish={handleQuickPublish} search={search} />
         </ContentPanel>
       </div>
     </div>

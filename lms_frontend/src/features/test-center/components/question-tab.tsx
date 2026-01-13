@@ -226,14 +226,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 rounded-md font-bold text-blue-600 hover:bg-blue-50 shadow-none px-3"
+                    className="font-bold text-blue-600 hover:bg-blue-50 shadow-none px-3"
                     onClick={() => navigate(`/test-center/questions/${questionDetail.id}/edit`)}
                   >
                     <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
                   </Button>
                   <Button
                     className={cn(
-                      "h-8 rounded-md font-bold text-xs uppercase shadow-none transition-all duration-200 hover:scale-105 px-3",
+                      "font-bold text-xs uppercase shadow-none transition-all duration-200 hover:scale-105 px-3",
                       selectedRowKeys.includes(questionDetail.id)
                         ? "bg-emerald-500 hover:bg-emerald-600 text-white"
                         : "bg-gray-900 hover:bg-gray-800 text-white"
@@ -413,7 +413,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                   const ids = selectedRowKeys.join(',');
                   navigate(`/test-center/quizzes/create?question_ids=${ids}`);
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-md font-bold text-xs px-6 h-12 shadow-none hover:scale-105 transition-all duration-200"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 shadow-none hover:scale-105 transition-all duration-200"
                 style={{ fontFamily: "'Outfit', sans-serif" }}
               >
                 Construct Quiz Engine
