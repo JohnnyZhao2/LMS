@@ -55,7 +55,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap shadow-none border-none outline-none ring-0',
               value === opt.value
                 ? activeStyles[activeColor]
-                : 'text-gray-500 hover:text-gray-700 hover:bg-black/5'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
             )}
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >

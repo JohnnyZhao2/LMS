@@ -21,11 +21,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   className,
 }) => {
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
-      {/* 扁平几何背景装饰 */}
-      <div className="absolute top-0 -left-20 w-[600px] h-[600px] bg-blue-600/5 rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 -right-20 w-[500px] h-[500px] bg-emerald-500/5 rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/5 rounded-full pointer-events-none" />
+    <div className="min-h-screen relative isolate flex items-center justify-center overflow-hidden bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      <div className="fixed inset-0 -z-10 pointer-events-none" aria-hidden="true">
+        <div className="absolute top-0 -left-20 w-[600px] h-[600px] bg-blue-600/5 rounded-full" />
+        <div className="absolute bottom-0 -right-20 w-[500px] h-[500px] bg-emerald-500/5 rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-amber-500/5 rounded-full" />
+      </div>
 
       <div className="relative z-10 w-full max-w-[480px] px-6 py-12">
         {/* Logo 装饰 */}

@@ -216,6 +216,7 @@ export const KnowledgeDetail: React.FC = () => {
                           "flex items-center gap-3 py-2.5 px-4 text-xs rounded-lg cursor-pointer transition-all",
                           item.level === 1 ? 'font-semibold text-gray-900 hover:bg-gray-50' : 'text-gray-500 hover:bg-gray-50'
                         )}
+                        style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
                         onClick={() => {
                           const element = document.getElementById(item.id);
                           if (element) {
@@ -223,7 +224,6 @@ export const KnowledgeDetail: React.FC = () => {
                           }
                         }}
                       >
-                        <span className="w-4 text-[10px] text-gray-300 font-mono">{'#'.repeat(item.level)}</span>
                         <span className="truncate">{item.text}</span>
                       </div>
                     ))}
@@ -240,7 +240,7 @@ export const KnowledgeDetail: React.FC = () => {
         <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0 border-l border-gray-200">
           {/* 标签栏 */}
           {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className="flex items-center gap-2 p-4 px-6 border-b border-gray-200 flex-wrap bg-gray-50/30">
+            <div className="flex items-center gap-2 p-4 px-6 border-b border-gray-200 flex-wrap bg-gray-50">
               {knowledge.system_tags?.map((tag) => (
                 <Badge key={tag.id} variant="info" className="text-[10px] rounded-md border-none px-2.5 py-1">
                   {tag.name}

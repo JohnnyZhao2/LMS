@@ -28,24 +28,16 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   item,
   onView,
   showActions,
-  showStatus,
+
   onEdit,
   variant = 'admin',
 }) => {
   const shouldShowActions = showActions ?? (variant === 'admin');
-  const shouldShowStatus = showStatus ?? (variant === 'admin');
+
 
   const isEmergency = item.knowledge_type === 'EMERGENCY';
 
-  // 根据新的版本管理系统，管理端只显示当前版本
-  // 不再需要 edit_status 判断
-  const getStatusBadge = () => {
-    // 学生视图不显示状态
-    if (variant === 'student') return null;
 
-    // 管理员视图：所有显示的都是当前版本，显示绿色徽章
-    return <Badge className="bg-[#10B981] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">当前版本</Badge>;
-  };
 
   // 清洗摘要和预览内容
   const cleanSummary = stripHtml(item.summary || '');
@@ -75,7 +67,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          {shouldShowStatus && getStatusBadge()}
+
           {shouldShowActions && (
             <button
               className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#111827] hover:text-white transition-all duration-200 shadow-none"

@@ -108,7 +108,7 @@ export function SearchableSelect<T>({
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                 >
-                    <div className="p-2.5 border-b border-gray-50 bg-gray-50/50">
+                    <div className="p-2.5 border-b border-gray-50 bg-gray-50">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                             <Input
@@ -135,7 +135,7 @@ export function SearchableSelect<T>({
                                     exit={{ opacity: 0, height: 0 }}
                                     onClick={handleCreate}
                                     disabled={isAdding}
-                                    className="w-full flex items-center justify-between px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 bg-primary-50/50 hover:bg-primary-50 rounded-md mb-1.5 transition-all group overflow-hidden"
+                                    className="w-full flex items-center justify-between px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 bg-primary-50 hover:bg-primary-50 rounded-md mb-1.5 transition-all group overflow-hidden"
                                 >
                                     <div className="flex items-center gap-2">
                                         <Plus className="w-4 h-4 transform group-hover:rotate-90 transition-transform" />
@@ -161,7 +161,7 @@ export function SearchableSelect<T>({
                                             className={cn(
                                                 "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md transition-all text-left group/item",
                                                 isSelected
-                                                    ? "bg-primary-100/50 text-primary-700 font-bold"
+                                                    ? "bg-primary-100 text-primary-700 font-bold"
                                                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                                             )}
                                         >

@@ -312,31 +312,33 @@ export const KnowledgeForm: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                 {outline.length > 0 ? (
                   <div className="space-y-1.5">
-                    {outline.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all",
-                          item.level === 1 ? 'font-semibold text-gray-900 bg-gray-50' : 'text-gray-500 hover:bg-gray-50',
-                          knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id && 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
-                        )}
-                        onClick={() => {
-                          if (knowledgeType === 'EMERGENCY') {
-                            setActiveEmergencyTab(item.id);
-                          } else {
-                            const element = document.getElementById(item.id);
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    {outline.map((item, index) => {
+                      const outlineKey = `${item.id}-${index}`;
+                      const paddingLeft = (item.level - 1) * 12 + 8;
+                      return (
+                        <div
+                          key={outlineKey}
+                          className={cn(
+                            "group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all",
+                            item.level === 1 ? 'font-semibold text-gray-900 bg-gray-50' : 'text-gray-500 hover:bg-gray-50',
+                            knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id && 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
+                          )}
+                          style={{ paddingLeft: `${paddingLeft}px` }}
+                          onClick={() => {
+                            if (knowledgeType === 'EMERGENCY') {
+                              setActiveEmergencyTab(item.id);
+                            } else {
+                              const element = document.getElementById(item.id);
+                              if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
                             }
-                          }
-                        }}
-                      >
-                        <span className="w-4 text-[10px] text-gray-300 font-mono group-hover:text-primary-400 transition-colors">
-                          {knowledgeType === 'EMERGENCY' ? index + 1 : item.level}
-                        </span>
-                        <span className="truncate group-hover:translate-x-1 transition-transform">{item.text}</span>
-                      </div>
-                    ))}
+                          }}
+                        >
+                          <span className="truncate group-hover:translate-x-1 transition-transform">{item.text}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-60 px-6 text-center text-gray-400">
@@ -364,9 +366,9 @@ export const KnowledgeForm: React.FC = () => {
                     return (
                       <div key={tab.key} className="flex flex-col h-full animate-in fade-in duration-300">
                         {/* Tab Header */}
-                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-50/50">
+                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-50">
                           <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-50 text-primary-600 text-xs font-bold ring-1 ring-primary-100/50">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-50 text-primary-600 text-xs font-bold ring-1 ring-primary-100">
                               {index + 1}
                             </span>
                             <h2 className="text-base font-bold text-gray-900 tracking-tight">{tab.label}</h2>
@@ -392,7 +394,7 @@ export const KnowledgeForm: React.FC = () => {
                             }}
                             placeholder={`在此输入${tab.label}详情...`}
                             className="border-none shadow-none ring-0 w-full h-full"
-                            contentClassName="p-6 max-w-5xl text-lg leading-relaxed"
+                            contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
                           />
                         </div>
                       </div>
@@ -407,7 +409,7 @@ export const KnowledgeForm: React.FC = () => {
                       onChange={setContent}
                       placeholder="请输入知识正文..."
                       className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
-                      contentClassName="p-12 px-20 max-w-5xl mx-auto text-lg leading-relaxed"
+                      contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
                     />
                   </div>
                   {errors.content && (
@@ -433,7 +435,7 @@ export const KnowledgeForm: React.FC = () => {
 
           <div className="p-6 space-y-6">
             {/* 基础定义 */}
-            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 基础配置
@@ -453,7 +455,7 @@ export const KnowledgeForm: React.FC = () => {
                   <SegmentedControl
                     options={[
                       { label: '标准类', value: 'OTHER' },
-                      { label: '急诊类', value: 'EMERGENCY' },
+                      { label: '应急类', value: 'EMERGENCY' },
                     ]}
                     value={knowledgeType}
                     onChange={(val) => setKnowledgeType(val as KnowledgeType)}
@@ -466,7 +468,7 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 内容摘要 */}
-            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 内容摘要
@@ -482,7 +484,7 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 分类归属 */}
-            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                 分类归属
@@ -508,7 +510,7 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 精细标签 */}
-            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                 精细标签
@@ -517,7 +519,7 @@ export const KnowledgeForm: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between ml-1">
                     <Label className="text-xs font-semibold text-gray-700">系统标签</Label>
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {systemTagIds.map(id => {
@@ -547,7 +549,7 @@ export const KnowledgeForm: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between ml-1">
                     <Label className="text-xs font-semibold text-gray-700">操作标签</Label>
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {operationTagIds.map(id => {
@@ -581,7 +583,7 @@ export const KnowledgeForm: React.FC = () => {
                 <span>当前版本</span>
                 <span className="text-primary-500">PUBLISHED</span>
               </div>
-              <div className="mt-4 p-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 flex gap-3">
+              <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 flex gap-3">
                 <div className="w-5 h-5 flex-shrink-0 bg-primary-100 rounded-md flex items-center justify-center">
                   <Settings className="w-3 h-3 text-primary-600" />
                 </div>

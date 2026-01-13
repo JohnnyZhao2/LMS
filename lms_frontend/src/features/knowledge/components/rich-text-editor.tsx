@@ -42,7 +42,7 @@ const ToolbarButton: React.FC<{
         disabled={disabled}
         title={title}
         className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isActive
-            ? 'bg-primary/10 text-primary'
+            ? 'bg-primary-50 text-primary'
             : 'text-gray-600 hover:bg-gray-100'
             } ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-95'}`}
     >
