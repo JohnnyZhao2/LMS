@@ -438,7 +438,7 @@ export const QuizForm: React.FC = () => {
                       setPreviewQuestion(null);
                     }}
                   >
-                    全部内容预览无误，添加到试卷
+                    添加到试卷
                   </Button>
                 </div>
               </div>
