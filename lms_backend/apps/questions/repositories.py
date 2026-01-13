@@ -50,8 +50,6 @@ class QuestionRepository(BaseRepository[Question]):
         if filters:
             if filters.get('question_type'):
                 qs = qs.filter(question_type=filters['question_type'])
-            if filters.get('difficulty'):
-                qs = qs.filter(difficulty=filters['difficulty'])
             if filters.get('created_by_id'):
                 qs = qs.filter(created_by_id=filters['created_by_id'])
             if filters.get('is_current') is not None:
@@ -150,8 +148,6 @@ class QuestionRepository(BaseRepository[Question]):
         if filters:
             if filters.get('question_type'):
                 qs = qs.filter(question_type=filters['question_type'])
-            if filters.get('difficulty'):
-                qs = qs.filter(difficulty=filters['difficulty'])
             if filters.get('created_by_id'):
                 qs = qs.filter(created_by_id=filters['created_by_id'])
             if filters.get('line_type_id'):

@@ -2,7 +2,7 @@
  * 题目相关类型定义
  */
 
-import type { QuestionType, Difficulty, SimpleTag } from './common';
+import type { QuestionType, SimpleTag } from './common';
 
 /**
  * 题目
@@ -18,8 +18,6 @@ export interface Question {
   answer?: string | string[];
   explanation?: string;
   score: string;
-  difficulty?: Difficulty;
-  difficulty_display?: string;
   line_type?: SimpleTag;
   is_objective?: boolean;
   is_subjective?: boolean;
@@ -40,6 +38,5 @@ export interface QuestionCreateRequest {
   answer?: string | string[];
   explanation?: string;
   score?: string | number;
-  difficulty?: Difficulty;
   line_type_id?: number;
 }

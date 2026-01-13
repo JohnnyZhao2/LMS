@@ -152,3 +152,4 @@ export * from "./stat-card";
 // Card System - Claymorphism 统一样式
 export { ActionCard } from './action-card';
 export { ContentPanel } from './content-panel';
+export { SegmentedControl } from './segmented-control';

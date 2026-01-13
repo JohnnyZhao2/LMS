@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type {
+  PaginatedResponse,
   StudentTaskCenterResponse,
   TaskListItem,
   TaskStatus,
@@ -62,7 +63,7 @@ export const useTaskList = (
         ...(typeof isClosed === 'boolean' && { is_closed: isClosed ? 'true' : 'false' }),
       };
       const queryString = buildQueryString(queryParams);
-      return apiClient.get<TaskListItem[]>(
+      return apiClient.get<PaginatedResponse<TaskListItem>>(
         `/tasks/${queryString}`
       );
     },

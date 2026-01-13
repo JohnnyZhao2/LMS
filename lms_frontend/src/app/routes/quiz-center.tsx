@@ -1,25 +1,25 @@
 /**
- * 测试中心相关路由
+ * 试卷中心相关路由
  */
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/protected-route';
-import { TestCenter } from '@/features/test-center/components/test-center';
-import { QuizForm } from '@/features/test-center/quizzes/components/quiz-form';
+import { QuizCenter } from '@/features/quiz-center/components/quiz-center';
+import { QuizForm } from '@/features/quiz-center/quizzes/components/quiz-form';
 import { ROUTES } from '@/config/routes';
 
-export const testCenterRoutes = [
+export const quizCenterRoutes = [
   <Route
-    key="test-center"
-    path={ROUTES.TEST_CENTER}
+    key="quiz-center"
+    path={ROUTES.QUIZ_CENTER}
     element={
       <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
-        <TestCenter />
+        <QuizCenter />
       </ProtectedRoute>
     }
   />,
   <Route
     key="quiz-create"
-    path={`${ROUTES.TEST_CENTER_QUIZZES}/create`}
+    path={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
     element={
       <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
         <QuizForm />
@@ -28,7 +28,7 @@ export const testCenterRoutes = [
   />,
   <Route
     key="quiz-edit"
-    path={`${ROUTES.TEST_CENTER_QUIZZES}/:id/edit`}
+    path={`${ROUTES.QUIZ_CENTER_QUIZZES}/:id/edit`}
     element={
       <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
         <QuizForm />

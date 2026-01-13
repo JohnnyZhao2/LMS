@@ -35,6 +35,7 @@ interface DataTableProps<TData, TValue> {
     pageIndex: number
     pageSize: number
     pageCount: number
+    totalCount?: number  // Actual total number of records
     onPageChange: (page: number) => void
     onPageSizeChange: (size: number) => void
   }
@@ -166,7 +167,7 @@ export function DataTable<TData, TValue>({
         <div className="pt-6 mt-4 border-t border-gray-100 bg-white sticky bottom-0 z-10">
           <Pagination
             current={pagination.pageIndex + 1}
-            total={pagination.pageCount * pagination.pageSize}
+            total={pagination.totalCount ?? (pagination.pageCount * pagination.pageSize)}
             pageSize={pagination.pageSize}
             onChange={(page) => pagination.onPageChange(page - 1)}
             showSizeChanger

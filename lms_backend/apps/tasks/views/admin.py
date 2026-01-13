@@ -12,7 +12,8 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.db.models import Q
 from core.exceptions import BusinessError, ErrorCodes
-from core.responses import success_response, created_response, no_content_response, list_response
+from core.responses import success_response, created_response, no_content_response, list_response, paginated_response
+from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import (
     IsAdminOrMentorOrDeptManager,
     get_current_role,
@@ -125,6 +126,15 @@ class TaskListView(APIView):
             is_closed_bool = is_closed.lower() in ('true', '1', 'yes')
             queryset = queryset.filter(is_closed=is_closed_bool)
         queryset = queryset.select_related('created_by').order_by('-created_at')
+        
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = TaskListSerializer(page, many=True)
+            return paginated_response(page, serializer.data, paginator)
+        
+        # Fallback to non-paginated response
         serializer = TaskListSerializer(queryset, many=True)
         return list_response(serializer.data)
 class TaskDetailView(APIView):

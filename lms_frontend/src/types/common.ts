@@ -36,11 +36,6 @@ export type KnowledgeType = 'EMERGENCY' | 'OTHER';
 export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_COMPLETED' | 'SPOT_CHECK';
 
 /**
- * 难度等级
- */
-export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
-
-/**
  * 标签类型
  */
 export type TagType = 'LINE' | 'SYSTEM' | 'OPERATION';

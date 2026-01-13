@@ -79,10 +79,6 @@ class AddNewQuestionSerializer(serializers.Serializer):
     answer = serializers.JSONField()
     explanation = serializers.CharField(required=False, default='')
     score = serializers.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    difficulty = serializers.ChoiceField(
-        choices=Question.DIFFICULTY_CHOICES,
-        default='MEDIUM'
-    )
     line_type_id = serializers.IntegerField(required=False, allow_null=True)
     def validate(self, attrs):
         """Validate question data based on question type."""
