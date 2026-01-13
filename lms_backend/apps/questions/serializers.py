@@ -10,7 +10,6 @@ class QuestionListSerializer(serializers.ModelSerializer):
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
-    difficulty_display = serializers.CharField(source='get_difficulty_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     line_type = TagSimpleSerializer(read_only=True)
     class Meta:
@@ -19,7 +18,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation',
-            'difficulty', 'difficulty_display', 'score',
+            'score',
             'is_objective', 'line_type',
             'is_current',
             'created_by', 'created_by_name',
@@ -31,7 +30,6 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
-    difficulty_display = serializers.CharField(source='get_difficulty_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     is_subjective = serializers.ReadOnlyField()
     line_type = TagSimpleSerializer(read_only=True)
@@ -41,7 +39,6 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation', 'score',
-            'difficulty', 'difficulty_display',
             'is_objective', 'is_subjective', 'line_type',
             'is_current',
             'created_by', 'created_by_name',
@@ -56,7 +53,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             'content', 'question_type', 'options', 'answer',
-            'explanation', 'score', 'difficulty', 'line_type_id'
+            'explanation', 'score', 'line_type_id'
         ]
     def validate_line_type_id(self, value):
         """Validate line_type_id exists and is a LINE type tag."""
@@ -131,7 +128,7 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             'content', 'options', 'answer', 'explanation',
-            'score', 'difficulty', 'line_type_id'
+            'score', 'line_type_id'
         ]
     def validate_line_type_id(self, value):
         """Validate line_type_id exists and is a LINE type tag."""

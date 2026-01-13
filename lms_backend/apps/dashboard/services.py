@@ -172,7 +172,7 @@ class MentorDashboardService(BaseService):
             'create_learning_task': '/tasks/learning/create',
             'create_practice_task': '/tasks/practice/create',
             'create_exam_task': '/tasks/exam/create',
-            'test_center': '/test-center',
+            'quiz_center': '/quiz-center',
             'spot_checks': '/spot-checks',
             'question_bank': '/questions',
             'quiz_management': '/quizzes'

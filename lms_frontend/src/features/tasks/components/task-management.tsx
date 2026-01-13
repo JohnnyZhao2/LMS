@@ -22,6 +22,7 @@ import {
     Input,
     Tooltip,
     Skeleton,
+    SegmentedControl,
 } from "@/components/ui"
 import { ConfirmDialog } from "@/components/ui"
 import {
@@ -56,19 +57,21 @@ export const TaskManagement: React.FC = () => {
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
+    const [page, setPage] = React.useState(1)
+    const [pageSize, setPageSize] = React.useState(10)
 
-    const { data: tasks, isLoading, refetch } = useTaskList({})
+    const { data: tasksData, isLoading, refetch } = useTaskList({ page, pageSize })
     const deleteTask = useDeleteTask()
 
     // 统计逻辑
     const stats = React.useMemo(() => {
-        const allTasks = tasks || []
+        const allTasks = tasksData?.results || []
         return {
-            total: allTasks.length,
-            active: allTasks.filter(t => !t.is_closed).length,
-            completed: allTasks.filter(t => t.is_closed).length
+            total: tasksData?.count || 0,
+            active: allTasks.filter((t: TaskListItem) => !t.is_closed).length,
+            completed: allTasks.filter((t: TaskListItem) => t.is_closed).length
         }
-    }, [tasks])
+    }, [tasksData])
 
     const handleDeleteTask = async () => {
         if (!deleteId) return
@@ -187,7 +190,7 @@ export const TaskManagement: React.FC = () => {
                 const canEdit = currentRole === 'ADMIN' || row.original.created_by === user?.id;
                 return (
                     <div className="flex items-center gap-1.5 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip content="预览任务">
+                        <Tooltip title="预览任务">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -199,7 +202,7 @@ export const TaskManagement: React.FC = () => {
                         </Tooltip>
                         {canEdit && (
                             <>
-                                <Tooltip content="编辑任务">
+                                <Tooltip title="编辑任务">
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -210,7 +213,7 @@ export const TaskManagement: React.FC = () => {
                                         <Pencil className="h-4 w-4" />
                                     </Button>
                                 </Tooltip>
-                                <Tooltip content="删除任务">
+                                <Tooltip title="删除任务">
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -299,20 +302,18 @@ export const TaskManagement: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center bg-[#F3F4F6] p-1.5 rounded-md">
-                                {['all', 'open', 'closed'].map((s) => (
-                                    <button
-                                        key={s}
-                                        onClick={() => setStatusFilter(s)}
-                                        className={cn(
-                                            "px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 shadow-none",
-                                            statusFilter === s ? "bg-white text-[#111827]" : "text-[#6B7280] hover:text-[#111827]"
-                                        )}
-                                    >
-                                        {s === 'all' ? '全部' : s === 'open' ? '进行中' : '已结束'}
-                                    </button>
-                                ))}
-                            </div>
+                            <SegmentedControl
+                                value={statusFilter}
+                                onChange={(val: string) => setStatusFilter(val)}
+                                options={[
+                                    { label: '全部', value: 'all' },
+                                    { label: '进行中', value: 'open' },
+                                    { label: '已结束', value: 'closed' },
+                                ]}
+                                variant="premium"
+                                activeColor="white"
+                                className="w-full md:w-auto"
+                            />
 
                             <Button
                                 variant="ghost"
@@ -339,15 +340,26 @@ export const TaskManagement: React.FC = () => {
                         ) : (
                             <DataTable
                                 columns={columns}
-                                data={tasks?.filter(t => {
+                                data={tasksData?.results?.filter((t: TaskListItem) => {
                                     const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
                                     const matchesStatus = statusFilter === 'all' ||
                                         (statusFilter === 'open' && !t.is_closed) ||
                                         (statusFilter === 'closed' && t.is_closed);
                                     return matchesSearch && matchesStatus;
                                 }) || []}
+                                pagination={{
+                                    pageIndex: page - 1,
+                                    pageSize: pageSize,
+                                    pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
+                                    totalCount: tasksData?.count || 0,
+                                    onPageChange: (p: number) => setPage(p + 1),
+                                    onPageSizeChange: (size: number) => {
+                                        setPageSize(size);
+                                        setPage(1);
+                                    },
+                                }}
                                 rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
-                                onRowClick={(row) => navigate(`/tasks/${row.id}`)}
+                                onRowClick={(row: TaskListItem) => navigate(`/tasks/${row.id}`)}
                             />
                         )}
                     </div>

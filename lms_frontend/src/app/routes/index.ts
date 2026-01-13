@@ -6,7 +6,7 @@ import { dashboardRoutes } from './dashboard';
 import { knowledgeRoutes } from './knowledge';
 import { taskRoutes } from './tasks';
 import { submissionRoutes } from './submissions';
-import { testCenterRoutes } from './test-center';
+import { quizCenterRoutes } from './quiz-center';
 import { spotCheckRoutes } from './spot-checks';
 import { userRoutes } from './users';
 import { otherRoutes } from './other';
@@ -17,7 +17,7 @@ export const allRoutes = [
   ...knowledgeRoutes,
   ...taskRoutes,
   ...submissionRoutes,
-  ...testCenterRoutes,
+  ...quizCenterRoutes,
   ...spotCheckRoutes,
   ...userRoutes,
   ...otherRoutes,

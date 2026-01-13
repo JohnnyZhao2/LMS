@@ -61,18 +61,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default=1.0,
         verbose_name='分值'
     )
-    # 难度等级
-    DIFFICULTY_CHOICES = [
-        ('EASY', '简单'),
-        ('MEDIUM', '中等'),
-        ('HARD', '困难'),
-    ]
-    difficulty = models.CharField(
-        max_length=10,
-        choices=DIFFICULTY_CHOICES,
-        default='MEDIUM',
-        verbose_name='难度等级'
-    )
     resource_uuid = models.UUIDField(
         default=uuid.uuid4,
         editable=False,
@@ -230,7 +218,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             answer=self.answer,
             explanation=self.explanation,
             score=self.score,
-            difficulty=self.difficulty,
             created_by=self.created_by,
             resource_uuid=self.resource_uuid,
             version_number=self.next_version_number(self.resource_uuid),

@@ -28,10 +28,9 @@ class QuestionListCreateView(APIView):
         self.service = QuestionService()
     @extend_schema(
         summary='获取题目列表',
-        description='获取所有题目，支持类型、难度、标签筛选',
+        description='获取所有题目，支持类型、标签筛选',
         parameters=[
             OpenApiParameter(name='question_type', type=str, description='题目类型'),
-            OpenApiParameter(name='difficulty', type=str, description='难度等级'),
             OpenApiParameter(name='tag', type=str, description='标签'),
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
@@ -50,8 +49,6 @@ class QuestionListCreateView(APIView):
         filters = {}
         if request.query_params.get('question_type'):
             filters['question_type'] = request.query_params.get('question_type')
-        if request.query_params.get('difficulty'):
-            filters['difficulty'] = request.query_params.get('difficulty')
         if request.query_params.get('created_by'):
             filters['created_by_id'] = int(request.query_params.get('created_by'))
         if request.query_params.get('line_type_id'):

@@ -14,7 +14,8 @@ interface SegmentedControlProps {
   onChange: (value: string) => void;
   label?: string;
   className?: string;
-  activeColor?: 'gray' | 'blue';
+  activeColor?: 'gray' | 'blue' | 'white';
+  variant?: 'default' | 'premium';
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -24,10 +25,12 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   label,
   className,
   activeColor = 'gray',
+  variant = 'default',
 }) => {
   const activeStyles = {
     gray: 'bg-gray-900 text-white',
     blue: 'bg-blue-600 text-white',
+    white: 'bg-white text-gray-900 shadow-sm',
   };
 
   return (
@@ -40,16 +43,19 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {label}
         </span>
       )}
-      <div className="flex bg-white p-1 rounded-md shadow-none overflow-x-auto no-scrollbar">
+      <div className={cn(
+        'flex p-1 rounded-md shadow-none overflow-x-auto no-scrollbar',
+        variant === 'premium' ? 'bg-[#F3F4F6]' : 'bg-white'
+      )}>
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap',
+              'px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap shadow-none',
               value === opt.value
-                ? `${activeStyles[activeColor]} shadow-none`
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ? activeStyles[activeColor]
+                : 'text-gray-500 hover:text-gray-700'
             )}
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >

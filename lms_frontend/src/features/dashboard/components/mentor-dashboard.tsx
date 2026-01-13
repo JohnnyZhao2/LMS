@@ -103,7 +103,7 @@ export const MentorDashboard: React.FC = () => {
             title="新建试卷"
             description="创建新的考试或练习试卷"
             icon={Plus}
-            route={ROUTES.TEST_CENTER}
+            route={ROUTES.QUIZ_CENTER}
             iconColor="text-[#10B981]"
             iconBg="bg-[#D1FAE5]"
           />

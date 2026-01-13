@@ -128,7 +128,7 @@ export const AdminDashboard: React.FC = () => {
               title="测评引擎"
               description="试卷与题库维护"
               icon={ClipboardCheck}
-              route={ROUTES.TEST_CENTER}
+              route={ROUTES.QUIZ_CENTER}
               iconColor="text-[#EC4899]"
               iconBg="bg-[#FCE7F3]"
             />

@@ -23,9 +23,9 @@ interface MenuItem {
  * 
  * 角色权限：
  * - 学员：概览、知识库、任务、个人中心
- * - 导师：概览、测试中心、任务、抽查
- * - 室经理：概览、测试中心、任务、抽查
- * - 管理员：概览、知识库管理、测试中心、任务、用户管理
+ * - 导师：概览、试卷中心、任务、抽查
+ * - 室经理：概览、试卷中心、任务、抽查
+ * - 管理员：概览、知识库管理、试卷中心、任务、用户管理
  * - 团队经理：概览、数据看板
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
@@ -68,9 +68,9 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: ROUTES.TEST_CENTER,
+            key: ROUTES.QUIZ_CENTER,
             icon: <HelpCircle className="w-4 h-4" />,
-            label: '测试中心',
+            label: '试卷中心',
           },
           {
             key: ROUTES.TASKS,
@@ -93,9 +93,9 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
             label: '知识库',
           },
           {
-            key: ROUTES.TEST_CENTER,
+            key: ROUTES.QUIZ_CENTER,
             icon: <HelpCircle className="w-4 h-4" />,
-            label: '测试中心',
+            label: '试卷中心',
           },
           {
             key: ROUTES.TASKS,

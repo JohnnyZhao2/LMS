@@ -366,7 +366,6 @@ class QuestionService(BaseService):
             'answer': data.get('answer', source.answer),
             'explanation': data.get('explanation', source.explanation),
             'score': data.get('score', source.score),
-            'difficulty': data.get('difficulty', source.difficulty),
             'source_version_id': source.id,
             'is_current': True,
             'created_by': user,
