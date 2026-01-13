@@ -108,7 +108,6 @@ export { ScrollArea, ScrollBar } from './scroll-area';
 
 // Textarea
 export { Textarea } from './textarea';
-export type { TextareaProps } from './textarea';
 
 // Checkbox
 export { Checkbox } from './checkbox';

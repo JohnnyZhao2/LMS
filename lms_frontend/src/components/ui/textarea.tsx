@@ -2,9 +2,6 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
-
 /**
  * Textarea 组件 - 平面设计系统
  * 
@@ -14,12 +11,12 @@ export interface TextareaProps
  * - 最小高度 min-h-[120px]
  * - 平滑过渡动画
  */
-const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
   ({ className, ...props }, ref) => {
     return (
       <textarea
         className={cn(
-          "flex min-h-[120px] w-full rounded-md border-none bg-gray-100 px-6 py-4",
+          "flex min-h-[120px] w-full rounded-md border-none bg-gray-100 px-4 py-3",
           "text-base font-normal text-gray-900 leading-relaxed",
           "placeholder:text-gray-500",
           "focus:outline-none focus:bg-white focus:border-2 focus:border-blue-600",

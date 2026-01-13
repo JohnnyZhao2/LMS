@@ -14,7 +14,7 @@ const buttonVariants = cva(
         destructive:
           "bg-red-600 text-white hover:bg-red-700 hover:scale-105",
         outline:
-          "border-4 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-600 hover:text-white",
+          "border-2 border-blue-600 bg-transparent text-blue-600 hover:bg-blue-600 hover:text-white",
         secondary:
           "bg-gray-100 text-gray-900 hover:bg-gray-200 hover:scale-105",
         ghost: "text-gray-900 hover:bg-gray-100",
@@ -23,10 +23,10 @@ const buttonVariants = cva(
           "bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-105",
       },
       size: {
-        default: "h-14 px-8 py-4 text-base rounded-md [&_svg]:size-5",
-        sm: "h-11 px-6 text-sm rounded-md [&_svg]:size-4",
-        lg: "h-16 px-10 text-lg rounded-lg [&_svg]:size-6",
-        icon: "h-14 w-14 rounded-md",
+        default: "h-12 px-6 py-3 text-base rounded-md [&_svg]:size-5",
+        sm: "h-9 px-4 text-sm rounded-md [&_svg]:size-4",
+        lg: "h-14 px-8 text-lg rounded-lg [&_svg]:size-6",
+        icon: "h-12 w-12 rounded-md",
       },
     },
     defaultVariants: {
