@@ -1,50 +1,39 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import {
-  X,
   FileText,
   Settings,
-  CheckCircle,
-  Plus,
   Save,
   PanelLeftClose,
   PanelLeft,
+  ArrowLeft,
   Loader2,
   ListOrdered,
+  X,
 } from 'lucide-react';
-
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Textarea } from '@/components/ui/textarea';
 
 import { useKnowledgeDetail } from '../api/get-admin-knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
-import { useCreateKnowledge, useUpdateKnowledge} from '../api/manage-knowledge';
-import { EMERGENCY_TABS, parseOutlineFromHtml } from '../utils';
+import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
+import { EMERGENCY_TABS, parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
 import { RichTextEditor } from './rich-text-editor';
 
-/**
- * 知识类型选项
- */
-const KNOWLEDGE_TYPE_OPTIONS = [
-  { value: 'EMERGENCY', label: '应急类' },
-  { value: 'OTHER', label: '标准类' },
-];
+
 
 /**
- * 知识表单组件 - ShadCN UI 版本
+ * 知识表单组件 - Unified Layout 版本 (Tasks/Quizzes Style)
  */
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -79,14 +68,12 @@ export const KnowledgeForm: React.FC = () => {
   const [recoveryPlan, setRecoveryPlan] = useState('');
 
   const [activeEmergencyTab, setActiveEmergencyTab] = useState('fault_scenario');
-  const [systemTagInput, setSystemTagInput] = useState('');
-  const [operationTagInput, setOperationTagInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // 编辑模式下填充数据
   useEffect(() => {
     if (isEdit && knowledgeDetail) {
-      setTitle(knowledgeDetail.title || '');
+      if (title === '') setTitle(knowledgeDetail.title || '');
       setKnowledgeType(knowledgeDetail.knowledge_type);
       setLineTypeId(knowledgeDetail.line_type?.id);
       setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
@@ -99,110 +86,22 @@ export const KnowledgeForm: React.FC = () => {
       setVerificationPlan(knowledgeDetail.verification_plan || '');
       setRecoveryPlan(knowledgeDetail.recovery_plan || '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, knowledgeDetail]);
 
   // 新建模式下设置默认值
   useEffect(() => {
-    if (!isEdit && lineTypeTags.length > 0) {
+    if (!isEdit && lineTypeTags.length > 0 && !lineTypeId) {
       const defaultLineType = lineTypeTags.find((t: Tag) => t.name === '其他');
-      if (defaultLineType && !lineTypeId) {
+      if (defaultLineType) {
         setLineTypeId(defaultLineType.id);
       }
     }
   }, [isEdit, lineTypeTags, lineTypeId]);
 
-
-
   const handleClose = useCallback(() => {
     navigate(ROUTES.ADMIN_KNOWLEDGE);
   }, [navigate]);
-
-  const getCurrentEmergencyContent = useCallback(() => {
-    switch (activeEmergencyTab) {
-      case 'fault_scenario': return faultScenario;
-      case 'trigger_process': return triggerProcess;
-      case 'solution': return solution;
-      case 'verification_plan': return verificationPlan;
-      case 'recovery_plan': return recoveryPlan;
-      default: return '';
-    }
-  }, [activeEmergencyTab, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan]);
-
-  const setCurrentEmergencyContent = useCallback((value: string) => {
-    switch (activeEmergencyTab) {
-      case 'fault_scenario': setFaultScenario(value); break;
-      case 'trigger_process': setTriggerProcess(value); break;
-      case 'solution': setSolution(value); break;
-      case 'verification_plan': setVerificationPlan(value); break;
-      case 'recovery_plan': setRecoveryPlan(value); break;
-    }
-  }, [activeEmergencyTab]);
-
-  /**
-   * 添加系统标签（如果不存在则先创建）
-   */
-  const handleAddSystemTag = useCallback(async () => {
-    if (!systemTagInput.trim()) return;
-    
-    const tagName = systemTagInput.trim();
-    
-    // 检查是否已存在同名标签
-    const existingTag = systemTags.find((tag: Tag) => tag.name === tagName);
-    if (existingTag) {
-      if (!systemTagIds.includes(existingTag.id)) {
-        setSystemTagIds(prev => [...prev, existingTag.id]);
-      }
-      setSystemTagInput('');
-      return;
-    }
-    
-    // 创建新标签
-    try {
-      const newTag = await createTag.mutateAsync({
-        name: tagName,
-        tag_type: 'SYSTEM',
-        is_active: true,
-      });
-      setSystemTagIds(prev => [...prev, newTag.id]);
-      setSystemTagInput('');
-      toast.success('标签创建成功');
-    } catch (error) {
-      showApiError(error, '创建标签失败');
-    }
-  }, [systemTagInput, systemTags, systemTagIds, createTag]);
-
-  /**
-   * 添加操作标签（如果不存在则先创建）
-   */
-  const handleAddOperationTag = useCallback(async () => {
-    if (!operationTagInput.trim()) return;
-    
-    const tagName = operationTagInput.trim();
-    
-    // 检查是否已存在同名标签
-    const existingTag = operationTags.find((tag: Tag) => tag.name === tagName);
-    if (existingTag) {
-      if (!operationTagIds.includes(existingTag.id)) {
-        setOperationTagIds(prev => [...prev, existingTag.id]);
-      }
-      setOperationTagInput('');
-      return;
-    }
-    
-    // 创建新标签
-    try {
-      const newTag = await createTag.mutateAsync({
-        name: tagName,
-        tag_type: 'OPERATION',
-        is_active: true,
-      });
-      setOperationTagIds(prev => [...prev, newTag.id]);
-      setOperationTagInput('');
-      toast.success('标签创建成功');
-    } catch (error) {
-      showApiError(error, '创建标签失败');
-    }
-  }, [operationTagInput, operationTags, operationTagIds, createTag]);
 
 
 
@@ -273,8 +172,12 @@ export const KnowledgeForm: React.FC = () => {
 
     try {
       if (isEdit && id) {
-        await updateKnowledge.mutateAsync({ id: Number(id), data: requestData });
+        const currentId = Number(id);
+        const result = await updateKnowledge.mutateAsync({ id: currentId, data: requestData });
         toast.success('保存成功');
+        if (result?.id && result.id !== currentId) {
+          navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
+        }
       } else {
         const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
         toast.success('创建成功');
@@ -296,16 +199,14 @@ export const KnowledgeForm: React.FC = () => {
   }, [lineTypeTags, lineTypeId, title, isEdit]);
 
   const statusInfo = useMemo(() => {
-    // 新建时显示新建状态
     if (!isEdit) {
-      return { 
-        label: '新建', 
-        isDraft: false, 
-        description: '保存后将立即对所有用户可见。' 
+      return {
+        label: '新建',
+        isDraft: false,
+        description: '保存后将立即对所有用户可见。'
       };
     }
-    
-    // 编辑时都是当前版本（因为管理端只显示当前版本）
+
     return {
       label: '当前版本',
       isDraft: false,
@@ -314,14 +215,7 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit]);
 
   const outline = useMemo(() => {
-    if (knowledgeType === 'EMERGENCY') {
-      return EMERGENCY_TABS.map((tab) => ({
-        id: tab.key,
-        level: 1,
-        text: tab.label,
-      }));
-    }
-    return parseOutlineFromHtml(content);
+    return parseOutline(knowledgeType === 'EMERGENCY' ? '' : content, knowledgeType === 'EMERGENCY');
   }, [knowledgeType, content]);
 
   if (isEdit && detailLoading) {
@@ -332,118 +226,125 @@ export const KnowledgeForm: React.FC = () => {
     );
   }
 
-
-  return createPortal(
-    <div className="fixed inset-0 flex flex-col bg-gray-100 z-[1000] animate-fadeIn" style={{ fontFamily: "'Outfit', sans-serif" }}>
-      {/* 顶部导航栏 */}
-      <div className="flex items-center justify-between h-16 px-6 bg-white border-b-2 border-gray-200 shrink-0">
+  return (
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-1px)] -m-6 bg-gray-50 overflow-hidden">
+      {/* 顶部导航栏 - Unified Style */}
+      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            className="w-10 h-10 flex items-center justify-center bg-gray-100 border-none rounded-md text-gray-600 cursor-pointer transition-all duration-200 hover:bg-gray-200 hover:text-gray-900 hover:scale-105"
+          <Button
+            variant="ghost"
             onClick={handleClose}
-            title="返回"
+            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 text-sm">
-            <span
-              className="text-gray-500 cursor-pointer transition-colors hover:text-gray-700"
-              onClick={handleClose}
-            >
-              知识库
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="text-sm font-semibold">返回列表</span>
+          </Button>
+          <div className="w-px h-5 bg-gray-200" />
+          <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
+            {isEdit ? '编辑知识' : '创建知识'}
+            <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">
+              {breadcrumbInfo.lineTypeName}
             </span>
-            <span className="text-gray-300">/</span>
-            <span className="text-gray-500">{breadcrumbInfo.lineTypeName}</span>
-            <span className="text-gray-300">/</span>
-            <span className="text-gray-900 font-medium">{breadcrumbInfo.documentTitle}</span>
-          </div>
+          </h1>
         </div>
 
-        {/* 状态和操作按钮 */}
         <div className="flex items-center gap-3">
-          <div
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold ${statusInfo.isDraft
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-emerald-100 text-emerald-700'
+          <Badge
+            className={`flex items-center gap-1.5 px-3 py-1 font-semibold rounded-full text-[10px] uppercase border ${statusInfo.isDraft
+              ? 'bg-amber-50 text-amber-600 border-amber-200'
+              : 'bg-emerald-50 text-emerald-600 border-emerald-200'
               }`}
           >
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ background: 'currentColor' }}
-            />
-            <span>{statusInfo.label}</span>
-          </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            {statusInfo.label}
+          </Badge>
 
           <Button
-            size="sm"
+            size="default"
             onClick={handleSave}
             disabled={isSubmitting}
-            className="h-14 px-6 font-semibold"
+            className="h-10 px-6 font-semibold"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            {isSubmitting ? '保存中...' : '保存'}
+            {isSubmitting ? '保存中...' : '保存修改'}
           </Button>
         </div>
       </div>
 
-      {/* 主体内容区域 */}
+      {/* 主体内容区域 - 三栏结构 */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左侧目录导航 */}
-        <div className="flex flex-col m-4 mr-2 shrink-0">
+        {/* 左侧目录 */}
+        <div className={cn(
+          "flex flex-col border-r border-gray-200 bg-white transition-all duration-300",
+          outlineCollapsed ? "w-14" : "w-80"
+        )}>
           {outlineCollapsed ? (
-            <button
-              className="flex items-center justify-center w-10 h-10 bg-white border-none rounded-md cursor-pointer text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:text-blue-600 hover:scale-105"
-              onClick={() => setOutlineCollapsed(false)}
-              title="展开目录"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
+            <div className="flex flex-col items-center py-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setOutlineCollapsed(false)}
+                title="展开目录"
+              >
+                <PanelLeft className="w-6 h-6" />
+              </Button>
+            </div>
           ) : (
-            <div className="w-[200px] bg-white rounded-lg border-2 border-gray-200 overflow-hidden flex flex-col shrink-0 min-h-[200px] max-h-[400px]">
-              <div className="flex items-center justify-between px-4 py-3 border-b-2 border-gray-200 text-xs font-bold text-gray-700 uppercase tracking-wider shrink-0 bg-gray-50">
-                <div className="flex items-center whitespace-nowrap overflow-hidden">
-                  <ListOrdered className="w-4 h-4 mr-2" />
-                  目录
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 text-sm font-semibold text-gray-900 shrink-0">
+                <div className="flex items-center gap-2">
+                  <ListOrdered className="w-5 h-5 text-primary-500" />
+                  内容大纲
                 </div>
-                <button
-                  className="flex items-center justify-center w-6 h-6 p-0 border-none bg-transparent text-gray-500 cursor-pointer rounded-md transition-all duration-200 hover:bg-gray-200 hover:text-gray-700 shrink-0"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-primary-500"
                   onClick={() => setOutlineCollapsed(true)}
-                  title="折叠目录"
                 >
                   <PanelLeftClose className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
-              <div className="flex-1 overflow-y-auto py-2">
+              <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                 {outline.length > 0 ? (
-                  outline.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex items-center gap-2 py-2.5 text-sm text-gray-700 cursor-pointer transition-all duration-200 border-l-2 border-transparent hover:bg-blue-50 hover:text-blue-600 ${item.level === 1 ? 'px-4 font-semibold' : item.level === 2 ? 'pl-6 pr-4' : 'pl-8 pr-4 text-xs'
-                        } ${knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id
-                          ? 'bg-blue-100 text-blue-700 border-l-blue-600'
-                          : ''
-                        }`}
-                      onClick={() => {
-                        if (knowledgeType === 'EMERGENCY') {
-                          setActiveEmergencyTab(item.id);
-                        }
-                      }}
-                    >
-                      <span className="text-[11px] font-mono font-semibold text-gray-400 shrink-0 min-w-6 text-right">
-                        {'#'.repeat(item.level)}
-                      </span>
-                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{item.text}</span>
-                    </div>
-                  ))
+                  <div className="space-y-1.5">
+                    {outline.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all",
+                          item.level === 1 ? 'font-semibold text-gray-900 bg-gray-50' : 'text-gray-500 hover:bg-gray-50',
+                          knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id && 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
+                        )}
+                        onClick={() => {
+                          if (knowledgeType === 'EMERGENCY') {
+                            setActiveEmergencyTab(item.id);
+                          } else {
+                            const element = document.getElementById(item.id);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }
+                        }}
+                      >
+                        <span className="w-4 text-[10px] text-gray-300 font-mono group-hover:text-primary-400 transition-colors">
+                          {knowledgeType === 'EMERGENCY' ? index + 1 : item.level}
+                        </span>
+                        <span className="truncate group-hover:translate-x-1 transition-transform">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="p-4 text-xs text-gray-500 text-center font-medium">
-                    {knowledgeType === 'EMERGENCY'
-                      ? '选择章节开始编辑'
-                      : '使用标题按钮创建标题'}
+                  <div className="flex flex-col items-center justify-center h-60 px-6 text-center text-gray-400">
+                    <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center mb-4">
+                      <FileText className="w-8 h-8 opacity-20" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-500">暂无大纲数据</p>
+                    <p className="text-[10px] mt-2 opacity-60">添加标题后将自动在此生成目录</p>
                   </div>
                 )}
               </div>
@@ -452,296 +353,247 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 中间编辑区 */}
-        <div className="flex-1 flex flex-col bg-white m-4 mr-2 rounded-lg border-2 border-gray-200 min-h-0 overflow-hidden">
-          {/* 编辑器头部 */}
-          <div className="flex items-center px-6 py-4 border-b-2 border-gray-200 shrink-0 bg-gray-50">
-            <span className="text-sm font-bold text-gray-900">
-              {knowledgeType === 'EMERGENCY' ? '应急知识内容' : '知识内容'}
-            </span>
-          </div>
+        <div className="flex-1 flex flex-col bg-white min-w-0">
+          <div className="flex-1 overflow-y-auto">
+            <div className="w-full h-full">
+              {knowledgeType === 'EMERGENCY' ? (
+                <div className="flex flex-col h-full overflow-hidden">
+                  {EMERGENCY_TABS.map((tab, index) => {
+                    if (tab.key !== activeEmergencyTab) return null;
 
-          {/* 编辑内容 */}
-          {knowledgeType === 'EMERGENCY' ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex px-6 border-b-2 border-gray-200 overflow-x-auto gap-1 bg-gray-50">
-                {EMERGENCY_TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    className={`px-5 py-3 bg-transparent border-none border-b-2 border-transparent text-gray-600 text-sm font-semibold cursor-pointer transition-all duration-200 whitespace-nowrap hover:text-blue-600 ${activeEmergencyTab === tab.key
-                      ? 'text-blue-600 border-b-blue-600 bg-blue-50'
-                      : ''
-                      }`}
-                    onClick={() => setActiveEmergencyTab(tab.key)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <RichTextEditor
-                  value={getCurrentEmergencyContent()}
-                  onChange={setCurrentEmergencyContent}
-                  placeholder={`在此编辑${EMERGENCY_TABS.find(t => t.key === activeEmergencyTab)?.label}内容...`}
-                />
-              </div>
-              {errors.emergency && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.emergency}</div>}
+                    return (
+                      <div key={tab.key} className="flex flex-col h-full animate-in fade-in duration-300">
+                        {/* Tab Header */}
+                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-50/50">
+                          <div className="flex items-center gap-3">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-50 text-primary-600 text-xs font-bold ring-1 ring-primary-100/50">
+                              {index + 1}
+                            </span>
+                            <h2 className="text-base font-bold text-gray-900 tracking-tight">{tab.label}</h2>
+                          </div>
+                        </div>
+
+                        {/* Editor Area */}
+                        <div className="flex-1 overflow-hidden">
+                          <RichTextEditor
+                            value={
+                              tab.key === 'fault_scenario' ? faultScenario :
+                                tab.key === 'trigger_process' ? triggerProcess :
+                                  tab.key === 'solution' ? solution :
+                                    tab.key === 'verification_plan' ? verificationPlan :
+                                      tab.key === 'recovery_plan' ? recoveryPlan : ''
+                            }
+                            onChange={(val) => {
+                              if (tab.key === 'fault_scenario') setFaultScenario(val);
+                              else if (tab.key === 'trigger_process') setTriggerProcess(val);
+                              else if (tab.key === 'solution') setSolution(val);
+                              else if (tab.key === 'verification_plan') setVerificationPlan(val);
+                              else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
+                            }}
+                            placeholder={`在此输入${tab.label}详情...`}
+                            className="border-none shadow-none ring-0 w-full h-full"
+                            contentClassName="p-6 max-w-5xl text-lg leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col h-full">
+                  <div className="flex-1">
+                    <RichTextEditor
+                      value={content}
+                      onChange={setContent}
+                      placeholder="请输入知识正文..."
+                      className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
+                      contentClassName="p-12 px-20 max-w-5xl mx-auto text-lg leading-relaxed"
+                    />
+                  </div>
+                  {errors.content && (
+                    <div className="m-6 p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-semibold text-red-600 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      {errors.content}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto">
-              <RichTextEditor
-                value={content}
-                onChange={setContent}
-                placeholder="在此编辑知识内容..."
-              />
-              {errors.content && <div className="text-sm font-semibold text-red-600 px-6 pb-4">{errors.content}</div>}
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* 右侧元数据面板 */}
-        <div className="w-[360px] flex flex-col bg-white m-4 ml-2 rounded-lg border-2 border-gray-200 overflow-y-auto shrink-0">
-          {/* 基本信息 */}
-          <div className="p-6 border-b-2 border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 flex items-center justify-center bg-blue-600 rounded-md">
-                <FileText className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm font-bold text-gray-900">基本信息</span>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">标题</label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="输入知识文档标题"
-              />
-              {errors.title && <div className="text-sm font-semibold text-red-600 mt-2">{errors.title}</div>}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">知识概要</label>
-              <textarea
-                className="w-full p-4 bg-gray-100 border-none rounded-md text-sm leading-relaxed resize-y min-h-[100px] transition-all duration-200 focus:outline-none focus:bg-white focus:border-2 focus:border-blue-600"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                placeholder="简要描述这篇知识的核心内容（用于卡片预览展示）"
-                rows={2}
-                maxLength={500}
-                style={{ fontFamily: "'Outfit', sans-serif" }}
-              />
-              <div className="text-xs text-gray-500 mt-2 text-right font-medium">{summary.length}/500 字符</div>
-            </div>
+        {/* 右侧配置 */}
+        <div className="w-[380px] flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
+          <div className="flex items-center h-16 px-8 bg-white border-b border-gray-100 shrink-0">
+            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-3">
+              <Settings className="w-5 h-5 text-primary-500" />
+              页面配置
+            </h2>
           </div>
 
-          {/* 分类信息 */}
-          <div className="p-6 border-b-2 border-gray-200">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-md">
-                <Settings className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm font-bold text-gray-900">分类信息</span>
-            </div>
-
-            <div className="flex flex-col gap-5">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">文档类型</label>
-                  <Select value={knowledgeType} onValueChange={(v) => setKnowledgeType(v as KnowledgeType)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择类型" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[1050]">
-                      {KNOWLEDGE_TYPE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <div className="p-6 space-y-6">
+            {/* 基础定义 */}
+            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                基础配置
+              </h3>
+              <div className="space-y-4">
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-semibold text-gray-700 ml-1">知识标题</Label>
+                  <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="请输入标题..."
+                    className="font-semibold"
+                  />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">条线类型</label>
-                  <Select value={lineTypeId?.toString() || ''} onValueChange={(v) => setLineTypeId(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[1050]">
-                      {lineTypeTags.map((tag: Tag) => (
-                        <SelectItem key={tag.id} value={tag.id.toString()}>{tag.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.lineTypeId && <div className="text-sm font-semibold text-red-600 mt-1">{errors.lineTypeId}</div>}
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-semibold text-gray-700 ml-1">知识分类</Label>
+                  <SegmentedControl
+                    options={[
+                      { label: '标准类', value: 'OTHER' },
+                      { label: '急诊类', value: 'EMERGENCY' },
+                    ]}
+                    value={knowledgeType}
+                    onChange={(val) => setKnowledgeType(val as KnowledgeType)}
+                    className="w-full"
+                    activeColor="white"
+                    variant="premium"
+                  />
                 </div>
               </div>
+            </section>
 
-              {/* 系统标签 */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">系统标签</label>
-                <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
-                  {systemTagIds.length > 0 ? systemTagIds.map((tagId) => {
-                    const tag = systemTags.find((t: Tag) => t.id === tagId);
-                    return tag ? (
-                      <Badge key={tagId} variant="secondary" className="text-xs px-3 py-1 rounded-md">
-                        {tag.name}
-                        <button
-                          className="ml-1.5 hover:text-red-600 transition-colors"
-                          onClick={() => setSystemTagIds(prev => prev.filter(id => id !== tagId))}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ) : null;
-                  }) : (
-                    <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <Select
-                    value=""
-                    onValueChange={(v) => {
-                      const tagId = Number(v);
-                      if (tagId && !systemTagIds.includes(tagId)) {
-                        setSystemTagIds(prev => [...prev, tagId]);
-                      }
+            {/* 内容摘要 */}
+            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                内容摘要
+              </h3>
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="添加说明..."
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  className="min-h-[120px] font-medium"
+                />
+              </div>
+            </section>
+
+            {/* 分类归属 */}
+            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                分类归属
+              </h3>
+              <div className="space-y-4">
+                <div className="space-y-2.5">
+                  <Label className="text-xs font-semibold text-gray-700 ml-1">所属条线</Label>
+                  <SearchableSelect
+                    items={lineTypeTags}
+                    value={lineTypeId}
+                    onSelect={(v) => setLineTypeId(Number(v))}
+                    onCreate={async (name) => {
+                      const newTag = await createTag.mutateAsync({ name, tag_type: 'LINE', is_active: true });
+                      setLineTypeId(newTag.id);
+                      toast.success('新条线已创建');
                     }}
-                  >
-                    <SelectTrigger className="h-14 text-sm">
-                      <SelectValue placeholder="选择已有..." />
-                    </SelectTrigger>
-                    <SelectContent className="z-[1050]">
-                      {systemTags.filter((tag: Tag) => !systemTagIds.includes(tag.id)).map((tag: Tag) => (
-                        <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="新建..."
-                      value={systemTagInput}
-                      onChange={(e) => setSystemTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddSystemTag();
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleAddSystemTag} 
-                      className="h-14 w-14"
-                      disabled={createTag.isPending}
-                    >
-                      {createTag.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
+                    placeholder="选择条线..."
+                    getLabel={(t) => t.name}
+                    getValue={(t) => t.id}
+                  />
                 </div>
               </div>
+            </section>
 
-              {/* 操作标签 */}
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">操作标签</label>
-                <div className="flex flex-wrap gap-2 min-h-[40px] p-3 bg-gray-50 rounded-md">
-                  {operationTagIds.length > 0 ? operationTagIds.map((tagId) => {
-                    const tag = operationTags.find((t: Tag) => t.id === tagId);
-                    return tag ? (
-                      <Badge key={tagId} variant="secondary" className="text-xs px-3 py-1 rounded-md">
-                        {tag.name}
-                        <button
-                          className="ml-1.5 hover:text-red-600 transition-colors"
-                          onClick={() => setOperationTagIds(prev => prev.filter(id => id !== tagId))}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ) : null;
-                  }) : (
-                    <span className="text-xs text-gray-400 italic self-center">暂无标签 (可多选)</span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <Select
-                    value=""
-                    onValueChange={(v) => {
-                      const tagId = Number(v);
-                      if (tagId && !operationTagIds.includes(tagId)) {
-                        setOperationTagIds(prev => [...prev, tagId]);
-                      }
+            {/* 精细标签 */}
+            <section className="p-6 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-5">
+              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                精细标签
+              </h3>
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between ml-1">
+                    <Label className="text-xs font-semibold text-gray-700">系统标签</Label>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {systemTagIds.map(id => {
+                      const tag = systemTags.find(t => t.id === id);
+                      return tag ? (
+                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-blue-50 text-blue-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                          {tag.name}
+                          <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setSystemTagIds(prev => prev.filter(i => i !== id))} />
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                  <SearchableSelect
+                    items={systemTags.filter(t => !systemTagIds.includes(t.id))}
+                    onSelect={(v) => setSystemTagIds(prev => [...prev, Number(v)])}
+                    onCreate={async (name) => {
+                      const newTag = await createTag.mutateAsync({ name, tag_type: 'SYSTEM', is_active: true });
+                      setSystemTagIds(prev => [...prev, newTag.id]);
+                      toast.success('标签已创建');
                     }}
-                  >
-                    <SelectTrigger className="h-14 text-sm">
-                      <SelectValue placeholder="选择已有..." />
-                    </SelectTrigger>
-                    <SelectContent className="z-[1050]">
-                      {operationTags.filter((tag: Tag) => !operationTagIds.includes(tag.id)).map((tag: Tag) => (
-                        <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="新建..."
-                      value={operationTagInput}
-                      onChange={(e) => setOperationTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddOperationTag();
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleAddOperationTag} 
-                      className="h-14 w-14"
-                      disabled={createTag.isPending}
-                    >
-                      {createTag.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4" />
-                      )}
-                    </Button>
+                    placeholder="关联系统..."
+                    getLabel={(t) => t.name}
+                    getValue={(t) => t.id}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between ml-1">
+                    <Label className="text-xs font-semibold text-gray-700">操作标签</Label>
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    {operationTagIds.map(id => {
+                      const tag = operationTags.find(t => t.id === id);
+                      return tag ? (
+                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                          {tag.name}
+                          <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setOperationTagIds(prev => prev.filter(i => i !== id))} />
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                  <SearchableSelect
+                    items={operationTags.filter(t => !operationTagIds.includes(t.id))}
+                    onSelect={(v) => setOperationTagIds(prev => [...prev, Number(v)])}
+                    onCreate={async (name) => {
+                      const newTag = await createTag.mutateAsync({ name, tag_type: 'OPERATION', is_active: true });
+                      setOperationTagIds(prev => [...prev, newTag.id]);
+                      toast.success('标签已创建');
+                    }}
+                    placeholder="选择操作..."
+                    getLabel={(t) => t.name}
+                    getValue={(t) => t.id}
+                  />
                 </div>
               </div>
-            </div>
-          </div>
+            </section>
 
-          {/* 发布状态 */}
-          <div className="p-6 bg-gray-50">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-md">
-                <CheckCircle className="w-4 h-4 text-white" />
+            <div className="pt-8 border-t border-gray-100">
+              <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                <span>当前版本</span>
+                <span className="text-primary-500">PUBLISHED</span>
               </div>
-              <span className="text-sm font-bold text-gray-900">版本状态</span>
-            </div>
-
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-700">当前状态</span>
-                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold ${statusInfo.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: 'currentColor' }} />
-                  {statusInfo.label}
-                </span>
-              </div>
-              <div className="text-xs text-gray-600 leading-relaxed font-medium">
-                {statusInfo.description}
+              <div className="mt-4 p-4 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 flex gap-3">
+                <div className="w-5 h-5 flex-shrink-0 bg-primary-100 rounded-md flex items-center justify-center">
+                  <Settings className="w-3 h-3 text-primary-600" />
+                </div>
+                <p className="text-[10px] text-gray-500 leading-relaxed font-medium">
+                  {statusInfo.description}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import {
     Bold,
     Italic,
@@ -22,6 +23,7 @@ interface RichTextEditorProps {
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
+    contentClassName?: string;
 }
 
 /**
@@ -39,10 +41,10 @@ const ToolbarButton: React.FC<{
         onClick={onClick}
         disabled={disabled}
         title={title}
-        className={`w-8 h-8 flex items-center justify-center rounded-md transition-all duration-200 ${isActive
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-gray-600 hover:bg-gray-100'
+            } ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer active:scale-95'}`}
     >
         {children}
     </button>
@@ -55,7 +57,7 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
     if (!editor) return null;
 
     return (
-        <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 flex-wrap">
+        <div className="flex items-center gap-0.5 p-1 border-b border-gray-200 bg-white flex-wrap">
             {/* 撤销/重做 */}
             <ToolbarButton
                 onClick={() => editor.chain().focus().undo().run()}
@@ -72,7 +74,7 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
                 <Redo className="w-4 h-4" />
             </ToolbarButton>
 
-            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <div className="w-px h-4 bg-gray-200 mx-1" />
 
             {/* 标题 */}
             <ToolbarButton
@@ -97,7 +99,7 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
                 <Heading3 className="w-4 h-4" />
             </ToolbarButton>
 
-            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <div className="w-px h-4 bg-gray-200 mx-1" />
 
             {/* 文本格式 */}
             <ToolbarButton
@@ -129,7 +131,7 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
                 <Code className="w-4 h-4" />
             </ToolbarButton>
 
-            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <div className="w-px h-4 bg-gray-200 mx-1" />
 
             {/* 列表 */}
             <ToolbarButton
@@ -147,7 +149,7 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
                 <ListOrdered className="w-4 h-4" />
             </ToolbarButton>
 
-            <div className="w-px h-6 bg-gray-300 mx-1" />
+            <div className="w-px h-4 bg-gray-200 mx-1" />
 
             {/* 块级元素 */}
             <ToolbarButton
@@ -181,8 +183,9 @@ const Toolbar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     value,
     onChange,
-    placeholder = '开始编辑...',
+    placeholder = '开始输入...',
     className = '',
+    contentClassName = '',
 }) => {
     const editor = useEditor({
         extensions: [
@@ -195,7 +198,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         content: value,
         editorProps: {
             attributes: {
-                class: 'prose prose-gray max-w-none focus:outline-none min-h-[300px] p-4',
+                class: cn('prose prose-gray !max-w-none focus:outline-none min-h-[calc(100vh-100px)] text-gray-800 prose-p:my-0 prose-headings:mb-4 prose-headings:mt-0 p-0', contentClassName),
             },
         },
         onUpdate: ({ editor }) => {
@@ -211,12 +214,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }, [editor, value]);
 
     return (
-        <div className={`border border-gray-200 rounded-lg overflow-hidden ${className}`}>
+        <div className={cn("bg-white overflow-hidden flex flex-col", className)}>
             <Toolbar editor={editor} />
-            <div className="relative">
-                <EditorContent editor={editor} />
+            <div className="relative flex-1">
+                <EditorContent editor={editor} className="h-full" />
                 {editor?.isEmpty && (
-                    <div className="absolute top-4 left-4 text-gray-400 pointer-events-none">
+                    <div className={cn("absolute top-4 left-4 text-gray-400 pointer-events-none text-sm", (contentClassName?.includes('p-0') || contentClassName?.includes('px-0')) && "top-2 left-2 p-0")}>
                         {placeholder}
                     </div>
                 )}

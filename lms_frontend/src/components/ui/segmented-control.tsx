@@ -44,7 +44,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         </span>
       )}
       <div className={cn(
-        'flex p-1 rounded-md shadow-none overflow-x-auto no-scrollbar',
+        'flex w-full p-1 rounded-md shadow-none overflow-x-auto no-scrollbar',
         variant === 'premium' ? 'bg-[#F3F4F6]' : 'bg-white'
       )}>
         {options.map((opt) => (
@@ -52,10 +52,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap shadow-none',
+              'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap shadow-none border-none outline-none ring-0',
               value === opt.value
                 ? activeStyles[activeColor]
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-black/5'
             )}
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >

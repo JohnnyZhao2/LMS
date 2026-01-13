@@ -9,11 +9,8 @@ import {
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
-import { cn } from '@/lib/utils';
+import { cn, stripHtml } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-
-/** 目录显示的最大条目数 */
-const MAX_TOC_ITEMS = 4;
 
 export interface SharedKnowledgeCardProps {
   item: KnowledgeListItem;
@@ -39,16 +36,20 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   const shouldShowStatus = showStatus ?? (variant === 'admin');
 
   const isEmergency = item.knowledge_type === 'EMERGENCY';
-  
+
   // 根据新的版本管理系统，管理端只显示当前版本
   // 不再需要 edit_status 判断
   const getStatusBadge = () => {
     // 学生视图不显示状态
     if (variant === 'student') return null;
-    
+
     // 管理员视图：所有显示的都是当前版本，显示绿色徽章
     return <Badge className="bg-[#10B981] text-white border-0 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-none">当前版本</Badge>;
   };
+
+  // 清洗摘要和预览内容
+  const cleanSummary = stripHtml(item.summary || '');
+  const cleanPreview = stripHtml(item.content_preview || item.summary || '') || '暂无详细内容...';
 
   return (
     <div
@@ -76,7 +77,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
           {shouldShowStatus && getStatusBadge()}
           {shouldShowActions && (
-            <button 
+            <button
               className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#111827] hover:text-white transition-all duration-200 shadow-none"
               onClick={() => onEdit?.(item.id)}
             >
@@ -87,35 +88,25 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       </div>
 
       {/* 标题 & 摘要 */}
-      <div className="relative mb-5">
-        <h3 className="text-lg font-bold text-[#111827] leading-tight mb-3 line-clamp-2 group-hover:text-[#3B82F6] transition-colors duration-200">
+      <div className="relative mb-4">
+        <h3 className="text-lg font-bold text-[#111827] leading-tight mb-2 line-clamp-2 group-hover:text-[#3B82F6] transition-colors duration-200">
           {item.title}
         </h3>
-        <p className="text-sm font-normal text-[#6B7280] line-clamp-2 leading-relaxed">
-          {item.summary || item.content_preview || '暂无摘要...'}
-        </p>
+        {cleanSummary && (
+          <p className="text-sm font-normal text-[#6B7280] line-clamp-1 leading-relaxed">
+            {cleanSummary}
+          </p>
+        )}
       </div>
 
-      {/* 目录 Map */}
-      <div className="flex-1 bg-[#F3F4F6] rounded-lg p-4 mb-6 group-hover:bg-[#DBEAFE] transition-colors duration-200">
+      {/* 内容预览区域 (替代原有的目录结构) */}
+      <div className="flex-1 bg-[#F3F4F6] rounded-lg p-4 mb-6 group-hover:bg-[#DBEAFE] transition-colors duration-200 overflow-hidden min-h-[160px] max-h-[160px]">
         <div className="flex items-center gap-2 mb-3">
           <List className="w-3.5 h-3.5 text-[#3B82F6]" />
-          <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">目录结构</span>
+          <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">内容预览</span>
         </div>
-        <div className="space-y-2">
-          {item.table_of_contents && item.table_of_contents.length > 0 ? (
-            item.table_of_contents.slice(0, MAX_TOC_ITEMS).map((toc, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-xs font-medium text-[#111827]">
-                <span className="text-[#3B82F6] mt-1 shrink-0">•</span>
-                <span className="line-clamp-1">{toc.text}</span>
-              </div>
-            ))
-          ) : <span className="text-[10px] text-[#9CA3AF]">暂无目录</span>}
-          {item.table_of_contents && item.table_of_contents.length > MAX_TOC_ITEMS && (
-            <div className="text-[10px] font-semibold text-[#3B82F6] pl-4">
-              +{item.table_of_contents.length - MAX_TOC_ITEMS} 个章节
-            </div>
-          )}
+        <div className="text-xs font-medium text-[#4B5563] leading-relaxed line-clamp-6">
+          {cleanPreview}
         </div>
       </div>
 

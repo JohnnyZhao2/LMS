@@ -10,7 +10,6 @@ interface UseResourceOptions {
 
 /**
  * 获取任务可选的知识文档列表（仅已发布版本）
- * 
  */
 export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
   const { search = '', enabled = true } = options;
@@ -52,4 +51,3 @@ export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
     staleTime: 60_000,
   });
 };
-

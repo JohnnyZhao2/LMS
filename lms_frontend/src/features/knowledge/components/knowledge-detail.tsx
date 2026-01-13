@@ -16,6 +16,7 @@ import {
 import { Button, ConfirmDialog } from '@/components/ui';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useStudentTaskKnowledgeDetail } from '../api/get-student-task-knowledge-detail';
@@ -26,138 +27,7 @@ import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 
-/**
- * 目录项接口
- */
-interface OutlineItem {
-  id: string;
-  level: number;
-  text: string;
-}
-
-/**
- * 从 Markdown/HTML 内容解析标题生成目录
- */
-const parseOutline = (content: string, isEmergency: boolean): OutlineItem[] => {
-  if (isEmergency) {
-    return [
-      { id: 'fault_scenario', level: 1, text: '故障场景' },
-      { id: 'trigger_process', level: 1, text: '触发流程' },
-      { id: 'solution', level: 1, text: '解决方案' },
-      { id: 'verification_plan', level: 1, text: '验证方案' },
-      { id: 'recovery_plan', level: 1, text: '恢复方案' },
-    ];
-  }
-
-  if (!content) return [];
-
-  const lines = content.split('\n');
-  const outline: OutlineItem[] = [];
-
-  lines.forEach((line, index) => {
-    const match = line.match(/^(#{1,3})\s+(.+)$/);
-    if (match) {
-      outline.push({
-        id: `heading-${index}`,
-        level: match[1].length,
-        text: match[2].trim(),
-      });
-    }
-  });
-
-  return outline;
-};
-
-/**
- * 简单的 Markdown 渲染
- */
-const renderMarkdown = (markdown: string): string => {
-  if (!markdown) return '';
-
-  let html = markdown;
-
-  const escapeHtml = (text: string) => {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  };
-
-  const codeBlocks: string[] = [];
-  html = html.replace(/```(\w+)?\n([\s\S]+?)\n```/g, (_, lang, code) => {
-    const index = codeBlocks.length;
-    codeBlocks.push(`<pre class="p-4 overflow-auto text-sm leading-relaxed bg-gray-50 rounded-lg mb-4"><code class="${lang || ''}">${escapeHtml(code)}</code></pre>`);
-    return `__CODE_BLOCK_${index}__`;
-  });
-
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-6 mb-3 text-gray-900">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-4 pb-2 border-b-2 border-gray-200 text-gray-900">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-4 pb-3 border-b-2 border-gray-200 text-gray-900">$1</h1>');
-
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em class="italic">$1</em>');
-  html = html.replace(/~~(.+?)~~/g, '<del class="line-through text-gray-500">$1</del>');
-
-  html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 text-sm bg-gray-100 rounded font-mono">$1</code>');
-
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full rounded-lg" />');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary-500 hover:underline">$1</a>');
-
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 text-gray-600 my-4">$1</blockquote>');
-
-  html = html.replace(/^---$/gm, '<hr class="my-6 border-t-2 border-gray-200" />');
-
-  html = html.replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>');
-  html = html.replace(/^\* (.+)$/gm, '<li class="ml-4">$1</li>');
-  html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4">$1</li>');
-  html = html.replace(/(<li[\s\S]*?<\/li>)+/g, (match) => `<ul class="list-disc pl-6 mb-4">${match}</ul>`);
-
-  const lines = html.split('\n');
-  const processedLines: string[] = [];
-  const blockTags = ['<h', '<ul', '<ol', '<li', '<table', '<blockquote', '<hr', '<pre'];
-
-  let inParagraph = false;
-  let paragraphContent = '';
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) {
-      if (inParagraph && paragraphContent) {
-        processedLines.push(`<p class="mb-4 leading-relaxed">${paragraphContent}</p>`);
-        paragraphContent = '';
-        inParagraph = false;
-      }
-      continue;
-    }
-
-    const isBlockElement = blockTags.some((tag) => trimmedLine.startsWith(tag));
-
-    if (isBlockElement) {
-      if (inParagraph && paragraphContent) {
-        processedLines.push(`<p class="mb-4 leading-relaxed">${paragraphContent}</p>`);
-        paragraphContent = '';
-        inParagraph = false;
-      }
-      processedLines.push(trimmedLine);
-    } else {
-      if (inParagraph) {
-        paragraphContent += '<br/>' + trimmedLine;
-      } else {
-        paragraphContent = trimmedLine;
-        inParagraph = true;
-      }
-    }
-  }
-
-  if (inParagraph && paragraphContent) {
-    processedLines.push(`<p class="mb-4 leading-relaxed">${paragraphContent}</p>`);
-  }
-
-  html = processedLines.join('\n');
-
-  codeBlocks.forEach((block, index) => {
-    html = html.replace(`__CODE_BLOCK_${index}__`, block);
-  });
-
-  return html;
-};
+import { parseOutline } from '../utils';
 
 /**
  * 知识详情组件（ShadCN UI 版本）
@@ -179,7 +49,7 @@ export const KnowledgeDetail: React.FC = () => {
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
   const adminQuery = useAdminKnowledgeDetail(Number(id));
 
-  const { data, isLoading, refetch } = isAdminRoute
+  const { data, isLoading } = isAdminRoute
     ? adminQuery
     : (taskKnowledgeId ? studentTaskQuery : studentQuery);
 
@@ -193,66 +63,7 @@ export const KnowledgeDetail: React.FC = () => {
     return parseOutline(knowledge.content || '', isEmergency);
   }, [knowledge, isEmergency]);
 
-  const renderedContent = useMemo(() => {
-    if (!knowledge) return '';
 
-    if (isEmergency) {
-      const sections = [];
-      if (knowledge.fault_scenario) {
-        sections.push(`
-          <div class="mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
-              故障场景
-            </h3>
-            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.fault_scenario)}</div>
-          </div>
-        `);
-      }
-      if (knowledge.trigger_process) {
-        sections.push(`
-          <div class="mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
-              触发流程
-            </h3>
-            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.trigger_process)}</div>
-          </div>
-        `);
-      }
-      if (knowledge.solution) {
-        sections.push(`
-          <div class="mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
-              解决方案
-            </h3>
-            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.solution)}</div>
-          </div>
-        `);
-      }
-      if (knowledge.verification_plan) {
-        sections.push(`
-          <div class="mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
-              验证方案
-            </h3>
-            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.verification_plan)}</div>
-          </div>
-        `);
-      }
-      if (knowledge.recovery_plan) {
-        sections.push(`
-          <div class="mb-6">
-            <h3 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b-2 border-blue-600">
-              恢复方案
-            </h3>
-            <div class="p-4 bg-gray-100 rounded-lg">${renderMarkdown(knowledge.recovery_plan)}</div>
-          </div>
-        `);
-      }
-      return sections.join('');
-    }
-
-    return renderMarkdown(knowledge.content || '');
-  }, [knowledge, isEmergency]);
 
   const handleEdit = () => {
     navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
@@ -314,33 +125,36 @@ export const KnowledgeDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50 overflow-hidden">
       {/* 顶部栏 */}
-      <div className="flex items-center justify-between p-4 px-6 bg-white border-b-2 border-gray-200 shrink-0">
+      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            className="flex items-center justify-center w-9 h-9 bg-gray-100 rounded-md text-gray-600 hover:bg-gray-200 transition-all duration-200"
-            onClick={() => navigate(-1)}
+          <Button
+            variant="ghost"
+            onClick={() => navigate(isAdminRoute ? ROUTES.ADMIN_KNOWLEDGE : ROUTES.KNOWLEDGE)}
+            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <div className="flex flex-col gap-1">
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="text-sm font-semibold">返回列表</span>
+          </Button>
+          <div className="w-px h-5 bg-gray-200" />
+          <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-gray-900 m-0">{knowledge.title}</h1>
+              <h1 className="text-lg font-semibold text-gray-900 m-0 leading-tight">{knowledge.title}</h1>
             </div>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-4 text-[11px] text-gray-500">
               {knowledge.updated_by_name && (
                 <span className="flex items-center gap-1">
-                  <User className="w-3.5 h-3.5" />
+                  <User className="w-3 h-3" />
                   {knowledge.updated_by_name}
                 </span>
               )}
               <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" />
+                <Calendar className="w-3 h-3" />
                 {dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}
               </span>
               <span className="flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-3 h-3" />
                 {knowledge.view_count} 次阅读
               </span>
             </div>
@@ -349,12 +163,12 @@ export const KnowledgeDetail: React.FC = () => {
 
         {isAdminRoute && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleEdit} className="border-2 rounded-md">
-              <Edit className="w-4 h-4 mr-1" />
+            <Button variant="outline" size="sm" onClick={handleEdit} className="h-9 rounded-lg font-semibold">
+              <Edit className="w-4 h-4 mr-1.5" />
               编辑
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 rounded-md">
-              <Trash2 className="w-4 h-4 mr-1" />
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-red-500 hover:bg-red-600 rounded-lg font-semibold">
+              <Trash2 className="w-4 h-4 mr-1.5" />
               删除
             </Button>
           </div>
@@ -364,47 +178,58 @@ export const KnowledgeDetail: React.FC = () => {
       {/* 主体内容 */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* 左侧目录 */}
-        <div className="flex flex-col m-4 mr-2 shrink-0 max-lg:hidden">
+        <div className="flex flex-col border-r border-gray-200 bg-white w-64 max-lg:hidden">
           {outlineCollapsed ? (
-            <button
-              className="flex items-center justify-center w-8 h-8 bg-white rounded-md text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition-all duration-200 border-2 border-gray-200"
-              onClick={() => setOutlineCollapsed(false)}
-              title="展开目录"
-            >
-              <PanelLeft className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col items-center py-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setOutlineCollapsed(false)}
+                title="展开目录"
+              >
+                <PanelLeft className="w-5 h-5" />
+              </Button>
+            </div>
           ) : (
-            <div className="w-56 bg-white rounded-lg overflow-hidden flex flex-col min-h-[200px] max-h-[500px] border-2 border-gray-200">
-              <div className="flex items-center justify-between p-3 border-b-2 border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                <div className="flex items-center">
-                  <List className="w-3.5 h-3.5 mr-2" />
-                  目录
+            <div className="flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 text-sm font-semibold text-gray-900 shrink-0">
+                <div className="flex items-center gap-2">
+                  <List className="w-4 h-4 text-primary-500" />
+                  内容大纲
                 </div>
-                <button
-                  className="flex items-center justify-center w-6 h-6 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all duration-200"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-primary-500"
                   onClick={() => setOutlineCollapsed(true)}
-                  title="折叠目录"
                 >
                   <PanelLeftClose className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
-              <div className="flex-1 overflow-y-auto py-2">
+              <div className="flex-1 overflow-y-auto py-4 px-2">
                 {outline.length > 0 ? (
-                  outline.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex items-center gap-2 py-2 cursor-pointer transition-all text-gray-700 text-sm hover:bg-gray-100 hover:text-blue-600 ${
-                        item.level === 1 ? 'pl-3 font-semibold' : item.level === 2 ? 'pl-5' : 'pl-7 text-xs'
-                      }`}
-                    >
-                      <span className="text-xs font-mono font-semibold text-gray-400 min-w-6 text-right">
-                        {'#'.repeat(item.level)}
-                      </span>
-                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">{item.text}</span>
-                    </div>
-                  ))
+                  <div className="space-y-0.5">
+                    {outline.map((item) => (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "flex items-center gap-3 py-2.5 px-4 text-xs rounded-lg cursor-pointer transition-all",
+                          item.level === 1 ? 'font-semibold text-gray-900 hover:bg-gray-50' : 'text-gray-500 hover:bg-gray-50'
+                        )}
+                        onClick={() => {
+                          const element = document.getElementById(item.id);
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }
+                        }}
+                      >
+                        <span className="w-4 text-[10px] text-gray-300 font-mono">{'#'.repeat(item.level)}</span>
+                        <span className="truncate">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="p-4 text-xs text-gray-500 text-center">暂无目录</div>
+                  <div className="p-4 text-[10px] text-gray-400 text-center font-medium">暂无目录</div>
                 )}
               </div>
             </div>
@@ -412,17 +237,17 @@ export const KnowledgeDetail: React.FC = () => {
         </div>
 
         {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col m-4 ml-2 bg-white rounded-lg overflow-hidden min-w-0 border-2 border-gray-200">
+        <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0 border-l border-gray-200">
           {/* 标签栏 */}
           {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className="flex items-center gap-2 p-3 px-5 border-b-2 border-gray-200 flex-wrap">
+            <div className="flex items-center gap-2 p-4 px-6 border-b border-gray-200 flex-wrap bg-gray-50/30">
               {knowledge.system_tags?.map((tag) => (
-                <Badge key={tag.id} variant="info" className="text-xs rounded-md">
+                <Badge key={tag.id} variant="info" className="text-[10px] rounded-md border-none px-2.5 py-1">
                   {tag.name}
                 </Badge>
               ))}
               {knowledge.operation_tags?.map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-xs rounded-md">
+                <Badge key={tag.id} variant="secondary" className="text-[10px] rounded-md border-none px-2.5 py-1">
                   {tag.name}
                 </Badge>
               ))}
@@ -430,11 +255,34 @@ export const KnowledgeDetail: React.FC = () => {
           ) : null}
 
           {/* 内容 */}
-          <div className="flex-1 overflow-y-auto p-6 px-8">
-            <div
-              className="text-base leading-relaxed text-gray-800"
-              dangerouslySetInnerHTML={{ __html: renderedContent }}
-            />
+          <div className="flex-1 overflow-y-auto p-12 px-20 w-full">
+            {isEmergency ? (
+              <div className="space-y-12">
+                {[
+                  { key: 'fault_scenario', label: '故障场景', content: knowledge.fault_scenario, id: 'tab-0' },
+                  { key: 'trigger_process', label: '触发流程', content: knowledge.trigger_process, id: 'tab-1' },
+                  { key: 'solution', label: '解决方案', content: knowledge.solution, id: 'tab-2' },
+                  { key: 'verification_plan', label: '验证方案', content: knowledge.verification_plan, id: 'tab-3' },
+                  { key: 'recovery_plan', label: '恢复方案', content: knowledge.recovery_plan, id: 'tab-4' },
+                ].filter(s => s.content).map((section) => (
+                  <div key={section.key} id={section.id} className="scroll-mt-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <span className="w-1.5 h-5 bg-primary-500 rounded-full" />
+                      {section.label}
+                    </h3>
+                    <div
+                      className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: section.content || '' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-gray-700"
+                dangerouslySetInnerHTML={{ __html: knowledge.content || '' }}
+              />
+            )}
           </div>
         </div>
       </div>

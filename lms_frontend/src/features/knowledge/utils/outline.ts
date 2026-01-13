@@ -21,6 +21,7 @@ export const EMERGENCY_TABS = [
 /**
  * 从 HTML 内容解析标题生成目录
  */
+// @ts-expect-error DOMParser might not be available in all environments during SSR/Testing
 export function parseOutlineFromHtml(html: string): OutlineItem[] {
     if (!html) return [];
 
@@ -41,11 +42,12 @@ export function parseOutlineFromHtml(html: string): OutlineItem[] {
 export function parseOutline(content: string, isEmergency: boolean): OutlineItem[] {
     if (isEmergency) {
         // 应急类使用固定的标签页作为目录
-        return EMERGENCY_TABS.map((tab, index) => ({
-            id: `tab-${index}`,
+        return EMERGENCY_TABS.map((tab) => ({
+            id: tab.key,
             level: 1,
             text: tab.label,
         }));
     }
+
     return parseOutlineFromHtml(content);
 }

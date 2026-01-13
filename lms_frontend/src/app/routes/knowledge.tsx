@@ -3,10 +3,9 @@
  */
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/protected-route';
-import { StudentKnowledgeCenter } from '@/features/knowledge/components/student-knowledge-center';
+import { KnowledgeCenter } from '@/features/knowledge/components/knowledge-center';
 import { KnowledgeDetail } from '@/features/knowledge/components/knowledge-detail';
 import { KnowledgeForm } from '@/features/knowledge/components/knowledge-form';
-import { AdminKnowledgeList } from '@/features/knowledge/components/admin-knowledge-list';
 import { ROUTES } from '@/config/routes';
 
 export const knowledgeRoutes = [
@@ -16,7 +15,7 @@ export const knowledgeRoutes = [
     path={ROUTES.KNOWLEDGE}
     element={
       <ProtectedRoute>
-        <StudentKnowledgeCenter />
+        <KnowledgeCenter />
       </ProtectedRoute>
     }
   />,
@@ -35,7 +34,7 @@ export const knowledgeRoutes = [
     path={ROUTES.ADMIN_KNOWLEDGE}
     element={
       <ProtectedRoute allowedRoles={['ADMIN']}>
-        <AdminKnowledgeList />
+        <KnowledgeCenter isAdmin />
       </ProtectedRoute>
     }
   />,
