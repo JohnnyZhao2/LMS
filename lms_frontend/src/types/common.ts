@@ -11,11 +11,6 @@
 export type RoleCode = 'STUDENT' | 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN' | 'TEAM_MANAGER';
 
 /**
- * 任务类型
- */
-export type TaskType = 'LEARNING' | 'PRACTICE' | 'EXAM';
-
-/**
  * 任务状态
  */
 export type TaskStatus = 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';

@@ -138,7 +138,6 @@ export type { SimplePaginationProps } from './simple-pagination';
 export { ConfirmDialog } from './confirm-dialog';
 export type { ConfirmDialogProps } from './confirm-dialog';
 
-// Legacy components (kept for backward compatibility during migration)
 export { StatusBadge } from './status-badge';
 export type { StatusBadgeProps, StatusType } from './status-badge';
 

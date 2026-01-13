@@ -11,7 +11,6 @@ interface UseResourceOptions {
 /**
  * 获取任务可选的知识文档列表（仅已发布版本）
  * 
- * 注意：后端可能返回数组或分页响应，需要兼容处理
  */
 export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
   const { search = '', enabled = true } = options;
@@ -25,8 +24,7 @@ export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
         ...(search && { search }),
       };
       const queryString = buildQueryString(queryParams);
-      // 后端可能返回数组或分页响应，使用联合类型
-      return apiClient.get<KnowledgeListItem[] | PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
+      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
     },
     enabled,
     staleTime: 60_000,
@@ -54,5 +52,4 @@ export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
     staleTime: 60_000,
   });
 };
-
 

@@ -168,13 +168,17 @@ class ApiClient {
     }
 
     const json = await response.json();
-    
-    // 自动解包统一响应格式 { code, message, data }
-    if (json && typeof json === 'object' && 'code' in json && 'data' in json) {
-      return json.data as T;
+
+    if (
+      json &&
+      typeof json === 'object' &&
+      'code' in json &&
+      'message' in json &&
+      'data' in json
+    ) {
+      return (json as ApiResponse<T>).data;
     }
-    
-    // 兼容旧格式（直接返回数据）
+
     return json as T;
   }
 

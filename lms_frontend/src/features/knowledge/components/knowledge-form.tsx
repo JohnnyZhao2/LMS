@@ -296,12 +296,12 @@ export const KnowledgeForm: React.FC = () => {
   }, [lineTypeTags, lineTypeId, title, isEdit]);
 
   const statusInfo = useMemo(() => {
-    // 新建时显示草稿
+    // 新建时显示新建状态
     if (!isEdit) {
       return { 
-        label: '草稿', 
-        isDraft: true, 
-        description: '保存后将创建新版本并立即对所有用户可见。' 
+        label: '新建', 
+        isDraft: false, 
+        description: '保存后将立即对所有用户可见。' 
       };
     }
     
