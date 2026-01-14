@@ -10,7 +10,7 @@ from django.utils import timezone
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.models import User
-from apps.users.permissions import get_current_role, filter_queryset_by_data_scope, is_student_in_scope
+from apps.users.permissions import get_current_role, filter_queryset_by_data_scope, get_accessible_students
 from apps.users.repositories import UserRepository
 from .models import SpotCheck
 from .repositories import SpotCheckRepository
@@ -216,7 +216,7 @@ class SpotCheckService(BaseService):
         Raises:
             BusinessError: 如果权限不足
         """
-        if not is_student_in_scope(user, spot_check.student_id):
+        if not get_accessible_students(user).filter(pk=spot_check.student_id).exists():
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问该抽查记录'
@@ -244,7 +244,7 @@ class SpotCheckService(BaseService):
             BusinessError: 如果权限不足
         Property 35: 抽查学员范围限制
         """
-        if not is_student_in_scope(user, student.id):
+        if not get_accessible_students(user).filter(pk=student.id).exists():
             current_role = get_current_role(user)
             # 根据角色提供更具体的错误消息
             if current_role == 'DEPT_MANAGER' and not user.department_id:

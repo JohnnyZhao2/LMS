@@ -80,17 +80,7 @@ class IsDeptManager(BasePermission):
         return get_current_role(request.user) == 'DEPT_MANAGER'
 
 
-class IsTeamManager(BasePermission):
-    """
-    Permission class for team manager users.
-    Team managers have read-only access to cross-team data analytics.
-    Property 41: 团队经理只读访问
-    """
-    message = '只有团队经理可以执行此操作'
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return get_current_role(request.user) == 'TEAM_MANAGER'
+
 class IsTeamManagerReadOnly(BasePermission):
     """
     Permission class for team manager users with read-only access.
@@ -117,17 +107,6 @@ class IsAdminOrMentorOrDeptManager(BasePermission):
             return False
         return get_current_role(request.user) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
 
-
-class IsMentorOrDeptManager(BasePermission):
-    """
-    Permission class for mentor or department manager users.
-    Used for spot check endpoints.
-    """
-    message = '只有导师或室经理可以执行此操作'
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return get_current_role(request.user) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
 
 
 class IsOwnerOrAdmin(BasePermission):
@@ -383,52 +362,4 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user'):
         return queryset.none()
     # Default: no access
     return queryset.none()
-def is_student_in_scope(user, student_id, current_role=None):
-    """
-    Check if a specific student is within the user's data access scope.
-    Args:
-        user: The requesting user
-        student_id: The ID of the student to check
-        current_role: The current active role (optional)
-    Returns:
-        True if the student is accessible, False otherwise
-    Properties: 37, 38, 39
-    """
-    from apps.users.models import User
-    if not current_role:
-        current_role = get_current_role(user)
-    # Admin can access all students (Property 39)
-    if current_role == 'ADMIN':
-        return User.objects.filter(pk=student_id, is_active=True).exists()
-    # Mentor can only access their mentees (Property 37)
-    if current_role == 'MENTOR':
-        return User.objects.filter(pk=student_id, mentor=user, is_active=True).exists()
-    # Department manager can only access department members (Property 38)
-    if current_role == 'DEPT_MANAGER':
-        if user.department_id:
-            return User.objects.filter(
-                pk=student_id,
-                department_id=user.department_id,
-                is_active=True
-            ).exclude(pk=user.pk).exists()
-        return False
-    return False
-def validate_students_in_scope(user, student_ids, current_role=None):
-    """
-    Validate that all student IDs are within the user's data access scope.
-    Args:
-        user: The requesting user
-        student_ids: List/set of student IDs to validate
-        current_role: The current active role (optional)
-    Returns:
-        Tuple of (is_valid, invalid_ids)
-        - is_valid: True if all students are in scope
-        - invalid_ids: List of student IDs that are not in scope
-    Properties: 37, 38, 39
-    """
-    if not student_ids:
-        return True, []
-    accessible_ids = get_accessible_student_ids(user, current_role)
-    student_id_set = set(student_ids)
-    invalid_ids = student_id_set - accessible_ids
-    return len(invalid_ids) == 0, list(invalid_ids)
+

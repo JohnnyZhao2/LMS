@@ -19,7 +19,6 @@ from apps.users.repositories import UserRepository
 from apps.users.permissions import (
     get_current_role,
     get_accessible_students,
-    validate_students_in_scope,
 )
 from apps.knowledge.models import Knowledge
 from apps.knowledge.repositories import KnowledgeRepository

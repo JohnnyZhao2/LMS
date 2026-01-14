@@ -2,7 +2,7 @@
  * 任务相关类型定义
  */
 
-import type { TaskStatus, SimpleTag } from './common';
+import type { TaskStatus } from './common';
 import type { QuizType } from './quiz';
 
 /**

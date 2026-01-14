@@ -10,7 +10,7 @@ from rest_framework import serializers
 from apps.users.models import User
 from apps.users.permissions import (
     get_current_role,
-    validate_students_in_scope,
+    get_accessible_student_ids,
 )
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
@@ -194,10 +194,8 @@ class TaskCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError('无法获取当前用户信息')
         assignee_ids = attrs.get('assignee_ids', [])
         current_role = get_current_role(request.user)
-        is_valid, invalid_ids = validate_students_in_scope(
-            request.user, assignee_ids, current_role
-        )
-        if not is_valid:
+        invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(request.user))
+        if invalid_ids:
             if current_role == 'MENTOR':
                 raise serializers.ValidationError({
                     'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
@@ -316,10 +314,8 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             request = self.context.get('request')
             if request and request.user:
                 current_role = get_current_role(request.user)
-                is_valid, invalid_ids = validate_students_in_scope(
-                    request.user, assignee_ids, current_role
-                )
-                if not is_valid:
+                invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(request.user))
+                if invalid_ids:
                     if current_role == 'MENTOR':
                         raise serializers.ValidationError({
                             'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'

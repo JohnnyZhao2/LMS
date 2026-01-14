@@ -101,7 +101,7 @@ class UserManagementService(BaseService):
                     name=role_name,
                     description=f'{role_name}角色'
                 )
-            if not self.user_role_repository.user_has_role(user.id, role_code):
+            if not self.user_repository.has_role(user.id, role_code):
                 self.user_role_repository.create_user_role(
                     user_id=user.id,
                     role_id=role.id,

@@ -16,7 +16,6 @@ export const ROLE_COLORS: Record<string, RoleColorConfig> = {
   ADMIN: { bg: '#FEE2E2', color: '#DC2626', iconBg: '#DC2626' },
   MENTOR: { bg: '#FEF3C7', color: '#F59E0B', iconBg: '#F59E0B' },
   DEPT_MANAGER: { bg: '#EDE9FE', color: '#7C3AED', iconBg: '#7C3AED' },
-  ROOM_MANAGER: { bg: '#EDE9FE', color: '#7C3AED', iconBg: '#7C3AED' },
   TEAM_MANAGER: { bg: '#DBEAFE', color: '#3B82F6', iconBg: '#0EA5E9' },
   STUDENT: { bg: '#DBEAFE', color: '#3B82F6', iconBg: '#3B82F6' },
 };

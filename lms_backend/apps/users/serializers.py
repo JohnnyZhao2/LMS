@@ -25,6 +25,39 @@ def validate_mentor(mentor_id):
         raise serializers.ValidationError('导师不存在')
 
 
+class UserValidationMixin:
+    """Mixin for common user field validations."""
+    
+    def validate_username_field(self, value, instance=None):
+        """Validate username (display name)."""
+        if not value or not value.strip():
+            raise serializers.ValidationError('姓名不能为空')
+        normalized = value.strip()
+        queryset = User.objects.filter(username=normalized)
+        if instance:
+            queryset = queryset.exclude(pk=instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('该姓名已存在')
+        return normalized
+    
+    def validate_employee_id_field(self, value, instance=None):
+        """Validate employee_id is unique."""
+        if value:
+            queryset = User.objects.filter(employee_id=value)
+            if instance:
+                queryset = queryset.exclude(pk=instance.pk)
+            if queryset.exists():
+                raise serializers.ValidationError('该工号已存在')
+        return value
+    
+    def validate_department_id_field(self, value):
+        """Validate department exists."""
+        if value is not None:
+            if not Department.objects.filter(id=value).exists():
+                raise serializers.ValidationError('部门不存在')
+        return value
+
+
 class DepartmentSerializer(serializers.ModelSerializer):
     """Serializer for Department model."""
     class Meta:
@@ -87,7 +120,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def get_mentees_count(self, obj):
         """Get count of mentees for this user."""
         return obj.mentees.filter(is_active=True).count()
-class UserCreateSerializer(serializers.ModelSerializer):
+class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating new users.
     """
@@ -112,23 +145,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'department_id', 'mentor_id'
         ]
     def validate_username(self, value):
-        """Validate username (display name)."""
-        if not value or not value.strip():
-            raise serializers.ValidationError('姓名不能为空')
-        normalized = value.strip()
-        if User.objects.filter(username=normalized).exists():
-            raise serializers.ValidationError('该姓名已存在')
-        return normalized
+        return self.validate_username_field(value)
+    
     def validate_employee_id(self, value):
-        """Validate employee_id is unique."""
-        if User.objects.filter(employee_id=value).exists():
-            raise serializers.ValidationError('该工号已存在')
-        return value
+        return self.validate_employee_id_field(value)
+    
     def validate_department_id(self, value):
-        """Validate department exists."""
-        if not Department.objects.filter(id=value).exists():
-            raise serializers.ValidationError('部门不存在')
-        return value
+        return self.validate_department_id_field(value)
+    
     def validate_mentor_id(self, value):
         """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)
@@ -172,7 +196,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 # 验证阶段已经检查过，这里理论上不会发生
                 pass
         return user
-class UserUpdateSerializer(serializers.ModelSerializer):
+class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating user information.
     """
@@ -191,36 +215,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'username', 'employee_id', 'department_id'
         ]
     def validate_username(self, value):
-        """Validate username (display name)."""
-        if not value or not value.strip():
-            raise serializers.ValidationError('姓名不能为空')
-        normalized = value.strip()
-        queryset = User.objects.filter(username=normalized)
-        if self.instance:
-            queryset = queryset.exclude(pk=self.instance.pk)
-        if queryset.exists():
-            raise serializers.ValidationError('该姓名已存在')
-        return normalized
+        return self.validate_username_field(value, self.instance)
+    
     def validate_employee_id(self, value):
-        """Validate employee_id is unique (excluding current user)."""
-        if value:
-            # 在 update 方法中，self.instance 是当前用户对象
-            # 检查时排除当前用户
-            queryset = User.objects.filter(employee_id=value)
-            if self.instance:
-                queryset = queryset.exclude(pk=self.instance.pk)
-            if queryset.exists():
-                raise serializers.ValidationError('该工号已存在')
-        return value
+        return self.validate_employee_id_field(value, self.instance)
+    
     def validate_department_id(self, value):
-        """Validate department exists."""
-        if value is not None:
-            if not Department.objects.filter(id=value).exists():
-                raise serializers.ValidationError('部门不存在')
-        return value
+        return self.validate_department_id_field(value)
     def update(self, instance, validated_data):
         """Update user information."""
-        from django.utils import timezone
         department_id = validated_data.pop('department_id', None)
         username = validated_data.pop('username', None)  # username 用于存储显示名称
         employee_id = validated_data.pop('employee_id', None)  # employee_id 可以更新

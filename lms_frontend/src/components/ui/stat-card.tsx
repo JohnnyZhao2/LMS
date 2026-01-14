@@ -8,7 +8,7 @@ interface StatCardProps {
     value: string | number;
     icon: LucideIcon;
     color: string;
-    gradient: string;
+    gradient?: string;
     delay?: string;
     className?: string;
     trend?: {
@@ -25,7 +25,6 @@ export const StatCard: React.FC<StatCardProps> = ({
     value,
     icon: Icon,
     color,
-    gradient,
     delay = '',
     className = '',
     trend,

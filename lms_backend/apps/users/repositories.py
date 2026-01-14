@@ -3,7 +3,7 @@
 负责所有用户、角色、部门相关的数据访问操作。
 """
 from typing import Optional, List
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet
 from core.base_repository import BaseRepository
 from .models import User, Role, Department, UserRole
 class UserRepository(BaseRepository[User]):
@@ -134,19 +134,6 @@ class UserRoleRepository(BaseRepository[UserRole]):
         return self.model.objects.filter(
             user_id=user_id
         ).select_related('role', 'assigned_by')
-    def user_has_role(self, user_id: int, role_code: str) -> bool:
-        """
-        检查用户是否拥有指定角色
-        Args:
-            user_id: 用户 ID
-            role_code: 角色代码
-        Returns:
-            True 如果用户拥有该角色
-        """
-        return self.model.objects.filter(
-            user_id=user_id,
-            role__code=role_code
-        ).exists()
     def create_user_role(
         self,
         user_id: int,

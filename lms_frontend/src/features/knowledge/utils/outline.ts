@@ -21,7 +21,6 @@ export const EMERGENCY_TABS = [
 /**
  * 从 HTML 内容解析标题生成目录
  */
-// @ts-expect-error DOMParser might not be available in all environments during SSR/Testing
 export function parseOutlineFromHtml(html: string): OutlineItem[] {
     if (!html) return [];
 

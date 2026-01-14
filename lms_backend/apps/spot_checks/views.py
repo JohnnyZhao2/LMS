@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from core.exceptions import BusinessError, ErrorCodes
-from apps.users.permissions import IsMentorOrDeptManager
+from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from .serializers import (
     SpotCheckListSerializer,
     SpotCheckDetailSerializer,
@@ -22,7 +22,7 @@ class SpotCheckListCreateView(APIView):
     抽查记录列表和创建端点
     Properties: 35, 36
     """
-    permission_classes = [IsAuthenticated, IsMentorOrDeptManager]
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = SpotCheckService()
@@ -109,7 +109,7 @@ class SpotCheckDetailView(APIView):
     """
     抽查记录详情、更新、删除端点
     """
-    permission_classes = [IsAuthenticated, IsMentorOrDeptManager]
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = SpotCheckService()

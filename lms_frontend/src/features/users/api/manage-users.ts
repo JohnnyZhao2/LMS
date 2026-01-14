@@ -92,5 +92,3 @@ export const useAssignMentor = () => {
     onSuccess: () => invalidateUserQueries(queryClient),
   });
 };
-
-
