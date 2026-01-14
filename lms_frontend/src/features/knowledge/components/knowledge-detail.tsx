@@ -34,7 +34,7 @@ export const KnowledgeDetail: React.FC = () => {
   const navigate = useNavigate();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>(({
+  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>({
     visible: false,
     type: null,
   });
