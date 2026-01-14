@@ -218,7 +218,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             <Toolbar editor={editor} />
             <div className="relative flex-1">
                 <EditorContent editor={editor} className="h-full" />
-                {editor?.isEmpty && (
+                {editor?.isEmpty && !value && (
                     <div className={cn("absolute top-4 left-4 text-gray-400 pointer-events-none text-sm", (contentClassName?.includes('p-0') || contentClassName?.includes('px-0')) && "top-2 left-2 p-0")}>
                         {placeholder}
                     </div>
