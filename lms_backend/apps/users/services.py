@@ -75,7 +75,6 @@ class UserManagementService(BaseService):
         Properties:
         - Property 9: 学员角色不可移除
         """
-        from .models import UserRole, Role
         user = self.user_repository.get_by_id(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         # Get student role (must always be preserved)
@@ -94,7 +93,6 @@ class UserManagementService(BaseService):
         # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
         for role_code in roles_to_add:
-            # Get or create the role
             role = self.role_repository.get_by_code(role_code)
             if not role:
                 role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
@@ -103,7 +101,6 @@ class UserManagementService(BaseService):
                     name=role_name,
                     description=f'{role_name}角色'
                 )
-            # Check if user_role already exists
             if not self.user_role_repository.user_has_role(user.id, role_code):
                 self.user_role_repository.create_user_role(
                     user_id=user.id,

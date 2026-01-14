@@ -21,6 +21,7 @@ import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/man
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
+import { getRoleColor } from "@/lib/role-config"
 import {
   DataTable,
   CellWithAvatar,

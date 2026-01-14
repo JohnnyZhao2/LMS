@@ -46,27 +46,7 @@ class QuestionRepository(BaseRepository[Question]):
             is_deleted=False,
             is_current=True
         ).select_related('created_by')
-        # 应用过滤条件
-        if filters:
-            if filters.get('question_type'):
-                qs = qs.filter(question_type=filters['question_type'])
-            if filters.get('created_by_id'):
-                qs = qs.filter(created_by_id=filters['created_by_id'])
-            if filters.get('is_current') is not None:
-                qs = qs.filter(is_current=filters['is_current'])
-            # 过滤条线类型（通过ResourceLineType关系表）
-            if filters.get('line_type_id'):
-                from apps.knowledge.models import ResourceLineType
-                question_content_type = ContentType.objects.get_for_model(self.model)
-                qs = qs.filter(
-                    id__in=ResourceLineType.objects.filter(
-                        content_type=question_content_type,
-                        line_type_id=filters['line_type_id']
-                    ).values_list('object_id', flat=True)
-                )
-        # 搜索
-        if search:
-            qs = qs.filter(content__icontains=search)
+        qs = self._apply_filters(qs, filters, search)
         # 排序
         if ordering:
             qs = qs.order_by(ordering)
@@ -89,38 +69,43 @@ class QuestionRepository(BaseRepository[Question]):
         except ImportError:
             # quizzes app 尚未实现
             return False
-    def get_current_version(
+    def _apply_filters(
         self,
-        resource_uuid: str
-    ) -> Optional[Question]:
+        qs: QuerySet[Question],
+        filters: dict = None,
+        search: str = None
+    ) -> QuerySet[Question]:
         """
-        获取资源的当前版本
+        应用过滤和搜索条件
         Args:
-            resource_uuid: 资源 UUID
+            qs: 查询集
+            filters: 过滤条件
+            search: 搜索关键词
         Returns:
-            当前版本或 None
+            QuerySet
         """
-        return self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_current=True,
-            is_deleted=False
-        ).select_related('created_by').first()
-    def get_draft_for_resource(
-        self,
-        resource_uuid: str
-    ) -> Optional[Question]:
-        """
-        获取资源的非当前版本（历史版本）
-        Args:
-            resource_uuid: 资源 UUID
-        Returns:
-            非当前版本或 None
-        """
-        return self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_current=False,
-            is_deleted=False
-        ).select_related('created_by').first()
+        # 应用过滤条件
+        if filters:
+            if filters.get('question_type'):
+                qs = qs.filter(question_type=filters['question_type'])
+            if filters.get('created_by_id'):
+                qs = qs.filter(created_by_id=filters['created_by_id'])
+            if filters.get('is_current') is not None:
+                qs = qs.filter(is_current=filters['is_current'])
+            # 过滤条线类型（通过ResourceLineType关系表）
+            if filters.get('line_type_id'):
+                from apps.knowledge.models import ResourceLineType
+                question_content_type = ContentType.objects.get_for_model(self.model)
+                qs = qs.filter(
+                    id__in=ResourceLineType.objects.filter(
+                        content_type=question_content_type,
+                        line_type_id=filters['line_type_id']
+                    ).values_list('object_id', flat=True)
+                )
+        # 搜索
+        if search:
+            qs = qs.filter(content__icontains=search)
+        return qs
     def get_published_list(
         self,
         filters: dict = None,
@@ -144,24 +129,7 @@ class QuestionRepository(BaseRepository[Question]):
             is_deleted=False,
             is_current=True
         ).select_related('created_by')
-        # 应用过滤条件
-        if filters:
-            if filters.get('question_type'):
-                qs = qs.filter(question_type=filters['question_type'])
-            if filters.get('created_by_id'):
-                qs = qs.filter(created_by_id=filters['created_by_id'])
-            if filters.get('line_type_id'):
-                from apps.knowledge.models import ResourceLineType
-                question_content_type = ContentType.objects.get_for_model(self.model)
-                qs = qs.filter(
-                    id__in=ResourceLineType.objects.filter(
-                        content_type=question_content_type,
-                        line_type_id=filters['line_type_id']
-                    ).values_list('object_id', flat=True)
-                )
-        # 搜索
-        if search:
-            qs = qs.filter(content__icontains=search)
+        qs = self._apply_filters(qs, filters, search)
         # 排序
         if ordering:
             qs = qs.order_by(ordering)

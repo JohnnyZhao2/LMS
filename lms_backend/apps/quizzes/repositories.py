@@ -84,56 +84,6 @@ class QuizRepository(BaseRepository[Quiz]):
         except ImportError:
             # tasks app 尚未实现
             return False
-    def next_version_number(self, resource_uuid) -> int:
-        """
-        获取下一个版本号
-        Args:
-            resource_uuid: 资源 UUID（可选）
-        Returns:
-            下一个版本号
-        """
-        if not resource_uuid:
-            return 1
-        aggregate = self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_deleted=False
-        ).aggregate(
-            max_version=Max('version_number')
-        )
-        max_version = aggregate['max_version'] or 0
-        return max_version + 1
-    def get_current_version(
-        self,
-        resource_uuid: str
-    ) -> Optional[Quiz]:
-        """
-        获取资源的当前版本
-        Args:
-            resource_uuid: 资源 UUID
-        Returns:
-            当前版本或 None
-        """
-        return self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_current=True,
-            is_deleted=False
-        ).select_related('created_by').first()
-    def get_draft_for_resource(
-        self,
-        resource_uuid: str
-    ) -> Optional[Quiz]:
-        """
-        获取资源的非当前版本（历史版本）
-        Args:
-            resource_uuid: 资源 UUID
-        Returns:
-            非当前版本或 None
-        """
-        return self.model.objects.filter(
-            resource_uuid=resource_uuid,
-            is_current=False,
-            is_deleted=False
-        ).first()
     def unset_current_flag_for_others(
         self,
         resource_uuid: str,

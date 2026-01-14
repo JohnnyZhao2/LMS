@@ -112,3 +112,60 @@ class BaseRepository(ABC, Generic[T]):
         if hasattr(self.model, 'is_deleted'):
             qs = qs.filter(is_deleted=False)
         return qs.count()
+    def get_current_version(self, resource_uuid: str) -> Optional[T]:
+        """
+        获取资源的当前版本
+        Args:
+            resource_uuid: 资源 UUID
+        Returns:
+            当前版本或 None
+        """
+        if not hasattr(self.model, 'resource_uuid'):
+            raise NotImplementedError(f"{self.model.__name__} does not support versioning")
+        qs = self.model.objects.filter(
+            resource_uuid=resource_uuid,
+            is_current=True,
+            is_deleted=False
+        )
+        if hasattr(self.model, 'created_by'):
+            qs = qs.select_related('created_by')
+        return qs.first()
+    def get_draft_for_resource(self, resource_uuid: str) -> Optional[T]:
+        """
+        获取资源的非当前版本（历史版本）
+        Args:
+            resource_uuid: 资源 UUID
+        Returns:
+            非当前版本或 None
+        """
+        if not hasattr(self.model, 'resource_uuid'):
+            raise NotImplementedError(f"{self.model.__name__} does not support versioning")
+        qs = self.model.objects.filter(
+            resource_uuid=resource_uuid,
+            is_current=False,
+            is_deleted=False
+        )
+        if hasattr(self.model, 'created_by'):
+            qs = qs.select_related('created_by')
+        return qs.first()
+    def next_version_number(self, resource_uuid: str) -> int:
+        """
+        获取下一个版本号
+        Args:
+            resource_uuid: 资源 UUID
+        Returns:
+            下一个版本号
+        """
+        if not hasattr(self.model, 'resource_uuid'):
+            raise NotImplementedError(f"{self.model.__name__} does not support versioning")
+        if not resource_uuid:
+            return 1
+        from django.db.models import Max
+        aggregate = self.model.objects.filter(
+            resource_uuid=resource_uuid,
+            is_deleted=False
+        ).aggregate(
+            max_version=Max('version_number')
+        )
+        max_version = aggregate['max_version'] or 0
+        return max_version + 1

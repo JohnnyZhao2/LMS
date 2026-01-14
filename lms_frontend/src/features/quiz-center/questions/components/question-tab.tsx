@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
+import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
@@ -139,12 +139,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                                     onClick={() => setPreviewQuestion(record)}
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-xs"
-                                    onClick={() => {/* TODO: Implement edit */ }}
-                                >
-                                    <Pencil className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑题目
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-gray-200 mx-2" />
                                 <DropdownMenuItem

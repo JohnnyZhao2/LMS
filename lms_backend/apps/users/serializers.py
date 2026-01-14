@@ -4,6 +4,27 @@ Serializers for user management.
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import User, Role, Department
+
+
+def validate_mentor(mentor_id):
+    """
+    Validate mentor exists, has MENTOR role, and is active.
+    Returns mentor User object if valid.
+    Raises ValidationError if invalid.
+    """
+    if mentor_id is None:
+        return None
+    try:
+        mentor = User.objects.get(pk=mentor_id)
+        if not mentor.has_role('MENTOR'):
+            raise serializers.ValidationError('指定的用户不是导师')
+        if not mentor.is_active:
+            raise serializers.ValidationError('指定的导师已被停用')
+        return mentor
+    except User.DoesNotExist:
+        raise serializers.ValidationError('导师不存在')
+
+
 class DepartmentSerializer(serializers.ModelSerializer):
     """Serializer for Department model."""
     class Meta:
@@ -110,15 +131,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return value
     def validate_mentor_id(self, value):
         """Validate mentor exists and has MENTOR role."""
-        if value is not None:
-            try:
-                mentor = User.objects.get(pk=value)
-                if not mentor.has_role('MENTOR'):
-                    raise serializers.ValidationError('指定的用户不是导师')
-                if not mentor.is_active:
-                    raise serializers.ValidationError('指定的导师已被停用')
-            except User.DoesNotExist:
-                raise serializers.ValidationError('导师不存在')
+        validate_mentor(value)
         return value
     def create(self, validated_data):
         """
@@ -247,16 +260,10 @@ class AssignMentorSerializer(serializers.Serializer):
     )
     def validate_mentor_id(self, value):
         """Validate mentor exists and has MENTOR role."""
-        if value is not None:
-            try:
-                mentor = User.objects.get(pk=value)
-                if not mentor.has_role('MENTOR'):
-                    raise serializers.ValidationError('指定的用户不是导师')
-                if not mentor.is_active:
-                    raise serializers.ValidationError('指定的导师已被停用')
-            except User.DoesNotExist:
-                raise serializers.ValidationError('导师不存在')
+        validate_mentor(value)
         return value
+
+
 class MenteeListSerializer(serializers.ModelSerializer):
     """Serializer for listing mentees."""
     department = DepartmentSerializer(read_only=True)
