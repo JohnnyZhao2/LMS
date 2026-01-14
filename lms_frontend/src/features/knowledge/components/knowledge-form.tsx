@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -28,7 +28,8 @@ import { EMERGENCY_TABS, parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { ROUTES } from '@/config/routes';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
-import { RichTextEditor } from './rich-text-editor';
+
+const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ default: m.RichTextEditor })));
 
 
 
@@ -377,25 +378,27 @@ export const KnowledgeForm: React.FC = () => {
 
                         {/* Editor Area */}
                         <div className="flex-1 overflow-hidden">
-                          <RichTextEditor
-                            value={
-                              tab.key === 'fault_scenario' ? faultScenario :
-                                tab.key === 'trigger_process' ? triggerProcess :
-                                  tab.key === 'solution' ? solution :
-                                    tab.key === 'verification_plan' ? verificationPlan :
-                                      tab.key === 'recovery_plan' ? recoveryPlan : ''
-                            }
-                            onChange={(val) => {
-                              if (tab.key === 'fault_scenario') setFaultScenario(val);
-                              else if (tab.key === 'trigger_process') setTriggerProcess(val);
-                              else if (tab.key === 'solution') setSolution(val);
-                              else if (tab.key === 'verification_plan') setVerificationPlan(val);
-                              else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
-                            }}
-                            placeholder={`在此输入${tab.label}详情...`}
-                            className="border-none shadow-none ring-0 w-full h-full"
-                            contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
-                          />
+                          <Suspense fallback={null}>
+                            <RichTextEditor
+                              value={
+                                tab.key === 'fault_scenario' ? faultScenario :
+                                  tab.key === 'trigger_process' ? triggerProcess :
+                                    tab.key === 'solution' ? solution :
+                                      tab.key === 'verification_plan' ? verificationPlan :
+                                        tab.key === 'recovery_plan' ? recoveryPlan : ''
+                              }
+                              onChange={(val) => {
+                                if (tab.key === 'fault_scenario') setFaultScenario(val);
+                                else if (tab.key === 'trigger_process') setTriggerProcess(val);
+                                else if (tab.key === 'solution') setSolution(val);
+                                else if (tab.key === 'verification_plan') setVerificationPlan(val);
+                                else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
+                              }}
+                              placeholder={`在此输入${tab.label}详情...`}
+                              className="border-none shadow-none ring-0 w-full h-full"
+                              contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
+                            />
+                          </Suspense>
                         </div>
                       </div>
                     );
@@ -404,13 +407,15 @@ export const KnowledgeForm: React.FC = () => {
               ) : (
                 <div className="flex flex-col h-full">
                   <div className="flex-1">
-                    <RichTextEditor
-                      value={content}
-                      onChange={setContent}
-                      placeholder="请输入知识正文..."
-                      className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
-                      contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
-                    />
+                    <Suspense fallback={null}>
+                      <RichTextEditor
+                        value={content}
+                        onChange={setContent}
+                        placeholder="请输入知识正文..."
+                        className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
+                        contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
+                      />
+                    </Suspense>
                   </div>
                   {errors.content && (
                     <div className="m-6 p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-semibold text-red-600 flex items-center gap-2">

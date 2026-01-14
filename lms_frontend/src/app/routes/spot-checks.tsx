@@ -2,10 +2,12 @@
  * 抽查相关路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { SpotCheckList } from '@/features/spot-checks/components/spot-check-list';
-import { SpotCheckForm } from '@/features/spot-checks/components/spot-check-form';
 import { ROUTES } from '@/config/routes';
+
+const SpotCheckList = lazy(() => import('@/features/spot-checks/components/spot-check-list').then(m => ({ default: m.SpotCheckList })));
+const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-check-form').then(m => ({ default: m.SpotCheckForm })));
 
 export const spotCheckRoutes = [
   <Route

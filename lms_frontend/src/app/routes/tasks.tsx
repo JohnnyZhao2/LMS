@@ -2,11 +2,13 @@
  * 任务相关路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { TaskList } from '@/features/tasks/components/task-list';
-import { TaskDetail } from '@/features/tasks/components/task-detail';
-import { TaskForm } from '@/features/tasks/components/task-form';
 import { ROUTES } from '@/config/routes';
+
+const TaskList = lazy(() => import('@/features/tasks/components/task-list').then(m => ({ default: m.TaskList })));
+const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
+const TaskForm = lazy(() => import('@/features/tasks/components/task-form').then(m => ({ default: m.TaskForm })));
 
 export const taskRoutes = [
   <Route
