@@ -8,8 +8,6 @@
 import uuid
 from typing import Optional, List
 from django.db import transaction
-from django.utils import timezone
-from django.db.models import Q
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from .models import Knowledge
@@ -202,42 +200,8 @@ class KnowledgeService(BaseService):
             knowledge.system_tags.set(system_tag_ids)
         if operation_tag_ids is not None:
             knowledge.operation_tags.set(operation_tag_ids)
-    def create_or_get_current_version(
-        self,
-        resource_uuid: uuid.UUID,
-        user
-    ) -> Knowledge:
-        """
-        获取或创建当前版本
-        Args:
-            resource_uuid: 资源 UUID
-            user: 操作用户
-        Returns:
-            当前版本（如果已存在则返回现有版本）
-        """
-        # 获取当前版本
-        current = self.repository.get_current_version(resource_uuid)
-        if current:
-            return current
-        # 如果没有当前版本，返回 None（不应该发生）
-        return None
-    def _calculate_next_version_number(
-        self,
-        source: Knowledge
-    ) -> int:
-        """
-        计算下一个版本号
-        Args:
-            source: 源知识文档
-        Returns:
-            下一个版本号
-        """
-        existing_versions = self.repository.get_version_numbers(
-            resource_uuid=source.resource_uuid
-        )
-        if not existing_versions:
-            return 1
-        return max(existing_versions) + 1
+
+
     def _create_new_version(
         self,
         source: Knowledge,
@@ -246,7 +210,7 @@ class KnowledgeService(BaseService):
     ) -> Knowledge:
         """基于当前版本创建新版本"""
         # 获取下一个版本号
-        next_version = self._calculate_next_version_number(source)
+        next_version = Knowledge.next_version_number(source.resource_uuid)
         # 提取标签数据
         line_type_id = data.pop('line_type_id', None)
         system_tag_ids = data.pop('system_tag_ids', None)

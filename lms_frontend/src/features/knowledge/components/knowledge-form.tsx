@@ -21,7 +21,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
 
-import { useKnowledgeDetail } from '../api/get-admin-knowledge';
+import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
 import { EMERGENCY_TABS, parseOutline } from '../utils';

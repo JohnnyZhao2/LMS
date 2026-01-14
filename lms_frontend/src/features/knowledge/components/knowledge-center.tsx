@@ -19,8 +19,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/config/routes';
 import type { Tag as TagType } from '@/types/api';
 
-import { useAdminKnowledgeList } from '../api/get-admin-knowledge';
-import { useStudentKnowledgeList } from '../api/get-student-knowledge-list';
+import { useKnowledgeList } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
@@ -31,14 +30,10 @@ interface KnowledgeCenterProps {
     isAdmin?: boolean;
 }
 
-/**
- * 统一知识中心组件 - 支持管理员和学员模式
- */
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
     const navigate = useNavigate();
     const incrementViewCount = useIncrementViewCount();
 
-    // 使用共用的筛选 Hook
     const {
         search,
         searchValue,
@@ -53,29 +48,16 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         handlePageChange,
     } = useKnowledgeFilters({ defaultPageSize: 9 });
 
-    // 获取条线类型标签
     const { data: lineTypeTags = [] } = useLineTypeTags();
-    // 级联获取系统标签（根据已选条线类型）
     const { data: systemTags = [] } = useSystemTags(selectedLineTypeId);
 
-    // 根据模式选择对应的 API Hook
-    const adminQuery = useAdminKnowledgeList({
+    const { data, isLoading, refetch } = useKnowledgeList({
         search: search || undefined,
         line_type_id: selectedLineTypeId,
         system_tag_id: selectedSystemTagIds[0],
         page,
         pageSize,
     });
-
-    const studentQuery = useStudentKnowledgeList({
-        search: search || undefined,
-        line_type_id: selectedLineTypeId,
-        system_tag_id: selectedSystemTagIds[0],
-        page,
-        pageSize,
-    });
-
-    const { data, isLoading, refetch } = isAdmin ? adminQuery : studentQuery;
 
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {

@@ -8,7 +8,6 @@ from .knowledge import (
     KnowledgeListCreateView,
     KnowledgeDetailView,
     KnowledgeStatsView,
-    StudentKnowledgeListView,
     StudentTaskKnowledgeDetailView,
     KnowledgeIncrementViewCountView,
 )
@@ -21,7 +20,6 @@ __all__ = [
     'KnowledgeListCreateView',
     'KnowledgeDetailView',
     'KnowledgeStatsView',
-    'StudentKnowledgeListView',
     'StudentTaskKnowledgeDetailView',
     'KnowledgeIncrementViewCountView',
     # Tag views

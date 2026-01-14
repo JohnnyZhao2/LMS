@@ -18,9 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-import { useStudentKnowledgeDetail } from '../api/get-student-knowledge-detail';
 import { useStudentTaskKnowledgeDetail } from '../api/get-student-task-knowledge-detail';
-import { useKnowledgeDetail as useAdminKnowledgeDetail } from '../api/get-admin-knowledge';
+import { useKnowledgeDetail } from '../api/knowledge';
 import { useDeleteKnowledge } from '../api/manage-knowledge';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
@@ -29,29 +28,23 @@ import dayjs from '@/lib/dayjs';
 
 import { parseOutline } from '../utils';
 
-/**
- * 知识详情组件（ShadCN UI 版本）
- */
 export const KnowledgeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>({
+  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>(({
     visible: false,
     type: null,
   });
 
   const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
   const taskKnowledgeId = Number(new URLSearchParams(location.search).get('taskKnowledgeId') || 0);
-  const studentQuery = useStudentKnowledgeDetail(Number(id));
+  const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
-  const adminQuery = useAdminKnowledgeDetail(Number(id));
 
-  const { data, isLoading } = isAdminRoute
-    ? adminQuery
-    : (taskKnowledgeId ? studentTaskQuery : studentQuery);
+  const { data, isLoading } = taskKnowledgeId ? studentTaskQuery : knowledgeQuery;
 
   const deleteKnowledge = useDeleteKnowledge();
 
