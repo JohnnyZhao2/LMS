@@ -1,6 +1,6 @@
 # 仓库指南
-
 用中文回复
+**No backward compatibility** - Break old formats freely
 
 ## 项目结构与模块组织
 - `lms_backend/` 为 Django REST API。关键区域：`apps/`（领域模块，如 `users`、`knowledge`、`tasks`）、`core/`（共享工具）、`config/`（配置与路由）、`tests/`（集成测试 + 性质测试）。
@@ -79,6 +79,12 @@ Usage notes:
 <skill>
 <name>canvas-design</name>
 <description>Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a poster, piece of art, design, or other static piece. Create original visual designs, never copying existing artists' work to avoid copyright violations.</description>
+<location>project</location>
+</skill>
+
+<skill>
+<name>code-cleanup</name>
+<description>代码清理与重构工具。用于：(1) 发现并删除冗余/重复代码，(2) 识别并清理旧代码与兼容代码，(3) 合并相似逻辑，(4) 统一代码风格。当用户提到"清理代码"、"删除冗余"、"重构"、"统一风格"、"找重复代码"时触发。</description>
 <location>project</location>
 </skill>
 
