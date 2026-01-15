@@ -60,11 +60,6 @@ import { useAssignableUsers } from '../api/get-assignable-users';
 import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
 import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { ROUTES } from '@/config/routes';
-import type {
-  KnowledgeListItem,
-  PaginatedResponse,
-  QuizListItem,
-} from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
 type ResourceType = 'DOCUMENT' | 'QUIZ';

@@ -28,5 +28,3 @@ export const useExamResult = (submissionId?: number, options?: UseResultOptions)
     enabled: Boolean(submissionId) && (options?.enabled ?? true),
   });
 };
-
-

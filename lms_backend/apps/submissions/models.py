@@ -169,33 +169,6 @@ class Submission(TimestampMixin, models.Model):
     def all_subjective_graded(self):
         """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
-    def _auto_grade_objective_questions(self):
-        """
-        自动评分客观题
-        Property 30: 客观题自动评分
-        """
-        for answer in self.answers.filter(
-            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ):
-            answer.auto_grade()
-    def _calculate_score(self):
-        """计算当前得分"""
-        self.obtained_score = self.answers.aggregate(
-            total=models.Sum('obtained_score')
-        )['total'] or Decimal('0')
-    def _update_task_assignment(self):
-        """更新任务分配的成绩"""
-        assignment = self.task_assignment
-        # 更新成绩（取最高分）
-        if assignment.score is None or self.obtained_score > assignment.score:
-            assignment.score = self.obtained_score
-            assignment.save(update_fields=['score'])
-    def _check_practice_completion(self):
-        """
-        检查练习任务是否应该自动完成
-        Property 25: 练习任务自动完成
-        """
-        self.task_assignment.check_completion()
     def complete_grading(self):
         """
         完成评分（所有主观题评分完成后调用）
@@ -208,11 +181,16 @@ class Submission(TimestampMixin, models.Model):
         if not self.all_subjective_graded:
             raise ValidationError('还有未评分的主观题')
         # 重新计算总分
-        self._calculate_score()
+        self.obtained_score = self.answers.aggregate(
+            total=models.Sum('obtained_score')
+        )['total'] or Decimal('0')
         self.status = 'GRADED'
         self.save()
-        # 更新任务分配
-        self._update_task_assignment()
+        # 更新任务分配成绩（取最高分）
+        assignment = self.task_assignment
+        if assignment.score is None or self.obtained_score > assignment.score:
+            assignment.score = self.obtained_score
+            assignment.save(update_fields=['score'])
 class Answer(TimestampMixin, models.Model):
     """
     答案记录模型
