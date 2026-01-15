@@ -11,6 +11,7 @@ import {
   List,
   PanelLeftClose,
   PanelLeft,
+  CheckCircle,
 } from 'lucide-react';
 
 import { Button, ConfirmDialog } from '@/components/ui';
@@ -21,6 +22,9 @@ import { cn } from '@/lib/utils';
 import { useStudentTaskKnowledgeDetail } from '../api/get-student-task-knowledge-detail';
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useDeleteKnowledge } from '../api/manage-knowledge';
+import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
+import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
@@ -40,16 +44,32 @@ export const KnowledgeDetail: React.FC = () => {
   });
 
   const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
-  const taskKnowledgeId = Number(new URLSearchParams(location.search).get('taskKnowledgeId') || 0);
+  const searchParams = new URLSearchParams(location.search);
+  const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
+  const taskId = Number(searchParams.get('task') || 0);
+
+  const { currentRole } = useAuth();
+  const isStudent = currentRole === 'STUDENT';
+
   const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
+  const { data: learningDetail } = useStudentLearningTaskDetail(taskId, {
+    enabled: !!taskId && isStudent,
+  });
 
   const { data, isLoading } = taskKnowledgeId ? studentTaskQuery : knowledgeQuery;
 
+  const completeLearning = useCompleteLearning();
   const deleteKnowledge = useDeleteKnowledge();
 
   const knowledge = data as KnowledgeDetailType | undefined;
   const isEmergency = knowledge?.knowledge_type === 'EMERGENCY';
+
+  const taskKnowledgeItem = useMemo(() => {
+    return learningDetail?.knowledge_items.find((item) => item.knowledge_id === Number(id));
+  }, [learningDetail, id]);
+
+  const isCompleted = taskKnowledgeItem?.is_completed;
 
   const outline = useMemo(() => {
     if (!knowledge) return [];
@@ -60,6 +80,27 @@ export const KnowledgeDetail: React.FC = () => {
 
   const handleEdit = () => {
     navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
+  };
+
+  const handleComplete = async () => {
+    if (!taskId || !id) return;
+    try {
+      await completeLearning.mutateAsync({
+        taskId,
+        knowledgeId: Number(id),
+      });
+      toast.success('已标记为完成');
+    } catch {
+      toast.error('操作失败，请稍后重试');
+    }
+  };
+
+  const handleBack = () => {
+    if (taskId) {
+      navigate(`${ROUTES.TASKS}/${taskId}`);
+    } else {
+      navigate(isAdminRoute ? ROUTES.ADMIN_KNOWLEDGE : ROUTES.KNOWLEDGE);
+    }
   };
 
   const handleDelete = () => {
@@ -126,11 +167,11 @@ export const KnowledgeDetail: React.FC = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            onClick={() => navigate(isAdminRoute ? ROUTES.ADMIN_KNOWLEDGE : ROUTES.KNOWLEDGE)}
+            onClick={handleBack}
             className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            <span className="text-sm font-semibold">返回列表</span>
+            <span className="text-sm font-semibold">{taskId ? '返回任务' : '返回列表'}</span>
           </Button>
           <div className="w-px h-5 bg-gray-200" />
           <div className="flex flex-col gap-0.5">
@@ -166,6 +207,31 @@ export const KnowledgeDetail: React.FC = () => {
               <Trash2 className="w-4 h-4 mr-1.5" />
               删除
             </Button>
+          </div>
+        )}
+
+        {isStudent && !!taskId && (
+          <div className="flex items-center gap-2">
+            {isCompleted ? (
+              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 shadow-sm">
+                <CheckCircle className="w-4 h-4" />
+                已学习
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleComplete}
+                disabled={completeLearning.isPending}
+                className="h-10 bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                {completeLearning.isPending ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                标记已学习
+              </Button>
+            )}
           </div>
         )}
       </div>
