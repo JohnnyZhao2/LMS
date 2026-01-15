@@ -93,7 +93,7 @@ export const StudentTaskList: React.FC = () => {
 
             {/* 任务列表网格 */}
             <div>
-                {isLoading ? (
+                {isLoading && !data ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map(i => (
                             <Skeleton key={i} className="h-80 rounded-lg" />
