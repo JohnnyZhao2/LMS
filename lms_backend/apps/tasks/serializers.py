@@ -7,15 +7,28 @@ Serializers for task management.
 - 业务逻辑已提取到 services.py
 """
 from rest_framework import serializers
-from apps.users.models import User
 from apps.users.permissions import (
     get_current_role,
     get_accessible_student_ids,
 )
 from apps.knowledge.models import Knowledge
-from apps.quizzes.models import Quiz
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 from .services import TaskService
+
+
+def extract_knowledge_summary(knowledge, max_length: int = 160) -> str:
+    if knowledge.knowledge_type == 'OTHER':
+        text = knowledge.content or ''
+    else:
+        parts = [
+            knowledge.fault_scenario,
+            knowledge.trigger_process,
+            knowledge.solution,
+            knowledge.verification_plan,
+            knowledge.recovery_plan,
+        ]
+        text = next((p for p in parts if p), '')
+    return text[:max_length] if text else ''
 class TaskAssignmentSerializer(serializers.ModelSerializer):
     """Serializer for TaskAssignment model."""
     assignee_name = serializers.CharField(source='assignee.username', read_only=True)
@@ -44,20 +57,9 @@ class TaskKnowledgeSerializer(serializers.ModelSerializer):
         read_only_fields = ['order']
     def get_knowledge_type_display(self, obj):
         return obj.knowledge.get_knowledge_type_display()
+
     def get_summary(self, obj):
-        knowledge = obj.knowledge
-        if knowledge.knowledge_type == 'OTHER':
-            text = knowledge.content or ''
-        else:
-            parts = [
-                knowledge.fault_scenario,
-                knowledge.trigger_process,
-                knowledge.solution,
-                knowledge.verification_plan,
-                knowledge.recovery_plan,
-            ]
-            text = next((p for p in parts if p), '')
-        return text[:160] if text else ''
+        return extract_knowledge_summary(obj.knowledge)
 class TaskQuizSerializer(serializers.ModelSerializer):
     """Serializer for TaskQuiz model."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
@@ -92,8 +94,8 @@ class TaskListSerializer(serializers.ModelSerializer):
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
     pass_rate = serializers.ReadOnlyField()
-    # 计算属性：手动关闭或截止时间已过都返回 True
-    is_closed = serializers.SerializerMethodField()
+    is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
+
     class Meta:
         model = Task
         fields = [
@@ -103,19 +105,14 @@ class TaskListSerializer(serializers.ModelSerializer):
             'assignee_count', 'completed_count', 'pass_rate',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
-    def get_is_closed(self, obj):
-        """任务是否已结束：手动关闭或截止时间已过"""
-        from django.utils import timezone
-        if obj.is_closed:
-            return True
-        return timezone.now() > obj.deadline
 class TaskDetailSerializer(serializers.ModelSerializer):
     """Serializer for task detail view."""
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
-    is_closed = serializers.SerializerMethodField()
+    is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
+
     class Meta:
         model = Task
         fields = [
@@ -124,12 +121,6 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'knowledge_items', 'quizzes', 'assignments',
             'created_by_name', 'created_at', 'updated_at'
         ]
-    def get_is_closed(self, obj):
-        """任务是否已结束：手动关闭或截止时间已过"""
-        from django.utils import timezone
-        if obj.is_closed:
-            return True
-        return timezone.now() > obj.deadline
 class TaskCreateSerializer(serializers.Serializer):
     """
     统一的任务创建 Serializer
@@ -257,51 +248,31 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             'knowledge_ids', 'quiz_ids', 'assignee_ids'
         ]
     def validate_knowledge_ids(self, value):
-        """验证知识文档ID"""
         if value is None:
             return value
         if value:
-            published_knowledge = Knowledge.objects.filter(
-                id__in=value,
-                is_deleted=False,
-                is_current=True
-            )
-            published_ids = set(published_knowledge.values_list('id', flat=True))
-            invalid_ids = set(value) - published_ids
-            if invalid_ids:
-                raise serializers.ValidationError(f'以下知识文档不可用: {list(invalid_ids)}')
+            is_valid, invalid_ids = TaskService.validate_knowledge_ids(value)
+            if not is_valid:
+                raise serializers.ValidationError(f'以下知识文档不可用: {invalid_ids}')
         return value
+
     def validate_quiz_ids(self, value):
-        """验证试卷ID"""
         if value is None:
             return value
         if value:
-            existing_ids = set(
-                Quiz.objects.filter(
-                    id__in=value,
-                    is_deleted=False,
-                    is_current=True
-                ).values_list('id', flat=True)
-            )
-            invalid_ids = set(value) - existing_ids
-            if invalid_ids:
-                raise serializers.ValidationError(f'以下试卷不存在: {list(invalid_ids)}')
+            is_valid, invalid_ids = TaskService.validate_quiz_ids(value)
+            if not is_valid:
+                raise serializers.ValidationError(f'以下试卷不存在: {invalid_ids}')
         return value
+
     def validate_assignee_ids(self, value):
-        """验证学员ID"""
         if value is None:
             return value
         if not value:
             raise serializers.ValidationError('请至少选择一个学员')
-        existing_ids = set(
-            User.objects.filter(
-                id__in=value,
-                is_active=True
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'学员不存在或已停用: {list(invalid_ids)}')
+        is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
+        if not is_valid:
+            raise serializers.ValidationError(f'学员不存在或已停用: {invalid_ids}')
         return value
     def validate(self, attrs):
         """验证更新数据"""
@@ -419,7 +390,6 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         """获取详细进度数据"""
         return obj.get_progress_data()
     def get_knowledge_items(self, obj):
-        """获取知识文档及其学习进度"""
         task_knowledge_items = obj.task.task_knowledge.select_related('knowledge').all()
         progress_map = {
             p.task_knowledge_id: p
@@ -435,27 +405,14 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
                 'title': knowledge.title,
                 'knowledge_type': knowledge.knowledge_type,
                 'knowledge_type_display': knowledge.get_knowledge_type_display(),
-                'summary': self._extract_summary(knowledge),
+                'summary': extract_knowledge_summary(knowledge),
                 'order': tk.order,
                 'is_completed': progress.is_completed if progress else False,
                 'completed_at': progress.completed_at if progress else None,
             }
             result.append(item)
         return sorted(result, key=lambda x: x['order'])
-    def _extract_summary(self, knowledge):
-        """从知识文档中提取摘要"""
-        if knowledge.knowledge_type == 'OTHER':
-            text = knowledge.content or ''
-        else:
-            parts = [
-                knowledge.fault_scenario,
-                knowledge.trigger_process,
-                knowledge.solution,
-                knowledge.verification_plan,
-                knowledge.recovery_plan,
-            ]
-            text = next((p for p in parts if p), '')
-        return text[:160] if text else ''
+
     def get_quiz_items(self, obj):
         """获取试卷列表及提交状态"""
         from apps.submissions.models import Submission

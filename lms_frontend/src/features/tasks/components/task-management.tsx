@@ -4,7 +4,6 @@ import {
     FileText,
     Plus,
     Search,
-    Filter,
     Eye,
     Trash2,
     Clock,
@@ -56,7 +55,6 @@ export const TaskManagement: React.FC = () => {
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
-    const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
 
@@ -315,18 +313,6 @@ export const TaskManagement: React.FC = () => {
                                 activeColor="white"
                                 className="w-full md:w-auto"
                             />
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                                className={cn(
-                                    "h-14 w-14 rounded-md transition-all duration-200 shadow-none",
-                                    showAdvancedFilters ? "bg-[#111827] text-white" : "bg-[#F3F4F6] text-[#6B7280]"
-                                )}
-                            >
-                                <Filter className="h-5 w-5" />
-                            </Button>
                         </div>
                     </div>
 

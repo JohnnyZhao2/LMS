@@ -10,7 +10,6 @@ Implements:
 - 一个任务可以包含任意组合的知识文档和试卷
 - 简化任务状态逻辑
 """
-import uuid
 from django.db import models
 from django.utils import timezone
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
@@ -110,6 +109,16 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             return None
         completed = self.assignments.filter(status='COMPLETED').count()
         return round(completed / total * 100, 1)
+
+    @property
+    def is_effectively_closed(self) -> bool:
+        """
+        任务是否已结束：手动关闭或截止时间已过
+        统一的关闭状态判断逻辑，供 serializers 和 services 使用
+        """
+        if self.is_closed:
+            return True
+        return timezone.now() > self.deadline
     def close(self):
         """
         强制结束任务
