@@ -87,6 +87,10 @@ export interface LearningTaskProgress {
   knowledge_completed?: number;
   quiz_total?: number;
   quiz_completed?: number;
+  exam_total?: number;
+  exam_completed?: number;
+  practice_total?: number;
+  practice_completed?: number;
 }
 
 /**
@@ -211,6 +215,10 @@ export interface TaskProgress {
   knowledge_completed?: number;
   quiz_total?: number;
   quiz_completed?: number;
+  exam_total?: number;
+  exam_completed?: number;
+  practice_total?: number;
+  practice_completed?: number;
 }
 
 export interface StudentTaskCenterItem {
@@ -250,6 +258,8 @@ export interface TaskListItem {
   closed_at?: string;
   knowledge_count: number;
   quiz_count: number;
+  exam_count: number;
+  practice_count: number;
   assignee_count: number;
   /** 已完成的学员数量 */
   completed_count: number;

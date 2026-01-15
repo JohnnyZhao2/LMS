@@ -22,18 +22,19 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(() => {
-    // 尝试从本地存储初始化，实现“秒开”体验
     const user = tokenStorage.getUserInfo();
     const currentRole = tokenStorage.getCurrentRole();
     const availableRoles = tokenStorage.getAvailableRoles();
     const hasTokens = tokenStorage.hasTokens();
 
+    const isAuthenticated = hasTokens && !!user;
+
     return {
       user,
       currentRole,
       availableRoles,
-      isAuthenticated: hasTokens && !!user,
-      isLoading: hasTokens, // 如果有 token，说明需要去验证/刷新，所以设为 loading
+      isAuthenticated,
+      isLoading: hasTokens && !isAuthenticated, // 如果有 token 但没用户信息，才需要进入初始加载态
       isSwitching: false,
     };
   });

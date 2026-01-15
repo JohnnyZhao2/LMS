@@ -248,7 +248,7 @@ export const UserList: React.FC = () => {
   ]
 
   return (
-    <div className="space-y-10 animate-fadeIn pb-20">
+    <div className="space-y-10 pb-20">
       <PageHeader
         title="用户中心"
         subtitle="组织架构与权限管理"

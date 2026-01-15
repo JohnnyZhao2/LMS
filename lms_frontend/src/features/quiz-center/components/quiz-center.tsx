@@ -36,7 +36,7 @@ export const QuizCenter: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col gap-10 animate-fadeIn pb-12">
+    <div className="space-y-10 pb-10">
       <PageHeader
         title="试卷中心"
         subtitle="管理题目资源与评估引擎"

@@ -41,7 +41,7 @@ export const MentorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 animate-fadeIn pb-10">
+    <div className="space-y-10 pb-10">
       <PageHeader
         title={`${roleName}工作台`}
         subtitle={`欢迎回来，${user?.username || '老师'}。今天各项教学工作正有序进行。`}

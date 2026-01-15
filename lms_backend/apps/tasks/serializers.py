@@ -87,6 +87,8 @@ class TaskListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     knowledge_count = serializers.ReadOnlyField()
     quiz_count = serializers.ReadOnlyField()
+    exam_count = serializers.ReadOnlyField()
+    practice_count = serializers.ReadOnlyField()
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
     pass_rate = serializers.ReadOnlyField()
@@ -97,8 +99,8 @@ class TaskListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description',
             'deadline', 'is_closed', 'closed_at',
-            'knowledge_count', 'quiz_count', 'assignee_count',
-            'completed_count', 'pass_rate',
+            'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
+            'assignee_count', 'completed_count', 'pass_rate',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
     def get_is_closed(self, obj):

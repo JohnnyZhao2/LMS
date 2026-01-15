@@ -95,7 +95,23 @@ export const QuizPlayer: React.FC = () => {
     if (!submission) {
       return;
     }
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+
+    // 判断答案是否为空
+    const isEmpty =
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0);
+
+    setAnswers((prev) => {
+      if (isEmpty) {
+        // 如果答案为空，从对象中删除该键
+        const { [questionId]: _, ...rest } = prev;
+        return rest;
+      }
+      // 否则正常设置答案
+      return { ...prev, [questionId]: value };
+    });
 
     try {
       await saveAnswerMutation({

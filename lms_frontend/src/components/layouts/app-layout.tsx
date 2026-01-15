@@ -4,7 +4,7 @@ import * as React from "react"
 import { Header } from "./header"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { cn } from "@/lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { useLocation } from "react-router-dom"
 
 interface AppLayoutProps {
@@ -13,11 +13,6 @@ interface AppLayoutProps {
 
 /**
  * 主应用布局组件 - 极致美学版
- * 包含：
- * 1. 动态渐变网孔背景 (bg-mesh)
- * 2. 玻璃拟态导航栏
- * 3. 页面淡入交互
- * 4. 角色主题切换 (Role-based Themes)
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { currentRole } = useAuth()
@@ -55,18 +50,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             maxWidth: "var(--container-max-width, 1400px)"
           }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="flex-1 flex flex-col"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="flex-1 flex flex-col"
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
     </div>

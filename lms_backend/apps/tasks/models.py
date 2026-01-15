@@ -76,6 +76,14 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """获取关联知识文档数量"""
         return self.task_knowledge.count()
     @property
+    def exam_count(self):
+        """获取考试数量"""
+        return self.task_quizzes.filter(quiz__quiz_type='EXAM').count()
+    @property
+    def practice_count(self):
+        """获取练习数量"""
+        return self.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
+    @property
     def assignee_count(self):
         """获取分配学员数量"""
         return self.assignments.count()
@@ -218,10 +226,23 @@ class TaskAssignment(TimestampMixin, models.Model):
         # 2. 试卷完成统计
         # 每个关联的试卷只要有至少一个非答题中的 submission 就算该项完成
         from apps.submissions.models import Submission
-        completed_quizzes = Submission.objects.filter(
+        all_completed_quiz_ids = Submission.objects.filter(
             task_assignment=self,
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).values('quiz_id').distinct().count()
+        ).values_list('quiz_id', flat=True).distinct()
+        completed_quizzes = len(all_completed_quiz_ids)
+        
+        # 统计考试和练习的完成情况
+        total_exams = task.task_quizzes.filter(quiz__quiz_type='EXAM').count()
+        total_practices = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
+        
+        # 获取考试和练习的 ID 列表以便计算完成数
+        exam_ids = task.task_quizzes.filter(quiz__quiz_type='EXAM').values_list('quiz_id', flat=True)
+        practice_ids = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').values_list('quiz_id', flat=True)
+        
+        completed_exams = len(set(all_completed_quiz_ids) & set(exam_ids))
+        completed_practices = len(set(all_completed_quiz_ids) & set(practice_ids))
+
         completed = completed_knowledge + completed_quizzes
         return {
             'completed': completed,
@@ -230,6 +251,10 @@ class TaskAssignment(TimestampMixin, models.Model):
             'knowledge_completed': completed_knowledge,
             'quiz_total': total_quizzes,
             'quiz_completed': completed_quizzes,
+            'exam_total': total_exams,
+            'exam_completed': completed_exams,
+            'practice_total': total_practices,
+            'practice_completed': completed_practices,
             'percentage': round(completed / total * 100, 1)
         }
     def check_completion(self):

@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  Clock,
   BookOpen,
   FileText,
   Pencil,
@@ -143,44 +142,39 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-full bg-white rounded-[2rem] p-8 transition-all duration-300 cursor-pointer border border-slate-100/50 hover:shadow-2xl hover:shadow-slate-200/50 hover:-translate-y-1",
+        "group relative flex flex-col h-[210px] bg-white rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-slate-100/50 hover:shadow-2xl hover:shadow-slate-200/50 hover:-translate-y-1",
         isStudentView && studentTask?.status === 'COMPLETED' && "bg-[#F9FAFB]/80 border-transparent shadow-none"
       )}
       onClick={() => navigate(`/tasks/${targetTaskId}`)}
     >
       {/* 顶部：状态、发布人、日期 */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2">
-          {isUrgent ? (
-            <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-wider">Urgent</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 text-slate-500 rounded-full">
-              <span className="text-[10px] font-black uppercase tracking-wider">{missionConfig.label}</span>
-            </div>
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div
+              className={cn("w-2 h-2 rounded-full", isUrgent && "bg-red-500 animate-pulse")}
+              style={!isUrgent ? { backgroundColor: missionConfig.bgColor } : {}}
+            />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              {isUrgent ? '紧急任务' : missionConfig.label}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-5">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 text-[10px] font-bold">
-              {(task.created_by_name || 'U').charAt(0)}
-            </div>
-            <span className="text-xs font-bold text-slate-700">{task.created_by_name || '发布人'}</span>
+        <div className="flex items-center gap-4">
+          <div className="text-[11px] font-bold text-slate-500">
+            {task.created_by_name || '发布人'}
           </div>
-          <div className="flex items-center gap-2 text-slate-400">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="text-xs font-bold text-slate-600">{dayjs(task.deadline).format('YYYY-MM-DD')}</span>
+          <div className="text-[11px] font-bold text-slate-400">
+            {dayjs(task.deadline).format('YYYY-MM-DD')}
           </div>
 
           {canEditTask && (
             <div onClick={e => e.stopPropagation()} className="ml-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
-                    <MoreHorizontal className="w-4 h-4" />
+                  <button className="h-6 w-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                    <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-xl p-2 border border-slate-200 bg-white shadow-xl">
@@ -205,11 +199,11 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
       </div>
 
       {/* 中部：标题 & 描述 */}
-      <div className="flex-1 mb-8">
-        <h3 className="text-2xl font-black text-slate-900 leading-tight mb-4 line-clamp-2 group-hover:text-blue-600 transition-colors">
+      <div className="flex-1 min-h-0">
+        <h3 className="text-xl font-black text-slate-900 leading-tight mb-1 truncate group-hover:text-blue-600 transition-colors">
           {title}
         </h3>
-        <p className="text-[15px] font-medium text-slate-500/80 line-clamp-2 leading-relaxed">
+        <p className="text-[14px] font-medium text-slate-500/80 truncate">
           {description || '此任务暂无描述...'}
         </p>
       </div>
@@ -217,12 +211,43 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
       {/* 底部：进度或统计 */}
       <div className="mt-auto">
         {isStudentView ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">进度</span>
-              <span className="text-xl font-black text-slate-900">{progress?.percentage ?? 0}<span className="text-sm ml-0.5">%</span></span>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-wrap gap-2">
+                {(studentTask?.progress.knowledge_total ?? 0) > 0 && (
+                  <span className={cn(
+                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
+                    (studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0)
+                      ? "text-slate-400 bg-slate-50"
+                      : "text-emerald-600 bg-emerald-50"
+                  )}>
+                    {studentTask?.progress.knowledge_total} 知识
+                  </span>
+                )}
+                {(studentTask?.progress.practice_total ?? 0) > 0 && (
+                  <span className={cn(
+                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
+                    (studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0)
+                      ? "text-slate-400 bg-slate-50"
+                      : "text-amber-600 bg-amber-50"
+                  )}>
+                    {studentTask?.progress.practice_total} 测验
+                  </span>
+                )}
+                {(studentTask?.progress.exam_total ?? 0) > 0 && (
+                  <span className={cn(
+                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
+                    (studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0)
+                      ? "text-slate-400 bg-slate-50"
+                      : "text-blue-600 bg-blue-50"
+                  )}>
+                    {studentTask?.progress.exam_total} 考试
+                  </span>
+                )}
+              </div>
+              <span className="text-base font-black text-slate-900">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
             </div>
-            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{
@@ -233,19 +258,43 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
             </div>
           </div>
         ) : (
-          <div className="flex gap-8 p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
-            <div className="flex gap-8">
-              <div className="flex flex-col">
-                <span className="text-xl font-black text-slate-900">{managerTask?.assignee_count ?? 0}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">学员</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-black text-slate-900">{managerTask?.knowledge_count ?? 0}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">知识</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-black text-slate-900">{managerTask?.quiz_count ?? 0}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">测验</span>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {(managerTask?.knowledge_count ?? 0) > 0 && (
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  {managerTask?.knowledge_count} 知识
+                </span>
+              )}
+              {(managerTask?.practice_count ?? 0) > 0 && (
+                <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+                  {managerTask?.practice_count} 测验
+                </span>
+              )}
+              {(managerTask?.exam_count ?? 0) > 0 && (
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                  {managerTask?.exam_count} 考试
+                </span>
+              )}
+            </div>
+            <div className="flex gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+              <div className="flex gap-4">
+                <div className="flex flex-col">
+                  <span className="text-base font-black text-slate-900">{managerTask?.assignee_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">学员</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-base font-black text-slate-900">{managerTask?.completed_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">完成</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-base font-black text-slate-900">
+                    {managerTask?.pass_rate !== null && managerTask?.pass_rate !== undefined
+                      ? `${managerTask.pass_rate}%`
+                      : '-'
+                    }
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">及格率</span>
+                </div>
               </div>
             </div>
           </div>

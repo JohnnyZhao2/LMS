@@ -156,25 +156,10 @@ export const Header: React.FC = () => {
         </div>
 
         {/* 导航菜单 */}
-        <nav className="hidden lg:flex items-center gap-1 h-10">
+        <nav className="hidden lg:flex items-center gap-1 h-10 relative">
           <AnimatePresence mode="popLayout" initial={false}>
-            {isLoading && menuItems.length === 0 ? (
-              // 首次加载且无缓存时显示骨架屏
-              Array.from({ length: 4 }).map((_, i) => (
-                <motion.div
-                  key={`skeleton-${i}`}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2, delay: i * 0.05 }}
-                  className="flex items-center gap-2 px-4 py-2"
-                >
-                  <Skeleton className="h-4 w-4 rounded-sm" />
-                  <Skeleton className="h-4 w-12 rounded-sm" />
-                </motion.div>
-              ))
-            ) : (
-              menuItems.map((item, index) => {
+            {menuItems.length > 0 ? (
+              menuItems.map((item) => {
                 const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
                 if (!menuItem.key) return null
 
@@ -185,13 +170,6 @@ export const Header: React.FC = () => {
                   <motion.button
                     key={menuItem.key}
                     layout
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.3,
-                      delay: index * 0.05,
-                      layout: { duration: 0.2 }
-                    }}
                     onClick={() => handleNavClick(menuItem.key!)}
                     className={cn(
                       "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
@@ -205,7 +183,7 @@ export const Header: React.FC = () => {
                       <motion.div
                         layoutId="active-nav-bg"
                         className="absolute inset-0 bg-blue-50 rounded-md -z-10"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                       />
                     )}
 
@@ -219,7 +197,21 @@ export const Header: React.FC = () => {
                   </motion.button>
                 )
               })
-            )}
+            ) : isLoading ? (
+              // 只有在真的没有数据且还在加载时才显示 Skeleton
+              Array.from({ length: 4 }).map((_, i) => (
+                <motion.div
+                  key={`skeleton-${i}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-4 py-2"
+                >
+                  <Skeleton className="h-4 w-4 rounded-sm" />
+                  <Skeleton className="h-4 w-12 rounded-sm" />
+                </motion.div>
+              ))
+            ) : null}
           </AnimatePresence>
         </nav>
       </div>

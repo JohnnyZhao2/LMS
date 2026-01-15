@@ -57,7 +57,7 @@ export const TeamManagerDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 animate-fadeIn pb-10">
+    <div className="space-y-10 pb-10">
       <PageHeader
         title="团队经理工作台"
         subtitle={`欢迎回来，${user?.username || '经理'}。全面掌握团队学习动态。`}
