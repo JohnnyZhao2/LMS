@@ -5,6 +5,7 @@
 import { cn } from '@/lib/utils';
 import { Building2, Users, UserCircle } from 'lucide-react';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { Department, Mentor } from '@/types/api';
 
 export type ViewMode = 'department' | 'mentorship';
@@ -66,7 +67,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                 options={viewOptions}
                 value={viewMode}
                 onChange={(v) => onViewModeChange(v as ViewMode)}
-                activeColor="gray"
+                activeColor="blue"
             />
 
             {/* 层级列表标题 */}
@@ -77,51 +78,70 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
             </div>
 
             {/* 层级列表 */}
-            <div className="flex flex-col gap-2">
-                {items.map((item) => {
-                    const isSelected = selectedId === item.id;
-                    const Icon = viewMode === 'department'
-                        ? (item.id === 'all' ? Building2 : Users)
-                        : UserCircle;
+            <div className="flex flex-col gap-2 relative">
+                <AnimatePresence mode="popLayout" initial={false}>
+                    {items.map((item, index) => {
+                        const isSelected = selectedId === item.id;
+                        const Icon = viewMode === 'department'
+                            ? (item.id === 'all' ? Building2 : Users)
+                            : UserCircle;
 
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onSelect(item.id)}
-                            className={cn(
-                                'group flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200',
-                                isSelected
-                                    ? 'bg-gray-900 text-white'
-                                    : 'bg-white hover:bg-gray-50 text-gray-700'
-                            )}
-                        >
-                            <div className={cn(
-                                'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                                isSelected
-                                    ? 'bg-gray-800 text-white'
-                                    : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
-                            )}>
-                                <Icon className="w-5 h-5" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                                <span className={cn(
-                                    'text-sm font-semibold truncate',
-                                    isSelected ? 'text-white' : 'text-gray-900'
-                                )}>
-                                    {item.name}
-                                </span>
-                                {item.subtitle && (
-                                    <span className={cn(
-                                        'text-[10px] font-medium uppercase tracking-wider truncate',
-                                        isSelected ? 'text-white/70' : 'text-gray-400'
-                                    )}>
-                                        {item.subtitle}
-                                    </span>
+                        return (
+                            <motion.button
+                                key={item.id}
+                                layout
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10, scale: 0.95 }}
+                                transition={{
+                                    duration: 0.2,
+                                    delay: index * 0.03,
+                                    layout: { duration: 0.2 }
+                                }}
+                                onClick={() => onSelect(item.id)}
+                                className={cn(
+                                    'group relative flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200',
+                                    isSelected
+                                        ? 'text-[#1D4ED8]'
+                                        : 'bg-white hover:bg-gray-50 text-gray-700'
                                 )}
-                            </div>
-                        </button>
-                    );
-                })}
+                            >
+                                {isSelected && (
+                                    <motion.div
+                                        layoutId="user-sidebar-active"
+                                        className="absolute inset-0 bg-[#EFF6FF] rounded-lg -z-10"
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                    />
+                                )}
+
+                                <div className={cn(
+                                    'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors',
+                                    isSelected
+                                        ? 'bg-[#DBEAFE] text-[#1D4ED8]'
+                                        : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                                )}>
+                                    <Icon className="w-5 h-5" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className={cn(
+                                        'text-sm font-semibold truncate',
+                                        isSelected ? 'text-[#1D4ED8]' : 'text-gray-900'
+                                    )}>
+                                        {item.name}
+                                    </span>
+                                    {item.subtitle && (
+                                        <span className={cn(
+                                            'text-[10px] font-medium uppercase tracking-wider truncate',
+                                            isSelected ? 'text-[#3B82F6]/80' : 'text-gray-400'
+                                        )}>
+                                            {item.subtitle}
+                                        </span>
+                                    )}
+                                </div>
+                            </motion.button>
+                        );
+                    })}
+                </AnimatePresence>
             </div>
         </div>
     );

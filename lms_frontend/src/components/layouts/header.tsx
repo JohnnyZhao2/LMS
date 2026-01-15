@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { LogOut, User, ChevronDown, Bell } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   LayoutGrid,
   BookOpen,
@@ -25,6 +26,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { RoleCode } from "@/types/api"
 
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
@@ -69,7 +71,7 @@ const MENU_ICONS: Record<string, React.ReactNode> = {
  * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
-  const { user, currentRole, availableRoles, logout, switchRole } = useAuth()
+  const { user, currentRole, availableRoles, logout, switchRole, setIsSwitching, isLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -82,10 +84,22 @@ export const Header: React.FC = () => {
   const handleRoleChange = async (roleCode: RoleCode) => {
     if (roleCode !== currentRole) {
       try {
+        // 开始切换
+        setIsSwitching(true)
+
+        // 调用后台切换 API
         await switchRole(roleCode)
+
+        // 跳转到首页（强制触发重新加载）
         navigate(ROUTES.DASHBOARD)
+
+        // 稍微延迟一点点关闭遮罩，让跳转后的页面有一定的渲染时间，避免生硬地闪现
+        setTimeout(() => {
+          setIsSwitching(false)
+        }, 800)
       } catch (error) {
         console.error("切换角色失败:", error)
+        setIsSwitching(false)
       }
     }
   }
@@ -142,35 +156,71 @@ export const Header: React.FC = () => {
         </div>
 
         {/* 导航菜单 */}
-        <nav className="hidden lg:flex items-center gap-2">
-          {menuItems.map((item) => {
-            const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
-            if (!menuItem.key) return null
+        <nav className="hidden lg:flex items-center gap-1 h-10">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {isLoading && menuItems.length === 0 ? (
+              // 首次加载且无缓存时显示骨架屏
+              Array.from({ length: 4 }).map((_, i) => (
+                <motion.div
+                  key={`skeleton-${i}`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2, delay: i * 0.05 }}
+                  className="flex items-center gap-2 px-4 py-2"
+                >
+                  <Skeleton className="h-4 w-4 rounded-sm" />
+                  <Skeleton className="h-4 w-12 rounded-sm" />
+                </motion.div>
+              ))
+            ) : (
+              menuItems.map((item, index) => {
+                const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
+                if (!menuItem.key) return null
 
-            const isActive = selectedNavKey === menuItem.key
-            const icon = MENU_ICONS[menuItem.key]
+                const isActive = selectedNavKey === menuItem.key
+                const icon = MENU_ICONS[menuItem.key]
 
-            return (
-              <button
-                key={menuItem.key}
-                onClick={() => handleNavClick(menuItem.key!)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200",
-                  isActive
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                )}
-              >
-                <span className={cn(
-                  "transition-transform duration-200 group-hover:scale-110",
-                  isActive ? "text-blue-600" : "text-gray-500"
-                )}>
-                  {icon}
-                </span>
-                <span>{menuItem.label}</span>
-              </button>
-            )
-          })}
+                return (
+                  <motion.button
+                    key={menuItem.key}
+                    layout
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: index * 0.05,
+                      layout: { duration: 0.2 }
+                    }}
+                    onClick={() => handleNavClick(menuItem.key!)}
+                    className={cn(
+                      "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
+                      isActive
+                        ? "text-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                    )}
+                  >
+                    {/* 活跃状态背景动画 */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-nav-bg"
+                        className="absolute inset-0 bg-blue-50 rounded-md -z-10"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+
+                    <span className={cn(
+                      "transition-transform duration-200 group-hover:scale-110 shrink-0",
+                      isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"
+                    )}>
+                      {icon}
+                    </span>
+                    <span className="relative z-10">{menuItem.label}</span>
+                  </motion.button>
+                )
+              })
+            )}
+          </AnimatePresence>
         </nav>
       </div>
 

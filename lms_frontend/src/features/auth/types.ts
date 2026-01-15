@@ -9,5 +9,6 @@ export interface AuthState {
   availableRoles: Role[];
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSwitching?: boolean;
 }
 

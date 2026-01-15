@@ -139,7 +139,7 @@ export const UserList: React.FC = () => {
     {
       header: "用户信息",
       id: "user",
-      size: 400, // 给一个较大的基础参考值，让它倾向于占据更多空间
+      size: 240,
       cell: ({ row }) => (
         <CellWithAvatar
           name={row.original.username}
@@ -150,6 +150,7 @@ export const UserList: React.FC = () => {
     {
       header: "权限角色",
       id: "roles",
+      size: 200,
       cell: ({ row }) => (
         <CellTags
           tags={row.original.roles.map((role: Role) => ({
@@ -163,6 +164,7 @@ export const UserList: React.FC = () => {
     {
       header: "所属部门",
       id: "department",
+      size: 160,
       cell: ({ row }) => (
         <CellIconText
           icon={<Building2 className="w-4 h-4" />}
@@ -173,6 +175,7 @@ export const UserList: React.FC = () => {
     {
       header: "指导老师",
       id: "mentor",
+      size: 140,
       cell: ({ row }) => {
         const mentor = row.original.mentor
         if (!mentor) return <span className="text-[#9CA3AF] italic text-xs">未分配</span>
@@ -182,6 +185,7 @@ export const UserList: React.FC = () => {
     {
       header: "状态",
       id: "status",
+      size: 100,
       cell: ({ row }) => (
         <CellStatus isActive={row.original.is_active} />
       ),
@@ -189,6 +193,7 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
+      size: 80,
       cell: ({ row }) => (
         <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
@@ -388,7 +393,7 @@ export const UserList: React.FC = () => {
           <DialogFooter className="mt-6">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-gray-900 text-white rounded-lg h-11 font-semibold hover:bg-gray-800"
+              className="w-full bg-[#3B82F6] text-white rounded-lg h-11 font-semibold hover:bg-[#2563EB] shadow-none"
             >
               完成并关闭
             </Button>

@@ -70,7 +70,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
           {shouldShowActions && (
             <button
-              className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#111827] hover:text-white transition-all duration-200 shadow-none"
+              className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#E0E7FF] hover:text-[#4338CA] transition-all duration-200 shadow-none"
               onClick={() => onEdit?.(item.id)}
             >
               <Pencil className="w-4 h-4" />
@@ -114,7 +114,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       {/* 底部信息 */}
       <div className="mt-auto pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-[#111827] rounded-md flex items-center justify-center text-white font-bold text-sm group-hover:scale-110 transition-transform duration-200">
+          <div className="h-9 w-9 bg-[#F3F4F6] rounded-md flex items-center justify-center text-[#4B5563] font-bold text-sm group-hover:scale-110 transition-transform duration-200">
             {(item.updated_by_name || 'U').charAt(0)}
           </div>
           <div className="flex flex-col">

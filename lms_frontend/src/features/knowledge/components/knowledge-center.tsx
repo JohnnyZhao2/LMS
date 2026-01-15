@@ -169,7 +169,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     className={cn(
                                         "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
                                         selectedSystemTagIds.length === 0
-                                            ? "bg-[#111827] text-white"
+                                            ? "bg-[#3B82F6] text-white"
                                             : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]"
                                     )}
                                 >
@@ -182,7 +182,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         className={cn(
                                             "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
                                             selectedSystemTagIds.includes(tag.id)
-                                                ? "bg-[#111827] text-white"
+                                                ? "bg-[#3B82F6] text-white"
                                                 : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]"
                                         )}
                                     >

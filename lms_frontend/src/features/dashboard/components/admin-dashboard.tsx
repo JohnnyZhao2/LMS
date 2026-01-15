@@ -191,7 +191,7 @@ export const AdminDashboard: React.FC = () => {
         {/* TRENDS & ASSETS - Flat Design */}
         <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
           {/* Knowledge Assets Card - 纯色背景 */}
-          <Card className="bg-[#111827] p-8 rounded-lg text-white relative overflow-hidden">
+          <Card className="bg-[#3B82F6] p-8 rounded-lg text-white relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center">

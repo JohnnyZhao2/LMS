@@ -53,7 +53,7 @@ export const TaskManagement: React.FC = () => {
     const navigate = useNavigate()
     const { user, currentRole } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
-    const [statusFilter, setStatusFilter] = React.useState<string>("all")
+    const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
@@ -157,8 +157,9 @@ export const TaskManagement: React.FC = () => {
             header: "截止日期",
             id: "deadline",
             cell: ({ row }) => {
+                const now = dayjs()
                 const date = dayjs(row.original.deadline)
-                const isUrgent = !row.original.is_closed && date.isBefore(dayjs().add(2, 'day'))
+                const isUrgent = !row.original.is_closed && date.isAfter(now) && date.diff(now, 'hour') <= 48
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
@@ -306,9 +307,9 @@ export const TaskManagement: React.FC = () => {
                                 value={statusFilter}
                                 onChange={(val: string) => setStatusFilter(val)}
                                 options={[
-                                    { label: '全部', value: 'all' },
                                     { label: '进行中', value: 'open' },
                                     { label: '已结束', value: 'closed' },
+                                    { label: '全部', value: 'all' },
                                 ]}
                                 variant="premium"
                                 activeColor="white"
