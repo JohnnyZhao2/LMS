@@ -266,9 +266,9 @@ class SubmissionService(BaseService):
         # 如果是纯客观题，更新任务分配
         if submission.status == 'GRADED':
             self._update_task_assignment(submission)
-        # 检查练习任务是否应该自动完成
-        if is_practice:
-            self._check_practice_completion(submission)
+        # 检查任务是否应该自动完成（考试和练习都需要检查）
+        self._check_task_completion(submission)
+
         return submission
     def _auto_grade_objective_questions(self, submission: Submission) -> None:
         """
@@ -293,10 +293,10 @@ class SubmissionService(BaseService):
                 assignment,
                 score=submission.obtained_score
             )
-    def _check_practice_completion(self, submission: Submission) -> None:
+    def _check_task_completion(self, submission: Submission) -> None:
         """
-        检查练习任务是否应该自动完成
-        Property 25: 练习任务自动完成
+        检查任务是否应该自动完成
+        Property 25: 任务自动完成（适用于练习和考试）
         """
         assignment = submission.task_assignment
         assignment.check_completion()
