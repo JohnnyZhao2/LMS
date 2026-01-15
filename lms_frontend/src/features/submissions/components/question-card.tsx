@@ -17,7 +17,7 @@ interface QuestionCardProps {
   onAnswerChange: (value: unknown) => void;
   disabled?: boolean;
   showResult?: boolean;
-  isDarkMode?: boolean;
+
 }
 
 /**
@@ -30,7 +30,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   onAnswerChange,
   disabled = false,
   showResult = false,
-  isDarkMode = false,
+
 }) => {
   const questionScore = (answer.question_score as string | number | undefined) ?? answer.score;
 
@@ -139,6 +139,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     }
   };
 
+  /* 保持 Light Mode 样式 */
   const renderQuestion = () => {
     switch (answer.question_type) {
       case 'SINGLE_CHOICE': {
@@ -156,21 +157,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <label
                   key={key}
                   className={cn(
-                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer',
-                    isDarkMode
-                      ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
-                    isSelected && (isDarkMode
-                      ? 'border-primary-500 bg-primary-500/15'
-                      : 'border-primary-500 bg-primary-50'),
+                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                    isSelected && 'border-primary-500 bg-primary-50',
                     disabled && 'cursor-not-allowed opacity-60'
                   )}
                 >
                   <RadioGroupItem value={key} id={`option-${answer.id}-${key}`} />
-                  <span className={cn(
-                    'flex-1',
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  )}>
+                  <span className="flex-1 text-gray-900">
                     <span className="font-medium">{key}.</span>{' '}
                     <span>{label}</span>
                   </span>
@@ -191,13 +184,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <label
                   key={key}
                   className={cn(
-                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer',
-                    isDarkMode
-                      ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
-                    isSelected && (isDarkMode
-                      ? 'border-primary-500 bg-primary-500/15'
-                      : 'border-primary-500 bg-primary-50'),
+                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                    isSelected && 'border-primary-500 bg-primary-50',
                     disabled && 'cursor-not-allowed opacity-60'
                   )}
                 >
@@ -209,10 +197,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     }
                     disabled={disabled}
                   />
-                  <span className={cn(
-                    'flex-1',
-                    isDarkMode ? 'text-white' : 'text-gray-900'
-                  )}>
+                  <span className="flex-1 text-gray-900">
                     <span className="font-medium">{key}.</span>{' '}
                     <span>{label}</span>
                   </span>
@@ -234,46 +219,30 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           >
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer',
-                isDarkMode
-                  ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
-                trueFalseValue === 'TRUE' && (isDarkMode
-                  ? 'border-green-500 bg-green-500/15'
-                  : 'border-green-500 bg-green-50'),
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                trueFalseValue === 'TRUE' && 'border-green-500 bg-green-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
             >
               <RadioGroupItem value="TRUE" id={`true-${answer.id}`} />
               <Label
                 htmlFor={`true-${answer.id}`}
-                className={cn(
-                  'font-medium cursor-pointer',
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                )}
+                className="font-medium cursor-pointer text-gray-900"
               >
                 ✓ 正确
               </Label>
             </label>
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer',
-                isDarkMode
-                  ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100',
-                trueFalseValue === 'FALSE' && (isDarkMode
-                  ? 'border-red-500 bg-red-500/15'
-                  : 'border-red-500 bg-red-50'),
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                trueFalseValue === 'FALSE' && 'border-red-500 bg-red-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
             >
               <RadioGroupItem value="FALSE" id={`false-${answer.id}`} />
               <Label
                 htmlFor={`false-${answer.id}`}
-                className={cn(
-                  'font-medium cursor-pointer',
-                  isDarkMode ? 'text-white' : 'text-gray-900'
-                )}
+                className="font-medium cursor-pointer text-gray-900"
               >
                 ✗ 错误
               </Label>
@@ -290,12 +259,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             rows={6}
             placeholder="请在此输入您的答案..."
             disabled={disabled}
-            className={cn(
-              'text-base',
-              isDarkMode
-                ? 'bg-white/5 border-white/10 text-white placeholder:text-white/40'
-                : 'bg-gray-50 border-gray-200 text-gray-900'
-            )}
+            className="text-base bg-gray-50 border-gray-200 text-gray-900"
           />
         );
 
@@ -308,12 +272,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     <div>
       {/* 题目内容 */}
       <div className="mb-5">
-        <h5
-          className={cn(
-            'text-base font-medium leading-relaxed m-0',
-            isDarkMode ? 'text-white' : 'text-gray-900'
-          )}
-        >
+        <h5 className="text-base font-medium leading-relaxed m-0 text-gray-900">
           {answer.question_content}
         </h5>
       </div>
@@ -327,8 +286,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           className={cn(
             'mt-5 p-4 rounded-lg border',
             answer.is_correct
-              ? (isDarkMode ? 'bg-green-500/10 border-green-300' : 'bg-green-50 border-green-300')
-              : (isDarkMode ? 'bg-red-500/10 border-red-300' : 'bg-red-50 border-red-300')
+              ? 'bg-green-50 border-green-300'
+              : 'bg-red-50 border-red-300'
           )}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -345,16 +304,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             >
               {answer.is_correct ? '回答正确' : '回答错误'}
             </span>
-            <span className={cn(
-              'ml-auto',
-              isDarkMode ? 'text-white/60' : 'text-gray-600'
-            )}>
+            <span className="ml-auto text-gray-600">
               得分: {answer.obtained_score || 0}/{questionScore ?? '--'}
             </span>
           </div>
           {answer.explanation && (
             <div className="mt-2">
-              <span className={isDarkMode ? 'text-white/60' : 'text-gray-600'}>
+              <span className="text-gray-600">
                 💡 解析: {answer.explanation}
               </span>
             </div>

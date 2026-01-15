@@ -16,7 +16,6 @@ import {
   Ghost,
   Layers,
   Calendar,
-  ChevronRight,
   GraduationCap,
   ClipboardList
 } from 'lucide-react';
@@ -317,14 +316,14 @@ export const TaskDetail: React.FC = () => {
                       key={item.id}
                       onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`)}
                       className={cn(
-                        "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer",
+                        "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px]",
                         "hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5",
                         item.isCompleted
                           ? "border-emerald-100 bg-emerald-50/10"
                           : "border-gray-100 hover:border-blue-100"
                       )}
                     >
-                      <div className="flex items-start gap-6">
+                      <div className="flex items-center gap-6 h-full">
                         <div className={cn(
                           "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm transition-colors",
                           item.isCompleted
@@ -334,7 +333,7 @@ export const TaskDetail: React.FC = () => {
                           {item.isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                         </div>
 
-                        <div className="flex-1 min-w-0 pt-0.5">
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 h-5 bg-gray-50 text-gray-500 border-gray-200 uppercase tracking-wide rounded-full">
                               {item.knowledgeTypeDisplay || item.knowledgeType}
@@ -346,34 +345,17 @@ export const TaskDetail: React.FC = () => {
                               {item.title}
                             </h4>
                           </div>
-                          {item.summary && (
-                            <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed mb-1 pr-4 group-hover:text-gray-600">
-                              {item.summary.replace(/<[^>]*>/g, '')}
-                            </p>
-                          )}
+                          <div className="h-10">
+                            {item.summary && (
+                              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed group-hover:text-gray-600">
+                                {item.summary.replace(/<[^>]*>/g, '')}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-3 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity self-center sm:self-start pt-2 sm:pt-0">
-                          {isStudent && (
-                            <div className="flex items-center gap-3">
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`);
-                                }}
-                                className={cn(
-                                  "h-10 transition-all rounded-full px-6 font-bold flex items-center gap-1.5",
-                                  item.isCompleted
-                                    ? "bg-gray-100 hover:bg-gray-200 text-gray-700 shadow-none border border-gray-200"
-                                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
-                                )}
-                              >
-                                {item.isCompleted ? '已学习' : '立即学习'}
-                                <ChevronRight className="w-3.5 h-3.5 opacity-70" />
-                              </Button>
-                            </div>
-                          )}
+                        <div className="flex-shrink-0 flex items-center justify-end w-[40px]">
+                          {/* Zero-Clutter Right Side */}
                         </div>
                       </div>
                     </div>
@@ -414,33 +396,44 @@ export const TaskDetail: React.FC = () => {
                     return (
                       <div
                         key={item.id}
+                        onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
                         className={cn(
-                          "relative bg-white rounded-xl border border-gray-100 p-6 transition-all duration-300 hover:shadow-sm hover:border-blue-100"
+                          "group relative bg-white rounded-xl border p-6 transition-all duration-300 h-[140px] cursor-pointer",
+                          isCompleted
+                            ? "border-emerald-100 bg-emerald-50/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                            : "border-gray-100 hover:shadow-sm hover:border-blue-100"
                         )}
                       >
 
-                        <div className="relative flex flex-col md:flex-row md:items-center gap-6">
+                        <div className="flex items-center gap-6 h-full">
                           <div className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-gray-50 transition-colors",
-                            isExam ? "text-amber-600" : "text-blue-600"
+                            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors shadow-sm",
+                            isCompleted
+                              ? "bg-emerald-100 text-emerald-600 ring-4 ring-emerald-50"
+                              : cn("bg-gray-50", isExam ? "text-amber-600" : "text-blue-600")
                           )}>
-                            {isExam ? <Trophy className="w-6 h-6" /> : <ClipboardList className="w-6 h-6" />}
+                            {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : (isExam ? <Trophy className="w-6 h-6" /> : <ClipboardList className="w-6 h-6" />)}
                           </div>
 
-                          <div className="flex-1 space-y-3">
+                          <div className="flex-1 min-w-0 flex flex-col justify-center space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                               <Badge variant="outline" className={cn(
                                 "text-[11px] font-bold px-2 py-0.5 h-5 uppercase tracking-wide border-none rounded-full",
-                                isExam ? "bg-amber-100/50 text-amber-700" : "bg-blue-100/50 text-blue-700"
+                                isCompleted
+                                  ? "bg-emerald-100/50 text-emerald-700"
+                                  : (isExam ? "bg-amber-100/50 text-amber-700" : "bg-blue-100/50 text-blue-700")
                               )}>
                                 {item.quiz_type_display || (isExam ? '考试' : '练习')}
                               </Badge>
-                              <h4 className="text-lg font-bold text-gray-900 tracking-tight leading-none">
+                              <h4 className={cn(
+                                "text-lg font-bold tracking-tight leading-none transition-colors",
+                                isCompleted ? "text-emerald-900" : "text-gray-900"
+                              )}>
                                 {studentQuizItem?.quiz_title || adminQuizItem?.quiz_title}
                               </h4>
                             </div>
 
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-400 font-medium">
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-400 font-medium h-5">
                               <div className="flex items-center gap-1.5">
                                 <Info className="w-3.5 h-3.5" />
                                 <span>{item.question_count} 题</span>
@@ -458,28 +451,10 @@ export const TaskDetail: React.FC = () => {
                             </div>
                           </div>
 
-                          <div className="flex-shrink-0 pt-4 md:pt-0 min-w-[140px] flex flex-col items-end justify-center min-h-[64px]">
-                            {isStudent && (
-                              <div className="flex flex-col items-end gap-2.5 w-full">
-                                {isCompleted && (
-                                  <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50/50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 mb-1 tracking-tight">
-                                    得分: <span className="text-sm font-black">{studentQuizItem.score}</span>
-                                  </div>
-                                )}
-                                <Button
-                                  className={cn(
-                                    "h-10 px-8 font-bold transition-all rounded-full w-full md:w-auto tracking-wide",
-                                    isExam
-                                      ? "bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-[0_8px_20px_-6px_rgba(245,158,11,0.35)] hover:shadow-[0_12px_24px_-6px_rgba(245,158,11,0.45)] hover:-translate-y-0.5"
-                                      : "bg-[#3B82F6] hover:bg-[#2563EB] text-white shadow-[0_8px_20px_-6px_rgba(59,130,246,0.35)] hover:shadow-[0_12px_24px_-6px_rgba(59,130,246,0.45)] hover:-translate-y-0.5"
-                                  )}
-                                  disabled={!canStartQuiz || (isExam && !!isCompleted)}
-                                  onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
-                                >
-                                  {isExam
-                                    ? (isCompleted ? '已提交' : '开始考试')
-                                    : (isCompleted ? '再次练习' : '开始练习')}
-                                </Button>
+                          <div className="flex-shrink-0 w-[120px] flex flex-col items-end justify-center">
+                            {isStudent && isCompleted && (
+                              <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 tracking-tight shadow-sm">
+                                得分: <span className="text-sm font-black">{studentQuizItem.score}</span>
                               </div>
                             )}
                           </div>
@@ -603,8 +578,8 @@ export const TaskDetail: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      </main>
-    </div>
+        </div >
+      </main >
+    </div >
   );
 };

@@ -6,6 +6,7 @@ import {
   XCircle,
   Info,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 
 /**
@@ -80,7 +81,7 @@ const statusStyles: Record<StatusType, { bg: string; color: string; border: stri
 const statusIcons: Record<StatusType, React.ReactNode> = {
   success: <CheckCircle className="w-3.5 h-3.5" />,
   warning: <AlertCircle className="w-3.5 h-3.5" />,
-  error: <XCircle className="w-3.5 h-3.5" />,
+  error: <ShieldCheck className="w-3.5 h-3.5" />,
   info: <Info className="w-3.5 h-3.5" />,
   pending: <Clock className="w-3.5 h-3.5" />,
   open: <AlertCircle className="w-3.5 h-3.5" />,
@@ -127,7 +128,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       gap: 4,
     },
     default: {
-      padding: '6px 12px',
+      padding: '8px 16px',
       fontSize: 'var(--font-size-sm)',
       iconSize: 14,
       gap: 6,

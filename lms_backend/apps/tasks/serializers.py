@@ -212,7 +212,8 @@ class TaskCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         """创建任务 - 委托给 TaskService"""
         request = self.context.get('request')
-        return TaskService.create_task(
+        service = TaskService()
+        return service.create_task(
             title=validated_data['title'],
             description=validated_data.get('description', ''),
             deadline=validated_data['deadline'],
@@ -339,7 +340,8 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         quiz_ids = validated_data.pop('quiz_ids', None)
         assignee_ids = validated_data.pop('assignee_ids', None)
         # 委托给 TaskService 处理更新
-        return TaskService.update_task(
+        service = TaskService()
+        return service.update_task(
             task=instance,
             knowledge_ids=knowledge_ids,
             quiz_ids=quiz_ids,
