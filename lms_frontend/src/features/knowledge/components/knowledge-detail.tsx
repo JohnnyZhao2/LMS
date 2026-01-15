@@ -97,8 +97,10 @@ export const KnowledgeDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="w-52 border-r-2 border-gray-200 bg-white" />
           <div className="flex-1 m-4 bg-white rounded-lg">
-            <div className="p-6">
+            <div className="p-12 px-20">
+              <Skeleton className="h-10 w-3/4 mb-8" />
               <Skeleton className="h-6 w-full mb-4" />
               <Skeleton className="h-4 w-3/4 mb-2" />
               <Skeleton className="h-4 w-1/2" />
@@ -118,7 +120,7 @@ export const KnowledgeDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50 overflow-hidden" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部栏 */}
       <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-4">
@@ -171,7 +173,7 @@ export const KnowledgeDetail: React.FC = () => {
       {/* 主体内容 */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* 左侧目录 */}
-        <div className="flex flex-col border-r border-gray-200 bg-white w-64 max-lg:hidden">
+        <div className="flex flex-col border-r border-gray-200 bg-white w-52 max-lg:hidden">
           {outlineCollapsed ? (
             <div className="flex flex-col items-center py-4">
               <Button
@@ -230,10 +232,10 @@ export const KnowledgeDetail: React.FC = () => {
         </div>
 
         {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0 border-l border-gray-200">
+        <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0">
           {/* 标签栏 */}
           {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className="flex items-center gap-2 p-4 px-6 border-b border-gray-200 flex-wrap bg-gray-50">
+            <div className="flex items-center gap-2 py-4 px-6 md:px-20 border-b border-gray-200 flex-wrap bg-gray-50">
               {knowledge.system_tags?.map((tag) => (
                 <Badge key={tag.id} variant="info" className="text-[10px] rounded-md border-none px-2.5 py-1">
                   {tag.name}
@@ -248,7 +250,8 @@ export const KnowledgeDetail: React.FC = () => {
           ) : null}
 
           {/* 内容 */}
-          <div className="flex-1 overflow-y-auto p-12 px-20 w-full">
+          <div className="flex-1 overflow-y-auto p-8 md:p-12 px-6 md:px-20 w-full">
+            <h1 className="text-3xl font-bold text-gray-900 mb-10 tracking-tight">{knowledge.title}</h1>
             {isEmergency ? (
               <div className="space-y-12">
                 {[
@@ -259,8 +262,8 @@ export const KnowledgeDetail: React.FC = () => {
                   { key: 'recovery_plan', label: '恢复方案', content: knowledge.recovery_plan, id: 'tab-4' },
                 ].filter(s => s.content).map((section) => (
                   <div key={section.key} id={section.id} className="scroll-mt-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <span className="w-1.5 h-5 bg-primary-500 rounded-full" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3 -ml-4.5">
+                      <span className="w-1.5 h-6 bg-primary-500 rounded-full" />
                       {section.label}
                     </h3>
                     <div

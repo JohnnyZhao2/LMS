@@ -20,6 +20,7 @@ export const QuizCenter: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'quizzes' | 'questions'>('quizzes');
+  const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
 
   const { data: quizzesData, refetch: refetchQuizzes } = useQuizzes({ page: 1, pageSize: 1 });
   const { data: questionsData, refetch: refetchQuestions } = useQuestions({ page: 1, pageSize: 1 });
@@ -96,37 +97,58 @@ export const QuizCenter: React.FC = () => {
       <div className="flex-1 flex flex-col min-h-0 reveal-item stagger-delay-2">
         <ContentPanel className="flex-1 flex flex-col overflow-hidden">
           {/* 选项卡搜索与切换区域 */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
-            <div className="flex-1 max-w-lg transition-all duration-300">
-              <div className="relative group">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-blue-600 transition-colors" />
-                <Input
-                  className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-blue-600 text-base font-medium shadow-none transition-all"
-                  placeholder={activeTab === 'quizzes' ? "搜索试卷标题或编号..." : "搜索题目内容..."}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="flex flex-col gap-6 mb-8">
+            {/* 顶层行：搜索框 + 这里的 Tab 切换（试卷/题库） */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 max-w-2xl flex flex-col md:flex-row items-start md:items-center gap-4">
+                {/* 搜索框 */}
+                <div className="relative group w-full md:w-80">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-blue-600 transition-colors" />
+                  <Input
+                    className="pl-12 h-12 bg-[#F3F4F6] border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm font-medium shadow-none transition-all"
+                    placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
 
-            <SegmentedControl
-              value={activeTab}
-              onChange={(v: string) => {
-                setActiveTab(v as 'quizzes' | 'questions');
-                setSearch(''); // 切换时清空搜索
-              }}
-              options={[
-                { label: '试卷列表', value: 'quizzes' },
-                { label: '题库管理', value: 'questions' },
-              ]}
-              variant="premium"
-              activeColor="white"
-              className="w-full md:w-auto"
-            />
+                {/* 类型筛选（仅试卷列表显示）- 现在与搜索框并排 */}
+                {activeTab === 'quizzes' && (
+                  <SegmentedControl
+                    value={quizType}
+                    onChange={(v: string) => setQuizType(v as 'ALL' | 'EXAM' | 'PRACTICE')}
+                    options={[
+                      { label: '全部类型', value: 'ALL' },
+                      { label: '考试', value: 'EXAM' },
+                      { label: '练习', value: 'PRACTICE' },
+                    ]}
+                    variant="premium"
+                    activeColor="white"
+                    className="w-full md:w-auto"
+                  />
+                )}
+              </div>
+
+              {/* 右侧：主维度切换 */}
+              <SegmentedControl
+                value={activeTab}
+                onChange={(v: string) => {
+                  setActiveTab(v as 'quizzes' | 'questions');
+                  setSearch('');
+                }}
+                options={[
+                  { label: '试卷列表', value: 'quizzes' },
+                  { label: '题库管理', value: 'questions' },
+                ]}
+                variant="premium"
+                activeColor="white"
+                className="w-full md:w-auto"
+              />
+            </div>
           </div>
 
           {activeTab === 'quizzes' ? (
-            <QuizTab search={search} />
+            <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
           ) : (
             <QuestionTab search={search} />
           )}

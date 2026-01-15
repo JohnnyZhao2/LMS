@@ -89,17 +89,6 @@ export function DataTable<TData, TValue>({
     pageCount: pagination?.pageCount ?? -1,
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-full" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div className="flex-1 flex flex-col mt-4">
       <div className="flex-1 overflow-auto">
@@ -131,7 +120,17 @@ export function DataTable<TData, TValue>({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {columns.map((_, index) => (
+                      <TableCell key={index}>
+                        <Skeleton className="h-6 w-full opacity-50" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}

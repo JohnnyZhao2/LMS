@@ -5,6 +5,8 @@ import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types
 
 interface UseResourceOptions {
   search?: string;
+  page?: number;
+  page_size?: number;
   enabled?: boolean;
 }
 
@@ -12,14 +14,15 @@ interface UseResourceOptions {
  * 获取任务可选的知识文档列表（仅已发布版本）
  */
 export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
-  const { search = '', enabled = true } = options;
+  const { search = '', page = 1, page_size = 10, enabled = true } = options;
 
   return useQuery({
-    queryKey: ['task-knowledge-options', search],
+    queryKey: ['task-knowledge-options', search, page, page_size],
     queryFn: () => {
       const queryParams = {
         is_current: 'true',
-        page_size: '100',
+        page: String(page),
+        page_size: String(page_size),
         ...(search && { search }),
       };
       const queryString = buildQueryString(queryParams);
@@ -31,17 +34,18 @@ export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
 };
 
 /**
- * 获取任务可选的试卷列表（仅已发布版本，默认最多50条）
+ * 获取任务可选的试卷列表
  */
 export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
-  const { search = '', enabled = true } = options;
+  const { search = '', page = 1, page_size = 10, enabled = true } = options;
 
   return useQuery({
-    queryKey: ['task-quiz-options', search],
+    queryKey: ['task-quiz-options', search, page, page_size],
     queryFn: () => {
       const queryParams = {
-        page_size: '50',
         is_current: 'true',
+        page: String(page),
+        page_size: String(page_size),
         ...(search && { search }),
       };
       const queryString = buildQueryString(queryParams);

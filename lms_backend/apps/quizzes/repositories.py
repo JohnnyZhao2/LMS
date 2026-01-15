@@ -59,6 +59,8 @@ class QuizRepository(BaseRepository[Quiz]):
         if filters:
             if filters.get('created_by_id'):
                 qs = qs.filter(created_by_id=filters['created_by_id'])
+            if filters.get('quiz_type'):
+                qs = qs.filter(quiz_type=filters['quiz_type'])
         # 搜索
         if search:
             qs = qs.filter(title__icontains=search)

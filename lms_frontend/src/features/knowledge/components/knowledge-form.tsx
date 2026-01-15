@@ -191,14 +191,6 @@ export const KnowledgeForm: React.FC = () => {
 
   const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending;
 
-  const breadcrumbInfo = useMemo(() => {
-    const lineType = lineTypeTags.find((t: Tag) => t.id === lineTypeId);
-    return {
-      lineTypeName: lineType?.name || '未分类',
-      documentTitle: title || (isEdit ? '编辑知识' : '新建知识'),
-    };
-  }, [lineTypeTags, lineTypeId, title, isEdit]);
-
   const statusInfo = useMemo(() => {
     if (!isEdit) {
       return {
@@ -230,8 +222,8 @@ export const KnowledgeForm: React.FC = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-1px)] -m-6 bg-gray-50 overflow-hidden">
       {/* 顶部导航栏 - Unified Style */}
-      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           <Button
             variant="ghost"
             onClick={handleClose}
@@ -241,15 +233,23 @@ export const KnowledgeForm: React.FC = () => {
             <span className="text-sm font-semibold">返回列表</span>
           </Button>
           <div className="w-px h-5 bg-gray-200" />
-          <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-3">
-            {isEdit ? '编辑知识' : '创建知识'}
-            <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md">
-              {breadcrumbInfo.lineTypeName}
-            </span>
-          </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="输入知识标题..."
+            className={cn(
+              "text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm",
+              "hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
+              "transition-all duration-200",
+              errors.title && "border-red-300 placeholder:text-red-300 focus:border-red-500 focus:ring-red-100"
+            )}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
           <Badge
             className={`flex items-center gap-1.5 px-3 py-1 font-semibold rounded-full text-[10px] uppercase border ${statusInfo.isDraft
               ? 'bg-amber-50 text-amber-600 border-amber-200'
@@ -281,7 +281,7 @@ export const KnowledgeForm: React.FC = () => {
         {/* 左侧目录 */}
         <div className={cn(
           "flex flex-col border-r border-gray-200 bg-white transition-all duration-300",
-          outlineCollapsed ? "w-14" : "w-80"
+          outlineCollapsed ? "w-14" : "w-64"
         )}>
           {outlineCollapsed ? (
             <div className="flex flex-col items-center py-4">
@@ -445,30 +445,19 @@ export const KnowledgeForm: React.FC = () => {
                 <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 基础配置
               </h3>
-              <div className="space-y-4">
-                <div className="space-y-2.5">
-                  <Label className="text-xs font-semibold text-gray-700 ml-1">知识标题</Label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="请输入标题..."
-                    className="font-semibold"
-                  />
-                </div>
-                <div className="space-y-2.5">
-                  <Label className="text-xs font-semibold text-gray-700 ml-1">知识分类</Label>
-                  <SegmentedControl
-                    options={[
-                      { label: '标准类', value: 'OTHER' },
-                      { label: '应急类', value: 'EMERGENCY' },
-                    ]}
-                    value={knowledgeType}
-                    onChange={(val) => setKnowledgeType(val as KnowledgeType)}
-                    className="w-full"
-                    activeColor="white"
-                    variant="premium"
-                  />
-                </div>
+              <div className="space-y-2.5">
+                <Label className="text-xs font-semibold text-gray-700 ml-1">知识分类</Label>
+                <SegmentedControl
+                  options={[
+                    { label: '标准类', value: 'OTHER' },
+                    { label: '应急类', value: 'EMERGENCY' },
+                  ]}
+                  value={knowledgeType}
+                  onChange={(val) => setKnowledgeType(val as KnowledgeType)}
+                  className="w-full"
+                  activeColor="white"
+                  variant="premium"
+                />
               </div>
             </section>
 
