@@ -100,6 +100,34 @@ class TaskService(BaseService):
                     message='无权访问此任务'
                 )
             return True
+
+    def has_student_progress(self, task: Task) -> bool:
+        """
+        检查任务是否有学员学习进度
+
+        Args:
+            task: The task to check
+
+        Returns:
+            True if any student has started working on the task
+        """
+        # 检查是否有知识学习进度
+        has_knowledge_progress = KnowledgeLearningProgress.objects.filter(
+            assignment__task=task,
+            is_completed=True
+        ).exists()
+
+        if has_knowledge_progress:
+            return True
+
+        # 检查是否有试卷提交
+        from apps.submissions.models import Submission
+        has_quiz_submissions = Submission.objects.filter(
+            task_assignment__task=task
+        ).exists()
+
+        return has_quiz_submissions
+
     def check_task_edit_permission(self, task: Task, user: User) -> bool:
         """
         Check if user has permission to edit a task.
