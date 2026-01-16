@@ -74,6 +74,7 @@ export interface TaskDetail {
   created_by_name: string;
   created_at: string;
   updated_at: string;
+  has_progress: boolean;
 }
 
 /**
@@ -269,4 +270,5 @@ export interface TaskListItem {
   created_by_name: string;
   created_at: string;
   updated_at: string;
+  has_progress: boolean;
 }
