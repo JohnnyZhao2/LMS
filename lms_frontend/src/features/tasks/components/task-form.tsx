@@ -98,6 +98,7 @@ export const TaskForm: React.FC = () => {
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [originalAssigneeIds, setOriginalAssigneeIds] = useState<number[]>([]);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalSearch, setUserModalSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,7 +159,9 @@ export const TaskForm: React.FC = () => {
         }));
 
         setSelectedResources([...knowledgeResources, ...quizResources]);
-        setSelectedUserIds(task.assignments?.map(item => item.assignee) || []);
+        const assigneeIds = task.assignments?.map(item => item.assignee) || [];
+        setSelectedUserIds(assigneeIds);
+        setOriginalAssigneeIds(assigneeIds);
         isInitialized.current = true;
       } else if (!isEdit && quizDetail && paramQuizId) {
         setSelectedResources([{
@@ -266,7 +269,9 @@ export const TaskForm: React.FC = () => {
 
   const toggleUser = (userId: number) => {
     const isRemoving = selectedUserIds.includes(userId);
-    if (isRemoving && !canRemoveAssignee) return;
+    // Allow removing if: no restrictions OR user is newly added (not in original list)
+    const canRemove = canRemoveAssignee || !originalAssigneeIds.includes(userId);
+    if (isRemoving && !canRemove) return;
     setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   };
 
@@ -276,7 +281,13 @@ export const TaskForm: React.FC = () => {
       setSelectedUserIds(prev => Array.from(new Set([...prev, ...allIds])));
     } else {
       const currentIds = modalFilteredUsers.map(u => u.id);
-      setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id)));
+      if (canRemoveAssignee) {
+        // No restrictions: remove all current modal users
+        setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id)));
+      } else {
+        // Has restrictions: only remove newly added users (not in original list)
+        setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id) || originalAssigneeIds.includes(id)));
+      }
     }
   };
 
@@ -735,7 +746,7 @@ export const TaskForm: React.FC = () => {
               variant="link"
               size="sm"
               className="text-red-500 hover:text-red-600"
-              onClick={() => setSelectedUserIds([])}
+              onClick={() => setSelectedUserIds(canRemoveAssignee ? [] : originalAssigneeIds)}
             >
               清空
             </Button>
