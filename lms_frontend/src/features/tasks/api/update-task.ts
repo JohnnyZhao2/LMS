@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { toast } from 'sonner';
+import { apiClient, ApiError } from '@/lib/api-client';
 import type { TaskDetail } from '@/types/api';
 
 /**
@@ -32,6 +33,11 @@ export const useUpdateTask = () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-detail'] });
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
+    },
+    onError: (error: Error) => {
+      if (error instanceof ApiError && error.code === 'INVALID_OPERATION') {
+        toast.error(error.message);
+      }
     },
   });
 };
