@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
+// No icons needed for this minimalist version
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,9 +30,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 /**
- * 登录表单组件
- * 扁平设计系统：无阴影、无渐变、纯色块设计
- * 使用 Outfit 字体，几何装饰形状，扁平交互反馈
+ * 登录表单组件 - 现代极致版
+ * 设计理念：去容器化、重排版、细腻微交互
  */
 export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -70,185 +70,108 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div
-      className="flex justify-center items-center min-h-screen p-6 relative overflow-hidden bg-[#F3F4F6]"
-      style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
-      {/* 几何装饰形状 - 扁平设计系统 */}
-      {/* 大圆形装饰 */}
-      <div
-        className="absolute rounded-full bg-white/5"
-        style={{
-          width: '600px',
-          height: '600px',
-          top: '-200px',
-          right: '-200px',
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="absolute rounded-full bg-[#3B82F6]/5"
-        style={{
-          width: '400px',
-          height: '400px',
-          bottom: '-150px',
-          left: '-150px',
-        }}
-        aria-hidden="true"
-      />
+    <div className="w-full">
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #1A1A1A;
+          -webkit-box-shadow: 0 0 0px 1000px transparent inset;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      ` }} />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-14">
+          <div className="space-y-12">
+            <FormField
+              control={form.control}
+              name="employee_id"
+              render={({ field }) => (
+                <FormItem className="space-y-4">
+                  <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
+                    <span className="w-1 h-1 bg-[#B33535]/30" />
+                    工号
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        placeholder="请输入工号"
+                        className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-500 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                        {...field}
+                      />
+                      {/* 动态焦点底线 */}
+                      <motion.div
+                        initial={{ scaleX: 0 }}
+                        whileFocus={{ scaleX: 1 }}
+                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left transition-transform duration-500"
+                        style={{ scaleX: form.watch('employee_id') ? 1 : 0 }} // 如果有值也保持亮起
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
+                </FormItem>
+              )}
+            />
 
-      {/* 旋转正方形装饰 */}
-      <div
-        className="absolute bg-emerald-500/5"
-        style={{
-          width: '300px',
-          height: '300px',
-          top: '20%',
-          left: '10%',
-          transform: 'rotate(45deg)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* 渐变装饰（仅用于背景，不用于元素） */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, transparent 50%)',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* 登录卡片 - 纯色块设计 */}
-      <div className="relative w-full max-w-[440px] bg-white rounded-lg p-8">
-        {/* Logo 和标题 */}
-        <div className="text-center mb-8">
-          {/* Logo - 扁平设计 */}
-          <div className="w-16 h-16 mx-auto mb-5 rounded-md bg-[#3B82F6] flex items-center justify-center">
-            <span className="text-white text-3xl font-bold" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              L
-            </span>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem className="space-y-4">
+                  <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
+                    <span className="w-1 h-1 bg-[#B33535]/30" />
+                    密码
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        placeholder="请输入密码"
+                        className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-500 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                        {...field}
+                      />
+                      <motion.div
+                        initial={{ scaleX: 0 }}
+                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left transition-transform duration-500"
+                        style={{ scaleX: form.watch('password') ? 1 : 0 }}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
+                </FormItem>
+              )}
+            />
           </div>
 
-          <h2
-            className="text-2xl font-bold text-[#111827] mb-2"
-            style={{
-              fontFamily: "'Outfit', sans-serif",
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            LMS 学习管理系统
-          </h2>
-          <p className="text-sm text-[#6B7280]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-            欢迎回来，请登录您的账号
-          </p>
-        </div>
+          <div className="space-y-8">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-[#B33535] hover:bg-[#962D2D] text-white rounded-none font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] shadow-[0_20px_40px_-12px_rgba(179,53,53,0.25)] border-none"
+            >
+              {loading ? "正在验证身份..." : "登录"}
+            </Button>
 
-        {/* 表单 */}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
-            <div className="space-y-5">
-              <FormField
-                control={form.control}
-                name="employee_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel
-                      className="text-[#111827] font-semibold text-sm"
-                      style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}
-                    >
-                      工号
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6B7280] z-10" strokeWidth={2} />
-                        <Input
-                          placeholder="请输入工号"
-                          className="bg-[#F3F4F6] border-0 rounded-md h-14 pl-12 text-[#111827] focus:bg-white focus:border-2 focus:border-[#3B82F6] focus:ring-0 transition-all duration-200"
-                          style={{
-                            fontFamily: "'Outfit', sans-serif",
-                            fontSize: '14px',
-                          }}
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel
-                      className="text-[#111827] font-semibold text-sm"
-                      style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}
-                    >
-                      密码
-                    </FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6B7280] z-10" strokeWidth={2} />
-                        <Input
-                          type="password"
-                          placeholder="请输入密码"
-                          className="bg-[#F3F4F6] border-0 rounded-md h-14 pl-12 text-[#111827] focus:bg-white focus:border-2 focus:border-[#3B82F6] focus:ring-0 transition-all duration-200"
-                          style={{
-                            fontFamily: "'Outfit', sans-serif",
-                            fontSize: '14px',
-                          }}
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="mt-8">
-              <Button
-                type="submit"
-                className="w-full h-14 bg-[#3B82F6] text-white rounded-md font-semibold flex items-center justify-center gap-2 hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  boxShadow: 'none',
-                }}
-                disabled={loading}
+            <div className="flex justify-between items-center py-2 px-1">
+              <button
+                type="button"
+                className="text-[11px] font-bold text-[#1A1A1A]/20 hover:text-[#B33535] transition-colors tracking-widest"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    登录中...
-                  </>
-                ) : (
-                  <>
-                    登录系统
-                    <ArrowRight className="h-5 w-5" strokeWidth={2.5} />
-                  </>
-                )}
-              </Button>
+                无法访问账号?
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-1 h-1 bg-[#B33535]/10 rounded-full" />
+                  <div className="w-1 h-1 bg-[#B33535]/20 rounded-full" />
+                  <div className="w-1 h-1 bg-[#B33535]/30 rounded-full" />
+                </div>
+                <span className="text-[10px] font-bold text-[#1A1A1A]/20 tracking-widest">安全链接已建立</span>
+              </div>
             </div>
-          </form>
-        </Form>
-
-        {/* 底部装饰 - 扁平分隔 */}
-        <div className="mt-8 pt-6 text-center">
-          <p
-            className="text-sm text-[#9CA3AF]"
-            style={{ fontFamily: "'Outfit', sans-serif" }}
-          >
-            © {new Date().getFullYear()} LMS 学习管理系统
-          </p>
-        </div>
-      </div>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };

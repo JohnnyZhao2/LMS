@@ -152,4 +152,15 @@
             transform: translateY(0);
         }
     }
+
+    @keyframes shimmer {
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    /* Glassmorphism Utilities */
+    .backdrop-blur-screen {
+        backdrop-filter: blur(40px) saturate(180%);
+    }
 }
