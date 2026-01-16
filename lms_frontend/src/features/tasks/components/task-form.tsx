@@ -17,6 +17,7 @@ import {
   GripVertical,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
 } from 'lucide-react';
 import {
   DndContext,
@@ -52,6 +53,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import { useCreateTask, type TaskCreateRequest } from '../api/create-task';
 import { useUpdateTask } from '../api/update-task';
@@ -121,6 +123,11 @@ export const TaskForm: React.FC = () => {
     enabled: resourceType === 'ALL' || resourceType === 'QUIZ'
   });
   const { data: users } = useAssignableUsers();
+
+  // Disabled state logic
+  const hasProgress = task?.has_progress || false;
+  const resourcesDisabled = isEdit && hasProgress;
+  const canRemoveAssignee = !(isEdit && hasProgress);
 
   // Initialization logic for edit mode or URL params
   const isInitialized = useRef(false);
@@ -240,6 +247,7 @@ export const TaskForm: React.FC = () => {
 
   // Handlers
   const addResource = (res: ResourceItem) => {
+    if (resourcesDisabled) return;
     setSelectedResources(prev => [...prev, { ...res, uid: prev.length + Date.now() }]);
   };
 
@@ -252,10 +260,13 @@ export const TaskForm: React.FC = () => {
   };
 
   const removeResource = (idx: number) => {
+    if (resourcesDisabled) return;
     setSelectedResources(selectedResources.filter((_, i) => i !== idx));
   };
 
   const toggleUser = (userId: number) => {
+    const isRemoving = selectedUserIds.includes(userId);
+    if (isRemoving && !canRemoveAssignee) return;
     setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   };
 
@@ -307,8 +318,10 @@ export const TaskForm: React.FC = () => {
         title,
         description: description || undefined,
         deadline: deadline.toISOString(),
-        knowledge_ids: selectedResources.filter(s => s.resourceType === 'DOCUMENT').map(s => s.id),
-        quiz_ids: selectedResources.filter(s => s.resourceType === 'QUIZ').map(s => s.id),
+        ...(resourcesDisabled ? {} : {
+          knowledge_ids: selectedResources.filter(s => s.resourceType === 'DOCUMENT').map(s => s.id),
+          quiz_ids: selectedResources.filter(s => s.resourceType === 'QUIZ').map(s => s.id),
+        }),
         assignee_ids: selectedUserIds,
       };
       if (isEdit) {
@@ -416,6 +429,17 @@ export const TaskForm: React.FC = () => {
             ))}
           </div>
 
+          {resourcesDisabled && (
+            <div className="px-6 mb-4">
+              <Alert variant="warning">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  任务已有学员开始学习，无法修改资源（知识文档和试卷）
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
           <div className="px-6 pb-2 shrink-0">
             <div className="space-y-3 h-[580px] overflow-hidden">
               {isLoading ? (
@@ -440,7 +464,11 @@ export const TaskForm: React.FC = () => {
                   {availableResources.map(res => (
                     <div
                       key={`${res.resourceType}-${res.id}-${res.title}`}
-                      className="group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-white border border-gray-100 cursor-pointer transition-all hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5"
+                      className={`group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-white border border-gray-100 transition-all ${
+                        resourcesDisabled
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'cursor-pointer hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5'
+                      }`}
                       onClick={() => addResource(res)}
                     >
                       <div
@@ -551,6 +579,7 @@ export const TaskForm: React.FC = () => {
                           moveResource={moveResource}
                           removeResource={removeResource}
                           totalResources={selectedResources.length}
+                          disabled={resourcesDisabled}
                         />
                       ))}
                     </div>
@@ -627,6 +656,17 @@ export const TaskForm: React.FC = () => {
               </Button>
             </div>
 
+            {!canRemoveAssignee && (
+              <div className="px-6 mb-4">
+                <Alert variant="warning">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    任务已有学员开始学习，无法移除已分配的学员
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+
             <div className="px-6 flex-1 overflow-y-auto pb-6">
               {selectedUserDetails.length === 0 ? (
                 <div className="text-gray-400 text-xs text-center py-10 font-medium">
@@ -645,14 +685,16 @@ export const TaskForm: React.FC = () => {
                         <div className="text-sm font-bold text-gray-800 truncate">{u.username}</div>
                         <div className="text-[10px] text-gray-500">{u.employee_id}</div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 hover:bg-red-50"
-                        onClick={() => toggleUser(u.id)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      {canRemoveAssignee && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 hover:bg-red-50"
+                          onClick={() => toggleUser(u.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -747,6 +789,7 @@ interface SortableItemProps {
   moveResource: (idx: number, direction: 'up' | 'down') => void;
   removeResource: (idx: number) => void;
   totalResources: number;
+  disabled?: boolean;
 }
 
 const SortableItem: React.FC<SortableItemProps> = ({
@@ -755,6 +798,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
   moveResource,
   removeResource,
   totalResources,
+  disabled = false,
 }) => {
   const {
     attributes,
@@ -803,9 +847,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
           }`}
       >
         <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 -ml-2 text-gray-300 hover:text-gray-400"
+          {...(disabled ? {} : attributes)}
+          {...(disabled ? {} : listeners)}
+          className={disabled ? 'p-1 -ml-2 text-gray-300 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing p-1 -ml-2 text-gray-300 hover:text-gray-400'}
         >
           <GripVertical className="w-4 h-4" />
         </div>
@@ -828,7 +872,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            disabled={idx === 0}
+            disabled={disabled || idx === 0}
             onClick={() => moveResource(idx, 'up')}
           >
             <ChevronUp className="w-4 h-4" />
@@ -837,7 +881,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            disabled={idx === totalResources - 1}
+            disabled={disabled || idx === totalResources - 1}
             onClick={() => moveResource(idx, 'down')}
           >
             <ChevronDown className="w-4 h-4" />
@@ -846,6 +890,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+            disabled={disabled}
             onClick={() => removeResource(idx)}
           >
             <Trash2 className="w-4 h-4" />
