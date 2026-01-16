@@ -295,26 +295,67 @@ class TaskService(BaseService):
     ) -> Task:
         """
         Update a task and its associations.
+
         Args:
             task: Task to update
             knowledge_ids: New list of knowledge IDs (None to skip update)
             quiz_ids: New list of quiz IDs (None to skip update)
             assignee_ids: New list of assignee IDs (None to skip update)
             **kwargs: Other task fields to update
+
         Returns:
             Updated Task instance
+
+        Raises:
+            BusinessError: If editing restricted fields with student progress
         """
+        # Check if task has student progress
+        has_progress = self.has_student_progress(task)
+
+        # If has progress, enforce restrictions
+        if has_progress:
+            # Cannot edit resources
+            if knowledge_ids is not None:
+                raise BusinessError(
+                    code=ErrorCodes.INVALID_OPERATION,
+                    message='任务已有学员开始学习，无法修改知识文档'
+                )
+
+            if quiz_ids is not None:
+                raise BusinessError(
+                    code=ErrorCodes.INVALID_OPERATION,
+                    message='任务已有学员开始学习，无法修改试卷'
+                )
+
+            # Cannot remove assignees (only add)
+            if assignee_ids is not None:
+                existing_ids = set(
+                    task.assignments.values_list('assignee_id', flat=True)
+                )
+                new_ids = set(assignee_ids)
+                removed_ids = existing_ids - new_ids
+
+                if removed_ids:
+                    raise BusinessError(
+                        code=ErrorCodes.INVALID_OPERATION,
+                        message='任务已有学员开始学习，无法移除已分配的学员'
+                    )
+
         # Update basic fields
         task = self.task_repository.update(task, **kwargs)
+
         # Update knowledge associations
         if knowledge_ids is not None:
             self._update_knowledge_associations(task, knowledge_ids)
+
         # Update quiz associations
         if quiz_ids is not None:
             self._update_quiz_associations(task, quiz_ids)
+
         # Update assignments
         if assignee_ids is not None:
             self._update_assignments(task, assignee_ids)
+
         return task
     def _update_associations(
         self,
