@@ -112,6 +112,12 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
     is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
+    has_progress = serializers.SerializerMethodField()
+
+    def get_has_progress(self, obj):
+        """Check if task has student learning progress"""
+        service = TaskService()
+        return service.has_student_progress(obj)
 
     class Meta:
         model = Task
@@ -119,7 +125,8 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline', 'is_closed', 'closed_at',
             'knowledge_items', 'quizzes', 'assignments',
-            'created_by_name', 'created_at', 'updated_at'
+            'created_by_name', 'created_at', 'updated_at',
+            'has_progress',
         ]
 class TaskCreateSerializer(serializers.Serializer):
     """
