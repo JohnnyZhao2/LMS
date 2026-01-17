@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from core.exceptions import BusinessError, ErrorCodes
+from core.throttles import AuthThrottle
 from apps.auth.services import AuthenticationService
 from apps.auth.serializers import (
     LoginRequestSerializer,
@@ -34,6 +35,8 @@ class LoginView(APIView):
     User login endpoint.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.auth_service = AuthenticationService()
@@ -88,6 +91,8 @@ class RefreshTokenView(APIView):
     Generates new access and refresh tokens using a valid refresh token.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.auth_service = AuthenticationService()
