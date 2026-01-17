@@ -199,20 +199,11 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': [],
     'PREPROCESSING_HOOKS': [],
 }
-# Cache settings
+# Cache settings (using Django's default in-memory cache for rate limiting)
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/{os.getenv('REDIS_DB', '0')}",
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
-            'CONNECTION_POOL_KWARGS': {'max_connections': 50},
-            'SOCKET_CONNECT_TIMEOUT': 5,
-            'SOCKET_TIMEOUT': 5,
-        },
-        'KEY_PREFIX': 'lms',
-        'TIMEOUT': 300,  # 5 minutes default
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'lms-cache',
     }
 }
 
