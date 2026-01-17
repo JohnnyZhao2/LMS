@@ -54,7 +54,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    source_version_id = serializers.IntegerField(source='source_version.id', read_only=True, allow_null=True)
     table_of_contents = serializers.ListField(read_only=True)
     class Meta:
         model = Knowledge
@@ -72,7 +71,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'summary',
             # 元数据
             'view_count', 'table_of_contents',
-            'source_version_id',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]

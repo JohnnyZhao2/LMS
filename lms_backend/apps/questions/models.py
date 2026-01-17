@@ -187,7 +187,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
             created_by=self.created_by,
             resource_uuid=self.resource_uuid,
             version_number=self.next_version_number(self.resource_uuid),
-            source_version=self,
             is_current=True
         )
         if self.line_type:

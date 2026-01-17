@@ -280,8 +280,7 @@ class TaskAssignment(TimestampMixin, models.Model):
 class TaskKnowledge(TimestampMixin, models.Model):
     """
     任务与知识文档的关联模型
-    通过 resource_uuid + version_number 关联到特定版本的知识文档。
-    不再存储 snapshot，直接从 Knowledge 表查询版本数据。
+    通过 FK 直接关联到特定版本的知识文档记录。
     """
     task = models.ForeignKey(
         Task,
@@ -294,17 +293,6 @@ class TaskKnowledge(TimestampMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='knowledge_tasks',
         verbose_name='知识文档'
-    )
-    resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name='知识资源ID'
-    )
-    version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='知识版本号'
     )
     order = models.PositiveIntegerField(
         default=1,
@@ -319,12 +307,7 @@ class TaskKnowledge(TimestampMixin, models.Model):
     def __str__(self):
         return f"{self.task.title} - {self.knowledge.title}"
     def save(self, *args, **kwargs):
-        """保存时自动设置版本号和顺序号"""
-        if self.knowledge:
-            if not self.resource_uuid:
-                self.resource_uuid = self.knowledge.resource_uuid
-            if not self.version_number:
-                self.version_number = self.knowledge.version_number
+        """保存时自动设置顺序号"""
         if not self.order:
             max_order = TaskKnowledge.objects.filter(
                 task=self.task
@@ -333,18 +316,10 @@ class TaskKnowledge(TimestampMixin, models.Model):
             )['max_order']
             self.order = (max_order or 0) + 1
         super().save(*args, **kwargs)
-    def get_versioned_knowledge(self):
-        """获取任务创建时版本的知识文档"""
-        from apps.knowledge.models import Knowledge
-        return Knowledge.objects.filter(
-            resource_uuid=self.resource_uuid,
-            version_number=self.version_number
-        ).first() or self.knowledge
 class TaskQuiz(TimestampMixin, models.Model):
     """
     任务与试卷的关联模型
-    通过 resource_uuid + version_number 关联到特定版本的试卷。
-    不再存储 snapshot，直接从 Quiz 表查询版本数据。
+    通过 FK 直接关联到特定版本的试卷记录。
     """
     task = models.ForeignKey(
         Task,
@@ -357,17 +332,6 @@ class TaskQuiz(TimestampMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='quiz_tasks',
         verbose_name='试卷'
-    )
-    resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name='试卷资源ID'
-    )
-    version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='试卷版本号'
     )
     order = models.PositiveIntegerField(
         default=1,
@@ -382,12 +346,7 @@ class TaskQuiz(TimestampMixin, models.Model):
     def __str__(self):
         return f"{self.task.title} - {self.quiz.title}"
     def save(self, *args, **kwargs):
-        """保存时自动设置版本号和顺序号"""
-        if self.quiz:
-            if not self.resource_uuid:
-                self.resource_uuid = self.quiz.resource_uuid
-            if not self.version_number:
-                self.version_number = self.quiz.version_number
+        """保存时自动设置顺序号"""
         if not self.order:
             max_order = TaskQuiz.objects.filter(
                 task=self.task
@@ -396,13 +355,6 @@ class TaskQuiz(TimestampMixin, models.Model):
             )['max_order']
             self.order = (max_order or 0) + 1
         super().save(*args, **kwargs)
-    def get_versioned_quiz(self):
-        """获取任务创建时版本的试卷"""
-        from apps.quizzes.models import Quiz
-        return Quiz.objects.filter(
-            resource_uuid=self.resource_uuid,
-            version_number=self.version_number
-        ).first() or self.quiz
 class KnowledgeLearningProgress(TimestampMixin, models.Model):
     """
     知识学习进度模型

@@ -59,14 +59,6 @@ class VersionedResourceMixin(models.Model):
         default=1,
         verbose_name='版本号'
     )
-    source_version = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='%(class)s_versions',
-        verbose_name='来源版本'
-    )
     is_current = models.BooleanField(
         default=True,
         verbose_name='是否当前版本'

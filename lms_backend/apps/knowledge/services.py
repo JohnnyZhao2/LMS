@@ -228,7 +228,6 @@ class KnowledgeService(BaseService):
             'verification_plan': data.get('verification_plan', source.verification_plan),
             'recovery_plan': data.get('recovery_plan', source.recovery_plan),
             'content': data.get('content', source.content),
-            'source_version_id': source.id,
             'is_current': True,
             'created_by': user,
             'updated_by': user,

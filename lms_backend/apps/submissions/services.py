@@ -156,29 +156,27 @@ class SubmissionService(BaseService):
         Returns:
             Created Submission instance
         """
-        # Get versioned quiz
-        quiz_version = task_quiz.get_versioned_quiz()
-        total_score = quiz_version.total_score
+        # Get quiz from FK (already points to specific version)
+        quiz = task_quiz.quiz
+        total_score = quiz.total_score
         # Calculate attempt number
         if is_exam:
             attempt_number = 1
         else:
             existing_count = self.repository.count_attempts(
                 task_assignment_id=assignment.id,
-                quiz_id=quiz_version.id
+                quiz_id=quiz.id
             )
             attempt_number = existing_count + 1
         # Calculate remaining seconds for exam
         remaining_seconds = None
-        if is_exam and task_quiz.quiz.duration:
-            remaining_seconds = task_quiz.quiz.duration * 60
+        if is_exam and quiz.duration:
+            remaining_seconds = quiz.duration * 60
         # Prepare answer data
-        questions = quiz_version.get_ordered_questions()
+        questions = quiz.get_ordered_questions()
         answers_data = [
             {
                 'question_id': relation.question_id,
-                'question_resource_uuid': relation.question.resource_uuid,
-                'question_version_number': relation.question.version_number
             }
             for relation in questions
         ]
@@ -186,14 +184,12 @@ class SubmissionService(BaseService):
         submission = self.repository.create_with_answers(
             answers_data=answers_data,
             task_assignment=assignment,
-            quiz=quiz_version,
+            quiz=quiz,
             user=user,
             attempt_number=attempt_number,
             status='IN_PROGRESS',
             total_score=total_score,
-            remaining_seconds=remaining_seconds,
-            quiz_resource_uuid=quiz_version.resource_uuid,
-            quiz_version_number=quiz_version.version_number
+            remaining_seconds=remaining_seconds
         )
         return submission
     def save_answer(

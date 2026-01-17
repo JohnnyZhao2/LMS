@@ -45,14 +45,12 @@ class TaskKnowledgeSerializer(serializers.ModelSerializer):
     knowledge_title = serializers.CharField(source='knowledge.title', read_only=True)
     knowledge_type = serializers.CharField(source='knowledge.knowledge_type', read_only=True)
     knowledge_type_display = serializers.SerializerMethodField()
-    resource_uuid = serializers.UUIDField(read_only=True)
-    version_number = serializers.IntegerField(read_only=True)
     summary = serializers.SerializerMethodField()
     class Meta:
         model = TaskKnowledge
         fields = [
             'id', 'knowledge', 'knowledge_title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'resource_uuid', 'version_number', 'order'
+            'summary', 'order'
         ]
         read_only_fields = ['order']
     def get_knowledge_type_display(self, obj):
@@ -65,8 +63,6 @@ class TaskQuizSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     question_count = serializers.IntegerField(source='quiz.question_count', read_only=True)
     total_score = serializers.DecimalField(source='quiz.total_score', max_digits=6, decimal_places=2, read_only=True)
-    resource_uuid = serializers.UUIDField(read_only=True)
-    version_number = serializers.IntegerField(read_only=True)
     subjective_question_count = serializers.IntegerField(source='quiz.subjective_question_count', read_only=True)
     objective_question_count = serializers.IntegerField(source='quiz.objective_question_count', read_only=True)
     # Quiz type info
@@ -78,8 +74,7 @@ class TaskQuizSerializer(serializers.ModelSerializer):
         model = TaskQuiz
         fields = [
             'id', 'quiz', 'quiz_title', 'question_count', 'total_score',
-            'subjective_question_count', 'objective_question_count',
-            'resource_uuid', 'version_number', 'order',
+            'subjective_question_count', 'objective_question_count', 'order',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score'
         ]
         read_only_fields = ['order']
@@ -405,7 +400,7 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         result = []
         for tk in task_knowledge_items:
             progress = progress_map.get(tk.id)
-            knowledge = tk.get_versioned_knowledge()
+            knowledge = tk.knowledge
             item = {
                 'id': tk.id,
                 'knowledge_id': tk.knowledge_id,
@@ -437,7 +432,7 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
             submission_map[s.quiz_id].append(s)
         result = []
         for tq in task_quiz_items:
-            quiz = tq.get_versioned_quiz()
+            quiz = tq.quiz
             quiz_subs = submission_map.get(tq.quiz_id, [])
             is_completed = len(quiz_subs) > 0
             best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None

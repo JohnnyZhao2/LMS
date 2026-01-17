@@ -302,7 +302,7 @@ class StudentTaskKnowledgeDetailView(APIView):
                     {'code': ErrorCodes.PERMISSION_DENIED, 'message': '无权访问该知识文档'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        knowledge = task_knowledge.get_versioned_knowledge()
+        knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
         return Response(serializer.data, status=status.HTTP_200_OK)
 class KnowledgeIncrementViewCountView(APIView):

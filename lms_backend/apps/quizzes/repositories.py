@@ -24,8 +24,7 @@ class QuizRepository(BaseRepository[Quiz]):
             试卷对象或 None
         """
         qs = self.model.objects.select_related(
-            'created_by',
-            'source_version'
+            'created_by'
         ).prefetch_related(
             'quiz_questions__question'
         )

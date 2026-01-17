@@ -366,7 +366,6 @@ class QuestionService(BaseService):
             'answer': data.get('answer', source.answer),
             'explanation': data.get('explanation', source.explanation),
             'score': data.get('score', source.score),
-            'source_version_id': source.id,
             'is_current': True,
             'created_by': user,
         }
@@ -380,33 +379,4 @@ class QuestionService(BaseService):
         Question.objects.filter(
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
-        self._bump_related_quiz_versions(source, new_question, user)
         return new_question
-
-    def _bump_related_quiz_versions(
-        self,
-        source: Question,
-        new_question: Question,
-        user
-    ) -> None:
-        """题目更新后，自动生成包含该题目的试卷新版本。"""
-        from apps.quizzes.models import Quiz
-        from apps.quizzes.services import QuizService
-        quiz_service = QuizService()
-        quizzes = Quiz.objects.filter(
-            is_current=True,
-            is_deleted=False,
-            quiz_questions__question_id=source.id
-        ).distinct()
-        for quiz in quizzes:
-            relations = quiz.quiz_questions.select_related('question').order_by('order')
-            updated_question_ids = [
-                (new_question.id if relation.question.resource_uuid == source.resource_uuid else relation.question_id)
-                for relation in relations
-            ]
-            quiz_service._create_new_version(
-                quiz,
-                {},
-                user,
-                question_ids=updated_question_ids
-            )

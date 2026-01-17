@@ -462,7 +462,6 @@ class QuizService(BaseService):
             'quiz_type': data.get('quiz_type', source.quiz_type),
             'duration': data.get('duration', source.duration),
             'pass_score': data.get('pass_score', source.pass_score),
-            'source_version_id': source.id,
             'is_current': True,
             'created_by': user,
             'updated_by': user,

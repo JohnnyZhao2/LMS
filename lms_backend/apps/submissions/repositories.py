@@ -98,20 +98,16 @@ class SubmissionRepository(BaseRepository[Submission]):
         Args:
             answers_data: 答案数据列表，每个元素包含:
                 - question_id: 题目ID
-                - question_resource_uuid: 题目资源UUID (可选)
-                - question_version_number: 题目版本号 (可选)
             **submission_data: 答题记录数据
         Returns:
             创建的答题记录对象
         """
         submission = self.create(**submission_data)
-        # 批量创建答案记录，记录题目版本信息
+        # 批量创建答案记录
         Answer.objects.bulk_create([
             Answer(
                 submission=submission,
                 question_id=answer_data['question_id'],
-                question_resource_uuid=answer_data.get('question_resource_uuid'),
-                question_version_number=answer_data.get('question_version_number')
             )
             for answer_data in answers_data
         ])

@@ -138,15 +138,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='版本号',
         help_text='同一资源的累积版本序号'
     )
-    source_version = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='derived_versions',
-        verbose_name='来源版本',
-        help_text='从该已发布版本衍生出来的草稿'
-    )
     is_current = models.BooleanField(
         default=True,
         verbose_name='是否当前最新发布版本'

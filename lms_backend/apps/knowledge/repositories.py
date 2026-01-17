@@ -25,8 +25,7 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
         """
         qs = self.model.objects.select_related(
             'created_by',
-            'updated_by',
-            'source_version'
+            'updated_by'
         ).prefetch_related(
             'system_tags',
             'operation_tags'
@@ -115,26 +114,6 @@ class KnowledgeRepository(BaseRepository[Knowledge]):
         if ordering:
             qs = qs.order_by(ordering)
         return qs.distinct()
-    def get_draft_for_published(
-        self,
-        published_knowledge_id: int
-    ) -> Optional[Knowledge]:
-        """
-        获取当前版本的非当前版本（历史版本）
-        Args:
-            published_knowledge_id: 当前版本知识文档 ID
-        Returns:
-            非当前版本或 None
-        """
-        return self.model.objects.filter(
-            source_version_id=published_knowledge_id,
-            is_current=False,
-            is_deleted=False
-        ).select_related(
-            'created_by', 'updated_by', 'source_version'
-        ).prefetch_related(
-            'system_tags', 'operation_tags'
-        ).first()
     def get_version_numbers(
         self,
         resource_uuid: str
