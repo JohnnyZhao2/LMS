@@ -14,7 +14,7 @@ export const spotCheckRoutes = [
     key="spot-check-list"
     path={ROUTES.SPOT_CHECKS}
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER']}>
+      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
         <SpotCheckList />
       </ProtectedRoute>
     }
@@ -23,7 +23,7 @@ export const spotCheckRoutes = [
     key="spot-check-create"
     path={`${ROUTES.SPOT_CHECKS}/create`}
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER']}>
+      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
         <SpotCheckForm />
       </ProtectedRoute>
     }
