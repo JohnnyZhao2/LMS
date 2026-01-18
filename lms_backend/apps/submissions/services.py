@@ -11,16 +11,15 @@ from typing import List, Optional, Any, Tuple
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
+from django.db.models import Sum, QuerySet
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User
-from apps.users.permissions import get_current_role
 from apps.tasks.models import TaskAssignment, TaskQuiz
-from apps.tasks.repositories import TaskQuizRepository, TaskAssignmentRepository
 from apps.quizzes.models import Quiz
-from django.db.models import Sum
 from .models import Submission, Answer
-from .repositories import SubmissionRepository, AnswerRepository
+
+
 class SubmissionService(BaseService):
     """
     Service for submission management operations.
@@ -30,11 +29,54 @@ class SubmissionService(BaseService):
     - Submitting and auto-grading
     - Submission status management
     """
-    def __init__(self):
-        self.repository = SubmissionRepository()
-        self.answer_repository = AnswerRepository()
-        self.task_quiz_repository = TaskQuizRepository()
-        self.task_assignment_repository = TaskAssignmentRepository()
+
+    def _submission_queryset(self, user: Optional[User] = None) -> QuerySet:
+        qs = Submission.objects.select_related(
+            'task_assignment__task',
+            'quiz',
+            'user'
+        ).prefetch_related(
+            'answers__question',
+            'answers__graded_by'
+        )
+        if user:
+            qs = qs.filter(user=user)
+        return qs
+
+    def _get_submission_by_id(self, pk: int, user: Optional[User] = None) -> Optional[Submission]:
+        return self._submission_queryset(user=user).filter(pk=pk).first()
+
+    def _get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        return Submission.objects.filter(
+            task_assignment_id=task_assignment_id,
+            quiz_id=quiz_id,
+            status='IN_PROGRESS'
+        ).first()
+
+    def _get_existing_submitted(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        return Submission.objects.filter(
+            task_assignment_id=task_assignment_id,
+            quiz_id=quiz_id,
+            status__in=['SUBMITTED', 'GRADING', 'GRADED']
+        ).first()
+
+    def _count_attempts(self, task_assignment_id: int, quiz_id: int) -> int:
+        return Submission.objects.filter(
+            task_assignment_id=task_assignment_id,
+            quiz_id=quiz_id
+        ).count()
+
+    def _create_with_answers(self, answers_data: List[dict], **submission_data) -> Submission:
+        submission = Submission.objects.create(**submission_data)
+        Answer.objects.bulk_create([
+            Answer(
+                submission=submission,
+                question_id=answer_data['question_id'],
+            )
+            for answer_data in answers_data
+        ])
+        return submission
+
     def get_submission_by_id(self, pk: int, user: User = None) -> Submission:
         """
         Get a submission by ID.
@@ -46,9 +88,10 @@ class SubmissionService(BaseService):
         Raises:
             BusinessError: If submission not found or not owned by user
         """
-        submission = self.repository.get_by_id(pk=pk, user=user)
+        submission = self._get_submission_by_id(pk=pk, user=user)
         self.validate_not_none(submission, f'答题记录 {pk} 不存在')
         return submission
+
     def validate_assignment_for_quiz(
         self,
         assignment_id: int,
@@ -67,10 +110,11 @@ class SubmissionService(BaseService):
             BusinessError: If validation fails
         """
         # Check task assignment exists
-        assignment = self.task_assignment_repository.get_by_id_for_user(
-            assignment_id=assignment_id,
-            user=user
-        )
+        assignment = TaskAssignment.objects.select_related('task').filter(
+            id=assignment_id,
+            assignee=user,
+            task__is_deleted=False
+        ).first()
         if not assignment:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
@@ -83,10 +127,10 @@ class SubmissionService(BaseService):
                 message='此任务不包含试卷'
             )
         # Check quiz is part of the task
-        task_quiz = self.task_quiz_repository.get_by_task_and_quiz(
+        task_quiz = TaskQuiz.objects.select_related('quiz').filter(
             task_id=assignment.task_id,
             quiz_id=quiz_id
-        )
+        ).first()
         if not task_quiz:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
@@ -99,6 +143,7 @@ class SubmissionService(BaseService):
                 message='试卷不存在'
             )
         return assignment, task_quiz, quiz
+
     def check_exam_constraints(
         self,
         assignment: TaskAssignment,
@@ -123,7 +168,7 @@ class SubmissionService(BaseService):
                 message='任务已结束'
             )
         # Check if already submitted
-        existing = self.repository.get_existing_submitted(
+        existing = self._get_existing_submitted(
             task_assignment_id=assignment.id,
             quiz_id=quiz_id
         )
@@ -133,11 +178,12 @@ class SubmissionService(BaseService):
                 message='您已提交过此考试，无法重新作答'
             )
         # Check for in-progress submission
-        in_progress = self.repository.get_in_progress(
+        in_progress = self._get_in_progress(
             task_assignment_id=assignment.id,
             quiz_id=quiz_id
         )
         return in_progress
+
     @transaction.atomic
     def start_quiz(
         self,
@@ -163,7 +209,7 @@ class SubmissionService(BaseService):
         if is_exam:
             attempt_number = 1
         else:
-            existing_count = self.repository.count_attempts(
+            existing_count = self._count_attempts(
                 task_assignment_id=assignment.id,
                 quiz_id=quiz.id
             )
@@ -181,7 +227,7 @@ class SubmissionService(BaseService):
             for relation in questions
         ]
         # Create submission with answers
-        submission = self.repository.create_with_answers(
+        submission = self._create_with_answers(
             answers_data=answers_data,
             task_assignment=assignment,
             quiz=quiz,
@@ -192,6 +238,7 @@ class SubmissionService(BaseService):
             remaining_seconds=remaining_seconds
         )
         return submission
+
     def save_answer(
         self,
         submission: Submission,
@@ -214,16 +261,15 @@ class SubmissionService(BaseService):
                 code=ErrorCodes.INVALID_OPERATION,
                 message='只能在答题中保存答案'
             )
-        answer = self.answer_repository.get_by_submission_and_question(
+        answer = Answer.objects.select_related('question').filter(
             submission_id=submission.id,
             question_id=question_id
-        )
+        ).first()
         self.validate_not_none(answer, '该题目不在此答卷中')
-        answer = self.answer_repository.update(
-            answer,
-            user_answer=user_answer
-        )
+        answer.user_answer = user_answer
+        answer.save(update_fields=['user_answer'])
         return answer
+
     @transaction.atomic
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
@@ -266,29 +312,34 @@ class SubmissionService(BaseService):
         self._check_task_completion(submission)
 
         return submission
+
     def _auto_grade_objective_questions(self, submission: Submission) -> None:
         """
         自动评分客观题
         Property 30: 客观题自动评分
         """
-        objective_answers = self.answer_repository.get_objective_answers(submission.id)
+        objective_answers = Answer.objects.filter(
+            submission_id=submission.id,
+            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
+        ).select_related('question')
         for answer in objective_answers:
             answer.auto_grade()
-            self.answer_repository.update(answer, obtained_score=answer.obtained_score)
+
     def _calculate_score(self, submission: Submission) -> None:
         """计算当前得分"""
-        all_answers = self.answer_repository.get_by_submission(submission.id)
-        total_score = all_answers.aggregate(total=Sum('obtained_score'))['total'] or Decimal('0')
+        total_score = Answer.objects.filter(
+            submission_id=submission.id
+        ).aggregate(total=Sum('obtained_score'))['total'] or Decimal('0')
         submission.obtained_score = total_score
+
     def _update_task_assignment(self, submission: Submission) -> None:
         """更新任务分配的成绩"""
         assignment = submission.task_assignment
         # 更新成绩（取最高分）
         if assignment.score is None or submission.obtained_score > assignment.score:
-            self.task_assignment_repository.update(
-                assignment,
-                score=submission.obtained_score
-            )
+            assignment.score = submission.obtained_score
+            assignment.save(update_fields=['score'])
+
     def _check_task_completion(self, submission: Submission) -> None:
         """
         检查任务是否应该自动完成

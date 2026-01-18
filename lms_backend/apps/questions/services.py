@@ -1,6 +1,6 @@
 """
 题目应用服务
-编排业务逻辑，协调 Repository。
+编排业务逻辑。
 """
 import uuid
 from typing import List
@@ -8,13 +8,13 @@ from django.db import transaction
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from .models import Question
-from .repositories import QuestionRepository
-from apps.knowledge.repositories import TagRepository
+from apps.knowledge.models import Tag
+from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
+
+
 class QuestionService(BaseService):
     """题目应用服务"""
-    def __init__(self):
-        self.repository = QuestionRepository()
-        self.tag_repository = TagRepository()
+
     def get_by_id(self, pk: int, user=None) -> Question:
         """
         获取题目
@@ -26,7 +26,7 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果不存在或无权限
         """
-        question = self.repository.get_by_id(pk)
+        question = get_question_by_id(pk)
         self.validate_not_none(
             question,
             f'题目 {pk} 不存在'
@@ -34,6 +34,7 @@ class QuestionService(BaseService):
         # 权限检查：非管理员只能访问已发布的题目
         self.check_published_resource_access(question, user, '题目')
         return question
+
     def get_list(
         self,
         filters: dict = None,
@@ -61,11 +62,11 @@ class QuestionService(BaseService):
                 filters = {}
             if 'is_current' not in filters:
                 filters['is_current'] = True
-        queryset = self.repository.get_all_with_filters(
-            filters=filters,
-            search=search,
-            ordering=ordering
-        )
+        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
+        queryset = apply_question_filters(queryset, filters, search)
+        # 排序
+        if ordering:
+            queryset = queryset.order_by(ordering)
         # 分页处理
         total_count = queryset.count()
         start = (page - 1) * page_size
@@ -78,6 +79,7 @@ class QuestionService(BaseService):
             'page_size': page_size,
             'total_pages': (total_count + page_size - 1) // page_size
         }
+
     def check_edit_permission(self, question: Question, user) -> bool:
         """
         检查用户是否有编辑/删除权限
@@ -100,6 +102,7 @@ class QuestionService(BaseService):
                 message='只有题目创建者或管理员可以操作此题目'
             )
         return True
+
     @transaction.atomic
     def create(self, data: dict, user) -> Question:
         """
@@ -122,7 +125,7 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
         # 3. 创建题目
-        question = self.repository.create(**data)
+        question = Question.objects.create(**data)
         Question.objects.filter(
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
@@ -130,6 +133,7 @@ class QuestionService(BaseService):
         if line_type_id:
             self._set_line_type(question, line_type_id)
         return question
+
     @transaction.atomic
     def update(self, pk: int, data: dict, user) -> Question:
         """
@@ -160,11 +164,15 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
         # 更新题目
-        question = self.repository.update(question, **data)
+        if data:
+            for key, value in data.items():
+                setattr(question, key, value)
+            question.save(update_fields=list(data.keys()))
         # 更新条线类型
         if line_type_id is not None:
             self._set_line_type(question, line_type_id)
         return question
+
     @transaction.atomic
     def delete(self, pk: int, user) -> None:
         """
@@ -175,7 +183,7 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果被引用无法删除
         """
-        question = self.repository.get_by_id(pk)
+        question = get_question_by_id(pk)
         self.validate_not_none(
             question,
             f'题目 {pk} 不存在'
@@ -183,13 +191,14 @@ class QuestionService(BaseService):
         # 检查编辑权限
         self.check_edit_permission(question, user)
         # 检查是否被引用
-        if self.repository.is_referenced_by_quiz(pk):
+        if self._is_referenced_by_quiz(pk):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该题目已被试卷引用，无法删除'
             )
         # 软删除
-        self.repository.delete(question, soft=True)
+        question.soft_delete()
+
     @transaction.atomic
     def publish(self, pk: int, user) -> Question:
         """
@@ -223,6 +232,7 @@ class QuestionService(BaseService):
             resource_uuid=question.resource_uuid
         ).exclude(pk=pk).update(is_current=False)
         return question
+
     @transaction.atomic
     def unpublish(self, pk: int, user) -> Question:
         """
@@ -243,7 +253,7 @@ class QuestionService(BaseService):
                 message='题目不是当前版本'
             )
         # 检查是否被引用
-        if self.repository.is_referenced_by_quiz(pk):
+        if self._is_referenced_by_quiz(pk):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该题目已被试卷引用，无法取消发布'
@@ -252,6 +262,7 @@ class QuestionService(BaseService):
         question.is_current = False
         question.save()
         return question
+
     def _validate_question_data(self, data: dict) -> None:
         """验证题目数据"""
         question_type = data.get('question_type')
@@ -311,6 +322,7 @@ class QuestionService(BaseService):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='简答题答案必须是字符串'
                 )
+
     def _set_line_type(self, question: Question, line_type_id: int) -> None:
         """
         设置条线类型
@@ -320,9 +332,10 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果条线类型无效
         """
-        # 通过Repository获取条线类型标签
-        line_type = self.tag_repository.get_all(
-            filters={'id': line_type_id, 'tag_type': 'LINE', 'is_active': True}
+        line_type = Tag.objects.filter(
+            id=line_type_id,
+            tag_type='LINE',
+            is_active=True
         ).first()
         if not line_type:
             raise BusinessError(
@@ -330,6 +343,7 @@ class QuestionService(BaseService):
                 message='无效的条线类型ID'
             )
         question.set_line_type(line_type)
+
     def _prepare_version_data(self, data: dict) -> None:
         """
         准备版本号相关数据
@@ -339,6 +353,7 @@ class QuestionService(BaseService):
         data.pop('resource_uuid', None)
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
+
     def _create_new_version(
         self,
         source: Question,
@@ -369,7 +384,7 @@ class QuestionService(BaseService):
             'is_current': True,
             'created_by': user,
         }
-        new_question = self.repository.create(**new_question_data)
+        new_question = Question.objects.create(**new_question_data)
         # 设置条线类型
         if line_type_id:
             self._set_line_type(new_question, line_type_id)
@@ -380,3 +395,14 @@ class QuestionService(BaseService):
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
         return new_question
+
+    def _is_referenced_by_quiz(self, question_id: int) -> bool:
+        """检查题目是否被试卷引用"""
+        try:
+            from apps.quizzes.models import QuizQuestion
+            return QuizQuestion.objects.filter(
+                question_id=question_id,
+                quiz__is_deleted=False
+            ).exists()
+        except ImportError:
+            return False

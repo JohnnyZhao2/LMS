@@ -357,7 +357,6 @@ lms_backend/
 ├── apps/                      # 业务应用模块
 │   ├── users/                # 用户、角色、部门
 │   │   ├── models.py         # Django ORM 模型
-│   │   ├── repositories.py   # 数据访问层
 │   │   ├── services.py       # 应用服务层
 │   │   ├── views/            # 视图层
 │   │   │   ├── auth.py       # 认证视图
@@ -370,7 +369,6 @@ lms_backend/
 │   │
 │   ├── knowledge/            # 知识文档
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   ├── domain/           # 领域层
 │   │   │   ├── models.py     # 领域模型
@@ -382,25 +380,21 @@ lms_backend/
 │   │
 │   ├── questions/            # 题库
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   └── domain/           # 领域层
 │   │
 │   ├── quizzes/              # 试卷
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   └── domain/           # 领域层
 │   │
 │   ├── tasks/                # 任务
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   └── domain/           # 领域层
 │   │
 │   ├── submissions/          # 答题提交、评分
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   ├── domain/           # 领域层
 │   │   └── views/
@@ -411,13 +405,11 @@ lms_backend/
 │   │
 │   ├── spot_checks/          # 抽查
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   └── views.py
 │   │
 │   ├── notifications/        # 通知
 │   │   ├── models.py
-│   │   ├── repositories.py
 │   │   ├── services.py
 │   │   └── views.py
 │   │
@@ -429,12 +421,12 @@ lms_backend/
 │           └── team_manager.py
 │
 ├── core/                     # 核心公共组件
-│   ├── base_repository.py   # Repository 基类
 │   ├── base_service.py      # Service 基类
 │   ├── exceptions.py        # 统一异常定义
-│   ├── permissions.py        # 权限控制基类
+│   ├── responses.py         # 通用响应封装
 │   ├── mixins.py            # 通用 Mixin
 │   ├── pagination.py        # 分页工具
+│   ├── throttles.py         # 限流工具
 │   └── utils.py             # 工具函数
 │
 ├── config/                   # 项目配置
@@ -495,27 +487,25 @@ lms_backend/
 ┌──────────────▼──────────────────────┐
 │   Application Layer (应用层)         │
 │   - Services (业务逻辑编排)          │
-│   - DTOs (数据传输对象)              │
+│   - Query Helpers / Selectors (可选) │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│   Domain Layer (领域层)              │
+│   Domain Layer (领域层，可选)        │
 │   - Domain Models (领域模型)        │
 │   - Domain Services (领域服务)      │
 │   - Value Objects (值对象)           │
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│   Infrastructure Layer (基础设施层)  │
-│   - Repositories (数据访问)          │
-│   - Database Models (Django ORM)     │
+│   Data Layer (数据层)                │
+│   - Django ORM Models                │
 └──────────────────────────────────────┘
 ```
 
 ### 各层职责
 
-- **Repository 层**：封装所有数据访问逻辑，提供领域友好的查询接口
-- **Service 层（应用服务）**：编排业务逻辑，协调多个 Repository 和 Domain Service
+- **Service 层（应用服务）**：编排业务逻辑，直接使用 ORM；复杂查询抽成模块内 helper/selector
 - **Domain 层**：包含领域模型和领域服务，实现核心业务规则（部分核心模块已实现）
 - **View 层**：只处理 HTTP 请求/响应，调用 Service 层
 - **Model 层**：只定义数据模型和字段，不包含业务逻辑
@@ -590,7 +580,7 @@ python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.s
 - **Presentation Layer**（视图层）：处理 HTTP 请求/响应
 - **Application Layer**（应用层）：业务逻辑编排
 - **Domain Layer**（领域层）：核心业务规则（部分模块已实现）
-- **Infrastructure Layer**（基础设施层）：数据访问和外部服务
+- **Data Layer**（数据层）：Django ORM 模型与数据访问
 
 详细说明请参见 [ARCHITECTURE.md](./ARCHITECTURE.md)
 
@@ -598,10 +588,10 @@ python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.s
 
 1. 在 `apps/` 下创建新的应用目录
 2. 创建 `models.py`（Django ORM 模型）
-3. 创建 `repositories.py`（继承 `BaseRepository`）
-4. 创建 `services.py`（继承 `BaseService`）
-5. 创建 `views/` 目录和视图文件
-6. 创建 `serializers.py`（DRF 序列化器）
+3. 创建 `services.py`（继承 `BaseService`）
+4. 创建 `views/` 目录和视图文件
+5. 创建 `serializers.py`（DRF 序列化器）
+6. 如有复杂/复用查询，创建 `selectors.py` 或模块内 helper
 7. 在 `config/urls.py` 中注册路由
 
 参考现有模块（如 `knowledge`、`tasks`）的实现。
@@ -618,8 +608,8 @@ python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.s
 ### 添加新功能流程
 
 1. **创建数据模型**：在 `models.py` 中定义 Django ORM 模型
-2. **创建 Repository**：在 `repositories.py` 中实现数据访问逻辑
-3. **创建 Service**：在 `services.py` 中实现业务逻辑
+2. **创建 Service**：在 `services.py` 中实现业务逻辑
+3. **创建查询 Helper（可选）**：复杂/复用查询抽到 `selectors.py` 或模块内 helper
 4. **创建 View**：在 `views/` 中处理 HTTP 请求
 5. **创建 Serializer**：在 `serializers.py` 中定义输入/输出格式
 6. **编写测试**：添加单元测试和集成测试
@@ -629,7 +619,7 @@ python manage.py reset_admin_password --employee-id ADMIN001 --settings=config.s
 
 项目已完成架构重构，采用 Clean Architecture：
 
-- ✅ 所有模块已实现 Repository 层
+- ✅ 已移除 Repository 层，服务直接使用 ORM + helper/selector
 - ✅ 所有模块已实现 Service 层
 - ✅ View 层职责清晰，无业务逻辑
 - ✅ 核心模块已引入 Domain 层（knowledge, questions, quizzes, tasks, submissions）

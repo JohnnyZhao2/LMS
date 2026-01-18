@@ -8,6 +8,7 @@ Implements:
 """
 from typing import Optional, Dict, Any, List
 from django.contrib.auth import authenticate
+from django.db.models import QuerySet
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
@@ -15,16 +16,23 @@ from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User, Role
 from apps.users.serializers import UserInfoSerializer
-from apps.users.repositories import UserRepository
 
 
 class AuthenticationService(BaseService):
     """
     Authentication service handling login, logout, and role switching.
     """
-    def __init__(self):
-        """初始化服务，注入依赖"""
-        self.user_repository = UserRepository()
+    def _user_queryset(self) -> QuerySet[User]:
+        return User.objects.select_related(
+            'department',
+            'mentor'
+        ).prefetch_related('roles')
+
+    def _get_user_by_employee_id(self, employee_id: str) -> Optional[User]:
+        return self._user_queryset().filter(employee_id=employee_id).first()
+
+    def _get_user_by_id(self, user_id: int) -> Optional[User]:
+        return self._user_queryset().filter(pk=user_id).first()
 
     def login(self, employee_id: str, password: str) -> Dict[str, Any]:
         """
@@ -44,7 +52,7 @@ class AuthenticationService(BaseService):
         # First, check if user exists and is active (Property 3)
         # We need to do this separately because Django's authenticate()
         # returns None for both invalid credentials AND inactive users
-        user_obj = self.user_repository.get_by_employee_id(employee_id)
+        user_obj = self._get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
             raise BusinessError(
                 code=ErrorCodes.AUTH_USER_INACTIVE,
@@ -114,7 +122,7 @@ class AuthenticationService(BaseService):
                     code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
                     message='无效的刷新令牌'
                 )
-            user = self.user_repository.get_by_id(user_id)
+            user = self._get_user_by_id(user_id)
             if not user or not user.is_active:
                 raise BusinessError(
                     code=ErrorCodes.AUTH_USER_INACTIVE,

@@ -1,24 +1,20 @@
 """
 抽查记录应用服务
-编排业务逻辑，协调 Repository 和 Domain Service。
-处理抽查记录的创建、更新、删除和权限验证。
+编排业务逻辑，处理抽查记录的创建、更新、删除和权限验证。
 Properties: 35, 36
 """
 from typing import Optional, List
-from django.db import transaction
 from django.utils import timezone
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.models import User
-from apps.users.permissions import get_current_role, filter_queryset_by_data_scope, get_accessible_students
-from apps.users.repositories import UserRepository
+from apps.users.permissions import get_current_role, get_accessible_students
 from .models import SpotCheck
-from .repositories import SpotCheckRepository
 class SpotCheckService(BaseService):
     """抽查记录应用服务"""
-    def __init__(self, user_repository: UserRepository = None):
-        self.repository = SpotCheckRepository()
-        self.user_repository = user_repository or UserRepository()
+
+    def _with_relations(self, qs):
+        return qs.select_related('student', 'checker', 'student__department')
     def get_by_id(self, pk: int, user: User) -> SpotCheck:
         """
         获取抽查记录详情
@@ -30,7 +26,7 @@ class SpotCheckService(BaseService):
         Raises:
             BusinessError: 如果不存在或无权限
         """
-        spot_check = self.repository.get_by_id(pk)
+        spot_check = self._with_relations(SpotCheck.objects).filter(pk=pk).first()
         self.validate_not_none(
             spot_check,
             f'抽查记录 {pk} 不存在'
@@ -82,7 +78,7 @@ class SpotCheckService(BaseService):
             )
         # 如果传入的是 ID，需要获取用户对象
         if isinstance(student, int):
-            student = self.user_repository.get_by_id(student)
+            student = User.objects.filter(pk=student).first()
             self.validate_not_none(student, f'学员 {data.get("student")} 不存在')
         if not isinstance(student, User):
             raise BusinessError(
@@ -96,8 +92,7 @@ class SpotCheckService(BaseService):
         data['student'] = student
         data['checker'] = user
         # 4. 创建记录
-        spot_check = self.repository.create(**data)
-        return spot_check
+        return SpotCheck.objects.create(**data)
     def update(
         self,
         pk: int,
@@ -131,7 +126,10 @@ class SpotCheckService(BaseService):
         data.pop('checker', None)
         data.pop('checker_id', None)
         # 更新记录
-        spot_check = self.repository.update(spot_check, **data)
+        if data:
+            for key, value in data.items():
+                setattr(spot_check, key, value)
+            spot_check.save(update_fields=list(data.keys()))
         return spot_check
     def delete(
         self,
@@ -155,7 +153,7 @@ class SpotCheckService(BaseService):
                 message='只能删除自己创建的抽查记录'
             )
         # 删除记录（硬删除）
-        self.repository.delete(spot_check, soft=False)
+        spot_check.delete()
     def _get_queryset_for_user(
         self,
         user: User,
@@ -173,18 +171,9 @@ class SpotCheckService(BaseService):
         """
         current_role = get_current_role(user)
         if current_role == 'ADMIN':
-            # 管理员可以看到所有记录
-            qs = self.repository.get_all_for_admin(
-                student_id=student_id,
-                ordering=ordering
-            )
+            qs = SpotCheck.objects.all()
         elif current_role == 'MENTOR':
-            # 导师只能看到名下学员的记录
-            qs = self.repository.get_for_mentor_mentees(
-                mentor_id=user.id,
-                student_id=student_id,
-                ordering=ordering
-            )
+            qs = SpotCheck.objects.filter(student__mentor_id=user.id)
         elif current_role == 'DEPT_MANAGER':
             # 室经理只能看到本室学员的记录
             if not user.department_id:
@@ -192,21 +181,18 @@ class SpotCheckService(BaseService):
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='您未分配部门，无法查看抽查记录'
                 )
-            qs = self.repository.get_for_department(
-                department_id=user.department_id,
-                student_id=student_id,
-                ordering=ordering
-            )
+            qs = SpotCheck.objects.filter(student__department_id=user.department_id)
         else:
             # 其他角色无权访问
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问抽查记录'
             )
-        # 应用排序
+        if student_id:
+            qs = qs.filter(student_id=student_id)
         if ordering:
             qs = qs.order_by(ordering)
-        return qs.select_related('student', 'checker', 'student__department')
+        return self._with_relations(qs)
     def _validate_data_scope_access(self, spot_check: SpotCheck, user: User) -> None:
         """
         验证用户是否有权限访问该抽查记录

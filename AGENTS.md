@@ -5,7 +5,7 @@
 ## 项目结构
 - `lms_backend/` — Django REST API（Clean Architecture）
   - `apps/` — 领域模块（users, knowledge, questions, quizzes, tasks, submissions, spot_checks, notifications, dashboard）
-  - `core/` — 共享基类（BaseRepository, BaseService, exceptions, permissions）
+  - `core/` — 共享基类与工具（BaseService, exceptions, responses, pagination）
   - `config/` — 配置与路由
   - `tests/` — 集成测试 + 属性测试
 - `lms_frontend/` — React 19 + Vite + TypeScript + Tailwind CSS 4
@@ -67,6 +67,12 @@ import { UserForm } from './user-form';
 - **禁止向后兼容**：触及旧代码时优先干净重构
 - **角色相关 UI**：检查 student/mentor/dept_manager/admin/team_manager 共享行为
 - **API 响应格式**：统一 `{ code, message, data }` 结构
+
+## 后端 Selector 规则
+- **必须建**：统计/聚合/多表复杂查询（≈5–10 行+，含 Q/annotate/aggregate/subquery）、跨模块读取需要打破循环依赖
+- **建议建**：查询 >3 行且会被 2+ 处复用、需要统一 select_related/prefetch_related、读模型（列表/搜索/筛选/仪表盘）
+- **不建**：简单一次性查询（≤3 行）、写流程中临时查询（事务强耦合）
+- **默认策略**：先写在 service 私有 helper，命中任一规则即抽到 `selectors.py`
 
 ## 全局原则
 - 不做向后兼容，旧格式可直接破坏性调整
