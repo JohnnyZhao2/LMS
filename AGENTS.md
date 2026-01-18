@@ -44,24 +44,6 @@ npm run preview      # 预览生产构建
 
 ## 代码风格
 
-### 后端（Python/Django）
-- **PEP 8** 风格，文件/函数 `snake_case`，类 `PascalCase`
-- **类型提示**：所有函数参数和返回值必须有类型注解
-- **Docstring**：服务层方法必须包含 Args/Returns/Raises 文档
-- **模块命名**：`models.py`, `repositories.py`, `services.py`, `views/`, `serializers.py`
-- **异常处理**：使用 `core.exceptions.BusinessError` 抛出业务异常，包含 `code` 和 `message`
-- **分层架构**：View → Service → Repository → Model，业务逻辑只在 Service 层
-
-### 前端（TypeScript/React）
-- **文件命名**：`kebab-case`（如 `user-list.tsx`, `api-client.ts`）
-- **组件命名**：`PascalCase`（如 `UserList`, `KnowledgeDetail`）
-- **变量命名**：`camelCase`
-- **导入路径**：使用 `@/` 别名（如 `@/components/ui`, `@/features/auth`）
-- **类型定义**：接口用 `interface`，联合类型用 `type`；导出类型与实现分离
-- **错误处理**：API 错误使用 `ApiError` 类，UI 层用 `sonner` toast 展示
-- **状态管理**：服务端状态用 `@tanstack/react-query`，本地状态用 `useState`/`useReducer`
-- **表单**：使用 `react-hook-form` + `zod` 验证
-
 ### 导入顺序（前端）
 ```typescript
 // 1. React/外部库
@@ -83,7 +65,6 @@ import { UserForm } from './user-form';
 
 ## 代理特定说明
 - **禁止向后兼容**：触及旧代码时优先干净重构
-- **数据库字段变更**：同步更新 Model → Serializer → Service → 前端类型，全局搜索引用
 - **角色相关 UI**：检查 student/mentor/dept_manager/admin/team_manager 共享行为
 - **API 响应格式**：统一 `{ code, message, data }` 结构
 
