@@ -60,7 +60,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         <CellWithIcon
           icon={<Layout className="w-5 h-5" />}
           title={row.original.title}
-          subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+          subtitle={row.original.created_by_name}
           iconBg="#EFF6FF"
           iconColor="#2563EB"
         />

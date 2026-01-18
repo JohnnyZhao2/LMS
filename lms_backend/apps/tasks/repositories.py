@@ -203,6 +203,31 @@ class TaskAssignmentRepository(BaseRepository[TaskAssignment]):
             assignee_id=assignee_id,
             status='IN_PROGRESS'
         )
+
+    def bulk_create_assignments(
+        self,
+        task_id: int,
+        assignee_ids: List[int]
+    ) -> List[TaskAssignment]:
+        """
+        批量创建任务分配
+        Args:
+            task_id: 任务 ID
+            assignee_ids: 学员用户 ID 列表
+        Returns:
+            创建的任务分配对象列表
+        """
+        if not assignee_ids:
+            return []
+        assignments = [
+            TaskAssignment(
+                task_id=task_id,
+                assignee_id=assignee_id,
+                status='IN_PROGRESS'
+            )
+            for assignee_id in assignee_ids
+        ]
+        return self.model.objects.bulk_create(assignments, batch_size=500)
     def update_status(
         self,
         assignment: TaskAssignment,
@@ -323,6 +348,18 @@ class TaskKnowledgeRepository(BaseRepository[TaskKnowledge], TaskAssociationRepo
             resource_uuid=resource_uuid,
             version_number=version_number
         )
+
+    def bulk_create_associations(self, associations: List[TaskKnowledge]) -> List[TaskKnowledge]:
+        """
+        批量创建任务知识关联
+        Args:
+            associations: 任务知识关联对象列表
+        Returns:
+            创建的关联对象列表
+        """
+        if not associations:
+            return []
+        return self.model.objects.bulk_create(associations, batch_size=500)
     def delete_by_task(self, task_id: int) -> None:
         """
         删除任务的所有知识关联
@@ -384,6 +421,18 @@ class TaskQuizRepository(BaseRepository[TaskQuiz], TaskAssociationRepositoryMixi
             resource_uuid=resource_uuid,
             version_number=version_number
         )
+
+    def bulk_create_associations(self, associations: List[TaskQuiz]) -> List[TaskQuiz]:
+        """
+        批量创建任务试卷关联
+        Args:
+            associations: 任务试卷关联对象列表
+        Returns:
+            创建的关联对象列表
+        """
+        if not associations:
+            return []
+        return self.model.objects.bulk_create(associations, batch_size=500)
     def delete_by_task(self, task_id: int) -> None:
         """
         删除任务的所有试卷关联
@@ -441,6 +490,19 @@ class KnowledgeLearningProgressRepository(BaseRepository[KnowledgeLearningProgre
             'task_knowledge',
             'task_knowledge__knowledge'
         ).order_by('task_knowledge__order')
+
+    def has_completed_by_task(self, task_id: int) -> bool:
+        """
+        检查任务是否存在已完成的知识学习进度
+        Args:
+            task_id: 任务 ID
+        Returns:
+            是否存在已完成学习进度
+        """
+        return self.model.objects.filter(
+            assignment__task_id=task_id,
+            is_completed=True
+        ).exists()
     def get_by_assignment_and_knowledge(
         self,
         assignment_id: int,

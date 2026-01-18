@@ -88,6 +88,34 @@ class SubmissionRepository(BaseRepository[Submission]):
             task_assignment_id=task_assignment_id,
             quiz_id=quiz_id
         ).count()
+
+    def get_submissions_for_assignment(
+        self,
+        task_assignment_id: int,
+        statuses: List[str]
+    ) -> QuerySet[Submission]:
+        """
+        获取任务分配的提交记录
+        Args:
+            task_assignment_id: 任务分配 ID
+            statuses: 允许的提交状态列表
+        Returns:
+            QuerySet
+        """
+        return self.model.objects.filter(
+            task_assignment_id=task_assignment_id,
+            status__in=statuses
+        ).select_related('quiz')
+
+    def exists_by_task(self, task_id: int) -> bool:
+        """
+        检查任务是否存在答题提交
+        Args:
+            task_id: 任务 ID
+        Returns:
+            是否存在提交
+        """
+        return self.model.objects.filter(task_assignment__task_id=task_id).exists()
     def create_with_answers(
         self,
         answers_data: List[dict],

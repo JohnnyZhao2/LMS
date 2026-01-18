@@ -11,24 +11,26 @@ from apps.users.permissions import (
     get_current_role,
     get_accessible_student_ids,
 )
-from apps.knowledge.models import Knowledge
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
-from .services import TaskService
+from .services import TaskService, StudentTaskService, extract_knowledge_summary
 
+def validate_assignee_scope(user, assignee_ids: list[int]) -> None:
+    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user))
+    if not invalid_ids:
+        return
+    current_role = get_current_role(user)
+    if current_role == 'MENTOR':
+        raise serializers.ValidationError({
+            'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
+        })
+    elif current_role == 'DEPT_MANAGER':
+        raise serializers.ValidationError({
+            'assignee_ids': f'以下学员不在您的部门: {invalid_ids}'
+        })
+    raise serializers.ValidationError({
+        'assignee_ids': f'无权为以下学员分配任务: {invalid_ids}'
+    })
 
-def extract_knowledge_summary(knowledge, max_length: int = 160) -> str:
-    if knowledge.knowledge_type == 'OTHER':
-        text = knowledge.content or ''
-    else:
-        parts = [
-            knowledge.fault_scenario,
-            knowledge.trigger_process,
-            knowledge.solution,
-            knowledge.verification_plan,
-            knowledge.recovery_plan,
-        ]
-        text = next((p for p in parts if p), '')
-    return text[:max_length] if text else ''
 class TaskAssignmentSerializer(serializers.ModelSerializer):
     """Serializer for TaskAssignment model."""
     assignee_name = serializers.CharField(source='assignee.username', read_only=True)
@@ -188,21 +190,7 @@ class TaskCreateSerializer(serializers.Serializer):
         if not request or not request.user:
             raise serializers.ValidationError('无法获取当前用户信息')
         assignee_ids = attrs.get('assignee_ids', [])
-        current_role = get_current_role(request.user)
-        invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(request.user))
-        if invalid_ids:
-            if current_role == 'MENTOR':
-                raise serializers.ValidationError({
-                    'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
-                })
-            elif current_role == 'DEPT_MANAGER':
-                raise serializers.ValidationError({
-                    'assignee_ids': f'以下学员不在您的部门: {invalid_ids}'
-                })
-            else:
-                raise serializers.ValidationError({
-                    'assignee_ids': f'无权为以下学员分配任务: {invalid_ids}'
-                })
+        validate_assignee_scope(request.user, assignee_ids)
         return attrs
     def create(self, validated_data):
         """创建任务 - 委托给 TaskService"""
@@ -289,21 +277,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         if assignee_ids is not None:
             request = self.context.get('request')
             if request and request.user:
-                current_role = get_current_role(request.user)
-                invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(request.user))
-                if invalid_ids:
-                    if current_role == 'MENTOR':
-                        raise serializers.ValidationError({
-                            'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
-                        })
-                    elif current_role == 'DEPT_MANAGER':
-                        raise serializers.ValidationError({
-                            'assignee_ids': f'以下学员不在您的部门: {invalid_ids}'
-                        })
-                    else:
-                        raise serializers.ValidationError({
-                            'assignee_ids': f'无权为以下学员分配任务: {invalid_ids}'
-                        })
+                validate_assignee_scope(request.user, assignee_ids)
         return attrs
     def update(self, instance, validated_data):
         """更新任务信息 - 委托给 TaskService"""
@@ -359,9 +333,9 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     def get_has_quiz(self, obj):
-        return obj.task.task_quizzes.exists()
+        return bool(obj.task.task_quizzes.all())
     def get_has_knowledge(self, obj):
-        return obj.task.task_knowledge.exists()
+        return bool(obj.task.task_knowledge.all())
     def get_progress(self, obj):
         """获取详细进度记录"""
         return obj.get_progress_data()
@@ -392,71 +366,12 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         """获取详细进度数据"""
         return obj.get_progress_data()
     def get_knowledge_items(self, obj):
-        task_knowledge_items = obj.task.task_knowledge.select_related('knowledge').all()
-        progress_map = {
-            p.task_knowledge_id: p
-            for p in obj.knowledge_progress.all()
-        }
-        result = []
-        for tk in task_knowledge_items:
-            progress = progress_map.get(tk.id)
-            knowledge = tk.knowledge
-            item = {
-                'id': tk.id,
-                'knowledge_id': tk.knowledge_id,
-                'title': knowledge.title,
-                'knowledge_type': knowledge.knowledge_type,
-                'knowledge_type_display': knowledge.get_knowledge_type_display(),
-                'summary': extract_knowledge_summary(knowledge),
-                'order': tk.order,
-                'is_completed': progress.is_completed if progress else False,
-                'completed_at': progress.completed_at if progress else None,
-            }
-            result.append(item)
-        return sorted(result, key=lambda x: x['order'])
+        service = StudentTaskService()
+        return service.get_student_knowledge_items(obj)
 
     def get_quiz_items(self, obj):
-        """获取试卷列表及提交状态"""
-        from apps.submissions.models import Submission
-        task_quiz_items = obj.task.task_quizzes.select_related('quiz').all()
-        # 获取学员对这些试卷的最近/最高分提交
-        all_submissions = Submission.objects.filter(
-            task_assignment=obj,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        )
-        # 按 quiz 分类
-        submission_map = {}
-        for s in all_submissions:
-            if s.quiz_id not in submission_map:
-                submission_map[s.quiz_id] = []
-            submission_map[s.quiz_id].append(s)
-        result = []
-        for tq in task_quiz_items:
-            quiz = tq.quiz
-            quiz_subs = submission_map.get(tq.quiz_id, [])
-            is_completed = len(quiz_subs) > 0
-            best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
-            latest_sub = max(quiz_subs, key=lambda x: x.submitted_at) if is_completed else None
-            item = {
-                'id': tq.id,
-                'quiz': tq.quiz_id, # 保持与管理端一致，返回 quiz ID
-                'quiz_id': tq.quiz_id,
-                'quiz_title': quiz.title,
-                'quiz_type': quiz.quiz_type,
-                'quiz_type_display': quiz.get_quiz_type_display(),
-                'description': quiz.description,
-                'question_count': quiz.question_count,
-                'total_score': float(quiz.total_score) if quiz.total_score else 0,
-                'duration': quiz.duration,
-                'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
-                'order': tq.order,
-                'is_completed': is_completed,
-                'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,
-                'latest_submission_id': latest_sub.id if latest_sub else None,
-                'latest_status': latest_sub.status if latest_sub else None,
-            }
-            result.append(item)
-        return sorted(result, key=lambda x: x['order'])
+        service = StudentTaskService()
+        return service.get_student_quiz_items(obj)
 class CompleteKnowledgeLearningSerializer(serializers.Serializer):
     """Serializer for completing knowledge learning."""
     knowledge_id = serializers.IntegerField(
@@ -464,6 +379,7 @@ class CompleteKnowledgeLearningSerializer(serializers.Serializer):
     )
     def validate_knowledge_id(self, value):
         """Validate that the knowledge ID exists."""
-        if not Knowledge.objects.filter(id=value, is_deleted=False).exists():
-            raise serializers.ValidationError('知识文档不存在')
+        is_valid, invalid_ids = TaskService.validate_knowledge_ids([value])
+        if not is_valid:
+            raise serializers.ValidationError(f'知识文档不可用: {invalid_ids}')
         return value

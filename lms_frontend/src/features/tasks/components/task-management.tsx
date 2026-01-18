@@ -94,7 +94,7 @@ export const TaskManagement: React.FC = () => {
                 <CellWithIcon
                     icon={<Layout className="h-5 w-5" />}
                     title={row.original.title}
-                    subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+                    subtitle={row.original.created_by_name}
                 />
             ),
         },

@@ -20,10 +20,10 @@ from apps.users.permissions import (
     get_current_role,
     get_accessible_students,
 )
-from apps.knowledge.models import Knowledge
 from apps.knowledge.repositories import KnowledgeRepository
 from apps.quizzes.models import Quiz
 from apps.quizzes.repositories import QuizRepository
+from apps.submissions.repositories import SubmissionRepository
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 from .repositories import (
     TaskRepository,
@@ -32,6 +32,22 @@ from .repositories import (
     TaskQuizRepository,
     KnowledgeLearningProgressRepository,
 )
+
+
+def extract_knowledge_summary(knowledge, max_length: int = 160) -> str:
+    if knowledge.knowledge_type == 'OTHER':
+        text = knowledge.content or ''
+    else:
+        parts = [
+            knowledge.fault_scenario,
+            knowledge.trigger_process,
+            knowledge.solution,
+            knowledge.verification_plan,
+            knowledge.recovery_plan,
+        ]
+        text = next((p for p in parts if p), '')
+    return text[:max_length] if text else ''
+
 class TaskService(BaseService):
     """
     Service for task management operations.
@@ -46,8 +62,10 @@ class TaskService(BaseService):
         self.task_assignment_repository = TaskAssignmentRepository()
         self.task_knowledge_repository = TaskKnowledgeRepository()
         self.task_quiz_repository = TaskQuizRepository()
+        self.knowledge_progress_repository = KnowledgeLearningProgressRepository()
         self.knowledge_repository = KnowledgeRepository()
         self.quiz_repository = QuizRepository()
+        self.submission_repository = SubmissionRepository()
     def get_task_queryset_for_user(self, user: User) -> QuerySet:
         """
         Get task queryset based on user's role.
@@ -111,22 +129,10 @@ class TaskService(BaseService):
         Returns:
             True if any student has started working on the task
         """
-        # 检查是否有知识学习进度
-        has_knowledge_progress = KnowledgeLearningProgress.objects.filter(
-            assignment__task=task,
-            is_completed=True
-        ).exists()
-
+        has_knowledge_progress = self.knowledge_progress_repository.has_completed_by_task(task.id)
         if has_knowledge_progress:
             return True
-
-        # 检查是否有试卷提交
-        from apps.submissions.models import Submission
-        has_quiz_submissions = Submission.objects.filter(
-            task_assignment__task=task
-        ).exists()
-
-        return has_quiz_submissions
+        return self.submission_repository.exists_by_task(task.id)
 
     def check_task_edit_permission(self, task: Task, user: User) -> bool:
         """
@@ -207,11 +213,10 @@ class TaskService(BaseService):
         if quiz_ids:
             self._create_quiz_associations(task, quiz_ids)
         # Create assignments
-        for assignee_id in assignee_ids:
-            self.task_assignment_repository.create_assignment(
-                task_id=task.id,
-                assignee_id=assignee_id
-            )
+        self.task_assignment_repository.bulk_create_assignments(
+            task_id=task.id,
+            assignee_ids=assignee_ids
+        )
         return task
     def _create_associations(
         self,
@@ -245,27 +250,24 @@ class TaskService(BaseService):
                 is_current=True
             )
         resource_map = {r.id: r for r in queryset}
+        associations = []
         for order, resource_id in enumerate(resource_ids, start=1):
             resource = resource_map.get(resource_id)
             if not resource:
                 continue
-            # 根据资源类型创建关联
             if resource_type == 'knowledge':
-                association_repository.create_association(
+                associations.append(TaskKnowledge(
                     task_id=task.id,
                     knowledge_id=resource_id,
-                    order=order,
-                    resource_uuid=resource.resource_uuid,
-                    version_number=resource.version_number
-                )
-            else:  # quiz
-                association_repository.create_association(
+                    order=order
+                ))
+            else:
+                associations.append(TaskQuiz(
                     task_id=task.id,
                     quiz_id=resource_id,
-                    order=order,
-                    resource_uuid=resource.resource_uuid,
-                    version_number=resource.version_number
-                )
+                    order=order
+                ))
+        association_repository.bulk_create_associations(associations)
     def _create_knowledge_associations(self, task: Task, knowledge_ids: List[int]) -> None:
         """Create TaskKnowledge associations for a task."""
         self._create_associations(
@@ -405,11 +407,10 @@ class TaskService(BaseService):
                 self.task_assignment_repository.delete(assignment, soft=False)
         # Add new assignments
         to_add = new_ids - existing_ids
-        for assignee_id in to_add:
-            self.task_assignment_repository.create_assignment(
-                task_id=task.id,
-                assignee_id=assignee_id
-            )
+        self.task_assignment_repository.bulk_create_assignments(
+            task_id=task.id,
+            assignee_ids=list(to_add)
+        )
     def delete_task(self, task: Task) -> None:
         """
         Soft delete a task.
@@ -531,6 +532,8 @@ class StudentTaskService(BaseService):
         self.task_assignment_repository = TaskAssignmentRepository()
         self.knowledge_progress_repository = KnowledgeLearningProgressRepository()
         self.task_knowledge_repository = TaskKnowledgeRepository()
+        self.task_quiz_repository = TaskQuizRepository()
+        self.submission_repository = SubmissionRepository()
     def get_student_assignment(self, task_id: int, user: User) -> TaskAssignment:
         """
         Get a student's task assignment.
@@ -633,6 +636,79 @@ class StudentTaskService(BaseService):
         progress = self.knowledge_progress_repository.mark_completed(progress)
         progress.refresh_from_db()
         return progress
+    def get_student_knowledge_items(self, assignment: TaskAssignment) -> List[dict]:
+        """
+        获取学员任务的知识条目与进度
+        Args:
+            assignment: 任务分配对象
+        Returns:
+            知识条目列表
+        """
+        task_knowledge_items = self.task_knowledge_repository.get_by_task(assignment.task.id)
+        progress_map = {
+            p.task_knowledge_id: p
+            for p in self.knowledge_progress_repository.get_by_assignment(assignment.id)
+        }
+        result = []
+        for tk in task_knowledge_items:
+            progress = progress_map.get(tk.id)
+            knowledge = tk.knowledge
+            result.append({
+                'id': tk.id,
+                'knowledge_id': tk.knowledge_id,
+                'title': knowledge.title,
+                'knowledge_type': knowledge.knowledge_type,
+                'knowledge_type_display': knowledge.get_knowledge_type_display(),
+                'summary': extract_knowledge_summary(knowledge),
+                'order': tk.order,
+                'is_completed': progress.is_completed if progress else False,
+                'completed_at': progress.completed_at if progress else None,
+            })
+        return sorted(result, key=lambda x: x['order'])
+
+    def get_student_quiz_items(self, assignment: TaskAssignment) -> List[dict]:
+        """
+        获取学员任务的试卷条目与提交状态
+        Args:
+            assignment: 任务分配对象
+        Returns:
+            试卷条目列表
+        """
+        task_quiz_items = self.task_quiz_repository.get_by_task(assignment.task.id)
+        submissions = self.submission_repository.get_submissions_for_assignment(
+            assignment.id,
+            statuses=['SUBMITTED', 'GRADING', 'GRADED']
+        )
+        submission_map = {}
+        for submission in submissions:
+            submission_map.setdefault(submission.quiz_id, []).append(submission)
+        result = []
+        for tq in task_quiz_items:
+            quiz = tq.quiz
+            quiz_subs = submission_map.get(tq.quiz_id, [])
+            is_completed = len(quiz_subs) > 0
+            best_sub = max(quiz_subs, key=lambda x: x.obtained_score or 0) if is_completed else None
+            latest_sub = max(quiz_subs, key=lambda x: x.submitted_at) if is_completed else None
+            result.append({
+                'id': tq.id,
+                'quiz': tq.quiz_id,
+                'quiz_id': tq.quiz_id,
+                'quiz_title': quiz.title,
+                'quiz_type': quiz.quiz_type,
+                'quiz_type_display': quiz.get_quiz_type_display(),
+                'description': quiz.description,
+                'question_count': quiz.question_count,
+                'total_score': float(quiz.total_score) if quiz.total_score else 0,
+                'duration': quiz.duration,
+                'pass_score': float(quiz.pass_score) if quiz.pass_score else None,
+                'order': tq.order,
+                'is_completed': is_completed,
+                'score': float(best_sub.obtained_score) if best_sub and best_sub.obtained_score is not None else None,
+                'latest_submission_id': latest_sub.id if latest_sub else None,
+                'latest_status': latest_sub.status if latest_sub else None,
+            })
+        return sorted(result, key=lambda x: x['order'])
+
     def get_student_assignments_queryset(
         self,
         user: User,

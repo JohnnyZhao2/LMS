@@ -74,7 +74,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
                     title={row.original.content}
-                    subtitle={`ID: ${row.original.id} • ${row.original.created_by_name || '系统'}`}
+                    subtitle={row.original.created_by_name || '系统'}
                     iconBg="#F0FDF4"
                     iconColor="#16A34A"
                 />
@@ -183,7 +183,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
                             <FileText className="w-5 h-5 text-emerald-500" />
                             题目详情预览
-                            <span className="ml-2 text-xs font-medium text-gray-400">ID: {previewQuestion?.id}</span>
+                            <span className="ml-2 text-xs font-medium text-gray-400"></span>
                         </DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto">
