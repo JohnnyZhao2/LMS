@@ -11,6 +11,7 @@ import {
     Layout,
     Pencil,
     RefreshCw,
+    BarChart3,
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
@@ -201,9 +202,10 @@ export const TaskManagement: React.FC = () => {
             id: "actions",
             cell: ({ row }) => {
                 const canEdit = currentRole === 'ADMIN' || row.original.created_by === user?.id;
+                const canPreview = currentRole === 'ADMIN' || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
                 return (
-                    <div className="flex items-center gap-1.5 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="预览任务">
+                    <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="查看详情">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -213,6 +215,18 @@ export const TaskManagement: React.FC = () => {
                                 <Eye className="h-4 w-4" />
                             </Button>
                         </Tooltip>
+                        {canPreview && (
+                            <Tooltip title="进度监控">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
+                                    onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
+                                >
+                                    <BarChart3 className="h-4 w-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
                         {canEdit && (
                             <>
                                 <Tooltip title="编辑任务">

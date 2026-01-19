@@ -9,6 +9,7 @@ import { ROUTES } from '@/config/routes';
 const TaskList = lazy(() => import('@/features/tasks/components/task-list').then(m => ({ default: m.TaskList })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
 const TaskForm = lazy(() => import('@/features/tasks/components/task-form').then(m => ({ default: m.TaskForm })));
+const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview').then(m => ({ default: m.TaskPreviewPage })));
 
 export const taskRoutes = [
   <Route
@@ -35,6 +36,15 @@ export const taskRoutes = [
     element={
       <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
         <TaskForm />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="task-preview"
+    path={`${ROUTES.TASKS}/:id/preview`}
+    element={
+      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+        <TaskPreviewPage />
       </ProtectedRoute>
     }
   />,

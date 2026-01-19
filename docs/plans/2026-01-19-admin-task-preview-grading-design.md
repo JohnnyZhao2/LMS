@@ -1,16 +1,17 @@
 # Admin Task Preview & Grading System Design
 
 **Date:** 2026-01-19
+**Updated:** 2026-01-20
 **Status:** Approved
 **Author:** Design collaboration with user
 
 ## Overview
 
-Design for a comprehensive admin task preview and grading system that provides progress monitoring and essay question grading capabilities for learning tasks.
+Design for a comprehensive admin task preview and grading system that provides progress monitoring and essay question grading capabilities for learning tasks. This is different from the student task detail view - it focuses on analytics and grading management.
 
 ## Entry Point
 
-- Add a "预览" button in the task management list
+- Add a "预览" button in the task management list (separate from the existing "查看" button)
 - New route: `/tasks/:id/preview`
 - Query params: `?tab=progress|grading` for direct tab access
 
@@ -62,10 +63,10 @@ Design for a comprehensive admin task preview and grading system that provides p
 **Row 3 - Student Execution Table:**
 
 Columns:
-- 学员信息 (Name, Employee ID, Department)
-- 状态 (COMPLETED, IN_PROGRESS, OVERDUE, COMPLETED_ABNORMAL)
+- 学员信息 (Name, Employee ID, Department/室组)
+- 状态判定 (COMPLETED, IN_PROGRESS, OVERDUE, COMPLETED_ABNORMAL)
 - 任务节点进度 (e.g., "3/5")
-- 分数 (nullable)
+- 分数 (nullable, empty if no score info)
 - 用时 (in minutes)
 - 答题情况 (link or summary)
 

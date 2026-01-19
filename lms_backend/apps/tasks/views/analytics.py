@@ -1,0 +1,534 @@
+"""
+Task analytics views for admin preview.
+Implements:
+- Task analytics API
+- Student executions API
+- Grading APIs
+"""
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from django.db.models import Avg, Sum, Count, Q, F
+from django.utils import timezone
+from decimal import Decimal
+
+from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response, list_response
+from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
+from apps.tasks.serializers import (
+    TaskAnalyticsSerializer,
+    StudentExecutionSerializer,
+    GradingQuestionSerializer,
+    GradingAnswerSerializer,
+    GradingSubmitSerializer,
+)
+from apps.tasks.services import TaskService
+from apps.submissions.models import Submission, Answer
+
+
+class TaskAnalyticsView(APIView):
+    """Task analytics endpoint for admin preview."""
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+
+    @extend_schema(
+        summary='获取任务分析数据',
+        description='获取任务的完成情况、准确率、异常人数等分析数据',
+        responses={
+            200: TaskAnalyticsSerializer,
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['任务分析']
+    )
+    def get(self, request, pk):
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
+
+        analytics = self._compute_analytics(task)
+        serializer = TaskAnalyticsSerializer(analytics)
+        return success_response(serializer.data)
+
+    def _compute_analytics(self, task):
+        """计算任务分析数据"""
+        assignments = task.assignments.select_related('assignee', 'assignee__department')
+        total_count = assignments.count()
+        completed_count = assignments.filter(status='COMPLETED').count()
+
+        # 计算平均用时（分钟）
+        completed_assignments = assignments.filter(
+            status='COMPLETED',
+            completed_at__isnull=False
+        )
+        avg_time = 0
+        if completed_assignments.exists():
+            total_time = sum([
+                (a.completed_at - a.created_at).total_seconds() / 60
+                for a in completed_assignments
+            ])
+            avg_time = round(total_time / completed_assignments.count(), 1)
+
+        # 计算准确率
+        has_quiz = task.task_quizzes.exists()
+        accuracy_percentage = None
+        if has_quiz:
+            submissions = Submission.objects.filter(
+                task_assignment__task=task,
+                status__in=['SUBMITTED', 'GRADED']
+            )
+            if submissions.exists():
+                total_score = submissions.aggregate(
+                    total=Sum('total_score')
+                )['total'] or 0
+                obtained_score = submissions.aggregate(
+                    total=Sum('obtained_score')
+                )['total'] or 0
+                if total_score > 0:
+                    accuracy_percentage = round(float(obtained_score) / float(total_score) * 100, 1)
+
+        # 计算异常人数
+        abnormal_count = self._count_abnormal(task, assignments)
+
+        # 计算节点进度
+        node_progress = self._compute_node_progress(task, total_count)
+
+        # 计算时间分布
+        time_distribution = self._compute_time_distribution(completed_assignments)
+
+        # 计算分数分布
+        score_distribution = None
+        if has_quiz:
+            score_distribution = self._compute_score_distribution(task)
+
+        return {
+            'completion': {
+                'completed_count': completed_count,
+                'total_count': total_count,
+                'percentage': round(completed_count / total_count * 100, 1) if total_count > 0 else 0,
+            },
+            'average_time': avg_time,
+            'accuracy': {
+                'has_quiz': has_quiz,
+                'percentage': accuracy_percentage,
+            },
+            'abnormal_count': abnormal_count,
+            'node_progress': node_progress,
+            'time_distribution': time_distribution,
+            'score_distribution': score_distribution,
+        }
+
+    def _count_abnormal(self, task, assignments):
+        """
+        计算异常人数
+        异常规则：
+        - 文章阅读时长 < 5分钟
+        - 测验完成时长 < 5分钟
+        - 考试完成时长 < 30分钟
+        """
+        abnormal_ids = set()
+
+        for assignment in assignments.filter(status='COMPLETED'):
+            # 检查知识学习时长
+            for progress in assignment.knowledge_progress.filter(is_completed=True):
+                if progress.completed_at and progress.created_at:
+                    duration = (progress.completed_at - progress.created_at).total_seconds() / 60
+                    if duration < 5:
+                        abnormal_ids.add(assignment.assignee_id)
+                        break
+
+            # 检查测验/考试时长
+            submissions = Submission.objects.filter(
+                task_assignment=assignment,
+                status__in=['SUBMITTED', 'GRADED']
+            )
+            for sub in submissions:
+                if sub.submitted_at and sub.started_at:
+                    duration = (sub.submitted_at - sub.started_at).total_seconds() / 60
+                    is_exam = sub.quiz.quiz_type == 'EXAM'
+                    threshold = 30 if is_exam else 5
+                    if duration < threshold:
+                        abnormal_ids.add(assignment.assignee_id)
+                        break
+
+        return len(abnormal_ids)
+
+    def _compute_node_progress(self, task, total_count):
+        """计算各节点完成进度"""
+        nodes = []
+
+        # 知识节点
+        for tk in task.task_knowledge.select_related('knowledge').order_by('order'):
+            completed = KnowledgeLearningProgress.objects.filter(
+                task_knowledge=tk,
+                is_completed=True
+            ).count()
+            nodes.append({
+                'node_id': tk.id,
+                'node_name': tk.knowledge.title,
+                'node_type': 'KNOWLEDGE',
+                'completed_count': completed,
+                'total_count': total_count,
+                'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
+            })
+
+        # 试卷节点
+        for tq in task.task_quizzes.select_related('quiz').order_by('order'):
+            completed = Submission.objects.filter(
+                task_assignment__task=task,
+                quiz=tq.quiz,
+                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            ).values('task_assignment').distinct().count()
+            nodes.append({
+                'node_id': tq.id,
+                'node_name': tq.quiz.title,
+                'node_type': 'QUIZ',
+                'completed_count': completed,
+                'total_count': total_count,
+                'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
+            })
+
+        return nodes
+
+    def _compute_time_distribution(self, completed_assignments):
+        """计算时间分布"""
+        ranges = [
+            ('0-15', 0, 15),
+            ('15-30', 15, 30),
+            ('30-45', 30, 45),
+            ('45-60', 45, 60),
+            ('60+', 60, float('inf')),
+        ]
+        distribution = {r[0]: 0 for r in ranges}
+
+        for assignment in completed_assignments:
+            if assignment.completed_at and assignment.created_at:
+                duration = (assignment.completed_at - assignment.created_at).total_seconds() / 60
+                for label, min_val, max_val in ranges:
+                    if min_val <= duration < max_val:
+                        distribution[label] += 1
+                        break
+
+        return [{'range': k, 'count': v} for k, v in distribution.items()]
+
+    def _compute_score_distribution(self, task):
+        """计算分数分布"""
+        ranges = [
+            ('0-60', 0, 60),
+            ('60-70', 60, 70),
+            ('70-80', 70, 80),
+            ('80-90', 80, 90),
+            ('90-100', 90, 101),
+        ]
+        distribution = {r[0]: 0 for r in ranges}
+
+        # 获取每个学员的最高分
+        submissions = Submission.objects.filter(
+            task_assignment__task=task,
+            status__in=['SUBMITTED', 'GRADED'],
+            obtained_score__isnull=False
+        ).values('task_assignment').annotate(
+            max_score=Sum('obtained_score'),
+            total=Sum('total_score')
+        )
+
+        for sub in submissions:
+            if sub['total'] and sub['total'] > 0:
+                percentage = float(sub['max_score']) / float(sub['total']) * 100
+                for label, min_val, max_val in ranges:
+                    if min_val <= percentage < max_val:
+                        distribution[label] += 1
+                        break
+
+        return [{'range': k, 'count': v} for k, v in distribution.items()]
+
+
+class StudentExecutionsView(APIView):
+    """Student executions endpoint for admin preview."""
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+
+    @extend_schema(
+        summary='获取学员执行情况',
+        description='获取任务下所有学员的执行情况列表',
+        responses={
+            200: StudentExecutionSerializer(many=True),
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['任务分析']
+    )
+    def get(self, request, pk):
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
+
+        executions = self._get_student_executions(task)
+        serializer = StudentExecutionSerializer(executions, many=True)
+        return list_response(serializer.data)
+
+    def _get_student_executions(self, task):
+        """获取学员执行情况列表"""
+        assignments = task.assignments.select_related(
+            'assignee', 'assignee__department'
+        ).order_by('-created_at')
+
+        total_nodes = task.task_knowledge.count() + task.task_quizzes.count()
+        results = []
+
+        for assignment in assignments:
+            # 计算完成节点数
+            completed_knowledge = assignment.knowledge_progress.filter(is_completed=True).count()
+            completed_quizzes = Submission.objects.filter(
+                task_assignment=assignment,
+                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            ).values('quiz').distinct().count()
+            completed_nodes = completed_knowledge + completed_quizzes
+
+            # 计算用时
+            time_spent = 0
+            if assignment.completed_at and assignment.created_at:
+                time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
+
+            # 获取分数
+            score = None
+            if assignment.score is not None:
+                score = float(assignment.score)
+
+            # 检查是否异常
+            is_abnormal = self._check_abnormal(assignment)
+
+            # 确定状态
+            status = assignment.status
+            if status == 'COMPLETED' and is_abnormal:
+                status = 'COMPLETED_ABNORMAL'
+
+            results.append({
+                'student_id': assignment.assignee.id,
+                'student_name': assignment.assignee.username,
+                'employee_id': assignment.assignee.employee_id or '',
+                'department': assignment.assignee.department.name if assignment.assignee.department else '',
+                'status': status,
+                'node_progress': f'{completed_nodes}/{total_nodes}',
+                'score': score,
+                'time_spent': time_spent,
+                'answer_details': '查看详情',
+                'is_abnormal': is_abnormal,
+            })
+
+        return results
+
+    def _check_abnormal(self, assignment):
+        """检查学员是否异常"""
+        # 检查知识学习时长
+        for progress in assignment.knowledge_progress.filter(is_completed=True):
+            if progress.completed_at and progress.created_at:
+                duration = (progress.completed_at - progress.created_at).total_seconds() / 60
+                if duration < 5:
+                    return True
+
+        # 检查测验/考试时长
+        submissions = Submission.objects.filter(
+            task_assignment=assignment,
+            status__in=['SUBMITTED', 'GRADED']
+        )
+        for sub in submissions:
+            if sub.submitted_at and sub.started_at:
+                duration = (sub.submitted_at - sub.started_at).total_seconds() / 60
+                is_exam = sub.quiz.quiz_type == 'EXAM'
+                threshold = 30 if is_exam else 5
+                if duration < threshold:
+                    return True
+
+        return False
+
+
+class GradingQuestionsView(APIView):
+    """Grading questions endpoint."""
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+
+    @extend_schema(
+        summary='获取待评分简答题列表',
+        description='获取任务中所有需要评分的简答题',
+        responses={
+            200: GradingQuestionSerializer(many=True),
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['阅卷中心']
+    )
+    def get(self, request, pk):
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
+
+        questions = self._get_grading_questions(task)
+        serializer = GradingQuestionSerializer(questions, many=True)
+        return list_response(serializer.data)
+
+    def _get_grading_questions(self, task):
+        """获取待评分简答题列表"""
+        from apps.questions.models import Question
+
+        # 获取任务关联的所有试卷中的简答题
+        quiz_ids = task.task_quizzes.values_list('quiz_id', flat=True)
+        questions = Question.objects.filter(
+            quiz_questions__quiz_id__in=quiz_ids,
+            question_type='SHORT_ANSWER'
+        ).distinct()
+
+        results = []
+        for question in questions:
+            # 统计未评分数量
+            ungraded_count = Answer.objects.filter(
+                question=question,
+                submission__task_assignment__task=task,
+                submission__status__in=['GRADING', 'SUBMITTED'],
+                graded_by__isnull=True
+            ).count()
+
+            results.append({
+                'question_id': question.id,
+                'question_text': question.stem,
+                'question_analysis': question.analysis or '',
+                'max_score': float(question.score),
+                'ungraded_count': ungraded_count,
+            })
+
+        return results
+
+
+class GradingAnswersView(APIView):
+    """Grading answers endpoint."""
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+
+    @extend_schema(
+        summary='获取学员答案列表',
+        description='获取指定简答题的所有学员答案',
+        parameters=[
+            OpenApiParameter(name='question_id', type=int, required=True, description='题目ID'),
+        ],
+        responses={
+            200: GradingAnswerSerializer(many=True),
+            404: OpenApiResponse(description='任务不存在'),
+        },
+        tags=['阅卷中心']
+    )
+    def get(self, request, pk):
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
+
+        question_id = request.query_params.get('question_id')
+        if not question_id:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_PARAMS,
+                message='缺少 question_id 参数'
+            )
+
+        answers = self._get_grading_answers(task, int(question_id))
+        serializer = GradingAnswerSerializer(answers, many=True)
+        return list_response(serializer.data)
+
+    def _get_grading_answers(self, task, question_id):
+        """获取学员答案列表"""
+        answers = Answer.objects.filter(
+            question_id=question_id,
+            submission__task_assignment__task=task,
+            submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
+        ).select_related(
+            'submission__task_assignment__assignee',
+            'submission__task_assignment__assignee__department'
+        ).order_by('graded_by', 'submission__submitted_at')
+
+        results = []
+        for answer in answers:
+            user = answer.submission.task_assignment.assignee
+            results.append({
+                'student_id': user.id,
+                'student_name': user.username,
+                'employee_id': user.employee_id or '',
+                'department': user.department.name if user.department else '',
+                'answer_text': answer.user_answer if isinstance(answer.user_answer, str) else str(answer.user_answer or ''),
+                'submitted_at': answer.submission.submitted_at,
+                'score': float(answer.obtained_score) if answer.graded_by else None,
+                'comments': answer.comment or None,
+                'is_graded': answer.graded_by is not None,
+            })
+
+        return results
+
+
+class GradingSubmitView(APIView):
+    """Grading submit endpoint."""
+    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.service = TaskService()
+
+    @extend_schema(
+        summary='提交评分',
+        description='为学员的简答题答案提交评分',
+        request=GradingSubmitSerializer,
+        responses={
+            200: OpenApiResponse(description='评分成功'),
+            400: OpenApiResponse(description='参数错误'),
+            404: OpenApiResponse(description='任务或答案不存在'),
+        },
+        tags=['阅卷中心']
+    )
+    def post(self, request, pk):
+        task = self.service.get_task_by_id(pk)
+        self.service.check_task_read_permission(task, request.user)
+
+        serializer = GradingSubmitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+        self._submit_grading(
+            task=task,
+            question_id=data['question_id'],
+            student_id=data['student_id'],
+            score=data['score'],
+            comments=data['comments'],
+            grader=request.user
+        )
+
+        return success_response({'message': '评分成功'})
+
+    def _submit_grading(self, task, question_id, student_id, score, comments, grader):
+        """提交评分"""
+        # 查找答案记录
+        try:
+            answer = Answer.objects.get(
+                question_id=question_id,
+                submission__task_assignment__task=task,
+                submission__task_assignment__assignee_id=student_id,
+                submission__status__in=['GRADING', 'SUBMITTED']
+            )
+        except Answer.DoesNotExist:
+            raise BusinessError(
+                code=ErrorCodes.NOT_FOUND,
+                message='未找到对应的答案记录'
+            )
+
+        # 验证分数范围
+        if score < 0 or score > float(answer.question.score):
+            raise BusinessError(
+                code=ErrorCodes.INVALID_PARAMS,
+                message=f'分数必须在 0 到 {answer.question.score} 之间'
+            )
+
+        # 执行评分
+        answer.grade(grader=grader, score=score, comment=comments)

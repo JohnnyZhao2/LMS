@@ -44,3 +44,6 @@ export * from './spot-check';
 
 // 导出通知相关类型
 export * from './notification';
+
+// 导出任务分析相关类型
+export * from './task-analytics';

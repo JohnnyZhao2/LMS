@@ -397,3 +397,91 @@ class CompleteKnowledgeLearningSerializer(serializers.Serializer):
         if not is_valid:
             raise serializers.ValidationError(f'知识文档不可用: {invalid_ids}')
         return value
+
+
+# ============ Task Analytics Serializers ============
+
+class CompletionSerializer(serializers.Serializer):
+    """完成情况序列化器"""
+    completed_count = serializers.IntegerField()
+    total_count = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class AccuracySerializer(serializers.Serializer):
+    """准确率序列化器"""
+    has_quiz = serializers.BooleanField()
+    percentage = serializers.FloatField(allow_null=True)
+
+
+class NodeProgressSerializer(serializers.Serializer):
+    """节点进度序列化器"""
+    node_id = serializers.IntegerField()
+    node_name = serializers.CharField()
+    node_type = serializers.ChoiceField(choices=['KNOWLEDGE', 'QUIZ'])
+    completed_count = serializers.IntegerField()
+    total_count = serializers.IntegerField()
+    percentage = serializers.FloatField()
+
+
+class DistributionItemSerializer(serializers.Serializer):
+    """分布项序列化器"""
+    range = serializers.CharField()
+    count = serializers.IntegerField()
+
+
+class TaskAnalyticsSerializer(serializers.Serializer):
+    """任务分析数据序列化器"""
+    completion = CompletionSerializer()
+    average_time = serializers.FloatField()
+    accuracy = AccuracySerializer()
+    abnormal_count = serializers.IntegerField()
+    node_progress = NodeProgressSerializer(many=True)
+    time_distribution = DistributionItemSerializer(many=True)
+    score_distribution = DistributionItemSerializer(many=True, allow_null=True)
+
+
+class StudentExecutionSerializer(serializers.Serializer):
+    """学员执行情况序列化器"""
+    student_id = serializers.IntegerField()
+    student_name = serializers.CharField()
+    employee_id = serializers.CharField()
+    department = serializers.CharField()
+    status = serializers.ChoiceField(
+        choices=['COMPLETED', 'IN_PROGRESS', 'OVERDUE', 'COMPLETED_ABNORMAL']
+    )
+    node_progress = serializers.CharField()
+    score = serializers.FloatField(allow_null=True)
+    time_spent = serializers.IntegerField()
+    answer_details = serializers.CharField()
+    is_abnormal = serializers.BooleanField()
+
+
+class GradingQuestionSerializer(serializers.Serializer):
+    """待评分题目序列化器"""
+    question_id = serializers.IntegerField()
+    question_text = serializers.CharField()
+    question_analysis = serializers.CharField(allow_blank=True)
+    max_score = serializers.FloatField()
+    ungraded_count = serializers.IntegerField()
+
+
+class GradingAnswerSerializer(serializers.Serializer):
+    """学员答案序列化器"""
+    student_id = serializers.IntegerField()
+    student_name = serializers.CharField()
+    employee_id = serializers.CharField()
+    department = serializers.CharField()
+    answer_text = serializers.CharField(allow_blank=True, allow_null=True)
+    submitted_at = serializers.DateTimeField()
+    score = serializers.FloatField(allow_null=True)
+    comments = serializers.CharField(allow_null=True, allow_blank=True)
+    is_graded = serializers.BooleanField()
+
+
+class GradingSubmitSerializer(serializers.Serializer):
+    """评分提交序列化器"""
+    question_id = serializers.IntegerField()
+    student_id = serializers.IntegerField()
+    score = serializers.FloatField()
+    comments = serializers.CharField(required=False, allow_blank=True, default='')
