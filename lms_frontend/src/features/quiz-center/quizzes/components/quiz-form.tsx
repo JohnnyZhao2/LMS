@@ -313,6 +313,9 @@ export const QuizForm: React.FC = () => {
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <QuizFormHeader
         isEdit={isEdit}
+        quizData={quizData}
+        title={title}
+        onTitleChange={setTitle}
         onBack={() => navigate(-1)}
         onCancel={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}

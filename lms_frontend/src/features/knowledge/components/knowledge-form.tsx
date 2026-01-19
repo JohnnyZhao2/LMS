@@ -250,6 +250,13 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {isEdit && knowledgeDetail && (
+            <div className="flex items-center gap-2 text-xs text-gray-500 mr-2">
+              <span>{knowledgeDetail.updated_by_name || knowledgeDetail.created_by_name}</span>
+              <span>·</span>
+              <span>{new Date(knowledgeDetail.updated_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          )}
           <Badge
             className={`flex items-center gap-1.5 px-3 py-1 font-semibold rounded-full text-[10px] uppercase border ${statusInfo.isDraft
               ? 'bg-amber-50 text-amber-600 border-amber-200'

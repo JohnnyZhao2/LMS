@@ -420,35 +420,49 @@ export const TaskForm: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50/50">
       {/* Header */}
-      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(ROUTES.TASKS)}
-              className="text-gray-600 hover:text-primary-500 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="w-px h-5 bg-gray-200 mx-1" />
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-              {isEdit ? '编辑任务' : '创建任务'}
-            </h1>
-          </div>
+      <div className="flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-4">
+        <div className="flex items-center gap-4 shrink-0">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(ROUTES.TASKS)}
+            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
+          >
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="text-sm font-semibold">返回列表</span>
+          </Button>
+          <div className="w-px h-5 bg-gray-200" />
         </div>
-        <Button
-          onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting}
-          className="h-11 px-8 rounded-full shadow-lg shadow-primary-500/20 transition-all hover:shadow-primary-500/30 active:scale-95"
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4 mr-2" />
+
+        <div className="flex-1 min-w-0">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="输入任务标题..."
+            className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {isEdit && task && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>{task.updated_by_name || task.created_by_name}</span>
+              <span>·</span>
+              <span>{new Date(task.updated_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
           )}
-          {isEdit ? '保存修改' : '发布任务'}
-        </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit || isSubmitting}
+            className="h-10 px-6 font-semibold"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
+            {isEdit ? '保存修改' : '发布任务'}
+          </Button>
+        </div>
       </div>
 
       {/* Body - Three columns with fixed baseline height (Header:54 + Search:77 + Filter:52 + List:580 + Pagination:65 = 828px) */}
