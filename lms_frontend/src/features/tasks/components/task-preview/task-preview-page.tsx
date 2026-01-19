@@ -52,23 +52,23 @@ export const TaskPreviewPage: React.FC = () => {
             variant="ghost"
             size="icon"
             onClick={() => navigate('/tasks')}
-            className="h-10 w-10 rounded-md hover:bg-gray-100"
+            className="h-10 w-10 rounded-lg hover:bg-slate-100 transition-colors duration-150 cursor-pointer"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{task.title}</h1>
-            <p className="text-sm text-gray-500">任务预览与管理</p>
+            <h1 className="text-2xl font-bold text-slate-900">{task.title}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">任务预览与管理</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger value="progress" className="flex items-center gap-2">
+          <TabsList className="bg-slate-100 p-1 rounded-lg">
+            <TabsTrigger value="progress" className="flex items-center gap-2 cursor-pointer transition-all duration-200">
               <BarChart3 className="h-4 w-4" />
               进度监控
             </TabsTrigger>
-            <TabsTrigger value="grading" className="flex items-center gap-2">
+            <TabsTrigger value="grading" className="flex items-center gap-2 cursor-pointer transition-all duration-200">
               <FileCheck className="h-4 w-4" />
               阅卷中心
             </TabsTrigger>

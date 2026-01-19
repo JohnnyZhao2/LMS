@@ -43,7 +43,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       id: 'student_info',
       cell: ({ row }) => (
         <CellWithIcon
-          icon={<Users className="h-4 w-4" />}
+          icon={<Users className="h-4 w-4 text-slate-400" />}
           title={row.original.student_name}
           subtitle={`${row.original.employee_id} · ${row.original.department}`}
         />
@@ -54,15 +54,15 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       id: 'status',
       cell: ({ row }) => {
         const statusMap: Record<string, { text: string; color: string; bg: string }> = {
-          COMPLETED: { text: '已完成', color: '#10B981', bg: '#D1FAE5' },
-          IN_PROGRESS: { text: '进行中', color: '#3B82F6', bg: '#DBEAFE' },
+          COMPLETED: { text: '已完成', color: '#059669', bg: '#D1FAE5' },
+          IN_PROGRESS: { text: '进行中', color: '#2563EB', bg: '#DBEAFE' },
           OVERDUE: { text: '已逾期', color: '#DC2626', bg: '#FEE2E2' },
-          COMPLETED_ABNORMAL: { text: '完成但异常', color: '#F59E0B', bg: '#FEF3C7' },
+          COMPLETED_ABNORMAL: { text: '完成但异常', color: '#D97706', bg: '#FEF3C7' },
         };
         const status = statusMap[row.original.status] || statusMap.IN_PROGRESS;
         return (
           <span
-            className="px-2.5 py-1 rounded-md text-xs font-semibold"
+            className="inline-flex px-2.5 py-1 rounded-md text-xs font-semibold"
             style={{ color: status.color, backgroundColor: status.bg }}
           >
             {status.text}
@@ -74,7 +74,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '任务节点进度',
       id: 'node_progress',
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-slate-700 tabular-nums">
           {row.original.node_progress}
         </span>
       ),
@@ -84,8 +84,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       id: 'score',
       cell: ({ row }) => (
         <span className={cn(
-          'text-sm font-bold',
-          row.original.score !== null ? 'text-gray-900' : 'text-gray-400'
+          'text-sm font-bold tabular-nums',
+          row.original.score !== null ? 'text-slate-900' : 'text-slate-400'
         )}>
           {row.original.score !== null ? row.original.score : '-'}
         </span>
@@ -95,7 +95,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '用时',
       id: 'time_spent',
       cell: ({ row }) => (
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-slate-600 tabular-nums">
           {row.original.time_spent} 分钟
         </span>
       ),
@@ -104,7 +104,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '答题情况',
       id: 'answer_details',
       cell: ({ row }) => (
-        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-150 cursor-pointer">
           {row.original.answer_details}
         </button>
       ),
@@ -162,8 +162,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       {/* Row 2: Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Node Progress */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">任务节点完成情况</h3>
+        <Card className="p-6 border border-gray-100">
+          <h3 className="text-base font-semibold text-slate-900 mb-5">任务节点完成情况</h3>
           <div className="space-y-4">
             {analytics.node_progress.map((node) => (
               <NodeProgressBar key={node.node_id} node={node} />
@@ -172,18 +172,18 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         </Card>
 
         {/* Right: Distribution Chart */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">分布统计</h3>
+        <Card className="p-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-base font-semibold text-slate-900">分布统计</h3>
             {hasScoreDistribution && (
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="flex bg-slate-100 rounded-lg p-1">
                 <button
                   onClick={() => setChartType('time')}
                   className={cn(
-                    'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'time'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
                   时间分布
@@ -191,10 +191,10 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
                 <button
                   onClick={() => setChartType('score')}
                   className={cn(
-                    'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                    'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'score'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
                   分数分布
@@ -210,12 +210,12 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       </div>
 
       {/* Row 3: Student Execution Table */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">学员执行情况</h3>
+      <Card className="p-6 border border-gray-100">
+        <h3 className="text-base font-semibold text-slate-900 mb-5">学员执行情况</h3>
         <DataTable
           columns={columns}
           data={students || []}
-          rowClassName="hover:bg-gray-50"
+          rowClassName="hover:bg-slate-50 transition-colors duration-150 cursor-pointer"
         />
       </Card>
     </div>
@@ -232,19 +232,19 @@ interface KPICardProps {
 }
 
 const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, color }) => (
-  <Card className="p-5 hover:scale-[1.02] transition-transform">
+  <Card className="p-5 cursor-pointer hover:shadow-md transition-shadow duration-200 ease-out border border-gray-100">
     <div className="flex items-center gap-4">
       <div
-        className="w-12 h-12 rounded-lg flex items-center justify-center"
-        style={{ backgroundColor: `${color}15` }}
+        className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-200"
+        style={{ backgroundColor: `${color}12` }}
       >
         <Icon className="h-6 w-6" style={{ color }} />
       </div>
-      <div>
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</p>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-bold text-gray-900">{value}</span>
-          {subtitle && <span className="text-sm text-gray-500">{subtitle}</span>}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">{title}</p>
+        <div className="flex items-baseline gap-1.5 mt-0.5">
+          <span className="text-2xl font-bold text-slate-900 tabular-nums">{value}</span>
+          {subtitle && <span className="text-sm text-slate-500">{subtitle}</span>}
         </div>
       </div>
     </div>
@@ -261,19 +261,26 @@ const NodeProgressBar: React.FC<NodeProgressBarProps> = ({ node }) => {
   const color = node.node_type === 'KNOWLEDGE' ? '#10B981' : '#3B82F6';
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 group cursor-pointer">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4" style={{ color }} />
-          <span className="text-sm font-medium text-gray-700">{node.node_name}</span>
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center transition-colors duration-200"
+            style={{ backgroundColor: `${color}12` }}
+          >
+            <Icon className="h-3.5 w-3.5" style={{ color }} />
+          </div>
+          <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-200">
+            {node.node_name}
+          </span>
         </div>
-        <span className="text-sm text-gray-500">
-          {node.completed_count}/{node.total_count} ({node.percentage}%)
+        <span className="text-sm text-slate-500 tabular-nums">
+          {node.completed_count}/{node.total_count} <span className="text-slate-400">({node.percentage}%)</span>
         </span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-500 ease-out"
           style={{ width: `${node.percentage}%`, backgroundColor: color }}
         />
       </div>
@@ -294,21 +301,21 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
   return (
     <div className="space-y-3">
       {data.map((item) => (
-        <div key={item.range} className="flex items-center gap-3">
-          <span className="w-16 text-xs text-gray-500 text-right">
+        <div key={item.range} className="flex items-center gap-3 group cursor-pointer">
+          <span className="w-16 text-xs text-slate-500 text-right tabular-nums font-medium">
             {type === 'time' ? `${item.range}分` : `${item.range}分`}
           </span>
-          <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden">
+          <div className="flex-1 h-7 bg-slate-100 rounded-md overflow-hidden">
             <div
-              className="h-full rounded transition-all duration-500 flex items-center justify-end pr-2"
+              className="h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-90"
               style={{
                 width: `${(item.count / maxCount) * 100}%`,
                 backgroundColor: color,
-                minWidth: item.count > 0 ? '24px' : '0',
+                minWidth: item.count > 0 ? '28px' : '0',
               }}
             >
               {item.count > 0 && (
-                <span className="text-xs font-medium text-white">{item.count}</span>
+                <span className="text-xs font-semibold text-white tabular-nums">{item.count}</span>
               )}
             </div>
           </div>
