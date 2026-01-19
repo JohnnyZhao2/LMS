@@ -2,7 +2,7 @@
  * 任务相关类型定义
  */
 
-import type { TaskStatus, SimpleTag } from './common';
+import type { TaskStatus } from './common';
 import type { QuizType } from './quiz';
 
 /**
@@ -33,6 +33,7 @@ export interface TaskKnowledge {
   order: number;
   resource_uuid: string;
   version_number: number;
+  is_current: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export interface TaskQuiz {
   order: number;
   resource_uuid: string;
   version_number: number;
+  is_current: boolean;
   quiz_type: QuizType;
   quiz_type_display: string;
   duration?: number | null;
@@ -72,8 +74,11 @@ export interface TaskDetail {
   quizzes: TaskQuiz[];
   assignments: TaskAssignment[];
   created_by_name: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
+  has_progress: boolean;
 }
 
 /**
@@ -87,6 +92,10 @@ export interface LearningTaskProgress {
   knowledge_completed?: number;
   quiz_total?: number;
   quiz_completed?: number;
+  exam_total?: number;
+  exam_completed?: number;
+  practice_total?: number;
+  practice_completed?: number;
 }
 
 /**
@@ -211,6 +220,10 @@ export interface TaskProgress {
   knowledge_completed?: number;
   quiz_total?: number;
   quiz_completed?: number;
+  exam_total?: number;
+  exam_completed?: number;
+  practice_total?: number;
+  practice_completed?: number;
 }
 
 export interface StudentTaskCenterItem {
@@ -250,6 +263,8 @@ export interface TaskListItem {
   closed_at?: string;
   knowledge_count: number;
   quiz_count: number;
+  exam_count: number;
+  practice_count: number;
   assignee_count: number;
   /** 已完成的学员数量 */
   completed_count: number;
@@ -257,6 +272,9 @@ export interface TaskListItem {
   pass_rate?: number | null;
   created_by?: number;
   created_by_name: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
+  has_progress: boolean;
 }

@@ -1,11 +1,19 @@
 import { LoginForm } from '@/features/auth/components/login-form';
+import { AuthLayout } from '@/components/layouts';
 
 /**
  * 登录页面
- * LoginForm 组件已包含完整的布局和样式
+ * 使用 AuthLayout 提供统一且精致的视觉背景
  */
 export const LoginPage: React.FC = () => {
-  return <LoginForm />;
+  return (
+    <AuthLayout
+      title="欢迎回来"
+      description="请登录您的账号以继续"
+    >
+      <LoginForm />
+    </AuthLayout>
+  );
 };
 
 export default LoginPage;

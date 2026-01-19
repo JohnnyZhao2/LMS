@@ -7,8 +7,8 @@ Implements:
 import uuid
 from django.db import models
 from django.db.models import Q
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
-class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
+class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     试卷模型
     试卷是题目的容器，不包含考试规则（考试规则在任务中设置）。
@@ -35,28 +35,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         related_name='quizzes',
         verbose_name='题目'
     )
-    resource_uuid = models.UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-        db_index=True,
-        verbose_name='资源标识'
-    )
-    version_number = models.PositiveIntegerField(
-        default=1,
-        verbose_name='版本号'
-    )
-    source_version = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='quiz_versions',
-        verbose_name='来源版本'
-    )
-    is_current = models.BooleanField(
-        default=True,
-        verbose_name='是否当前版本'
-    )
     QUIZ_TYPE_CHOICES = [
         ('PRACTICE', '练习'),
         ('EXAM', '考试'),
@@ -81,6 +59,15 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         null=True,
         blank=True,
         verbose_name='及格分数'
+    )
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quiz_updated',
+        verbose_name='最后更新者'
     )
     class Meta:
         db_table = 'lms_quiz'

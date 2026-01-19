@@ -43,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   onRowSelectionChange?: (selection: RowSelectionState) => void
   onRowClick?: (row: TData) => void
   rowClassName?: string
+  minHeight?: string | number
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   onRowClick,
   rowClassName,
+  minHeight = "400px",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -89,28 +91,27 @@ export function DataTable<TData, TValue>({
     pageCount: pagination?.pageCount ?? -1,
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-full" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </div>
-    )
-  }
+  const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
 
   return (
-    <div className="flex-1 flex flex-col mt-4">
+    <div
+      className="flex-1 flex flex-col mt-4"
+      style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
+    >
       <div className="flex-1 overflow-auto">
         <div className="rounded-lg bg-white shadow-none border-0">
-          <Table className="table-auto">
+          <Table className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
                   {headerGroup.headers.map((header, index) => (
                     <TableHead
                       key={header.id}
+                      style={{
+                        width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : undefined,
+                        minWidth: header.column.columnDef.minSize ? `${header.column.columnDef.minSize}px` : undefined,
+                        maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : undefined,
+                      }}
                       className={cn(
                         index === 0
                           ? 'rounded-tl-lg'
@@ -131,7 +132,24 @@ export function DataTable<TData, TValue>({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {columns.map((column, index) => (
+                      <TableCell
+                        key={index}
+                        style={{
+                          width: column.size ? `${column.size}px` : undefined,
+                          minWidth: column.minSize ? `${column.minSize}px` : undefined,
+                          maxWidth: column.maxSize ? `${column.maxSize}px` : undefined,
+                        }}
+                      >
+                        <Skeleton className="h-6 w-full opacity-50" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
@@ -140,7 +158,14 @@ export function DataTable<TData, TValue>({
                     className={onRowClick ? `cursor-pointer hover:bg-[#F9FAFB] ${rowClassName || ''}` : rowClassName}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: cell.column.columnDef.size ? `${cell.column.columnDef.size}px` : undefined,
+                          minWidth: cell.column.columnDef.minSize ? `${cell.column.columnDef.minSize}px` : undefined,
+                          maxWidth: cell.column.columnDef.maxSize ? `${cell.column.columnDef.maxSize}px` : undefined,
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()

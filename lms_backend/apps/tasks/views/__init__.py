@@ -3,6 +3,7 @@ Task views module.
 Split into:
 - admin.py: Task management views for admin/mentor/dept_manager
 - student.py: Student task execution views
+- analytics.py: Task analytics and grading views
 """
 from .admin import (
     AssignableUserListView,
@@ -16,6 +17,13 @@ from .student import (
     StudentTaskDetailView,
     CompleteKnowledgeLearningView,
 )
+from .analytics import (
+    TaskAnalyticsView,
+    StudentExecutionsView,
+    GradingQuestionsView,
+    GradingAnswersView,
+    GradingSubmitView,
+)
 __all__ = [
     # Admin views
     'AssignableUserListView',
@@ -27,4 +35,10 @@ __all__ = [
     'StudentAssignmentListView',
     'StudentTaskDetailView',
     'CompleteKnowledgeLearningView',
+    # Analytics views
+    'TaskAnalyticsView',
+    'StudentExecutionsView',
+    'GradingQuestionsView',
+    'GradingAnswersView',
+    'GradingSubmitView',
 ]

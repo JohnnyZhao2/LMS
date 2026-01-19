@@ -118,5 +118,3 @@ export const useDepartments = () => {
     select: normalizeDepartments,
   });
 };
-
-

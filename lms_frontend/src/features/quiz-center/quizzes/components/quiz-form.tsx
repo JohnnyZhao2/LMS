@@ -82,6 +82,8 @@ export const QuizForm: React.FC = () => {
         const items: QuizQuestionItem[] = quizData.questions
           .map((qq) => ({
             id: qq.question,
+            resource_uuid: qq.resource_uuid,
+            is_current: qq.is_current,
             content: qq.question_content,
             question_type: qq.question_type as QuestionType,
             question_type_display: qq.question_type_display || getQuestionTypeLabel(qq.question_type as QuestionType),
@@ -101,6 +103,8 @@ export const QuizForm: React.FC = () => {
           if (!q) return null;
           return {
             id: q.id,
+            resource_uuid: q.resource_uuid,
+            is_current: q.is_current,
             content: q.content,
             question_type: q.question_type,
             question_type_display: q.question_type_display || getQuestionTypeLabel(q.question_type),
@@ -116,10 +120,10 @@ export const QuizForm: React.FC = () => {
 
   const filteredQuestionsData = useMemo(() => {
     if (!questionsData) return undefined;
-    const selectedIds = new Set(selectedQuestions.map(q => q.id));
+    const selectedUuids = new Set(selectedQuestions.map(q => q.resource_uuid));
     return {
       ...questionsData,
-      results: questionsData.results.filter(q => !selectedIds.has(q.id))
+      results: questionsData.results.filter(q => !selectedUuids.has(q.resource_uuid))
     };
   }, [questionsData, selectedQuestions]);
 
@@ -134,9 +138,11 @@ export const QuizForm: React.FC = () => {
   }, [selectedQuestions]);
 
   const handleAddQuestion = (q: Question) => {
-    if (selectedQuestions.some(x => x.id === q.id)) return toast.warning('题目已在试卷中');
+    if (selectedQuestions.some(x => x.resource_uuid === q.resource_uuid)) return toast.warning('该题目已在试卷中');
     const newItem: QuizQuestionItem = {
       id: q.id,
+      resource_uuid: q.resource_uuid,
+      is_current: q.is_current,
       content: q.content,
       question_type: q.question_type,
       question_type_display: q.question_type_display || getQuestionTypeLabel(q.question_type),
@@ -179,6 +185,30 @@ export const QuizForm: React.FC = () => {
 
     setSelectedQuestions(sorted);
     toast.success('已按题型一键排序');
+  };
+
+  const handleUpgradeQuestion = (index: number, resourceUuid: string) => {
+    // 从题库中找到该 resource_uuid 的最新版本
+    const latestQuestion = questionsData?.results.find(q => q.resource_uuid === resourceUuid);
+    if (!latestQuestion) {
+      toast.error('未找到最新版本');
+      return;
+    }
+    // 替换该位置的题目
+    setSelectedQuestions(prev => prev.map((q, idx) => {
+      if (idx !== index) return q;
+      return {
+        id: latestQuestion.id,
+        resource_uuid: latestQuestion.resource_uuid,
+        is_current: latestQuestion.is_current,
+        content: latestQuestion.content,
+        question_type: latestQuestion.question_type,
+        question_type_display: latestQuestion.question_type_display || getQuestionTypeLabel(latestQuestion.question_type),
+        score: q.score, // 保留原分值
+        order: q.order,
+      };
+    }));
+    toast.success('已升级到最新版本');
   };
 
   const handleEditQuestion = async (item: QuizQuestionItem) => {
@@ -236,6 +266,8 @@ export const QuizForm: React.FC = () => {
         const created = await createQuestion.mutateAsync(questionForm as QuestionCreateRequest);
         setSelectedQuestions(prev => [...prev, {
           id: created.id,
+          resource_uuid: created.resource_uuid,
+          is_current: created.is_current,
           content: created.content,
           question_type: created.question_type,
           question_type_display: created.question_type_display || getQuestionTypeLabel(created.question_type),
@@ -281,6 +313,9 @@ export const QuizForm: React.FC = () => {
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <QuizFormHeader
         isEdit={isEdit}
+        quizData={quizData}
+        title={title}
+        onTitleChange={setTitle}
         onBack={() => navigate(-1)}
         onCancel={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}
@@ -310,6 +345,7 @@ export const QuizForm: React.FC = () => {
           onRemoveQuestion={removeQuestion}
           onScoreChange={handleScoreChange}
           onSortQuestions={handleSortQuestions}
+          onUpgradeQuestion={handleUpgradeQuestion}
         />
 
         <QuizSidePanel

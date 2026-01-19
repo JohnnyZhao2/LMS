@@ -5,19 +5,22 @@ Dashboard 应用服务
 - 学员进度跟踪
 - 部门/团队分析
 - 知识热度统计
-此服务层通过 Repository 访问数据，将业务逻辑与数据访问分离，
-提高代码可重用性和可测试性。
 """
 from typing import List, Dict, Any
 from django.db.models import QuerySet
 from core.base_service import BaseService
 from apps.users.models import User
 from apps.users.permissions import get_current_role, get_accessible_students
-from .repositories import (
-    TaskAssignmentDashboardRepository,
-    KnowledgeDashboardRepository,
-    SubmissionDashboardRepository,
+from .selectors import (
+    calculate_avg_score,
+    calculate_task_stats,
+    get_assignments_by_students,
+    get_latest_knowledge,
+    get_pending_tasks,
+    get_student_assignments,
 )
+
+
 class StudentDashboardService(BaseService):
     """
     学员仪表盘服务
@@ -26,9 +29,6 @@ class StudentDashboardService(BaseService):
     - 最新知识获取
     - 任务摘要统计
     """
-    def __init__(self):
-        self.task_assignment_repo = TaskAssignmentDashboardRepository()
-        self.knowledge_repo = KnowledgeDashboardRepository()
     def get_pending_tasks(self, user: User, limit: int = 10) -> QuerySet:
         """
         获取学员的待办任务
@@ -38,10 +38,8 @@ class StudentDashboardService(BaseService):
         Returns:
             待办任务 QuerySet
         """
-        return self.task_assignment_repo.get_pending_tasks(
-            user_id=user.id,
-            limit=limit
-        )
+        return get_pending_tasks(user_id=user.id, limit=limit)
+
     def get_latest_knowledge(self, limit: int = 5) -> QuerySet:
         """
         获取最新发布的知识文档
@@ -50,7 +48,8 @@ class StudentDashboardService(BaseService):
         Returns:
             知识文档 QuerySet
         """
-        return self.knowledge_repo.get_latest_knowledge(limit=limit)
+        return get_latest_knowledge(limit=limit)
+
     def get_task_summary(self, user: User) -> Dict[str, int]:
         """
         获取学员任务摘要统计
@@ -59,16 +58,16 @@ class StudentDashboardService(BaseService):
         Returns:
             包含待办、已完成、逾期、总数量的字典
         """
-        assignments = self.task_assignment_repo.get_student_assignments(
-            user_id=user.id
-        )
-        stats = self.task_assignment_repo.calculate_task_stats(assignments)
+        assignments = get_student_assignments(user_id=user.id)
+        stats = calculate_task_stats(assignments)
         return {
             'pending': stats['in_progress_tasks'],
             'completed': stats['completed_tasks'],
             'overdue': stats['overdue_tasks'],
             'total': stats['total_tasks']
         }
+
+
 class MentorDashboardService(BaseService):
     """
     导师/室经理仪表盘服务
@@ -77,9 +76,6 @@ class MentorDashboardService(BaseService):
     - 单个学员统计
     - 快捷链接生成
     """
-    def __init__(self):
-        self.task_assignment_repo = TaskAssignmentDashboardRepository()
-        self.submission_repo = SubmissionDashboardRepository()
     def get_dashboard_data(self, user: User) -> Dict[str, Any]:
         """
         获取导师/室经理的完整仪表盘数据
@@ -100,6 +96,7 @@ class MentorDashboardService(BaseService):
             'quick_links': quick_links,
             'current_role': current_role
         }
+
     def _calculate_summary(
         self,
         student_ids: List[int]
@@ -118,13 +115,9 @@ class MentorDashboardService(BaseService):
                 'practice_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0},
                 'exam_tasks': {'total': 0, 'completed': 0, 'completion_rate': 0.0, 'avg_score': None}
             }
-        assignments = self.task_assignment_repo.get_assignments_by_students(
-            student_ids=student_ids
-        )
-        stats = self.task_assignment_repo.calculate_task_stats(assignments)
-        overall_avg_score = self.submission_repo.calculate_avg_score(
-            student_ids=student_ids
-        )
+        assignments = get_assignments_by_students(student_ids=student_ids)
+        stats = calculate_task_stats(assignments)
+        overall_avg_score = calculate_avg_score(student_ids=student_ids)
         default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         return {
             'total_students': len(student_ids),
@@ -138,17 +131,14 @@ class MentorDashboardService(BaseService):
             'practice_tasks': default_stats,
             'exam_tasks': {**default_stats, 'avg_score': None}
         }
+
     def _calculate_student_stats(self, students: QuerySet) -> List[Dict[str, Any]]:
         """计算每个学员的统计"""
         student_stats = []
         for student in students.select_related('department'):
-            assignments = self.task_assignment_repo.get_student_assignments(
-                user_id=student.id
-            )
-            stats = self.task_assignment_repo.calculate_task_stats(assignments)
-            avg_score = self.submission_repo.calculate_avg_score(
-                user_id=student.id
-            )
+            assignments = get_student_assignments(user_id=student.id)
+            stats = calculate_task_stats(assignments)
+            avg_score = calculate_avg_score(user_id=student.id)
             student_stats.append({
                 'id': student.id,
                 'employee_id': student.employee_id,
@@ -165,6 +155,7 @@ class MentorDashboardService(BaseService):
                 'exam_pass_rate': None
             })
         return student_stats
+
     @staticmethod
     def _generate_quick_links() -> Dict[str, str]:
         """生成快捷访问链接"""

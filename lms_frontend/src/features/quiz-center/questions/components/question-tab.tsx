@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
+import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
@@ -74,7 +74,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
                     title={row.original.content}
-                    subtitle={`ID: ${row.original.id} • ${row.original.created_by_name || '系统'}`}
+                    subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
                     iconBg="#F0FDF4"
                     iconColor="#16A34A"
                 />
@@ -140,12 +140,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-xs"
-                                    onClick={() => {/* TODO: Implement edit */ }}
-                                >
-                                    <Pencil className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑题目
-                                </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-gray-200 mx-2" />
                                 <DropdownMenuItem
                                     className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors text-xs"
@@ -189,7 +183,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
                             <FileText className="w-5 h-5 text-emerald-500" />
                             题目详情预览
-                            <span className="ml-2 text-xs font-medium text-gray-400">ID: {previewQuestion?.id}</span>
+                            <span className="ml-2 text-xs font-medium text-gray-400"></span>
                         </DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto">

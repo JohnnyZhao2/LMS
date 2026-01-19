@@ -56,17 +56,6 @@ class Submission(TimestampMixin, models.Model):
         related_name='submissions',
         verbose_name='答题用户'
     )
-    # 版本追踪字段
-    quiz_resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        verbose_name='试卷资源UUID'
-    )
-    quiz_version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='试卷版本号'
-    )
     # 答题次数（练习任务可多次提交）
     attempt_number = models.PositiveIntegerField(
         default=1,
@@ -114,12 +103,6 @@ class Submission(TimestampMixin, models.Model):
         verbose_name = '答题记录'
         verbose_name_plural = '答题记录'
         ordering = ['-created_at']
-        indexes = [
-            models.Index(
-                fields=['quiz_resource_uuid', 'quiz_version_number'],
-                name='idx_submission_quiz_version'
-            )
-        ]
         # 考试任务每个用户只能有一次提交
         # 练习任务可以有多次提交，通过 attempt_number 区分
     def __str__(self):
@@ -169,33 +152,6 @@ class Submission(TimestampMixin, models.Model):
     def all_subjective_graded(self):
         """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
-    def _auto_grade_objective_questions(self):
-        """
-        自动评分客观题
-        Property 30: 客观题自动评分
-        """
-        for answer in self.answers.filter(
-            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ):
-            answer.auto_grade()
-    def _calculate_score(self):
-        """计算当前得分"""
-        self.obtained_score = self.answers.aggregate(
-            total=models.Sum('obtained_score')
-        )['total'] or Decimal('0')
-    def _update_task_assignment(self):
-        """更新任务分配的成绩"""
-        assignment = self.task_assignment
-        # 更新成绩（取最高分）
-        if assignment.score is None or self.obtained_score > assignment.score:
-            assignment.score = self.obtained_score
-            assignment.save(update_fields=['score'])
-    def _check_practice_completion(self):
-        """
-        检查练习任务是否应该自动完成
-        Property 25: 练习任务自动完成
-        """
-        self.task_assignment.check_completion()
     def complete_grading(self):
         """
         完成评分（所有主观题评分完成后调用）
@@ -208,11 +164,16 @@ class Submission(TimestampMixin, models.Model):
         if not self.all_subjective_graded:
             raise ValidationError('还有未评分的主观题')
         # 重新计算总分
-        self._calculate_score()
+        self.obtained_score = self.answers.aggregate(
+            total=models.Sum('obtained_score')
+        )['total'] or Decimal('0')
         self.status = 'GRADED'
         self.save()
-        # 更新任务分配
-        self._update_task_assignment()
+        # 更新任务分配成绩（取最高分）
+        assignment = self.task_assignment
+        if assignment.score is None or self.obtained_score > assignment.score:
+            assignment.score = self.obtained_score
+            assignment.save(update_fields=['score'])
 class Answer(TimestampMixin, models.Model):
     """
     答案记录模型
@@ -233,17 +194,6 @@ class Answer(TimestampMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='answers',
         verbose_name='题目'
-    )
-    # 版本追踪字段
-    question_resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        verbose_name='题目资源UUID'
-    )
-    question_version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='题目版本号'
     )
     # 用户答案
     # 单选题: "A"
@@ -293,12 +243,6 @@ class Answer(TimestampMixin, models.Model):
         verbose_name_plural = '答案记录'
         unique_together = ['submission', 'question']
         ordering = ['submission', 'question']
-        indexes = [
-            models.Index(
-                fields=['question_resource_uuid', 'question_version_number'],
-                name='idx_answer_question_version'
-            )
-        ]
     def __str__(self):
         return f"{self.submission} - {self.question}"
     @property

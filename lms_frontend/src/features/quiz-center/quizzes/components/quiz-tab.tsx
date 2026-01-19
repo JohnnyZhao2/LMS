@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, MoreHorizontal, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
@@ -24,16 +24,21 @@ import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuizTabProps {
   search?: string;
+  quizType?: 'EXAM' | 'PRACTICE';
 }
 
-export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
+export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined });
+  const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setPage(1);
+  }, [quizType, search]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -55,7 +60,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
         <CellWithIcon
           icon={<Layout className="w-5 h-5" />}
           title={row.original.title}
-          subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+          subtitle={row.original.updated_by_name || row.original.created_by_name}
           iconBg="#EFF6FF"
           iconColor="#2563EB"
         />
@@ -78,7 +83,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
             />
             {isExam && row.original.duration && (
               <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter px-0.5" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                {row.original.duration}min / Pass {row.original.pass_score}
+                {row.original.duration}分钟 / 合格 {row.original.pass_score}
               </span>
             )}
           </div>
@@ -95,7 +100,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
               {row.original.question_count}
             </span>
             <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
-              Questions
+              题量 (Q)
             </span>
           </div>
           <div className="flex flex-col">
@@ -103,7 +108,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
               {row.original.total_score}
             </span>
             <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
-              Points
+              总分 (P)
             </span>
           </div>
         </div>
@@ -111,14 +116,14 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '' }) => {
     },
     {
       id: 'timestamp',
-      header: '构建时间',
+      header: '更新时间',
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="text-sm font-bold text-[#111827]">
-            {dayjs(row.original.created_at).format('YYYY.MM.DD')}
+            {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
           </span>
           <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
-            {dayjs(row.original.created_at).format('HH:mm:ss')}
+            {dayjs(row.original.updated_at).format('HH:mm:ss')}
           </span>
         </div>
       ),

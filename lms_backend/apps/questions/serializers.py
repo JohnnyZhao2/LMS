@@ -9,6 +9,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
     Serializer for question list view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     line_type = TagSimpleSerializer(read_only=True)
@@ -21,14 +22,16 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'score',
             'is_objective', 'line_type',
             'is_current',
-            'created_by', 'created_by_name',
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
+
         ]
 class QuestionDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for question detail view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     is_subjective = serializers.ReadOnlyField()
@@ -41,9 +44,11 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'options', 'answer', 'explanation', 'score',
             'is_objective', 'is_subjective', 'line_type',
             'is_current',
-            'created_by', 'created_by_name',
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
         ]
+
+
 class QuestionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating questions.

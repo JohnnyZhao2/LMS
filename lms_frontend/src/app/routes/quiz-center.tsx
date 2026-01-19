@@ -2,10 +2,12 @@
  * 试卷中心相关路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { QuizCenter } from '@/features/quiz-center/components/quiz-center';
-import { QuizForm } from '@/features/quiz-center/quizzes/components/quiz-form';
 import { ROUTES } from '@/config/routes';
+
+const QuizCenter = lazy(() => import('@/features/quiz-center/components/quiz-center').then(m => ({ default: m.QuizCenter })));
+const QuizForm = lazy(() => import('@/features/quiz-center/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
 
 export const quizCenterRoutes = [
   <Route

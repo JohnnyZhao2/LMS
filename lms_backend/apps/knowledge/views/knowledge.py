@@ -6,8 +6,6 @@ Implements:
 - Student knowledge list
 - View count increment
 """
-from django.db import models
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -34,13 +32,39 @@ class KnowledgeListCreateView(APIView):
     Knowledge list and create endpoint.
     """
     permission_classes = [IsAuthenticated]
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = KnowledgeService()
+
+    def _get_knowledge_list(self, request):
+        """共享的知识列表获取逻辑"""
+        filters = {
+            'knowledge_type': request.query_params.get('knowledge_type'),
+            'line_type_id': request.query_params.get('line_type_id'),
+            'system_tag_id': request.query_params.get('system_tag_id'),
+            'operation_tag_id': request.query_params.get('operation_tag_id'),
+        }
+        filters = {k: v for k, v in filters.items() if v}
+        search = request.query_params.get('search')
+
+        knowledge_list = self.service.get_all_with_filters(
+            filters=filters,
+            search=search
+        )
+
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(knowledge_list, request)
+        if page is not None:
+            serializer = KnowledgeListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = KnowledgeListSerializer(knowledge_list, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
         summary='获取知识文档列表',
         description='''获取知识文档列表，支持条线类型、知识类型和系统标签筛选。
-普通用户只能看到当前版本的知识，管理员默认也只看到当前版本。
+所有用户只能看到当前版本的知识。
 **注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
 ''',
         parameters=[
@@ -56,28 +80,7 @@ class KnowledgeListCreateView(APIView):
         tags=['知识管理']
     )
     def get(self, request):
-        # 1. 获取查询参数
-        filters = {
-            'knowledge_type': request.query_params.get('knowledge_type'),
-            'line_type_id': request.query_params.get('line_type_id'),
-            'system_tag_id': request.query_params.get('system_tag_id'),
-            'operation_tag_id': request.query_params.get('operation_tag_id'),
-        }
-        filters = {k: v for k, v in filters.items() if v}
-        search = request.query_params.get('search')
-        # 2. 调用 Service（管理端和学员端都只返回当前版本）
-        knowledge_list = self.service.get_all_with_filters(
-            filters=filters,
-            search=search
-        )
-        # 3. 分页和序列化
-        paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(knowledge_list, request)
-        if page is not None:
-            serializer = KnowledgeListSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-        serializer = KnowledgeListSerializer(knowledge_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
         description='创建新的知识文档（仅管理员）',
@@ -260,50 +263,6 @@ class KnowledgeStatsView(APIView):
         # 4. 序列化输出
         serializer = KnowledgeStatsSerializer(stats)
         return Response(serializer.data, status=status.HTTP_200_OK)
-class StudentKnowledgeListView(APIView):
-    """学员知识列表端点 - 只返回当前版本的知识"""
-    permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
-    @extend_schema(
-        summary='获取学员知识列表',
-        description='获取已发布的知识文档列表。此接口专为学员端设计。',
-        parameters=[
-            OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
-            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
-            OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
-            OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
-            OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
-            OpenApiParameter(name='page', type=int, description='页码（默认1）'),
-            OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
-        ],
-        responses={200: KnowledgeListSerializer(many=True)},
-        tags=['知识管理']
-    )
-    def get(self, request):
-        # 1. 获取查询参数
-        filters = {
-            'knowledge_type': request.query_params.get('knowledge_type'),
-            'line_type_id': request.query_params.get('line_type_id'),
-            'system_tag_id': request.query_params.get('system_tag_id'),
-            'operation_tag_id': request.query_params.get('operation_tag_id'),
-        }
-        filters = {k: v for k, v in filters.items() if v}
-        search = request.query_params.get('search')
-        # 2. 调用 Service（学员只能看到当前版本的知识）
-        knowledge_list = self.service.get_all_with_filters(
-            filters=filters,
-            search=search
-        )
-        # 3. 分页和序列化
-        paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(knowledge_list, request)
-        if page is not None:
-            serializer = KnowledgeListSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-        serializer = KnowledgeListSerializer(knowledge_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class StudentTaskKnowledgeDetailView(APIView):
@@ -343,7 +302,7 @@ class StudentTaskKnowledgeDetailView(APIView):
                     {'code': ErrorCodes.PERMISSION_DENIED, 'message': '无权访问该知识文档'},
                     status=status.HTTP_403_FORBIDDEN
                 )
-        knowledge = task_knowledge.get_versioned_knowledge()
+        knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
         return Response(serializer.data, status=status.HTTP_200_OK)
 class KnowledgeIncrementViewCountView(APIView):

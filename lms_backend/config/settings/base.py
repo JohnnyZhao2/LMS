@@ -4,10 +4,16 @@ Django base settings for LMS project.
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Load environment variables
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-in-production')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-development')
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -96,6 +102,17 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'auth': '10/minute',
+        'submission': '30/hour',
+        'burst': '60/minute',
+    },
 }
 # Simple JWT settings
 SIMPLE_JWT = {
@@ -182,6 +199,14 @@ SPECTACULAR_SETTINGS = {
     'POSTPROCESSING_HOOKS': [],
     'PREPROCESSING_HOOKS': [],
 }
+# Cache settings (using Django's default in-memory cache for rate limiting)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'lms-cache',
+    }
+}
+
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = []

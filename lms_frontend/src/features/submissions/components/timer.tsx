@@ -36,7 +36,7 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [seconds > 0, onTimeUp]);
+  }, [seconds, onTimeUp]);
 
   const formatTime = (secs: number) => {
     const hours = Math.floor(secs / 3600);
@@ -54,28 +54,28 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-4 py-2 rounded-full border',
-        isCritical && 'bg-error-50 border-error-300 animate-pulse',
-        isWarning && !isCritical && 'bg-warning-50 border-warning-300',
-        !isWarning && 'bg-white/10 border-white/20'
+        'flex items-center gap-2 px-4 py-2 rounded-lg border',
+        isCritical && 'bg-red-50 border-red-300 animate-pulse',
+        isWarning && !isCritical && 'bg-orange-50 border-orange-300',
+        !isWarning && 'bg-blue-50 border-blue-200'
       )}
     >
       {isCritical ? (
-        <AlertTriangle className="w-4 h-4 text-error-500" />
+        <AlertTriangle className="w-4 h-4 text-red-500" />
       ) : (
         <Clock
           className={cn(
             'w-4 h-4',
-            isWarning ? 'text-warning-600' : 'text-white'
+            isWarning ? 'text-orange-600' : 'text-blue-600'
           )}
         />
       )}
       <span
         className={cn(
-          'font-mono text-lg font-semibold tracking-wide',
-          isCritical && 'text-error-600',
-          isWarning && !isCritical && 'text-warning-600',
-          !isWarning && 'text-white'
+          'font-mono text-sm font-semibold tracking-wide',
+          isCritical && 'text-red-600',
+          isWarning && !isCritical && 'text-orange-600',
+          !isWarning && 'text-blue-600'
         )}
       >
         {formatTime(seconds)}

@@ -2,12 +2,13 @@
  * 知识库相关路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { StudentKnowledgeCenter } from '@/features/knowledge/components/student-knowledge-center';
-import { KnowledgeDetail } from '@/features/knowledge/components/knowledge-detail';
-import { KnowledgeForm } from '@/features/knowledge/components/knowledge-form';
-import { AdminKnowledgeList } from '@/features/knowledge/components/admin-knowledge-list';
 import { ROUTES } from '@/config/routes';
+
+const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
+const KnowledgeDetail = lazy(() => import('@/features/knowledge/components/knowledge-detail').then(m => ({ default: m.KnowledgeDetail })));
+const KnowledgeForm = lazy(() => import('@/features/knowledge/components/knowledge-form').then(m => ({ default: m.KnowledgeForm })));
 
 export const knowledgeRoutes = [
   // 知识中心（学员）
@@ -16,7 +17,7 @@ export const knowledgeRoutes = [
     path={ROUTES.KNOWLEDGE}
     element={
       <ProtectedRoute>
-        <StudentKnowledgeCenter />
+        <KnowledgeCenter />
       </ProtectedRoute>
     }
   />,
@@ -35,7 +36,7 @@ export const knowledgeRoutes = [
     path={ROUTES.ADMIN_KNOWLEDGE}
     element={
       <ProtectedRoute allowedRoles={['ADMIN']}>
-        <AdminKnowledgeList />
+        <KnowledgeCenter isAdmin />
       </ProtectedRoute>
     }
   />,

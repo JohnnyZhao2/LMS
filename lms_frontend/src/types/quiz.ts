@@ -21,6 +21,8 @@ export interface QuizQuestion {
   question_type_display: string;
   order: number;
   score: string;
+  resource_uuid: string;
+  is_current: boolean;
 }
 
 /**
@@ -42,6 +44,8 @@ export interface QuizListItem {
   is_current: boolean;
   created_by?: number;
   created_by_name?: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +72,8 @@ export interface QuizDetail {
   is_current: boolean;
   created_by?: number;
   created_by_name?: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
 }

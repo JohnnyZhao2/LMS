@@ -46,4 +46,3 @@ export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
     },
   });
 };
-

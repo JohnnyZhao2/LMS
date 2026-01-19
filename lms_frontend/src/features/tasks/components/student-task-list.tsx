@@ -4,16 +4,15 @@ import React, { useState } from 'react';
 import { Inbox, Activity, Search } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
-import { Skeleton } from '@/components/ui';
+import { Skeleton, SegmentedControl } from '@/components/ui';
 import { Input } from '@/components/ui/input';
 import type { TaskStatus } from '@/types/api';
-import { cn } from '@/lib/utils';
 
 const statusOptions = [
-    { value: 'all', label: '全部' },
     { value: 'IN_PROGRESS', label: '进行中' },
     { value: 'COMPLETED', label: '已完成' },
     { value: 'OVERDUE', label: '已逾期' },
+    { value: 'all', label: '全部' },
 ];
 
 /**
@@ -26,10 +25,12 @@ const statusOptions = [
  * - hover:scale 交互反馈
  */
 export const StudentTaskList: React.FC = () => {
-    const [status, setStatus] = useState<TaskStatus | undefined>();
+    const [statusFilter, setStatusFilter] = useState<string>("IN_PROGRESS");
     const [searchTerm, setSearchTerm] = useState("");
 
-    const { data, isLoading } = useStudentTasks({ status });
+    const { data, isLoading } = useStudentTasks({
+        status: statusFilter === 'all' ? undefined : (statusFilter as TaskStatus)
+    });
     const allTasks = data?.results ?? [];
 
     const filteredTasks = allTasks.filter(t =>
@@ -57,7 +58,7 @@ export const StudentTaskList: React.FC = () => {
                     <div className="relative group min-w-[320px]">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280] group-focus-within:text-[#3B82F6] transition-colors" />
                         <Input
-                            className="pl-14"
+                            className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
                             placeholder="搜索任务标题或编号..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -67,25 +68,18 @@ export const StudentTaskList: React.FC = () => {
             </div>
 
             {/* 分段筛选器 - Flat Design */}
-            <div className="flex flex-wrap items-center gap-6 pb-6 border-b-2 border-[#F3F4F6]">
-                <div className="flex items-center gap-1 bg-[#F3F4F6] p-1 rounded-lg">
-                    {statusOptions.map((opt) => (
-                        <button
-                            key={opt.value}
-                            onClick={() => setStatus(opt.value === 'all' ? undefined : (opt.value as TaskStatus))}
-                            className={cn(
-                                "px-6 py-3 rounded-md text-xs font-bold uppercase tracking-widest transition-all duration-200",
-                                (status === opt.value || (!status && opt.value === 'all'))
-                                    ? "bg-[#3B82F6] text-white hover:bg-[#2563EB]"
-                                    : "text-[#6B7280] hover:text-[#111827] hover:bg-[#E5E7EB]",
-                                "hover:scale-105 active:scale-95"
-                            )}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
+            <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b-2 border-[#F3F4F6]">
+                <div className="flex items-center gap-4">
+                    <SegmentedControl
+                        value={statusFilter}
+                        onChange={(val: string) => setStatusFilter(val)}
+                        options={statusOptions}
+                        variant="premium"
+                        activeColor="white"
+                        className="w-full md:w-auto"
+                    />
                 </div>
-                <div className="h-8 w-[2px] bg-[#E5E7EB] hidden md:block" />
+
                 <span className="text-xs font-bold text-[#6B7280] uppercase tracking-widest">
                     共找到 <span className="text-[#3B82F6] text-base ml-1">{filteredTasks.length}</span> 个任务
                 </span>
@@ -93,7 +87,7 @@ export const StudentTaskList: React.FC = () => {
 
             {/* 任务列表网格 */}
             <div>
-                {isLoading ? (
+                {isLoading && !data ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map(i => (
                             <Skeleton key={i} className="h-80 rounded-lg" />
@@ -120,3 +114,4 @@ export const StudentTaskList: React.FC = () => {
 };
 
 export default StudentTaskList;
+

@@ -21,6 +21,7 @@ import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/man
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
+import { getRoleColor } from "@/lib/role-config"
 import {
   DataTable,
   CellWithAvatar,
@@ -133,24 +134,12 @@ export const UserList: React.FC = () => {
     }
   }
 
-  // 角色颜色映射
-  const getRoleColor = (code: string) => {
-    const colorMap: Record<string, { bg: string; color: string }> = {
-      ADMIN: { bg: '#FEE2E2', color: '#DC2626' },
-      MENTOR: { bg: '#FEF3C7', color: '#F59E0B' },
-      DEPT_MANAGER: { bg: '#EDE9FE', color: '#7C3AED' },
-      ROOM_MANAGER: { bg: '#EDE9FE', color: '#7C3AED' },
-      TEAM_MANAGER: { bg: '#DBEAFE', color: '#3B82F6' },
-    }
-    return colorMap[code] || { bg: '#DBEAFE', color: '#3B82F6' }
-  }
-
   // DataTable 列定义 - 使用共用 Cell 组件
   const columns: ColumnDef<UserListType>[] = [
     {
       header: "用户信息",
       id: "user",
-      size: 400, // 给一个较大的基础参考值，让它倾向于占据更多空间
+      size: 240,
       cell: ({ row }) => (
         <CellWithAvatar
           name={row.original.username}
@@ -161,6 +150,7 @@ export const UserList: React.FC = () => {
     {
       header: "权限角色",
       id: "roles",
+      size: 200,
       cell: ({ row }) => (
         <CellTags
           tags={row.original.roles.map((role: Role) => ({
@@ -174,6 +164,7 @@ export const UserList: React.FC = () => {
     {
       header: "所属部门",
       id: "department",
+      size: 160,
       cell: ({ row }) => (
         <CellIconText
           icon={<Building2 className="w-4 h-4" />}
@@ -184,6 +175,7 @@ export const UserList: React.FC = () => {
     {
       header: "指导老师",
       id: "mentor",
+      size: 140,
       cell: ({ row }) => {
         const mentor = row.original.mentor
         if (!mentor) return <span className="text-[#9CA3AF] italic text-xs">未分配</span>
@@ -193,6 +185,7 @@ export const UserList: React.FC = () => {
     {
       header: "状态",
       id: "status",
+      size: 100,
       cell: ({ row }) => (
         <CellStatus isActive={row.original.is_active} />
       ),
@@ -200,6 +193,7 @@ export const UserList: React.FC = () => {
     {
       header: "操作",
       id: "actions",
+      size: 80,
       cell: ({ row }) => (
         <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
@@ -254,7 +248,7 @@ export const UserList: React.FC = () => {
   ]
 
   return (
-    <div className="space-y-10 animate-fadeIn pb-20">
+    <div className="space-y-10 pb-20">
       <PageHeader
         title="用户中心"
         subtitle="组织架构与权限管理"
@@ -399,7 +393,7 @@ export const UserList: React.FC = () => {
           <DialogFooter className="mt-6">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-gray-900 text-white rounded-lg h-11 font-semibold hover:bg-gray-800"
+              className="w-full bg-[#3B82F6] text-white rounded-lg h-11 font-semibold hover:bg-[#2563EB] shadow-none"
             >
               完成并关闭
             </Button>

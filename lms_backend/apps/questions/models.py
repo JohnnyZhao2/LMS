@@ -8,8 +8,8 @@ from django.db import models
 from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
-class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
+class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     题目模型
     题目类型:
@@ -61,27 +61,14 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default=1.0,
         verbose_name='分值'
     )
-    resource_uuid = models.UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-        db_index=True,
-        verbose_name='资源标识'
-    )
-    version_number = models.PositiveIntegerField(
-        default=1,
-        verbose_name='版本号'
-    )
-    source_version = models.ForeignKey(
-        'self',
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='question_versions',
-        verbose_name='来源版本'
-    )
-    is_current = models.BooleanField(
-        default=True,
-        verbose_name='是否当前版本'
+        related_name='question_updated',
+        verbose_name='最后更新者'
     )
     # 条线类型通过ResourceLineType关联（多态关系）
     # 使用property提供便捷访问
@@ -191,18 +178,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         if self.is_referenced_by_quiz():
             raise ValidationError('该题目已被试卷引用，无法删除')
         super().delete(*args, **kwargs)
-    @classmethod
-    def next_version_number(cls, resource_uuid):
-        if not resource_uuid:
-            return 1
-        aggregate = cls.objects.filter(
-            resource_uuid=resource_uuid,
-            is_deleted=False
-        ).aggregate(
-            max_version=models.Max('version_number')
-        )
-        max_version = aggregate['max_version'] or 0
-        return max_version + 1
     def clone_new_version(self):
         """
         创建当前题目的新版本，保持历史版本只读。
@@ -219,9 +194,9 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             explanation=self.explanation,
             score=self.score,
             created_by=self.created_by,
+            updated_by=self.updated_by,
             resource_uuid=self.resource_uuid,
             version_number=self.next_version_number(self.resource_uuid),
-            source_version=self,
             is_current=True
         )
         if self.line_type:

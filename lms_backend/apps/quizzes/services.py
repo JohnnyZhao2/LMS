@@ -1,25 +1,45 @@
 """
 试卷应用服务
-编排业务逻辑，协调 Repository。
+编排业务逻辑。
 """
 from typing import Optional, List
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 import uuid
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
-from .models import Quiz
-from .repositories import QuizRepository, QuizQuestionRepository
+from .models import Quiz, QuizQuestion
 from apps.questions.models import Question
-from apps.questions.repositories import QuestionRepository
-from apps.knowledge.repositories import TagRepository
+from apps.knowledge.models import Tag
+from .selectors import get_quiz_by_id, get_question_ids, list_quiz_questions
+
+
 class QuizService(BaseService):
     """试卷应用服务"""
-    def __init__(self):
-        self.repository = QuizRepository()
-        self.quiz_question_repository = QuizQuestionRepository()
-        self.question_repository = QuestionRepository()
-        self.tag_repository = TagRepository()
+
+    def _add_question(self, quiz_id: int, question_id: int, order: int = None) -> QuizQuestion:
+        if order is None:
+            max_order = QuizQuestion.objects.filter(
+                quiz_id=quiz_id
+            ).aggregate(
+                max_order=Max('order')
+            )['max_order']
+            order = (max_order or 0) + 1
+        return QuizQuestion.objects.create(
+            quiz_id=quiz_id,
+            question_id=question_id,
+            order=order
+        )
+
+    def _remove_questions(self, quiz_id: int, question_ids: List[int]) -> int:
+        deleted_count, _ = QuizQuestion.objects.filter(
+            quiz_id=quiz_id,
+            question_id__in=question_ids
+        ).delete()
+        return deleted_count
+
+
     def get_by_id(self, pk: int) -> Quiz:
         """
         获取试卷
@@ -30,12 +50,13 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果不存在
         """
-        quiz = self.repository.get_by_id(pk)
+        quiz = get_quiz_by_id(pk)
         self.validate_not_none(
             quiz,
             f'试卷 {pk} 不存在'
         )
         return quiz
+
     def get_list(
         self,
         filters: dict = None,
@@ -55,13 +76,27 @@ class QuizService(BaseService):
         Returns:
             试卷列表
         """
-        return list(self.repository.get_list(
-            filters=filters,
-            search=search,
-            ordering=ordering,
-            limit=limit,
-            offset=offset
-        ))
+        qs = Quiz.objects.filter(
+            is_deleted=False,
+            is_current=True
+        ).select_related('created_by', 'updated_by')
+        # 应用过滤条件
+        if filters:
+            if filters.get('created_by_id'):
+                qs = qs.filter(created_by_id=filters['created_by_id'])
+            if filters.get('quiz_type'):
+                qs = qs.filter(quiz_type=filters['quiz_type'])
+        # 搜索
+        if search:
+            qs = qs.filter(title__icontains=search)
+        # 排序
+        if ordering:
+            qs = qs.order_by(ordering)
+        # 分页
+        if limit:
+            qs = qs[offset:offset+limit] if offset else qs[:limit]
+        return list(qs)
+
     def check_edit_permission(self, user, quiz: Quiz) -> bool:
         """
         检查用户是否有编辑权限
@@ -79,6 +114,7 @@ class QuizService(BaseService):
             return True
         # Others can only edit/delete their own quizzes
         return quiz.created_by_id == user.id
+
     @transaction.atomic
     def create(
         self,
@@ -103,28 +139,31 @@ class QuizService(BaseService):
         self._validate_quiz_data(data)
         # 2. 准备数据
         data['created_by'] = user
+        data['updated_by'] = user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_quiz_version_data(data)
         # 3. 创建试卷
-        quiz = self.repository.create(**data)
-        self.repository.unset_current_flag_for_others(
-            resource_uuid=quiz.resource_uuid,
-            exclude_pk=quiz.pk
-        )
+        quiz = Quiz.objects.create(**data)
+        Quiz.objects.filter(
+            resource_uuid=quiz.resource_uuid
+        ).exclude(pk=quiz.pk).update(is_current=False)
         # 4. 添加题目
         existing_question_ids = existing_question_ids or []
         new_questions_data = new_questions_data or []
         # 添加已有题目
         for question_id in existing_question_ids:
-            self.quiz_question_repository.add_question(
+            self._add_question(
                 quiz_id=quiz.id,
                 question_id=question_id
             )
         # 创建并添加新题目
         for question_data in new_questions_data:
             self._create_and_add_question(quiz, question_data, user)
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
+
     @transaction.atomic
     def update(
         self,
@@ -159,11 +198,15 @@ class QuizService(BaseService):
             # 草稿直接更新
             self._validate_quiz_data(data)
             data['updated_by'] = user
-            quiz = self.repository.update(quiz, **data)
+            if data:
+                for key, value in data.items():
+                    setattr(quiz, key, value)
+                quiz.save(update_fields=list(data.keys()))
         # 更新题目顺序（如果提供）
         if question_ids is not None:
             self._sync_question_order(quiz, question_ids)
         return quiz
+
     @transaction.atomic
     def delete(self, pk: int, user) -> None:
         """
@@ -183,13 +226,14 @@ class QuizService(BaseService):
             '只有试卷创建者或管理员可以删除此试卷'
         )
         # 检查是否被引用
-        if self.repository.is_referenced_by_task(quiz.id):
+        if self._is_referenced_by_task(quiz.id):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该试卷已被任务引用，无法删除'
             )
         # 软删除
-        self.repository.delete(quiz, soft=True)
+        quiz.soft_delete()
+
     @transaction.atomic
     def add_questions(
         self,
@@ -223,26 +267,29 @@ class QuizService(BaseService):
         new_questions_data = new_questions_data or []
         # 获取当前试卷中已有的题目 ID
         existing_quiz_question_ids = set(
-            self.quiz_question_repository.get_question_ids(quiz.id)
+            get_question_ids(quiz.id)
         )
         # 添加已有题目
         for question_id in existing_question_ids:
             if question_id not in existing_quiz_question_ids:
                 # 验证题目存在
-                question = self.question_repository.get_by_id(question_id)
+                question = Question.objects.filter(pk=question_id).first()
                 if not question:
                     raise BusinessError(
                         code=ErrorCodes.RESOURCE_NOT_FOUND,
                         message=f'题目 {question_id} 不存在'
                     )
-                self.quiz_question_repository.add_question(
+                self._add_question(
                     quiz_id=quiz.id,
                     question_id=question_id
                 )
         # 创建并添加新题目
         for question_data in new_questions_data:
             self._create_and_add_question(quiz, question_data, user)
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
+
     @transaction.atomic
     def remove_questions(
         self,
@@ -271,11 +318,14 @@ class QuizService(BaseService):
         if quiz.is_current:
             quiz = self._create_new_version(quiz, {}, user)
         # 移除题目
-        self.quiz_question_repository.remove_questions(
+        self._remove_questions(
             quiz_id=quiz.id,
             question_ids=question_ids
         )
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
+
     @transaction.atomic
     def publish(self, pk: int, user) -> Quiz:
         """
@@ -304,13 +354,13 @@ class QuizService(BaseService):
         # 设置为当前版本
         quiz.is_current = True
         quiz.updated_by = user
-        quiz.save()
+        quiz.save(update_fields=['is_current', 'updated_by'])
         # 取消其他版本的 is_current 标志
-        self.repository.unset_current_flag_for_others(
-            resource_uuid=quiz.resource_uuid,
-            exclude_pk=pk
-        )
+        Quiz.objects.filter(
+            resource_uuid=quiz.resource_uuid
+        ).exclude(pk=pk).update(is_current=False)
         return quiz
+
     @transaction.atomic
     def unpublish(self, pk: int, user) -> Quiz:
         """
@@ -331,7 +381,7 @@ class QuizService(BaseService):
                 message='试卷不是当前版本'
             )
         # 检查是否被引用
-        if self.repository.is_referenced_by_task(pk):
+        if self._is_referenced_by_task(pk):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该试卷已被任务引用，无法取消发布'
@@ -339,8 +389,9 @@ class QuizService(BaseService):
         # 取消当前版本标志
         quiz.is_current = False
         quiz.updated_by = user
-        quiz.save()
+        quiz.save(update_fields=['is_current', 'updated_by'])
         return quiz
+
     def _create_and_add_question(
         self,
         quiz: Quiz,
@@ -366,7 +417,7 @@ class QuizService(BaseService):
             **question_data,
         }
         # 创建题目
-        question = self.question_repository.create(**question_attrs)
+        question = Question.objects.create(**question_attrs)
         Question.objects.filter(
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
@@ -374,11 +425,12 @@ class QuizService(BaseService):
         if line_type_id:
             self._set_question_line_type(question, line_type_id)
         # 添加到试卷
-        self.quiz_question_repository.add_question(
+        self._add_question(
             quiz_id=quiz.id,
             question_id=question.id
         )
         return question
+
     def _prepare_quiz_version_data(self, data: dict) -> None:
         """
         准备试卷版本号相关数据
@@ -388,6 +440,7 @@ class QuizService(BaseService):
         data.pop('resource_uuid', None)
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
+
     def _prepare_question_version_data(self, data: dict) -> None:
         """
         准备题目版本号相关数据
@@ -397,6 +450,7 @@ class QuizService(BaseService):
         data.pop('resource_uuid', None)
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
+
     def _set_question_line_type(self, question: Question, line_type_id: int) -> None:
         """
         设置题目的条线类型
@@ -406,8 +460,10 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果条线类型无效
         """
-        line_type = self.tag_repository.get_all(
-            filters={'id': line_type_id, 'tag_type': 'LINE', 'is_active': True}
+        line_type = Tag.objects.filter(
+            id=line_type_id,
+            tag_type='LINE',
+            is_active=True
         ).first()
         if not line_type:
             raise BusinessError(
@@ -415,6 +471,7 @@ class QuizService(BaseService):
                 message='无效的条线类型ID'
             )
         question.set_line_type(line_type)
+
     def _validate_quiz_data(self, data: dict) -> None:
         """验证试卷数据"""
         quiz_type = data.get('quiz_type', 'PRACTICE')
@@ -429,6 +486,7 @@ class QuizService(BaseService):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message='考试类型必须设置及格分数'
                 )
+
     def _create_new_version(
         self,
         source: Quiz,
@@ -462,64 +520,74 @@ class QuizService(BaseService):
             'quiz_type': data.get('quiz_type', source.quiz_type),
             'duration': data.get('duration', source.duration),
             'pass_score': data.get('pass_score', source.pass_score),
-            'source_version_id': source.id,
             'is_current': True,
             'created_by': user,
             'updated_by': user,
         }
-        new_quiz = self.repository.create(**new_quiz_data)
+        new_quiz = Quiz.objects.create(**new_quiz_data)
         # 复制题目顺序
         if question_ids is None:
-            source_questions = self.quiz_question_repository.get_ordered_questions(
-                source.id
-            )
+            source_questions = list_quiz_questions(source.id)
             for relation in source_questions:
-                self.quiz_question_repository.add_question(
+                self._add_question(
                     quiz_id=new_quiz.id,
                     question_id=relation.question_id,
                     order=relation.order
                 )
         else:
             for order, question_id in enumerate(question_ids, start=1):
-                self.quiz_question_repository.add_question(
+                self._add_question(
                     quiz_id=new_quiz.id,
                     question_id=question_id,
                     order=order
                 )
         # 取消其他版本的 is_current 标志
-        self.repository.unset_current_flag_for_others(
-            resource_uuid=source.resource_uuid,
-            exclude_pk=new_quiz.pk
-        )
+        Quiz.objects.filter(
+            resource_uuid=source.resource_uuid
+        ).exclude(pk=new_quiz.pk).update(is_current=False)
         return new_quiz
+
     def _sync_question_order(
         self,
         quiz: Quiz,
         question_ids: List[int]
     ) -> None:
         """
-        同步题目顺序
+        同步题目顺序（按 resource_uuid 去重）
         Args:
             quiz: 试卷对象
             question_ids: 新的题目 ID 顺序列表
         """
+        # 获取提交的题目信息，按 resource_uuid 去重（保留最后出现的）
+        questions = Question.objects.filter(pk__in=question_ids).values('id', 'resource_uuid')
+        question_map = {q['id']: q['resource_uuid'] for q in questions}
+        
+        # 按 resource_uuid 去重，保留最后出现的 id
+        seen_uuids = {}
+        for qid in question_ids:
+            uuid = question_map.get(qid)
+            if uuid:
+                seen_uuids[uuid] = qid
+        deduped_question_ids = [seen_uuids[question_map[qid]] for qid in question_ids 
+                                if qid in question_map and seen_uuids.get(question_map[qid]) == qid]
+        
         current_relations = {
             qq.question_id: qq
-            for qq in self.quiz_question_repository.get_by_quiz(quiz.id)
+            for qq in list_quiz_questions(quiz.id)
         }
-        new_id_set = set(question_ids)
+        new_id_set = set(deduped_question_ids)
         # 移除不再存在的题目
         to_remove = [
             qid for qid in current_relations.keys()
             if qid not in new_id_set
         ]
         if to_remove:
-            self.quiz_question_repository.remove_questions(
+            self._remove_questions(
                 quiz_id=quiz.id,
                 question_ids=to_remove
             )
         # 重新排序/添加缺失的题目
-        for order, question_id in enumerate(question_ids, start=1):
+        for order, question_id in enumerate(deduped_question_ids, start=1):
             relation = current_relations.get(question_id)
             if relation:
                 if relation.order != order:
@@ -527,14 +595,22 @@ class QuizService(BaseService):
                     relation.save(update_fields=['order'])
             else:
                 # 验证题目存在
-                question = self.question_repository.get_by_id(question_id)
+                question = Question.objects.filter(pk=question_id).first()
                 if not question:
                     raise BusinessError(
                         code=ErrorCodes.RESOURCE_NOT_FOUND,
                         message=f'题目 {question_id} 不存在'
                     )
-                self.quiz_question_repository.add_question(
+                self._add_question(
                     quiz_id=quiz.id,
                     question_id=question_id,
                     order=order
                 )
+
+    def _is_referenced_by_task(self, quiz_id: int) -> bool:
+        """检查试卷是否被任务引用"""
+        try:
+            from apps.tasks.models import TaskQuiz
+            return TaskQuiz.objects.filter(quiz_id=quiz_id).exists()
+        except ImportError:
+            return False

@@ -4,12 +4,7 @@ User services for LMS.
 from typing import Optional, List
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
-from .models import User, Role
-from .repositories import (
-    UserRepository,
-    RoleRepository,
-    UserRoleRepository,
-)
+from .models import User, Role, UserRole
 
 
 class UserManagementService(BaseService):
@@ -18,10 +13,12 @@ class UserManagementService(BaseService):
     Provides methods for user CRUD operations, activation/deactivation,
     role assignment, and mentor assignment.
     """
-    def __init__(self):
-        self.user_repository = UserRepository()
-        self.role_repository = RoleRepository()
-        self.user_role_repository = UserRoleRepository()
+    def _get_user(self, user_id: int) -> Optional[User]:
+        return User.objects.select_related(
+            'department',
+            'mentor'
+        ).prefetch_related('roles').filter(pk=user_id).first()
+
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -34,7 +31,7 @@ class UserManagementService(BaseService):
         Properties:
         - Property 7: 用户停用/启用状态切换
         """
-        user = self.user_repository.get_by_id(user_id)
+        user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         # 防止停用超级用户（Django 的 is_superuser）
         if user.is_superuser:
@@ -42,8 +39,10 @@ class UserManagementService(BaseService):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='不能停用超级用户账号'
             )
-        user = self.user_repository.update(user, is_active=False)
+        user.is_active = False
+        user.save(update_fields=['is_active'])
         return user
+
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
@@ -56,10 +55,12 @@ class UserManagementService(BaseService):
         Properties:
         - Property 7: 用户停用/启用状态切换
         """
-        user = self.user_repository.get_by_id(user_id)
+        user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
-        user = self.user_repository.update(user, is_active=True)
+        user.is_active = True
+        user.save(update_fields=['is_active'])
         return user
+
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
@@ -75,11 +76,16 @@ class UserManagementService(BaseService):
         Properties:
         - Property 9: 学员角色不可移除
         """
-        from .models import UserRole, Role
-        user = self.user_repository.get_by_id(user_id)
+        user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         # Get student role (must always be preserved)
-        student_role = self.role_repository.get_or_create_student_role()
+        Role.objects.get_or_create(
+            code='STUDENT',
+            defaults={
+                'name': '学员',
+                'description': '系统默认角色'
+            }
+        )
         # Get all roles to assign (including STUDENT)
         roles_to_assign = set(role_codes)
         roles_to_assign.add('STUDENT')  # Always include STUDENT
@@ -89,23 +95,24 @@ class UserManagementService(BaseService):
         roles_to_remove = current_role_codes - roles_to_assign
         if 'STUDENT' in roles_to_remove:
             roles_to_remove.remove('STUDENT')  # Never remove STUDENT
-        for role_code in roles_to_remove:
-            self.user_role_repository.remove_user_role(user.id, role_code)
+        if roles_to_remove:
+            UserRole.objects.filter(
+                user_id=user.id,
+                role__code__in=list(roles_to_remove)
+            ).delete()
         # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
         for role_code in roles_to_add:
-            # Get or create the role
-            role = self.role_repository.get_by_code(role_code)
+            role = Role.objects.filter(code=role_code).first()
             if not role:
                 role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
-                role = self.role_repository.create(
+                role = Role.objects.create(
                     code=role_code,
                     name=role_name,
                     description=f'{role_name}角色'
                 )
-            # Check if user_role already exists
-            if not self.user_role_repository.user_has_role(user.id, role_code):
-                self.user_role_repository.create_user_role(
+            if not user.roles.filter(code=role_code).exists():
+                UserRole.objects.create(
                     user_id=user.id,
                     role_id=role.id,
                     assigned_by_id=assigned_by.id
@@ -113,6 +120,7 @@ class UserManagementService(BaseService):
         # Refresh user from database
         user.refresh_from_db()
         return user
+
     def assign_mentor(self, user_id: int, mentor_id: Optional[int]) -> User:
         """
         Assign a mentor to a user.
@@ -126,16 +134,17 @@ class UserManagementService(BaseService):
         Properties:
         - Property 10: 师徒关系唯一性
         """
-        user = self.user_repository.get_by_id(user_id)
+        user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
         if mentor_id is None:
             # Remove mentor binding
-            user = self.user_repository.update(user, mentor_id=None)
+            user.mentor_id = None
+            user.save(update_fields=['mentor'])
         else:
             # Validate mentor
-            mentor = self.user_repository.get_by_id(mentor_id)
+            mentor = self._get_user(mentor_id)
             self.validate_not_none(mentor, f'导师 {mentor_id} 不存在')
-            if not self.user_repository.has_role(mentor.id, 'MENTOR'):
+            if not mentor.has_role('MENTOR'):
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='指定的用户不是导师'
@@ -151,5 +160,6 @@ class UserManagementService(BaseService):
                     message='不能将自己设为导师'
                 )
             # Assign new mentor (automatically replaces old one due to FK)
-            user = self.user_repository.update(user, mentor_id=mentor_id)
+            user.mentor_id = mentor_id
+            user.save(update_fields=['mentor'])
         return user

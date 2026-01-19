@@ -54,7 +54,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    source_version_id = serializers.IntegerField(source='source_version.id', read_only=True, allow_null=True)
     table_of_contents = serializers.ListField(read_only=True)
     class Meta:
         model = Knowledge
@@ -72,7 +71,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'summary',
             # 元数据
             'view_count', 'table_of_contents',
-            'source_version_id',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]
@@ -199,42 +197,6 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
                     'content': '必须填写正文内容'
                 })
         return attrs
-    def update(self, instance, validated_data):
-        """
-        Update knowledge document with tag handling.
-        重要：如果知识当前是当前版本，更新时应该保存为新版本，不影响已发布版本的查看。
-        只有通过发布操作才会更新已发布的内容。
-        实现方式：
-        - 如果当前是当前版本，检查是否已存在关联的草稿
-        - 如果存在草稿，更新草稿记录；如果不存在，创建新草稿记录
-        - 原记录保持当前版本状态不变，其他人仍可查看
-        - 新草稿记录保存修改内容，只有发布后才会更新原记录
-        """
-        # Set updated_by from context
-        user = self.context['request'].user
-        instance.updated_by = user
-        # 如果当前是当前版本，需要创建或更新草稿而不是直接修改原记录
-        if instance.is_current:
-            from .services import KnowledgeService
-            service = KnowledgeService()
-            instance = service.create_or_get_draft_from_published(instance, user)
-        # 处理条线类型
-        line_type_id = validated_data.pop('line_type_id', None)
-        if line_type_id is not None:
-            instance.set_line_type(Tag.objects.get(id=line_type_id, tag_type='LINE'))
-        # 处理系统标签
-        system_tag_ids = validated_data.pop('system_tag_ids', None)
-        if system_tag_ids is not None:
-            instance.system_tags.set(system_tag_ids)
-        # 处理操作标签
-        operation_tag_ids = validated_data.pop('operation_tag_ids', None)
-        if operation_tag_ids is not None:
-            instance.operation_tags.set(operation_tag_ids)
-        # Update other fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
 class KnowledgeStatsSerializer(serializers.Serializer):
     """
     知识统计序列化器

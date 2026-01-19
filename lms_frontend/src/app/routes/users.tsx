@@ -2,9 +2,11 @@
  * 用户管理相关路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { UserList } from '@/features/users/components/user-list';
 import { ROUTES } from '@/config/routes';
+
+const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
 
 export const userRoutes = [
   <Route

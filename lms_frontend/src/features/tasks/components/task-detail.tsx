@@ -1,10 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import {
   ArrowLeft,
-  CheckCircle,
-  PlayCircle,
   BookOpen,
   FileText,
   Clock,
@@ -13,6 +10,14 @@ import {
   Info,
   Trophy,
   Activity,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Ghost,
+  Layers,
+  Calendar,
+  GraduationCap,
+  ClipboardList
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -22,9 +27,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
-import { useCompleteLearning } from '../api/complete-learning';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
@@ -50,16 +56,6 @@ interface KnowledgeListViewItem {
   completedAt?: string | null;
 }
 
-/**
- * 任务详情组件 - Flat Design 版本
- * 
- * 设计规范：
- * - 无阴影 (shadow-none)
- * - 无渐变 (no gradient)
- * - 无模糊 (no blur)
- * - 实心背景色区分层级
- * - hover:scale 交互反馈
- */
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -82,45 +78,7 @@ export const TaskDetail: React.FC = () => {
     enabled: Boolean(taskId) && isValidTaskId && isStudent,
   });
 
-  const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
-
-  const completeLearning = useCompleteLearning();
   const isLoading = authLoading || !isValidTaskId || taskLoading || (isStudent && learningLoading);
-
-  // Flat Design: 使用纯色而非渐变
-  const appearance = useMemo(() => {
-    const hasQuiz = (task?.quizzes?.length ?? 0) > 0;
-    const hasKnowledge = (task?.knowledge_items?.length ?? 0) > 0;
-    const isExamTask = task?.quizzes?.some(q => q.quiz_type === 'EXAM');
-
-    if (isExamTask) {
-      return {
-        bgColor: '#EF4444', // Red 500 - 实心颜色
-        icon: <Trophy className="w-5 h-5" />,
-        themeColor: '#EF4444',
-        bgSoft: '#FEF2F2', // red-50
-        missionLabel: 'EXAM MISSION',
-      };
-    }
-
-    if (hasQuiz && hasKnowledge) {
-      return {
-        bgColor: '#3B82F6', // Blue 500 - 实心颜色
-        icon: <Activity className="w-5 h-5" />,
-        themeColor: '#3B82F6',
-        bgSoft: '#EFF6FF', // blue-50
-        missionLabel: 'HYBRID MISSION',
-      };
-    }
-
-    return {
-      bgColor: '#3B82F6', // Blue 500
-      icon: <BookOpen className="w-5 h-5" />,
-      themeColor: '#3B82F6',
-      bgSoft: '#EFF6FF',
-      missionLabel: 'LEARNING MISSION',
-    };
-  }, [task]);
 
   const knowledgeList: KnowledgeListViewItem[] = useMemo(() => {
     if (!task) return [];
@@ -152,14 +110,14 @@ export const TaskDetail: React.FC = () => {
 
   if (!isValidTaskId) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="bg-[#F3F4F6] rounded-lg p-12 text-center">
-          <div className="w-16 h-16 bg-[#FEE2E2] text-[#EF4444] rounded-md flex items-center justify-center mx-auto mb-4">
-            <Info className="w-8 h-8" />
+      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50/50">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full shadow-sm">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+            <AlertCircle className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-[#111827] mb-2">Invalid Task ID</h3>
-          <p className="text-[#6B7280]">无法找到指定的任务编号，请检查后重试。</p>
-          <Button variant="outline" className="mt-6" onClick={() => navigate(-1)}>
+          <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">Invalid Task ID</h3>
+          <p className="text-gray-500 text-sm mb-8 leading-relaxed">无法找到指定的任务编号，请检查后重试。</p>
+          <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
             返回上一页
           </Button>
         </div>
@@ -169,10 +127,22 @@ export const TaskDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-6">
-          <div className="w-16 h-16 border-4 border-[#DBEAFE] rounded-full animate-spin border-t-[#3B82F6]"></div>
-          <span className="text-[#6B7280] font-bold tracking-widest uppercase text-sm animate-pulse">Loading Mission Data...</span>
+      <div className="flex flex-col min-h-screen bg-gray-50/50">
+        <div className="h-16 border-b bg-white flex items-center px-6">
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-6">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-xl" />
+            </div>
+          </div>
+          <div className="lg:col-span-4 space-y-6">
+            <Skeleton className="h-64 w-full rounded-xl" />
+          </div>
         </div>
       </div>
     );
@@ -180,14 +150,14 @@ export const TaskDetail: React.FC = () => {
 
   if (taskError || !task) {
     return (
-      <div className="flex justify-center items-center h-[50vh]">
-        <div className="bg-[#F3F4F6] rounded-lg p-12 text-center max-w-md">
-          <div className="w-16 h-16 bg-[#F3F4F6] text-[#9CA3AF] rounded-md flex items-center justify-center mx-auto mb-4">
-            <Info className="w-8 h-8" />
+      <div className="flex justify-center items-center min-h-[50vh] bg-gray-50/50">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full shadow-sm">
+          <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
+            <Ghost className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-[#111827] mb-2">Mission Not Found</h3>
-          <p className="text-[#6B7280]">任务不存在或您没有权限查看，请联系管理员。</p>
-          <Button variant="outline" className="mt-6" onClick={() => navigate(ROUTES.TASKS)}>
+          <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">Task Not Found</h3>
+          <p className="text-gray-500 text-sm mb-8 leading-relaxed">任务不存在或您没有权限查看，请联系管理员。</p>
+          <Button variant="outline" onClick={() => navigate(ROUTES.TASKS)} className="w-full">
             返回任务中心
           </Button>
         </div>
@@ -204,14 +174,10 @@ export const TaskDetail: React.FC = () => {
     : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
 
-  const handleCompleteLearning = async (knowledgeId: number) => {
-    try {
-      await completeLearning.mutateAsync({ taskId, knowledgeId });
-      toast.success('已标记为完成');
-    } catch {
-      toast.error('操作失败，请稍后重试');
-    }
-  };
+  const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
+  const hasKnowledge = knowledgeList.length > 0;
+  const hasQuizzes = displayQuizzes.length > 0;
+
 
   const handleStartQuiz = (quizId: number) => {
     if (!isStudent || !canStartQuiz) return;
@@ -220,393 +186,406 @@ export const TaskDetail: React.FC = () => {
     navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
   };
 
-  const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
+  const getStatusBadge = () => {
+    if (isStudent && studentStatus) {
+      const isCompleted = studentStatus === 'COMPLETED';
+      return (
+        <span className={cn(
+          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm",
+          isCompleted
+            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+            : "bg-blue-50 text-blue-600 border-blue-200"
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-emerald-500" : "bg-blue-500 animate-pulse")} />
+          {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
+        </span>
+      );
+    }
+    if (!isStudent && myAssignment) {
+      const isCompleted = myAssignment.status === 'COMPLETED';
+      return (
+        <span className={cn(
+          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm",
+          isCompleted
+            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+            : "bg-blue-50 text-blue-600 border-blue-200"
+        )}>
+          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-emerald-500" : "bg-blue-500")} />
+          {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
+        </span>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header - Flat Design: 纯色背景 */}
-      <div className="relative mb-8">
-        <div
-          className="rounded-lg overflow-hidden"
-          style={{ backgroundColor: appearance.bgColor }}
-        >
-          <div className="relative pt-10 px-8 pb-8 text-white">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-              <div className="space-y-4 max-w-2xl">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(-1)}
-                  className="text-white bg-white/20 hover:bg-white/30 rounded-md mb-2 hover:scale-105 transition-all duration-200"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-1" />
-                  返回列表
-                </Button>
+    <div className="flex flex-col min-h-screen bg-[#F8F9FB] font-sans selection:bg-blue-100 selection:text-blue-900">
+      <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
+        <div className="flex items-center gap-4 min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(ROUTES.TASKS)}
+            className="text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="h-4 w-px bg-gray-200 flex-shrink-0" />
+          <h1 className="text-base lg:text-lg font-bold text-gray-900 truncate tracking-tight" title={task.title}>
+            {task.title}
+          </h1>
+          <div className="hidden sm:block">
+            {getStatusBadge()}
+          </div>
+        </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className={cn(
-                      "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
-                      appearance.missionLabel === 'EXAM MISSION'
-                        ? "bg-white/30 text-white"
-                        : "bg-white/20 text-white"
-                    )}>
-                      {appearance.missionLabel}
-                    </span>
-                    {isStudent && studentStatus && (
-                      <span className={cn(
-                        "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
-                        studentStatus === 'COMPLETED' ? "bg-[#10B981] text-white" : "bg-white/20 text-white"
-                      )}>
-                        {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
-                      </span>
-                    )}
-                    {!isStudent && myAssignment && (
-                      <span className={cn(
-                        "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
-                        myAssignment.status === 'COMPLETED' ? "bg-[#10B981] text-white" : "bg-white/20 text-white"
-                      )}>
-                        {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
-                      </span>
-                    )}
-                  </div>
-                  <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">{task.title}</h1>
-                </div>
-                {task.description && (
-                  <p className="text-white/90 text-lg font-medium leading-relaxed">
+        <div className="flex items-center gap-4 lg:gap-6 text-sm flex-shrink-0">
+          <div className="hidden md:flex items-center gap-6 text-gray-500">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
+              <User className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-700">{task.updated_by_name || task.created_by_name}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
+              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-700">{dayjs(task.deadline).format('MM-DD HH:mm')} 截止</span>
+            </div>
+          </div>
+
+          {canEditTask && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 text-gray-500 rounded-full">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg rounded-xl p-1 w-48">
+                <DropdownMenuItem onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)} className="cursor-pointer font-medium rounded-lg py-2 focus:bg-gray-50">
+                  <Edit className="w-4 h-4 mr-2 text-gray-500" />
+                  编辑任务
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </header>
+
+      <main className="flex-1 container mx-auto px-4 py-8 lg:py-10 max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+          <div className="lg:col-span-8 space-y-10">
+
+            {task.description && (
+              <section className="bg-white rounded-2xl border border-gray-100 p-8 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <FileText className="w-3 h-3" />
+                  任务描述
+                </h3>
+                <div className="prose prose-sm prose-gray max-w-none">
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line text-[15px]">
                     {task.description}
                   </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-3 items-end">
-                <div className="flex items-center gap-3 bg-white/20 rounded-md p-4">
-                  <div className="text-right">
-                    <div className="text-xs text-white/70 font-bold uppercase tracking-wider">截止时间</div>
-                    <div className="font-bold text-xl font-mono">{dayjs(task.deadline).format('MM.DD HH:mm')}</div>
-                  </div>
-                  <div className="w-10 h-10 rounded-md bg-white/20 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
                 </div>
+              </section>
+            )}
 
-                <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">
-                    {task.created_by_name.charAt(0)}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <BookOpen className="w-5 h-5" />
                   </div>
-                  发布人: {task.created_by_name}
-
-                  {canEditTask && (
-                    <div className="ml-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/20 hover:bg-white/30 rounded-md text-white">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-lg bg-white border-2 border-[#E5E7EB]">
-                          <DropdownMenuItem onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)} className="focus:bg-[#F3F4F6] rounded-md cursor-pointer">
-                            <Edit className="w-4 h-4 mr-2 text-[#3B82F6]" />
-                            <span className="font-semibold text-[#111827]">编辑任务</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={`grid gap-6 ${isStudent ? 'grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
-        <div className="flex flex-col gap-6">
-          {/* 知识列表 - Flat Design: 实心背景色块 */}
-          {hasKnowledge && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-2 px-2">
-                <div className="w-10 h-10 rounded-md bg-[#3B82F6] flex items-center justify-center text-white">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <h3 className="text-xl font-bold text-[#111827] tracking-tight">学习章节</h3>
+                  学习资料
+                  <span className="text-sm font-medium text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md ml-1">
+                    {knowledgeList.length}
+                  </span>
+                </h3>
               </div>
 
-              <div className="space-y-4">
-                {knowledgeList.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="group relative bg-[#F3F4F6] rounded-lg p-6 hover:scale-[1.01] transition-all duration-200"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-center gap-6">
-                      {/* Index Block */}
-                      <div className={cn(
-                        "w-14 h-14 rounded-md flex-shrink-0 flex items-center justify-center text-xl font-bold",
-                        item.isCompleted
-                          ? "bg-[#10B981] text-white"
-                          : "bg-[#E5E7EB] text-[#6B7280]"
-                      )}>
-                        {item.isCompleted ? <CheckCircle className="w-7 h-7" /> : index + 1}
-                      </div>
-
-                      <div className="flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-md bg-[#DBEAFE] text-[#3B82F6] text-[10px] font-bold uppercase tracking-wider">
-                            {item.knowledgeTypeDisplay || item.knowledgeType}
-                          </span>
-                          <h4 className="text-lg font-bold text-[#111827]">{item.title}</h4>
-                        </div>
-                        {item.summary && (
-                          <p className="text-[#6B7280] text-sm leading-relaxed">{item.summary}</p>
-                        )}
-                      </div>
-
-                      <div className="flex-shrink-0 flex flex-col gap-2">
-                        {isStudent && (
-                          <Button
-                            className="w-full md:w-auto bg-white hover:bg-[#F3F4F6] text-[#111827] border-2 border-[#111827] hover:scale-105 transition-all font-semibold"
-                            onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`)}
-                          >
-                            查看内容
-                          </Button>
-                        )}
-                        {isStudent && (
-                          item.isCompleted ? (
-                            <div className="px-4 py-2 rounded-md bg-[#D1FAE5] text-[#10B981] font-semibold text-sm flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4" />
-                              已掌握
-                            </div>
-                          ) : (
-                            <Button
-                              className="w-full md:w-auto bg-white hover:bg-[#F3F4F6] text-[#3B82F6] border-2 border-[#3B82F6] hover:scale-105 transition-all font-semibold"
-                              disabled={completeLearning.isPending}
-                              onClick={() => handleCompleteLearning(item.knowledgeId)}
-                            >
-                              标记为掌握
-                            </Button>
-                          )
-                        )}
-                      </div>
-                    </div>
+              {!hasKnowledge ? (
+                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <Layers className="w-8 h-8 text-gray-300" />
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 试卷列表 - Flat Design: 色块区分 */}
-          {displayQuizzes.length > 0 && (
-            <div className="space-y-4 mt-8">
-              <div className="flex items-center gap-3 mb-2 px-2">
-                <div className="w-10 h-10 rounded-md bg-[#F59E0B] flex items-center justify-center text-white">
-                  <Trophy className="w-5 h-5" />
+                  <p className="text-gray-500 font-medium">暂无学习资料</p>
+                  <p className="text-sm text-gray-400 mt-1">该任务尚未关联任何知识点</p>
                 </div>
-                <h3 className="text-xl font-bold text-[#111827] tracking-tight">能力评估</h3>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {displayQuizzes.map((item) => {
-                  const isExamQuiz = item.quiz_type === 'EXAM';
-                  const studentQuizItem = isStudent ? item as LearningTaskQuizItem : null;
-                  const adminQuizItem = !isStudent ? item as TaskQuiz : null;
-
-                  return (
+              ) : (
+                <div className="grid gap-6">
+                  {knowledgeList.map((item) => (
                     <div
                       key={item.id}
+                      onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`)}
                       className={cn(
-                        "group relative rounded-lg p-6 transition-all duration-200 hover:scale-[1.01]",
-                        isExamQuiz ? "bg-[#FEF2F2]" : "bg-[#F3F4F6]"
+                        "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px]",
+                        "hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5",
+                        item.isCompleted
+                          ? "border-emerald-100 bg-emerald-50/10"
+                          : "border-gray-100 hover:border-blue-100"
                       )}
                     >
-                      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                      <div className="flex items-center gap-6 h-full">
                         <div className={cn(
-                          "w-16 h-16 rounded-md flex items-center justify-center flex-shrink-0 text-white",
-                          isExamQuiz ? "bg-[#EF4444]" : "bg-[#3B82F6]"
+                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm transition-colors",
+                          item.isCompleted
+                            ? "bg-emerald-100 text-emerald-600 ring-4 ring-emerald-50"
+                            : "bg-white text-gray-400 border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100"
                         )}>
-                          {isExamQuiz ? <Trophy className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
+                          {item.isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                         </div>
 
-                        <div className="flex-1 space-y-3">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={cn(
-                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest",
-                                isExamQuiz
-                                  ? "bg-[#FEE2E2] text-[#EF4444]"
-                                  : "bg-[#DBEAFE] text-[#3B82F6]"
-                              )}>
-                                {item.quiz_type_display || (isExamQuiz ? 'FINAL EXAM' : 'PRACTICE QUIZ')}
-                              </span>
-                              {studentQuizItem?.is_completed && (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest bg-[#D1FAE5] text-[#10B981]">
-                                  COMPLETED
-                                </span>
-                              )}
-                            </div>
-                            <h4 className="text-2xl font-bold text-[#111827]">
-                              {studentQuizItem ? studentQuizItem.quiz_title : adminQuizItem?.quiz_title}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 h-5 bg-gray-50 text-gray-500 border-gray-200 uppercase tracking-wide rounded-full">
+                              {item.knowledgeTypeDisplay || item.knowledgeType}
+                            </Badge>
+                            <h4 className={cn(
+                              "font-bold text-gray-900 truncate text-lg transition-colors",
+                              item.isCompleted ? "text-emerald-900" : "group-hover:text-blue-700"
+                            )}>
+                              {item.title}
                             </h4>
                           </div>
-
-                          <div className="flex flex-wrap gap-4 text-sm font-semibold text-[#6B7280]">
-                            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
-                              <Info className="w-4 h-4 text-[#3B82F6]" />
-                              {item.question_count} 题
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
-                              <Trophy className="w-4 h-4 text-[#F59E0B]" />
-                              总分 {item.total_score}
-                            </div>
-                            {item.duration && (
-                              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md">
-                                <Clock className="w-4 h-4 text-[#3B82F6]" />
-                                限时 {item.duration} 分钟
-                              </div>
-                            )}
-                            {studentQuizItem?.is_completed && (
-                              <div className="flex items-center gap-1.5 bg-[#D1FAE5] px-2 py-1 rounded-md text-[#10B981] ml-auto">
-                                <Trophy className="w-4 h-4" />
-                                最佳成绩: {studentQuizItem.score}
-                              </div>
+                          <div className="h-10">
+                            {item.summary && (
+                              <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed group-hover:text-gray-600">
+                                {item.summary.replace(/<[^>]*>/g, '')}
+                              </p>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex-shrink-0 w-full md:w-auto">
-                          {isStudent && (
-                            <Button
-                              className={cn(
-                                "w-full md:w-auto h-12 rounded-md hover:scale-105 transition-transform font-semibold text-base px-8",
-                                isExamQuiz
-                                  ? "bg-[#EF4444] text-white hover:bg-[#DC2626]"
-                                  : "bg-[#3B82F6] text-white hover:bg-[#2563EB]"
-                              )}
-                              disabled={!canStartQuiz || (isExamQuiz && !!studentQuizItem?.is_completed)}
-                              onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
-                            >
-                              <PlayCircle className="w-5 h-5 mr-2" />
-                              {isExamQuiz
-                                ? (studentQuizItem?.is_completed ? '考试已提交' : '开始系统考试')
-                                : (studentQuizItem?.is_completed ? '再次练习答题' : '开始技能练习')}
-                            </Button>
-                          )}
+                        <div className="flex-shrink-0 flex items-center justify-end w-[40px]">
+                          {/* Zero-Clutter Right Side */}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-6 pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                    <Trophy className="w-5 h-5" />
+                  </div>
+                  能力考核
+                  <span className="text-sm font-medium text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md ml-1">
+                    {displayQuizzes.length}
+                  </span>
+                </h3>
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* 学员侧边栏 - Flat Design: 色块区分 */}
-        {isStudent && (
-          <div className="flex flex-col gap-6">
-            <div className="bg-[#F3F4F6] rounded-lg p-6">
-              <h3 className="text-lg font-bold text-[#111827] mb-6 flex items-center gap-2">
-                <div className="w-1 h-6 bg-[#3B82F6] rounded-full"></div>
-                任务进度
-              </h3>
+              {!hasQuizzes ? (
+                <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <GraduationCap className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-500 font-medium">暂无考核内容</p>
+                  <p className="text-sm text-gray-400 mt-1">该任务尚未配置任何测验或考试</p>
+                </div>
+              ) : (
+                <div className="grid gap-6">
+                  {displayQuizzes.map((item) => {
+                    const isExam = item.quiz_type === 'EXAM';
+                    const studentQuizItem = isStudent ? item as LearningTaskQuizItem : null;
+                    const adminQuizItem = !isStudent ? item as TaskQuiz : null;
+                    const isCompleted = studentQuizItem?.is_completed;
 
-              <div className="flex flex-col items-center">
-                {learningDetail ? (
-                  <>
-                    <div className="relative w-48 h-48">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          fill="none"
-                          stroke="#E5E7EB"
-                          strokeWidth="12"
-                        />
-                        {/* Progress circle - 实心颜色 */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          fill="none"
-                          stroke="#3B82F6"
-                          strokeWidth="12"
-                          strokeLinecap="round"
-                          strokeDasharray={`${learningDetail.progress.percentage * 2.64} 264`}
-                          className="transition-all duration-1000 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-4xl font-bold text-[#3B82F6]">
-                          {learningDetail.progress.percentage}%
-                        </span>
-                        <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-widest mt-1">Total Progress</span>
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
+                        className={cn(
+                          "group relative bg-white rounded-xl border p-6 transition-all duration-300 h-[140px] cursor-pointer",
+                          isCompleted
+                            ? "border-emerald-100 bg-emerald-50/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+                            : "border-gray-100 hover:shadow-sm hover:border-blue-100"
+                        )}
+                      >
+
+                        <div className="flex items-center gap-6 h-full">
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors shadow-sm",
+                            isCompleted
+                              ? "bg-emerald-100 text-emerald-600 ring-4 ring-emerald-50"
+                              : cn("bg-gray-50", isExam ? "text-amber-600" : "text-blue-600")
+                          )}>
+                            {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : (isExam ? <Trophy className="w-6 h-6" /> : <ClipboardList className="w-6 h-6" />)}
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex flex-col justify-center space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                              <Badge variant="outline" className={cn(
+                                "text-[11px] font-bold px-2 py-0.5 h-5 uppercase tracking-wide border-none rounded-full",
+                                isCompleted
+                                  ? "bg-emerald-100/50 text-emerald-700"
+                                  : (isExam ? "bg-amber-100/50 text-amber-700" : "bg-blue-100/50 text-blue-700")
+                              )}>
+                                {item.quiz_type_display || (isExam ? '考试' : '练习')}
+                              </Badge>
+                              <h4 className={cn(
+                                "text-lg font-bold tracking-tight leading-none transition-colors",
+                                isCompleted ? "text-emerald-900" : "text-gray-900"
+                              )}>
+                                {studentQuizItem?.quiz_title || adminQuizItem?.quiz_title}
+                              </h4>
+                            </div>
+
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-400 font-medium h-5">
+                              <div className="flex items-center gap-1.5">
+                                <Info className="w-3.5 h-3.5" />
+                                <span>{item.question_count} 题</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Activity className="w-3.5 h-3.5" />
+                                <span>总分 {item.total_score}</span>
+                              </div>
+                              {item.duration && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  <span>{item.duration} min</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex-shrink-0 w-[120px] flex flex-col items-end justify-center">
+                            {isStudent && isCompleted && (
+                              <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 tracking-tight shadow-sm">
+                                得分: <span className="text-sm font-black">{studentQuizItem.score}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
 
-                    <div className="w-full mt-6 space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-md">
-                        <span className="text-sm font-semibold text-[#6B7280]">完成项目</span>
-                        <span className="font-bold text-[#3B82F6] text-lg">
-                          {learningDetail.progress.completed} <span className="text-[#9CA3AF] text-sm font-normal">/ {learningDetail.progress.total}</span>
-                        </span>
+          <div className="lg:col-span-4 space-y-6">
+
+            {isStudent && learningDetail && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sticky top-24">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  总体进度
+                </h3>
+
+                <div className="mb-8 text-center relative">
+                  <div className="text-6xl font-bold text-gray-900 mb-2 font-mono tracking-tighter">
+                    {learningDetail.progress?.percentage ?? 0}<span className="text-2xl text-gray-400 ml-1">%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-1000 ease-out relative"
+                      style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {Number(learningDetail.progress?.knowledge_total) > 0 && (
+                    <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <span className="text-gray-600 font-medium">知识学习</span>
                       </div>
+                      <span className="font-bold text-gray-900 font-mono">
+                        {learningDetail.progress?.knowledge_completed ?? 0} <span className="text-gray-400">/</span> {learningDetail.progress?.knowledge_total ?? 0}
+                      </span>
                     </div>
-                  </>
-                ) : (
-                  <div className="text-center py-10 text-[#6B7280] font-medium">
-                    <div className="w-12 h-12 bg-[#E5E7EB] rounded-md flex items-center justify-center mx-auto mb-3">
-                      <Activity className="w-5 h-5 text-[#9CA3AF]" />
+                  )}
+                  {Number(learningDetail.progress?.quiz_total) > 0 && (
+                    <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                          <Trophy className="w-4 h-4" />
+                        </div>
+                        <span className="text-gray-600 font-medium">测验进度</span>
+                      </div>
+                      <span className="font-bold text-gray-900 font-mono">
+                        {learningDetail.progress?.quiz_completed ?? 0} <span className="text-gray-400">/</span> {learningDetail.progress?.quiz_total ?? 0}
+                      </span>
                     </div>
-                    暂无详细进度
+                  )}
+                </div>
+
+                {studentStatus === 'IN_PROGRESS' && (
+                  <div className="mt-8 p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 text-sm text-blue-700 flex gap-3">
+                    <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-500" />
+                    <div>
+                      <p className="font-bold text-blue-800 mb-1">当前状态: 进行中</p>
+                      <p className="opacity-80 leading-relaxed">
+                        请按时完成所有学习内容和考核。加油！
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
+            )}
 
-            <div className="bg-[#F3F4F6] rounded-lg p-6">
-              <h3 className="text-lg font-bold text-[#111827] mb-6 flex items-center gap-2">
-                <div className="w-1 h-6 bg-[#F59E0B] rounded-full"></div>
-                当前状态
-              </h3>
-
-              <div className="flex flex-col gap-4">
-                {learningDetail?.progress?.knowledge_total ? (
-                  <div className="flex items-center justify-between p-4 bg-[#DBEAFE] rounded-md">
-                    <span className="text-sm font-semibold text-[#3B82F6]">知识同步</span>
-                    <span className="font-bold text-[#3B82F6] text-lg">
-                      {learningDetail.progress.knowledge_completed} / {learningDetail.progress.knowledge_total}
+            {!isStudent && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sticky top-24">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-gray-500" />
+                  任务信息
+                </h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                    <span className="text-gray-500">截止日期</span>
+                    <span className="font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      {dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}
                     </span>
                   </div>
-                ) : null}
-
-                {learningDetail?.progress?.quiz_total ? (
-                  <div className="flex items-center justify-between p-4 bg-[#F3E8FF] rounded-md">
-                    <span className="text-sm font-semibold text-[#A855F7]">试卷同步</span>
-                    <span className="font-bold text-[#A855F7] text-lg">
-                      {learningDetail.progress.quiz_completed} / {learningDetail.progress.quiz_total}
+                  <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                    <span className="text-gray-500">更新人</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
+                        {(task.updated_by_name || task.created_by_name)?.[0]}
+                      </div>
+                      <span className="font-semibold text-gray-900">{task.updated_by_name || task.created_by_name}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                    <span className="text-gray-500">更新时间</span>
+                    <span className="font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      {dayjs(task.updated_at).format('YYYY-MM-DD HH:mm')}
                     </span>
                   </div>
-                ) : null}
-
-                <div className="flex items-center justify-between p-4 bg-white rounded-md">
-                  <span className="text-sm font-semibold text-[#6B7280]">执行状态</span>
-                  {studentStatus && (
-                    <span className={cn(
-                      "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-widest",
-                      studentStatus === 'COMPLETED' ? "bg-[#D1FAE5] text-[#10B981]" :
-                        studentStatus === 'IN_PROGRESS' ? "bg-[#DBEAFE] text-[#3B82F6]" :
-                          "bg-[#F3F4F6] text-[#6B7280]"
-                    )}>
-                      {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
-                    </span>
-                  )}
+                  <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                    <span className="text-gray-500">知识点数量</span>
+                    <span className="font-semibold text-gray-900">{task.knowledge_items?.length || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-gray-500">测验数量</span>
+                    <span className="font-semibold text-gray-900">{task.quizzes?.length || 0}</span>
+                  </div>
                 </div>
+
+                {canEditTask && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-8 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl h-11"
+                    onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    编辑任务配置
+                  </Button>
+                )}
               </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div >
+      </main >
+    </div >
   );
 };

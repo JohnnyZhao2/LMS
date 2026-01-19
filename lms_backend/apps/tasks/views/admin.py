@@ -125,7 +125,7 @@ class TaskListView(APIView):
         if is_closed is not None:
             is_closed_bool = is_closed.lower() in ('true', '1', 'yes')
             queryset = queryset.filter(is_closed=is_closed_bool)
-        queryset = queryset.select_related('created_by').order_by('-created_at')
+        queryset = queryset.select_related('created_by', 'updated_by').order_by('-created_at')
         
         # Apply pagination
         paginator = StandardResultsSetPagination()
@@ -227,6 +227,6 @@ class TaskCloseView(APIView):
                 message='只有管理员可以强制结束任务'
             )
         task = self.service.get_task_by_id(pk)
-        task = self.service.close_task(task)
+        task = self.service.close_task(task, updated_by=request.user)
         serializer = TaskDetailSerializer(task)
         return success_response(serializer.data)

@@ -10,7 +10,6 @@ Implements:
 - 一个任务可以包含任意组合的知识文档和试卷
 - 简化任务状态逻辑
 """
-import uuid
 from django.db import models
 from django.utils import timezone
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
@@ -35,6 +34,15 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     # 时间设置
     deadline = models.DateTimeField(
         verbose_name='截止时间'
+    )
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='task_updated',
+        verbose_name='最后更新者'
     )
     # 任务状态（任务级别，非分配级别）
     is_closed = models.BooleanField(
@@ -76,6 +84,14 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         """获取关联知识文档数量"""
         return self.task_knowledge.count()
     @property
+    def exam_count(self):
+        """获取考试数量"""
+        return self.task_quizzes.filter(quiz__quiz_type='EXAM').count()
+    @property
+    def practice_count(self):
+        """获取练习数量"""
+        return self.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
+    @property
     def assignee_count(self):
         """获取分配学员数量"""
         return self.assignments.count()
@@ -102,6 +118,16 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             return None
         completed = self.assignments.filter(status='COMPLETED').count()
         return round(completed / total * 100, 1)
+
+    @property
+    def is_effectively_closed(self) -> bool:
+        """
+        任务是否已结束：手动关闭或截止时间已过
+        统一的关闭状态判断逻辑，供 serializers 和 services 使用
+        """
+        if self.is_closed:
+            return True
+        return timezone.now() > self.deadline
     def close(self):
         """
         强制结束任务
@@ -218,10 +244,23 @@ class TaskAssignment(TimestampMixin, models.Model):
         # 2. 试卷完成统计
         # 每个关联的试卷只要有至少一个非答题中的 submission 就算该项完成
         from apps.submissions.models import Submission
-        completed_quizzes = Submission.objects.filter(
+        all_completed_quiz_ids = Submission.objects.filter(
             task_assignment=self,
             status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).values('quiz_id').distinct().count()
+        ).values_list('quiz_id', flat=True).distinct()
+        completed_quizzes = len(all_completed_quiz_ids)
+        
+        # 统计考试和练习的完成情况
+        total_exams = task.task_quizzes.filter(quiz__quiz_type='EXAM').count()
+        total_practices = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
+        
+        # 获取考试和练习的 ID 列表以便计算完成数
+        exam_ids = task.task_quizzes.filter(quiz__quiz_type='EXAM').values_list('quiz_id', flat=True)
+        practice_ids = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').values_list('quiz_id', flat=True)
+        
+        completed_exams = len(set(all_completed_quiz_ids) & set(exam_ids))
+        completed_practices = len(set(all_completed_quiz_ids) & set(practice_ids))
+
         completed = completed_knowledge + completed_quizzes
         return {
             'completed': completed,
@@ -230,6 +269,10 @@ class TaskAssignment(TimestampMixin, models.Model):
             'knowledge_completed': completed_knowledge,
             'quiz_total': total_quizzes,
             'quiz_completed': completed_quizzes,
+            'exam_total': total_exams,
+            'exam_completed': completed_exams,
+            'practice_total': total_practices,
+            'practice_completed': completed_practices,
             'percentage': round(completed / total * 100, 1)
         }
     def check_completion(self):
@@ -246,8 +289,7 @@ class TaskAssignment(TimestampMixin, models.Model):
 class TaskKnowledge(TimestampMixin, models.Model):
     """
     任务与知识文档的关联模型
-    通过 resource_uuid + version_number 关联到特定版本的知识文档。
-    不再存储 snapshot，直接从 Knowledge 表查询版本数据。
+    通过 FK 直接关联到特定版本的知识文档记录。
     """
     task = models.ForeignKey(
         Task,
@@ -260,17 +302,6 @@ class TaskKnowledge(TimestampMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='knowledge_tasks',
         verbose_name='知识文档'
-    )
-    resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name='知识资源ID'
-    )
-    version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='知识版本号'
     )
     order = models.PositiveIntegerField(
         default=1,
@@ -285,12 +316,7 @@ class TaskKnowledge(TimestampMixin, models.Model):
     def __str__(self):
         return f"{self.task.title} - {self.knowledge.title}"
     def save(self, *args, **kwargs):
-        """保存时自动设置版本号和顺序号"""
-        if self.knowledge:
-            if not self.resource_uuid:
-                self.resource_uuid = self.knowledge.resource_uuid
-            if not self.version_number:
-                self.version_number = self.knowledge.version_number
+        """保存时自动设置顺序号"""
         if not self.order:
             max_order = TaskKnowledge.objects.filter(
                 task=self.task
@@ -299,18 +325,10 @@ class TaskKnowledge(TimestampMixin, models.Model):
             )['max_order']
             self.order = (max_order or 0) + 1
         super().save(*args, **kwargs)
-    def get_versioned_knowledge(self):
-        """获取任务创建时版本的知识文档"""
-        from apps.knowledge.models import Knowledge
-        return Knowledge.objects.filter(
-            resource_uuid=self.resource_uuid,
-            version_number=self.version_number
-        ).first() or self.knowledge
 class TaskQuiz(TimestampMixin, models.Model):
     """
     任务与试卷的关联模型
-    通过 resource_uuid + version_number 关联到特定版本的试卷。
-    不再存储 snapshot，直接从 Quiz 表查询版本数据。
+    通过 FK 直接关联到特定版本的试卷记录。
     """
     task = models.ForeignKey(
         Task,
@@ -323,17 +341,6 @@ class TaskQuiz(TimestampMixin, models.Model):
         on_delete=models.PROTECT,
         related_name='quiz_tasks',
         verbose_name='试卷'
-    )
-    resource_uuid = models.UUIDField(
-        null=True,
-        blank=True,
-        editable=False,
-        verbose_name='试卷资源ID'
-    )
-    version_number = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name='试卷版本号'
     )
     order = models.PositiveIntegerField(
         default=1,
@@ -348,12 +355,7 @@ class TaskQuiz(TimestampMixin, models.Model):
     def __str__(self):
         return f"{self.task.title} - {self.quiz.title}"
     def save(self, *args, **kwargs):
-        """保存时自动设置版本号和顺序号"""
-        if self.quiz:
-            if not self.resource_uuid:
-                self.resource_uuid = self.quiz.resource_uuid
-            if not self.version_number:
-                self.version_number = self.quiz.version_number
+        """保存时自动设置顺序号"""
         if not self.order:
             max_order = TaskQuiz.objects.filter(
                 task=self.task
@@ -362,13 +364,6 @@ class TaskQuiz(TimestampMixin, models.Model):
             )['max_order']
             self.order = (max_order or 0) + 1
         super().save(*args, **kwargs)
-    def get_versioned_quiz(self):
-        """获取任务创建时版本的试卷"""
-        from apps.quizzes.models import Quiz
-        return Quiz.objects.filter(
-            resource_uuid=self.resource_uuid,
-            version_number=self.version_number
-        ).first() or self.quiz
 class KnowledgeLearningProgress(TimestampMixin, models.Model):
     """
     知识学习进度模型

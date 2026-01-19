@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import type {
@@ -42,6 +42,7 @@ export const useStudentTasks = (
       );
     },
     enabled,
+    placeholderData: keepPreviousData,
   });
 };
 

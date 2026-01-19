@@ -1,59 +1,91 @@
 # 仓库指南
-
 用中文回复
+**No backward compatibility** - Break old formats freely
 
-## 项目结构与模块组织
-- `lms_backend/` 为 Django REST API。关键区域：`apps/`（领域模块，如 `users`、`knowledge`、`tasks`）、`core/`（共享工具）、`config/`（配置与路由）、`tests/`（集成测试 + 性质测试）。
-- `lms_frontend/` 为 React + Vite 应用。源码位于 `lms_frontend/src/`，其中 `app/` 用于路由与应用壳，`features/` 为业务模块，`components/ui/` 为共享 UI。
-- 仓库级文档（例如 `NAMING_CONVENTIONS.md`、`project structure.md`）描述命名与架构规范。
+## 项目结构
+- `lms_backend/` — Django REST API（Clean Architecture）
+  - `apps/` — 领域模块（users, knowledge, questions, quizzes, tasks, submissions, spot_checks, notifications, dashboard）
+  - `core/` — 共享基类与工具（BaseService, exceptions, responses, pagination）
+  - `config/` — 配置与路由
+  - `tests/` — 集成测试 + 属性测试
+- `lms_frontend/` — React 19 + Vite + TypeScript + Tailwind CSS 4
+  - `src/app/` — 路由与应用壳
+  - `src/features/` — 业务模块（按功能隔离）
+  - `src/components/ui/` — 共享 UI 组件（基于 Radix UI）
+  - `src/lib/` — 工具库（api-client, react-query, utils）
 
 ## 构建、测试与开发命令
-后端（在 `lms_backend/` 目录执行）：
-- `pip install -r requirements.txt` —— 安装 API 依赖。
-- `python manage.py runserver --settings=config.settings.development` —— 本地启动 API。
-- `python -m pytest tests/ -v` —— 运行全部后端测试。
 
-前端（在 `lms_frontend/` 目录执行）：
-- `npm install` —— 安装 UI 依赖。
-- `npm run dev` —— 启动 Vite 开发服务器。
-- `npm run build` —— 类型检查并构建生产资源。
-- `npm run lint` —— 运行 ESLint。
+### 后端（workdir: `lms_backend/`）
+```bash
+pip install -r requirements.txt                                    # 安装依赖
+python manage.py runserver --settings=config.settings.development  # 启动开发服务器
+python manage.py migrate --settings=config.settings.development    # 运行迁移
 
-## 编码风格与命名约定
-- 后端：遵循 PEP 8；文件/函数用 `snake_case`，类用 `PascalCase`；模块命名如 `services.py`、`repositories.py`。
-- 前端：文件名用 `kebab-case`（例如 `task-list.tsx`），组件用 `PascalCase`，变量用 `camelCase`；路由路径使用 `kebab-case` 与 `ROUTES` 常量。
-- 前端 `src/` 模块优先使用 `@/` 导入。
+# 测试命令
+python -m pytest tests/ -v                                         # 运行全部测试
+python -m pytest tests/integration/ -v                             # 仅集成测试
+python -m pytest tests/properties/ -v                              # 仅属性测试
+python -m pytest tests/test_domain_layer.py -v                     # 仅领域层测试
+python -m pytest tests/integration/test_exam_task_flow.py -v       # 运行单个测试文件
+python -m pytest tests/integration/test_exam_task_flow.py::TestExamTaskFlow::test_xxx -v  # 运行单个测试方法
+python -m pytest tests/ -k "keyword" -v                            # 按关键字筛选测试
+python -m pytest tests/ --cov=apps --cov-report=html               # 覆盖率报告
+```
 
-## 前端规范参考（轻量）
-- 组件与样式规范：`components-and-styling.md`
-- 项目结构约定：`project structure.md`
-- 工程与代码标准：`project-standards.md`
+### 前端（workdir: `lms_frontend/`）
+```bash
+npm install          # 安装依赖
+npm run dev          # 启动 Vite 开发服务器
+npm run build        # TypeScript 检查 + 生产构建
+npm run lint         # ESLint 检查
+npm run preview      # 预览生产构建
+```
+
+## 代码风格
+
+### 导入顺序（前端）
+```typescript
+// 1. React/外部库
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+// 2. 内部模块（@/ 别名）
+import { apiClient } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+// 3. 相对路径（同模块内）
+import { UserForm } from './user-form';
+```
 
 ## 测试指南
-- 后端使用 `pytest`、`pytest-django`、`hypothesis`、`factory-boy`。
-- 测试位于 `lms_backend/tests/`，命名为 `test_*.py`（包括 `tests/integration/` 与 `tests/properties/`）。
-- 未提供前端测试方案；如需添加，请显式引入相关工具。
-
-## 提交与拉取请求指南
-- 历史提交信息为简短描述（常为中文），无固定规范；保持简洁与聚焦。
-- PR 需包含：摘要、测试说明（运行的命令）、关联 Issue（如有）、UI 变更截图。
+- **后端框架**：pytest + pytest-django + hypothesis + factory-boy
+- **测试位置**：`lms_backend/tests/`（`integration/` 和 `properties/` 子目录）
+- **测试命名**：`test_*.py`，测试类 `Test*`，测试方法 `test_*`
+- **测试数据库**：SQLite 内存数据库（`config.settings.test`）
+- **前端测试**：暂无配置，如需添加请显式引入
 
 ## 代理特定说明
-- 避免向后兼容补丁；触及旧代码时优先进行干净重构。
-- 修改数据库字段时，更新 Django 模型、序列化器、服务与前端类型，并全局搜索更新引用。
-- 修改基于角色的 UI 时，检查角色间共享行为（student、mentor、dept manager、admin、team manager）。
+- **禁止向后兼容**：触及旧代码时优先干净重构
+- **角色相关 UI**：检查 student/mentor/dept_manager/admin/team_manager 共享行为
+- **API 响应格式**：统一 `{ code, message, data }` 结构
+
+## 后端 Selector 规则
+- **必须建**：统计/聚合/多表复杂查询（≈5–10 行+，含 Q/annotate/aggregate/subquery）、跨模块读取需要打破循环依赖
+- **建议建**：查询 >3 行且会被 2+ 处复用、需要统一 select_related/prefetch_related、读模型（列表/搜索/筛选/仪表盘）
+- **不建**：简单一次性查询（≤3 行）、写流程中临时查询（事务强耦合）
+- **默认策略**：先写在 service 私有 helper，命中任一规则即抽到 `selectors.py`
 
 ## 全局原则
-- 不做向后兼容，旧格式可直接破坏性调整。
-- 避免冗余与重复代码，优先简化与抽象；能删除就删除。
+- 不做向后兼容，旧格式可直接破坏性调整
+- 避免冗余与重复代码，优先简化与抽象；能删除就删除
+- 组件拆分：超过 200 行或嵌套渲染函数时提取子组件
 
 ## 前端审美原则
-- 避免“AI 模板感”与泛化设计，输出需有鲜明风格与语境个性。
-- 字体：选择独特、有审美张力的字体，避免 Inter/Roboto/Arial/系统默认字体。
-- 配色与主题：确立明确风格，使用 CSS 变量统一；主色占据视觉主导，配以锐利强调色；可参考 IDE 主题或文化语境。
-- 动效：优先 CSS 动画；在 React 场景可用 Motion；注重高影响时刻（如首屏加载与分段揭示），而非零散微动效。
-- 背景：营造氛围与层次，使用渐变、几何图形或环境化纹理，避免单色铺底。
-- 禁止：紫色渐变白底、可预期的布局与组件套路、无差别的模板化风格。
+- 避免"AI 模板感"与泛化设计，输出需有鲜明风格与语境个性
+- 字体：选择独特、有审美张力的字体，避免 Inter/Roboto/Arial/系统默认字体
+- 配色与主题：确立明确风格，使用 CSS 变量统一；主色占据视觉主导，配以锐利强调色
+- 动效：优先 CSS 动画；在 React 场景可用 framer-motion；注重高影响时刻
+- 背景：营造氛围与层次，使用渐变、几何图形或环境化纹理，避免单色铺底
+- 禁止：紫色渐变白底、可预期的布局与组件套路、无差别的模板化风格
 
 <skills_system priority="1">
 
@@ -83,8 +115,8 @@ Usage notes:
 </skill>
 
 <skill>
-<name>frontend-design</name>
-<description>Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics.</description>
+<name>code-cleanup</name>
+<description>代码清理与重构工具。用于：(1) 发现并删除冗余/重复代码，(2) 识别并清理旧代码与兼容代码，(3) 合并相似逻辑，(4) 统一代码风格。当用户提到"清理代码"、"删除冗余"、"重构"、"统一风格"、"找重复代码"时触发。</description>
 <location>project</location>
 </skill>
 

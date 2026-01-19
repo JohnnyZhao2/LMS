@@ -12,6 +12,7 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
+  setIsSwitching: (isSwitching: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -20,12 +21,22 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
  * 认证 Provider
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    currentRole: null,
-    availableRoles: [],
-    isAuthenticated: false,
-    isLoading: true,
+  const [state, setState] = useState<AuthState>(() => {
+    const user = tokenStorage.getUserInfo();
+    const currentRole = tokenStorage.getCurrentRole();
+    const availableRoles = tokenStorage.getAvailableRoles();
+    const hasTokens = tokenStorage.hasTokens();
+
+    const isAuthenticated = hasTokens && !!user;
+
+    return {
+      user,
+      currentRole,
+      availableRoles,
+      isAuthenticated,
+      isLoading: hasTokens && !isAuthenticated, // 如果有 token 但没用户信息，才需要进入初始加载态
+      isSwitching: false,
+    };
   });
 
   /**
@@ -46,12 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // 调用 API 获取最新用户信息
       const response = await meApi.getMe();
-      
+
       // 更新本地存储
       tokenStorage.setUserInfo(response.user);
       tokenStorage.setCurrentRole(response.current_role);
       tokenStorage.setAvailableRoles(response.available_roles);
-      
+
       setState({
         user: response.user,
         currentRole: response.current_role,
@@ -82,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     tokenStorage.setUserInfo(response.user);
     tokenStorage.setCurrentRole(response.current_role);
     tokenStorage.setAvailableRoles(response.available_roles);
-    
+
     setState({
       user: response.user,
       currentRole: response.current_role,
@@ -124,13 +135,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     tokenStorage.setUserInfo(response.user);
     tokenStorage.setCurrentRole(response.current_role);
     tokenStorage.setAvailableRoles(response.available_roles);
-    
+
     setState((prev) => ({
       ...prev,
       user: response.user,
       currentRole: response.current_role,
       availableRoles: response.available_roles,
+      isSwitching: true, // 切换完成后保持 true，由 Header 处理导航后通过 setIsSwitching(false) 关闭
     }));
+  }, []);
+
+  /**
+   * 设置切换状态
+   */
+  const setIsSwitching = useCallback((isSwitching: boolean) => {
+    setState((prev) => ({ ...prev, isSwitching }));
   }, []);
 
   // 初始化时检查 token
@@ -144,6 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     switchRole,
     refreshUser,
+    setIsSwitching,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,12 +2,14 @@
  * 仪表盘路由
  */
 import { Route } from 'react-router-dom';
+import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { StudentDashboard } from '@/features/dashboard/components/student-dashboard';
-import { MentorDashboard } from '@/features/dashboard/components/mentor-dashboard';
-import { TeamManagerDashboard } from '@/features/dashboard/components/team-manager-dashboard';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
+
+const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
+const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
+const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
 
 /**
  * 根据角色渲染对应的仪表盘

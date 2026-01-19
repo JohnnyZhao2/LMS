@@ -132,14 +132,18 @@ class StartQuizSerializer(serializers.Serializer):
             raise serializers.ValidationError(str(e))
         is_exam = quiz.quiz_type == 'EXAM'
         if is_exam:
-            # 检查考试约束
+            # 检查考试约束（已提交则报错）
             try:
                 in_progress = service.check_exam_constraints(assignment, quiz_id)
             except Exception as e:
                 raise serializers.ValidationError(str(e))
-            attrs['in_progress_submission'] = in_progress
         else:
-            attrs['in_progress_submission'] = None
+            # 练习模式：也检查进行中的提交，复用已有记录
+            in_progress = service.repository.get_in_progress(
+                task_assignment_id=assignment.id,
+                quiz_id=quiz_id
+            )
+        attrs['in_progress_submission'] = in_progress
         attrs['assignment'] = assignment
         attrs['quiz'] = quiz
         attrs['task'] = assignment.task
@@ -149,14 +153,13 @@ class StartQuizSerializer(serializers.Serializer):
     def create(self, validated_data):
         """Create or return existing submission - 委托给 SubmissionService"""
         service = SubmissionService()
-        is_exam = validated_data['is_exam']
         in_progress = validated_data.get('in_progress_submission')
-        # 如果是考试模式且有进行中的提交，直接返回
-        if is_exam and in_progress:
+        # 无论练习还是考试，有进行中的提交就直接返回
+        if in_progress:
             return in_progress
         return service.start_quiz(
             assignment=validated_data['assignment'],
             task_quiz=validated_data['task_quiz'],
             user=self.context['request'].user,
-            is_exam=is_exam
+            is_exam=validated_data['is_exam']
         )

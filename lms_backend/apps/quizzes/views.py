@@ -34,6 +34,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
         parameters=[
             OpenApiParameter(name='search', type=str, description='搜索试卷标题'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
+            OpenApiParameter(name='quiz_type', type=str, description='试卷类型: EXAM/PRACTICE'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
@@ -48,6 +49,8 @@ class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
         filters = {}
         if request.query_params.get('created_by'):
             filters['created_by_id'] = int(request.query_params.get('created_by'))
+        if request.query_params.get('quiz_type'):
+            filters['quiz_type'] = request.query_params.get('quiz_type')
         search = request.query_params.get('search')
         # 2. 调用 Service
         try:

@@ -138,15 +138,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         verbose_name='版本号',
         help_text='同一资源的累积版本序号'
     )
-    source_version = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='derived_versions',
-        verbose_name='来源版本',
-        help_text='从该已发布版本衍生出来的草稿'
-    )
     is_current = models.BooleanField(
         default=True,
         verbose_name='是否当前最新发布版本'
@@ -254,8 +245,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 raise ValidationError({
                     'content': '其他类型知识必须填写正文内容'
                 })
-    # 注意：is_referenced_by_task() 和 delete() 方法已迁移到 KnowledgeService
-    # 业务逻辑应在 Service 层处理，Model 层只保留数据定义
     @classmethod
     def next_version_number(cls, resource_uuid):
         """
@@ -271,25 +260,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         )
         max_version = aggregate['max_version'] or 0
         return max_version + 1
-    def _compute_next_version_number(self):
-        """
-        计算下一个可用版本号。
-        """
-        return self.next_version_number(self.resource_uuid)
-    def ensure_version_number(self):
-        """
-        确保当前实例拥有正确的版本号。
-        """
-        if not self.version_number or Knowledge.objects.filter(
-            resource_uuid=self.resource_uuid,
-            version_number=self.version_number
-        ).exclude(pk=self.pk).exists():
-            self.version_number = self._compute_next_version_number()
-    # 注意：publish() 方法已迁移到 KnowledgeService.publish()
-    # 业务逻辑应在 Service 层处理
-    # clone_as_draft() 方法已移除，请使用 KnowledgeService.create_or_get_draft_from_published()
-    # 注意：unpublish() 方法已迁移到 KnowledgeService.unpublish()
-    # 业务逻辑应在 Service 层处理
+
     def increment_view_count(self):
         """
         增加知识文档的阅读次数

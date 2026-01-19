@@ -11,6 +11,11 @@ from .views import (
     StudentAssignmentListView,
     StudentTaskDetailView,
     CompleteKnowledgeLearningView,
+    TaskAnalyticsView,
+    StudentExecutionsView,
+    GradingQuestionsView,
+    GradingAnswersView,
+    GradingSubmitView,
 )
 urlpatterns = [
     # Task list and detail
@@ -26,4 +31,11 @@ urlpatterns = [
     path('my-assignments/', StudentAssignmentListView.as_view(), name='student-assignment-list'),
     path('<int:task_id>/detail/', StudentTaskDetailView.as_view(), name='student-task-detail'),
     path('<int:task_id>/complete-knowledge/', CompleteKnowledgeLearningView.as_view(), name='complete-knowledge-learning'),
+    # Task analytics (admin preview)
+    path('<int:pk>/analytics/', TaskAnalyticsView.as_view(), name='task-analytics'),
+    path('<int:pk>/student-executions/', StudentExecutionsView.as_view(), name='student-executions'),
+    # Grading center
+    path('<int:pk>/grading/questions/', GradingQuestionsView.as_view(), name='grading-questions'),
+    path('<int:pk>/grading/answers/', GradingAnswersView.as_view(), name='grading-answers'),
+    path('<int:pk>/grading/submit/', GradingSubmitView.as_view(), name='grading-submit'),
 ]

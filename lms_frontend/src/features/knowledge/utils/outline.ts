@@ -41,11 +41,12 @@ export function parseOutlineFromHtml(html: string): OutlineItem[] {
 export function parseOutline(content: string, isEmergency: boolean): OutlineItem[] {
     if (isEmergency) {
         // 应急类使用固定的标签页作为目录
-        return EMERGENCY_TABS.map((tab, index) => ({
-            id: `tab-${index}`,
+        return EMERGENCY_TABS.map((tab) => ({
+            id: tab.key,
             level: 1,
             text: tab.label,
         }));
     }
+
     return parseOutlineFromHtml(content);
 }

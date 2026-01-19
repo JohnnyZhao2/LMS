@@ -7,7 +7,7 @@ Properties:
 """
 from rest_framework import serializers
 from apps.questions.models import Question
-from apps.questions.serializers import QuestionDetailSerializer, QuestionCreateSerializer
+from apps.questions.serializers import QuestionCreateSerializer
 from .models import Quiz, QuizQuestion
 class QuizQuestionSerializer(serializers.ModelSerializer):
     """
@@ -19,14 +19,17 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
     question_type = serializers.CharField(source='question.question_type', read_only=True)
     question_type_display = serializers.CharField(source='question.get_question_type_display', read_only=True)
     score = serializers.DecimalField(source='question.score', max_digits=5, decimal_places=2, read_only=True)
+    resource_uuid = serializers.UUIDField(source='question.resource_uuid', read_only=True)
+    is_current = serializers.BooleanField(source='question.is_current', read_only=True)
     class Meta:
         model = QuizQuestion
-        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order']
+        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order', 'resource_uuid', 'is_current']
 class QuizListSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz list view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -39,14 +42,17 @@ class QuizListSerializer(serializers.ModelSerializer):
             'has_subjective_questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name',
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
         ]
+
+
 class QuizDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz detail view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -63,7 +69,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             'subjective_question_count', 'questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
     def get_questions(self, obj):
         """Get ordered questions with details."""

@@ -95,7 +95,23 @@ export const QuizPlayer: React.FC = () => {
     if (!submission) {
       return;
     }
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+
+    // 判断答案是否为空
+    const isEmpty =
+      value === null ||
+      value === undefined ||
+      value === '' ||
+      (Array.isArray(value) && value.length === 0);
+
+    setAnswers((prev) => {
+      if (isEmpty) {
+        // 如果答案为空，从对象中删除该键
+        const { [questionId]: _, ...rest } = prev;
+        return rest;
+      }
+      // 否则正常设置答案
+      return { ...prev, [questionId]: value };
+    });
 
     try {
       await saveAnswerMutation({
@@ -150,49 +166,39 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
-    <div
-      className={cn(
-        '-m-6 min-h-[calc(100vh-var(--header-height))] p-6',
-        isExam ? 'bg-[#111827]' : 'bg-[#F3F4F6]'
-      )}
-    >
+    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-[#F3F4F6]">
       {/* 顶部信息栏 - Flat Design */}
-      <div
-        className={cn(
-          'flex justify-between items-center mb-6 px-5 py-4 rounded-lg',
-          isExam
-            ? 'bg-white/10'
-            : 'bg-white'
-        )}
-      >
+      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-white">
         <div className="flex items-center gap-4">
-          <div
-            className={cn(
-              'w-11 h-11 rounded-md flex items-center justify-center text-white text-xl',
-              isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
-            )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 shrink-0 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
           >
-            <FileText className="w-5 h-5" />
-          </div>
-          <div>
-            <h4
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <div className="flex items-center gap-4">
+            <div
               className={cn(
-                'text-lg font-semibold m-0',
-                isExam ? 'text-white' : 'text-[#111827]'
+                'w-11 h-11 rounded-md flex items-center justify-center text-white text-xl',
+                isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
               )}
             >
-              {submission.quiz_title}
-            </h4>
-            <span className={cn(
-              'text-sm',
-              isExam ? 'text-white/60' : 'text-[#6B7280]'
-            )}>
-              总分：{submission.total_score}分 · {submission.answers.length} 道题
-            </span>
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold m-0 text-[#111827]">
+                {submission.quiz_title}
+              </h4>
+              <span className="text-sm text-[#6B7280]">
+                总分：{submission.total_score}分 · {submission.answers.length} 道题
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 ml-auto">
           <StatusBadge
             status={isExam ? 'error' : 'info'}
             text={isExam ? '正式考试' : '练习模式'}
@@ -207,19 +213,11 @@ export const QuizPlayer: React.FC = () => {
         {/* 题目导航 */}
         <div className="lg:col-span-1">
           <div className="sticky top-[88px]">
-            <Card
-              className={cn(
-                'rounded-lg',
-                isExam ? 'bg-white/10' : 'bg-white'
-              )}
-            >
+            <Card className="rounded-lg bg-white">
               <CardContent className="p-5">
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
-                    <span className={cn(
-                      'text-sm',
-                      isExam ? 'text-white/60' : 'text-[#6B7280]'
-                    )}>
+                    <span className="text-sm text-[#6B7280]">
                       答题进度
                     </span>
                     <span className={cn(
@@ -232,14 +230,11 @@ export const QuizPlayer: React.FC = () => {
                   <Progress
                     percent={progressPercent}
                     strokeColor={isExam ? '#EF4444' : '#3B82F6'}
-                    trailColor={isExam ? 'rgba(255, 255, 255, 0.1)' : '#E5E7EB'}
+                    trailColor="#E5E7EB"
                   />
                 </div>
 
-                <span className={cn(
-                  'text-xs block mb-3',
-                  isExam ? 'text-white/50' : 'text-[#6B7280]'
-                )}>
+                <span className="text-xs block mb-3 text-[#6B7280]">
                   题目导航
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -264,11 +259,7 @@ export const QuizPlayer: React.FC = () => {
                                   ? 'bg-[#065F46] text-[#34D399]'
                                   : 'bg-[#D1FAE5] text-[#10B981]'
                               )
-                              : cn(
-                                isExam
-                                  ? 'bg-white/10 text-white/60 hover:bg-white/20'
-                                  : 'bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]'
-                              )
+                              : 'bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]'
                         )}
                       >
                         {isAnswered && !isCurrent ? (
@@ -287,39 +278,27 @@ export const QuizPlayer: React.FC = () => {
 
         {/* 答题区域 */}
         <div className="lg:col-span-3">
-          <Card
-            className={cn(
-              'rounded-lg',
-              isExam ? 'bg-white/10' : 'bg-white'
-            )}
-          >
+          <Card className="rounded-lg bg-white">
             <CardContent className="p-6">
               {/* 题号指示 */}
-              <div
-                className={cn(
-                  'flex justify-between items-center mb-5 pb-4 border-b-2',
-                  isExam ? 'border-white/10' : 'border-[#F3F4F6]'
-                )}
-              >
+              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F3F4F6]">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
-                      'w-9 h-9 rounded-md flex items-center justify-center text-white font-bold text-lg',
-                      isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
+                      'w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg border',
+                      isExam
+                        ? 'bg-red-50 text-red-600 border-red-100'
+                        : 'bg-blue-50 text-blue-600 border-blue-100'
                     )}
                   >
                     {currentIndex + 1}
                   </div>
-                  <span className={cn(
-                    isExam ? 'text-white/60' : 'text-[#6B7280]'
-                  )}>
+                  <span className="text-[#6B7280]">
                     第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
                   </span>
                 </div>
                 {currentQuestion && (
-                  <span className={cn(
-                    isExam ? 'text-white/60' : 'text-[#6B7280]'
-                  )}>
+                  <span className="text-[#6B7280]">
                     分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                   </span>
                 )}
@@ -327,32 +306,23 @@ export const QuizPlayer: React.FC = () => {
 
               {/* 题目内容 */}
               {currentQuestion && (
-                <div className={isExam ? 'text-white' : undefined}>
+                <div>
                   <QuestionCard
                     answer={currentQuestion}
                     userAnswer={answers[currentQuestion.question]}
                     onAnswerChange={(value) => handleAnswerChange(currentQuestion.question, value)}
-                    isDarkMode={isExam}
                   />
                 </div>
               )}
 
               {/* 底部操作栏 */}
-              <div
-                className={cn(
-                  'flex justify-between mt-8 pt-5 border-t-2',
-                  isExam ? 'border-white/10' : 'border-[#F3F4F6]'
-                )}
-              >
+              <div className="flex justify-between mt-8 pt-5 border-t-2 border-[#F3F4F6]">
                 <Button
                   variant="outline"
                   size="lg"
                   disabled={currentIndex === 0}
                   onClick={() => setCurrentIndex((prev) => prev - 1)}
-                  className={cn(
-                    'h-12 px-5 rounded-md',
-                    isExam && 'bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white'
-                  )}
+                  className="h-12 px-5 rounded-md"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   上一题

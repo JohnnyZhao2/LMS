@@ -16,7 +16,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  // DialogClose removed to avoid duplication with default Close button
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -33,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
 import { showApiError } from '@/utils/error-handler';
+import { ROLE_COLORS } from '@/lib/role-config';
 import type { RoleCode } from '@/types/api';
 
 interface UserFormProps {
@@ -158,15 +158,6 @@ export const UserForm: React.FC<UserFormProps> = ({
   };
 
   const getAvatarText = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
-
-  // Role Configuration - refined style
-  const roleConfigs: Record<string, { bg: string, text: string, icon: React.ReactNode, ring: string }> = {
-    ADMIN: { bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-red-500/20', icon: <Shield className="w-4 h-4" /> },
-    DEPT_MANAGER: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-500/20', icon: <Building2 className="w-4 h-4" /> },
-    MENTOR: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'ring-amber-500/20', icon: <Briefcase className="w-4 h-4" /> },
-    TEAM_MANAGER: { bg: 'bg-cyan-50', text: 'text-cyan-600', ring: 'ring-cyan-500/20', icon: <Users className="w-4 h-4" /> },
-    STUDENT: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-500/20', icon: <User className="w-4 h-4" /> },
-  };
 
   const toggleRole = (code: RoleCode) => {
     setFormData(prev => ({
@@ -337,18 +328,14 @@ export const UserForm: React.FC<UserFormProps> = ({
 
               {/* Selectable Roles */}
               {roles.filter(r => r.code !== 'STUDENT').map(role => {
-                const config = roleConfigs[role.code] || roleConfigs.STUDENT;
                 const active = formData.role_codes.includes(role.code as RoleCode);
-
-                // Map role codes to flat design colors
-                const colorMap: Record<string, { bg: string; text: string; iconBg: string }> = {
-                  ADMIN: { bg: "#DC2626", text: "#DC2626", iconBg: "#DC2626" },
-                  MENTOR: { bg: "#F59E0B", text: "#F59E0B", iconBg: "#F59E0B" },
-                  TEAM_MANAGER: { bg: "#0EA5E9", text: "#0EA5E9", iconBg: "#0EA5E9" },
-                  DEPT_MANAGER: { bg: "#7C3AED", text: "#7C3AED", iconBg: "#7C3AED" },
-                  ROOM_MANAGER: { bg: "#7C3AED", text: "#7C3AED", iconBg: "#7C3AED" }
+                const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
+                const roleIcons: Record<string, React.ReactNode> = {
+                  ADMIN: <Shield className="w-6 h-6" />,
+                  DEPT_MANAGER: <Building2 className="w-6 h-6" />,
+                  MENTOR: <Briefcase className="w-6 h-6" />,
+                  TEAM_MANAGER: <Users className="w-6 h-6" />,
                 };
-                const colorConfig = colorMap[role.code] || { bg: "#3B82F6", text: "#3B82F6", iconBg: "#3B82F6" };
 
                 return (
                   <div
@@ -360,7 +347,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                         ? "bg-white border-2"
                         : "bg-[#F3F4F6] border-2 border-transparent hover:bg-white hover:scale-[1.02]"
                     )}
-                    style={active ? { borderColor: colorConfig.bg } : {}}
+                    style={active ? { borderColor: colorConfig.iconBg || colorConfig.color } : {}}
                   >
                     <div className={cn(
                       "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
@@ -368,16 +355,17 @@ export const UserForm: React.FC<UserFormProps> = ({
                         ? "text-white"
                         : "bg-white text-[#6B7280] group-hover:text-[#111827]"
                     )}
-                      style={active ? { backgroundColor: colorConfig.iconBg } : {}}
+                      style={active ? { backgroundColor: colorConfig.iconBg || colorConfig.color } : {}}
                     >
-                      {config.icon}
+                      {roleIcons[role.code] || <User className="w-6 h-6" />}
                     </div>
 
                     <div className="flex-1">
                       <div className={cn(
-                        "text-base font-bold transition-colors",
-                        active ? colorConfig.text : "text-[#6B7280] group-hover:text-[#111827]"
-                      )}>
+                        "text-base font-bold transition-colors"
+                      )}
+                        style={active ? { color: colorConfig.color } : {}}
+                      >
                         {role.name}
                       </div>
                       {active && <div className="text-[10px] font-semibold uppercase text-[#6B7280] tracking-wider">Enabled</div>}

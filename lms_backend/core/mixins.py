@@ -43,6 +43,46 @@ class CreatorMixin(models.Model):
     )
     class Meta:
         abstract = True
+class VersionedResourceMixin(models.Model):
+    """
+    Mixin for versioned resources (Question, Quiz, etc).
+    Note: Subclasses must define their own Meta.constraints for uniqueness.
+    """
+    import uuid as uuid_module
+    resource_uuid = models.UUIDField(
+        default=uuid_module.uuid4,
+        editable=False,
+        db_index=True,
+        verbose_name='资源标识'
+    )
+    version_number = models.PositiveIntegerField(
+        default=1,
+        verbose_name='版本号'
+    )
+    is_current = models.BooleanField(
+        default=True,
+        verbose_name='是否当前版本'
+    )
+    class Meta:
+        abstract = True
+    @classmethod
+    def next_version_number(cls, resource_uuid):
+        if not resource_uuid:
+            return 1
+        aggregate = cls.objects.filter(
+            resource_uuid=resource_uuid,
+            is_deleted=False
+        ).aggregate(
+            max_version=models.Max('version_number')
+        )
+        max_version = aggregate['max_version'] or 0
+        return max_version + 1
+    def clone_new_version(self):
+        """
+        创建当前资源的新版本，保持历史版本只读。
+        子类需要重写此方法以复制特定字段。
+        """
+        raise NotImplementedError("Subclasses must implement clone_new_version()")
 class DataScopeMixin:
     """
     Mixin for views that provides automatic data scope filtering based on user role.

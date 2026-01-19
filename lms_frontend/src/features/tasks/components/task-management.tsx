@@ -4,7 +4,6 @@ import {
     FileText,
     Plus,
     Search,
-    Filter,
     Eye,
     Trash2,
     Clock,
@@ -12,6 +11,7 @@ import {
     Layout,
     Pencil,
     RefreshCw,
+    BarChart3,
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
@@ -53,10 +53,9 @@ export const TaskManagement: React.FC = () => {
     const navigate = useNavigate()
     const { user, currentRole } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
-    const [statusFilter, setStatusFilter] = React.useState<string>("all")
+    const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
-    const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
 
@@ -96,7 +95,7 @@ export const TaskManagement: React.FC = () => {
                 <CellWithIcon
                     icon={<Layout className="h-5 w-5" />}
                     title={row.original.title}
-                    subtitle={`ID: ${row.original.id} • ${row.original.created_by_name}`}
+                    subtitle={row.original.updated_by_name || row.original.created_by_name}
                 />
             ),
         },
@@ -157,8 +156,9 @@ export const TaskManagement: React.FC = () => {
             header: "截止日期",
             id: "deadline",
             cell: ({ row }) => {
+                const now = dayjs()
                 const date = dayjs(row.original.deadline)
-                const isUrgent = !row.original.is_closed && date.isBefore(dayjs().add(2, 'day'))
+                const isUrgent = !row.original.is_closed && date.isAfter(now) && date.diff(now, 'hour') <= 48
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
@@ -171,6 +171,20 @@ export const TaskManagement: React.FC = () => {
                     </div>
                 )
             }
+        },
+        {
+            header: "更新时间",
+            id: "updated_at",
+            cell: ({ row }) => (
+                <div className="flex flex-col min-w-[100px]">
+                    <span className="text-sm font-bold text-[#111827]">
+                        {dayjs(row.original.updated_at).format("YYYY.MM.DD")}
+                    </span>
+                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                        {dayjs(row.original.updated_at).format("HH:mm:ss")}
+                    </span>
+                </div>
+            )
         },
         {
             header: "状态",
@@ -188,9 +202,10 @@ export const TaskManagement: React.FC = () => {
             id: "actions",
             cell: ({ row }) => {
                 const canEdit = currentRole === 'ADMIN' || row.original.created_by === user?.id;
+                const canPreview = currentRole === 'ADMIN' || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
                 return (
-                    <div className="flex items-center gap-1.5 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="预览任务">
+                    <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
+                        <Tooltip title="查看详情">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -200,6 +215,18 @@ export const TaskManagement: React.FC = () => {
                                 <Eye className="h-4 w-4" />
                             </Button>
                         </Tooltip>
+                        {canPreview && (
+                            <Tooltip title="进度监控">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
+                                    onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
+                                >
+                                    <BarChart3 className="h-4 w-4" />
+                                </Button>
+                            </Tooltip>
+                        )}
                         {canEdit && (
                             <>
                                 <Tooltip title="编辑任务">
@@ -306,26 +333,14 @@ export const TaskManagement: React.FC = () => {
                                 value={statusFilter}
                                 onChange={(val: string) => setStatusFilter(val)}
                                 options={[
-                                    { label: '全部', value: 'all' },
                                     { label: '进行中', value: 'open' },
                                     { label: '已结束', value: 'closed' },
+                                    { label: '全部', value: 'all' },
                                 ]}
                                 variant="premium"
                                 activeColor="white"
                                 className="w-full md:w-auto"
                             />
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                                className={cn(
-                                    "h-14 w-14 rounded-md transition-all duration-200 shadow-none",
-                                    showAdvancedFilters ? "bg-[#111827] text-white" : "bg-[#F3F4F6] text-[#6B7280]"
-                                )}
-                            >
-                                <Filter className="h-5 w-5" />
-                            </Button>
                         </div>
                     </div>
 
