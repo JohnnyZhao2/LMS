@@ -179,10 +179,10 @@ export const KnowledgeDetail: React.FC = () => {
               <h1 className="text-lg font-semibold text-gray-900 m-0 leading-tight">{knowledge.title}</h1>
             </div>
             <div className="flex items-center gap-4 text-[11px] text-gray-500">
-              {knowledge.updated_by_name && (
+              {(knowledge.updated_by_name || knowledge.created_by_name) && (
                 <span className="flex items-center gap-1">
                   <User className="w-3 h-3" />
-                  {knowledge.updated_by_name}
+                  {knowledge.updated_by_name || knowledge.created_by_name}
                 </span>
               )}
               <span className="flex items-center gap-1">

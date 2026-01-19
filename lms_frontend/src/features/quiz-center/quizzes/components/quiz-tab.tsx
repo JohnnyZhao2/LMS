@@ -60,7 +60,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         <CellWithIcon
           icon={<Layout className="w-5 h-5" />}
           title={row.original.title}
-          subtitle={row.original.created_by_name}
+          subtitle={row.original.updated_by_name || row.original.created_by_name}
           iconBg="#EFF6FF"
           iconColor="#2563EB"
         />
@@ -116,14 +116,14 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     },
     {
       id: 'timestamp',
-      header: '构建时间',
+      header: '更新时间',
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="text-sm font-bold text-[#111827]">
-            {dayjs(row.original.created_at).format('YYYY.MM.DD')}
+            {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
           </span>
           <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
-            {dayjs(row.original.created_at).format('HH:mm:ss')}
+            {dayjs(row.original.updated_at).format('HH:mm:ss')}
           </span>
         </div>
       ),

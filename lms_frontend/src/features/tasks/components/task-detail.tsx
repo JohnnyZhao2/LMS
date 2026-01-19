@@ -243,7 +243,7 @@ export const TaskDetail: React.FC = () => {
           <div className="hidden md:flex items-center gap-6 text-gray-500">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
               <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-700">{task.created_by_name}</span>
+              <span className="text-xs font-medium text-gray-700">{task.updated_by_name || task.created_by_name}</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
@@ -547,13 +547,19 @@ export const TaskDetail: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-gray-50">
-                    <span className="text-gray-500">发布人</span>
+                    <span className="text-gray-500">更新人</span>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
-                        {task.created_by_name?.[0]}
+                        {(task.updated_by_name || task.created_by_name)?.[0]}
                       </div>
-                      <span className="font-semibold text-gray-900">{task.created_by_name}</span>
+                      <span className="font-semibold text-gray-900">{task.updated_by_name || task.created_by_name}</span>
                     </div>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-gray-50">
+                    <span className="text-gray-500">更新时间</span>
+                    <span className="font-semibold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                      {dayjs(task.updated_at).format('YYYY-MM-DD HH:mm')}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-gray-50">
                     <span className="text-gray-500">知识点数量</span>

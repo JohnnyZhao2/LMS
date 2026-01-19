@@ -252,7 +252,7 @@ class TaskService(BaseService):
         resource_type: str
     ) -> None:
         """
-        通用的关联创建方法
+        通用的关联创建方法（按 resource_uuid 去重）
         Args:
             task: 任务对象
             resource_ids: 资源ID列表（knowledge_ids 或 quiz_ids）
@@ -274,11 +274,18 @@ class TaskService(BaseService):
                 is_current=True
             )
         resource_map = {r.id: r for r in queryset}
-        associations = []
-        for order, resource_id in enumerate(resource_ids, start=1):
+        
+        # 按 resource_uuid 去重，保留最后出现的
+        seen_uuids = {}
+        for resource_id in resource_ids:
             resource = resource_map.get(resource_id)
-            if not resource:
-                continue
+            if resource:
+                seen_uuids[resource.resource_uuid] = resource_id
+        deduped_ids = [seen_uuids[resource_map[rid].resource_uuid] for rid in resource_ids 
+                       if rid in resource_map and seen_uuids.get(resource_map[rid].resource_uuid) == rid]
+        
+        associations = []
+        for order, resource_id in enumerate(deduped_ids, start=1):
             if resource_type == 'knowledge':
                 associations.append(TaskKnowledge(
                     task_id=task.id,

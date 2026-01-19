@@ -48,11 +48,13 @@ class TaskKnowledgeSerializer(serializers.ModelSerializer):
     knowledge_type = serializers.CharField(source='knowledge.knowledge_type', read_only=True)
     knowledge_type_display = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
+    resource_uuid = serializers.UUIDField(source='knowledge.resource_uuid', read_only=True)
+    is_current = serializers.BooleanField(source='knowledge.is_current', read_only=True)
     class Meta:
         model = TaskKnowledge
         fields = [
             'id', 'knowledge', 'knowledge_title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'order'
+            'summary', 'order', 'resource_uuid', 'is_current'
         ]
         read_only_fields = ['order']
     def get_knowledge_type_display(self, obj):
@@ -72,12 +74,15 @@ class TaskQuizSerializer(serializers.ModelSerializer):
     quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
     duration = serializers.IntegerField(source='quiz.duration', read_only=True)
     pass_score = serializers.DecimalField(source='quiz.pass_score', max_digits=5, decimal_places=2, read_only=True)
+    resource_uuid = serializers.UUIDField(source='quiz.resource_uuid', read_only=True)
+    is_current = serializers.BooleanField(source='quiz.is_current', read_only=True)
     class Meta:
         model = TaskQuiz
         fields = [
             'id', 'quiz', 'quiz_title', 'question_count', 'total_score',
             'subjective_question_count', 'objective_question_count', 'order',
-            'quiz_type', 'quiz_type_display', 'duration', 'pass_score'
+            'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
+            'resource_uuid', 'is_current'
         ]
         read_only_fields = ['order']
 class TaskListSerializer(serializers.ModelSerializer):

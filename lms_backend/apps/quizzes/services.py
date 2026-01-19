@@ -553,16 +553,29 @@ class QuizService(BaseService):
         question_ids: List[int]
     ) -> None:
         """
-        同步题目顺序
+        同步题目顺序（按 resource_uuid 去重）
         Args:
             quiz: 试卷对象
             question_ids: 新的题目 ID 顺序列表
         """
+        # 获取提交的题目信息，按 resource_uuid 去重（保留最后出现的）
+        questions = Question.objects.filter(pk__in=question_ids).values('id', 'resource_uuid')
+        question_map = {q['id']: q['resource_uuid'] for q in questions}
+        
+        # 按 resource_uuid 去重，保留最后出现的 id
+        seen_uuids = {}
+        for qid in question_ids:
+            uuid = question_map.get(qid)
+            if uuid:
+                seen_uuids[uuid] = qid
+        deduped_question_ids = [seen_uuids[question_map[qid]] for qid in question_ids 
+                                if qid in question_map and seen_uuids.get(question_map[qid]) == qid]
+        
         current_relations = {
             qq.question_id: qq
             for qq in list_quiz_questions(quiz.id)
         }
-        new_id_set = set(question_ids)
+        new_id_set = set(deduped_question_ids)
         # 移除不再存在的题目
         to_remove = [
             qid for qid in current_relations.keys()
@@ -574,7 +587,7 @@ class QuizService(BaseService):
                 question_ids=to_remove
             )
         # 重新排序/添加缺失的题目
-        for order, question_id in enumerate(question_ids, start=1):
+        for order, question_id in enumerate(deduped_question_ids, start=1):
             relation = current_relations.get(question_id)
             if relation:
                 if relation.order != order:

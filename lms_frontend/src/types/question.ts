@@ -24,6 +24,8 @@ export interface Question {
   is_current: boolean;
   created_by?: number;
   created_by_name?: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
 }

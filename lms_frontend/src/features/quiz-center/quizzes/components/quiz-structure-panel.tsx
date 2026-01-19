@@ -1,9 +1,9 @@
 "use client"
 
 import React from 'react';
-import { ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, SortAsc, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
-import { Badge, Button, Input } from '@/components/ui';
+import { Badge, Button, Input, Tooltip } from '@/components/ui';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { cn } from '@/lib/utils';
 import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';
@@ -15,6 +15,7 @@ interface QuizStructurePanelProps {
   onRemoveQuestion: (index: number) => void;
   onScoreChange: (id: number, score: string) => void;
   onSortQuestions?: () => void;
+  onUpgradeQuestion?: (index: number, resourceUuid: string) => void;
 }
 
 export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
@@ -24,6 +25,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
   onRemoveQuestion,
   onScoreChange,
   onSortQuestions,
+  onUpgradeQuestion,
 }) => {
   return (
     <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
@@ -69,7 +71,29 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                       <span className="text-sm font-bold">{idx + 1}</span>
                     </div>
                   </div>
-                  <div className="flex-1 flex flex-col gap-2 p-4 bg-white border border-gray-200 rounded-xl transition-all hover:border-primary-300 hover:shadow-md">
+                  <div className={cn(
+                    "flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all hover:shadow-md",
+                    item.is_current === false ? "border-amber-300 bg-amber-50/30" : "border-gray-200 hover:border-primary-300"
+                  )}>
+                    {item.is_current === false && (
+                      <div className="flex items-center gap-2 text-xs text-amber-600 mb-1">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>题目有新版本</span>
+                        {onUpgradeQuestion && (
+                          <Tooltip title="替换为最新版本">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                              onClick={() => onUpgradeQuestion(idx, item.resource_uuid)}
+                            >
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              升级
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">

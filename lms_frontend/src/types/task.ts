@@ -33,6 +33,7 @@ export interface TaskKnowledge {
   order: number;
   resource_uuid: string;
   version_number: number;
+  is_current: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export interface TaskQuiz {
   order: number;
   resource_uuid: string;
   version_number: number;
+  is_current: boolean;
   quiz_type: QuizType;
   quiz_type_display: string;
   duration?: number | null;
@@ -72,6 +74,8 @@ export interface TaskDetail {
   quizzes: TaskQuiz[];
   assignments: TaskAssignment[];
   created_by_name: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
   has_progress: boolean;
@@ -268,6 +272,8 @@ export interface TaskListItem {
   pass_rate?: number | null;
   created_by?: number;
   created_by_name: string;
+  updated_by?: number;
+  updated_by_name?: string;
   created_at: string;
   updated_at: string;
   has_progress: boolean;

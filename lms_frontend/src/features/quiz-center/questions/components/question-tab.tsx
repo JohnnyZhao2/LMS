@@ -74,7 +74,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
                     title={row.original.content}
-                    subtitle={row.original.created_by_name || '系统'}
+                    subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
                     iconBg="#F0FDF4"
                     iconColor="#16A34A"
                 />

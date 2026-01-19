@@ -68,6 +68,8 @@ type ResourceType = 'DOCUMENT' | 'QUIZ';
 
 interface ResourceItem {
   id: number;
+  resource_uuid: string;
+  is_current: boolean;
   title: string;
   resourceType: ResourceType;
   category?: string;
@@ -145,6 +147,8 @@ export const TaskForm: React.FC = () => {
         const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => ({
           uid: Date.now() + Math.random() + idx,
           id: item.knowledge,
+          resource_uuid: item.resource_uuid,
+          is_current: item.is_current,
           title: item.knowledge_title || `文档 ${item.knowledge}`,
           resourceType: 'DOCUMENT' as ResourceType,
           category: (item as { knowledge_type_display?: string }).knowledge_type_display || '文档',
@@ -153,6 +157,8 @@ export const TaskForm: React.FC = () => {
         const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
           uid: Date.now() + Math.random() + idx + 1000,
           id: item.quiz,
+          resource_uuid: item.resource_uuid,
+          is_current: item.is_current,
           title: item.quiz_title || `试卷 ${item.quiz}`,
           resourceType: 'QUIZ' as ResourceType,
           category: `${(item as { question_count?: number }).question_count || 0} 个题目`,
@@ -167,6 +173,8 @@ export const TaskForm: React.FC = () => {
         setSelectedResources([{
           uid: Date.now(),
           id: quizDetail.id,
+          resource_uuid: quizDetail.resource_uuid,
+          is_current: quizDetail.is_current,
           title: quizDetail.title,
           resourceType: 'QUIZ',
           category: `${quizDetail.question_count || 0} 个题目`,
@@ -190,6 +198,8 @@ export const TaskForm: React.FC = () => {
 
     const mappedK = (kItems || []).map((item: any) => ({
       id: item.id,
+      resource_uuid: item.resource_uuid,
+      is_current: item.is_current,
       title: item.title,
       category: item.line_type?.name || '未分类',
       resourceType: 'DOCUMENT' as ResourceType,
@@ -197,6 +207,8 @@ export const TaskForm: React.FC = () => {
 
     const mappedQ = (qItems || []).map((quiz: any) => ({
       id: quiz.id,
+      resource_uuid: quiz.resource_uuid,
+      is_current: quiz.is_current,
       title: quiz.title,
       category: `${quiz.question_count} 个题目`,
       resourceType: 'QUIZ' as ResourceType,
@@ -213,8 +225,8 @@ export const TaskForm: React.FC = () => {
       combined = [...mappedK, ...mappedQ];
     }
 
-    const selectedIds = selectedResources.map(s => `${s.resourceType}-${s.id}`);
-    const filtered = combined.filter(r => !selectedIds.includes(`${r.resourceType}-${r.id}`));
+    const selectedUuids = selectedResources.map(s => `${s.resourceType}-${s.resource_uuid}`);
+    const filtered = combined.filter(r => !selectedUuids.includes(`${r.resourceType}-${r.resource_uuid}`));
 
     // 在前端根据 currentPage 和 PAGE_SIZE 进行切片
     const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -265,6 +277,46 @@ export const TaskForm: React.FC = () => {
   const removeResource = (idx: number) => {
     if (resourcesDisabled) return;
     setSelectedResources(selectedResources.filter((_, i) => i !== idx));
+  };
+
+  const upgradeResource = (idx: number) => {
+    if (resourcesDisabled) return;
+    const item = selectedResources[idx];
+    if (!item) return;
+    
+    // 从资源列表中找到该 resource_uuid 的最新版本
+    const kData = knowledgeQuery.data;
+    const qData = quizQuery.data;
+    const isKPaginated = kData && typeof kData === 'object' && 'results' in kData;
+    const isQPaginated = qData && typeof qData === 'object' && 'results' in qData;
+    const kItems = isKPaginated ? (kData as any).results : (Array.isArray(kData) ? kData : []);
+    const qItems = isQPaginated ? (qData as any).results : (Array.isArray(qData) ? qData : []);
+    
+    let latestResource: any = null;
+    if (item.resourceType === 'DOCUMENT') {
+      latestResource = kItems.find((k: any) => k.resource_uuid === item.resource_uuid);
+    } else {
+      latestResource = qItems.find((q: any) => q.resource_uuid === item.resource_uuid);
+    }
+    
+    if (!latestResource) {
+      toast.error('未找到最新版本');
+      return;
+    }
+    
+    setSelectedResources(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      return {
+        ...r,
+        id: latestResource.id,
+        is_current: latestResource.is_current,
+        title: latestResource.title,
+        category: item.resourceType === 'DOCUMENT' 
+          ? (latestResource.line_type?.name || '未分类')
+          : `${latestResource.question_count} 个题目`,
+      };
+    }));
+    toast.success('已升级到最新版本');
   };
 
   const toggleUser = (userId: number) => {
@@ -589,6 +641,7 @@ export const TaskForm: React.FC = () => {
                           idx={idx}
                           moveResource={moveResource}
                           removeResource={removeResource}
+                          upgradeResource={upgradeResource}
                           totalResources={selectedResources.length}
                           disabled={resourcesDisabled}
                         />
@@ -799,6 +852,7 @@ interface SortableItemProps {
   idx: number;
   moveResource: (idx: number, direction: 'up' | 'down') => void;
   removeResource: (idx: number) => void;
+  upgradeResource?: (idx: number) => void;
   totalResources: number;
   disabled?: boolean;
 }
@@ -808,6 +862,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
   idx,
   moveResource,
   removeResource,
+  upgradeResource,
   totalResources,
   disabled = false,
 }) => {
@@ -852,60 +907,81 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </div>
       </div>
       <div
-        className={`flex-1 flex items-center gap-3 p-4 bg-white border rounded-xl transition-all hover:shadow-md ${item.quizType === 'EXAM'
-          ? 'border-red-100 hover:border-red-200 shadow-sm shadow-red-50'
-          : 'border-gray-200 hover:border-primary-300'
-          }`}
+        className={`flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all hover:shadow-md ${
+          item.is_current === false
+            ? 'border-amber-300 bg-amber-50/30'
+            : item.quizType === 'EXAM'
+              ? 'border-red-100 hover:border-red-200 shadow-sm shadow-red-50'
+              : 'border-gray-200 hover:border-primary-300'
+        }`}
       >
-        <div
-          {...(disabled ? {} : attributes)}
-          {...(disabled ? {} : listeners)}
-          className={disabled ? 'p-1 -ml-2 text-gray-300 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing p-1 -ml-2 text-gray-300 hover:text-gray-400'}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <Badge
-            variant={item.resourceType === 'DOCUMENT' ? 'default' : 'secondary'}
-            className={`mb-2 font-bold ${item.resourceType === 'DOCUMENT'
-              ? 'bg-green-100 text-green-700 hover:bg-green-100'
-              : item.quizType === 'EXAM'
-                ? 'bg-red-500 text-white hover:bg-red-500'
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
-              }`}
+        {item.is_current === false && (
+          <div className="flex items-center gap-2 text-xs text-amber-600">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>资源有新版本</span>
+            {upgradeResource && !disabled && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                onClick={() => upgradeResource(idx)}
+              >
+                升级
+              </Button>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <div
+            {...(disabled ? {} : attributes)}
+            {...(disabled ? {} : listeners)}
+            className={disabled ? 'p-1 -ml-2 text-gray-300 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing p-1 -ml-2 text-gray-300 hover:text-gray-400'}
           >
-            步骤 {idx + 1} {item.quizType === 'EXAM' && '• 考试'}
-          </Badge>
-          <div className="text-base font-bold text-gray-900 truncate">{item.title}</div>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={disabled || idx === 0}
-            onClick={() => moveResource(idx, 'up')}
-          >
-            <ChevronUp className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            disabled={disabled || idx === totalResources - 1}
-            onClick={() => moveResource(idx, 'down')}
-          >
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-            disabled={disabled}
-            onClick={() => removeResource(idx)}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+            <GripVertical className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <Badge
+              variant={item.resourceType === 'DOCUMENT' ? 'default' : 'secondary'}
+              className={`mb-2 font-bold ${item.resourceType === 'DOCUMENT'
+                ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                : item.quizType === 'EXAM'
+                  ? 'bg-red-500 text-white hover:bg-red-500'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                }`}
+            >
+              步骤 {idx + 1} {item.quizType === 'EXAM' && '• 考试'}
+            </Badge>
+            <div className="text-base font-bold text-gray-900 truncate">{item.title}</div>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={disabled || idx === 0}
+              onClick={() => moveResource(idx, 'up')}
+            >
+              <ChevronUp className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={disabled || idx === totalResources - 1}
+              onClick={() => moveResource(idx, 'down')}
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+              disabled={disabled}
+              onClick={() => removeResource(idx)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

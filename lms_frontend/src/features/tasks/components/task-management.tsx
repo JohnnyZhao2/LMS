@@ -94,7 +94,7 @@ export const TaskManagement: React.FC = () => {
                 <CellWithIcon
                     icon={<Layout className="h-5 w-5" />}
                     title={row.original.title}
-                    subtitle={row.original.created_by_name}
+                    subtitle={row.original.updated_by_name || row.original.created_by_name}
                 />
             ),
         },
@@ -170,6 +170,20 @@ export const TaskManagement: React.FC = () => {
                     </div>
                 )
             }
+        },
+        {
+            header: "更新时间",
+            id: "updated_at",
+            cell: ({ row }) => (
+                <div className="flex flex-col min-w-[100px]">
+                    <span className="text-sm font-bold text-[#111827]">
+                        {dayjs(row.original.updated_at).format("YYYY.MM.DD")}
+                    </span>
+                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                        {dayjs(row.original.updated_at).format("HH:mm:ss")}
+                    </span>
+                </div>
+            )
         },
         {
             header: "状态",

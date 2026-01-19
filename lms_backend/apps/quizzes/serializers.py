@@ -19,9 +19,11 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
     question_type = serializers.CharField(source='question.question_type', read_only=True)
     question_type_display = serializers.CharField(source='question.get_question_type_display', read_only=True)
     score = serializers.DecimalField(source='question.score', max_digits=5, decimal_places=2, read_only=True)
+    resource_uuid = serializers.UUIDField(source='question.resource_uuid', read_only=True)
+    is_current = serializers.BooleanField(source='question.is_current', read_only=True)
     class Meta:
         model = QuizQuestion
-        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order']
+        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order', 'resource_uuid', 'is_current']
 class QuizListSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz list view.

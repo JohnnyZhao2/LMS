@@ -115,10 +115,10 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       <div className="mt-auto pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 bg-[#F3F4F6] rounded-md flex items-center justify-center text-[#4B5563] font-bold text-sm group-hover:scale-110 transition-transform duration-200">
-            {(item.updated_by_name || 'U').charAt(0)}
+            {(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
           </div>
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-[#111827] leading-none mb-1">{item.updated_by_name || '系统'}</span>
+            <span className="text-[11px] font-bold text-[#111827] leading-none mb-1">{item.updated_by_name || item.created_by_name || '系统'}</span>
             <span className="text-[10px] font-medium text-[#6B7280]">{dayjs(item.updated_at).format('YYYY.MM.DD')}</span>
           </div>
         </div>
