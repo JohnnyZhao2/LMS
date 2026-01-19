@@ -60,6 +60,15 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         blank=True,
         verbose_name='及格分数'
     )
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quiz_updated',
+        verbose_name='最后更新者'
+    )
     class Meta:
         db_table = 'lms_quiz'
         verbose_name = '试卷'

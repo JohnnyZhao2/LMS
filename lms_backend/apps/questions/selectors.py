@@ -10,7 +10,7 @@ from apps.knowledge.models import ResourceLineType
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Question.objects.select_related('created_by')
+    qs = Question.objects.select_related('created_by', 'updated_by')
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs

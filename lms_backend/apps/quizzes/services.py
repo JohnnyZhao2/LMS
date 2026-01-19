@@ -79,7 +79,7 @@ class QuizService(BaseService):
         qs = Quiz.objects.filter(
             is_deleted=False,
             is_current=True
-        ).select_related('created_by')
+        ).select_related('created_by', 'updated_by')
         # 应用过滤条件
         if filters:
             if filters.get('created_by_id'):
@@ -139,6 +139,7 @@ class QuizService(BaseService):
         self._validate_quiz_data(data)
         # 2. 准备数据
         data['created_by'] = user
+        data['updated_by'] = user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_quiz_version_data(data)
@@ -159,6 +160,8 @@ class QuizService(BaseService):
         # 创建并添加新题目
         for question_data in new_questions_data:
             self._create_and_add_question(quiz, question_data, user)
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic
@@ -283,6 +286,8 @@ class QuizService(BaseService):
         # 创建并添加新题目
         for question_data in new_questions_data:
             self._create_and_add_question(quiz, question_data, user)
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic
@@ -317,6 +322,8 @@ class QuizService(BaseService):
             quiz_id=quiz.id,
             question_ids=question_ids
         )
+        quiz.updated_by = user
+        quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic
@@ -347,7 +354,7 @@ class QuizService(BaseService):
         # 设置为当前版本
         quiz.is_current = True
         quiz.updated_by = user
-        quiz.save()
+        quiz.save(update_fields=['is_current', 'updated_by'])
         # 取消其他版本的 is_current 标志
         Quiz.objects.filter(
             resource_uuid=quiz.resource_uuid
@@ -382,7 +389,7 @@ class QuizService(BaseService):
         # 取消当前版本标志
         quiz.is_current = False
         quiz.updated_by = user
-        quiz.save()
+        quiz.save(update_fields=['is_current', 'updated_by'])
         return quiz
 
     def _create_and_add_question(

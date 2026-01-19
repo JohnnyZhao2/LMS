@@ -84,6 +84,8 @@ class TaskListSerializer(serializers.ModelSerializer):
     """Serializer for task list view."""
     created_by = serializers.IntegerField(source='created_by.id', read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by = serializers.IntegerField(source='updated_by.id', read_only=True, allow_null=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     knowledge_count = serializers.ReadOnlyField()
     quiz_count = serializers.ReadOnlyField()
     exam_count = serializers.ReadOnlyField()
@@ -100,11 +102,13 @@ class TaskListSerializer(serializers.ModelSerializer):
             'deadline', 'is_closed', 'closed_at',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
             'assignee_count', 'completed_count', 'pass_rate',
-            'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 class TaskDetailSerializer(serializers.ModelSerializer):
     """Serializer for task detail view."""
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by = serializers.IntegerField(source='updated_by.id', read_only=True, allow_null=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
@@ -122,7 +126,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline', 'is_closed', 'closed_at',
             'knowledge_items', 'quizzes', 'assignments',
-            'created_by_name', 'created_at', 'updated_at',
+            'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
             'has_progress',
         ]
 class TaskCreateSerializer(serializers.Serializer):
@@ -201,6 +205,7 @@ class TaskCreateSerializer(serializers.Serializer):
             description=validated_data.get('description', ''),
             deadline=validated_data['deadline'],
             created_by=request.user,
+            updated_by=request.user,
             knowledge_ids=validated_data.get('knowledge_ids', []),
             quiz_ids=validated_data.get('quiz_ids', []),
             assignee_ids=validated_data.get('assignee_ids', []),
@@ -290,8 +295,12 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         assignee_ids = validated_data.pop('assignee_ids', None)
         # 委托给 TaskService 处理更新
         service = TaskService()
+        request = self.context.get('request')
+        if not request or not request.user:
+            raise serializers.ValidationError('无法获取当前用户信息')
         return service.update_task(
             task=instance,
+            updated_by=request.user,
             knowledge_ids=knowledge_ids,
             quiz_ids=quiz_ids,
             assignee_ids=assignee_ids,

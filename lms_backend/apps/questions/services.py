@@ -119,6 +119,7 @@ class QuestionService(BaseService):
         self._validate_question_data(data)
         # 2. 准备数据
         data['created_by'] = user
+        data['updated_by'] = user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_version_data(data)
@@ -164,6 +165,7 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
         # 更新题目
+        data['updated_by'] = user
         if data:
             for key, value in data.items():
                 setattr(question, key, value)
@@ -226,7 +228,8 @@ class QuestionService(BaseService):
             )
         # 设置为当前版本
         question.is_current = True
-        question.save()
+        question.updated_by = user
+        question.save(update_fields=['is_current', 'updated_by'])
         # 取消其他版本的 is_current 标志
         Question.objects.filter(
             resource_uuid=question.resource_uuid
@@ -260,7 +263,8 @@ class QuestionService(BaseService):
             )
         # 取消当前版本标志
         question.is_current = False
-        question.save()
+        question.updated_by = user
+        question.save(update_fields=['is_current', 'updated_by'])
         return question
 
     def _validate_question_data(self, data: dict) -> None:
@@ -383,6 +387,7 @@ class QuestionService(BaseService):
             'score': data.get('score', source.score),
             'is_current': True,
             'created_by': user,
+            'updated_by': user,
         }
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型

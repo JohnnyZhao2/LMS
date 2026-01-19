@@ -69,7 +69,7 @@ def test_update_task_blocks_resource_edit_with_progress():
     service = TaskService()
 
     with pytest.raises(BusinessError) as exc:
-        service.update_task(task, knowledge_ids=[999])
+        service.update_task(task, updated_by=task.created_by, knowledge_ids=[999])
 
     assert exc.value.code == ErrorCodes.INVALID_OPERATION
     assert '无法修改知识文档' in str(exc.value.message)
@@ -90,7 +90,7 @@ def test_update_task_blocks_quiz_edit_with_progress():
     service = TaskService()
 
     with pytest.raises(BusinessError) as exc:
-        service.update_task(task, quiz_ids=[999])
+        service.update_task(task, updated_by=task.created_by, quiz_ids=[999])
 
     assert exc.value.code == ErrorCodes.INVALID_OPERATION
     assert '无法修改试卷' in str(exc.value.message)
@@ -113,7 +113,7 @@ def test_update_task_blocks_assignee_removal_with_progress():
 
     # Try to remove assignment2
     with pytest.raises(BusinessError) as exc:
-        service.update_task(task, assignee_ids=[assignment1.assignee_id])
+        service.update_task(task, updated_by=task.created_by, assignee_ids=[assignment1.assignee_id])
 
     assert exc.value.code == ErrorCodes.INVALID_OPERATION
     assert '无法移除已分配的学员' in str(exc.value.message)
@@ -137,6 +137,7 @@ def test_update_task_allows_assignee_addition_with_progress():
     # Should succeed - adding new assignee
     result = service.update_task(
         task,
+        updated_by=task.created_by,
         assignee_ids=[assignment.assignee_id, new_user.id]
     )
 
@@ -160,6 +161,7 @@ def test_update_task_allows_basic_fields_with_progress():
     # Should succeed - editing basic fields
     result = service.update_task(
         task,
+        updated_by=task.created_by,
         title="New Title",
         description="New Description"
     )

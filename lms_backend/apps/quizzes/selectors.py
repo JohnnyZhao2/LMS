@@ -8,7 +8,7 @@ from .models import Quiz, QuizQuestion
 
 
 def quiz_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Quiz.objects.select_related('created_by').prefetch_related('quiz_questions__question')
+    qs = Quiz.objects.select_related('created_by', 'updated_by').prefetch_related('quiz_questions__question')
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs

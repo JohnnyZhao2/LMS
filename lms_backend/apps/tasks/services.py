@@ -184,6 +184,7 @@ class TaskService(BaseService):
         description: str,
         deadline,
         created_by: User,
+        updated_by: User,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
         assignee_ids: List[int] = None,
@@ -209,7 +210,8 @@ class TaskService(BaseService):
             title=title,
             description=description,
             deadline=deadline,
-            created_by=created_by
+            created_by=created_by,
+            updated_by=updated_by
         )
         # Create knowledge associations
         if knowledge_ids:
@@ -264,7 +266,7 @@ class TaskService(BaseService):
                 id__in=resource_ids,
                 is_deleted=False,
                 is_current=True
-            ).select_related('created_by').prefetch_related('system_tags', 'operation_tags')
+            ).select_related('created_by', 'updated_by').prefetch_related('system_tags', 'operation_tags')
         else:  # quiz
             queryset = resource_model.objects.filter(
                 id__in=resource_ids,
@@ -316,6 +318,7 @@ class TaskService(BaseService):
     def update_task(
         self,
         task: Task,
+        updated_by: User,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
         assignee_ids: List[int] = None,
@@ -369,11 +372,11 @@ class TaskService(BaseService):
                         message='任务已有学员开始学习，无法移除已分配的学员'
                     )
 
-        # Update basic fields
         if kwargs:
             for key, value in kwargs.items():
                 setattr(task, key, value)
-            task.save(update_fields=list(kwargs.keys()))
+        task.updated_by = updated_by
+        task.save(update_fields=[*kwargs.keys(), 'updated_by'])
 
         # Update knowledge associations
         if knowledge_ids is not None:
@@ -479,7 +482,7 @@ class TaskService(BaseService):
         """
         task.soft_delete()
 
-    def close_task(self, task: Task) -> Task:
+    def close_task(self, task: Task, updated_by: User) -> Task:
         """
         Force close a task.
         Args:
@@ -498,7 +501,8 @@ class TaskService(BaseService):
         # 关闭任务
         task.is_closed = True
         task.closed_at = timezone.now()
-        task.save(update_fields=['is_closed', 'closed_at'])
+        task.updated_by = updated_by
+        task.save(update_fields=['is_closed', 'closed_at', 'updated_by'])
         # 将未完成的分配记录标记为已逾期
         task.assignments.filter(
             status='IN_PROGRESS'

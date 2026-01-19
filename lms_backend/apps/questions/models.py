@@ -61,6 +61,15 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         default=1.0,
         verbose_name='分值'
     )
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='question_updated',
+        verbose_name='最后更新者'
+    )
     # 条线类型通过ResourceLineType关联（多态关系）
     # 使用property提供便捷访问
     @property
@@ -185,6 +194,7 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
             explanation=self.explanation,
             score=self.score,
             created_by=self.created_by,
+            updated_by=self.updated_by,
             resource_uuid=self.resource_uuid,
             version_number=self.next_version_number(self.resource_uuid),
             is_current=True

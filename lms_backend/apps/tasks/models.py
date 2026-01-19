@@ -35,6 +35,15 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     deadline = models.DateTimeField(
         verbose_name='截止时间'
     )
+    # 最后更新者
+    updated_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='task_updated',
+        verbose_name='最后更新者'
+    )
     # 任务状态（任务级别，非分配级别）
     is_closed = models.BooleanField(
         default=False,

@@ -8,7 +8,8 @@ from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLear
 
 def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
     qs = Task.objects.select_related(
-        'created_by'
+        'created_by',
+        'updated_by'
     ).prefetch_related(
         'task_knowledge__knowledge',
         'task_quizzes__quiz',
@@ -20,7 +21,7 @@ def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
 
 
 def task_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Task.objects.select_related('created_by')
+    qs = Task.objects.select_related('created_by', 'updated_by')
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs
@@ -30,6 +31,7 @@ def assignment_detail_queryset() -> QuerySet:
     return TaskAssignment.objects.select_related(
         'task',
         'task__created_by',
+        'task__updated_by',
         'assignee'
     ).prefetch_related(
         'task__task_knowledge__knowledge',
@@ -42,6 +44,7 @@ def assignment_list_queryset() -> QuerySet:
     return TaskAssignment.objects.select_related(
         'task',
         'task__created_by',
+        'task__updated_by',
         'assignee'
     ).prefetch_related(
         'task__task_knowledge',

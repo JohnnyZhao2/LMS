@@ -7,7 +7,7 @@ Properties:
 """
 from rest_framework import serializers
 from apps.questions.models import Question
-from apps.questions.serializers import QuestionDetailSerializer, QuestionCreateSerializer
+from apps.questions.serializers import QuestionCreateSerializer
 from .models import Quiz, QuizQuestion
 class QuizQuestionSerializer(serializers.ModelSerializer):
     """
@@ -27,6 +27,7 @@ class QuizListSerializer(serializers.ModelSerializer):
     Serializer for quiz list view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -39,14 +40,17 @@ class QuizListSerializer(serializers.ModelSerializer):
             'has_subjective_questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name',
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
         ]
+
+
 class QuizDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz detail view.
     """
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
@@ -63,7 +67,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
             'subjective_question_count', 'questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
     def get_questions(self, obj):
         """Get ordered questions with details."""
