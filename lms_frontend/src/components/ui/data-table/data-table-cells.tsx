@@ -35,7 +35,7 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
             {icon}
         </div>
         <div className="flex flex-col">
-            <span className="font-bold text-[#111827] hover:text-[#3B82F6] cursor-pointer transition-colors line-clamp-1">
+            <span className="font-bold text-[#111827] hover:text-[#3B82F6] cursor-pointer transition-colors">
                 {title}
             </span>
             {subtitle && (

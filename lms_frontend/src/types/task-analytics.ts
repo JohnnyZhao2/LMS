@@ -17,6 +17,7 @@ export interface TaskAnalytics {
   node_progress: TaskNodeProgress[];
   time_distribution: DistributionItem[];
   score_distribution: DistributionItem[] | null;
+  pass_rate: number | null;
 }
 
 export interface TaskNodeProgress {

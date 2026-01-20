@@ -97,7 +97,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     practice_count = serializers.ReadOnlyField()
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
-    pass_rate = serializers.ReadOnlyField()
+
     is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
 
     class Meta:
@@ -106,7 +106,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline', 'is_closed', 'closed_at',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
-            'assignee_count', 'completed_count', 'pass_rate',
+            'assignee_count', 'completed_count',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 class TaskDetailSerializer(serializers.ModelSerializer):
@@ -439,6 +439,7 @@ class TaskAnalyticsSerializer(serializers.Serializer):
     node_progress = NodeProgressSerializer(many=True)
     time_distribution = DistributionItemSerializer(many=True)
     score_distribution = DistributionItemSerializer(many=True, allow_null=True)
+    pass_rate = serializers.FloatField(allow_null=True)
 
 
 class StudentExecutionSerializer(serializers.Serializer):

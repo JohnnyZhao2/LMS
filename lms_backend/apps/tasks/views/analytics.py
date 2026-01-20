@@ -100,10 +100,12 @@ class TaskAnalyticsView(APIView):
         # 计算时间分布
         time_distribution = self._compute_time_distribution(completed_assignments)
 
-        # 计算分数分布
+        # 计算分数分布和通过率
         score_distribution = None
+        pass_rate = None
         if has_quiz:
             score_distribution = self._compute_score_distribution(task)
+            pass_rate = self._compute_pass_rate(task)
 
         return {
             'completion': {
@@ -120,6 +122,7 @@ class TaskAnalyticsView(APIView):
             'node_progress': node_progress,
             'time_distribution': time_distribution,
             'score_distribution': score_distribution,
+            'pass_rate': pass_rate,
         }
 
     def _count_abnormal(self, task, assignments):
@@ -216,7 +219,7 @@ class TaskAnalyticsView(APIView):
         return [{'range': k, 'count': v} for k, v in distribution.items()]
 
     def _compute_score_distribution(self, task):
-        """计算分数分布"""
+        """计算分数分布（仅考试，按实际分数统计）"""
         ranges = [
             ('0-60', 0, 60),
             ('60-70', 60, 70),
@@ -226,25 +229,62 @@ class TaskAnalyticsView(APIView):
         ]
         distribution = {r[0]: 0 for r in ranges}
 
-        # 获取每个学员的最高分
-        submissions = Submission.objects.filter(
+        # 获取每个学员在考试中的最高分提交（只统计 EXAM）
+        from django.db.models import Max
+        
+        highest_scores = Submission.objects.filter(
             task_assignment__task=task,
-            status__in=['SUBMITTED', 'GRADED'],
+            quiz__quiz_type='EXAM',  # 只统计考试
+            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
             obtained_score__isnull=False
-        ).values('task_assignment').annotate(
-            max_score=Sum('obtained_score'),
-            total=Sum('total_score')
+        ).values('task_assignment_id').annotate(
+            max_obtained=Max('obtained_score')
         )
-
-        for sub in submissions:
-            if sub['total'] and sub['total'] > 0:
-                percentage = float(sub['max_score']) / float(sub['total']) * 100
-                for label, min_val, max_val in ranges:
-                    if min_val <= percentage < max_val:
-                        distribution[label] += 1
-                        break
+        
+        # 构建一个字典：task_assignment_id -> max_obtained_score
+        assignment_max_scores = {
+            item['task_assignment_id']: item['max_obtained'] 
+            for item in highest_scores
+        }
+        
+        # 获取达到最高分的那些提交记录，并按实际分数统计
+        for assignment_id, max_score in assignment_max_scores.items():
+            score = float(max_score)  # 直接使用实际分数，不计算百分比
+            for label, min_val, max_val in ranges:
+                if min_val <= score < max_val:
+                    distribution[label] += 1
+                    break
 
         return [{'range': k, 'count': v} for k, v in distribution.items()]
+
+    def _compute_pass_rate(self, task):
+        """计算通过率（仅考试任务）"""
+        # 1. 首先检查任务是否包含考试类型的试卷
+        has_exam = task.task_quizzes.filter(quiz__quiz_type='EXAM').exists()
+        if not has_exam:
+            return None
+
+        # 2. 获取所有已完成的考试提交
+        exam_submissions = Submission.objects.filter(
+            task_assignment__task=task,
+            quiz__quiz_type='EXAM',
+            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
+            obtained_score__isnull=False
+        ).select_related('quiz')
+
+        # 3. 如果有考试但没人提交，返回 0.0
+        if not exam_submissions.exists():
+            return 0.0
+
+        # 4. 统计通过人数
+        passed_count = 0
+        total_count = exam_submissions.count()
+
+        for submission in exam_submissions:
+            if submission.quiz.pass_score and submission.obtained_score >= submission.quiz.pass_score:
+                passed_count += 1
+
+        return round(passed_count / total_count * 100, 1) if total_count > 0 else 0.0
 
 
 class StudentExecutionsView(APIView):
@@ -295,10 +335,17 @@ class StudentExecutionsView(APIView):
             if assignment.completed_at and assignment.created_at:
                 time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
 
-            # 获取分数
+            # 获取分数（只显示考试分数）
             score = None
-            if assignment.score is not None:
-                score = float(assignment.score)
+            exam_submission = Submission.objects.filter(
+                task_assignment=assignment,
+                quiz__quiz_type='EXAM',
+                status__in=['SUBMITTED', 'GRADING', 'GRADED'],
+                obtained_score__isnull=False
+            ).order_by('-obtained_score').first()
+            
+            if exam_submission:
+                score = float(exam_submission.obtained_score)
 
             # 检查是否异常
             is_abnormal = self._check_abnormal(assignment)

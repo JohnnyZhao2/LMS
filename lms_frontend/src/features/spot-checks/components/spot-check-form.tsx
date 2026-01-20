@@ -32,7 +32,7 @@ export const SpotCheckForm: React.FC = () => {
   // Form state
   const [studentId, setStudentId] = useState<string>('');
   const [content, setContent] = useState('');
-  const [score, setScore] = useState<number>(5);
+  const [score, setScore] = useState<number>(80);
   const [comment, setComment] = useState('');
   const [checkedAt, setCheckedAt] = useState<Date | undefined>(new Date());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,7 +41,7 @@ export const SpotCheckForm: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!studentId) newErrors.student = '请选择学员';
     if (!content.trim()) newErrors.content = '请输入抽查内容';
-    if (!score || score < 1 || score > 10) newErrors.score = '请输入1-10分的评分';
+    if (score < 0 || score > 100) newErrors.score = '请输入0-100分的评分';
     if (!checkedAt) newErrors.checkedAt = '请选择抽查时间';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -107,11 +107,11 @@ export const SpotCheckForm: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label>评分（1-10分）</Label>
+            <Label>评分（0-100分）</Label>
             <Input
               type="number"
-              min={1}
-              max={10}
+              min={0}
+              max={100}
               value={score}
               onChange={(e) => setScore(Number(e.target.value))}
             />

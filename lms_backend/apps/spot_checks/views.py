@@ -17,15 +17,20 @@ from .serializers import (
     SpotCheckUpdateSerializer,
 )
 from .services import SpotCheckService
+from core.pagination import StandardResultsSetPagination
+
 class SpotCheckListCreateView(APIView):
     """
     抽查记录列表和创建端点
     Properties: 35, 36
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    pagination_class = StandardResultsSetPagination
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.service = SpotCheckService()
+
     @extend_schema(
         summary='获取抽查记录列表',
         description='获取所辖范围内的抽查记录列表，按时间倒序排列',
@@ -34,6 +39,16 @@ class SpotCheckListCreateView(APIView):
                 name='student_id', 
                 type=int, 
                 description='按学员ID筛选'
+            ),
+            OpenApiParameter(
+                name='page',
+                type=int,
+                description='页码'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=int,
+                description='每页数量'
             ),
         ],
         responses={200: SpotCheckListSerializer(many=True)},
@@ -56,6 +71,7 @@ class SpotCheckListCreateView(APIView):
                 )
         else:
             student_id = None
+
         # 调用 Service
         try:
             spot_checks = self.service.get_list(
@@ -68,7 +84,15 @@ class SpotCheckListCreateView(APIView):
                 {'code': e.code, 'message': e.message},
                 status=status.HTTP_403_FORBIDDEN
             )
-        # 序列化输出
+
+        # 分页处理
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(spot_checks, request)
+        if page is not None:
+            serializer = SpotCheckListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        # 序列化输出（如果不分页）
         serializer = SpotCheckListSerializer(spot_checks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(

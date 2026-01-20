@@ -46,6 +46,7 @@ export interface QuizListItem {
   created_by_name?: string;
   updated_by?: number;
   updated_by_name?: string;
+  question_type_counts?: Record<string, number>;
   created_at: string;
   updated_at: string;
 }

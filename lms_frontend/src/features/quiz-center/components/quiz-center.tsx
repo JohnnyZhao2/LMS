@@ -118,7 +118,7 @@ export const QuizCenter: React.FC = () => {
                     value={quizType}
                     onChange={(v: string) => setQuizType(v as 'ALL' | 'EXAM' | 'PRACTICE')}
                     options={[
-                      { label: '全部类型', value: 'ALL' },
+                      { label: '全部', value: 'ALL' },
                       { label: '考试', value: 'EXAM' },
                       { label: '练习', value: 'PRACTICE' },
                     ]}

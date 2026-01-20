@@ -210,7 +210,25 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         {/* Right: Distribution Chart */}
         <Card className="p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-semibold text-slate-900">分布统计</h3>
+            <div className="flex items-center gap-4">
+              <h3 className="text-base font-semibold text-slate-900">分布统计</h3>
+              {analytics.pass_rate !== null && (
+                <div className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border",
+                  analytics.pass_rate >= 80 ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
+                  analytics.pass_rate >= 60 ? "bg-amber-50 border-amber-200 text-amber-700" :
+                  "bg-red-50 border-red-200 text-red-700"
+                )}>
+                  <span className="text-xs font-medium">通过率</span>
+                  <span className={cn(
+                    "text-sm font-bold tabular-nums",
+                    analytics.pass_rate >= 80 ? "text-emerald-900" :
+                    analytics.pass_rate >= 60 ? "text-amber-900" :
+                    "text-red-900"
+                  )}>{analytics.pass_rate}%</span>
+                </div>
+              )}
+            </div>
             {hasScoreDistribution && (
               <div className="flex bg-slate-100 rounded-lg p-1">
                 <button

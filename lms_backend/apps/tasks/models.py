@@ -107,17 +107,7 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def has_knowledge(self):
         """任务是否包含知识文档"""
         return self.knowledge_count > 0
-    @property
-    def pass_rate(self):
-        """
-        获取完成率（百分比）
-        计算公式：已完成数/总分配数
-        """
-        total = self.assignments.count()
-        if total == 0:
-            return None
-        completed = self.assignments.filter(status='COMPLETED').count()
-        return round(completed / total * 100, 1)
+
 
     @property
     def is_effectively_closed(self) -> bool:

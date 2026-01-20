@@ -29,7 +29,7 @@ import {
     DataTable,
     CellWithIcon,
     CellTags,
-    CellStatus,
+
 } from "@/components/ui/data-table"
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
@@ -138,20 +138,7 @@ export const TaskManagement: React.FC = () => {
                 )
             }
         },
-        {
-            header: "及格率",
-            id: "pass_rate",
-            cell: ({ row }) => (
-                <div className="text-center font-bold min-w-[80px]">
-                    <span className={cn(
-                        "text-sm",
-                        (row.original.pass_rate || 0) >= 80 ? "text-[#10B981]" : "text-[#111827]"
-                    )}>
-                        {row.original.pass_rate ? `${row.original.pass_rate.toFixed(0)}%` : '-'}
-                    </span>
-                </div>
-            )
-        },
+
         {
             header: "截止日期",
             id: "deadline",
@@ -186,17 +173,7 @@ export const TaskManagement: React.FC = () => {
                 </div>
             )
         },
-        {
-            header: "状态",
-            id: "status",
-            cell: ({ row }) => (
-                <CellStatus
-                    isActive={!row.original.is_closed}
-                    activeText="进行中"
-                    inactiveText="已结束"
-                />
-            ),
-        },
+
         {
             header: "操作",
             id: "actions",

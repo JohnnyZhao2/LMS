@@ -152,6 +152,20 @@ class Submission(TimestampMixin, models.Model):
     def all_subjective_graded(self):
         """所有主观题是否都已评分"""
         return self.ungraded_subjective_count == 0
+
+    @property
+    def pass_score(self):
+        """获取及格分数"""
+        return float(self.quiz.pass_score) if self.quiz.pass_score else None
+
+    @property
+    def is_passed(self):
+        """是否通过（考试专用）"""
+        if self.quiz.quiz_type != 'EXAM':
+            return None
+        if not self.quiz.pass_score or self.obtained_score is None:
+            return None
+        return self.obtained_score >= self.quiz.pass_score
     def complete_grading(self):
         """
         完成评分（所有主观题评分完成后调用）

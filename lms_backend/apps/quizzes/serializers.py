@@ -34,12 +34,13 @@ class QuizListSerializer(serializers.ModelSerializer):
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
+    question_type_counts = serializers.DictField(child=serializers.IntegerField(), read_only=True)
     class Meta:
         model = Quiz
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'description', 'question_count', 'total_score',
-            'has_subjective_questions',
+            'has_subjective_questions', 'question_type_counts',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
