@@ -177,17 +177,30 @@ class Submission(TimestampMixin, models.Model):
             raise ValidationError('只能完成待评分状态的记录')
         if not self.all_subjective_graded:
             raise ValidationError('还有未评分的主观题')
-        # 重新计算总分
+        self.refresh_obtained_score()
+        self.status = 'GRADED'
+        self.save(update_fields=['status'])
+        self.refresh_assignment_score()
+
+    def refresh_obtained_score(self):
+        """重算当前提交得分"""
         self.obtained_score = self.answers.aggregate(
             total=models.Sum('obtained_score')
         )['total'] or Decimal('0')
-        self.status = 'GRADED'
-        self.save()
-        # 更新任务分配成绩（取最高分）
+        self.save(update_fields=['obtained_score'])
+
+    def refresh_assignment_score(self):
+        """同步任务分配成绩为当前最高分"""
         assignment = self.task_assignment
-        if assignment.score is None or self.obtained_score > assignment.score:
-            assignment.score = self.obtained_score
-            assignment.save(update_fields=['score'])
+        max_score = Submission.objects.filter(
+            task_assignment_id=assignment.id,
+            status__in=['SUBMITTED', 'GRADED'],
+            obtained_score__isnull=False
+        ).aggregate(
+            max_score=models.Max('obtained_score')
+        )['max_score']
+        assignment.score = max_score
+        assignment.save(update_fields=['score'])
 class Answer(TimestampMixin, models.Model):
     """
     答案记录模型
@@ -294,11 +307,12 @@ class Answer(TimestampMixin, models.Model):
         """
         if self.is_objective:
             raise ValidationError('客观题不需要人工评分')
-        if score < 0 or score > self.question.score:
+        score_decimal = Decimal(str(score))
+        if score_decimal < 0 or score_decimal > self.question.score:
             raise ValidationError(f'分数必须在 0 到 {self.question.score} 之间')
         self.graded_by = grader
         self.graded_at = timezone.now()
-        self.obtained_score = Decimal(str(score))
+        self.obtained_score = score_decimal
         self.comment = comment
         # 主观题的正确性由评分人判断
         # 如果得分等于满分，认为是正确的
@@ -306,5 +320,9 @@ class Answer(TimestampMixin, models.Model):
         self.save()
         # 检查是否所有主观题都已评分
         submission = self.submission
-        if submission.all_subjective_graded and submission.status == 'GRADING':
-            submission.complete_grading()
+        if submission.status == 'GRADING':
+            if submission.all_subjective_graded:
+                submission.complete_grading()
+        elif submission.status in ['SUBMITTED', 'GRADED']:
+            submission.refresh_obtained_score()
+            submission.refresh_assignment_score()

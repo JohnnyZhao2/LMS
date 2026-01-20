@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import type { KnowledgeDetail, StudentKnowledgeDetail } from '@/types/knowledge';
 
 /**
  * 增加知识阅读次数响应
@@ -24,13 +25,13 @@ export const useIncrementViewCount = () => {
     },
     onSuccess: (result, id) => {
       // 更新知识详情中的阅读次数
-      queryClient.setQueryData(['student-knowledge-detail', id], (old: any) => {
+      queryClient.setQueryData(['student-knowledge-detail', id], (old: StudentKnowledgeDetail | undefined) => {
         if (old) {
           return { ...old, view_count: result.view_count };
         }
         return old;
       });
-      queryClient.setQueryData(['admin-knowledge-detail', id], (old: any) => {
+      queryClient.setQueryData(['admin-knowledge-detail', id], (old: KnowledgeDetail | undefined) => {
         if (old) {
           return { ...old, view_count: result.view_count };
         }
@@ -42,4 +43,3 @@ export const useIncrementViewCount = () => {
     },
   });
 };
-

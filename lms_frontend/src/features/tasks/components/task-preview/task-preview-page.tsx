@@ -1,7 +1,18 @@
 import * as React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BarChart3, FileCheck } from 'lucide-react';
-import { Button, Tabs, TabsList, TabsTrigger, Skeleton } from '@/components/ui';
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  Skeleton,
+} from '@/components/ui';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from './grading-center-tab';
@@ -14,6 +25,7 @@ export const TaskPreviewPage: React.FC = () => {
 
   const defaultTab = searchParams.get('tab') || 'progress';
   const [activeTab, setActiveTab] = React.useState(defaultTab);
+  const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
   const { data: task, isLoading } = useTaskDetail(taskId);
 
@@ -43,6 +55,11 @@ export const TaskPreviewPage: React.FC = () => {
     );
   }
 
+  const quizIds = task.quizzes?.map((quiz) => quiz.quiz) ?? [];
+  const resolvedQuizId = quizIds.includes(selectedQuizId ?? -1) ? selectedQuizId : quizIds[0] ?? null;
+  const activeQuizId = resolvedQuizId ?? null;
+  const activeQuiz = task.quizzes?.find((quiz) => quiz.quiz === activeQuizId) || task.quizzes?.[0];
+
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
       {/* Header */}
@@ -58,7 +75,29 @@ export const TaskPreviewPage: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{task.title}</h1>
-            <p className="text-sm text-slate-500 mt-0.5">任务预览与管理</p>
+            <div className="mt-1.5">
+              {activeTab === 'grading' && task.quizzes?.length ? (
+                <Select
+                  value={activeQuizId?.toString() || ''}
+                  onValueChange={(value) => setSelectedQuizId(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[220px] text-xs">
+                    <SelectValue placeholder="选择试卷" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {task.quizzes.map((quiz) => (
+                      <SelectItem key={quiz.id} value={quiz.quiz.toString()}>
+                        {quiz.quiz_title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  {activeQuiz?.quiz_title || '综合测验'}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -78,7 +117,7 @@ export const TaskPreviewPage: React.FC = () => {
 
       {/* Tab Content */}
       {activeTab === 'progress' && <ProgressMonitoringTab taskId={taskId} />}
-      {activeTab === 'grading' && <GradingCenterTab taskId={taskId} task={task} />}
+      {activeTab === 'grading' && <GradingCenterTab taskId={taskId} quizId={activeQuizId} />}
     </div>
   );
 };

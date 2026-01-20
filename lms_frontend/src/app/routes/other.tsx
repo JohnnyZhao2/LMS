@@ -1,6 +1,7 @@
 /**
  * 其他路由（个人中心、数据看板等）
  */
+/* eslint-disable react-refresh/only-export-components */
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/protected-route';
 import { ROUTES } from '@/config/routes';

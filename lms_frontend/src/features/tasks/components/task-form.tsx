@@ -63,6 +63,7 @@ import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-res
 import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
+import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
 
 type ResourceType = 'DOCUMENT' | 'QUIZ';
 
@@ -79,6 +80,12 @@ interface ResourceItem {
 interface SelectedResource extends ResourceItem {
   uid: number;
 }
+
+const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  return data.results;
+};
 
 /**
  * TaskForm - Task creation/editing form using ShadCN UI
@@ -186,66 +193,47 @@ export const TaskForm: React.FC = () => {
     initData();
   }, [isEdit, task, quizDetail, paramQuizId]);
 
-  const { availableResources, totalCount } = useMemo(() => {
-    const kData = knowledgeQuery.data;
-    const qData = quizQuery.data;
+  const filteredResources = useMemo(() => {
+    const kItems = getPaginatedResults<KnowledgeListItem>(knowledgeQuery.data);
+    const qItems = getPaginatedResults<QuizListItem>(quizQuery.data);
 
-    const isKPaginated = kData && typeof kData === 'object' && 'results' in kData;
-    const isQPaginated = qData && typeof qData === 'object' && 'results' in qData;
-
-    const kItems = isKPaginated ? (kData as any).results : (Array.isArray(kData) ? kData : []);
-    const qItems = isQPaginated ? (qData as any).results : (Array.isArray(qData) ? qData : []);
-
-    const mappedK = (kItems || []).map((item: any) => ({
+    const mappedK: ResourceItem[] = kItems.map((item) => ({
       id: item.id,
       resource_uuid: item.resource_uuid,
       is_current: item.is_current,
       title: item.title,
       category: item.line_type?.name || '未分类',
-      resourceType: 'DOCUMENT' as ResourceType,
+      resourceType: 'DOCUMENT',
     }));
 
-    const mappedQ = (qItems || []).map((quiz: any) => ({
+    const mappedQ: ResourceItem[] = qItems.map((quiz) => ({
       id: quiz.id,
       resource_uuid: quiz.resource_uuid,
       is_current: quiz.is_current,
       title: quiz.title,
       category: `${quiz.question_count} 个题目`,
-      resourceType: 'QUIZ' as ResourceType,
+      resourceType: 'QUIZ',
       quizType: quiz.quiz_type,
     }));
 
-    let combined: ResourceItem[] = [];
-
-    if (resourceType === 'DOCUMENT') {
-      combined = mappedK;
-    } else if (resourceType === 'QUIZ') {
-      combined = mappedQ;
-    } else {
-      combined = [...mappedK, ...mappedQ];
-    }
+    const combined = resourceType === 'DOCUMENT'
+      ? mappedK
+      : resourceType === 'QUIZ'
+        ? mappedQ
+        : [...mappedK, ...mappedQ];
 
     const selectedUuids = selectedResources.map(s => `${s.resourceType}-${s.resource_uuid}`);
-    const filtered = combined.filter(r => !selectedUuids.includes(`${r.resourceType}-${r.resource_uuid}`));
+    return combined.filter(r => !selectedUuids.includes(`${r.resourceType}-${r.resource_uuid}`));
+  }, [knowledgeQuery.data, quizQuery.data, resourceType, selectedResources]);
 
-    // 在前端根据 currentPage 和 PAGE_SIZE 进行切片
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    const paginated = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-
-    return {
-      availableResources: paginated,
-      totalCount: filtered.length
-    };
-  }, [knowledgeQuery.data, quizQuery.data, resourceType, selectedResources, PAGE_SIZE, currentPage]);
-
+  const totalCount = filteredResources.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
-  // 保护：如果当前页码超过总页数（例如过滤后数据变少），自动重置回第一页
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [totalPages, currentPage]);
+  const availableResources = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+    return filteredResources.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredResources, PAGE_SIZE, safeCurrentPage]);
 
   const modalFilteredUsers = useMemo(() => {
     if (!users) return [];
@@ -285,37 +273,43 @@ export const TaskForm: React.FC = () => {
     if (!item) return;
     
     // 从资源列表中找到该 resource_uuid 的最新版本
-    const kData = knowledgeQuery.data;
-    const qData = quizQuery.data;
-    const isKPaginated = kData && typeof kData === 'object' && 'results' in kData;
-    const isQPaginated = qData && typeof qData === 'object' && 'results' in qData;
-    const kItems = isKPaginated ? (kData as any).results : (Array.isArray(kData) ? kData : []);
-    const qItems = isQPaginated ? (qData as any).results : (Array.isArray(qData) ? qData : []);
-    
-    let latestResource: any = null;
+    const kItems = getPaginatedResults<KnowledgeListItem>(knowledgeQuery.data);
+    const qItems = getPaginatedResults<QuizListItem>(quizQuery.data);
+
     if (item.resourceType === 'DOCUMENT') {
-      latestResource = kItems.find((k: any) => k.resource_uuid === item.resource_uuid);
+      const latestResource = kItems.find((k) => k.resource_uuid === item.resource_uuid);
+      if (!latestResource) {
+        toast.error('未找到最新版本');
+        return;
+      }
+      setSelectedResources(prev => prev.map((r, i) => {
+        if (i !== idx) return r;
+        return {
+          ...r,
+          id: latestResource.id,
+          is_current: latestResource.is_current,
+          title: latestResource.title,
+          category: latestResource.line_type?.name || '未分类',
+        };
+      }));
     } else {
-      latestResource = qItems.find((q: any) => q.resource_uuid === item.resource_uuid);
+      const latestResource = qItems.find((q) => q.resource_uuid === item.resource_uuid);
+      if (!latestResource) {
+        toast.error('未找到最新版本');
+        return;
+      }
+      setSelectedResources(prev => prev.map((r, i) => {
+        if (i !== idx) return r;
+        return {
+          ...r,
+          id: latestResource.id,
+          is_current: latestResource.is_current,
+          title: latestResource.title,
+          category: `${latestResource.question_count} 个题目`,
+          quizType: latestResource.quiz_type,
+        };
+      }));
     }
-    
-    if (!latestResource) {
-      toast.error('未找到最新版本');
-      return;
-    }
-    
-    setSelectedResources(prev => prev.map((r, i) => {
-      if (i !== idx) return r;
-      return {
-        ...r,
-        id: latestResource.id,
-        is_current: latestResource.is_current,
-        title: latestResource.title,
-        category: item.resourceType === 'DOCUMENT' 
-          ? (latestResource.line_type?.name || '未分类')
-          : `${latestResource.question_count} 个题目`,
-      };
-    }));
     toast.success('已升级到最新版本');
   };
 
@@ -579,15 +573,15 @@ export const TaskForm: React.FC = () => {
 
           <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
             <div className="text-[11px] text-gray-400 font-bold tracking-tight">
-              第 {currentPage} 页 <span className="text-gray-200 mx-1">/</span> 共 {totalPages} 页
+              第 {safeCurrentPage} 页 <span className="text-gray-200 mx-1">/</span> 共 {totalPages} 页
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 rounded-lg hover:bg-gray-50"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -595,8 +589,8 @@ export const TaskForm: React.FC = () => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 rounded-lg hover:bg-gray-50"
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>

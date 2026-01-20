@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { tokenStorage } from '@/lib/token-storage';
 import { loginApi } from '../api/login';
@@ -179,4 +181,3 @@ export const useAuth = (): AuthContextValue => {
   }
   return context;
 };
-

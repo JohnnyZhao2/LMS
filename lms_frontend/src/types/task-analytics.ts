@@ -52,27 +52,53 @@ export interface StudentExecutionsResponse {
   count: number;
 }
 
+export type GradingQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+
 export interface GradingQuestion {
   question_id: number;
   question_text: string;
   question_analysis: string;
+  question_type: GradingQuestionType;
+  question_type_display: string;
   max_score: number;
-  ungraded_count: number;
+  pass_rate: number | null;
 }
 
-export interface GradingAnswer {
+export interface GradingOptionStudent {
   student_id: number;
   student_name: string;
   employee_id: string;
   department: string;
-  answer_text: string;
+}
+
+export interface GradingOption {
+  option_key: string;
+  option_text: string;
+  selected_count: number;
+  is_correct: boolean;
+  students: GradingOptionStudent[];
+}
+
+export interface GradingSubjectiveAnswer {
+  student_id: number;
+  student_name: string;
+  employee_id: string;
+  department: string;
+  answer_text: string | null;
   submitted_at: string;
   score: number | null;
-  comments: string | null;
-  is_graded: boolean;
+}
+
+export interface GradingAnswerResponse {
+  question_id: number;
+  question_type: GradingQuestionType;
+  pass_rate: number | null;
+  options?: GradingOption[];
+  subjective_answers?: GradingSubjectiveAnswer[];
 }
 
 export interface GradingSubmitRequest {
+  quiz_id: number;
   question_id: number;
   student_id: number;
   score: number;

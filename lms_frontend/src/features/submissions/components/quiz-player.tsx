@@ -106,8 +106,9 @@ export const QuizPlayer: React.FC = () => {
     setAnswers((prev) => {
       if (isEmpty) {
         // 如果答案为空，从对象中删除该键
-        const { [questionId]: _, ...rest } = prev;
-        return rest;
+        const nextAnswers = { ...prev };
+        delete nextAnswers[questionId];
+        return nextAnswers;
       }
       // 否则正常设置答案
       return { ...prev, [questionId]: value };

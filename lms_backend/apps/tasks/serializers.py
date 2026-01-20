@@ -459,16 +459,34 @@ class StudentExecutionSerializer(serializers.Serializer):
 
 
 class GradingQuestionSerializer(serializers.Serializer):
-    """待评分题目序列化器"""
+    """阅卷中心题目概览序列化器"""
     question_id = serializers.IntegerField()
     question_text = serializers.CharField()
     question_analysis = serializers.CharField(allow_blank=True)
+    question_type = serializers.ChoiceField(
+        choices=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER']
+    )
+    question_type_display = serializers.CharField()
     max_score = serializers.FloatField()
-    ungraded_count = serializers.IntegerField()
+    pass_rate = serializers.FloatField(allow_null=True)
 
 
-class GradingAnswerSerializer(serializers.Serializer):
-    """学员答案序列化器"""
+class GradingOptionStudentSerializer(serializers.Serializer):
+    student_id = serializers.IntegerField()
+    student_name = serializers.CharField()
+    employee_id = serializers.CharField()
+    department = serializers.CharField()
+
+
+class GradingOptionSerializer(serializers.Serializer):
+    option_key = serializers.CharField()
+    option_text = serializers.CharField()
+    selected_count = serializers.IntegerField()
+    is_correct = serializers.BooleanField()
+    students = GradingOptionStudentSerializer(many=True)
+
+
+class GradingSubjectiveAnswerSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
     student_name = serializers.CharField()
     employee_id = serializers.CharField()
@@ -476,12 +494,21 @@ class GradingAnswerSerializer(serializers.Serializer):
     answer_text = serializers.CharField(allow_blank=True, allow_null=True)
     submitted_at = serializers.DateTimeField()
     score = serializers.FloatField(allow_null=True)
-    comments = serializers.CharField(allow_null=True, allow_blank=True)
-    is_graded = serializers.BooleanField()
+
+
+class GradingAnswerResponseSerializer(serializers.Serializer):
+    question_id = serializers.IntegerField()
+    question_type = serializers.ChoiceField(
+        choices=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER']
+    )
+    pass_rate = serializers.FloatField(allow_null=True)
+    options = GradingOptionSerializer(many=True, required=False)
+    subjective_answers = GradingSubjectiveAnswerSerializer(many=True, required=False)
 
 
 class GradingSubmitSerializer(serializers.Serializer):
     """评分提交序列化器"""
+    quiz_id = serializers.IntegerField()
     question_id = serializers.IntegerField()
     student_id = serializers.IntegerField()
     score = serializers.FloatField()

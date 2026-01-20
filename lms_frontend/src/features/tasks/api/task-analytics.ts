@@ -4,7 +4,7 @@ import type {
   TaskAnalytics,
   StudentExecution,
   GradingQuestion,
-  GradingAnswer,
+  GradingAnswerResponse,
   GradingSubmitRequest,
 } from '@/types/api';
 
@@ -35,12 +35,16 @@ export const useStudentExecutions = (taskId: number, options: { enabled?: boolea
 /**
  * 获取待评分简答题列表
  */
-export const useGradingQuestions = (taskId: number, options: { enabled?: boolean } = {}) => {
+export const useGradingQuestions = (
+  taskId: number,
+  quizId: number | null,
+  options: { enabled?: boolean } = {}
+) => {
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-questions', taskId],
-    queryFn: () => apiClient.get<GradingQuestion[]>(`/tasks/${taskId}/grading/questions/`),
-    enabled: Boolean(taskId) && enabled,
+    queryKey: ['grading-questions', taskId, quizId],
+    queryFn: () => apiClient.get<GradingQuestion[]>(`/tasks/${taskId}/grading/questions/?quiz_id=${quizId}`),
+    enabled: Boolean(taskId) && Boolean(quizId) && enabled,
   });
 };
 
@@ -50,14 +54,17 @@ export const useGradingQuestions = (taskId: number, options: { enabled?: boolean
 export const useGradingAnswers = (
   taskId: number,
   questionId: number | null,
+  quizId: number | null,
   options: { enabled?: boolean } = {}
 ) => {
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-answers', taskId, questionId],
+    queryKey: ['grading-answers', taskId, quizId, questionId],
     queryFn: () =>
-      apiClient.get<GradingAnswer[]>(`/tasks/${taskId}/grading/answers/?question_id=${questionId}`),
-    enabled: Boolean(taskId) && Boolean(questionId) && enabled,
+      apiClient.get<GradingAnswerResponse>(
+        `/tasks/${taskId}/grading/answers/?question_id=${questionId}&quiz_id=${quizId}`
+      ),
+    enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && enabled,
   });
 };
 

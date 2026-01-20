@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from django.db.models import Avg, Sum, Count, Q, F
+from django.db.models import Avg, Sum, Count, Q, F, OuterRef, Subquery
 from django.utils import timezone
 from decimal import Decimal
 
@@ -22,11 +22,31 @@ from apps.tasks.serializers import (
     TaskAnalyticsSerializer,
     StudentExecutionSerializer,
     GradingQuestionSerializer,
-    GradingAnswerSerializer,
+    GradingAnswerResponseSerializer,
     GradingSubmitSerializer,
 )
 from apps.tasks.services import TaskService
 from apps.submissions.models import Submission, Answer
+
+
+def _get_latest_answers(task, question_id, quiz_id):
+    """获取每位学员最新一次提交的答案"""
+    base_answers = Answer.objects.filter(
+        question_id=question_id,
+        submission__task_assignment__task=task,
+        submission__quiz_id=quiz_id,
+        submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
+    )
+
+    latest_submission_subquery = Submission.objects.filter(
+        task_assignment_id=OuterRef('submission__task_assignment_id'),
+        quiz_id=OuterRef('submission__quiz_id'),
+        status__in=['GRADING', 'SUBMITTED', 'GRADED']
+    ).order_by('-attempt_number', '-submitted_at', '-id').values('id')[:1]
+
+    return base_answers.annotate(
+        latest_submission_id=Subquery(latest_submission_subquery)
+    ).filter(submission_id=F('latest_submission_id'))
 
 
 class TaskAnalyticsView(APIView):
@@ -404,8 +424,8 @@ class GradingQuestionsView(APIView):
         self.service = TaskService()
 
     @extend_schema(
-        summary='获取待评分简答题列表',
-        description='获取任务中所有需要评分的简答题',
+        summary='获取阅卷中心题目列表',
+        description='获取任务中全部题目及通过率信息',
         responses={
             200: GradingQuestionSerializer(many=True),
             404: OpenApiResponse(description='任务不存在'),
@@ -416,40 +436,65 @@ class GradingQuestionsView(APIView):
         task = self.service.get_task_by_id(pk)
         self.service.check_task_read_permission(task, request.user)
 
-        questions = self._get_grading_questions(task)
+        quiz_id = request.query_params.get('quiz_id')
+        if not quiz_id:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='缺少 quiz_id 参数'
+            )
+        quiz_id = int(quiz_id)
+        if not task.task_quizzes.filter(quiz_id=quiz_id).exists():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='试卷不属于该任务'
+            )
+
+        questions = self._get_grading_questions(task, quiz_id)
         serializer = GradingQuestionSerializer(questions, many=True)
         return list_response(serializer.data)
 
-    def _get_grading_questions(self, task):
-        """获取待评分简答题列表"""
+    def _get_grading_questions(self, task, quiz_id):
+        """获取阅卷中心题目列表"""
         from apps.questions.models import Question
 
-        # 获取任务关联的所有试卷中的简答题
-        quiz_ids = task.task_quizzes.values_list('quiz_id', flat=True)
+        # 获取任务关联的所有试卷中的题目
         questions = Question.objects.filter(
-            quiz_questions__quiz_id__in=quiz_ids,
-            question_type='SHORT_ANSWER'
-        ).distinct()
+            question_quizzes__quiz_id=quiz_id
+        ).distinct().order_by('question_quizzes__order')
 
         results = []
         for question in questions:
-            # 统计未评分数量
-            ungraded_count = Answer.objects.filter(
-                question=question,
-                submission__task_assignment__task=task,
-                submission__status__in=['GRADING', 'SUBMITTED'],
-                graded_by__isnull=True
-            ).count()
+            pass_rate = self._calculate_pass_rate(task, question, quiz_id)
 
             results.append({
                 'question_id': question.id,
-                'question_text': question.stem,
-                'question_analysis': question.analysis or '',
+                'question_text': question.content,
+                'question_analysis': question.explanation or '',
+                'question_type': question.question_type,
+                'question_type_display': question.get_question_type_display(),
                 'max_score': float(question.score),
-                'ungraded_count': ungraded_count,
+                'pass_rate': pass_rate,
             })
 
         return results
+
+    def _calculate_pass_rate(self, task, question, quiz_id):
+        """计算通过率"""
+        answers = _get_latest_answers(task, question.id, quiz_id)
+        total_count = answers.count()
+        if total_count == 0:
+            return None
+
+        if question.is_objective:
+            correct_count = answers.filter(is_correct=True).count()
+        else:
+            score_threshold = float(question.score) * 0.6
+            correct_count = answers.filter(
+                graded_by__isnull=False,
+                obtained_score__gte=score_threshold
+            ).count()
+
+        return round(correct_count / total_count * 100, 1)
 
 
 class GradingAnswersView(APIView):
@@ -461,13 +506,13 @@ class GradingAnswersView(APIView):
         self.service = TaskService()
 
     @extend_schema(
-        summary='获取学员答案列表',
-        description='获取指定简答题的所有学员答案',
+        summary='获取题目分析详情',
+        description='获取指定题目的作答分布与学员答案',
         parameters=[
             OpenApiParameter(name='question_id', type=int, required=True, description='题目ID'),
         ],
         responses={
-            200: GradingAnswerSerializer(many=True),
+            200: GradingAnswerResponseSerializer,
             404: OpenApiResponse(description='任务不存在'),
         },
         tags=['阅卷中心']
@@ -477,27 +522,130 @@ class GradingAnswersView(APIView):
         self.service.check_task_read_permission(task, request.user)
 
         question_id = request.query_params.get('question_id')
+        quiz_id = request.query_params.get('quiz_id')
         if not question_id:
             raise BusinessError(
-                code=ErrorCodes.INVALID_PARAMS,
+                code=ErrorCodes.VALIDATION_ERROR,
                 message='缺少 question_id 参数'
             )
+        if not quiz_id:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='缺少 quiz_id 参数'
+            )
+        quiz_id = int(quiz_id)
+        if not task.task_quizzes.filter(quiz_id=quiz_id).exists():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='试卷不属于该任务'
+            )
 
-        answers = self._get_grading_answers(task, int(question_id))
-        serializer = GradingAnswerSerializer(answers, many=True)
-        return list_response(serializer.data)
+        answers = self._get_grading_answers(task, int(question_id), quiz_id)
+        serializer = GradingAnswerResponseSerializer(answers)
+        return success_response(serializer.data)
 
-    def _get_grading_answers(self, task, question_id):
-        """获取学员答案列表"""
-        answers = Answer.objects.filter(
-            question_id=question_id,
-            submission__task_assignment__task=task,
-            submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
-        ).select_related(
+    def _get_grading_answers(self, task, question_id, quiz_id):
+        """获取题目分析详情"""
+        from apps.questions.models import Question
+
+        question = Question.objects.filter(id=question_id).first()
+        if not question:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='未找到对应题目'
+            )
+        answers = _get_latest_answers(task, question_id, quiz_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
 
+        pass_rate = self._calculate_pass_rate(task, question, quiz_id)
+
+        if question.is_objective:
+            return {
+                'question_id': question.id,
+                'question_type': question.question_type,
+                'pass_rate': pass_rate,
+                'options': self._build_objective_options(question, answers),
+            }
+
+        return {
+            'question_id': question.id,
+            'question_type': question.question_type,
+            'pass_rate': pass_rate,
+            'subjective_answers': self._build_subjective_answers(answers),
+        }
+
+    def _calculate_pass_rate(self, task, question, quiz_id):
+        """计算通过率"""
+        answers = _get_latest_answers(task, question.id, quiz_id)
+        total_count = answers.count()
+        if total_count == 0:
+            return None
+
+        if question.is_objective:
+            correct_count = answers.filter(is_correct=True).count()
+        else:
+            score_threshold = float(question.score) * 0.6
+            correct_count = answers.filter(
+                graded_by__isnull=False,
+                obtained_score__gte=score_threshold
+            ).count()
+
+        return round(correct_count / total_count * 100, 1)
+
+    def _build_objective_options(self, question, answers):
+        """构造客观题选项分布"""
+        options = question.options or []
+        if question.question_type == 'TRUE_FALSE' and not options:
+            options = [
+                {'key': 'TRUE', 'value': '正确'},
+                {'key': 'FALSE', 'value': '错误'},
+            ]
+
+        correct_keys = question.answer if isinstance(question.answer, list) else [question.answer]
+        option_payload = []
+
+        for option in options:
+            if not isinstance(option, dict):
+                continue
+            option_key = option.get('key')
+            option_text = option.get('value')
+            if not option_key:
+                continue
+            students = []
+            selected_count = 0
+
+            for answer in answers:
+                user_answer = answer.user_answer
+                selected = False
+                if question.question_type == 'MULTIPLE_CHOICE':
+                    selected = isinstance(user_answer, list) and option_key in user_answer
+                else:
+                    selected = user_answer == option_key
+
+                if selected:
+                    selected_count += 1
+                    user = answer.submission.task_assignment.assignee
+                    students.append({
+                        'student_id': user.id,
+                        'student_name': user.username,
+                        'employee_id': user.employee_id or '',
+                        'department': user.department.name if user.department else '',
+                    })
+
+            option_payload.append({
+                'option_key': option_key,
+                'option_text': option_text,
+                'selected_count': selected_count,
+                'is_correct': option_key in correct_keys,
+                'students': students,
+            })
+
+        return option_payload
+
+    def _build_subjective_answers(self, answers):
+        """构造主观题答案列表"""
         results = []
         for answer in answers:
             user = answer.submission.task_assignment.assignee
@@ -509,8 +657,6 @@ class GradingAnswersView(APIView):
                 'answer_text': answer.user_answer if isinstance(answer.user_answer, str) else str(answer.user_answer or ''),
                 'submitted_at': answer.submission.submitted_at,
                 'score': float(answer.obtained_score) if answer.graded_by else None,
-                'comments': answer.comment or None,
-                'is_graded': answer.graded_by is not None,
             })
 
         return results
@@ -543,8 +689,14 @@ class GradingSubmitView(APIView):
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
+        if not task.task_quizzes.filter(quiz_id=data['quiz_id']).exists():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='试卷不属于该任务'
+            )
         self._submit_grading(
             task=task,
+            quiz_id=data['quiz_id'],
             question_id=data['question_id'],
             student_id=data['student_id'],
             score=data['score'],
@@ -554,26 +706,23 @@ class GradingSubmitView(APIView):
 
         return success_response({'message': '评分成功'})
 
-    def _submit_grading(self, task, question_id, student_id, score, comments, grader):
+    def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments, grader):
         """提交评分"""
-        # 查找答案记录
-        try:
-            answer = Answer.objects.get(
-                question_id=question_id,
-                submission__task_assignment__task=task,
-                submission__task_assignment__assignee_id=student_id,
-                submission__status__in=['GRADING', 'SUBMITTED']
-            )
-        except Answer.DoesNotExist:
+        # 查找最新一次提交的答案记录
+        answer = _get_latest_answers(task, question_id, quiz_id).filter(
+            submission__task_assignment__assignee_id=student_id,
+            submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
+        ).order_by('-submission__submitted_at', '-submission_id').first()
+        if not answer:
             raise BusinessError(
-                code=ErrorCodes.NOT_FOUND,
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='未找到对应的答案记录'
             )
 
         # 验证分数范围
         if score < 0 or score > float(answer.question.score):
             raise BusinessError(
-                code=ErrorCodes.INVALID_PARAMS,
+                code=ErrorCodes.VALIDATION_ERROR,
                 message=f'分数必须在 0 到 {answer.question.score} 之间'
             )
 

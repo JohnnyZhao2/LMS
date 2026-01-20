@@ -1,6 +1,7 @@
 /**
  * 仪表盘路由
  */
+/* eslint-disable react-refresh/only-export-components */
 import { Route } from 'react-router-dom';
 import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';

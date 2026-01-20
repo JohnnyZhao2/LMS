@@ -12,6 +12,7 @@ import {
     Pencil,
     RefreshCw,
     BarChart3,
+    FileCheck,
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
@@ -193,16 +194,28 @@ export const TaskManagement: React.FC = () => {
                             </Button>
                         </Tooltip>
                         {canPreview && (
-                            <Tooltip title="进度监控">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
-                                    onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                </Button>
-                            </Tooltip>
+                            <>
+                                <Tooltip title="进度监控">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
+                                        onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
+                                    >
+                                        <BarChart3 className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                                <Tooltip title="阅卷中心">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-md hover:bg-[#F3E8FF] hover:text-[#9333EA] text-[#9CA3AF] shadow-none"
+                                        onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=grading`)}
+                                    >
+                                        <FileCheck className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                            </>
                         )}
                         {canEdit && (
                             <>
