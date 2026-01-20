@@ -22,7 +22,7 @@ export interface TaskAnalytics {
 export interface TaskNodeProgress {
   node_id: number;
   node_name: string;
-  node_type: 'KNOWLEDGE' | 'QUIZ';
+  category: 'KNOWLEDGE' | 'PRACTICE' | 'EXAM';
   completed_count: number;
   total_count: number;
   percentage: number;

@@ -170,7 +170,7 @@ class TaskAnalyticsView(APIView):
             nodes.append({
                 'node_id': tk.id,
                 'node_name': tk.knowledge.title,
-                'node_type': 'KNOWLEDGE',
+                'category': 'KNOWLEDGE',
                 'completed_count': completed,
                 'total_count': total_count,
                 'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,
@@ -186,7 +186,7 @@ class TaskAnalyticsView(APIView):
             nodes.append({
                 'node_id': tq.id,
                 'node_name': tq.quiz.title,
-                'node_type': 'QUIZ',
+                'category': tq.quiz.quiz_type,  # 'PRACTICE' or 'EXAM'
                 'completed_count': completed,
                 'total_count': total_count,
                 'percentage': round(completed / total_count * 100, 1) if total_count > 0 else 0,

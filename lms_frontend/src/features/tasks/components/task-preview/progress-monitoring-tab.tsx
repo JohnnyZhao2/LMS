@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   BookOpen,
   FileQuestion,
+  GraduationCap,
 } from 'lucide-react';
 import { Card, Skeleton } from '@/components/ui';
 import {
@@ -16,7 +17,6 @@ import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
-  TaskNodeProgress,
 } from '@/types/task-analytics';
 import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
 
@@ -36,6 +36,39 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
 
   const isLoading = analyticsLoading || studentsLoading;
   const hasScoreDistribution = analytics?.score_distribution != null;
+
+  // 聚合节点进度为三个类别
+  const aggregatedProgress = React.useMemo(() => {
+    if (!analytics?.node_progress) return [];
+
+    const categories = [
+      { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, color: '#10B981' },
+      { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, color: '#3B82F6' },
+      { key: 'EXAM', label: '结业考核', icon: GraduationCap, color: '#8B5CF6' },
+    ];
+
+    return categories.map(({ key, label, icon, color }) => {
+      const nodes = analytics.node_progress.filter((n) => n.category === key);
+
+      if (nodes.length === 0) return null;
+
+      const totalCount = nodes[0].total_count;
+      const nodeCount = nodes.length;
+      const avgCompleted = Math.round(nodes.reduce((sum, n) => sum + n.completed_count, 0) / nodeCount);
+      const percentage = Math.round((avgCompleted / totalCount) * 100);
+
+      return { key, label, icon, color, nodeCount, completedCount: avgCompleted, totalCount, percentage };
+    }).filter(Boolean) as {
+      key: string;
+      label: string;
+      icon: React.ElementType;
+      color: string;
+      nodeCount: number;
+      completedCount: number;
+      totalCount: number;
+      percentage: number;
+    }[];
+  }, [analytics]);
 
   const columns: ColumnDef<StudentExecution>[] = [
     {
@@ -161,13 +194,16 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
 
       {/* Row 2: Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Node Progress */}
+        {/* Left: Node Progress (Aggregated by Category) */}
         <Card className="p-6 border border-gray-100">
           <h3 className="text-base font-semibold text-slate-900 mb-5">任务节点完成情况</h3>
           <div className="space-y-4">
-            {analytics.node_progress.map((node) => (
-              <NodeProgressBar key={node.node_id} node={node} />
+            {aggregatedProgress.map((category) => (
+              <CategoryProgressBar key={category.key} category={category} />
             ))}
+            {aggregatedProgress.length === 0 && (
+              <p className="text-sm text-slate-400 text-center py-4">暂无任务节点</p>
+            )}
           </div>
         </Card>
 
@@ -251,14 +287,22 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, c
   </Card>
 );
 
-// Node Progress Bar Component
-interface NodeProgressBarProps {
-  node: TaskNodeProgress;
+// Category Progress Bar Component (Aggregated)
+interface CategoryProgressBarProps {
+  category: {
+    key: string;
+    label: string;
+    icon: React.ElementType;
+    color: string;
+    nodeCount: number;
+    completedCount: number;
+    totalCount: number;
+    percentage: number;
+  };
 }
 
-const NodeProgressBar: React.FC<NodeProgressBarProps> = ({ node }) => {
-  const Icon = node.node_type === 'KNOWLEDGE' ? BookOpen : FileQuestion;
-  const color = node.node_type === 'KNOWLEDGE' ? '#10B981' : '#3B82F6';
+const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) => {
+  const Icon = category.icon;
 
   return (
     <div className="space-y-2 group cursor-pointer">
@@ -266,22 +310,25 @@ const NodeProgressBar: React.FC<NodeProgressBarProps> = ({ node }) => {
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded-md flex items-center justify-center transition-colors duration-200"
-            style={{ backgroundColor: `${color}12` }}
+            style={{ backgroundColor: `${category.color}12` }}
           >
-            <Icon className="h-3.5 w-3.5" style={{ color }} />
+            <Icon className="h-3.5 w-3.5" style={{ color: category.color }} />
           </div>
           <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-200">
-            {node.node_name}
+            {category.label}
+          </span>
+          <span className="text-xs text-slate-400">
+            ({category.nodeCount}项)
           </span>
         </div>
         <span className="text-sm text-slate-500 tabular-nums">
-          {node.completed_count}/{node.total_count} <span className="text-slate-400">({node.percentage}%)</span>
+          {category.completedCount}/{category.totalCount} <span className="text-slate-400">({category.percentage}%)</span>
         </span>
       </div>
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-7 bg-slate-100 rounded-md overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500 ease-out"
-          style={{ width: `${node.percentage}%`, backgroundColor: color }}
+          className="h-full rounded-md transition-all duration-500 ease-out"
+          style={{ width: `${category.percentage}%`, backgroundColor: category.color }}
         />
       </div>
     </div>
@@ -303,11 +350,11 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
       {data.map((item) => (
         <div key={item.range} className="flex items-center gap-3 group cursor-pointer">
           <span className="w-16 text-xs text-slate-500 text-right tabular-nums font-medium">
-            {type === 'time' ? `${item.range}分` : `${item.range}分`}
+            {item.range}
           </span>
           <div className="flex-1 h-7 bg-slate-100 rounded-md overflow-hidden">
             <div
-              className="h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-90"
+              className="h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-80"
               style={{
                 width: `${(item.count / maxCount) * 100}%`,
                 backgroundColor: color,

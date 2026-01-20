@@ -418,7 +418,7 @@ class NodeProgressSerializer(serializers.Serializer):
     """节点进度序列化器"""
     node_id = serializers.IntegerField()
     node_name = serializers.CharField()
-    node_type = serializers.ChoiceField(choices=['KNOWLEDGE', 'QUIZ'])
+    category = serializers.ChoiceField(choices=['KNOWLEDGE', 'PRACTICE', 'EXAM'])
     completed_count = serializers.IntegerField()
     total_count = serializers.IntegerField()
     percentage = serializers.FloatField()
