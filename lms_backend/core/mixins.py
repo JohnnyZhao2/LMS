@@ -109,7 +109,7 @@ class DataScopeMixin:
         Get the current active role of the user.
         Returns the role code string or None if not authenticated.
         """
-        return get_user_current_role(self.request.user)
+        return get_user_current_role(self.request.user, self.request)
     def filter_queryset_by_scope(self, queryset):
         """
         Filter the queryset based on the user's data access scope.

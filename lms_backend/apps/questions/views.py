@@ -123,7 +123,7 @@ class QuestionDetailView(APIView):
     )
     def get(self, request, pk):
         """Get question detail."""
-        question = self.service.get_by_id(pk, user=request.user)
+        question = self.service.get_by_id(pk, user=request.user, request=request)
         serializer = QuestionDetailSerializer(question)
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
@@ -144,7 +144,7 @@ class QuestionDetailView(APIView):
         Property 15: 题目所有权编辑控制
         """
         # 先获取题目对象用于验证
-        question = self.service.get_by_id(pk, user=request.user)
+        question = self.service.get_by_id(pk, user=request.user, request=request)
         serializer = QuestionUpdateSerializer(
             instance=question,
             data=request.data,
@@ -177,5 +177,5 @@ class QuestionDetailView(APIView):
         Property 15: 题目所有权编辑控制
         """
         # 使用Service删除题目（权限检查和引用检查在Service中完成）
-        self.service.delete(pk=pk, user=request.user)
+        self.service.delete(pk=pk, user=request.user, request=request)
         return Response(status=status.HTTP_204_NO_CONTENT)

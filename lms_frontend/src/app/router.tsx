@@ -4,8 +4,25 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense } from 'react';
 import { Spinner } from '@/components/ui/spinner';
-import { allRoutes } from './routes';
-import { ROUTES } from '@/config/routes';
+import { RoleRouteWrapper } from '@/components/role-route-wrapper';
+import { roleRoutes } from './routes/role-routes';
+import { authRoutes } from './routes/auth';
+import { tokenStorage } from '@/lib/token-storage';
+
+/**
+ * 获取默认角色路径
+ */
+const getDefaultRolePath = () => {
+  const role = tokenStorage.getCurrentRole();
+  return role ? `/${role.toLowerCase()}/dashboard` : '/login';
+};
+
+/**
+ * 默认重定向组件
+ */
+const DefaultRedirect = () => {
+  return <Navigate to={getDefaultRolePath()} replace />;
+};
 
 /**
  * 路由配置
@@ -14,12 +31,26 @@ export const AppRouter: React.FC = () => {
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-screen"><Spinner /></div>}>
       <Routes>
-        {/* 所有功能路由 */}
-        {allRoutes}
+        {/* 认证路由（不需要角色前缀） */}
+        {authRoutes}
+
+        {/* 角色前缀路由 */}
+        <Route path="/:role" element={<RoleRouteWrapper />}>
+          {roleRoutes}
+        </Route>
+
+        {/* 兼容旧路由：重定向到带角色前缀的路由 */}
+        <Route path="/dashboard" element={<DefaultRedirect />} />
+        <Route path="/tasks/*" element={<DefaultRedirect />} />
+        <Route path="/knowledge/*" element={<DefaultRedirect />} />
+        <Route path="/quiz-center/*" element={<DefaultRedirect />} />
+        <Route path="/spot-checks/*" element={<DefaultRedirect />} />
+        <Route path="/users/*" element={<DefaultRedirect />} />
+        <Route path="/personal" element={<DefaultRedirect />} />
 
         {/* 默认重定向 */}
-        <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
-        <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+        <Route path="/" element={<DefaultRedirect />} />
+        <Route path="*" element={<DefaultRedirect />} />
       </Routes>
     </Suspense>
   );

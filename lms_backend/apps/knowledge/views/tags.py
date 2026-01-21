@@ -89,7 +89,7 @@ class TagCreateView(APIView):
         tags=['知识管理']
     )
     def post(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建标签'

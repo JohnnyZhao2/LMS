@@ -18,12 +18,13 @@ from apps.users.permissions import get_current_role
 class KnowledgeService(BaseService):
     """知识文档应用服务"""
 
-    def get_by_id(self, pk: int, user=None) -> Knowledge:
+    def get_by_id(self, pk: int, user=None, request=None) -> Knowledge:
         """
         获取知识文档
         Args:
             pk: 主键
             user: 当前用户（用于权限检查）
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             知识文档对象
         Raises:
@@ -35,7 +36,7 @@ class KnowledgeService(BaseService):
             f'知识文档 {pk} 不存在'
         )
         # 权限检查：非管理员只能访问当前版本的知识
-        if user and get_current_role(user) != 'ADMIN':
+        if user and get_current_role(user, request) != 'ADMIN':
             if not knowledge.is_current:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,

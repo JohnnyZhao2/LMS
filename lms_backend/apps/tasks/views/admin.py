@@ -47,8 +47,8 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        current_role = get_current_role(request.user)
-        queryset = get_accessible_students(request.user, current_role).filter(
+        current_role = get_current_role(request.user, request)
+        queryset = get_accessible_students(request.user, current_role, request).filter(
             roles__code='STUDENT'
         ).select_related(
             'department', 'mentor'
@@ -120,7 +120,7 @@ class TaskListView(APIView):
     )
     def get(self, request):
         # Use TaskService to get queryset based on user role
-        queryset = self.service.get_task_queryset_for_user(request.user)
+        queryset = self.service.get_task_queryset_for_user(request.user, request)
         is_closed = request.query_params.get('is_closed')
         if is_closed is not None:
             is_closed_bool = is_closed.lower() in ('true', '1', 'yes')
@@ -154,7 +154,7 @@ class TaskDetailView(APIView):
     )
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task, request.user, request)
         serializer = TaskDetailSerializer(task)
         return success_response(serializer.data)
     @extend_schema(
@@ -171,7 +171,7 @@ class TaskDetailView(APIView):
     )
     def patch(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task, request.user)
+        self.service.check_task_edit_permission(task, request.user, request)
         if task.is_closed:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
@@ -199,7 +199,7 @@ class TaskDetailView(APIView):
     )
     def delete(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task, request.user)
+        self.service.check_task_edit_permission(task, request.user, request)
         self.service.delete_task(task)
         return no_content_response()
 class TaskCloseView(APIView):
@@ -220,7 +220,7 @@ class TaskCloseView(APIView):
         tags=['任务管理']
     )
     def post(self, request, pk):
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         if current_role != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,

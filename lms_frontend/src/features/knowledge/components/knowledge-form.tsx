@@ -26,7 +26,7 @@ import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
 import { EMERGENCY_TABS, parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
 
 const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ default: m.RichTextEditor })));
@@ -39,6 +39,7 @@ const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ defa
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { roleNavigate, getRolePath } = useRoleNavigate();
   const isEdit = !!id;
 
   // API Hooks
@@ -101,7 +102,7 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit, lineTypeTags, lineTypeId]);
 
   const handleClose = useCallback(() => {
-    navigate(ROUTES.ADMIN_KNOWLEDGE);
+    roleNavigate('admin/knowledge');
   }, [navigate]);
 
 
@@ -177,12 +178,12 @@ export const KnowledgeForm: React.FC = () => {
         const result = await updateKnowledge.mutateAsync({ id: currentId, data: requestData });
         toast.success('保存成功');
         if (result?.id && result.id !== currentId) {
-          navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
+          navigate(getRolePath(`admin/knowledge/${result.id}/edit`), { replace: true });
         }
       } else {
         const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
         toast.success('创建成功');
-        navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
+        navigate(getRolePath(`admin/knowledge/${result.id}/edit`), { replace: true });
       }
     } catch (error) {
       showApiError(error, isEdit ? '保存失败' : '创建失败');

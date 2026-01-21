@@ -46,7 +46,8 @@ class BaseService:
         self,
         resource,
         user,
-        resource_name: str = '资源'
+        resource_name: str = '资源',
+        request=None
     ) -> None:
         """
         检查资源的访问权限
@@ -55,10 +56,11 @@ class BaseService:
             resource: 资源对象（必须有 is_current 属性）
             user: 当前用户
             resource_name: 资源名称（用于错误消息）
+            request: The HTTP request object (optional)
         Raises:
             BusinessError: 如果权限不足
         """
-        if user and get_current_role(user) != 'ADMIN':
+        if user and get_current_role(user, request) != 'ADMIN':
             if not hasattr(resource, 'is_current'):
                 return  # 如果资源没有这些属性，跳过检查
             if not resource.is_current:

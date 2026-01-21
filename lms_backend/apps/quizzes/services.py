@@ -98,18 +98,19 @@ class QuizService(BaseService):
             qs = qs[offset:offset+limit] if offset else qs[:limit]
         return list(qs)
 
-    def check_edit_permission(self, user, quiz: Quiz) -> bool:
+    def check_edit_permission(self, user, quiz: Quiz, request=None) -> bool:
         """
         检查用户是否有编辑权限
         Property 16: 试卷所有权编辑控制
         Args:
             user: 当前用户
             quiz: 试卷对象
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             True 如果有权限
         """
         # Admin can edit/delete any quiz
-        if get_current_role(user) == 'ADMIN':
+        if get_current_role(user, request) == 'ADMIN':
             return True
         # Others can only edit/delete their own quizzes
         return quiz.created_by_id == user.id

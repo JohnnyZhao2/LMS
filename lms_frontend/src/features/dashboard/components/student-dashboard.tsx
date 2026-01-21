@@ -10,8 +10,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { useStudentDashboard } from '../api/student-dashboard';
-import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
 import { Skeleton } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -23,7 +22,7 @@ import { cn } from '@/lib/utils';
  */
 export const StudentDashboard: React.FC = () => {
   const { data, isLoading } = useStudentDashboard();
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   return (
     <div className="space-y-12 pb-10 animate-in fade-in duration-700 pt-4">
@@ -40,7 +39,7 @@ export const StudentDashboard: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate(ROUTES.KNOWLEDGE)}
+            onClick={() => roleNavigate('knowledge')}
             className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
           >
             查看全部 <ArrowRight className="w-3 h-3" />
@@ -54,7 +53,7 @@ export const StudentDashboard: React.FC = () => {
             data.latest_knowledge.slice(0, 3).map((knowledge) => (
               <div
                 key={knowledge.id}
-                onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${knowledge.id}`)}
+                onClick={() => roleNavigate(`knowledge/${knowledge.id}`)}
                 className="group flex flex-col p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-emerald-100/40 hover:border-emerald-100 cursor-pointer transition-all duration-300"
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -115,7 +114,7 @@ export const StudentDashboard: React.FC = () => {
               return (
                 <div
                   key={task.id}
-                  onClick={() => navigate(`${ROUTES.TASKS}/${task.task_id}`)}
+                  onClick={() => roleNavigate(`tasks/${task.task_id}`)}
                   className="group relative flex flex-col p-6 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 hover:border-indigo-100 cursor-pointer transition-all duration-300"
                 >
                   <div className="flex justify-between items-start mb-4">

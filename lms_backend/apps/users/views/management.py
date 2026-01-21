@@ -50,7 +50,7 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看用户列表'
@@ -82,7 +82,7 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def post(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建用户'
@@ -116,7 +116,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def get(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看用户详情'
@@ -137,7 +137,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以更新用户信息'
@@ -168,7 +168,7 @@ class UserDeactivateView(APIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以停用用户'
@@ -196,7 +196,7 @@ class UserActivateView(APIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以启用用户'
@@ -225,7 +225,7 @@ class UserAssignRolesView(APIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以分配角色'
@@ -260,7 +260,7 @@ class UserAssignMentorView(APIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以指定导师'
@@ -286,7 +286,7 @@ class MenteesListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'MENTOR':
+        if get_current_role(request.user, request) != 'MENTOR':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有导师可以查看名下学员'
@@ -307,7 +307,7 @@ class DepartmentMembersListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'DEPT_MANAGER':
+        if get_current_role(request.user, request) != 'DEPT_MANAGER':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有室经理可以查看本室成员'
@@ -328,7 +328,7 @@ class MentorsListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看导师列表'
@@ -352,7 +352,7 @@ class DepartmentsListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看部门列表'
@@ -373,7 +373,7 @@ class RolesListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看角色列表'

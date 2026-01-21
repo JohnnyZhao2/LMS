@@ -1,5 +1,6 @@
 import { config } from '@/config';
 import { tokenStorage } from './token-storage';
+import { roleState } from './role-state';
 import { ROUTES } from '@/config/routes';
 
 /**
@@ -115,6 +116,11 @@ class ApiClient {
       const accessToken = tokenStorage.getAccessToken();
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      // 添加当前角色 header
+      const currentRole = roleState.get();
+      if (currentRole) {
+        headers['X-Current-Role'] = currentRole;
       }
     }
 

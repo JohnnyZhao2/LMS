@@ -14,11 +14,11 @@ from apps.users.permissions import (
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 from .services import TaskService, StudentTaskService, extract_knowledge_summary
 
-def validate_assignee_scope(user, assignee_ids: list[int]) -> None:
-    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user))
+def validate_assignee_scope(user, assignee_ids: list[int], request=None) -> None:
+    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request=request))
     if not invalid_ids:
         return
-    current_role = get_current_role(user)
+    current_role = get_current_role(user, request)
     if current_role == 'MENTOR':
         raise serializers.ValidationError({
             'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
@@ -199,7 +199,7 @@ class TaskCreateSerializer(serializers.Serializer):
         if not request or not request.user:
             raise serializers.ValidationError('无法获取当前用户信息')
         assignee_ids = attrs.get('assignee_ids', [])
-        validate_assignee_scope(request.user, assignee_ids)
+        validate_assignee_scope(request.user, assignee_ids, request)
         return attrs
     def create(self, validated_data):
         """创建任务 - 委托给 TaskService"""

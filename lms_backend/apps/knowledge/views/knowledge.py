@@ -95,7 +95,7 @@ class KnowledgeListCreateView(APIView):
     )
     def post(self, request):
         # 1. 权限检查
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建知识文档'
@@ -141,7 +141,7 @@ class KnowledgeDetailView(APIView):
     def get(self, request, pk):
         # 1. 调用 Service
         try:
-            knowledge = self.service.get_by_id(pk, user=request.user)
+            knowledge = self.service.get_by_id(pk, user=request.user, request=request)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
@@ -164,7 +164,7 @@ class KnowledgeDetailView(APIView):
     )
     def patch(self, request, pk):
         # 1. 权限检查
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以更新知识文档'
@@ -203,7 +203,7 @@ class KnowledgeDetailView(APIView):
     )
     def delete(self, request, pk):
         # 1. 权限检查
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以删除知识文档'
@@ -293,7 +293,7 @@ class StudentTaskKnowledgeDetailView(APIView):
                 {'code': ErrorCodes.RESOURCE_NOT_FOUND, 'message': '任务知识不存在'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             has_assignment = TaskAssignment.objects.filter(
                 task_id=task_knowledge.task_id,
                 assignee=request.user
@@ -325,7 +325,7 @@ class KnowledgeIncrementViewCountView(APIView):
     def post(self, request, pk):
         # 1. 权限检查（先获取知识文档）
         try:
-            knowledge = self.service.get_by_id(pk, user=request.user)
+            knowledge = self.service.get_by_id(pk, user=request.user, request=request)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},

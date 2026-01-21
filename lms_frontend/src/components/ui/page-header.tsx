@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Home, ChevronRight } from 'lucide-react';
-import { ROUTES } from '@/config/routes';
 import { cn } from '@/lib/utils';
+import { tokenStorage } from '@/lib/token-storage';
 
 export interface BreadcrumbItem {
   title: string;
@@ -40,6 +40,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   icon,
   className = '',
 }) => {
+  const { role: urlRole } = useParams<{ role: string }>();
+
+  // 获取带角色前缀的 dashboard 路径
+  const getDashboardPath = () => {
+    const role = urlRole || tokenStorage.getCurrentRole();
+    return role ? `/${role.toLowerCase()}/dashboard` : '/dashboard';
+  };
+
   return (
     <div className={cn(
       "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10",
@@ -49,7 +57,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 面包屑 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
-            <Link to={ROUTES.DASHBOARD} className="text-gray-400 hover:text-primary-500 transition-colors">
+            <Link to={getDashboardPath()} className="text-gray-400 hover:text-primary-500 transition-colors">
               <Home className="w-3.5 h-3.5" />
             </Link>
             {breadcrumbs.map((item, index) => (

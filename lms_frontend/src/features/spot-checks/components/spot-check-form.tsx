@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -18,14 +17,14 @@ import { DatePicker } from '@/components/ui/date-picker';
 
 import { useCreateSpotCheck } from '../api/create-spot-check';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 
 /**
  * 抽查录入表单组件 - ShadCN UI 版本
  */
 export const SpotCheckForm: React.FC = () => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const createSpotCheck = useCreateSpotCheck();
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
@@ -62,7 +61,7 @@ export const SpotCheckForm: React.FC = () => {
         checked_at: checkedAt!.toISOString(),
       });
       toast.success('抽查记录创建成功');
-      navigate(ROUTES.SPOT_CHECKS);
+      roleNavigate('spot-checks');
     } catch (error) {
       showApiError(error, '创建失败');
     }
@@ -147,7 +146,7 @@ export const SpotCheckForm: React.FC = () => {
               {createSpotCheck.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               提交
             </Button>
-            <Button variant="outline" onClick={() => navigate(ROUTES.SPOT_CHECKS)}>
+            <Button variant="outline" onClick={() => roleNavigate('spot-checks')}>
               取消
             </Button>
           </div>

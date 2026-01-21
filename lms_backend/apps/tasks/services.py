@@ -57,15 +57,16 @@ class TaskService(BaseService):
     - Task closing logic
     - Permission checks for task operations
     """
-    def get_task_queryset_for_user(self, user: User) -> QuerySet:
+    def get_task_queryset_for_user(self, user: User, request=None) -> QuerySet:
         """
         Get task queryset based on user's role.
         Args:
             user: The requesting user
+            request: The HTTP request object (optional)
         Returns:
             QuerySet of tasks accessible to the user
         """
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         qs = task_base_queryset(include_deleted=False)
         if current_role == 'ADMIN':
             return qs
@@ -91,18 +92,19 @@ class TaskService(BaseService):
         self.validate_not_none(task, f'任务 {pk} 不存在')
         return task
 
-    def check_task_read_permission(self, task: Task, user: User) -> bool:
+    def check_task_read_permission(self, task: Task, user: User, request=None) -> bool:
         """
         Check if user has permission to read a task.
         Args:
             task: The task to check
             user: The user requesting access
+            request: The HTTP request object (optional)
         Returns:
             True if permitted
         Raises:
             BusinessError: If permission denied
         """
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
@@ -138,18 +140,19 @@ class TaskService(BaseService):
             return True
         return Submission.objects.filter(task_assignment__task_id=task.id).exists()
 
-    def check_task_edit_permission(self, task: Task, user: User) -> bool:
+    def check_task_edit_permission(self, task: Task, user: User, request=None) -> bool:
         """
         Check if user has permission to edit a task.
         Args:
             task: The task to check
             user: The user requesting access
+            request: The HTTP request object (optional)
         Returns:
             True if permitted
         Raises:
             BusinessError: If permission denied
         """
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:

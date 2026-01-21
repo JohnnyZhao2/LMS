@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
@@ -59,6 +59,7 @@ interface KnowledgeListViewItem {
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { roleNavigate, getRolePath } = useRoleNavigate();
   const { currentRole, user, isLoading: authLoading } = useAuth();
 
   const isStudent = !authLoading && currentRole === 'STUDENT';
@@ -157,7 +158,7 @@ export const TaskDetail: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">Task Not Found</h3>
           <p className="text-gray-500 text-sm mb-8 leading-relaxed">任务不存在或您没有权限查看，请联系管理员。</p>
-          <Button variant="outline" onClick={() => navigate(ROUTES.TASKS)} className="w-full">
+          <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
             返回任务中心
           </Button>
         </div>
@@ -183,7 +184,7 @@ export const TaskDetail: React.FC = () => {
     if (!isStudent || !canStartQuiz) return;
     const assignmentId = learningDetail?.id;
     if (!assignmentId) return;
-    navigate(`${ROUTES.QUIZ}/${quizId}?assignment=${assignmentId}&task=${taskId}`);
+    navigate(getRolePath(`quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`));
   };
 
   const getStatusBadge = () => {
@@ -225,7 +226,7 @@ export const TaskDetail: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(ROUTES.TASKS)}
+            onClick={() => roleNavigate('tasks')}
             className="text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -259,7 +260,7 @@ export const TaskDetail: React.FC = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg rounded-xl p-1 w-48">
-                <DropdownMenuItem onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)} className="cursor-pointer font-medium rounded-lg py-2 focus:bg-gray-50">
+                <DropdownMenuItem onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))} className="cursor-pointer font-medium rounded-lg py-2 focus:bg-gray-50">
                   <Edit className="w-4 h-4 mr-2 text-gray-500" />
                   编辑任务
                 </DropdownMenuItem>
@@ -314,7 +315,7 @@ export const TaskDetail: React.FC = () => {
                   {knowledgeList.map((item) => (
                     <div
                       key={item.id}
-                      onClick={() => navigate(`${ROUTES.KNOWLEDGE}/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`)}
+                      onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`))}
                       className={cn(
                         "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px]",
                         "hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5",
@@ -575,7 +576,7 @@ export const TaskDetail: React.FC = () => {
                   <Button
                     variant="outline"
                     className="w-full mt-8 border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl h-11"
-                    onClick={() => navigate(`${ROUTES.TASKS}/${taskId}/edit`)}
+                    onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     编辑任务配置

@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
+import { useCurrentRole } from "@/hooks/use-current-role"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/config/routes"
 import {
@@ -55,23 +56,33 @@ const ROLE_COLORS: Record<RoleCode, string> = {
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
 
-const MENU_ICONS: Record<string, React.ReactNode> = {
-  [ROUTES.DASHBOARD]: <LayoutGrid className="h-4 w-4" />,
-  [ROUTES.KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
-  [ROUTES.ADMIN_KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
-  [ROUTES.TASKS]: <FileText className="h-4 w-4" />,
-  [ROUTES.USERS]: <Users className="h-4 w-4" />,
-  [ROUTES.QUIZ_CENTER]: <HelpCircle className="h-4 w-4" />,
-  [ROUTES.SPOT_CHECKS]: <FileSearch className="h-4 w-4" />,
-  [ROUTES.ANALYTICS]: <BarChart3 className="h-4 w-4" />,
-  [ROUTES.PERSONAL]: <User className="h-4 w-4" />,
+// 根据路径后缀获取图标
+const getMenuIcon = (path: string): React.ReactNode => {
+  // 移除角色前缀，获取实际路径
+  const pathParts = path.split('/').filter(Boolean)
+  const actualPath = pathParts.length > 1 ? pathParts.slice(1).join('/') : pathParts[0]
+
+  const iconMap: Record<string, React.ReactNode> = {
+    'dashboard': <LayoutGrid className="h-4 w-4" />,
+    'knowledge': <BookOpen className="h-4 w-4" />,
+    'admin/knowledge': <BookOpen className="h-4 w-4" />,
+    'tasks': <FileText className="h-4 w-4" />,
+    'users': <Users className="h-4 w-4" />,
+    'quiz-center': <HelpCircle className="h-4 w-4" />,
+    'spot-checks': <FileSearch className="h-4 w-4" />,
+    'analytics': <BarChart3 className="h-4 w-4" />,
+    'personal': <User className="h-4 w-4" />,
+  }
+
+  return iconMap[actualPath] || <LayoutGrid className="h-4 w-4" />
 }
 
 /**
  * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
-  const { user, currentRole, availableRoles, logout, switchRole, setIsSwitching, isLoading } = useAuth()
+  const { user, availableRoles, logout, isLoading } = useAuth()
+  const currentRole = useCurrentRole()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -81,26 +92,19 @@ export const Header: React.FC = () => {
     navigate(ROUTES.LOGIN)
   }
 
-  const handleRoleChange = async (roleCode: RoleCode) => {
+  // 获取当前路径（不含角色前缀）
+  const getPathWithoutRole = () => {
+    const pathParts = location.pathname.split('/').filter(Boolean)
+    if (pathParts.length <= 1) return 'dashboard'
+    // 跳过角色前缀
+    return pathParts.slice(1).join('/')
+  }
+
+  const handleRoleChange = (roleCode: RoleCode) => {
     if (roleCode !== currentRole) {
-      try {
-        // 开始切换
-        setIsSwitching(true)
-
-        // 调用后台切换 API
-        await switchRole(roleCode)
-
-        // 跳转到首页（强制触发重新加载）
-        navigate(ROUTES.DASHBOARD)
-
-        // 稍微延迟一点点关闭遮罩，让跳转后的页面有一定的渲染时间，避免生硬地闪现
-        setTimeout(() => {
-          setIsSwitching(false)
-        }, 800)
-      } catch (error) {
-        console.error("切换角色失败:", error)
-        setIsSwitching(false)
-      }
+      // 直接更新 URL，保持当前路径
+      const currentPath = getPathWithoutRole()
+      navigate(`/${roleCode.toLowerCase()}/${currentPath}`)
     }
   }
 
@@ -125,6 +129,14 @@ export const Header: React.FC = () => {
       value: role.code,
     }))
 
+  // 获取带角色前缀的 dashboard 路径
+  const getDashboardPath = () => {
+    if (currentRole) {
+      return `/${currentRole.toLowerCase()}/dashboard`
+    }
+    return ROUTES.DASHBOARD
+  }
+
   const selectedNavKey = getSelectedNavKey()
 
   return (
@@ -137,7 +149,7 @@ export const Header: React.FC = () => {
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate(ROUTES.DASHBOARD)}
+          onClick={() => navigate(getDashboardPath())}
         >
           <div
             className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
@@ -164,7 +176,7 @@ export const Header: React.FC = () => {
                 if (!menuItem.key) return null
 
                 const isActive = selectedNavKey === menuItem.key
-                const icon = MENU_ICONS[menuItem.key]
+                const icon = getMenuIcon(menuItem.key)
 
                 return (
                   <motion.button
@@ -226,22 +238,29 @@ export const Header: React.FC = () => {
         {/* 角色切换器 */}
         {availableRoles.length > 1 && currentRole && (
           <div
+            key={location.pathname} // 强制在路径变化时重新渲染
             className="hidden md:flex items-center bg-gray-100 p-1 rounded-md gap-1"
           >
-            {roleOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleRoleChange(option.value)}
-                className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
-                  currentRole === option.value
-                    ? "bg-white text-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+            {roleOptions.map((option) => {
+              // 从当前 URL 实时解析角色，而不是依赖 state
+              const pathRole = location.pathname.split('/')[1]?.toUpperCase() as RoleCode
+              const isActive = pathRole === option.value || currentRole === option.value
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleRoleChange(option.value)}
+                  className={cn(
+                    "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
+                    isActive
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
           </div>
         )}
 

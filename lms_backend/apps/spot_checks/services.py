@@ -15,12 +15,13 @@ class SpotCheckService(BaseService):
 
     def _with_relations(self, qs):
         return qs.select_related('student', 'checker', 'student__department')
-    def get_by_id(self, pk: int, user: User) -> SpotCheck:
+    def get_by_id(self, pk: int, user: User, request=None) -> SpotCheck:
         """
         获取抽查记录详情
         Args:
             pk: 主键
             user: 当前用户（用于权限验证）
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             抽查记录对象
         Raises:
@@ -32,13 +33,14 @@ class SpotCheckService(BaseService):
             f'抽查记录 {pk} 不存在'
         )
         # 验证数据权限
-        self._validate_data_scope_access(spot_check, user)
+        self._validate_data_scope_access(spot_check, user, request)
         return spot_check
     def get_list(
         self,
         user: User,
         student_id: Optional[int] = None,
-        ordering: str = '-checked_at'
+        ordering: str = '-checked_at',
+        request=None
     ) -> List[SpotCheck]:
         """
         获取抽查记录列表（根据用户权限范围）
@@ -46,23 +48,26 @@ class SpotCheckService(BaseService):
             user: 当前用户
             student_id: 可选的学生 ID（用于筛选）
             ordering: 排序字段
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             抽查记录列表
         Property 36: 抽查记录时间排序
         """
         # 根据用户角色获取相应范围的查询集
-        qs = self._get_queryset_for_user(user, student_id, ordering)
+        qs = self._get_queryset_for_user(user, student_id, ordering, request)
         return list(qs)
     def create(
         self,
         data: dict,
-        user: User
+        user: User,
+        request=None
     ) -> SpotCheck:
         """
         创建抽查记录
         Args:
             data: 抽查记录数据
             user: 创建用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             创建的抽查记录对象
         Raises:
@@ -85,7 +90,7 @@ class SpotCheckService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='无效的学员数据'
             )
-        self._validate_student_scope(student, user)
+        self._validate_student_scope(student, user, request)
         # 2. 验证抽查时间
         self._validate_checked_at(data.get('checked_at'))
         # 3. 准备数据
@@ -97,7 +102,8 @@ class SpotCheckService(BaseService):
         self,
         pk: int,
         data: dict,
-        user: User
+        user: User,
+        request=None
     ) -> SpotCheck:
         """
         更新抽查记录
@@ -105,14 +111,15 @@ class SpotCheckService(BaseService):
             pk: 主键
             data: 更新数据
             user: 更新用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             更新后的抽查记录对象
         Raises:
             BusinessError: 如果验证失败或权限不足
         """
-        spot_check = self.get_by_id(pk, user)
+        spot_check = self.get_by_id(pk, user, request)
         # 验证更新权限：只能更新自己创建的记录（管理员除外）
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role != 'ADMIN' and spot_check.checker_id != user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
@@ -134,19 +141,21 @@ class SpotCheckService(BaseService):
     def delete(
         self,
         pk: int,
-        user: User
+        user: User,
+        request=None
     ) -> None:
         """
         删除抽查记录
         Args:
             pk: 主键
             user: 删除用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果权限不足
         """
-        spot_check = self.get_by_id(pk, user)
+        spot_check = self.get_by_id(pk, user, request)
         # 验证删除权限：只能删除自己创建的记录（管理员除外）
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role != 'ADMIN' and spot_check.checker_id != user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
@@ -158,7 +167,8 @@ class SpotCheckService(BaseService):
         self,
         user: User,
         student_id: Optional[int] = None,
-        ordering: str = '-checked_at'
+        ordering: str = '-checked_at',
+        request=None
     ):
         """
         根据用户角色获取相应范围的查询集
@@ -166,10 +176,11 @@ class SpotCheckService(BaseService):
             user: 当前用户
             student_id: 可选的学生 ID
             ordering: 排序字段
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             QuerySet
         """
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role == 'ADMIN':
             qs = SpotCheck.objects.all()
         elif current_role == 'MENTOR':
@@ -193,16 +204,17 @@ class SpotCheckService(BaseService):
         if ordering:
             qs = qs.order_by(ordering)
         return self._with_relations(qs)
-    def _validate_data_scope_access(self, spot_check: SpotCheck, user: User) -> None:
+    def _validate_data_scope_access(self, spot_check: SpotCheck, user: User, request=None) -> None:
         """
         验证用户是否有权限访问该抽查记录
         Args:
             spot_check: 抽查记录对象
             user: 当前用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果权限不足
         """
-        if not get_accessible_students(user).filter(pk=spot_check.student_id).exists():
+        if not get_accessible_students(user, request=request).filter(pk=spot_check.student_id).exists():
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问该抽查记录'
@@ -220,18 +232,19 @@ class SpotCheckService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='抽查时间不能是未来时间'
             )
-    def _validate_student_scope(self, student: User, user: User) -> None:
+    def _validate_student_scope(self, student: User, user: User, request=None) -> None:
         """
         验证用户是否有权限为指定学员创建抽查记录
         Args:
             student: 被抽查学员
             user: 当前用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果权限不足
         Property 35: 抽查学员范围限制
         """
-        if not get_accessible_students(user).filter(pk=student.id).exists():
-            current_role = get_current_role(user)
+        if not get_accessible_students(user, request=request).filter(pk=student.id).exists():
+            current_role = get_current_role(user, request)
             # 根据角色提供更具体的错误消息
             if current_role == 'DEPT_MANAGER' and not user.department_id:
                 raise BusinessError(

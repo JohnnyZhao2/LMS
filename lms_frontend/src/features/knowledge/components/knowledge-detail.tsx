@@ -26,7 +26,7 @@ import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 
@@ -36,6 +36,7 @@ export const KnowledgeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const { getRolePath } = useRoleNavigate();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>({
@@ -43,7 +44,7 @@ export const KnowledgeDetail: React.FC = () => {
     type: null,
   });
 
-  const isAdminRoute = location.pathname.startsWith(ROUTES.ADMIN_KNOWLEDGE);
+  const isAdminRoute = location.pathname.includes('/admin/knowledge');
   const searchParams = new URLSearchParams(location.search);
   const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
   const taskId = Number(searchParams.get('task') || 0);
@@ -79,7 +80,7 @@ export const KnowledgeDetail: React.FC = () => {
 
 
   const handleEdit = () => {
-    navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
+    navigate(getRolePath(`admin/knowledge/${id}/edit`));
   };
 
   const handleComplete = async () => {
@@ -97,9 +98,9 @@ export const KnowledgeDetail: React.FC = () => {
 
   const handleBack = () => {
     if (taskId) {
-      navigate(`${ROUTES.TASKS}/${taskId}`);
+      navigate(getRolePath(`tasks/${taskId}`));
     } else {
-      navigate(isAdminRoute ? ROUTES.ADMIN_KNOWLEDGE : ROUTES.KNOWLEDGE);
+      navigate(getRolePath(isAdminRoute ? 'admin/knowledge' : 'knowledge'));
     }
   };
 
@@ -111,7 +112,7 @@ export const KnowledgeDetail: React.FC = () => {
     try {
       await deleteKnowledge.mutateAsync(Number(id));
       toast.success('删除成功');
-      navigate(ROUTES.ADMIN_KNOWLEDGE);
+      navigate(getRolePath('admin/knowledge'));
     } catch (error) {
       showApiError(error, '删除失败');
     }

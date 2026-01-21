@@ -76,16 +76,17 @@ class MentorDashboardService(BaseService):
     - 单个学员统计
     - 快捷链接生成
     """
-    def get_dashboard_data(self, user: User) -> Dict[str, Any]:
+    def get_dashboard_data(self, user: User, request=None) -> Dict[str, Any]:
         """
         获取导师/室经理的完整仪表盘数据
         Args:
             user: 导师或室经理用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             包含摘要、学员、快捷链接、当前角色的字典
         """
-        current_role = get_current_role(user)
-        students = get_accessible_students(user, current_role)
+        current_role = get_current_role(user, request)
+        students = get_accessible_students(user, current_role, request)
         student_ids = list(students.values_list('id', flat=True))
         summary = self._calculate_summary(student_ids)
         student_stats = self._calculate_student_stats(students)

@@ -36,7 +36,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -61,7 +61,7 @@ import { useTaskDetail } from '../api/get-task-detail';
 import { useAssignableUsers } from '../api/get-assignable-users';
 import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
 import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
 
@@ -93,7 +93,7 @@ const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
 export const TaskForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   const isEdit = !!id;
   const taskId = isEdit ? Number(id) : 0;
@@ -388,7 +388,7 @@ export const TaskForm: React.FC = () => {
         await createTask.mutateAsync(payload);
         toast.success('任务发布成功');
       }
-      navigate(ROUTES.TASKS);
+      roleNavigate('tasks');
     } catch (error) {
       showApiError(error, '操作失败');
     }
@@ -405,7 +405,7 @@ export const TaskForm: React.FC = () => {
       <div className="flex flex-col items-center justify-center py-16">
         <FileText className="w-12 h-12 text-gray-300 mb-4" />
         <span className="text-gray-500 mb-4">加载任务失败</span>
-        <Button onClick={() => navigate(ROUTES.TASKS)}>返回</Button>
+        <Button onClick={() => roleNavigate('tasks')}>返回</Button>
       </div>
     );
   }
@@ -418,7 +418,7 @@ export const TaskForm: React.FC = () => {
         <div className="flex items-center gap-4 shrink-0">
           <Button
             variant="ghost"
-            onClick={() => navigate(ROUTES.TASKS)}
+            onClick={() => roleNavigate('tasks')}
             className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />

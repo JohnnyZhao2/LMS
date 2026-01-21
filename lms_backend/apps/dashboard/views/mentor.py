@@ -30,12 +30,12 @@ class MentorDashboardView(APIView):
     )
     def get(self, request):
         user = request.user
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
         if current_role not in ['MENTOR', 'DEPT_MANAGER', 'ADMIN']:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有导师、室经理或管理员可以访问此仪表盘'
             )
         # 调用 Service 获取仪表盘数据
-        data = self.service.get_dashboard_data(user)
+        data = self.service.get_dashboard_data(user, request=request)
         return Response(data)

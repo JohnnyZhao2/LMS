@@ -18,8 +18,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
-import { ROUTES } from '@/config/routes';
 import { ApiError } from '@/lib/api-client';
+import { tokenStorage } from '@/lib/token-storage';
 
 // Zod 验证 schema
 const loginSchema = z.object({
@@ -51,7 +51,10 @@ export const LoginForm: React.FC = () => {
     try {
       await login(values);
       toast.success('登录成功');
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      // 登录成功后，获取当前角色并重定向到带角色前缀的路径
+      const currentRole = tokenStorage.getCurrentRole();
+      const rolePath = currentRole ? `/${currentRole.toLowerCase()}/dashboard` : '/dashboard';
+      navigate(rolePath, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status !== 401 && error.status !== 403) {

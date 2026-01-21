@@ -193,7 +193,7 @@ class ResetPasswordView(APIView):
         tags=['认证']
     )
     def post(self, request):
-        if get_current_role(request.user) != 'ADMIN':
+        if get_current_role(request.user, request) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以重置用户密码'

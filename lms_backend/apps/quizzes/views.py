@@ -190,7 +190,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, APIView):
         Property 16: 试卷所有权编辑控制
         """
         try:
-            self.service.delete(pk, request.user)
+            self.service.delete(pk, request.user, request=request)
         except BusinessError as e:
             return self.handle_business_error(e)
         return Response(status=status.HTTP_204_NO_CONTENT)

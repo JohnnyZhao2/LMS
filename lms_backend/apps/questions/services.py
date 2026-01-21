@@ -43,7 +43,8 @@ class QuestionService(BaseService):
         ordering: str = '-created_at',
         page: int = 1,
         page_size: int = 10,
-        user=None
+        user=None,
+        request=None
     ) -> dict:
         """
         获取题目列表
@@ -54,11 +55,12 @@ class QuestionService(BaseService):
             page: 页码
             page_size: 每页数量
             user: 当前用户（用于权限检查）
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             包含题目列表和分页信息的字典
         """
         # 非管理员默认只显示当前版本的题目
-        if user and get_current_role(user) != 'ADMIN':
+        if user and get_current_role(user, request) != 'ADMIN':
             if not filters:
                 filters = {}
             if 'is_current' not in filters:
@@ -81,20 +83,21 @@ class QuestionService(BaseService):
             'total_pages': (total_count + page_size - 1) // page_size
         }
 
-    def check_edit_permission(self, question: Question, user) -> bool:
+    def check_edit_permission(self, question: Question, user, request=None) -> bool:
         """
         检查用户是否有编辑/删除权限
         Property 15: 题目所有权编辑控制
         Args:
             question: 题目对象
             user: 当前用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             True 如果有权限
         Raises:
             BusinessError: 如果权限不足
         """
         # 管理员可以编辑/删除任何题目
-        if get_current_role(user) == 'ADMIN':
+        if get_current_role(user, request) == 'ADMIN':
             return True
         # 其他人只能编辑/删除自己创建的题目
         if question.created_by_id != user.id:
@@ -137,13 +140,14 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def update(self, pk: int, data: dict, user) -> Question:
+    def update(self, pk: int, data: dict, user, request=None) -> Question:
         """
         更新题目
         Args:
             pk: 主键
             data: 更新数据
             user: 更新用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             更新后的题目对象
         Raises:
@@ -151,7 +155,7 @@ class QuestionService(BaseService):
         """
         question = self.get_by_id(pk, user)
         # 检查编辑权限
-        self.check_edit_permission(question, user)
+        self.check_edit_permission(question, user, request)
         # 当前版本需要创建新版本
         if question.is_current:
             return self._create_new_version(question, data, user)
@@ -177,12 +181,13 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def delete(self, pk: int, user) -> None:
+    def delete(self, pk: int, user, request=None) -> None:
         """
         删除题目
         Args:
             pk: 主键
             user: 操作用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果被引用无法删除
         """
@@ -192,7 +197,7 @@ class QuestionService(BaseService):
             f'题目 {pk} 不存在'
         )
         # 检查编辑权限
-        self.check_edit_permission(question, user)
+        self.check_edit_permission(question, user, request)
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):
             raise BusinessError(

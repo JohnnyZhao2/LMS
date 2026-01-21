@@ -150,7 +150,7 @@ class SpotCheckDetailView(APIView):
     def get(self, request, pk):
         """获取抽查记录详情"""
         try:
-            spot_check = self.service.get_by_id(pk, request.user)
+            spot_check = self.service.get_by_id(pk, request.user, request=request)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
@@ -212,7 +212,7 @@ class SpotCheckDetailView(APIView):
         只能删除自己创建的记录（管理员除外）
         """
         try:
-            self.service.delete(pk, request.user)
+            self.service.delete(pk, request.user, request=request)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
