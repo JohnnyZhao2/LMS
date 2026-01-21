@@ -106,9 +106,10 @@ export const Header: React.FC = () => {
     }
     try {
       await switchRole(roleCode)
-      // 直接更新 URL，保持当前路径
+      // 直接更新 URL，保持当前路径、查询参数和锚点
       const currentPath = getPathWithoutRole()
-      navigate(`/${roleCode.toLowerCase()}/${currentPath}`)
+      const suffix = `${location.search}${location.hash}`
+      navigate(`/${roleCode.toLowerCase()}/${currentPath}${suffix}`)
     } catch (error) {
       showApiError(error, "角色切换失败")
       setIsSwitching(false)
