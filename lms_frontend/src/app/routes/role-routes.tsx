@@ -105,43 +105,25 @@ export const roleRoutes = [
 
   // Knowledge
   <Route key="knowledge-list" path="knowledge" element={<KnowledgeCenter />} />,
+  <Route
+    key="knowledge-create"
+    path="knowledge/create"
+    element={
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <KnowledgeForm />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="knowledge-edit"
+    path="knowledge/:id/edit"
+    element={
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <KnowledgeForm />
+      </ProtectedRoute>
+    }
+  />,
   <Route key="knowledge-detail" path="knowledge/:id" element={<KnowledgeDetail />} />,
-  <Route
-    key="admin-knowledge-list"
-    path="admin/knowledge"
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeCenter isAdmin />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="admin-knowledge-create"
-    path="admin/knowledge/create"
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeForm />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="admin-knowledge-edit"
-    path="admin/knowledge/:id/edit"
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeForm />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="admin-knowledge-detail"
-    path="admin/knowledge/:id"
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeDetail />
-      </ProtectedRoute>
-    }
-  />,
 
   // Quiz Center
   <Route

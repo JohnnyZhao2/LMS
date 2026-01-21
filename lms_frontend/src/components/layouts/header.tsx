@@ -66,7 +66,6 @@ const getMenuIcon = (path: string): React.ReactNode => {
   const iconMap: Record<string, React.ReactNode> = {
     'dashboard': <LayoutGrid className="h-4 w-4" />,
     'knowledge': <BookOpen className="h-4 w-4" />,
-    'admin/knowledge': <BookOpen className="h-4 w-4" />,
     'tasks': <FileText className="h-4 w-4" />,
     'users': <Users className="h-4 w-4" />,
     'quiz-center': <HelpCircle className="h-4 w-4" />,

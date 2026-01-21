@@ -120,7 +120,7 @@ export const AdminDashboard: React.FC = () => {
               title="资源库"
               description="编排知识与文档"
               icon={Database}
-              route={ROUTES.ADMIN_KNOWLEDGE}
+              route={ROUTES.KNOWLEDGE}
               iconColor="text-[#8B5CF6]"
               iconBg="bg-[#EDE9FE]"
             />

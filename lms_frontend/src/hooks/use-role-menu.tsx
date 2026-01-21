@@ -93,7 +93,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: `${rolePrefix}/admin/knowledge`,
+            key: `${rolePrefix}/knowledge`,
             icon: <BookOpen className="w-4 h-4" />,
             label: '知识库',
           },

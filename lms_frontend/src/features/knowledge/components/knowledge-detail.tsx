@@ -44,13 +44,13 @@ export const KnowledgeDetail: React.FC = () => {
     type: null,
   });
 
-  const isAdminRoute = location.pathname.includes('/admin/knowledge');
   const searchParams = new URLSearchParams(location.search);
   const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
   const taskId = Number(searchParams.get('task') || 0);
 
   const { currentRole } = useAuth();
   const isStudent = currentRole === 'STUDENT';
+  const isAdmin = currentRole === 'ADMIN';
 
   const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
@@ -80,7 +80,7 @@ export const KnowledgeDetail: React.FC = () => {
 
 
   const handleEdit = () => {
-    navigate(getRolePath(`admin/knowledge/${id}/edit`));
+    navigate(getRolePath(`knowledge/${id}/edit`));
   };
 
   const handleComplete = async () => {
@@ -100,7 +100,7 @@ export const KnowledgeDetail: React.FC = () => {
     if (taskId) {
       navigate(getRolePath(`tasks/${taskId}`));
     } else {
-      navigate(getRolePath(isAdminRoute ? 'admin/knowledge' : 'knowledge'));
+      navigate(getRolePath('knowledge'));
     }
   };
 
@@ -112,7 +112,7 @@ export const KnowledgeDetail: React.FC = () => {
     try {
       await deleteKnowledge.mutateAsync(Number(id));
       toast.success('删除成功');
-      navigate(getRolePath('admin/knowledge'));
+      navigate(getRolePath('knowledge'));
     } catch (error) {
       showApiError(error, '删除失败');
     }
@@ -198,7 +198,7 @@ export const KnowledgeDetail: React.FC = () => {
           </div>
         </div>
 
-        {isAdminRoute && (
+        {isAdmin && (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleEdit} className="h-9 rounded-lg font-semibold">
               <Edit className="w-4 h-4 mr-1.5" />

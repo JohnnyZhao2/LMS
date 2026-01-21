@@ -30,19 +30,9 @@ export const knowledgeRoutes = [
       </ProtectedRoute>
     }
   />,
-  // 知识库管理（管理员）
   <Route
-    key="admin-knowledge-list"
-    path={ROUTES.ADMIN_KNOWLEDGE}
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeCenter isAdmin />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="admin-knowledge-create"
-    path={`${ROUTES.ADMIN_KNOWLEDGE}/create`}
+    key="knowledge-create"
+    path={`${ROUTES.KNOWLEDGE}/create`}
     element={
       <ProtectedRoute allowedRoles={['ADMIN']}>
         <KnowledgeForm />
@@ -50,20 +40,11 @@ export const knowledgeRoutes = [
     }
   />,
   <Route
-    key="admin-knowledge-edit"
-    path={`${ROUTES.ADMIN_KNOWLEDGE}/:id/edit`}
+    key="knowledge-edit"
+    path={`${ROUTES.KNOWLEDGE}/:id/edit`}
     element={
       <ProtectedRoute allowedRoles={['ADMIN']}>
         <KnowledgeForm />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="admin-knowledge-detail"
-    path={`${ROUTES.ADMIN_KNOWLEDGE}/:id`}
-    element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
-        <KnowledgeDetail />
       </ProtectedRoute>
     }
   />,

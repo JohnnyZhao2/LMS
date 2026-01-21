@@ -5,7 +5,6 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   KNOWLEDGE: '/knowledge',
-  ADMIN_KNOWLEDGE: '/admin/knowledge',
   TASKS: '/tasks',
   PERSONAL: '/personal',
   SPOT_CHECKS: '/spot-checks',

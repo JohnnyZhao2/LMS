@@ -102,8 +102,8 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit, lineTypeTags, lineTypeId]);
 
   const handleClose = useCallback(() => {
-    roleNavigate('admin/knowledge');
-  }, [navigate]);
+    roleNavigate('knowledge');
+  }, [roleNavigate]);
 
 
 
@@ -178,17 +178,17 @@ export const KnowledgeForm: React.FC = () => {
         const result = await updateKnowledge.mutateAsync({ id: currentId, data: requestData });
         toast.success('保存成功');
         if (result?.id && result.id !== currentId) {
-          navigate(getRolePath(`admin/knowledge/${result.id}/edit`), { replace: true });
+          navigate(getRolePath(`knowledge/${result.id}/edit`), { replace: true });
         }
       } else {
         const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
         toast.success('创建成功');
-        navigate(getRolePath(`admin/knowledge/${result.id}/edit`), { replace: true });
+        navigate(getRolePath(`knowledge/${result.id}/edit`), { replace: true });
       }
     } catch (error) {
       showApiError(error, isEdit ? '保存失败' : '创建失败');
     }
-  }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate]);
+  }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate, getRolePath]);
 
   const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending;
 
