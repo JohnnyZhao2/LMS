@@ -1,4 +1,5 @@
 import * as React from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
@@ -30,7 +31,6 @@ import {
     DataTable,
     CellWithIcon,
     CellTags,
-
 } from "@/components/ui/data-table"
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
@@ -62,6 +62,25 @@ export const TaskManagement: React.FC = () => {
 
     const { data: tasksData, isLoading, refetch } = useTaskList({ page, pageSize })
     const deleteTask = useDeleteTask()
+
+    // 动画配置
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+        }
+    }
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20, scale: 0.98 },
+        visible: { 
+            opacity: 1, 
+            y: 0, 
+            scale: 1,
+            transition: { type: "spring", stiffness: 260, damping: 20 }
+        }
+    }
 
     // 统计逻辑
     const stats = React.useMemo(() => {
@@ -128,18 +147,17 @@ export const TaskManagement: React.FC = () => {
                             <TrendingUp className="w-3 h-3 text-[#10B981] opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
                         <div className="h-1.5 w-full bg-[#F3F4F6] rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-[#3B82F6] rounded-full transition-all duration-1000 ease-out"
-                                style={{
-                                    width: `${percent}%`
-                                }}
+                            <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percent}%` }}
+                                transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.5 }}
+                                className="h-full bg-[#3B82F6] rounded-full"
                             />
                         </div>
                     </div>
                 )
             }
         },
-
         {
             header: "截止日期",
             id: "deadline",
@@ -174,7 +192,6 @@ export const TaskManagement: React.FC = () => {
                 </div>
             )
         },
-
         {
             header: "操作",
             id: "actions",
@@ -187,7 +204,7 @@ export const TaskManagement: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
+                                className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none soft-press"
                                 onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
@@ -199,7 +216,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none soft-press"
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
@@ -209,7 +226,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#F3E8FF] hover:text-[#9333EA] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-[#F3E8FF] hover:text-[#9333EA] text-[#9CA3AF] shadow-none soft-press"
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=grading`)}
                                     >
                                         <FileCheck className="h-4 w-4" />
@@ -223,7 +240,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none soft-press"
                                         disabled={row.original.is_closed}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
@@ -234,7 +251,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#FEE2E2] hover:text-[#DC2626] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-[#FEE2E2] hover:text-[#DC2626] text-[#9CA3AF] shadow-none soft-press"
                                         onClick={() => setDeleteId(row.original.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -249,63 +266,67 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <div className="space-y-10 animate-fadeIn overflow-x-hidden pb-10">
-            <PageHeader
-                title="任务中心"
-                subtitle="管理与监督"
-                icon={<FileText />}
-                extra={
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
-                            onClick={() => refetch()}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            刷新
-                        </Button>
-                        <Button
-                            onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
-                            className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
-                        >
-                            <Plus className="mr-2 h-5 w-5" />
-                            发布新任务
-                        </Button>
-                    </div>
-                }
-            />
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-10 overflow-x-hidden pb-10"
+        >
+            <motion.div variants={itemVariants}>
+                <PageHeader
+                    title="任务中心"
+                    subtitle="管理与监督"
+                    icon={<FileText />}
+                    extra={
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none soft-press"
+                                onClick={() => refetch()}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                刷新
+                            </Button>
+                            <Button
+                                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
+                                className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] shadow-none soft-press"
+                            >
+                                <Plus className="mr-2 h-5 w-5" />
+                                发布新任务
+                            </Button>
+                        </div>
+                    }
+                />
+            </motion.div>
 
             {/* 统计网格 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard
                     title="活跃任务"
                     value={stats.active}
                     icon={Timer}
                     color="#3B82F6"
-                    gradient=""
-                    delay="stagger-delay-1"
+                    className="clay-shadow"
                 />
                 <StatCard
                     title="总任务数"
                     value={stats.total}
                     icon={FileText}
                     color="#F59E0B"
-                    gradient=""
-                    delay="stagger-delay-2"
+                    className="clay-shadow"
                 />
                 <StatCard
                     title="平均及格率"
                     value={typeof stats.total === 'number' && stats.total > 0 ? '82%' : '-'}
                     icon={Layout}
                     color="#10B981"
-                    gradient=""
-                    delay="stagger-delay-3"
+                    className="clay-shadow"
                 />
-            </div>
+            </motion.div>
 
             {/* 列表主体 */}
-            <div className="reveal-item stagger-delay-2">
-                <ContentPanel className="overflow-hidden">
+            <motion.div variants={itemVariants}>
+                <ContentPanel className="overflow-hidden clay-shadow">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
@@ -336,40 +357,55 @@ export const TaskManagement: React.FC = () => {
 
                     {/* 表格 */}
                     <div className="overflow-hidden rounded-lg border-0">
-                        {isLoading ? (
-                            <div className="p-10 space-y-5">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                                ))}
-                            </div>
-                        ) : (
-                            <DataTable
-                                columns={columns}
-                                data={tasksData?.results?.filter((t: TaskListItem) => {
-                                    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                    const matchesStatus = statusFilter === 'all' ||
-                                        (statusFilter === 'open' && !t.is_closed) ||
-                                        (statusFilter === 'closed' && t.is_closed);
-                                    return matchesSearch && matchesStatus;
-                                }) || []}
-                                pagination={{
-                                    pageIndex: page - 1,
-                                    pageSize: pageSize,
-                                    pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
-                                    totalCount: tasksData?.count || 0,
-                                    onPageChange: (p: number) => setPage(p + 1),
-                                    onPageSizeChange: (size: number) => {
-                                        setPageSize(size);
-                                        setPage(1);
-                                    },
-                                }}
-                                rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
-                                onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
-                            />
-                        )}
+                        <AnimatePresence mode="wait">
+                            {isLoading ? (
+                                <motion.div 
+                                    key="skeleton"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="p-10 space-y-5"
+                                >
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="content"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    <DataTable
+                                        columns={columns}
+                                        data={tasksData?.results?.filter((t: TaskListItem) => {
+                                            const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
+                                            const matchesStatus = statusFilter === 'all' ||
+                                                (statusFilter === 'open' && !t.is_closed) ||
+                                                (statusFilter === 'closed' && t.is_closed);
+                                            return matchesSearch && matchesStatus;
+                                        }) || []}
+                                        pagination={{
+                                            pageIndex: page - 1,
+                                            pageSize: pageSize,
+                                            pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
+                                            totalCount: tasksData?.count || 0,
+                                            onPageChange: (p: number) => setPage(p + 1),
+                                            onPageSizeChange: (size: number) => {
+                                                setPageSize(size);
+                                                setPage(1);
+                                            },
+                                        }}
+                                        rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
+                                        onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </ContentPanel>
-            </div>
+            </motion.div>
 
             {/* 删除确认对话框 */}
             <ConfirmDialog
@@ -386,6 +422,6 @@ export const TaskManagement: React.FC = () => {
                 onConfirm={handleDeleteTask}
                 isConfirming={isDeleting}
             />
-        </div>
+        </motion.div>
     )
 }

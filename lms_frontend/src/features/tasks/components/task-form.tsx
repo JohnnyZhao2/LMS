@@ -419,7 +419,7 @@ export const TaskForm: React.FC = () => {
           <Button
             variant="ghost"
             onClick={() => roleNavigate('tasks')}
-            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
+            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg soft-press"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             <span className="text-sm font-semibold">返回列表</span>
@@ -447,7 +447,7 @@ export const TaskForm: React.FC = () => {
           <Button
             onClick={handleSubmit}
             disabled={!canSubmit || isSubmitting}
-            className="h-10 px-6 font-semibold"
+            className="h-10 px-6 font-semibold soft-press"
           >
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -538,7 +538,7 @@ export const TaskForm: React.FC = () => {
                       className={`group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-white border border-gray-100 transition-all ${
                         resourcesDisabled
                           ? 'opacity-50 cursor-not-allowed'
-                          : 'cursor-pointer hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5'
+                          : 'cursor-pointer hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5 animate-fadeIn'
                       }`}
                       onClick={() => addResource(res)}
                     >
@@ -579,7 +579,7 @@ export const TaskForm: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg hover:bg-gray-50"
+                className="h-8 w-8 rounded-lg hover:bg-gray-50 soft-press"
                 disabled={safeCurrentPage === 1}
                 onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
               >
@@ -588,7 +588,7 @@ export const TaskForm: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg hover:bg-gray-50"
+                className="h-8 w-8 rounded-lg hover:bg-gray-50 soft-press"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
               >
@@ -608,7 +608,7 @@ export const TaskForm: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6">
             {selectedResources.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full max-w-sm mx-auto text-center">
-                <div className="w-24 h-24 rounded-[2rem] bg-white shadow-2xl shadow-gray-200/50 flex items-center justify-center mb-8 animate-bounce-slow">
+                <div className="w-24 h-24 rounded-[2rem] bg-white shadow-2xl shadow-gray-200/50 flex items-center justify-center mb-8 animate-fadeInUp">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary-100 blur-xl opacity-50 scale-150" />
                     <Send className="w-10 h-10 text-primary-500 relative -rotate-45" />

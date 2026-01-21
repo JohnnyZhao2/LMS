@@ -124,38 +124,99 @@
 
     /* Entrance Animations */
     .animate-fadeIn {
-        animation: fadeIn 0.3s ease-out forwards;
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .animate-fadeInUp {
-        animation: fadeInUp 0.3s ease-out forwards;
+        animation: fadeInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .animate-shimmer {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .animate-shimmer::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    /* Claymorphism & Interaction */
+    .clay-shadow {
+        box-shadow: 
+            inset -4px -4px 8px rgba(0, 0, 0, 0.02),
+            inset 4px 4px 8px rgba(255, 255, 255, 0.8),
+            0 4px 6px -1px rgba(0, 0, 0, 0.05),
+            0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .clay-shadow:hover {
+        box-shadow: 
+            inset -2px -2px 4px rgba(0, 0, 0, 0.01),
+            inset 2px 2px 4px rgba(255, 255, 255, 0.9),
+            0 20px 25px -5px rgba(0, 0, 0, 0.05),
+            0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        transform: translateY(-2px);
+    }
+
+    .stagger-delay-1 { animation-delay: 0.1s; }
+    .stagger-delay-2 { animation-delay: 0.2s; }
+    .stagger-delay-3 { animation-delay: 0.3s; }
+    .stagger-delay-4 { animation-delay: 0.4s; }
+    .stagger-delay-5 { animation-delay: 0.5s; }
+
+    .soft-press {
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .soft-press:active {
+        transform: scale(0.96);
     }
 
     @keyframes fadeIn {
         from {
             opacity: 0;
+            transform: scale(0.98);
         }
 
         to {
             opacity: 1;
+            transform: scale(1);
         }
     }
 
     @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(20px) scale(0.95);
         }
 
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
     }
 
     @keyframes shimmer {
         100% {
             transform: translateX(100%);
+        }
+    }
+
+    /* Respect Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+        .animate-fadeIn, .animate-fadeInUp, .animate-shimmer::after, .soft-press {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+        }
+        .animate-fadeIn, .animate-fadeInUp {
+            opacity: 1 !important;
         }
     }
 

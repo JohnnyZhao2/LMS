@@ -43,11 +43,10 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
 
     // 构建部门层级列表
     const departmentItems: HierarchyItem[] = [
-        { id: 'all', name: '全院总览', subtitle: 'GLOBAL_VIEW' },
+        { id: 'all', name: '全部' },
         ...departments.map(d => ({
             id: d.id,
             name: d.name,
-            subtitle: d.code,
         })),
     ];
 
@@ -55,7 +54,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
     const mentorItems: HierarchyItem[] = mentors.map(m => ({
         id: m.id,
         name: m.username,
-        subtitle: '导师',
     }));
 
     const items = viewMode === 'department' ? departmentItems : mentorItems;
@@ -73,7 +71,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
             {/* 层级列表标题 */}
             <div className="flex items-center gap-2 px-2">
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                    {viewMode === 'department' ? 'DEPARTMENTAL_HIERARCHY' : 'MENTORSHIP_LIST'}
+                    {viewMode === 'department' ? '部门架构' : '师徒列表'}
                 </span>
             </div>
 
@@ -110,7 +108,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                     <motion.div
                                         layoutId="user-sidebar-active"
                                         className="absolute inset-0 bg-[#EFF6FF] rounded-lg -z-10"
-                                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                                     />
                                 )}
 

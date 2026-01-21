@@ -25,7 +25,7 @@ export const StudentDashboard: React.FC = () => {
   const { roleNavigate } = useRoleNavigate();
 
   return (
-    <div className="space-y-12 pb-10 animate-in fade-in duration-700 pt-4">
+    <div className="space-y-12 pb-10 animate-in fade-in duration-500 pt-4">
       {/* 最新知识 - Horizontal Grid */}
       <div className="space-y-6">
         <div className="flex items-center justify-between px-4">
