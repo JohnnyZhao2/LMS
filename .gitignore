@@ -1,9 +1,20 @@
-# AI 助手配置文件
+# AI 助手与自动化工具
 .claude/
 .claude
 .gemini/
 .cursor/
 .aider*
+.agent/
+.codex/
+.shared/
+
+# IDE 与编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
 # Python
 __pycache__/
@@ -15,9 +26,16 @@ __pycache__/
 dist/
 build/
 *.egg
+
+# 测试与覆盖率
 .pytest_cache/
 .coverage
 htmlcov/
+nosetests.xml
+coverage.xml
+*.lcov
+.hypothesis/
+.tox/
 
 # Django
 *.log
@@ -31,13 +49,6 @@ staticfiles/
 .env.local
 .env.*.local
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
 # Node
 node_modules/
 npm-debug.log*
@@ -49,3 +60,7 @@ lms_frontend/dist/
 lms_frontend/.vite/
 lms_frontend/.next/
 lms_frontend/out/
+
+# 文档构建
+docs/_build/
+docs/site/
