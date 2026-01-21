@@ -46,7 +46,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition-all duration-200 cursor-pointer hover:scale-[1.02] border-0 shadow-none"
+        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition duration-200 cursor-pointer hover:scale-[1.02] border-0 shadow-none"
       )}
       style={{ fontFamily: "'Outfit', sans-serif" }}
       onClick={() => onView(item.id)}

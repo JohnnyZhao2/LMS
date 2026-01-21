@@ -4,7 +4,7 @@ import * as React from "react"
 import { Header } from "./header"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { useLocation } from "react-router-dom"
 
 interface AppLayoutProps {
@@ -34,9 +34,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
     <div className={cn("min-h-screen relative isolate bg-gray-100 flex flex-col", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
       <div className="fixed inset-0 -z-10 pointer-events-none" aria-hidden="true">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/5 rounded-full" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 rounded-full -translate-y-1/2 translate-x-1/2 will-change-transform" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full translate-y-1/2 -translate-x-1/2 will-change-transform" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-500/5 rounded-full will-change-transform" />
       </div>
 
       <div className="relative z-10 flex flex-col flex-1">
@@ -50,15 +50,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             maxWidth: "var(--container-max-width, 1400px)"
           }}
         >
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="flex-1 flex flex-col"
-          >
-            {children}
-          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="flex-1 flex flex-col h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>

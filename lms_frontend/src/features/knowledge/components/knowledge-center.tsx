@@ -116,7 +116,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         {isAdminView ? (
                             <Button
                                 onClick={handleCreate}
-                                className="h-14 px-6 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition-all duration-200 hover:scale-105 shadow-none"
+                                className="h-14 px-6 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition duration-200 hover:scale-105 shadow-none"
                             >
                                 <Plus className="mr-2 h-5 w-5" />
                                 新建知识
@@ -124,7 +124,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         ) : (
                             <Button
                                 onClick={submitSearch}
-                                className="h-14 px-6 rounded-md bg-[#3B82F6] text-white font-bold hover:bg-[#2563EB] transition-all duration-200 hover:scale-105 shadow-none"
+                                className="h-14 px-6 rounded-md bg-[#3B82F6] text-white font-bold hover:bg-[#2563EB] transition duration-200 hover:scale-105 shadow-none"
                             >
                                 搜索
                             </Button>
@@ -142,7 +142,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             <button
                                 onClick={() => handleLineTypeSelect(undefined)}
                                 className={cn(
-                                    "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200 shadow-none",
+                                    "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition duration-200 shadow-none",
                                     !selectedLineTypeId
                                         ? "bg-[#3B82F6] text-white"
                                         : "text-[#111827] hover:bg-[#F3F4F6]"
@@ -156,7 +156,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     key={tag.id}
                                     onClick={() => handleLineTypeSelect(tag.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200 shadow-none",
+                                        "w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition duration-200 shadow-none",
                                         selectedLineTypeId === tag.id
                                             ? "bg-[#3B82F6] text-white"
                                             : "text-[#111827] hover:bg-[#F3F4F6]"
@@ -176,7 +176,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <button
                                     onClick={() => toggleSystemTag(-1)}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
+                                        "px-3 py-1.5 rounded-md text-xs font-semibold transition duration-200 shadow-none",
                                         selectedSystemTagIds.length === 0
                                             ? "bg-[#3B82F6] text-white"
                                             : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]"
@@ -189,7 +189,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         key={tag.id}
                                         onClick={() => toggleSystemTag(tag.id)}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 shadow-none",
+                                            "px-3 py-1.5 rounded-md text-xs font-semibold transition duration-200 shadow-none",
                                             selectedSystemTagIds.includes(tag.id)
                                                 ? "bg-[#3B82F6] text-white"
                                                 : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]"
