@@ -15,9 +15,6 @@ from django.utils import timezone
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User
-from apps.users.permissions import (
-    get_current_role,
-)
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
@@ -57,23 +54,21 @@ class TaskService(BaseService):
     - Task closing logic
     - Permission checks for task operations
     """
-    def get_task_queryset_for_user(self, user: User, request=None) -> QuerySet:
+    def get_task_queryset_for_user(self) -> QuerySet:
         """
         Get task queryset based on user's role.
-        Args:
-            user: The requesting user
-            request: The HTTP request object (optional)
+        
         Returns:
             QuerySet of tasks accessible to the user
         """
-        current_role = get_current_role(user, request)
+        current_role = self.get_current_role()
         qs = task_base_queryset(include_deleted=False)
         if current_role == 'ADMIN':
             return qs
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            return qs.filter(created_by=user)
+            return qs.filter(created_by=self.user)
         assigned_task_ids = TaskAssignment.objects.filter(
-            assignee=user
+            assignee=self.user
         ).values_list('task_id', flat=True)
         return qs.filter(id__in=assigned_task_ids)
 
@@ -92,30 +87,28 @@ class TaskService(BaseService):
         self.validate_not_none(task, f'任务 {pk} 不存在')
         return task
 
-    def check_task_read_permission(self, task: Task, user: User, request=None) -> bool:
+    def check_task_read_permission(self, task: Task) -> bool:
         """
         Check if user has permission to read a task.
         Args:
             task: The task to check
-            user: The user requesting access
-            request: The HTTP request object (optional)
         Returns:
             True if permitted
         Raises:
             BusinessError: If permission denied
         """
-        current_role = get_current_role(user, request)
+        current_role = self.get_current_role()
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by != user:
+            if task.created_by != self.user:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='无权访问此任务'
                 )
             return True
         # Student
-        if not task.assignments.filter(assignee=user).exists():
+        if not task.assignments.filter(assignee=self.user).exists():
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问此任务'
@@ -140,23 +133,21 @@ class TaskService(BaseService):
             return True
         return Submission.objects.filter(task_assignment__task_id=task.id).exists()
 
-    def check_task_edit_permission(self, task: Task, user: User, request=None) -> bool:
+    def check_task_edit_permission(self, task: Task) -> bool:
         """
         Check if user has permission to edit a task.
         Args:
             task: The task to check
-            user: The user requesting access
-            request: The HTTP request object (optional)
         Returns:
             True if permitted
         Raises:
             BusinessError: If permission denied
         """
-        current_role = get_current_role(user, request)
+        current_role = self.get_current_role()
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by != user:
+            if task.created_by != self.user:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='无权操作此任务'
@@ -186,8 +177,6 @@ class TaskService(BaseService):
         title: str,
         description: str,
         deadline,
-        created_by: User,
-        updated_by: User,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
         assignee_ids: List[int] = None,
@@ -198,7 +187,6 @@ class TaskService(BaseService):
             title: Task title
             description: Task description
             deadline: Task deadline
-            created_by: User creating the task
             knowledge_ids: List of knowledge document IDs
             quiz_ids: List of quiz IDs
             assignee_ids: List of assignee user IDs
@@ -213,8 +201,8 @@ class TaskService(BaseService):
             title=title,
             description=description,
             deadline=deadline,
-            created_by=created_by,
-            updated_by=updated_by
+            created_by=self.user,
+            updated_by=self.user
         )
         # Create knowledge associations
         if knowledge_ids:
@@ -328,7 +316,6 @@ class TaskService(BaseService):
     def update_task(
         self,
         task: Task,
-        updated_by: User,
         knowledge_ids: List[int] = None,
         quiz_ids: List[int] = None,
         assignee_ids: List[int] = None,
@@ -385,7 +372,7 @@ class TaskService(BaseService):
         if kwargs:
             for key, value in kwargs.items():
                 setattr(task, key, value)
-        task.updated_by = updated_by
+        task.updated_by = self.user
         task.save(update_fields=[*kwargs.keys(), 'updated_by'])
 
         # Update knowledge associations
@@ -492,7 +479,7 @@ class TaskService(BaseService):
         """
         task.soft_delete()
 
-    def close_task(self, task: Task, updated_by: User) -> Task:
+    def close_task(self, task: Task) -> Task:
         """
         Force close a task.
         Args:
@@ -511,7 +498,7 @@ class TaskService(BaseService):
         # 关闭任务
         task.is_closed = True
         task.closed_at = timezone.now()
-        task.updated_by = updated_by
+        task.updated_by = self.user
         task.save(update_fields=['is_closed', 'closed_at', 'updated_by'])
         # 将未完成的分配记录标记为已逾期
         task.assignments.filter(
@@ -604,12 +591,11 @@ class StudentTaskService(BaseService):
     - Knowledge learning progress tracking
     - Task completion logic
     """
-    def get_student_assignment(self, task_id: int, user: User) -> TaskAssignment:
+    def get_student_assignment(self, task_id: int) -> TaskAssignment:
         """
         Get a student's task assignment.
         Args:
             task_id: Task ID
-            user: Student user
         Returns:
             TaskAssignment instance
         Raises:
@@ -617,7 +603,7 @@ class StudentTaskService(BaseService):
         """
         assignment = assignment_detail_queryset().filter(
             task_id=task_id,
-            assignee_id=user.id,
+            assignee_id=self.user.id,
             task__is_deleted=False
         ).first()
         self.validate_not_none(assignment, '任务不存在或未分配给您')
@@ -791,7 +777,6 @@ class StudentTaskService(BaseService):
 
     def get_student_assignments_queryset(
         self,
-        user: User,
         status_filter: str = None,
         search: str = None
     ) -> QuerySet:
@@ -805,7 +790,7 @@ class StudentTaskService(BaseService):
             Filtered QuerySet of TaskAssignment
         """
         qs = assignment_list_queryset().filter(
-            assignee_id=user.id,
+            assignee_id=self.user.id,
             task__is_deleted=False
         )
         if status_filter:

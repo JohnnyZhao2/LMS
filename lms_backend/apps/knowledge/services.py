@@ -12,19 +12,16 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from .models import Knowledge, Tag
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
-from apps.users.permissions import get_current_role
 
 
 class KnowledgeService(BaseService):
     """知识文档应用服务"""
 
-    def get_by_id(self, pk: int, user=None, request=None) -> Knowledge:
+    def get_by_id(self, pk: int) -> Knowledge:
         """
         获取知识文档
         Args:
             pk: 主键
-            user: 当前用户（用于权限检查）
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             知识文档对象
         Raises:
@@ -36,12 +33,7 @@ class KnowledgeService(BaseService):
             f'知识文档 {pk} 不存在'
         )
         # 权限检查：非管理员只能访问当前版本的知识
-        if user and get_current_role(user, request) != 'ADMIN':
-            if not knowledge.is_current:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该知识文档'
-                )
+        self.check_published_resource_access(knowledge, resource_name='知识文档')
         return knowledge
 
     def get_all_with_filters(
@@ -63,12 +55,11 @@ class KnowledgeService(BaseService):
         return list(qs)
 
     @transaction.atomic
-    def create(self, data: dict, user) -> Knowledge:
+    def create(self, data: dict) -> Knowledge:
         """
         创建知识文档
         Args:
             data: 知识文档数据
-            user: 创建用户
         Returns:
             创建的知识文档对象
         Raises:
@@ -77,8 +68,8 @@ class KnowledgeService(BaseService):
         # 1. 业务验证
         self._validate_knowledge_data(data)
         # 2. 准备数据
-        data['created_by'] = user
-        data['updated_by'] = user
+        data['created_by'] = self.user
+        data['updated_by'] = self.user
         data['is_current'] = True
         # 处理版本号（创建只允许新资源）
         data.pop('resource_uuid', None)
@@ -98,30 +89,29 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    def update(self, pk: int, data: dict, user) -> Knowledge:
+    def update(self, pk: int, data: dict) -> Knowledge:
         """
         更新知识文档
         版本管理：每次更新都创建新版本，旧版本保持不变
         Args:
             pk: 主键
             data: 更新数据
-            user: 更新用户
         Returns:
             更新后的知识文档对象
         Raises:
             BusinessError: 如果验证失败或无法更新
         """
-        knowledge = self.get_by_id(pk, user)
+        knowledge = self.get_by_id(pk)
         # 当前版本需要创建新版本
         if knowledge.is_current:
-            return self._create_new_version(knowledge, data, user)
+            return self._create_new_version(knowledge, data)
         # 非当前版本直接更新（历史版本的修正）
         self._validate_knowledge_data(data)
         # 提取标签数据
         line_type_id = data.pop('line_type_id', None)
         system_tag_ids = data.pop('system_tag_ids', None)
         operation_tag_ids = data.pop('operation_tag_ids', None)
-        data['updated_by'] = user
+        data['updated_by'] = self.user
         if data:
             for key, value in data.items():
                 setattr(knowledge, key, value)
@@ -220,8 +210,7 @@ class KnowledgeService(BaseService):
     def _create_new_version(
         self,
         source: Knowledge,
-        data: dict,
-        user
+        data: dict
     ) -> Knowledge:
         """基于当前版本创建新版本"""
         # 获取下一个版本号
@@ -244,8 +233,8 @@ class KnowledgeService(BaseService):
             'recovery_plan': data.get('recovery_plan', source.recovery_plan),
             'content': data.get('content', source.content),
             'is_current': True,
-            'created_by': user,
-            'updated_by': user,
+            'created_by': self.user,
+            'updated_by': self.user,
             'view_count': source.view_count,
         }
         # 创建新版本

@@ -1,6 +1,10 @@
 """
 试卷应用服务
 编排业务逻辑。
+
+使用方式（构造器注入）:
+    service = QuizService(request)
+    quiz = service.get_by_id(pk=123)
 """
 from typing import Optional, List
 from django.db import transaction
@@ -13,7 +17,6 @@ from .models import Quiz, QuizQuestion
 from apps.questions.models import Question
 from apps.knowledge.models import Tag
 from .selectors import get_quiz_by_id, get_question_ids, list_quiz_questions
-from apps.users.permissions import get_current_role
 
 
 class QuizService(BaseService):
@@ -40,7 +43,6 @@ class QuizService(BaseService):
         ).delete()
         return deleted_count
 
-
     def get_by_id(self, pk: int) -> Quiz:
         """
         获取试卷
@@ -52,10 +54,7 @@ class QuizService(BaseService):
             BusinessError: 如果不存在
         """
         quiz = get_quiz_by_id(pk)
-        self.validate_not_none(
-            quiz,
-            f'试卷 {pk} 不存在'
-        )
+        self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
 
     def get_list(
@@ -98,28 +97,25 @@ class QuizService(BaseService):
             qs = qs[offset:offset+limit] if offset else qs[:limit]
         return list(qs)
 
-    def check_edit_permission(self, user, quiz: Quiz, request=None) -> bool:
+    def check_edit_permission(self, quiz: Quiz) -> bool:
         """
         检查用户是否有编辑权限
         Property 16: 试卷所有权编辑控制
         Args:
-            user: 当前用户
             quiz: 试卷对象
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             True 如果有权限
         """
         # Admin can edit/delete any quiz
-        if get_current_role(user, request) == 'ADMIN':
+        if self.get_current_role() == 'ADMIN':
             return True
         # Others can only edit/delete their own quizzes
-        return quiz.created_by_id == user.id
+        return quiz.created_by_id == self.user.id
 
     @transaction.atomic
     def create(
         self,
         data: dict,
-        user,
         existing_question_ids: List[int] = None,
         new_questions_data: List[dict] = None
     ) -> Quiz:
@@ -127,7 +123,6 @@ class QuizService(BaseService):
         创建试卷
         Args:
             data: 试卷数据
-            user: 创建用户
             existing_question_ids: 已有题目 ID 列表
             new_questions_data: 新建题目数据列表
         Returns:
@@ -138,8 +133,8 @@ class QuizService(BaseService):
         # 1. 业务验证
         self._validate_quiz_data(data)
         # 2. 准备数据
-        data['created_by'] = user
-        data['updated_by'] = user
+        data['created_by'] = self.user
+        data['updated_by'] = self.user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_quiz_version_data(data)
@@ -159,8 +154,8 @@ class QuizService(BaseService):
             )
         # 创建并添加新题目
         for question_data in new_questions_data:
-            self._create_and_add_question(quiz, question_data, user)
-        quiz.updated_by = user
+            self._create_and_add_question(quiz, question_data)
+        quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
         return quiz
 
@@ -169,7 +164,6 @@ class QuizService(BaseService):
         self,
         pk: int,
         data: dict,
-        user,
         question_ids: List[int] = None
     ) -> Quiz:
         """
@@ -178,7 +172,6 @@ class QuizService(BaseService):
         Args:
             pk: 主键
             data: 更新数据
-            user: 更新用户
             question_ids: 新的题目 ID 顺序列表（可选）
         Returns:
             更新后的试卷对象
@@ -188,16 +181,16 @@ class QuizService(BaseService):
         quiz = self.get_by_id(pk)
         # 检查权限
         self.validate_permission(
-            self.check_edit_permission(user, quiz),
+            self.check_edit_permission(quiz),
             '只有试卷创建者或管理员可以编辑此试卷'
         )
         # 当前版本需要创建新版本
         if quiz.is_current:
-            quiz = self._create_new_version(quiz, data, user)
+            quiz = self._create_new_version(quiz, data)
         else:
             # 草稿直接更新
             self._validate_quiz_data(data)
-            data['updated_by'] = user
+            data['updated_by'] = self.user
             if data:
                 for key, value in data.items():
                     setattr(quiz, key, value)
@@ -208,22 +201,20 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    def delete(self, pk: int, user, request=None) -> None:
+    def delete(self, pk: int) -> None:
         """
         删除试卷
         Property 14: 被引用试卷删除保护
         Property 16: 试卷所有权编辑控制
         Args:
             pk: 主键
-            user: 删除用户
-            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果被引用无法删除或无权限
         """
         quiz = self.get_by_id(pk)
         # 检查权限
         self.validate_permission(
-            self.check_edit_permission(user, quiz, request),
+            self.check_edit_permission(quiz),
             '只有试卷创建者或管理员可以删除此试卷'
         )
         # 检查是否被引用
@@ -239,7 +230,6 @@ class QuizService(BaseService):
     def add_questions(
         self,
         pk: int,
-        user,
         existing_question_ids: List[int] = None,
         new_questions_data: List[dict] = None
     ) -> Quiz:
@@ -247,7 +237,6 @@ class QuizService(BaseService):
         向试卷添加题目
         Args:
             pk: 试卷 ID
-            user: 当前用户
             existing_question_ids: 已有题目 ID 列表
             new_questions_data: 新建题目数据列表
         Returns:
@@ -258,18 +247,17 @@ class QuizService(BaseService):
         quiz = self.get_by_id(pk)
         # 检查权限
         self.validate_permission(
-            self.check_edit_permission(user, quiz),
+            self.check_edit_permission(quiz),
             '只有试卷创建者或管理员可以编辑此试卷'
         )
         # 已发布的试卷需要创建新版本
         if quiz.is_current:
-            quiz = self._create_new_version(quiz, {}, user)
+            quiz = self._create_new_version(quiz, {})
+        
         existing_question_ids = existing_question_ids or []
         new_questions_data = new_questions_data or []
         # 获取当前试卷中已有的题目 ID
-        existing_quiz_question_ids = set(
-            get_question_ids(quiz.id)
-        )
+        existing_quiz_question_ids = set(get_question_ids(quiz.id))
         # 添加已有题目
         for question_id in existing_question_ids:
             if question_id not in existing_quiz_question_ids:
@@ -286,8 +274,9 @@ class QuizService(BaseService):
                 )
         # 创建并添加新题目
         for question_data in new_questions_data:
-            self._create_and_add_question(quiz, question_data, user)
-        quiz.updated_by = user
+            self._create_and_add_question(quiz, question_data)
+        
+        quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
         return quiz
 
@@ -295,14 +284,12 @@ class QuizService(BaseService):
     def remove_questions(
         self,
         pk: int,
-        user,
         question_ids: List[int]
     ) -> Quiz:
         """
         从试卷移除题目
         Args:
             pk: 试卷 ID
-            user: 当前用户
             question_ids: 要移除的题目 ID 列表
         Returns:
             更新后的试卷对象
@@ -312,28 +299,27 @@ class QuizService(BaseService):
         quiz = self.get_by_id(pk)
         # 检查权限
         self.validate_permission(
-            self.check_edit_permission(user, quiz),
+            self.check_edit_permission(quiz),
             '只有试卷创建者或管理员可以编辑此试卷'
         )
         # 已发布的试卷需要创建新版本
         if quiz.is_current:
-            quiz = self._create_new_version(quiz, {}, user)
+            quiz = self._create_new_version(quiz, {})
         # 移除题目
         self._remove_questions(
             quiz_id=quiz.id,
             question_ids=question_ids
         )
-        quiz.updated_by = user
+        quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic
-    def publish(self, pk: int, user) -> Quiz:
+    def publish(self, pk: int) -> Quiz:
         """
         发布试卷
         Args:
             pk: 主键
-            user: 发布用户
         Returns:
             发布后的试卷对象
         Raises:
@@ -354,7 +340,7 @@ class QuizService(BaseService):
             )
         # 设置为当前版本
         quiz.is_current = True
-        quiz.updated_by = user
+        quiz.updated_by = self.user
         quiz.save(update_fields=['is_current', 'updated_by'])
         # 取消其他版本的 is_current 标志
         Quiz.objects.filter(
@@ -363,12 +349,11 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    def unpublish(self, pk: int, user) -> Quiz:
+    def unpublish(self, pk: int) -> Quiz:
         """
         取消发布试卷
         Args:
             pk: 主键
-            user: 操作用户
         Returns:
             取消发布后的试卷对象
         Raises:
@@ -389,22 +374,20 @@ class QuizService(BaseService):
             )
         # 取消当前版本标志
         quiz.is_current = False
-        quiz.updated_by = user
+        quiz.updated_by = self.user
         quiz.save(update_fields=['is_current', 'updated_by'])
         return quiz
 
     def _create_and_add_question(
         self,
         quiz: Quiz,
-        question_data: dict,
-        user
+        question_data: dict
     ) -> Question:
         """
         创建题目并添加到试卷
         Args:
             quiz: 试卷对象
             question_data: 题目数据字典（会被修改，line_type_id 会被弹出）
-            user: 创建用户
         Returns:
             创建的题目对象
         """
@@ -413,7 +396,7 @@ class QuizService(BaseService):
         self._prepare_question_version_data(question_data)
         # 准备题目属性
         question_attrs = {
-            'created_by': user,
+            'created_by': self.user,
             'is_current': True,
             **question_data,
         }
@@ -492,7 +475,6 @@ class QuizService(BaseService):
         self,
         source: Quiz,
         data: dict,
-        user,
         question_ids: Optional[List[int]] = None
     ) -> Quiz:
         """
@@ -500,7 +482,6 @@ class QuizService(BaseService):
         Args:
             source: 源试卷
             data: 更新数据
-            user: 更新用户
         Returns:
             新版本的试卷对象
         """
@@ -522,8 +503,8 @@ class QuizService(BaseService):
             'duration': data.get('duration', source.duration),
             'pass_score': data.get('pass_score', source.pass_score),
             'is_current': True,
-            'created_by': user,
-            'updated_by': user,
+            'created_by': self.user,
+            'updated_by': self.user,
         }
         new_quiz = Quiz.objects.create(**new_quiz_data)
         # 复制题目顺序

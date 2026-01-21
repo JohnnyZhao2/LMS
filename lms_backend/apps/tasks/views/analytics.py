@@ -17,6 +17,7 @@ from decimal import Decimal
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import success_response, list_response
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from core.base_view import BaseAPIView
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
 from apps.tasks.serializers import (
     TaskAnalyticsSerializer,
@@ -81,13 +82,10 @@ def _calculate_question_pass_rate(task, question, quiz_id):
         return round(correct_count / total_count * 100, 1)
 
 
-class TaskAnalyticsView(APIView):
+class TaskAnalyticsView(BaseAPIView):
     """Task analytics endpoint for admin preview."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = TaskService()
+    service_class = TaskService
 
     @extend_schema(
         summary='获取任务分析数据',
@@ -100,7 +98,7 @@ class TaskAnalyticsView(APIView):
     )
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task)
 
         analytics = self._compute_analytics(task)
         serializer = TaskAnalyticsSerializer(analytics)
@@ -339,13 +337,10 @@ class TaskAnalyticsView(APIView):
         return round(passed_count / total_count * 100, 1) if total_count > 0 else 0.0
 
 
-class StudentExecutionsView(APIView):
+class StudentExecutionsView(BaseAPIView):
     """Student executions endpoint for admin preview."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = TaskService()
+    service_class = TaskService
 
     @extend_schema(
         summary='获取学员执行情况',
@@ -358,7 +353,7 @@ class StudentExecutionsView(APIView):
     )
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task)
 
         executions = self._get_student_executions(task)
         serializer = StudentExecutionSerializer(executions, many=True)
@@ -447,13 +442,10 @@ class StudentExecutionsView(APIView):
         return False
 
 
-class GradingQuestionsView(APIView):
+class GradingQuestionsView(BaseAPIView):
     """Grading questions endpoint."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = TaskService()
+    service_class = TaskService
 
     @extend_schema(
         summary='获取阅卷中心题目列表',
@@ -466,7 +458,7 @@ class GradingQuestionsView(APIView):
     )
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task)
 
         quiz_id = request.query_params.get('quiz_id')
         if not quiz_id:
@@ -515,13 +507,10 @@ class GradingQuestionsView(APIView):
         return _calculate_question_pass_rate(task, question, quiz_id)
 
 
-class GradingAnswersView(APIView):
+class GradingAnswersView(BaseAPIView):
     """Grading answers endpoint."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = TaskService()
+    service_class = TaskService
 
     @extend_schema(
         summary='获取题目分析详情',
@@ -537,7 +526,7 @@ class GradingAnswersView(APIView):
     )
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task)
 
         question_id = request.query_params.get('question_id')
         quiz_id = request.query_params.get('quiz_id')
@@ -666,13 +655,10 @@ class GradingAnswersView(APIView):
         return results
 
 
-class GradingSubmitView(APIView):
+class GradingSubmitView(BaseAPIView):
     """Grading submit endpoint."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = TaskService()
+    service_class = TaskService
 
     @extend_schema(
         summary='提交评分',
@@ -687,7 +673,7 @@ class GradingSubmitView(APIView):
     )
     def post(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task, request.user)
+        self.service.check_task_read_permission(task)
 
         serializer = GradingSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -704,14 +690,14 @@ class GradingSubmitView(APIView):
             question_id=data['question_id'],
             student_id=data['student_id'],
             score=data['score'],
-            comments=data['comments'],
-            grader=request.user
+            comments=data['comments']
         )
 
         return success_response({'message': '评分成功'})
 
-    def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments, grader):
+    def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments):
         """提交评分"""
+        grader = self.request.user
         # 查找最新一次提交的答案记录
         answer = _get_latest_answers(task, question_id, quiz_id).filter(
             submission__task_assignment__assignee_id=student_id,

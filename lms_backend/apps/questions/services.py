@@ -1,6 +1,10 @@
 """
 题目应用服务
 编排业务逻辑。
+
+使用方式（构造器注入）:
+    service = QuestionService(request)
+    question = service.get_by_id(pk=123)
 """
 import uuid
 from typing import List
@@ -10,31 +14,25 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Question
 from apps.knowledge.models import Tag
 from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
-from apps.users.permissions import get_current_role
 
 
 class QuestionService(BaseService):
     """题目应用服务"""
 
-    def get_by_id(self, pk: int, user=None, request=None) -> Question:
+    def get_by_id(self, pk: int) -> Question:
         """
         获取题目
         Args:
             pk: 主键
-            user: 当前用户（用于权限检查）
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             题目对象
         Raises:
             BusinessError: 如果不存在或无权限
         """
         question = get_question_by_id(pk)
-        self.validate_not_none(
-            question,
-            f'题目 {pk} 不存在'
-        )
+        self.validate_not_none(question, f'题目 {pk} 不存在')
         # 权限检查：非管理员只能访问已发布的题目
-        self.check_published_resource_access(question, user, '题目', request=request)
+        self.check_published_resource_access(question, resource_name='题目')
         return question
 
     def get_list(
@@ -43,9 +41,7 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
         page: int = 1,
-        page_size: int = 10,
-        user=None,
-        request=None
+        page_size: int = 10
     ) -> dict:
         """
         获取题目列表
@@ -55,27 +51,29 @@ class QuestionService(BaseService):
             ordering: 排序字段
             page: 页码
             page_size: 每页数量
-            user: 当前用户（用于权限检查）
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             包含题目列表和分页信息的字典
         """
         # 非管理员默认只显示当前版本的题目
-        if user and get_current_role(user, request) != 'ADMIN':
+        if self.user and self.get_current_role() != 'ADMIN':
             if not filters:
                 filters = {}
             if 'is_current' not in filters:
                 filters['is_current'] = True
+        
         queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
         queryset = apply_question_filters(queryset, filters, search)
+        
         # 排序
         if ordering:
             queryset = queryset.order_by(ordering)
+        
         # 分页处理
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
         questions = queryset[start:end]
+        
         return {
             'count': total_count,
             'results': list(questions),
@@ -84,24 +82,22 @@ class QuestionService(BaseService):
             'total_pages': (total_count + page_size - 1) // page_size
         }
 
-    def check_edit_permission(self, question: Question, user, request=None) -> bool:
+    def check_edit_permission(self, question: Question) -> bool:
         """
         检查用户是否有编辑/删除权限
         Property 15: 题目所有权编辑控制
         Args:
             question: 题目对象
-            user: 当前用户
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             True 如果有权限
         Raises:
             BusinessError: 如果权限不足
         """
         # 管理员可以编辑/删除任何题目
-        if get_current_role(user, request) == 'ADMIN':
+        if self.get_current_role() == 'ADMIN':
             return True
         # 其他人只能编辑/删除自己创建的题目
-        if question.created_by_id != user.id:
+        if question.created_by_id != self.user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有题目创建者或管理员可以操作此题目'
@@ -109,12 +105,11 @@ class QuestionService(BaseService):
         return True
 
     @transaction.atomic
-    def create(self, data: dict, user) -> Question:
+    def create(self, data: dict) -> Question:
         """
         创建题目
         Args:
             data: 题目数据
-            user: 创建用户
         Returns:
             创建的题目对象
         Raises:
@@ -123,8 +118,8 @@ class QuestionService(BaseService):
         # 1. 业务验证
         self._validate_question_data(data)
         # 2. 准备数据
-        data['created_by'] = user
-        data['updated_by'] = user
+        data['created_by'] = self.user
+        data['updated_by'] = self.user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_version_data(data)
@@ -141,25 +136,23 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def update(self, pk: int, data: dict, user, request=None) -> Question:
+    def update(self, pk: int, data: dict) -> Question:
         """
         更新题目
         Args:
             pk: 主键
             data: 更新数据
-            user: 更新用户
-            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             更新后的题目对象
         Raises:
             BusinessError: 如果验证失败或无法更新
         """
-        question = self.get_by_id(pk, user, request=request)
+        question = self.get_by_id(pk)
         # 检查编辑权限
-        self.check_edit_permission(question, user, request)
+        self.check_edit_permission(question)
         # 当前版本需要创建新版本
         if question.is_current:
-            return self._create_new_version(question, data, user)
+            return self._create_new_version(question, data)
         # 非当前版本直接更新
         # 合并现有数据以进行验证
         merged_data = {
@@ -171,7 +164,7 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
         # 更新题目
-        data['updated_by'] = user
+        data['updated_by'] = self.user
         if data:
             for key, value in data.items():
                 setattr(question, key, value)
@@ -182,23 +175,18 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def delete(self, pk: int, user, request=None) -> None:
+    def delete(self, pk: int) -> None:
         """
         删除题目
         Args:
             pk: 主键
-            user: 操作用户
-            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果被引用无法删除
         """
         question = get_question_by_id(pk)
-        self.validate_not_none(
-            question,
-            f'题目 {pk} 不存在'
-        )
+        self.validate_not_none(question, f'题目 {pk} 不存在')
         # 检查编辑权限
-        self.check_edit_permission(question, user, request)
+        self.check_edit_permission(question)
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):
             raise BusinessError(
@@ -209,18 +197,17 @@ class QuestionService(BaseService):
         question.soft_delete()
 
     @transaction.atomic
-    def publish(self, pk: int, user) -> Question:
+    def publish(self, pk: int) -> Question:
         """
         发布题目
         Args:
             pk: 主键
-            user: 发布用户
         Returns:
             发布后的题目对象
         Raises:
             BusinessError: 如果无法发布
         """
-        question = self.get_by_id(pk, user)
+        question = self.get_by_id(pk)
         # 检查是否已经是当前版本
         if question.is_current:
             raise BusinessError(
@@ -235,7 +222,7 @@ class QuestionService(BaseService):
             )
         # 设置为当前版本
         question.is_current = True
-        question.updated_by = user
+        question.updated_by = self.user
         question.save(update_fields=['is_current', 'updated_by'])
         # 取消其他版本的 is_current 标志
         Question.objects.filter(
@@ -244,18 +231,17 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def unpublish(self, pk: int, user) -> Question:
+    def unpublish(self, pk: int) -> Question:
         """
         取消发布题目
         Args:
             pk: 主键
-            user: 操作用户
         Returns:
             取消发布后的题目对象
         Raises:
             BusinessError: 如果无法取消发布
         """
-        question = self.get_by_id(pk, user)
+        question = self.get_by_id(pk)
         # 检查是否是当前版本
         if not question.is_current:
             raise BusinessError(
@@ -270,7 +256,7 @@ class QuestionService(BaseService):
             )
         # 取消当前版本标志
         question.is_current = False
-        question.updated_by = user
+        question.updated_by = self.user
         question.save(update_fields=['is_current', 'updated_by'])
         return question
 
@@ -279,6 +265,7 @@ class QuestionService(BaseService):
         question_type = data.get('question_type')
         options = data.get('options', [])
         answer = data.get('answer')
+        
         # 选择题验证
         if question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
             if not options:
@@ -368,8 +355,7 @@ class QuestionService(BaseService):
     def _create_new_version(
         self,
         source: Question,
-        data: dict,
-        user
+        data: dict
     ) -> Question:
         """基于已发布版本创建新版本"""
         # 计算新版本号
@@ -393,8 +379,8 @@ class QuestionService(BaseService):
             'explanation': data.get('explanation', source.explanation),
             'score': data.get('score', source.score),
             'is_current': True,
-            'created_by': user,
-            'updated_by': user,
+            'created_by': self.user,
+            'updated_by': self.user,
         }
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型

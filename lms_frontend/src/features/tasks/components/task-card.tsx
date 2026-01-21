@@ -10,7 +10,7 @@ import {
   StopCircle,
   Activity,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,7 @@ export const TaskCard: React.FC<TaskCardProps> = (props) => (
 );
 
 const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const { user, currentRole } = useAuth();
   const deleteTask = useDeleteTask();
   const closeTask = useCloseTask();
@@ -145,7 +145,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
         "group relative flex flex-col h-[210px] bg-white rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-slate-100/50 hover:shadow-2xl hover:shadow-slate-200/50 hover:-translate-y-1",
         isStudentView && studentTask?.status === 'COMPLETED' && "bg-[#F9FAFB]/80 border-transparent shadow-none"
       )}
-      onClick={() => navigate(`/tasks/${targetTaskId}`)}
+      onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
       {/* 顶部：状态、发布人、日期 */}
       <div className="flex items-center justify-between mb-4">
@@ -179,7 +179,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-xl p-2 border border-slate-200 bg-white shadow-xl">
                   <DropdownMenuLabel className="text-[10px] font-bold text-[#6B7280] uppercase px-3 py-2">任务控制</DropdownMenuLabel>
-                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/tasks/${targetTaskId}/edit`)}>
+                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-slate-50" onClick={() => roleNavigate(`tasks/${targetTaskId}/edit`)}>
                     <Pencil className="w-4 h-4 mr-2" /> 编辑任务
                   </DropdownMenuItem>
                   {!managerClosed && (

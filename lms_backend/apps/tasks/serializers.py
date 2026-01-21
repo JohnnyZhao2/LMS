@@ -204,13 +204,11 @@ class TaskCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         """创建任务 - 委托给 TaskService"""
         request = self.context.get('request')
-        service = TaskService()
+        service = TaskService(request)
         return service.create_task(
             title=validated_data['title'],
             description=validated_data.get('description', ''),
             deadline=validated_data['deadline'],
-            created_by=request.user,
-            updated_by=request.user,
             knowledge_ids=validated_data.get('knowledge_ids', []),
             quiz_ids=validated_data.get('quiz_ids', []),
             assignee_ids=validated_data.get('assignee_ids', []),
@@ -299,13 +297,12 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         quiz_ids = validated_data.pop('quiz_ids', None)
         assignee_ids = validated_data.pop('assignee_ids', None)
         # 委托给 TaskService 处理更新
-        service = TaskService()
         request = self.context.get('request')
         if not request or not request.user:
             raise serializers.ValidationError('无法获取当前用户信息')
+        service = TaskService(request)
         return service.update_task(
             task=instance,
-            updated_by=request.user,
             knowledge_ids=knowledge_ids,
             quiz_ids=quiz_ids,
             assignee_ids=assignee_ids,

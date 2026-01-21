@@ -24,19 +24,16 @@ from apps.knowledge.serializers import (
     KnowledgeUpdateSerializer,
     KnowledgeStatsSerializer,
 )
-from apps.users.permissions import get_current_role
+from core.base_view import BaseAPIView
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()
-class KnowledgeListCreateView(APIView):
+class KnowledgeListCreateView(BaseAPIView):
     """
     Knowledge list and create endpoint.
     """
     permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
+    service_class = KnowledgeService
 
     def _get_knowledge_list(self, request):
         """共享的知识列表获取逻辑"""
@@ -95,7 +92,7 @@ class KnowledgeListCreateView(APIView):
     )
     def post(self, request):
         # 1. 权限检查
-        if get_current_role(request.user, request) != 'ADMIN':
+        if self.service.get_current_role() != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建知识文档'
@@ -109,8 +106,7 @@ class KnowledgeListCreateView(APIView):
         # 3. 调用 Service
         try:
             knowledge = self.service.create(
-                data=serializer.validated_data,
-                user=request.user
+                data=serializer.validated_data
             )
         except BusinessError as e:
             return Response(
@@ -120,14 +116,12 @@ class KnowledgeListCreateView(APIView):
         # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-class KnowledgeDetailView(APIView):
+class KnowledgeDetailView(BaseAPIView):
     """
     Knowledge detail, update, delete endpoint.
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
+    service_class = KnowledgeService
     @extend_schema(
         summary='获取知识文档详情',
         description='获取指定知识文档的详细信息',
@@ -141,7 +135,7 @@ class KnowledgeDetailView(APIView):
     def get(self, request, pk):
         # 1. 调用 Service
         try:
-            knowledge = self.service.get_by_id(pk, user=request.user, request=request)
+            knowledge = self.service.get_by_id(pk)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
@@ -164,7 +158,7 @@ class KnowledgeDetailView(APIView):
     )
     def patch(self, request, pk):
         # 1. 权限检查
-        if get_current_role(request.user, request) != 'ADMIN':
+        if self.service.get_current_role() != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以更新知识文档'
@@ -179,8 +173,7 @@ class KnowledgeDetailView(APIView):
         try:
             knowledge = self.service.update(
                 pk=pk,
-                data=serializer.validated_data,
-                user=request.user
+                data=serializer.validated_data
             )
         except BusinessError as e:
             return Response(
@@ -203,7 +196,7 @@ class KnowledgeDetailView(APIView):
     )
     def delete(self, request, pk):
         # 1. 权限检查
-        if get_current_role(request.user, request) != 'ADMIN':
+        if self.service.get_current_role() != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以删除知识文档'
@@ -217,12 +210,10 @@ class KnowledgeDetailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
-class KnowledgeStatsView(APIView):
+class KnowledgeStatsView(BaseAPIView):
     """知识统计端点"""
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
+    service_class = KnowledgeService
     @extend_schema(
         summary='获取知识统计',
         description='获取知识文档的统计数据',
@@ -266,13 +257,10 @@ class KnowledgeStatsView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class StudentTaskKnowledgeDetailView(APIView):
+class StudentTaskKnowledgeDetailView(BaseAPIView):
     """学员任务知识详情端点 - 允许访问任务锁定版本"""
     permission_classes = [IsAuthenticated]
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
+    service_class = KnowledgeService
 
     @extend_schema(
         summary='获取任务内知识详情',
@@ -293,7 +281,7 @@ class StudentTaskKnowledgeDetailView(APIView):
                 {'code': ErrorCodes.RESOURCE_NOT_FOUND, 'message': '任务知识不存在'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        if get_current_role(request.user, request) != 'ADMIN':
+        if self.service.get_current_role() != 'ADMIN':
             has_assignment = TaskAssignment.objects.filter(
                 task_id=task_knowledge.task_id,
                 assignee=request.user
@@ -306,13 +294,11 @@ class StudentTaskKnowledgeDetailView(APIView):
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
         return Response(serializer.data, status=status.HTTP_200_OK)
-class KnowledgeIncrementViewCountView(APIView):
+class KnowledgeIncrementViewCountView(BaseAPIView):
     """Increment knowledge view count endpoint."""
     permission_classes = [IsAuthenticated]
     serializer_class = ViewCountResponseSerializer
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = KnowledgeService()
+    service_class = KnowledgeService
     @extend_schema(
         summary='增加知识阅读次数',
         description='记录知识文档被阅读',
@@ -325,7 +311,7 @@ class KnowledgeIncrementViewCountView(APIView):
     def post(self, request, pk):
         # 1. 权限检查（先获取知识文档）
         try:
-            knowledge = self.service.get_by_id(pk, user=request.user, request=request)
+            knowledge = self.service.get_by_id(pk)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},

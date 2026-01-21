@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 import {
   ChevronLeft,
@@ -42,6 +43,7 @@ export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const assignmentId = Number(searchParams.get('assignment') ?? NaN);
   const quizId = Number(quizIdStr ?? NaN);
 
@@ -132,7 +134,7 @@ export const QuizPlayer: React.FC = () => {
       await submitMutation(submission.id);
       toast.success('提交成功');
       setShowSubmitDialog(false);
-      navigate(`/tasks`);
+      roleNavigate('tasks');
     } catch (error) {
       console.error('提交答卷失败:', error);
       showApiError(error, '提交失败');
@@ -149,7 +151,7 @@ export const QuizPlayer: React.FC = () => {
     }
     await submitMutation(submission.id);
     setShowTimeUpDialog(false);
-    navigate(`/tasks`);
+    roleNavigate('tasks');
   };
 
   if (!submission) {

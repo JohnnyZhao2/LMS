@@ -4,11 +4,11 @@
 Properties: 35, 36
 """
 from rest_framework import status
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from core.exceptions import BusinessError, ErrorCodes
+from core.exceptions import BusinessError
+from core.base_view import BaseAPIView
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from .serializers import (
     SpotCheckListSerializer,
@@ -19,17 +19,15 @@ from .serializers import (
 from .services import SpotCheckService
 from core.pagination import StandardResultsSetPagination
 
-class SpotCheckListCreateView(APIView):
+
+class SpotCheckListCreateView(BaseAPIView):
     """
     抽查记录列表和创建端点
     Properties: 35, 36
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
     pagination_class = StandardResultsSetPagination
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SpotCheckService()
+    service_class = SpotCheckService  # 声明 Service 类
 
     @extend_schema(
         summary='获取抽查记录列表',
@@ -72,10 +70,9 @@ class SpotCheckListCreateView(APIView):
         else:
             student_id = None
 
-        # 调用 Service
+        # 调用 Service（直接用 self.service，不用传 user/request）
         try:
             spot_checks = self.service.get_list(
-                user=request.user,
                 student_id=student_id,
                 ordering='-checked_at'
             )
@@ -95,6 +92,7 @@ class SpotCheckListCreateView(APIView):
         # 序列化输出（如果不分页）
         serializer = SpotCheckListSerializer(spot_checks, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='创建抽查记录',
         description='创建新的抽查记录（导师只能为名下学员创建，室经理只能为本室学员创建）',
@@ -114,29 +112,29 @@ class SpotCheckListCreateView(APIView):
         # 反序列化输入
         serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # 调用 Service
+        
+        # 调用 Service（直接用 self.service）
         try:
-            spot_check = self.service.create(
-                data=serializer.validated_data,
-                user=request.user
-            )
+            spot_check = self.service.create(data=serializer.validated_data)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message, 'details': e.details},
                 status=status.HTTP_400_BAD_REQUEST if e.code == 'VALIDATION_ERROR'
                 else status.HTTP_403_FORBIDDEN
             )
+        
         # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-class SpotCheckDetailView(APIView):
+
+
+class SpotCheckDetailView(BaseAPIView):
     """
     抽查记录详情、更新、删除端点
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SpotCheckService()
+    service_class = SpotCheckService  # 声明 Service 类
+
     @extend_schema(
         summary='获取抽查记录详情',
         description='获取指定抽查记录的详细信息',
@@ -150,7 +148,7 @@ class SpotCheckDetailView(APIView):
     def get(self, request, pk):
         """获取抽查记录详情"""
         try:
-            spot_check = self.service.get_by_id(pk, request.user, request=request)
+            spot_check = self.service.get_by_id(pk)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
@@ -159,6 +157,7 @@ class SpotCheckDetailView(APIView):
             )
         serializer = SpotCheckDetailSerializer(spot_check)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='更新抽查记录',
         description='更新抽查记录内容（只能更新自己创建的记录）',
@@ -179,13 +178,10 @@ class SpotCheckDetailView(APIView):
         # 反序列化输入
         serializer = SpotCheckUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        
         # 调用 Service
         try:
-            spot_check = self.service.update(
-                pk=pk,
-                data=serializer.validated_data,
-                user=request.user
-            )
+            spot_check = self.service.update(pk=pk, data=serializer.validated_data)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message, 'details': e.details},
@@ -193,9 +189,11 @@ class SpotCheckDetailView(APIView):
                 else status.HTTP_403_FORBIDDEN if e.code == 'PERMISSION_DENIED'
                 else status.HTTP_404_NOT_FOUND
             )
+        
         # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='删除抽查记录',
         description='删除抽查记录（只能删除自己创建的记录）',
@@ -212,7 +210,7 @@ class SpotCheckDetailView(APIView):
         只能删除自己创建的记录（管理员除外）
         """
         try:
-            self.service.delete(pk, request.user, request=request)
+            self.service.delete(pk)
         except BusinessError as e:
             return Response(
                 {'code': e.code, 'message': e.message},
