@@ -1,6 +1,6 @@
 import React from 'react';
 import { type LucideIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 
 /**
@@ -40,11 +40,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   iconBg = 'bg-[#DBEAFE]',
   className,
 }) => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   const handleClick = () => {
     if (route) {
-      navigate(route);
+      roleNavigate(route);
     } else if (onClick) {
       onClick();
     }

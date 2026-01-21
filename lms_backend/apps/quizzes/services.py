@@ -208,7 +208,7 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    def delete(self, pk: int, user) -> None:
+    def delete(self, pk: int, user, request=None) -> None:
         """
         删除试卷
         Property 14: 被引用试卷删除保护
@@ -216,13 +216,14 @@ class QuizService(BaseService):
         Args:
             pk: 主键
             user: 删除用户
+            request: HTTP请求对象（用于从Header读取当前角色）
         Raises:
             BusinessError: 如果被引用无法删除或无权限
         """
         quiz = self.get_by_id(pk)
         # 检查权限
         self.validate_permission(
-            self.check_edit_permission(user, quiz),
+            self.check_edit_permission(user, quiz, request),
             '只有试卷创建者或管理员可以删除此试卷'
         )
         # 检查是否被引用

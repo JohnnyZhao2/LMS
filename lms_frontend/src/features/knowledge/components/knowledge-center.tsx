@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import {
     Search,
     Home,
@@ -31,7 +31,7 @@ interface KnowledgeCenterProps {
 }
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
-    const navigate = useNavigate();
+    const { roleNavigate } = useRoleNavigate();
     const incrementViewCount = useIncrementViewCount();
 
     const {
@@ -66,7 +66,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     };
 
     const handleCreate = () => {
-        navigate(`${ROUTES.ADMIN_KNOWLEDGE}/create`);
+        roleNavigate(`${ROUTES.ADMIN_KNOWLEDGE}/create`);
     };
 
     const handleView = (id: number) => {
@@ -76,14 +76,14 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     refetch();
                 },
             });
-            navigate(`${ROUTES.KNOWLEDGE}/${id}`);
+            roleNavigate(`${ROUTES.KNOWLEDGE}/${id}`);
         } else {
-            navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}`);
+            roleNavigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}`);
         }
     };
 
     const handleEdit = (id: number) => {
-        navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
+        roleNavigate(`${ROUTES.ADMIN_KNOWLEDGE}/${id}/edit`);
     };
 
     return (

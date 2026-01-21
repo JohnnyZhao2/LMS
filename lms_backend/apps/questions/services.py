@@ -16,12 +16,13 @@ from apps.users.permissions import get_current_role
 class QuestionService(BaseService):
     """题目应用服务"""
 
-    def get_by_id(self, pk: int, user=None) -> Question:
+    def get_by_id(self, pk: int, user=None, request=None) -> Question:
         """
         获取题目
         Args:
             pk: 主键
             user: 当前用户（用于权限检查）
+            request: HTTP请求对象（用于从Header读取当前角色）
         Returns:
             题目对象
         Raises:
@@ -33,7 +34,7 @@ class QuestionService(BaseService):
             f'题目 {pk} 不存在'
         )
         # 权限检查：非管理员只能访问已发布的题目
-        self.check_published_resource_access(question, user, '题目')
+        self.check_published_resource_access(question, user, '题目', request=request)
         return question
 
     def get_list(
@@ -153,7 +154,7 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果验证失败或无法更新
         """
-        question = self.get_by_id(pk, user)
+        question = self.get_by_id(pk, user, request=request)
         # 检查编辑权限
         self.check_edit_permission(question, user, request)
         # 当前版本需要创建新版本

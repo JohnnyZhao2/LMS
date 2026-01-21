@@ -155,7 +155,8 @@ class QuestionDetailView(APIView):
         updated_question = self.service.update(
             pk=pk,
             data=serializer.validated_data,
-            user=request.user
+            user=request.user,
+            request=request
         )
         response_serializer = QuestionDetailSerializer(updated_question)
         return Response(response_serializer.data, status=status.HTTP_200_OK)

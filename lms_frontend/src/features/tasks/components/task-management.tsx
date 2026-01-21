@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
     Plus,
@@ -51,7 +51,7 @@ const TrendingUp = ({ className }: { className?: string }) => (
 )
 
 export const TaskManagement: React.FC = () => {
-    const navigate = useNavigate()
+    const { roleNavigate } = useRoleNavigate()
     const { user, currentRole } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
@@ -188,7 +188,7 @@ export const TaskManagement: React.FC = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
-                                onClick={() => navigate(`/tasks/${row.original.id}`)}
+                                onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
@@ -200,7 +200,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
-                                        onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
                                     </Button>
@@ -210,7 +210,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-[#F3E8FF] hover:text-[#9333EA] text-[#9CA3AF] shadow-none"
-                                        onClick={() => navigate(`/tasks/${row.original.id}/preview?tab=grading`)}
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=grading`)}
                                     >
                                         <FileCheck className="h-4 w-4" />
                                     </Button>
@@ -225,7 +225,7 @@ export const TaskManagement: React.FC = () => {
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
                                         disabled={row.original.is_closed}
-                                        onClick={() => navigate(`/tasks/${row.original.id}/edit`)}
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
                                         <Pencil className="h-4 w-4" />
                                     </Button>
@@ -265,7 +265,7 @@ export const TaskManagement: React.FC = () => {
                             刷新
                         </Button>
                         <Button
-                            onClick={() => navigate(`${ROUTES.TASKS}/create`)}
+                            onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                             className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
                         >
                             <Plus className="mr-2 h-5 w-5" />
@@ -364,7 +364,7 @@ export const TaskManagement: React.FC = () => {
                                     },
                                 }}
                                 rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
-                                onRowClick={(row: TaskListItem) => navigate(`/tasks/${row.id}`)}
+                                onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
                             />
                         )}
                     </div>

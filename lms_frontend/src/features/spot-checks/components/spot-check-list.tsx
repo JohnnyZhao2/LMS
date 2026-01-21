@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Plus, Search, User, Clock, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useSpotChecks } from '../api/get-spot-checks';
 import { ROUTES } from '@/config/routes';
 import { PageHeader, SimplePagination } from '@/components/ui';
@@ -35,7 +35,7 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
 export const SpotCheckList: React.FC = () => {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useSpotChecks({ page });
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   const columns: ColumnDef<SpotCheck>[] = [
     {
@@ -127,7 +127,7 @@ export const SpotCheckList: React.FC = () => {
         icon={<Search className="w-5 h-5" />}
         extra={
           <Button
-            onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
+            onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
             className="h-14 px-8 rounded-md bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold shadow-none hover:scale-105 transition-all duration-200"
           >
             <Plus className="w-5 h-5 mr-2" />
@@ -157,8 +157,8 @@ export const SpotCheckList: React.FC = () => {
               <div className="flex flex-col items-center justify-center py-12 text-[#6B7280]">
                 <Search className="w-12 h-12 text-[#9CA3AF] mb-4" />
                 <span className="text-base mb-4">暂无抽查记录</span>
-                <Button 
-                  onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
+                <Button
+                  onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
                   className="bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-none"
                 >
                   <Plus className="w-4 h-4 mr-2" />

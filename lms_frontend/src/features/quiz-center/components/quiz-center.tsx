@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Search, Layout, FileText, CheckCircle, RefreshCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { useQuestions } from '../questions/api/get-questions';
  * 采用零阴影、颜色块结构、几何纯度设计原则
  */
 export const QuizCenter: React.FC = () => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'quizzes' | 'questions'>('quizzes');
   const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
@@ -32,7 +32,7 @@ export const QuizCenter: React.FC = () => {
   }), [quizzesData, questionsData]);
 
   const handleAdd = () => {
-    navigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/create`);
+    roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/create`);
   };
 
   return (

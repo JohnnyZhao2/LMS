@@ -19,6 +19,7 @@ import { useRoleMenu } from "@/hooks/use-role-menu"
 import { useCurrentRole } from "@/hooks/use-current-role"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/config/routes"
+import { showApiError } from "@/utils/error-handler"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,7 +82,7 @@ const getMenuIcon = (path: string): React.ReactNode => {
  * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
-  const { user, availableRoles, logout, isLoading } = useAuth()
+  const { user, availableRoles, logout, isLoading, switchRole, setIsSwitching, isSwitching } = useAuth()
   const currentRole = useCurrentRole()
   const navigate = useNavigate()
   const location = useLocation()
@@ -100,13 +101,26 @@ export const Header: React.FC = () => {
     return pathParts.slice(1).join('/')
   }
 
-  const handleRoleChange = (roleCode: RoleCode) => {
-    if (roleCode !== currentRole) {
+  const handleRoleChange = async (roleCode: RoleCode) => {
+    if (roleCode === currentRole) {
+      return
+    }
+    try {
+      await switchRole(roleCode)
       // 直接更新 URL，保持当前路径
       const currentPath = getPathWithoutRole()
       navigate(`/${roleCode.toLowerCase()}/${currentPath}`)
+    } catch (error) {
+      showApiError(error, "角色切换失败")
+      setIsSwitching(false)
     }
   }
+
+  React.useEffect(() => {
+    if (isSwitching) {
+      setIsSwitching(false)
+    }
+  }, [location.pathname, isSwitching, setIsSwitching])
 
   const handleNavClick = (path: string) => {
     navigate(path)
@@ -312,7 +326,7 @@ export const Header: React.FC = () => {
               </div>
 
               <DropdownMenuItem
-                onClick={() => navigate(ROUTES.PERSONAL)}
+                onClick={() => navigate(`/${currentRole!.toLowerCase()}/personal`)}
                 className="rounded-md py-2.5 focus:bg-blue-50 focus:text-blue-600 cursor-pointer"
               >
                 <User className="mr-3 h-4 w-4" />

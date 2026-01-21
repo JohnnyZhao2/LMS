@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, Layout } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
 import { getQuestionTypeLabel } from '@/features/quiz-center/questions/constants';
@@ -30,7 +30,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
 
   const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   useEffect(() => {
     setPage(1);
@@ -177,7 +177,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                onClick={() => navigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${record.id}/edit`)}
+                onClick={() => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${record.id}/edit`)}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -217,7 +217,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           },
         }}
         rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
-        onRowClick={(row: QuizListItem) => navigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${row.id}/edit`)}
+        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${row.id}/edit`)}
       />
 
       {/* 删除确认对话框 */}
