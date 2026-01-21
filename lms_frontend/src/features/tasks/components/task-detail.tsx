@@ -57,14 +57,15 @@ interface KnowledgeListViewItem {
 }
 
 export const TaskDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const { roleNavigate, getRolePath } = useRoleNavigate();
   const { currentRole, user, isLoading: authLoading } = useAuth();
 
-  const isStudent = !authLoading && currentRole === 'STUDENT';
-  const isAdmin = currentRole === 'ADMIN';
-  const isMentorOrManager = currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER' || currentRole === 'TEAM_MANAGER';
+  const effectiveRole = role?.toUpperCase() || currentRole;
+  const isStudent = !authLoading && effectiveRole === 'STUDENT';
+  const isAdmin = effectiveRole === 'ADMIN';
+  const isMentorOrManager = effectiveRole === 'MENTOR' || effectiveRole === 'DEPT_MANAGER' || effectiveRole === 'TEAM_MANAGER';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;

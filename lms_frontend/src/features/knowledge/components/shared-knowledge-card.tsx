@@ -71,7 +71,11 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
           {shouldShowActions && (
             <button
               className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#E0E7FF] hover:text-[#4338CA] transition-all duration-200 shadow-none"
-              onClick={() => onEdit?.(item.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit?.(item.id);
+              }}
             >
               <Pencil className="w-4 h-4" />
             </button>

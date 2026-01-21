@@ -33,7 +33,7 @@ import dayjs from '@/lib/dayjs';
 import { parseOutline } from '../utils';
 
 export const KnowledgeDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, role } = useParams<{ id: string; role: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const { getRolePath } = useRoleNavigate();
@@ -49,8 +49,9 @@ export const KnowledgeDetail: React.FC = () => {
   const taskId = Number(searchParams.get('task') || 0);
 
   const { currentRole } = useAuth();
-  const isStudent = currentRole === 'STUDENT';
-  const isAdmin = currentRole === 'ADMIN';
+  const effectiveRole = role?.toUpperCase() || currentRole;
+  const isStudent = effectiveRole === 'STUDENT';
+  const isAdmin = effectiveRole === 'ADMIN';
 
   const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useParams } from 'react-router-dom';
 import {
     Search,
     Home,
@@ -31,11 +32,16 @@ interface KnowledgeCenterProps {
     isAdmin?: boolean;
 }
 
+
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
+    const { role } = useParams<{ role: string }>();
     const { roleNavigate } = useRoleNavigate();
     const incrementViewCount = useIncrementViewCount();
     const { currentRole } = useAuth();
-    const isAdminView = isAdmin || currentRole === 'ADMIN';
+
+    // 优先使用 URL 中的角色参数
+    const effectiveRole = role?.toUpperCase() || currentRole;
+    const isAdminView = isAdmin || effectiveRole === 'ADMIN';
 
     const {
         search,
@@ -216,10 +222,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     <div key={item.id} className="group">
                                         <SharedKnowledgeCard
                                             item={item}
-                                            variant={isAdmin ? "admin" : "student"}
-                                            showActions={isAdmin}
+                                            variant={isAdminView ? "admin" : "student"}
+                                            showActions={isAdminView}
                                             onView={handleView}
-                                            onEdit={isAdmin ? handleEdit : undefined}
+                                            onEdit={isAdminView ? handleEdit : undefined}
                                         />
                                     </div>
                                 ))}
