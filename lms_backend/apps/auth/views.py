@@ -30,6 +30,7 @@ from apps.auth.serializers import (
 )
 from apps.users.serializers import UserInfoSerializer
 from apps.users.models import User
+from apps.users.permissions import get_current_role
 class LoginView(APIView):
     """
     User login endpoint.
@@ -192,7 +193,7 @@ class ResetPasswordView(APIView):
         tags=['认证']
     )
     def post(self, request):
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以重置用户密码'

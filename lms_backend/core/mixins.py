@@ -5,6 +5,7 @@ Properties: 37, 38, 39
 from django.db import models
 from django.utils import timezone
 from core.exceptions import BusinessError, ErrorCodes
+from apps.users.permissions import get_current_role as get_user_current_role
 class TimestampMixin(models.Model):
     """
     Mixin that adds created_at and updated_at fields.
@@ -108,22 +109,7 @@ class DataScopeMixin:
         Get the current active role of the user.
         Returns the role code string or None if not authenticated.
         """
-        user = self.request.user
-        if not user or not user.is_authenticated:
-            return None
-        # Check current_role if set (from JWT token)
-        if hasattr(user, 'current_role') and user.current_role:
-            return user.current_role
-        # Determine role from user's roles with priority
-        if user.is_admin:
-            return 'ADMIN'
-        if user.is_dept_manager:
-            return 'DEPT_MANAGER'
-        if user.is_mentor:
-            return 'MENTOR'
-        if user.is_team_manager:
-            return 'TEAM_MANAGER'
-        return 'STUDENT'
+        return get_user_current_role(self.request.user)
     def filter_queryset_by_scope(self, queryset):
         """
         Filter the queryset based on the user's data access scope.

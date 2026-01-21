@@ -4,7 +4,8 @@ import {
   ThumbsUp,
   Check,
   BarChart3,
-  Filter
+  Filter,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,10 +38,10 @@ const formatPassRate = (rate?: number | null) => {
 
 // Utility: Color helpers based on pass rate
 const getPassRateColor = (rate?: number | null) => {
-  if (rate === null || rate === undefined) return 'bg-slate-100 text-slate-500';
-  if (rate >= 80) return 'bg-emerald-100 text-emerald-700';
-  if (rate >= 60) return 'bg-amber-100 text-amber-700';
-  return 'bg-rose-100 text-rose-700';
+  if (rate === null || rate === undefined) return 'bg-slate-100 text-slate-500 border border-slate-200';
+  if (rate >= 80) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  if (rate >= 60) return 'bg-amber-50 text-amber-700 border border-amber-200';
+  return 'bg-rose-50 text-rose-700 border border-rose-200';
 };
 
 const formatAnswerText = (answer?: string | null) => {
@@ -225,45 +226,41 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                 key={question.question_id}
                 onClick={() => setSelectedQuestionId(question.question_id)}
                 className={cn(
-                  'w-full text-left p-4 rounded-xl transition-all duration-200 border-2 group relative',
+                  'w-full text-left p-4 rounded-xl transition-all duration-200 border group relative mb-3',
                   isActive
-                    ? 'border-blue-500/20 bg-blue-50/40'
+                    ? 'border-blue-200 bg-blue-50/60 shadow-sm ring-1 ring-blue-100'
                     : 'border-transparent bg-white hover:bg-slate-50 hover:border-slate-200'
                 )}
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-indicator"
-                    className="absolute left-0 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full"
-                  />
-                )}
                 <div className="flex justify-between items-start mb-2 gap-2">
-                  <span className={cn(
-                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border",
-                    question.question_type === 'SHORT_ANSWER'
-                      ? 'bg-purple-50 text-purple-600 border-purple-100'
-                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                  )}>
-                    {question.question_type_display}
-                  </span>
-                  <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold tabular-nums", passRateColor)}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                      question.question_type === 'SHORT_ANSWER'
+                        ? 'bg-purple-50 text-purple-600 border-purple-100'
+                        : 'bg-white text-slate-500 border-slate-200 shadow-sm'
+                    )}>
+                      {question.question_type_display}
+                    </span>
+                    {question.question_type === 'SHORT_ANSWER' && (
+                      <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                        人工
+                      </span>
+                    )}
+                  </div>
+                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums", passRateColor)}>
                     {formatPassRate(question.pass_rate)}
                   </span>
                 </div>
                 <h3 className={cn(
-                  "text-sm font-medium leading-relaxed line-clamp-2 mb-2",
+                  "text-sm font-medium leading-relaxed line-clamp-2 mb-3",
                   isActive ? "text-slate-900" : "text-slate-700"
                 )}>
                   {question.question_text}
                 </h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <span>分值: {question.max_score}</span>
-                  {question.question_type === 'SHORT_ANSWER' && (
-                    <>
-                      <span className="w-1 h-1 rounded-full bg-slate-300" />
-                      <span className="text-blue-500 font-medium">需人工批阅</span>
-                    </>
-                  )}
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span className="font-medium bg-slate-100/50 px-2 py-1 rounded">分值: {question.max_score}</span>
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                 </div>
               </button>
             );
@@ -353,59 +350,69 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                               )}
                             >
                               <div className={cn(
-                                "px-4 py-3 flex items-center justify-between border-b relative overflow-hidden",
-                                isCorrect ? "bg-emerald-50/50 border-emerald-100" : "bg-slate-50/50 border-slate-100"
+                                "relative px-4 py-3 flex items-center justify-between gap-4 overflow-hidden",
+                                isCorrect ? "bg-emerald-50/30" : "bg-white"
                               )}>
-                                {/* Progress Bar Background */}
+                                {/* Progress Bar Background - Subtler */}
                                 <div
-                                  className={cn("absolute left-0 top-0 bottom-0 opacity-10 transition-all duration-1000", isCorrect ? "bg-emerald-500" : "bg-slate-500")}
+                                  className={cn(
+                                    "absolute left-0 top-0 bottom-0 transition-all duration-1000 mix-blend-multiply",
+                                    isCorrect ? "bg-emerald-50" : "bg-slate-100/50"
+                                  )}
                                   style={{ width: `${percent}%` }}
                                 />
 
-                                <div className="flex items-center gap-3 relative z-10">
+                                <div className="flex items-center gap-3 relative z-10 flex-1">
                                   <span className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm border",
+                                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm border shadow-sm shrink-0",
                                     isCorrect
                                       ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-                                      : "bg-white text-slate-700 border-slate-200"
+                                      : "bg-white text-slate-600 border-slate-200"
                                   )}>
                                     {option.option_key}
                                   </span>
-                                  <span className={cn("text-sm font-medium", isCorrect ? "text-emerald-900" : "text-slate-700")}>
+                                  <span className={cn(
+                                    "text-sm font-medium leading-relaxed",
+                                    isCorrect ? "text-emerald-900" : "text-slate-700"
+                                  )}>
                                     {option.option_text}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-4 relative z-10">
-                                  <div className="text-right">
-                                    <div className="text-xs text-slate-500 font-medium">
-                                      {option.selected_count} 人 ({percent}%)
-                                    </div>
+
+                                <div className="flex items-center gap-4 relative z-10 shrink-0">
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-bold text-slate-900 tabular-nums">
+                                      {option.selected_count} <span className="text-xs font-normal text-slate-400">人</span>
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium tabular-nums">{percent}%</span>
                                   </div>
-                                  {isCorrect ? (
-                                    <Check className="w-5 h-5 text-emerald-500" />
-                                  ) : (
-                                    <div className="w-5 h-5" /> // spacer
+                                  {isCorrect && (
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                      <Check className="w-5 h-5" />
+                                    </div>
                                   )}
                                 </div>
                               </div>
 
                               {/* Student List */}
                               {option.students.length > 0 ? (
-                                <div className="p-4 bg-white grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                <div className="p-3 bg-slate-50/50 border-t border-slate-100/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                   {option.students.map(student => (
-                                    <div key={student.student_id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
-                                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">
+                                    <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-colors text-xs">
+                                      <div className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0 text-[10px] shadow-sm">
                                         {student.student_name.slice(0, 1)}
                                       </div>
                                       <div className="min-w-0">
-                                        <div className="font-semibold text-slate-700 truncate">{student.student_name}</div>
-                                        <div className="text-slate-400 truncate scale-90 origin-left">{student.department || '学员'}</div>
+                                        <div className="font-medium text-slate-700 truncate">{student.student_name}</div>
                                       </div>
                                     </div>
                                   ))}
                                 </div>
                               ) : (
-                                <div className="px-4 py-3 text-xs text-slate-400 italic">无人选择此项</div>
+                                <div className="px-4 py-2 bg-slate-50/30 border-t border-slate-50 text-xs text-slate-400 italic flex items-center gap-2">
+                                  <Users className="w-3 h-3 text-slate-300" />
+                                  <span>无人选择此项</span>
+                                </div>
                               )}
                             </div>
                           );
@@ -427,76 +434,63 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             key={answer.student_id}
-                            className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+                            className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-4 group hover:shadow-md transition-shadow"
                           >
-                            <div className="flex flex-col md:flex-row">
-                              {/* Student Info */}
-                              <div className="p-5 md:w-48 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100 flex md:flex-col items-center md:items-start gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                            {/* Header: Student Info + Score */}
+                            <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shadow-sm">
                                   {answer.student_name.slice(0, 1)}
                                 </div>
                                 <div>
-                                  <div className="font-bold text-slate-900">{answer.student_name}</div>
-                                  <div className="text-xs text-slate-500 mt-0.5">{answer.department || '未分配部门'}</div>
-                                  <div className="text-xs text-slate-400 font-mono mt-0.5">{answer.employee_id || '#'}</div>
+                                  <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                    {answer.student_name}
+                                    <span className="font-normal text-xs text-slate-400 font-mono px-1.5 py-0.5 bg-white border border-slate-100 rounded-full">
+                                      {answer.department || '学员'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Answer & Grade */}
-                              <div className="flex-1 p-5 flex flex-col gap-6">
-                                <div className="space-y-2">
-                                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">学员回答</span>
-                                  <div className="text-slate-800 text-sm leading-relaxed p-4 bg-slate-50/80 rounded-xl border border-slate-100/80">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center">
+                                  <span className="mr-2 text-xs font-bold text-slate-400 uppercase">得分</span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={selectedQuestion?.max_score || 0}
+                                    value={scoresByStudent[answer.student_id] ?? ''}
+                                    onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
+                                    onBlur={(e) => commitScore(answer.student_id, e.target.value)}
+                                    className="w-20 h-9 font-mono text-base font-bold border-slate-200 focus:ring-blue-500/20 text-right pr-2 bg-white"
+                                  />
+                                  <span className="ml-2 text-sm text-slate-400 font-medium select-none">/ {selectedQuestion?.max_score}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-5">
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">学员回答</span>
+                                  <div className="text-slate-800 text-sm leading-relaxed p-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 min-h-[80px]">
                                     {formatAnswerText(answer.answer_text)}
                                   </div>
                                 </div>
 
-                                <div className="flex items-end justify-between gap-4 pt-4 border-t border-slate-100">
-                                  <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                      <label className="absolute -top-2.5 left-2 px-1 bg-white text-[10px] font-bold text-slate-400 uppercase">得分</label>
-                                      <div className="flex items-center">
-                                        <Input
-                                          type="number"
-                                          min={0}
-                                          max={selectedQuestion?.max_score || 0}
-                                          value={scoresByStudent[answer.student_id] ?? ''}
-                                          onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
-                                          onBlur={(e) => commitScore(answer.student_id, e.target.value)}
-                                          className="w-24 font-mono text-lg font-bold border-slate-200 focus:ring-blue-500/20"
-                                        />
-                                        <span className="ml-2 text-sm text-slate-400 font-medium">/ {selectedQuestion?.max_score}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    {/* Quick Actions */}
-                                    <div className="flex bg-slate-100 rounded-lg p-1">
-                                      <button
-                                        onClick={() => handleQuickScore(answer.student_id, 1)}
-                                        className="p-2 text-emerald-600 hover:bg-white hover:shadow-sm rounded-md transition-all tooltip-trigger"
-                                        title="满分"
-                                      >
-                                        <ThumbsUp className="w-4 h-4" />
-                                      </button>
-                                      <div className="w-px bg-slate-200 my-1 mx-0.5" />
-                                      <button
-                                        onClick={() => handleQuickScore(answer.student_id, 0.6)}
-                                        className="p-2 text-amber-600 hover:bg-white hover:shadow-sm rounded-md transition-all tooltip-trigger"
-                                        title="及格 (60%)"
-                                      >
-                                        <Check className="w-4 h-4" />
-                                      </button>
-                                      <div className="w-px bg-slate-200 my-1 mx-0.5" />
-                                      <button
-                                        onClick={() => handleQuickScore(answer.student_id, 0)}
-                                        className="p-2 text-rose-600 hover:bg-white hover:shadow-sm rounded-md transition-all tooltip-trigger"
-                                        title="零分"
-                                      >
-                                        <ThumbsDown className="w-4 h-4" />
-                                      </button>
-                                    </div>
+                                {/* Quick Actions Footer */}
+                                <div className="flex justify-end pt-2">
+                                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors border border-emerald-100">
+                                      <ThumbsUp className="w-3.5 h-3.5" /> 满分
+                                    </button>
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors border border-amber-100">
+                                      <Check className="w-3.5 h-3.5" /> 及格
+                                    </button>
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors border border-rose-100">
+                                      <ThumbsDown className="w-3.5 h-3.5" /> 零分
+                                    </button>
                                   </div>
                                 </div>
                               </div>

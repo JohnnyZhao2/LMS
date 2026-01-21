@@ -4,6 +4,7 @@
 """
 from typing import Optional, TypeVar
 from core.exceptions import BusinessError, ErrorCodes
+from apps.users.permissions import get_current_role
 T = TypeVar('T')
 class BaseService:
     """
@@ -57,7 +58,7 @@ class BaseService:
         Raises:
             BusinessError: 如果权限不足
         """
-        if user and not user.is_admin:
+        if user and get_current_role(user) != 'ADMIN':
             if not hasattr(resource, 'is_current'):
                 return  # 如果资源没有这些属性，跳过检查
             if not resource.is_current:

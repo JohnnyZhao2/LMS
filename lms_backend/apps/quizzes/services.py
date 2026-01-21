@@ -13,6 +13,7 @@ from .models import Quiz, QuizQuestion
 from apps.questions.models import Question
 from apps.knowledge.models import Tag
 from .selectors import get_quiz_by_id, get_question_ids, list_quiz_questions
+from apps.users.permissions import get_current_role
 
 
 class QuizService(BaseService):
@@ -108,9 +109,7 @@ class QuizService(BaseService):
             True 如果有权限
         """
         # Admin can edit/delete any quiz
-        if user.is_admin:
-            return True
-        if hasattr(user, 'current_role') and user.current_role == 'ADMIN':
+        if get_current_role(user) == 'ADMIN':
             return True
         # Others can only edit/delete their own quizzes
         return quiz.created_by_id == user.id

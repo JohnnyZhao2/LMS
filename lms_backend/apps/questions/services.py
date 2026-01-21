@@ -10,6 +10,7 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Question
 from apps.knowledge.models import Tag
 from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
+from apps.users.permissions import get_current_role
 
 
 class QuestionService(BaseService):
@@ -57,7 +58,7 @@ class QuestionService(BaseService):
             包含题目列表和分页信息的字典
         """
         # 非管理员默认只显示当前版本的题目
-        if user and not user.is_admin:
+        if user and get_current_role(user) != 'ADMIN':
             if not filters:
                 filters = {}
             if 'is_current' not in filters:
@@ -93,7 +94,7 @@ class QuestionService(BaseService):
             BusinessError: 如果权限不足
         """
         # 管理员可以编辑/删除任何题目
-        if user.is_admin or (hasattr(user, 'current_role') and user.current_role == 'ADMIN'):
+        if get_current_role(user) == 'ADMIN':
             return True
         # 其他人只能编辑/删除自己创建的题目
         if question.created_by_id != user.id:

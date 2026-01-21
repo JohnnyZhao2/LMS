@@ -1,18 +1,24 @@
 import * as React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, BarChart3, FileCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  BarChart3,
+  FileCheck,
+  GraduationCap,
+  BookOpen,
+  CheckCircle2,
+  Clock
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
   Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Tabs,
   TabsList,
   TabsTrigger,
   Skeleton,
+  Badge,
 } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from './grading-center-tab';
@@ -28,6 +34,25 @@ export const TaskPreviewPage: React.FC = () => {
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
   const { data: task, isLoading } = useTaskDetail(taskId);
+
+  // Compute quizzes and active ID *before* early returns
+  // Use useMemo to prevent unnecessary re-renders of dependent effects
+  const quizzes = React.useMemo(() => task?.quizzes || [], [task]);
+  const hasMultipleQuizzes = quizzes.length > 0;
+
+  const activeQuizId = React.useMemo(() => {
+    return (selectedQuizId && quizzes.some(q => q.quiz === selectedQuizId))
+      ? selectedQuizId
+      : (quizzes[0]?.quiz ?? null);
+  }, [selectedQuizId, quizzes]);
+
+  // Effect to sync selectedQuizId with default
+  // This hook is now unconditionally called
+  React.useEffect(() => {
+    if (activeTab === 'grading' && !selectedQuizId && quizzes.length > 0) {
+      setSelectedQuizId(quizzes[0].quiz);
+    }
+  }, [activeTab, quizzes, selectedQuizId]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -55,69 +80,166 @@ export const TaskPreviewPage: React.FC = () => {
     );
   }
 
-  const quizIds = task.quizzes?.map((quiz) => quiz.quiz) ?? [];
-  const resolvedQuizId = quizIds.includes(selectedQuizId ?? -1) ? selectedQuizId : quizIds[0] ?? null;
-  const activeQuizId = resolvedQuizId ?? null;
-  const activeQuiz = task.quizzes?.find((quiz) => quiz.quiz === activeQuizId) || task.quizzes?.[0];
-
   return (
-    <div className="space-y-6 animate-fadeIn pb-10">
+    <div className="space-y-6 animate-fadeIn pb-10 min-h-screen bg-slate-50/30">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/tasks')}
-            className="h-10 w-10 rounded-lg hover:bg-slate-100 transition-colors duration-150 cursor-pointer"
-          >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{task.title}</h1>
-            <div className="mt-1.5">
-              {activeTab === 'grading' && task.quizzes?.length ? (
-                <Select
-                  value={activeQuizId?.toString() || ''}
-                  onValueChange={(value) => setSelectedQuizId(Number(value))}
-                >
-                  <SelectTrigger className="h-8 w-[220px] text-xs">
-                    <SelectValue placeholder="选择试卷" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {task.quizzes.map((quiz) => (
-                      <SelectItem key={quiz.id} value={quiz.quiz.toString()}>
-                        {quiz.quiz_title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  {activeQuiz?.quiz_title || '综合测验'}
-                </p>
-              )}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-6 py-4">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/tasks')}
+              className="h-10 w-10 rounded-xl hover:bg-slate-100 transition-colors duration-150"
+            >
+              <ArrowLeft className="h-5 w-5 text-slate-600" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">{task.title}</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 ml-0.5">
+                {activeTab === 'grading' ? '阅卷中心' : '任务进度监控'}
+              </p>
             </div>
           </div>
-        </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="bg-slate-100 p-1 rounded-lg">
-            <TabsTrigger value="progress" className="flex items-center gap-2 cursor-pointer transition-all duration-200">
-              <BarChart3 className="h-4 w-4" />
-              进度监控
-            </TabsTrigger>
-            <TabsTrigger value="grading" className="flex items-center gap-2 cursor-pointer transition-all duration-200">
-              <FileCheck className="h-4 w-4" />
-              阅卷中心
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
+              <TabsTrigger
+                value="progress"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all"
+              >
+                <BarChart3 className="h-4 w-4" />
+                进度监控
+              </TabsTrigger>
+              <TabsTrigger
+                value="grading"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm transition-all"
+              >
+                <FileCheck className="h-4 w-4" />
+                阅卷中心
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'progress' && <ProgressMonitoringTab taskId={taskId} />}
-      {activeTab === 'grading' && <GradingCenterTab taskId={taskId} quizId={activeQuizId} />}
+      <div className="max-w-[1600px] mx-auto px-6">
+        {/* PROGRESS TAB */}
+        {activeTab === 'progress' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ProgressMonitoringTab taskId={taskId} />
+          </motion.div>
+        )}
+
+        {/* GRADING TAB */}
+        {activeTab === 'grading' && (
+          <div className="space-y-6">
+            {/* Prominent Quiz Selector */}
+            {hasMultipleQuizzes ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {quizzes.map((quiz) => {
+                  const isActive = quiz.quiz === activeQuizId;
+                  const isExam = quiz.quiz_type === 'EXAM'; // Verify exact value from backend if needed, assuming generic check or use display text
+
+                  return (
+                    <button
+                      key={quiz.id}
+                      onClick={() => setSelectedQuizId(quiz.quiz)}
+                      className={cn(
+                        "relative flex flex-col items-start text-left p-4 rounded-2xl border-2 transition-all duration-200 group overflow-hidden",
+                        isActive
+                          ? isExam
+                            ? "border-rose-500 bg-rose-50/30 ring-4 ring-rose-100" // Active Exam
+                            : "border-purple-500 bg-purple-50/30 ring-4 ring-purple-100" // Active Quiz
+                          : "border-white bg-white hover:border-slate-300 hover:shadow-md" // Inactive
+                      )}
+                    >
+                      {/* Selection Indicator */}
+                      {isActive && (
+                        <div className={cn(
+                          "absolute top-0 right-0 p-1.5 rounded-bl-xl text-white",
+                          isExam ? "bg-rose-500" : "bg-purple-500"
+                        )}>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge
+                          className={cn(
+                            "border-none px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider",
+                            isExam
+                              ? "bg-rose-100 text-rose-700 group-hover:bg-rose-200"
+                              : "bg-blue-100 text-blue-700 group-hover:bg-blue-200"
+                          )}
+                        >
+                          {isExam ? <GraduationCap className="w-3 h-3 mr-1" /> : <BookOpen className="w-3 h-3 mr-1" />}
+                          {quiz.quiz_type_display || (isExam ? '考试' : '练习')}
+                        </Badge>
+                        {/* Duration or Score Tag */}
+                        <div className="flex items-center text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {quiz.duration ? `${quiz.duration}分` : '不限时'}
+                        </div>
+                      </div>
+
+                      <h3 className={cn(
+                        "font-bold text-lg leading-tight mb-2 line-clamp-2",
+                        isActive ? "text-slate-900" : "text-slate-700"
+                      )}>
+                        {quiz.quiz_title}
+                      </h3>
+
+                      <div className="mt-auto pt-2 w-full flex items-center justify-between text-xs text-slate-500 border-t border-slate-100/50">
+                        <span>{quiz.question_count} 道题目</span>
+                        <span className="font-mono font-medium">总分: {quiz.total_score}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              // Only one quiz - show a simple banner context
+              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  quizzes[0]?.quiz_type === 'EXAM' ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                )}>
+                  {quizzes[0]?.quiz_type === 'EXAM' ? <GraduationCap className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-slate-900">{quizzes[0]?.quiz_title || '试卷详情'}</h2>
+                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                      {quizzes[0]?.quiz_type_display}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    共 {quizzes[0]?.question_count} 道题目 · 总分 {quizzes[0]?.total_score}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Alert for Auto-Grading Quizzes */}
+            {quizzes.find(q => q.quiz === activeQuizId)?.quiz_type !== 'EXAM' && (
+              <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-sm">
+                <div className="mt-0.5"><BookOpen className="w-4 h-4" /></div>
+                <div>
+                  <span className="font-bold">提示：</span>
+                  当前选择的是练习/测验试卷。通常此类试卷主要用于学员自测，题目多为客观题（系统自动评分）。请重点关注“考试”类型的试卷进行人工批阅。
+                </div>
+              </div>
+            )}
+
+            <GradingCenterTab taskId={taskId} quizId={activeQuizId} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

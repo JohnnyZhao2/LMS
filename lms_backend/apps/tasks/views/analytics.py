@@ -49,6 +49,38 @@ def _get_latest_answers(task, question_id, quiz_id):
     ).filter(submission_id=F('latest_submission_id'))
 
 
+def _calculate_question_pass_rate(task, question, quiz_id):
+    """
+    计算题目通过率
+    规则：
+    1. 客观题：通过数(is_correct=True) / 总提交数
+    2. 主观题：通过数(graded & >=60%) / 总已评分数 (graded)
+       注意：主观题分母不包含等待评分的记录，避免拉低通过率
+    """
+    answers = _get_latest_answers(task, question.id, quiz_id)
+
+    if question.is_objective:
+        total_count = answers.count()
+        if total_count == 0:
+            return None
+        correct_count = answers.filter(is_correct=True).count()
+        return round(correct_count / total_count * 100, 1)
+    else:
+        # 主观题：只计算已评分的
+        graded_answers = answers.filter(graded_by__isnull=False)
+        total_count = graded_answers.count()
+
+        if total_count == 0:
+            return None
+
+        score_threshold = float(question.score) * 0.6
+        correct_count = graded_answers.filter(
+            obtained_score__gte=score_threshold
+        ).count()
+
+        return round(correct_count / total_count * 100, 1)
+
+
 class TaskAnalyticsView(APIView):
     """Task analytics endpoint for admin preview."""
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
@@ -480,21 +512,7 @@ class GradingQuestionsView(APIView):
 
     def _calculate_pass_rate(self, task, question, quiz_id):
         """计算通过率"""
-        answers = _get_latest_answers(task, question.id, quiz_id)
-        total_count = answers.count()
-        if total_count == 0:
-            return None
-
-        if question.is_objective:
-            correct_count = answers.filter(is_correct=True).count()
-        else:
-            score_threshold = float(question.score) * 0.6
-            correct_count = answers.filter(
-                graded_by__isnull=False,
-                obtained_score__gte=score_threshold
-            ).count()
-
-        return round(correct_count / total_count * 100, 1)
+        return _calculate_question_pass_rate(task, question, quiz_id)
 
 
 class GradingAnswersView(APIView):
@@ -578,21 +596,7 @@ class GradingAnswersView(APIView):
 
     def _calculate_pass_rate(self, task, question, quiz_id):
         """计算通过率"""
-        answers = _get_latest_answers(task, question.id, quiz_id)
-        total_count = answers.count()
-        if total_count == 0:
-            return None
-
-        if question.is_objective:
-            correct_count = answers.filter(is_correct=True).count()
-        else:
-            score_threshold = float(question.score) * 0.6
-            correct_count = answers.filter(
-                graded_by__isnull=False,
-                obtained_score__gte=score_threshold
-            ).count()
-
-        return round(correct_count / total_count * 100, 1)
+        return _calculate_question_pass_rate(task, question, quiz_id)
 
     def _build_objective_options(self, question, answers):
         """构造客观题选项分布"""

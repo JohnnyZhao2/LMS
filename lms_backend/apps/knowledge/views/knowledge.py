@@ -24,6 +24,7 @@ from apps.knowledge.serializers import (
     KnowledgeUpdateSerializer,
     KnowledgeStatsSerializer,
 )
+from apps.users.permissions import get_current_role
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()
@@ -94,7 +95,7 @@ class KnowledgeListCreateView(APIView):
     )
     def post(self, request):
         # 1. 权限检查
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建知识文档'
@@ -163,7 +164,7 @@ class KnowledgeDetailView(APIView):
     )
     def patch(self, request, pk):
         # 1. 权限检查
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以更新知识文档'
@@ -202,7 +203,7 @@ class KnowledgeDetailView(APIView):
     )
     def delete(self, request, pk):
         # 1. 权限检查
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以删除知识文档'
@@ -292,7 +293,7 @@ class StudentTaskKnowledgeDetailView(APIView):
                 {'code': ErrorCodes.RESOURCE_NOT_FOUND, 'message': '任务知识不存在'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             has_assignment = TaskAssignment.objects.filter(
                 task_id=task_knowledge.task_id,
                 assignee=request.user

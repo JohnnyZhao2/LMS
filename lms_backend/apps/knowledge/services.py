@@ -12,6 +12,7 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from .models import Knowledge, Tag
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
+from apps.users.permissions import get_current_role
 
 
 class KnowledgeService(BaseService):
@@ -34,7 +35,7 @@ class KnowledgeService(BaseService):
             f'知识文档 {pk} 不存在'
         )
         # 权限检查：非管理员只能访问当前版本的知识
-        if user and not user.is_admin:
+        if user and get_current_role(user) != 'ADMIN':
             if not knowledge.is_current:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,

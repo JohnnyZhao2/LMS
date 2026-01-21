@@ -13,6 +13,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 from core.exceptions import BusinessError, ErrorCodes
 from apps.knowledge.models import Knowledge, Tag, ResourceLineType
 from apps.knowledge.serializers import TagSerializer
+from apps.users.permissions import get_current_role
 class TagListView(APIView):
     """
     统一标签列表端点
@@ -88,7 +89,7 @@ class TagCreateView(APIView):
         tags=['知识管理']
     )
     def post(self, request):
-        if not request.user.is_admin:
+        if get_current_role(request.user) != 'ADMIN':
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建标签'
