@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
-import { cn, stripHtml } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 export interface SharedKnowledgeCardProps {
@@ -39,9 +39,8 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
 
 
-  // 清洗摘要和预览内容
-  const cleanSummary = stripHtml(item.summary || '');
-  const cleanPreview = stripHtml(item.content_preview || item.summary || '') || '暂无详细内容...';
+  // 内容预览（后端已清洗 HTML 标签）
+  const contentPreview = item.content_preview || '暂无详细内容...';
 
   return (
     <div
@@ -83,16 +82,11 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         </div>
       </div>
 
-      {/* 标题 & 摘要 */}
+      {/* 标题 */}
       <div className="relative mb-4">
         <h3 className="text-lg font-bold text-[#111827] leading-tight mb-2 line-clamp-2 group-hover:text-[#3B82F6] transition-colors duration-200">
           {item.title}
         </h3>
-        {cleanSummary && (
-          <p className="text-sm font-normal text-[#6B7280] line-clamp-1 leading-relaxed">
-            {cleanSummary}
-          </p>
-        )}
       </div>
 
       {/* 内容预览区域 (替代原有的目录结构) */}
@@ -102,7 +96,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
           <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">内容预览</span>
         </div>
         <div className="text-xs font-medium text-[#4B5563] leading-relaxed line-clamp-6">
-          {cleanPreview}
+          {contentPreview}
         </div>
       </div>
 

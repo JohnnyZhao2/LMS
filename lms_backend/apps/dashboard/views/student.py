@@ -9,9 +9,9 @@ from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from apps.dashboard.serializers import (
     StudentPendingTaskSerializer,
-    LatestKnowledgeSerializer,
     StudentDashboardSerializer,
 )
+from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.dashboard.services import StudentDashboardService
 class StudentDashboardView(APIView):
     """
@@ -41,7 +41,7 @@ class StudentDashboardView(APIView):
         latest_knowledge = self.service.get_latest_knowledge(knowledge_limit)
         task_summary = self.service.get_task_summary(user)
         pending_tasks_data = StudentPendingTaskSerializer(pending_tasks, many=True).data
-        latest_knowledge_data = LatestKnowledgeSerializer(latest_knowledge, many=True).data
+        latest_knowledge_data = KnowledgeListSerializer(latest_knowledge, many=True).data
         return Response({
             'pending_tasks': pending_tasks_data,
             'latest_knowledge': latest_knowledge_data,

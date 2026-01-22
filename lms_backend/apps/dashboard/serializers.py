@@ -6,7 +6,7 @@ Implements serializers for:
 """
 from rest_framework import serializers
 from apps.tasks.models import TaskAssignment
-from apps.knowledge.models import Knowledge
+from apps.knowledge.serializers import KnowledgeListSerializer
 class StudentPendingTaskSerializer(serializers.ModelSerializer):
     """
     Serializer for student's pending tasks on dashboard.
@@ -49,36 +49,12 @@ class StudentPendingTaskSerializer(serializers.ModelSerializer):
             'total': total,
             'percentage': round(completed / total * 100, 1)
         }
-class LatestKnowledgeSerializer(serializers.ModelSerializer):
-    """
-    Serializer for latest knowledge documents on dashboard.
-    """
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by_name = serializers.SerializerMethodField()
-    knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
-    content_preview = serializers.SerializerMethodField()
-    class Meta:
-        model = Knowledge
-        fields = [
-            'id', 'title', 'knowledge_type', 'knowledge_type_display',
-            'content_preview', 'operation_tags',
-            'created_by_name', 'updated_by_name',
-            'created_at', 'updated_at'
-        ]
-    def get_content_preview(self, obj):
-        """Get content preview from Knowledge model property."""
-        return obj.content_preview
-    def get_updated_by_name(self, obj):
-        """Get name of last updater."""
-        if obj.updated_by:
-            return obj.updated_by.username
-        return obj.created_by.username if obj.created_by else None
 class StudentDashboardSerializer(serializers.Serializer):
     """
     Serializer for student dashboard data.
     """
     pending_tasks = StudentPendingTaskSerializer(many=True, read_only=True)
-    latest_knowledge = LatestKnowledgeSerializer(many=True, read_only=True)
+    latest_knowledge = KnowledgeListSerializer(many=True, read_only=True)
     task_summary = serializers.DictField(read_only=True)
 # ============ Mentor/Department Manager Dashboard Serializers ============
 class MentorStudentStatSerializer(serializers.Serializer):

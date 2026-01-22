@@ -171,6 +171,243 @@ try {
 - 背景：营造氛围与层次，使用渐变、几何图形或环境化纹理，避免单色铺底
 - 禁止：紫色渐变白底、可预期的布局与组件套路、无差别的模板化风格
 
+## 设计系统使用指南
+
+### 📚 设计系统文件位置
+
+**核心文件（必读）：**
+1. **`design-system/corporate-lms/MASTER.md`** — 全局设计系统真理源
+   - 完整的颜色系统（Flat Design）
+   - 字体系统（当前 Outfit + 推荐 Poppins/Open Sans）
+   - 间距、圆角、阴影系统
+   - 动画系统（7 种动画类型）
+   - 组件规范（Button、Card、Input、Modal）
+   - 反模式清单 + 交付前检查清单
+   - 40 个共同组件列表
+
+2. **`lms_frontend/src/styles/design-tokens.ts`** — TypeScript 设计令牌
+   - 类型安全的颜色、间距、字体、动画配置
+   - Tailwind 类名映射
+   - CSS 变量映射
+   - 辅助函数（`getCSSVar`, `setCSSVar`）
+
+3. **`lms_frontend/src/styles/animations.ts`** — 动画配置
+   - 7 种动画类型配置（fadeIn, fadeInUp, scaleIn 等）
+   - Framer Motion 变体
+   - 交错动画配置
+   - 辅助函数（`getAnimationConfig`, `prefersReducedMotion`）
+
+### 🎯 AI 工作流程（强制执行）
+
+**在开始任何 UI/UX 工作之前，必须按以下顺序执行：**
+
+1. **读取全局设计系统**
+   ```bash
+   # 读取 MASTER.md 了解设计规则
+   Read: design-system/corporate-lms/MASTER.md
+   ```
+
+2. **检查页面特定覆盖规则**
+   ```bash
+   # 检查是否存在页面特定的设计规则
+   # 例如：design-system/corporate-lms/pages/dashboard.md
+   # 如果存在，页面规则会覆盖 MASTER.md 的规则
+   Read: design-system/corporate-lms/pages/[page-name].md
+   ```
+
+3. **读取设计令牌和动画配置**
+   ```bash
+   # 了解可用的设计令牌和动画
+   Read: lms_frontend/src/styles/design-tokens.ts
+   Read: lms_frontend/src/styles/animations.ts
+   ```
+
+4. **应用设计系统**
+   - 使用 MASTER.md 中定义的颜色、间距、字体
+   - 使用 design-tokens.ts 中的类型安全令牌
+   - 使用 animations.ts 中的动画配置
+   - 遵循组件规范和反模式清单
+
+5. **交付前验证**
+   - 对照 MASTER.md 中的"Pre-Delivery Checklist"检查
+   - 确保没有违反反模式清单
+   - 验证响应式设计（375px, 768px, 1024px, 1440px）
+
+### 💻 代码中使用设计令牌
+
+**使用颜色：**
+```typescript
+import { designTokens } from '@/styles/design-tokens';
+
+// 方式 1: 使用设计令牌对象
+const primaryColor = designTokens.colors.primary; // '#3B82F6'
+
+// 方式 2: 使用 Tailwind 类名
+<button className="bg-blue-600 hover:bg-blue-700">按钮</button>
+
+// 方式 3: 使用 CSS 变量
+<div style={{ color: 'var(--color-primary)' }}>文本</div>
+```
+
+**使用间距和圆角：**
+```typescript
+import { designTokens } from '@/styles/design-tokens';
+
+// 使用设计令牌
+const padding = designTokens.spacing.md; // '16px'
+const borderRadius = designTokens.radius.lg; // '8px'
+
+// 使用 Tailwind 类名
+<div className="p-4 rounded-lg">内容</div>
+```
+
+**使用动画：**
+```typescript
+import { animations, getAnimationCSS, motionVariants } from '@/styles/animations';
+
+// CSS 动画
+const animationCSS = getAnimationCSS('fadeInUp', 'slow', 100);
+
+// Framer Motion
+import { motion } from 'framer-motion';
+
+<motion.div variants={motionVariants.fadeInUp}>
+  内容
+</motion.div>
+
+// 使用 AnimatedContainer 组件
+import { AnimatedContainer } from '@/components/ui/animated-container';
+
+<AnimatedContainer animation="fadeInUp" delay={100}>
+  内容
+</AnimatedContainer>
+```
+
+### 🎨 设计系统层级结构
+
+```
+design-system/corporate-lms/
+├── MASTER.md                    # 全局设计规则（优先级：低）
+└── pages/                       # 页面特定覆盖规则（优先级：高）
+    ├── dashboard.md             # 仪表盘页面规则
+    ├── knowledge.md             # 知识库页面规则
+    └── [page-name].md           # 其他页面规则
+```
+
+**规则优先级：**
+- 如果存在 `pages/[page-name].md`，其规则**覆盖** MASTER.md
+- 如果不存在，严格遵循 MASTER.md
+
+### ✅ 交付前检查清单（必须验证）
+
+**视觉质量：**
+- [ ] 没有使用 emoji 作为图标（使用 SVG：Lucide/Heroicons）
+- [ ] 所有图标来自一致的图标集
+- [ ] 悬停状态不会导致布局偏移
+- [ ] 颜色匹配设计令牌
+- [ ] 字体遵循系统规则
+
+**交互：**
+- [ ] 所有可点击元素有 `cursor-pointer`
+- [ ] 悬停状态提供清晰的视觉反馈
+- [ ] 过渡动画流畅（150-300ms）
+- [ ] 焦点状态对键盘导航可见
+- [ ] 活动状态提供反馈（scale, color）
+
+**无障碍：**
+- [ ] 文本对比度 4.5:1 最低（WCAG AA）
+- [ ] 所有图片有 alt 文本
+- [ ] 表单输入有标签
+- [ ] 颜色不是唯一指示器
+- [ ] 尊重 `prefers-reduced-motion`
+- [ ] 键盘导航正常工作
+
+**响应式：**
+- [ ] 在 375px（移动端）响应式
+- [ ] 在 768px（平板）响应式
+- [ ] 在 1024px（桌面）响应式
+- [ ] 在 1440px（大桌面）响应式
+- [ ] 移动端无横向滚动
+- [ ] 内容不被固定导航栏遮挡
+
+### 🚫 反模式清单（严禁使用）
+
+**视觉反模式：**
+- ❌ 使用 emoji 作为图标 → 使用 SVG 图标（Lucide, Heroicons）
+- ❌ 幼稚/玩闹设计 → 保持专业和清晰
+- ❌ AI 紫色/粉色渐变 → 避免通用 AI 美学
+- ❌ 到处使用重阴影 → 谨慎使用以表现深度
+- ❌ 导致布局偏移的悬停效果 → 避免 scale 变换导致布局偏移
+
+**交互反模式：**
+- ❌ 缺少 cursor:pointer → 所有可点击元素必须有 cursor:pointer
+- ❌ 瞬间状态变化 → 始终使用过渡动画（150-300ms）
+- ❌ 不可见的焦点状态 → 焦点状态必须对无障碍可见
+
+**无障碍反模式：**
+- ❌ 低对比度文本 → 保持 4.5:1 最低对比度
+- ❌ 缺少 alt 文本 → 所有图片需要描述性 alt 文本
+- ❌ 无键盘导航 → 所有交互元素必须支持键盘访问
+- ❌ 忽略 reduced motion → 尊重 prefers-reduced-motion 偏好
+
+### 📦 共同组件库
+
+**位置：** `lms_frontend/src/components/ui/`
+
+**关键组件（40 个）：**
+- `button.tsx` — 多变体按钮（CVA）
+- `card.tsx` — 卡片容器
+- `input.tsx` — 表单输入
+- `dialog.tsx` — 模态对话框
+- `dropdown-menu.tsx` — 下拉菜单
+- `form.tsx` — 表单组件（React Hook Form）
+- `badge.tsx` — 状态徽章
+- `avatar.tsx` — 用户头像
+- `skeleton.tsx` — 加载状态
+- `spinner.tsx` — 加载指示器
+- `animated-container.tsx` — 动画包装器
+- `data-table/` — 可复用数据表组件
+- `toast/sonner.tsx` — Toast 通知
+
+**模式：** shadcn/ui 风格组件（复制粘贴，非 npm 包）
+
+### 🎨 当前设计系统概览
+
+**风格：** Flat Design with Subtle Depth（扁平设计 + 微妙深度）
+
+**颜色：**
+- Primary: `#3B82F6` (Blue 600)
+- Secondary: `#10B981` (Emerald 500)
+- Accent: `#F59E0B` (Amber 500)
+- CTA: `#F97316` (Orange 500) — 推荐用于新设计
+
+**字体：**
+- 当前：Outfit (Geometric Sans-Serif)
+- 推荐：Poppins (标题) + Open Sans (正文)
+
+**动画：**
+- fadeIn, fadeInUp, fadeInDown, scaleIn, slideInLeft, slideInRight, shimmer
+- 持续时间：fast (0.15s), base (0.2s), slow (0.3s)
+- 自动尊重 `prefers-reduced-motion`
+
+**组件变体（Button）：**
+- default, destructive, outline, secondary, ghost, link, success
+- 尺寸：sm, default, lg, icon
+
+### 🔄 设计系统更新流程
+
+**如果需要更换设计系统：**
+1. 更新 `design-system/corporate-lms/MASTER.md`
+2. 更新 `lms_frontend/src/styles/design-tokens.ts`
+3. 更新 `lms_frontend/src/styles/animations.ts`
+4. 更新 `lms_frontend/src/index.css` 中的 CSS 变量
+5. AI 会自动读取新的设计系统并应用
+
+**页面特定覆盖：**
+- 创建 `design-system/corporate-lms/pages/[page-name].md`
+- 定义页面特定的颜色、字体、动画规则
+- AI 会优先使用页面规则，其次使用 MASTER.md
+
 <skills_system priority="1">
 
 ## Available Skills

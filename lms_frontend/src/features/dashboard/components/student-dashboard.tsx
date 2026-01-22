@@ -68,7 +68,7 @@ export const StudentDashboard: React.FC = () => {
                   {knowledge.title}
                 </h5>
                 <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-medium mb-4">
-                  {knowledge.summary || '这是一篇关于相关领域最新发展的精彩文章，深入浅出地讲解了核心概念。'}
+                  {knowledge.content_preview || '暂无详细内容'}
                 </p>
                 <div className="mt-auto flex items-center gap-1 text-[10px] font-bold text-emerald-600 opacity-0 group-hover:opacity-100 transition-all">
                   阅读详情 <TrendingUp className="w-3 h-3" />

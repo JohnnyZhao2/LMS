@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
+from django.utils.html import strip_tags
 from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
 class Tag(TimestampMixin, models.Model):
     """
@@ -279,13 +280,11 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def content_preview(self):
         """
         生成内容预览（用于列表显示）
-        优先使用 summary 字段，如果没有则自动提取：
+        从文章内容中自动提取并清洗 HTML 标签：
         - 应急类知识：从结构化字段中提取关键信息
         - 其他类型知识：从 content 字段中提取前150个字符
+        注意：不使用 summary 字段，summary 仅用于知识详情页
         """
-        # 优先使用手动填写的概要
-        if self.summary and self.summary.strip():
-            return self.summary.strip()
         if self.knowledge_type == 'EMERGENCY':
             # 应急类知识：优先显示故障场景，如果没有则显示解决方案
             preview_text = self.fault_scenario.strip() or self.solution.strip()
@@ -294,9 +293,13 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         else:
             # 其他类型知识：从 content 字段提取
             preview_text = self.content.strip()
-        # 限制长度并去除换行
+
+        # 清洗 HTML 标签
         if preview_text:
-            preview_text = preview_text.replace('\n', ' ').replace('\r', ' ')
+            preview_text = strip_tags(preview_text)
+            # 去除多余的空白字符和换行
+            preview_text = ' '.join(preview_text.split())
+            # 限制长度
             if len(preview_text) > 150:
                 return preview_text[:150] + '...'
             return preview_text

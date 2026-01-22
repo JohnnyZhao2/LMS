@@ -68,6 +68,7 @@ export interface LatestKnowledge {
   id: number;
   title: string;
   summary?: string;
+  content_preview?: string;
   updated_at: string;
 }
 
