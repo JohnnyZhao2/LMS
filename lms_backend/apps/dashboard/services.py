@@ -40,7 +40,7 @@ class StudentDashboardService(BaseService):
         """
         return get_pending_tasks(user_id=user.id, limit=limit)
 
-    def get_latest_knowledge(self, limit: int = 5) -> QuerySet:
+    def get_latest_knowledge(self, limit: int = 6) -> QuerySet:
         """
         获取最新发布的知识文档
         Args:

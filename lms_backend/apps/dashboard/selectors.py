@@ -24,12 +24,13 @@ def get_pending_tasks(user_id: int, limit: int = 10) -> QuerySet:
     ).order_by('task__deadline')[:limit]
 
 
-def get_latest_knowledge(limit: int = 5) -> QuerySet:
+def get_latest_knowledge(limit: int = 6) -> QuerySet:
     return Knowledge.objects.filter(
-        is_deleted=False
+        is_deleted=False,
+        is_current=True
     ).select_related(
         'created_by', 'updated_by'
-    ).order_by('-created_at')[:limit]
+    ).order_by('-updated_at')[:limit]
 
 
 def get_student_assignments(

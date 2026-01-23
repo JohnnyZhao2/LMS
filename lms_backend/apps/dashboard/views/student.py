@@ -27,7 +27,7 @@ class StudentDashboardView(APIView):
         description='获取学员仪表盘数据，包括待办任务、最新知识和任务统计',
         parameters=[
             OpenApiParameter(name='pending_limit', type=int, description='待办任务数量限制（默认10）'),
-            OpenApiParameter(name='knowledge_limit', type=int, description='最新知识数量限制（默认5）'),
+            OpenApiParameter(name='knowledge_limit', type=int, description='最新知识数量限制（默认6）'),
         ],
         responses={200: StudentDashboardSerializer},
         tags=['学员仪表盘']
@@ -35,7 +35,7 @@ class StudentDashboardView(APIView):
     def get(self, request):
         user = request.user
         pending_limit = int(request.query_params.get('pending_limit', 10))
-        knowledge_limit = int(request.query_params.get('knowledge_limit', 5))
+        knowledge_limit = int(request.query_params.get('knowledge_limit', 6))
         # 调用 Service
         pending_tasks = self.service.get_pending_tasks(user, pending_limit)
         latest_knowledge = self.service.get_latest_knowledge(knowledge_limit)

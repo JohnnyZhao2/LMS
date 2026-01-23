@@ -48,9 +48,9 @@ export const StudentDashboard: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading ? (
-            [1, 2, 3].map((i) => <Skeleton key={i} className="h-40 rounded-3xl" />)
+            [1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-40 rounded-3xl" />)
           ) : data?.latest_knowledge && data.latest_knowledge.length > 0 ? (
-            data.latest_knowledge.slice(0, 3).map((knowledge) => (
+            data.latest_knowledge.map((knowledge) => (
               <div
                 key={knowledge.id}
                 onClick={() => roleNavigate(`knowledge/${knowledge.id}`)}

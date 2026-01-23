@@ -5,7 +5,7 @@ import type { StudentDashboard } from '@/types/api';
 /**
  * 获取学员仪表盘数据
  */
-export const useStudentDashboard = (knowledgeLimit = 5, pendingLimit = 10) => {
+export const useStudentDashboard = (knowledgeLimit = 6, pendingLimit = 10) => {
   return useQuery({
     queryKey: ['student-dashboard', knowledgeLimit, pendingLimit],
     queryFn: () =>
