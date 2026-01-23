@@ -113,8 +113,8 @@ export const TaskDetail: React.FC = () => {
   if (!isValidTaskId) {
     return (
       <div className="flex justify-center items-center min-h-[50vh] bg-gray-50/50">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full shadow-sm">
-          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full">
+          <div className="w-16 h-16 bg-destructive-50 text-destructive-500 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
             <AlertCircle className="w-8 h-8" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2 tracking-tight">Invalid Task ID</h3>
@@ -153,7 +153,7 @@ export const TaskDetail: React.FC = () => {
   if (taskError || !task) {
     return (
       <div className="flex justify-center items-center min-h-[50vh] bg-gray-50/50">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full shadow-sm">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200/60 p-12 text-center max-w-md w-full">
           <div className="w-16 h-16 bg-gray-100 text-gray-400 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
             <Ghost className="w-8 h-8" />
           </div>
@@ -193,12 +193,12 @@ export const TaskDetail: React.FC = () => {
       const isCompleted = studentStatus === 'COMPLETED';
       return (
         <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm",
+          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5",
           isCompleted
-            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-            : "bg-blue-50 text-blue-600 border-blue-200"
+            ? "bg-secondary-50 text-secondary-600 border-secondary-200"
+            : "bg-primary-50 text-primary-600 border-primary-200"
         )}>
-          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-emerald-500" : "bg-blue-500 animate-pulse")} />
+          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-secondary-500" : "bg-primary-500 animate-pulse")} />
           {studentStatusDisplay || assignmentStatusLabelMap[studentStatus] || studentStatus}
         </span>
       );
@@ -207,12 +207,12 @@ export const TaskDetail: React.FC = () => {
       const isCompleted = myAssignment.status === 'COMPLETED';
       return (
         <span className={cn(
-          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 shadow-sm",
+          "px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5",
           isCompleted
-            ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-            : "bg-blue-50 text-blue-600 border-blue-200"
+            ? "bg-secondary-50 text-secondary-600 border-secondary-200"
+            : "bg-primary-50 text-primary-600 border-primary-200"
         )}>
-          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-emerald-500" : "bg-blue-500")} />
+          <span className={cn("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-secondary-500" : "bg-primary-500")} />
           {assignmentStatusLabelMap[myAssignment.status] || myAssignment.status}
         </span>
       );
@@ -221,7 +221,7 @@ export const TaskDetail: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8F9FB] font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex flex-col min-h-screen bg-gray-50 font-sans selection:bg-primary-100 selection:text-primary-700">
       <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
         <div className="flex items-center gap-4 min-w-0">
           <Button
@@ -260,7 +260,7 @@ export const TaskDetail: React.FC = () => {
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg rounded-xl p-1 w-48">
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200  rounded-xl p-1 w-48">
                 <DropdownMenuItem onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))} className="cursor-pointer font-medium rounded-lg py-2 focus:bg-gray-50">
                   <Edit className="w-4 h-4 mr-2 text-gray-500" />
                   编辑任务
@@ -277,7 +277,7 @@ export const TaskDetail: React.FC = () => {
           <div className="lg:col-span-8 space-y-10">
 
             {task.description && (
-              <section className="bg-white rounded-2xl border border-gray-100 p-8 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_-4px_rgba(0,0,0,0.08)] transition-all duration-300">
+              <section className="bg-white rounded-2xl border border-gray-100 p-8   transition-all duration-300">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <FileText className="w-3 h-3" />
                   任务描述
@@ -293,7 +293,7 @@ export const TaskDetail: React.FC = () => {
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                  <div className="p-2 bg-primary-50 text-primary-600 rounded-lg">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   学习资料
@@ -318,19 +318,18 @@ export const TaskDetail: React.FC = () => {
                       key={item.id}
                       onClick={() => navigate(getRolePath(`knowledge/${item.knowledgeId}?taskKnowledgeId=${item.id}&task=${taskId}`))}
                       className={cn(
-                        "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px]",
-                        "hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-0.5",
+                        "group relative bg-white rounded-xl border p-6 transition-all duration-300 cursor-pointer h-[140px] hover:-translate-y-0.5",
                         item.isCompleted
-                          ? "border-emerald-100 bg-emerald-50/10"
-                          : "border-gray-100 hover:border-blue-100"
+                          ? "border-secondary-100 bg-secondary-50/10"
+                          : "border-gray-100 hover:border-primary-100"
                       )}
                     >
                       <div className="flex items-center gap-6 h-full">
                         <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm transition-colors",
+                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold  transition-colors",
                           item.isCompleted
-                            ? "bg-emerald-100 text-emerald-600 ring-4 ring-emerald-50"
-                            : "bg-white text-gray-400 border border-gray-100 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100"
+                            ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
+                            : "bg-white text-gray-400 border border-gray-100 group-hover:bg-primary-50 group-hover:text-primary-600 group-hover:border-primary-100"
                         )}>
                           {item.isCompleted ? <CheckCircle2 className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                         </div>
@@ -342,7 +341,7 @@ export const TaskDetail: React.FC = () => {
                             </Badge>
                             <h4 className={cn(
                               "font-bold text-gray-900 truncate text-lg transition-colors",
-                              item.isCompleted ? "text-emerald-900" : "group-hover:text-blue-700"
+                              item.isCompleted ? "text-secondary-900" : "group-hover:text-primary-700"
                             )}>
                               {item.title}
                             </h4>
@@ -369,7 +368,7 @@ export const TaskDetail: React.FC = () => {
             <section className="space-y-6 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                  <div className="p-2 bg-warning-50 text-warning-600 rounded-lg">
                     <Trophy className="w-5 h-5" />
                   </div>
                   能力考核
@@ -402,18 +401,20 @@ export const TaskDetail: React.FC = () => {
                         className={cn(
                           "group relative bg-white rounded-xl border p-6 transition-all duration-300 h-[140px] cursor-pointer",
                           isCompleted
-                            ? "border-emerald-100 bg-emerald-50/10 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-                            : "border-gray-100 hover:shadow-sm hover:border-blue-100"
+                            ? "border-secondary-100 bg-secondary-50/10"
+                            : "border-gray-100 hover:border-primary-100"
                         )}
                       >
 
                         <div className="flex items-center gap-6 h-full">
-                          <div className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors shadow-sm",
-                            isCompleted
-                              ? "bg-emerald-100 text-emerald-600 ring-4 ring-emerald-50"
-                              : cn("bg-gray-50", isExam ? "text-amber-600" : "text-blue-600")
-                          )}>
+                          <div
+                            className={cn(
+                              "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+                              isCompleted
+                                ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
+                                : cn("bg-gray-50", isExam ? "text-warning-600" : "text-primary-600")
+                            )}
+                          >
                             {isCompleted ? <CheckCircle2 className="w-6 h-6" /> : (isExam ? <Trophy className="w-6 h-6" /> : <ClipboardList className="w-6 h-6" />)}
                           </div>
 
@@ -422,14 +423,14 @@ export const TaskDetail: React.FC = () => {
                               <Badge variant="outline" className={cn(
                                 "text-[11px] font-bold px-2 py-0.5 h-5 uppercase tracking-wide border-none rounded-full",
                                 isCompleted
-                                  ? "bg-emerald-100/50 text-emerald-700"
-                                  : (isExam ? "bg-amber-100/50 text-amber-700" : "bg-blue-100/50 text-blue-700")
+                                  ? "bg-secondary-100/50 text-secondary-700"
+                                  : (isExam ? "bg-warning-100/50 text-warning-700" : "bg-primary-100/50 text-primary-700")
                               )}>
                                 {item.quiz_type_display || (isExam ? '考试' : '练习')}
                               </Badge>
                               <h4 className={cn(
                                 "text-lg font-bold tracking-tight leading-none transition-colors",
-                                isCompleted ? "text-emerald-900" : "text-gray-900"
+                                isCompleted ? "text-secondary-900" : "text-gray-900"
                               )}>
                                 {studentQuizItem?.quiz_title || adminQuizItem?.quiz_title}
                               </h4>
@@ -455,7 +456,7 @@ export const TaskDetail: React.FC = () => {
 
                           <div className="flex-shrink-0 w-[120px] flex flex-col items-end justify-center">
                             {isStudent && isCompleted && (
-                              <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-1.5 tracking-tight shadow-sm">
+                              <div className="text-[11px] font-bold text-secondary-600 bg-secondary-50 px-3 py-1 rounded-full border border-secondary-100 flex items-center gap-1.5 tracking-tight">
                                 得分: <span className="text-sm font-black">{studentQuizItem.score}</span>
                               </div>
                             )}
@@ -472,9 +473,9 @@ export const TaskDetail: React.FC = () => {
           <div className="lg:col-span-4 space-y-6">
 
             {isStudent && learningDetail && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sticky top-24">
+              <div className="bg-white rounded-2xl border border-gray-100  p-6 sticky top-24">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-blue-500" />
+                  <Activity className="w-4 h-4 text-primary-500" />
                   总体进度
                 </h3>
 
@@ -482,9 +483,9 @@ export const TaskDetail: React.FC = () => {
                   <div className="text-6xl font-bold text-gray-900 mb-2 font-mono tracking-tighter">
                     {learningDetail.progress?.percentage ?? 0}<span className="text-2xl text-gray-400 ml-1">%</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-1000 ease-out relative"
+                      className="bg-gradient-to-r from-primary-500 to-primary-600 h-full rounded-full transition-all duration-1000 ease-out relative"
                       style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
                     >
                       <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]" />
@@ -496,7 +497,7 @@ export const TaskDetail: React.FC = () => {
                   {Number(learningDetail.progress?.knowledge_total) > 0 && (
                     <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                        <div className="p-2 bg-primary-100 text-primary-600 rounded-lg">
                           <BookOpen className="w-4 h-4" />
                         </div>
                         <span className="text-gray-600 font-medium">知识学习</span>
@@ -509,7 +510,7 @@ export const TaskDetail: React.FC = () => {
                   {Number(learningDetail.progress?.quiz_total) > 0 && (
                     <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                        <div className="p-2 bg-warning-100 text-warning-600 rounded-lg">
                           <Trophy className="w-4 h-4" />
                         </div>
                         <span className="text-gray-600 font-medium">测验进度</span>
@@ -522,10 +523,10 @@ export const TaskDetail: React.FC = () => {
                 </div>
 
                 {studentStatus === 'IN_PROGRESS' && (
-                  <div className="mt-8 p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 text-sm text-blue-700 flex gap-3">
-                    <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-500" />
+                  <div className="mt-8 p-4 bg-primary-50/50 rounded-xl border border-primary-100/50 text-sm text-primary-700 flex gap-3">
+                    <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-primary-500" />
                     <div>
-                      <p className="font-bold text-blue-800 mb-1">当前状态: 进行中</p>
+                      <p className="font-bold text-primary-700 mb-1">当前状态: 进行中</p>
                       <p className="opacity-80 leading-relaxed">
                         请按时完成所有学习内容和考核。加油！
                       </p>
@@ -536,7 +537,7 @@ export const TaskDetail: React.FC = () => {
             )}
 
             {!isStudent && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sticky top-24">
+              <div className="bg-white rounded-2xl border border-gray-100  p-6 sticky top-24">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                   <Info className="w-4 h-4 text-gray-500" />
                   任务信息

@@ -24,7 +24,7 @@ import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from './grading-center-tab';
 
 export const TaskPreviewPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const taskId = Number(id);
@@ -73,7 +73,7 @@ export const TaskPreviewPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-gray-500">
         <p>任务不存在</p>
-        <Button variant="outline" onClick={() => navigate('/tasks')} className="mt-4">
+        <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
           返回任务列表
         </Button>
       </div>
@@ -89,7 +89,7 @@ export const TaskPreviewPage: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/tasks')}
+              onClick={() => navigate(`/${role}/tasks`)}
               className="h-10 w-10 rounded-xl hover:bg-slate-100 transition-colors duration-150"
             >
               <ArrowLeft className="h-5 w-5 text-slate-600" />
@@ -106,14 +106,14 @@ export const TaskPreviewPage: React.FC = () => {
             <TabsList className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
               <TabsTrigger
                 value="progress"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary-600  transition-all"
               >
                 <BarChart3 className="h-4 w-4" />
                 进度监控
               </TabsTrigger>
               <TabsTrigger
                 value="grading"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary-600  transition-all"
               >
                 <FileCheck className="h-4 w-4" />
                 阅卷中心
@@ -153,16 +153,16 @@ export const TaskPreviewPage: React.FC = () => {
                         "relative flex flex-col items-start text-left p-4 rounded-2xl border-2 transition-all duration-200 group overflow-hidden",
                         isActive
                           ? isExam
-                            ? "border-rose-500 bg-rose-50/30 ring-4 ring-rose-100" // Active Exam
-                            : "border-purple-500 bg-purple-50/30 ring-4 ring-purple-100" // Active Quiz
-                          : "border-white bg-white hover:border-slate-300 hover:shadow-md" // Inactive
+                            ? "border-destructive-500 bg-destructive-50/30 ring-4 ring-destructive-100" // Active Exam
+                            : "border-primary-500 bg-primary-50/30 ring-4 ring-primary-100" // Active Quiz
+                          : "border-white bg-white hover:border-slate-300" // Inactive
                       )}
                     >
                       {/* Selection Indicator */}
                       {isActive && (
                         <div className={cn(
                           "absolute top-0 right-0 p-1.5 rounded-bl-xl text-white",
-                          isExam ? "bg-rose-500" : "bg-purple-500"
+                          isExam ? "bg-destructive-500" : "bg-primary-500"
                         )}>
                           <CheckCircle2 className="w-4 h-4" />
                         </div>
@@ -173,8 +173,8 @@ export const TaskPreviewPage: React.FC = () => {
                           className={cn(
                             "border-none px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider",
                             isExam
-                              ? "bg-rose-100 text-rose-700 group-hover:bg-rose-200"
-                              : "bg-blue-100 text-blue-700 group-hover:bg-blue-200"
+                              ? "bg-destructive-100 text-destructive-700 group-hover:bg-destructive-200"
+                              : "bg-primary-100 text-primary-700 group-hover:bg-primary-200"
                           )}
                         >
                           {isExam ? <GraduationCap className="w-3 h-3 mr-1" /> : <BookOpen className="w-3 h-3 mr-1" />}
@@ -204,10 +204,10 @@ export const TaskPreviewPage: React.FC = () => {
               </div>
             ) : (
               // Only one quiz - show a simple banner context
-              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl">
                 <div className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center",
-                  quizzes[0]?.quiz_type === 'EXAM' ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                  quizzes[0]?.quiz_type === 'EXAM' ? "bg-destructive-100 text-destructive-600" : "bg-primary-100 text-primary-600"
                 )}>
                   {quizzes[0]?.quiz_type === 'EXAM' ? <GraduationCap className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                 </div>
@@ -227,7 +227,7 @@ export const TaskPreviewPage: React.FC = () => {
 
             {/* Alert for Auto-Grading Quizzes */}
             {quizzes.find(q => q.quiz === activeQuizId)?.quiz_type !== 'EXAM' && (
-              <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-sm">
+              <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-100 rounded-xl text-primary-700 text-sm">
                 <div className="mt-0.5"><BookOpen className="w-4 h-4" /></div>
                 <div>
                   <span className="font-bold">提示：</span>

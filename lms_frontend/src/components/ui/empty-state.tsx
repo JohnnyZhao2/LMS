@@ -49,7 +49,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {Icon && (
         <div className={cn(
           'mb-4 transform hover:scale-110 transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]',
-          'text-[#9CA3AF]'
+          'text-gray-400'
         )}>
           {React.isValidElement(Icon) ? (
             React.cloneElement(Icon as React.ReactElement<{ className?: string }>, {

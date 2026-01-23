@@ -205,7 +205,7 @@ export const KnowledgeDetail: React.FC = () => {
               <Edit className="w-4 h-4 mr-1.5" />
               编辑
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-red-500 hover:bg-red-600 rounded-lg font-semibold">
+            <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-destructive-500 hover:bg-destructive-600 rounded-lg font-semibold">
               <Trash2 className="w-4 h-4 mr-1.5" />
               删除
             </Button>
@@ -215,7 +215,7 @@ export const KnowledgeDetail: React.FC = () => {
         {isStudent && !!taskId && (
           <div className="flex items-center gap-2">
             {isCompleted ? (
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100 shadow-sm">
+              <span className="text-xs font-bold text-secondary-600 flex items-center gap-1.5 bg-secondary-50 px-4 py-2 rounded-lg border border-secondary-100">
                 <CheckCircle className="w-4 h-4" />
                 已学习
               </span>
@@ -224,7 +224,7 @@ export const KnowledgeDetail: React.FC = () => {
                 size="sm"
                 onClick={handleComplete}
                 disabled={completeLearning.isPending}
-                className="h-10 bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                className="h-10 bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 rounded-lg transition-all flex items-center gap-2"
               >
                 {completeLearning.isPending ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

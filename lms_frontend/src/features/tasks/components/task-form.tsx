@@ -55,15 +55,16 @@ import {
 import { DatePicker } from '@/components/ui/date-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-import { useCreateTask, type TaskCreateRequest } from '../api/create-task';
-import { useUpdateTask } from '../api/update-task';
-import { useTaskDetail } from '../api/get-task-detail';
-import { useAssignableUsers } from '../api/get-assignable-users';
-import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
 import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
+import { useCreateTask, type TaskCreateRequest } from '../api/create-task';
+import { useAssignableUsers } from '../api/get-assignable-users';
+import { useTaskDetail } from '../api/get-task-detail';
+import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../api/get-task-resources';
+import { useUpdateTask } from '../api/update-task';
 
 type ResourceType = 'DOCUMENT' | 'QUIZ';
 
@@ -432,7 +433,7 @@ export const TaskForm: React.FC = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入任务标题..."
-            className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+            className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4  hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
           />
         </div>
 
@@ -460,7 +461,7 @@ export const TaskForm: React.FC = () => {
       </div>
 
       {/* Body - Three columns with fixed baseline height (Header:54 + Search:77 + Filter:52 + List:580 + Pagination:65 = 828px) */}
-      <div className="flex bg-white h-[828px] border-b border-gray-200 shadow-sm overflow-hidden shrink-0">
+      <div className="flex bg-white h-[828px] border-b border-gray-200  overflow-hidden shrink-0">
         {/* Left Sidebar - Resource Library */}
         <div className="w-80 flex flex-col bg-white border-r border-gray-100 shrink-0 h-full">
           <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-gray-900 border-b border-gray-100">
@@ -489,7 +490,7 @@ export const TaskForm: React.FC = () => {
                 key={type}
                 variant={resourceType === type ? 'default' : 'secondary'}
                 size="sm"
-                className={`flex-1 h-9 rounded-lg transition-all text-xs font-semibold ${resourceType === type ? 'shadow-md' : 'bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500'}`}
+                className={`flex-1 h-9 rounded-lg transition-all text-xs font-semibold ${resourceType === type ?  : 'bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500'}`}
                 onClick={() => {
                   setResourceType(type);
                   setCurrentPage(1);
@@ -538,23 +539,26 @@ export const TaskForm: React.FC = () => {
                       className={`group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-white border border-gray-100 transition-all ${
                         resourcesDisabled
                           ? 'opacity-50 cursor-not-allowed'
-                          : 'cursor-pointer hover:border-primary-300 hover:shadow-md hover:-translate-y-0.5 animate-fadeIn'
+                          : 'cursor-pointer hover:border-primary-300 hover:-translate-y-0.5 animate-fadeIn'
                       }`}
                       onClick={() => addResource(res)}
                     >
                       <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105"
-                        style={{
-                          background: res.resourceType === 'DOCUMENT' ? '#ECFDF5' : res.quizType === 'EXAM' ? '#FEF2F2' : '#EFF6FF',
-                          color: res.resourceType === 'DOCUMENT' ? '#10B981' : res.quizType === 'EXAM' ? '#EF4444' : '#3B82F6',
-                        }}
+                        className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
+                          res.resourceType === 'DOCUMENT'
+                            ? 'bg-secondary-50 text-secondary'
+                            : res.quizType === 'EXAM'
+                              ? 'bg-destructive-50 text-destructive'
+                              : 'bg-primary-50 text-primary'
+                        )}
                       >
                         {res.resourceType === 'DOCUMENT' ? <BookOpen className="w-5 h-5" /> : <ClipboardList className="w-5 h-5" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-gray-800 truncate mb-1">{res.title}</div>
                         <div className="text-[11px] text-gray-400 flex items-center gap-2 font-semibold">
-                          <span className={res.resourceType === 'DOCUMENT' ? 'text-green-600' : res.quizType === 'EXAM' ? 'text-red-500' : 'text-primary-500'}>
+                          <span className={res.resourceType === 'DOCUMENT' ? 'text-secondary-600' : res.quizType === 'EXAM' ? 'text-destructive-500' : 'text-primary-500'}>
                             {res.resourceType === 'DOCUMENT' ? '文档' : res.quizType === 'EXAM' ? '考试' : '练习'}
                           </span>
                           <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
@@ -608,7 +612,7 @@ export const TaskForm: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6">
             {selectedResources.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full max-w-sm mx-auto text-center">
-                <div className="w-24 h-24 rounded-[2rem] bg-white shadow-2xl shadow-gray-200/50 flex items-center justify-center mb-8 animate-fadeInUp">
+                <div className="w-24 h-24 rounded-[2rem] bg-white   flex items-center justify-center mb-8 animate-fadeInUp">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary-100 blur-xl opacity-50 scale-150" />
                     <Send className="w-10 h-10 text-primary-500 relative -rotate-45" />
@@ -761,7 +765,7 @@ export const TaskForm: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 hover:bg-red-50"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive-400 hover:text-destructive-500 hover:bg-destructive-50"
                           onClick={() => toggleUser(u.id)}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -806,7 +810,7 @@ export const TaskForm: React.FC = () => {
             <Button
               variant="link"
               size="sm"
-              className="text-red-500 hover:text-red-600"
+              className="text-destructive-500 hover:text-destructive-600"
               onClick={() => setSelectedUserIds(canRemoveAssignee ? [] : originalAssigneeIds)}
             >
               清空
@@ -897,15 +901,14 @@ const SortableItem: React.FC<SortableItemProps> = ({
     >
       <div className="absolute -left-12 top-0 flex flex-col items-center">
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md transition-transform hover:scale-110"
-          style={{
-            background:
-              item.resourceType === 'DOCUMENT'
-                ? '#10B981'
-                : item.quizType === 'EXAM'
-                  ? '#EF4444'
-                  : '#3B82F6',
-          }}
+          className={cn(
+            "w-9 h-9 rounded-full flex items-center justify-center text-white transition-transform hover:scale-110",
+            item.resourceType === 'DOCUMENT'
+              ? 'bg-secondary'
+              : item.quizType === 'EXAM'
+                ? 'bg-destructive'
+                : 'bg-primary'
+          )}
         >
           {item.resourceType === 'DOCUMENT' ? (
             <BookOpen className="w-4 h-4" />
@@ -915,23 +918,23 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </div>
       </div>
       <div
-        className={`flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all hover:shadow-md ${
+        className={`flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all ${
           item.is_current === false
-            ? 'border-amber-300 bg-amber-50/30'
+            ? 'border-warning-300 bg-warning-50/30'
             : item.quizType === 'EXAM'
-              ? 'border-red-100 hover:border-red-200 shadow-sm shadow-red-50'
+              ? 'border-destructive-100 hover:border-destructive-200'
               : 'border-gray-200 hover:border-primary-300'
         }`}
       >
         {item.is_current === false && (
-          <div className="flex items-center gap-2 text-xs text-amber-600">
+          <div className="flex items-center gap-2 text-xs text-warning-600">
             <AlertCircle className="w-3.5 h-3.5" />
             <span>资源有新版本</span>
             {upgradeResource && !disabled && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                className="h-5 px-2 text-xs text-warning-700 hover:text-warning-800 hover:bg-warning-100"
                 onClick={() => upgradeResource(idx)}
               >
                 升级
@@ -951,10 +954,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
             <Badge
               variant={item.resourceType === 'DOCUMENT' ? 'default' : 'secondary'}
               className={`mb-2 font-bold ${item.resourceType === 'DOCUMENT'
-                ? 'bg-green-100 text-green-700 hover:bg-green-100'
+                ? 'bg-secondary-100 text-secondary-700 hover:bg-secondary-100'
                 : item.quizType === 'EXAM'
-                  ? 'bg-red-500 text-white hover:bg-red-500'
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                  ? 'bg-destructive-500 text-white hover:bg-destructive-500'
+                  : 'bg-primary-100 text-primary-700 hover:bg-primary-100'
                 }`}
             >
               步骤 {idx + 1} {item.quizType === 'EXAM' && '• 考试'}
@@ -983,7 +986,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+              className="h-8 w-8 text-destructive-500 hover:text-destructive-600 hover:bg-destructive-50"
               disabled={disabled}
               onClick={() => removeResource(idx)}
             >

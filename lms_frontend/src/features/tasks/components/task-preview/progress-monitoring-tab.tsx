@@ -42,12 +42,12 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
     if (!analytics?.node_progress) return [];
 
     const categories = [
-      { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, color: '#10B981' },
-      { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, color: '#3B82F6' },
-      { key: 'EXAM', label: '结业考核', icon: GraduationCap, color: '#8B5CF6' },
+      { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, textClass: 'text-secondary', bgClass: 'bg-secondary-50', barClass: 'bg-secondary' },
+      { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, textClass: 'text-primary', bgClass: 'bg-primary-50', barClass: 'bg-primary' },
+      { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
     ];
 
-    return categories.map(({ key, label, icon, color }) => {
+    return categories.map(({ key, label, icon, textClass, bgClass, barClass }) => {
       const nodes = analytics.node_progress.filter((n) => n.category === key);
 
       if (nodes.length === 0) return null;
@@ -57,12 +57,14 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       const avgCompleted = Math.round(nodes.reduce((sum, n) => sum + n.completed_count, 0) / nodeCount);
       const percentage = Math.round((avgCompleted / totalCount) * 100);
 
-      return { key, label, icon, color, nodeCount, completedCount: avgCompleted, totalCount, percentage };
+      return { key, label, icon, textClass, bgClass, barClass, nodeCount, completedCount: avgCompleted, totalCount, percentage };
     }).filter(Boolean) as {
       key: string;
       label: string;
       icon: React.ElementType;
-      color: string;
+      textClass: string;
+      bgClass: string;
+      barClass: string;
       nodeCount: number;
       completedCount: number;
       totalCount: number;
@@ -86,17 +88,20 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '状态判定',
       id: 'status',
       cell: ({ row }) => {
-        const statusMap: Record<string, { text: string; color: string; bg: string }> = {
-          COMPLETED: { text: '已完成', color: '#059669', bg: '#D1FAE5' },
-          IN_PROGRESS: { text: '进行中', color: '#2563EB', bg: '#DBEAFE' },
-          OVERDUE: { text: '已逾期', color: '#DC2626', bg: '#FEE2E2' },
-          COMPLETED_ABNORMAL: { text: '完成但异常', color: '#D97706', bg: '#FEF3C7' },
+        const statusMap: Record<string, { text: string; textClass: string; bgClass: string }> = {
+          COMPLETED: { text: '已完成', textClass: 'text-secondary', bgClass: 'bg-secondary-100' },
+          IN_PROGRESS: { text: '进行中', textClass: 'text-primary-600', bgClass: 'bg-primary-100' },
+          OVERDUE: { text: '已逾期', textClass: 'text-destructive', bgClass: 'bg-destructive-100' },
+          COMPLETED_ABNORMAL: { text: '完成但异常', textClass: 'text-warning', bgClass: 'bg-warning-100' },
         };
         const status = statusMap[row.original.status] || statusMap.IN_PROGRESS;
         return (
           <span
-            className="inline-flex px-2.5 py-1 rounded-md text-xs font-semibold"
-            style={{ color: status.color, backgroundColor: status.bg }}
+            className={cn(
+              'inline-flex px-2.5 py-1 rounded-md text-xs font-semibold',
+              status.textClass,
+              status.bgClass
+            )}
           >
             {status.text}
           </span>
@@ -137,7 +142,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '答题情况',
       id: 'answer_details',
       cell: ({ row }) => (
-        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-150 cursor-pointer">
+        <button className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors duration-150 cursor-pointer">
           {row.original.answer_details}
         </button>
       ),
@@ -167,28 +172,32 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
           value={`${analytics.completion.completed_count}/${analytics.completion.total_count}`}
           subtitle={`${analytics.completion.percentage}%`}
           icon={Users}
-          color="#3B82F6"
+          iconClassName="text-primary"
+          iconBgClassName="bg-primary-50"
         />
         <KPICard
           title="平均用时"
           value={`${analytics.average_time}`}
           subtitle="分钟"
           icon={Clock}
-          color="#10B981"
+          iconClassName="text-secondary"
+          iconBgClassName="bg-secondary-50"
         />
         <KPICard
           title={analytics.accuracy.has_quiz ? '准确率' : '考试情况'}
           value={analytics.accuracy.has_quiz ? `${analytics.accuracy.percentage}%` : '无考试'}
           subtitle={analytics.accuracy.has_quiz ? '平均正确率' : ''}
           icon={Target}
-          color="#8B5CF6"
+          iconClassName="text-primary-500"
+          iconBgClassName="bg-primary-50"
         />
         <KPICard
           title="异常人数"
           value={analytics.abnormal_count.toString()}
           subtitle="需关注"
           icon={AlertTriangle}
-          color={analytics.abnormal_count > 0 ? '#DC2626' : '#6B7280'}
+          iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-gray-500'}
+          iconBgClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-gray-100'}
         />
       </div>
 
@@ -215,16 +224,16 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
               {analytics.pass_rate !== null && (
                 <div className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border",
-                  analytics.pass_rate >= 80 ? "bg-emerald-50 border-emerald-200 text-emerald-700" :
-                  analytics.pass_rate >= 60 ? "bg-amber-50 border-amber-200 text-amber-700" :
-                  "bg-red-50 border-red-200 text-red-700"
+                  analytics.pass_rate >= 80 ? "bg-secondary-50 border-secondary-200 text-secondary-700" :
+                  analytics.pass_rate >= 60 ? "bg-warning-50 border-warning-200 text-warning-700" :
+                  "bg-destructive-50 border-destructive-200 text-destructive-700"
                 )}>
                   <span className="text-xs font-medium">通过率</span>
                   <span className={cn(
                     "text-sm font-bold tabular-nums",
-                    analytics.pass_rate >= 80 ? "text-emerald-900" :
-                    analytics.pass_rate >= 60 ? "text-amber-900" :
-                    "text-red-900"
+                    analytics.pass_rate >= 80 ? "text-secondary-900" :
+                    analytics.pass_rate >= 60 ? "text-warning-900" :
+                    "text-destructive-900"
                   )}>{analytics.pass_rate}%</span>
                 </div>
               )}
@@ -236,7 +245,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'time'
-                      ? 'bg-white text-slate-900 shadow-sm'
+                      ? 'bg-white text-slate-900'
                       : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
@@ -247,7 +256,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'score'
-                      ? 'bg-white text-slate-900 shadow-sm'
+                      ? 'bg-white text-slate-900'
                       : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
@@ -282,17 +291,15 @@ interface KPICardProps {
   value: string;
   subtitle: string;
   icon: React.ElementType;
-  color: string;
+  iconClassName: string;
+  iconBgClassName: string;
 }
 
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, color }) => (
-  <Card className="p-5 cursor-pointer hover:shadow-md transition-shadow duration-200 ease-out border border-gray-100">
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, iconClassName, iconBgClassName }) => (
+  <Card className="p-5 cursor-pointer transition-colors duration-200 ease-out border border-gray-100">
     <div className="flex items-center gap-4">
-      <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-200"
-        style={{ backgroundColor: `${color}12` }}
-      >
-        <Icon className="h-6 w-6" style={{ color }} />
+      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-200", iconBgClassName)}>
+        <Icon className={cn("h-6 w-6", iconClassName)} />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">{title}</p>
@@ -311,7 +318,9 @@ interface CategoryProgressBarProps {
     key: string;
     label: string;
     icon: React.ElementType;
-    color: string;
+    textClass: string;
+    bgClass: string;
+    barClass: string;
     nodeCount: number;
     completedCount: number;
     totalCount: number;
@@ -327,10 +336,9 @@ const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) =
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded-md flex items-center justify-center transition-colors duration-200"
-            style={{ backgroundColor: `${category.color}12` }}
+            className={cn("w-6 h-6 rounded-md flex items-center justify-center transition-colors duration-200", category.bgClass)}
           >
-            <Icon className="h-3.5 w-3.5" style={{ color: category.color }} />
+            <Icon className={cn("h-3.5 w-3.5", category.textClass)} />
           </div>
           <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-200">
             {category.label}
@@ -345,8 +353,8 @@ const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) =
       </div>
       <div className="h-7 bg-slate-100 rounded-md overflow-hidden">
         <div
-          className="h-full rounded-md transition-all duration-500 ease-out"
-          style={{ width: `${category.percentage}%`, backgroundColor: category.color }}
+          className={cn("h-full rounded-md transition-all duration-500 ease-out", category.barClass)}
+          style={{ width: `${category.percentage}%` }}
         />
       </div>
     </div>
@@ -361,7 +369,7 @@ interface DistributionChartProps {
 
 const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => {
   const maxCount = Math.max(...data.map((d) => d.count), 1);
-  const color = type === 'time' ? '#3B82F6' : '#10B981';
+  const barClassName = type === 'time' ? 'bg-primary' : 'bg-secondary';
 
   return (
     <div className="space-y-3">
@@ -372,10 +380,12 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
           </span>
           <div className="flex-1 h-7 bg-slate-100 rounded-md overflow-hidden">
             <div
-              className="h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-80"
+              className={cn(
+                "h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-80",
+                barClassName
+              )}
               style={{
                 width: `${(item.count / maxCount) * 100}%`,
-                backgroundColor: color,
                 minWidth: item.count > 0 ? '28px' : '0',
               }}
             >

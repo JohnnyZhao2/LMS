@@ -1,5 +1,3 @@
-"use client"
-
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, Layout } from 'lucide-react';
@@ -58,8 +56,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           icon={<Layout className="w-5 h-5" />}
           title={row.original.title}
           subtitle={row.original.updated_by_name || row.original.created_by_name}
-          iconBg="#EFF6FF"
-          iconColor="#2563EB"
+          iconBgClass="bg-primary-50"
+          iconColorClass="text-primary-600"
         />
       )
     },
@@ -75,8 +73,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               tags={[{
                 key: row.original.quiz_type,
                 label: row.original.quiz_type_display || (isExam ? '考试' : '练习'),
-                bg: isExam ? '#FEE2E2' : '#EFF6FF',
-                color: isExam ? '#DC2626' : '#2563EB',
+                bgClass: isExam ? 'bg-destructive-100' : 'bg-primary-50',
+                textClass: isExam ? 'text-destructive' : 'text-primary-600',
               }]}
             />
             {isExam && row.original.duration && (
@@ -105,9 +103,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                   {row.original.question_count}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50/50 border border-blue-100/50">
-                <span className="text-[10px] text-blue-500 font-medium">总分</span>
-                <span className="text-sm font-bold text-blue-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-50/50 border border-primary-100/50">
+                <span className="text-[10px] text-primary-500 font-medium">总分</span>
+                <span className="text-sm font-bold text-primary-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
                   {row.original.total_score}
                 </span>
               </div>
@@ -122,9 +120,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                     let label = '单';
                     let colorClass = "text-gray-500 bg-gray-100";
 
-                    if (type === 'MULTIPLE_CHOICE') { label = '多'; colorClass = "text-emerald-600 bg-emerald-50"; }
-                    if (type === 'TRUE_FALSE') { label = '判'; colorClass = "text-amber-600 bg-amber-50"; }
-                    if (type === 'SHORT_ANSWER') { label = '简'; colorClass = "text-purple-600 bg-purple-50"; }
+                    if (type === 'MULTIPLE_CHOICE') { label = '多'; colorClass = "text-secondary-600 bg-secondary-50"; }
+                    if (type === 'TRUE_FALSE') { label = '判'; colorClass = "text-warning-600 bg-warning-50"; }
+                    if (type === 'SHORT_ANSWER') { label = '简'; colorClass = "text-primary-600 bg-primary-50"; }
 
                     return (
                       <Tooltip
@@ -176,7 +174,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
                 onClick={() => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${record.id}/edit`)}
               >
                 <Pencil className="w-4 h-4" />
@@ -187,7 +185,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                className="h-8 w-8 text-destructive-500 hover:text-destructive-700 hover:bg-destructive-50"
                 onClick={() => setDeleteId(record.id)}
               >
                 <Trash2 className="w-4 h-4" />
@@ -216,7 +214,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             setPage(1);
           },
         }}
-        rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
+        rowClassName="hover:bg-gray-100 transition-colors cursor-pointer group"
         onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${row.id}/edit`)}
       />
 
@@ -227,8 +225,8 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         title="彻底移除此试卷？"
         description="此操作将永久删除该试卷及其所有数据映射，相关的历史成绩可能也会受到影响。该操作不可撤销。"
         icon={<Trash2 className="h-10 w-10" />}
-        iconBgColor="bg-[#FEE2E2]"
-        iconColor="text-[#DC2626]"
+        iconBgColor="bg-destructive-100"
+        iconColor="text-destructive"
         confirmText="确认删除"
         cancelText="取消"
         confirmVariant="destructive"

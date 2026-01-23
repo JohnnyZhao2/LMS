@@ -23,9 +23,9 @@ export interface ConfirmDialogProps {
   description: string | React.ReactNode;
   /** 自定义图标 */
   icon?: React.ReactNode;
-  /** 图标背景颜色类名（如 "bg-[#FEE2E2]"） */
+  /** 图标背景颜色类名（如 "bg-destructive-100"） */
   iconBgColor?: string;
-  /** 图标颜色类名（如 "text-[#DC2626]"） */
+  /** 图标颜色类名（如 "text-destructive"） */
   iconColor?: string;
   /** 确认按钮文本 */
   confirmText?: string;
@@ -51,8 +51,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   title,
   description,
   icon,
-  iconBgColor = 'bg-[#DBEAFE]',
-  iconColor = 'text-[#3B82F6]',
+  iconBgColor = 'bg-primary-100',
+  iconColor = 'text-primary',
   confirmText = '确认',
   cancelText = '取消',
   confirmVariant = 'default',
@@ -64,7 +64,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     await onConfirm();
   };
 
-  const defaultContentClassName = 'rounded-lg max-w-md p-10 border-0 bg-white shadow-none';
+  const defaultContentClassName = 'rounded-lg max-w-md p-10 border-0 bg-white';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,10 +75,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               {icon}
             </div>
           )}
-          <DialogTitle className="text-2xl font-bold text-[#111827] mb-2 text-center">
+          <DialogTitle className="text-2xl font-bold text-gray-900 mb-2 text-center">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-[#6B7280] font-medium text-center leading-relaxed">
+          <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -86,7 +86,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-md h-14 font-semibold text-[#6B7280] hover:bg-[#F3F4F6] shadow-none"
+            className="flex-1 rounded-md h-14 font-semibold text-gray-500 hover:bg-gray-100 "
           >
             {cancelText}
           </Button>
@@ -94,10 +94,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={handleConfirm}
             disabled={isConfirming}
             variant={confirmVariant === 'destructive' ? 'destructive' : 'default'}
-            className={`flex-1 text-white rounded-md h-14 font-semibold shadow-none hover:scale-105 transition-all duration-200 ${
+            className={`flex-1 text-white rounded-md h-14 font-semibold  hover:scale-105 transition-all duration-200 ${
               confirmVariant === 'destructive'
-                ? 'bg-[#DC2626] hover:bg-[#B91C1C]'
-                : 'bg-[#111827] hover:bg-[#374151]'
+                ? 'bg-destructive hover:bg-destructive'
+                : 'bg-gray-900 hover:bg-gray-700'
             }`}
           >
             {isConfirming ? '处理中...' : confirmText}

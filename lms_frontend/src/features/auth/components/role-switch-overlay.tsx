@@ -28,7 +28,7 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                         className="flex flex-col items-center gap-6"
                     >
                         <div className="relative">
-                            <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
                                 <Sparkles className="text-white w-8 h-8 animate-pulse" />
                             </div>
                             <motion.div
@@ -41,7 +41,7 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                                     repeat: Infinity,
                                     ease: "easeInOut"
                                 }}
-                                className="absolute inset-0 bg-blue-400 rounded-2xl -z-10 blur-xl"
+                                className="absolute inset-0 bg-primary-400 rounded-2xl -z-10 blur-xl"
                             />
                         </div>
 
@@ -64,7 +64,7 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                                     repeat: Infinity,
                                     ease: "linear"
                                 }}
-                                className="w-full h-full bg-blue-600"
+                                className="w-full h-full bg-primary"
                             />
                         </div>
                     </motion.div>

@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { LogOut, User, ChevronDown, Bell } from "lucide-react"
@@ -47,12 +45,12 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   TEAM_MANAGER: "团队经理",
 }
 
-const ROLE_COLORS: Record<RoleCode, string> = {
-  STUDENT: "var(--color-primary-500)",
-  MENTOR: "var(--color-success-500)",
-  DEPT_MANAGER: "var(--color-purple-500)",
-  TEAM_MANAGER: "var(--color-orange-500)",
-  ADMIN: "var(--color-error-500)",
+const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
+  STUDENT: "bg-primary",
+  MENTOR: "bg-secondary",
+  DEPT_MANAGER: "bg-primary-500",
+  TEAM_MANAGER: "bg-warning-500",
+  ADMIN: "bg-destructive",
 }
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
@@ -165,9 +163,7 @@ export const Header: React.FC = () => {
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => navigate(getDashboardPath())}
         >
-          <div
-            className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-          >
+          <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
             <Sparkles className="text-white w-5 h-5" />
           </div>
 
@@ -175,7 +171,7 @@ export const Header: React.FC = () => {
             <span className="text-lg font-bold tracking-tight leading-none text-gray-900">
               SyncLearn
             </span>
-            <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase mt-0.5">
+            <span className="text-[10px] font-bold text-primary tracking-wider uppercase mt-0.5">
               Platform
             </span>
           </div>
@@ -200,7 +196,7 @@ export const Header: React.FC = () => {
                     className={cn(
                       "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
                       isActive
-                        ? "text-blue-600"
+                        ? "text-primary-600"
                         : "text-gray-600 hover:text-gray-900"
                     )}
                   >
@@ -208,14 +204,14 @@ export const Header: React.FC = () => {
                     {isActive && (
                       <motion.div
                         layoutId="active-nav-bg"
-                        className="absolute inset-0 bg-blue-50 rounded-md -z-10"
+                        className="absolute inset-0 bg-primary-50 rounded-md -z-10"
                         transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                       />
                     )}
 
                     <span className={cn(
                       "transition-transform duration-200 group-hover:scale-110 shrink-0",
-                      isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"
+                      isActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"
                     )}>
                       {icon}
                     </span>
@@ -245,7 +241,7 @@ export const Header: React.FC = () => {
       {/* 右侧：通知 + 角色切换器 + 用户信息 */}
       <div className="flex items-center gap-6">
         {/* 通知图标 */}
-        <button className="p-2.5 bg-gray-100 rounded-md text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200">
+        <button className="p-2.5 bg-gray-100 rounded-md text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200">
           <Bell className="w-5 h-5" />
         </button>
 
@@ -267,7 +263,7 @@ export const Header: React.FC = () => {
                   className={cn(
                     "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
                     isActive
-                      ? "bg-white text-gray-900 shadow-sm"
+                      ? "bg-white text-gray-900"
                       : "text-gray-500 hover:text-gray-700"
                   )}
                 >
@@ -288,17 +284,19 @@ export const Header: React.FC = () => {
                 <div className="relative">
                   <Avatar className="h-9 w-9 border-2 border-gray-200 transition-transform duration-200 group-hover:scale-105">
                     <AvatarFallback
-                      className="text-white font-bold text-sm"
-                      style={{
-                        background: ROLE_COLORS[currentRole!] || '#3B82F6',
-                      }}
+                      className={cn(
+                        "text-white font-bold text-sm",
+                        ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
+                      )}
                     >
                       {user.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div
-                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
-                    style={{ background: ROLE_COLORS[currentRole!] || '#3B82F6' }}
+                    className={cn(
+                      "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",
+                      ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
+                    )}
                   />
                 </div>
 
@@ -317,17 +315,14 @@ export const Header: React.FC = () => {
               <div className="px-3 py-3 border-b-2 border-gray-200 mb-1">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">当前角色</p>
                 <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: ROLE_COLORS[currentRole!] }}
-                  />
+                  <div className={cn("w-2 h-2 rounded-full", ROLE_COLOR_CLASSES[currentRole!] || "bg-primary")} />
                   <span className="text-sm font-bold text-gray-900">{ROLE_FULL_LABELS[currentRole!]}</span>
                 </div>
               </div>
 
               <DropdownMenuItem
                 onClick={() => navigate(`/${currentRole!.toLowerCase()}/personal`)}
-                className="rounded-md py-2.5 focus:bg-blue-50 focus:text-blue-600 cursor-pointer"
+                className="rounded-md py-2.5 focus:bg-primary-50 focus:text-primary-600 cursor-pointer"
               >
                 <User className="mr-3 h-4 w-4" />
                 个人设置
@@ -337,7 +332,7 @@ export const Header: React.FC = () => {
 
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="rounded-md py-2.5 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                className="rounded-md py-2.5 text-destructive-600 focus:text-destructive-700 focus:bg-destructive-50 cursor-pointer"
               >
                 <LogOut className="mr-3 h-4 w-4" />
                 退出登录

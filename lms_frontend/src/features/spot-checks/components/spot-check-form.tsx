@@ -90,7 +90,7 @@ export const SpotCheckForm: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-            {errors.student && <p className="text-sm text-red-500">{errors.student}</p>}
+            {errors.student && <p className="text-sm text-destructive-500">{errors.student}</p>}
           </div>
 
           <div className="space-y-2">
@@ -102,7 +102,7 @@ export const SpotCheckForm: React.FC = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />
-            {errors.content && <p className="text-sm text-red-500">{errors.content}</p>}
+            {errors.content && <p className="text-sm text-destructive-500">{errors.content}</p>}
           </div>
 
           <div className="space-y-2">
@@ -114,7 +114,7 @@ export const SpotCheckForm: React.FC = () => {
               value={score}
               onChange={(e) => setScore(Number(e.target.value))}
             />
-            {errors.score && <p className="text-sm text-red-500">{errors.score}</p>}
+            {errors.score && <p className="text-sm text-destructive-500">{errors.score}</p>}
           </div>
 
           <div className="space-y-2">
@@ -135,7 +135,7 @@ export const SpotCheckForm: React.FC = () => {
               onDateChange={setCheckedAt}
               placeholder="选择抽查时间"
             />
-            {errors.checkedAt && <p className="text-sm text-red-500">{errors.checkedAt}</p>}
+            {errors.checkedAt && <p className="text-sm text-destructive-500">{errors.checkedAt}</p>}
           </div>
 
           <div className="flex gap-3 pt-4">

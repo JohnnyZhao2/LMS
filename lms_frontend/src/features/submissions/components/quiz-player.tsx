@@ -35,7 +35,7 @@ import type { SubmissionDetail } from '@/types/api';
  * 答题界面组件 - Flat Design 版本
  * 
  * 设计规范：
- * - 无阴影 (shadow-none)
+ * - 无阴影 
  * - 无渐变 (no gradient)
  * - 实心背景色区分考试/练习模式
  */
@@ -169,7 +169,7 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
-    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-[#F3F4F6]">
+    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-gray-100">
       {/* 顶部信息栏 - Flat Design */}
       <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-white">
         <div className="flex items-center gap-4">
@@ -177,7 +177,7 @@ export const QuizPlayer: React.FC = () => {
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="h-10 w-10 shrink-0 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+            className="h-10 w-10 shrink-0 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
           >
             <ChevronLeft className="w-6 h-6" />
           </Button>
@@ -185,16 +185,16 @@ export const QuizPlayer: React.FC = () => {
             <div
               className={cn(
                 'w-11 h-11 rounded-md flex items-center justify-center text-white text-xl',
-                isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
+                isExam ? 'bg-destructive' : 'bg-primary'
               )}
             >
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-lg font-semibold m-0 text-[#111827]">
+              <h4 className="text-lg font-semibold m-0 text-gray-900">
                 {submission.quiz_title}
               </h4>
-              <span className="text-sm text-[#6B7280]">
+              <span className="text-sm text-gray-500">
                 总分：{submission.total_score}分 · {submission.answers.length} 道题
               </span>
             </div>
@@ -220,24 +220,24 @@ export const QuizPlayer: React.FC = () => {
               <CardContent className="p-5">
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm text-[#6B7280]">
+                    <span className="text-sm text-gray-500">
                       答题进度
                     </span>
                     <span className={cn(
                       'font-semibold',
-                      isExam ? 'text-white' : 'text-[#3B82F6]'
+                      isExam ? 'text-white' : 'text-primary'
                     )}>
                       {answeredCount}/{submission.answers.length}
                     </span>
                   </div>
                   <Progress
                     percent={progressPercent}
-                    strokeColor={isExam ? '#EF4444' : '#3B82F6'}
-                    trailColor="#E5E7EB"
+                    strokeColor={isExam ? 'var(--color-error-500)' : 'var(--color-primary-500)'}
+                    trailColor="var(--color-gray-200)"
                   />
                 </div>
 
-                <span className="text-xs block mb-3 text-[#6B7280]">
+                <span className="text-xs block mb-3 text-gray-500">
                   题目导航
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -254,15 +254,15 @@ export const QuizPlayer: React.FC = () => {
                           isCurrent
                             ? cn(
                               'text-white',
-                              isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
+                              isExam ? 'bg-destructive' : 'bg-primary'
                             )
                             : isAnswered
                               ? cn(
                                 isExam
-                                  ? 'bg-[#065F46] text-[#34D399]'
-                                  : 'bg-[#D1FAE5] text-[#10B981]'
+                                  ? 'bg-secondary-800 text-secondary-400'
+                                  : 'bg-secondary-100 text-secondary'
                               )
-                              : 'bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         )}
                       >
                         {isAnswered && !isCurrent ? (
@@ -284,24 +284,24 @@ export const QuizPlayer: React.FC = () => {
           <Card className="rounded-lg bg-white">
             <CardContent className="p-6">
               {/* 题号指示 */}
-              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F3F4F6]">
+              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
                       'w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg border',
                       isExam
-                        ? 'bg-red-50 text-red-600 border-red-100'
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
+                        ? 'bg-destructive-50 text-destructive-600 border-destructive-100'
+                        : 'bg-primary-50 text-primary-600 border-primary-100'
                     )}
                   >
                     {currentIndex + 1}
                   </div>
-                  <span className="text-[#6B7280]">
+                  <span className="text-gray-500">
                     第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
                   </span>
                 </div>
                 {currentQuestion && (
-                  <span className="text-[#6B7280]">
+                  <span className="text-gray-500">
                     分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                   </span>
                 )}
@@ -319,7 +319,7 @@ export const QuizPlayer: React.FC = () => {
               )}
 
               {/* 底部操作栏 */}
-              <div className="flex justify-between mt-8 pt-5 border-t-2 border-[#F3F4F6]">
+              <div className="flex justify-between mt-8 pt-5 border-t-2 border-gray-100">
                 <Button
                   variant="outline"
                   size="lg"
@@ -338,8 +338,8 @@ export const QuizPlayer: React.FC = () => {
                       className={cn(
                         'h-12 px-6 rounded-md font-semibold hover:scale-105',
                         isExam
-                          ? 'bg-[#EF4444] hover:bg-[#DC2626]'
-                          : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                          ? 'bg-destructive hover:bg-destructive'
+                          : 'bg-primary hover:bg-primary-600'
                       )}
                     >
                       下一题
@@ -376,7 +376,7 @@ export const QuizPlayer: React.FC = () => {
             <DialogDescription asChild>
               <div>
                 {unansweredCount > 0 && (
-                  <div className="mb-3 text-[#F59E0B]">
+                  <div className="mb-3 text-warning">
                     ⚠️ 还有 {unansweredCount} 道题未作答
                   </div>
                 )}

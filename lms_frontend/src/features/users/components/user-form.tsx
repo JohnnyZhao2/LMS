@@ -173,20 +173,20 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-[#E5E7EB] h-[85vh] flex flex-col bg-white">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-gray-200 h-[85vh] flex flex-col bg-white">
 
         {/* Header */}
-        <DialogHeader className="px-8 py-6 shrink-0 border-b border-[#E5E7EB]">
-          <DialogTitle className="text-2xl font-bold text-[#111827] flex items-center gap-4 tracking-tight">
+        <DialogHeader className="px-8 py-6 shrink-0 border-b border-gray-200">
+          <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-4 tracking-tight">
             <div className={cn(
               "w-14 h-14 rounded-lg flex items-center justify-center text-white",
-              isEdit ? "bg-[#DC2626]" : "bg-[#10B981]"
+              isEdit ? "bg-destructive" : "bg-secondary"
             )}>
               {isEdit ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
             </div>
             {isEdit ? '编辑成员档案' : '邀请新成员'}
             {isEdit && (
-              <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-[#D1FAE5] text-[#10B981]">
+              <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-secondary-100 text-secondary">
                 Active
               </span>
             )}
@@ -199,35 +199,35 @@ export const UserForm: React.FC<UserFormProps> = ({
           {/* 1. Basic Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-[#3B82F6]" />
-              <h3 className="text-sm font-semibold text-[#111827] uppercase tracking-wider">基础信息</h3>
+              <div className="w-1 h-5 rounded-full bg-primary" />
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">基础信息</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">真实姓名</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">真实姓名</label>
                 <Input
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
                   placeholder="请输入姓名"
                 />
-                {errors.username && <p className="text-xs font-medium text-[#DC2626]">{errors.username}</p>}
+                {errors.username && <p className="text-xs font-medium text-destructive">{errors.username}</p>}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">员工工号</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">员工工号</label>
                 <Input
                   value={formData.employee_id}
                   onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
                   className="font-mono"
                   placeholder="E.g. EMP001"
                 />
-                {errors.employee_id && <p className="text-xs font-medium text-[#DC2626]">{errors.employee_id}</p>}
+                {errors.employee_id && <p className="text-xs font-medium text-destructive">{errors.employee_id}</p>}
               </div>
 
               {!isEdit && (
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">初始密码</label>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">初始密码</label>
                   <Input
                     type="password"
                     value={formData.password}
@@ -235,24 +235,24 @@ export const UserForm: React.FC<UserFormProps> = ({
                     className="tracking-widest"
                     placeholder="••••••••"
                   />
-                  {errors.password && <p className="text-xs font-medium text-[#DC2626]">{errors.password}</p>}
+                  {errors.password && <p className="text-xs font-medium text-destructive">{errors.password}</p>}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="h-px w-full bg-[#E5E7EB]" />
+          <div className="h-px w-full bg-gray-200" />
 
           {/* 2. Organization */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-[#10B981]" />
-              <h3 className="text-sm font-semibold text-[#111827] uppercase tracking-wider">组织归属</h3>
+              <div className="w-1 h-5 rounded-full bg-secondary" />
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">组织归属</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">选择部门</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">选择部门</label>
                 <div className="grid grid-cols-2 gap-3">
                   {departments.map(dept => {
                     const active = formData.department_id === dept.id;
@@ -263,8 +263,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                         className={cn(
                           "cursor-pointer group flex items-center justify-center gap-2 px-4 h-14 rounded-md transition-all duration-200",
                           active
-                            ? "bg-[#10B981] text-white"
-                            : "bg-[#F3F4F6] border-0 text-[#111827] hover:bg-[#E5E7EB]"
+                            ? "bg-secondary text-white"
+                            : "bg-gray-100 border-0 text-gray-900 hover:bg-gray-200"
                         )}
                       >
                         <Building2 className="w-4 h-4" />
@@ -275,11 +275,11 @@ export const UserForm: React.FC<UserFormProps> = ({
                     )
                   })}
                 </div>
-                {errors.department_id && <p className="text-xs font-medium text-[#DC2626]">{errors.department_id}</p>}
+                {errors.department_id && <p className="text-xs font-medium text-destructive">{errors.department_id}</p>}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">分配导师 (可选)</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">分配导师 (可选)</label>
                 <Select
                   value={formData.mentor_id?.toString() || ''}
                   onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
@@ -292,11 +292,11 @@ export const UserForm: React.FC<UserFormProps> = ({
                       <SelectItem key={m.id} value={m.id.toString()}>
                         <div className="flex items-center gap-3">
                           <Avatar className="w-8 h-8 rounded-full">
-                            <AvatarFallback className="bg-[#3B82F6] text-white text-xs font-bold">
+                            <AvatarFallback className="bg-primary text-white text-xs font-bold">
                               {getAvatarText(m.username)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium text-[#111827]">{m.username}</span>
+                          <span className="font-medium text-gray-900">{m.username}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -306,24 +306,24 @@ export const UserForm: React.FC<UserFormProps> = ({
             </div>
           </div>
 
-          <div className="h-px w-full bg-[#E5E7EB]" />
+          <div className="h-px w-full bg-gray-200" />
 
           {/* 3. Roles */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-[#F59E0B]" />
-              <h3 className="text-base font-bold text-[#111827] tracking-tight">系统权限</h3>
+              <div className="w-1 h-5 rounded-full bg-warning" />
+              <h3 className="text-base font-bold text-gray-900 tracking-tight">系统权限</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Default Role */}
-              <div className="flex items-center gap-4 p-5 rounded-lg bg-[#F3F4F6] opacity-60">
-                <div className="w-12 h-12 rounded-lg bg-white text-[#9CA3AF] flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-5 rounded-lg bg-gray-100 opacity-60">
+                <div className="w-12 h-12 rounded-lg bg-white text-gray-400 flex items-center justify-center shrink-0">
                   <User className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-bold text-[#6B7280]">普通学员</span>
-                  <span className="text-xs text-[#9CA3AF] font-semibold uppercase mt-0.5 tracking-wider">Default</span>
+                  <span className="text-base font-bold text-gray-500">普通学员</span>
+                  <span className="text-xs text-gray-400 font-semibold uppercase mt-0.5 tracking-wider">Default</span>
                 </div>
               </div>
 
@@ -345,35 +345,33 @@ export const UserForm: React.FC<UserFormProps> = ({
                     className={cn(
                       "group cursor-pointer relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
                       active
-                        ? "bg-white border-2"
-                        : "bg-[#F3F4F6] border-2 border-transparent hover:bg-white hover:scale-[1.02]"
+                        ? cn("bg-white border-2", colorConfig.borderClass)
+                        : "bg-gray-100 border-2 border-transparent hover:bg-white hover:scale-[1.02]"
                     )}
-                    style={active ? { borderColor: colorConfig.iconBg || colorConfig.color } : {}}
                   >
                     <div className={cn(
                       "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
                       active
-                        ? "text-white"
-                        : "bg-white text-[#6B7280] group-hover:text-[#111827]"
+                        ? cn("text-white", colorConfig.iconBgClass)
+                        : "bg-white text-gray-500 group-hover:text-gray-900"
                     )}
-                      style={active ? { backgroundColor: colorConfig.iconBg || colorConfig.color } : {}}
                     >
                       {roleIcons[role.code] || <User className="w-6 h-6" />}
                     </div>
 
                     <div className="flex-1">
                       <div className={cn(
-                        "text-base font-bold transition-colors"
+                        "text-base font-bold transition-colors",
+                        active ? colorConfig.textClass : undefined
                       )}
-                        style={active ? { color: colorConfig.color } : {}}
                       >
                         {role.name}
                       </div>
-                      {active && <div className="text-[10px] font-semibold uppercase text-[#6B7280] tracking-wider">Enabled</div>}
+                      {active && <div className="text-[10px] font-semibold uppercase text-gray-500 tracking-wider">Enabled</div>}
                     </div>
 
                     {active && (
-                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full" style={{ backgroundColor: "#10B981" }} />
+                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full bg-secondary" />
                     )}
                   </div>
                 )
@@ -383,18 +381,18 @@ export const UserForm: React.FC<UserFormProps> = ({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="px-8 py-6 border-t border-[#E5E7EB] bg-white shrink-0 sm:justify-end gap-4">
+        <DialogFooter className="px-8 py-6 border-t border-gray-200 bg-white shrink-0 sm:justify-end gap-4">
           <Button
             variant="ghost"
             onClick={onClose}
-            className="h-14 px-8 rounded-md font-semibold text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] transition-all duration-200"
+            className="h-14 px-8 rounded-md font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200"
           >
             取消
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="w-full sm:w-auto h-14 px-10 rounded-md bg-[#3B82F6] text-white font-semibold text-base hover:bg-[#2563EB] hover:scale-105 transition-all duration-200"
+            className="w-full sm:w-auto h-14 px-10 rounded-md bg-primary text-white font-semibold text-base hover:bg-primary-600 hover:scale-105 transition-all duration-200"
           >
             {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即邀请"}
           </Button>

@@ -178,7 +178,7 @@ export const UserList: React.FC = () => {
       size: 140,
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-[#9CA3AF] italic text-xs">未分配</span>
+        if (!mentor) return <span className="text-gray-400 italic text-xs">未分配</span>
         return <CellSmallAvatar name={mentor.username} />
       },
     },
@@ -198,12 +198,12 @@ export const UserList: React.FC = () => {
         <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-gray-400">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-[#E5E7EB]">
-              <DropdownMenuLabel className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider px-3 py-2">
+            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200">
+              <DropdownMenuLabel className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2">
                 账号控制台
               </DropdownMenuLabel>
 
@@ -229,8 +229,8 @@ export const UserList: React.FC = () => {
                 className={cn(
                   "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
                   row.original.is_active
-                    ? "text-[#DC2626] focus:bg-[#FEE2E2]"
-                    : "text-[#10B981] focus:bg-[#D1FAE5]"
+                    ? "text-destructive focus:bg-destructive-100"
+                    : "text-secondary focus:bg-secondary-100"
                 )}
                 onClick={() => handleToggleActive(row.original)}
               >
@@ -257,7 +257,7 @@ export const UserList: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
+              className="h-14 py-3 px-6 rounded-md border-4 border-gray-200 font-semibold text-gray-500 hover:bg-gray-100 flex items-center gap-2 "
               onClick={() => refetch()}
             >
               <RefreshCw className="h-4 w-4" />
@@ -268,7 +268,7 @@ export const UserList: React.FC = () => {
                 setEditingUserId(undefined)
                 setFormModalOpen(true)
               }}
-              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
+              className="h-14 px-8 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 "
             >
               <Plus className="mr-2 h-5 w-5" />
               快速录入
@@ -294,12 +294,12 @@ export const UserList: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
             <div className="relative flex-1 max-w-lg group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="检索姓名、工号、部位..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 bg-white border-2 border-[#F3F4F6] rounded-md focus:border-[#3B82F6] text-base font-medium shadow-none transition-all"
+                className="pl-14 h-14 bg-white border-2 border-gray-100 rounded-md focus:border-primary text-base font-medium  transition-all"
               />
             </div>
           </div>
@@ -317,7 +317,7 @@ export const UserList: React.FC = () => {
                 onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
                 onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
               }}
-              rowClassName="group cursor-pointer hover:bg-[#F9FAFB] transition-colors"
+              rowClassName="group cursor-pointer hover:bg-gray-50 transition-colors"
               onRowClick={(row) => {
                 setEditingUserId(row.id)
                 setFormModalOpen(true)
@@ -347,13 +347,13 @@ export const UserList: React.FC = () => {
         title="重置密码？"
         description={
           <>
-            系统将生成一个<span className="text-blue-600 font-semibold">临时密码</span>。<br />
+            系统将生成一个<span className="text-primary-600 font-semibold">临时密码</span>。<br />
             用户下次登录时必须修改。
           </>
         }
         icon={<Lock className="h-10 w-10" />}
-        iconBgColor="bg-blue-100"
-        iconColor="text-blue-600"
+        iconBgColor="bg-primary-100"
+        iconColor="text-primary-600"
         confirmText="确认重置"
         cancelText="取消"
         confirmVariant="destructive"
@@ -368,7 +368,7 @@ export const UserList: React.FC = () => {
       >
         <DialogContent className="rounded-lg max-w-md p-8 border border-gray-200">
           <DialogHeader>
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+            <div className="w-16 h-16 bg-secondary-100 text-secondary-600 rounded-full flex items-center justify-center mb-6 mx-auto">
               <ShieldCheck className="h-8 w-8" />
             </div>
             <DialogTitle className="text-xl font-bold text-gray-900 text-center">重置成功</DialogTitle>
@@ -383,7 +383,7 @@ export const UserList: React.FC = () => {
           }}>
             <div className="bg-gray-50 rounded-lg p-6 text-center hover:bg-gray-100 transition-colors">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">临时密码</span>
-              <code className="text-2xl font-bold text-blue-600 tracking-widest font-mono">
+              <code className="text-2xl font-bold text-primary-600 tracking-widest font-mono">
                 {tempPasswordDialog.password}
               </code>
               <div className="mt-3 text-xs font-medium text-gray-400">点击复制</div>
@@ -393,7 +393,7 @@ export const UserList: React.FC = () => {
           <DialogFooter className="mt-6">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-[#3B82F6] text-white rounded-lg h-11 font-semibold hover:bg-[#2563EB] shadow-none"
+              className="w-full bg-primary text-white rounded-lg h-11 font-semibold hover:bg-primary-600 "
             >
               完成并关闭
             </Button>

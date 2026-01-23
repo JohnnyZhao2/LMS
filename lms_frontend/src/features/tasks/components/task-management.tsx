@@ -126,8 +126,8 @@ export const TaskManagement: React.FC = () => {
                 const kCount = row.original.knowledge_count || 0
                 const qCount = row.original.quiz_count || 0
                 const tags = []
-                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bg: '#D1FAE5', color: '#10B981' })
-                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bg: '#DBEAFE', color: '#3B82F6' })
+                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bgClass: 'bg-secondary-100', textClass: 'text-secondary' })
+                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bgClass: 'bg-primary-100', textClass: 'text-primary' })
                 return <CellTags tags={tags} />
             }
         },
@@ -141,17 +141,17 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="w-32 group/progress">
                         <div className="flex items-center justify-between mb-1.5 px-0.5">
-                            <span className="text-[10px] font-bold text-[#111827]">
-                                {percent}% <span className="text-[#9CA3AF] font-medium ml-1">({completed}/{total})</span>
+                            <span className="text-[10px] font-bold text-gray-900">
+                                {percent}% <span className="text-gray-400 font-medium ml-1">({completed}/{total})</span>
                             </span>
-                            <TrendingUp className="w-3 h-3 text-[#10B981] opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                            <TrendingUp className="w-3 h-3 text-secondary opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
-                        <div className="h-1.5 w-full bg-[#F3F4F6] rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                             <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${percent}%` }}
                                 transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.5 }}
-                                className="h-full bg-[#3B82F6] rounded-full"
+                                className="h-full bg-primary rounded-full"
                             />
                         </div>
                     </div>
@@ -168,12 +168,12 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
-                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-[#DC2626]" : "text-[#9CA3AF]")} />
-                            <span className={cn("text-xs font-bold", isUrgent ? "text-[#DC2626]" : "text-[#111827]")}>
+                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-destructive" : "text-gray-400")} />
+                            <span className={cn("text-xs font-bold", isUrgent ? "text-destructive" : "text-gray-900")}>
                                 {date.format("MM-DD")}
                             </span>
                         </div>
-                        <span className="text-[10px] text-[#9CA3AF] font-medium">{date.format("HH:mm")}</span>
+                        <span className="text-[10px] text-gray-400 font-medium">{date.format("HH:mm")}</span>
                     </div>
                 )
             }
@@ -183,10 +183,10 @@ export const TaskManagement: React.FC = () => {
             id: "updated_at",
             cell: ({ row }) => (
                 <div className="flex flex-col min-w-[100px]">
-                    <span className="text-sm font-bold text-[#111827]">
+                    <span className="text-sm font-bold text-gray-900">
                         {dayjs(row.original.updated_at).format("YYYY.MM.DD")}
                     </span>
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                         {dayjs(row.original.updated_at).format("HH:mm:ss")}
                     </span>
                 </div>
@@ -204,7 +204,7 @@ export const TaskManagement: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none soft-press"
+                                className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-gray-400  soft-press"
                                 onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
@@ -216,7 +216,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none soft-press"
+                                        className="h-9 w-9 rounded-md hover:bg-secondary-100 hover:text-secondary text-gray-400  soft-press"
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
@@ -226,7 +226,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#F3E8FF] hover:text-[#9333EA] text-[#9CA3AF] shadow-none soft-press"
+                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary-600 text-gray-400  soft-press"
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=grading`)}
                                     >
                                         <FileCheck className="h-4 w-4" />
@@ -240,7 +240,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none soft-press"
+                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-gray-400  soft-press"
                                         disabled={row.original.is_closed}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
@@ -251,7 +251,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#FEE2E2] hover:text-[#DC2626] text-[#9CA3AF] shadow-none soft-press"
+                                        className="h-9 w-9 rounded-md hover:bg-destructive-100 hover:text-destructive text-gray-400  soft-press"
                                         onClick={() => setDeleteId(row.original.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -281,7 +281,7 @@ export const TaskManagement: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
-                                className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none soft-press"
+                                className="h-14 py-3 px-6 rounded-md border-4 border-gray-200 font-semibold text-gray-500 hover:bg-gray-100 flex items-center gap-2  soft-press"
                                 onClick={() => refetch()}
                             >
                                 <RefreshCw className="h-4 w-4" />
@@ -289,7 +289,7 @@ export const TaskManagement: React.FC = () => {
                             </Button>
                             <Button
                                 onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
-                                className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] shadow-none soft-press"
+                                className="h-14 px-8 rounded-md bg-primary text-white font-semibold hover:bg-primary-600  soft-press"
                             >
                                 <Plus className="mr-2 h-5 w-5" />
                                 发布新任务
@@ -305,37 +305,34 @@ export const TaskManagement: React.FC = () => {
                     title="活跃任务"
                     value={stats.active}
                     icon={Timer}
-                    color="#3B82F6"
-                    className="clay-shadow"
+                    accentClassName="bg-primary"
                 />
                 <StatCard
                     title="总任务数"
                     value={stats.total}
                     icon={FileText}
-                    color="#F59E0B"
-                    className="clay-shadow"
+                    accentClassName="bg-warning"
                 />
                 <StatCard
                     title="平均及格率"
                     value={typeof stats.total === 'number' && stats.total > 0 ? '82%' : '-'}
                     icon={Layout}
-                    color="#10B981"
-                    className="clay-shadow"
+                    accentClassName="bg-secondary"
                 />
             </motion.div>
 
             {/* 列表主体 */}
             <motion.div variants={itemVariants}>
-                <ContentPanel className="overflow-hidden clay-shadow">
+                <ContentPanel className="overflow-hidden">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                             <Input
                                 placeholder="搜索任务标题或编号..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
+                                className="pl-14 h-14 bg-gray-100 border-0 rounded-md focus:bg-white focus:border-2 focus:border-primary text-base font-medium "
                             />
                         </div>
 
@@ -397,7 +394,7 @@ export const TaskManagement: React.FC = () => {
                                                 setPage(1);
                                             },
                                         }}
-                                        rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
+                                        rowClassName="hover:bg-gray-100 transition-colors cursor-pointer group"
                                         onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
                                     />
                                 </motion.div>
@@ -414,8 +411,8 @@ export const TaskManagement: React.FC = () => {
                 title="确认删除此任务？"
                 description="此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
-                iconBgColor="bg-[#FEE2E2]"
-                iconColor="text-[#DC2626]"
+                iconBgColor="bg-destructive-100"
+                iconColor="text-destructive"
                 confirmText="确认删除"
                 cancelText="取消"
                 confirmVariant="destructive"

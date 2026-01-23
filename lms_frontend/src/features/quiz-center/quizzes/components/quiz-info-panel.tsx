@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 
 import { Input, Label, Textarea } from '@/components/ui';
@@ -57,13 +55,19 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
         <Label>试卷性质</Label>
         <div className="flex p-1 bg-gray-100 rounded-lg gap-1">
           <button
-            className={cn("flex-1 py-2 text-sm font-semibold rounded-md transition-all", quizType === 'PRACTICE' ? "bg-white text-primary-600 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+            className={cn(
+              "flex-1 py-2 text-sm font-semibold rounded-md transition-all",
+              quizType === 'PRACTICE' ? "bg-white text-primary-600" : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => setQuizType('PRACTICE')}
           >
             练习模式
           </button>
           <button
-            className={cn("flex-1 py-2 text-sm font-semibold rounded-md transition-all", quizType === 'EXAM' ? "bg-red-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700")}
+            className={cn(
+              "flex-1 py-2 text-sm font-semibold rounded-md transition-all",
+              quizType === 'EXAM' ? "bg-destructive-500 text-white" : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => setQuizType('EXAM')}
           >
             考试模式
@@ -72,24 +76,24 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
       </div>
 
       {quizType === 'EXAM' && (
-        <div className="p-4 bg-red-50/50 border border-red-100 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 bg-destructive-50/50 border border-destructive-100 rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-red-600">考试时长 (分钟)</Label>
+              <Label className="text-xs text-destructive-600">考试时长 (分钟)</Label>
               <Input
                 type="number"
                 value={duration ?? ''}
                 onChange={e => setDuration(Number(e.target.value) || undefined)}
-                className="bg-white border-red-200"
+                className="bg-white border-destructive-200"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-red-600">合格分数线</Label>
+              <Label className="text-xs text-destructive-600">合格分数线</Label>
               <Input
                 type="number"
                 value={passScore ?? ''}
                 onChange={e => setPassScore(Number(e.target.value) || undefined)}
-                className="bg-white border-red-200"
+                className="bg-white border-destructive-200"
               />
             </div>
           </div>

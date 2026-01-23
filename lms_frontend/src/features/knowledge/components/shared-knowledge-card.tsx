@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from 'react';
 import {
   Pencil,
@@ -45,7 +43,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition duration-200 cursor-pointer hover:scale-[1.02] border-0 shadow-none"
+        "group relative flex flex-col h-full bg-white rounded-lg p-6 transition duration-200 cursor-pointer hover:scale-[1.02] border-0"
       )}
       style={{ fontFamily: "'Outfit', sans-serif" }}
       onClick={() => onView(item.id)}
@@ -55,11 +53,11 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         <div className="flex items-center gap-2">
           <div className={cn(
             "w-2.5 h-2.5 rounded-full",
-            isEmergency ? "bg-[#DC2626]" : "bg-[#10B981]"
+            isEmergency ? "bg-destructive" : "bg-secondary"
           )} />
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-wider",
-            isEmergency ? "text-[#DC2626]" : "text-[#10B981]"
+            isEmergency ? "text-destructive" : "text-secondary"
           )}>
             {isEmergency ? '应急类' : '标准类'}
           </span>
@@ -69,7 +67,7 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
           {shouldShowActions && (
             <button
-              className="h-8 w-8 rounded-md bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:bg-[#E0E7FF] hover:text-[#4338CA] transition-all duration-200 shadow-none"
+              className="h-8 w-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-primary-100 hover:text-primary-700 transition-all duration-200 "
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -84,18 +82,18 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
       {/* 标题 */}
       <div className="relative mb-4">
-        <h3 className="text-lg font-bold text-[#111827] leading-tight mb-2 line-clamp-2 group-hover:text-[#3B82F6] transition-colors duration-200">
+        <h3 className="text-lg font-bold text-gray-900 leading-tight mb-2 line-clamp-2 group-hover:text-primary transition-colors duration-200">
           {item.title}
         </h3>
       </div>
 
       {/* 内容预览区域 (替代原有的目录结构) */}
-      <div className="flex-1 bg-[#F3F4F6] rounded-lg p-4 mb-6 group-hover:bg-[#DBEAFE] transition-colors duration-200 overflow-hidden min-h-[160px] max-h-[160px]">
+      <div className="flex-1 bg-gray-100 rounded-lg p-4 mb-6 group-hover:bg-primary-100 transition-colors duration-200 overflow-hidden min-h-[160px] max-h-[160px]">
         <div className="flex items-center gap-2 mb-3">
-          <List className="w-3.5 h-3.5 text-[#3B82F6]" />
-          <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">内容预览</span>
+          <List className="w-3.5 h-3.5 text-primary" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">内容预览</span>
         </div>
-        <div className="text-xs font-medium text-[#4B5563] leading-relaxed line-clamp-6">
+        <div className="text-xs font-medium text-gray-600 leading-relaxed line-clamp-6">
           {contentPreview}
         </div>
       </div>
@@ -103,30 +101,34 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       {/* 标签 */}
       <div className="flex flex-wrap gap-2 mb-6">
         {item.system_tags?.slice(0, 2).map((tag) => (
-          <Badge key={tag.id} variant="secondary" className="bg-[#F3F4F6] text-[#111827] border-0 rounded-md font-semibold text-[10px] shadow-none">
+          <Badge
+            key={tag.id}
+            variant="secondary"
+            className="bg-gray-100 text-gray-900 border-0 rounded-md font-semibold text-[10px]"
+          >
             {tag.name}
           </Badge>
         ))}
       </div>
 
       {/* 底部信息 */}
-      <div className="mt-auto pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
+      <div className="mt-auto pt-6 border-t border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-[#F3F4F6] rounded-md flex items-center justify-center text-[#4B5563] font-bold text-sm group-hover:scale-110 transition-transform duration-200">
+          <div className="h-9 w-9 bg-gray-100 rounded-md flex items-center justify-center text-gray-600 font-bold text-sm group-hover:scale-110 transition-transform duration-200">
             {(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
           </div>
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-[#111827] leading-none mb-1">{item.updated_by_name || item.created_by_name || '系统'}</span>
-            <span className="text-[10px] font-medium text-[#6B7280]">{dayjs(item.updated_at).format('YYYY.MM.DD')}</span>
+            <span className="text-[11px] font-bold text-gray-900 leading-none mb-1">{item.updated_by_name || item.created_by_name || '系统'}</span>
+            <span className="text-[10px] font-medium text-gray-500">{dayjs(item.updated_at).format('YYYY.MM.DD')}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-[#6B7280]">
+          <div className="flex items-center gap-1 text-gray-500">
             <Eye className="w-3.5 h-3.5" />
             <span className="text-[10px] font-semibold">{item.view_count || 0}</span>
           </div>
-          <div className="h-8 w-8 rounded-md bg-[#3B82F6] text-white flex items-center justify-center group-hover:bg-[#2563EB] transition-all duration-200 group-hover:scale-110">
+          <div className="h-8 w-8 rounded-md bg-primary text-white flex items-center justify-center group-hover:bg-primary-600 transition-all duration-200 group-hover:scale-110">
             <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>

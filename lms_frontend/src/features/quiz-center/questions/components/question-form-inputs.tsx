@@ -90,7 +90,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
       {value.map((opt, index) => (
         <div
           key={index}
-          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-green-200 bg-green-50/50' : 'border-gray-100 bg-gray-50/50'
+          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-secondary-200 bg-secondary-50/50' : 'border-gray-100 bg-gray-50/50'
             }`}
         >
           {/* 选择控件 */}
@@ -129,7 +129,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => handleRemove(index)}
-              className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-destructive-500 hover:bg-destructive-50"
             >
               <X className="w-4 h-4" />
             </Button>

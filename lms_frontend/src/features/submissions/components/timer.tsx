@@ -55,27 +55,27 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
     <div
       className={cn(
         'flex items-center gap-2 px-4 py-2 rounded-lg border',
-        isCritical && 'bg-red-50 border-red-300 animate-pulse',
-        isWarning && !isCritical && 'bg-orange-50 border-orange-300',
-        !isWarning && 'bg-blue-50 border-blue-200'
+        isCritical && 'bg-destructive-50 border-destructive-300 animate-pulse',
+        isWarning && !isCritical && 'bg-warning-50 border-warning-300',
+        !isWarning && 'bg-primary-50 border-primary-200'
       )}
     >
       {isCritical ? (
-        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <AlertTriangle className="w-4 h-4 text-destructive-500" />
       ) : (
         <Clock
           className={cn(
             'w-4 h-4',
-            isWarning ? 'text-orange-600' : 'text-blue-600'
+            isWarning ? 'text-warning-600' : 'text-primary-600'
           )}
         />
       )}
       <span
         className={cn(
           'font-mono text-sm font-semibold tracking-wide',
-          isCritical && 'text-red-600',
-          isWarning && !isCritical && 'text-orange-600',
-          !isWarning && 'text-blue-600'
+          isCritical && 'text-destructive-600',
+          isWarning && !isCritical && 'text-warning-600',
+          !isWarning && 'text-primary-600'
         )}
       >
         {formatTime(seconds)}

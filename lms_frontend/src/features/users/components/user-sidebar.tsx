@@ -100,14 +100,14 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                 className={cn(
                                     'group relative flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200',
                                     isSelected
-                                        ? 'text-[#1D4ED8]'
+                                        ? 'text-primary-700'
                                         : 'bg-white hover:bg-gray-50 text-gray-700'
                                 )}
                             >
                                 {isSelected && (
                                     <motion.div
                                         layoutId="user-sidebar-active"
-                                        className="absolute inset-0 bg-[#EFF6FF] rounded-lg -z-10"
+                                        className="absolute inset-0 bg-primary-50 rounded-lg -z-10"
                                         transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                                     />
                                 )}
@@ -115,7 +115,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                 <div className={cn(
                                     'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors',
                                     isSelected
-                                        ? 'bg-[#DBEAFE] text-[#1D4ED8]'
+                                        ? 'bg-primary-100 text-primary-700'
                                         : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
                                 )}>
                                     <Icon className="w-5 h-5" />
@@ -123,14 +123,14 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                 <div className="flex flex-col min-w-0">
                                     <span className={cn(
                                         'text-sm font-semibold truncate',
-                                        isSelected ? 'text-[#1D4ED8]' : 'text-gray-900'
+                                        isSelected ? 'text-primary-700' : 'text-gray-900'
                                     )}>
                                         {item.name}
                                     </span>
                                     {item.subtitle && (
                                         <span className={cn(
                                             'text-[10px] font-medium uppercase tracking-wider truncate',
-                                            isSelected ? 'text-[#3B82F6]/80' : 'text-gray-400'
+                                            isSelected ? 'text-primary/80' : 'text-gray-400'
                                         )}>
                                             {item.subtitle}
                                         </span>

@@ -29,7 +29,7 @@ const SelectTrigger = React.forwardRef<
       "rounded-md border-none bg-gray-100 px-4 py-3",
       "text-base font-medium text-gray-900",
       "placeholder:text-gray-500",
-      "focus:outline-none focus:bg-white focus:border-2 focus:border-blue-600",
+      "focus:outline-none focus:bg-white focus:border-2 focus:border-primary-600",
       "disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 disabled:opacity-50",
       "transition-all duration-200",
       "[&>span]:line-clamp-1",
@@ -84,7 +84,7 @@ SelectScrollDownButton.displayName =
  * SelectContent 组件 - 平面设计系统
  * 
  * 特性：
- * - 无阴影设计（shadow-none）
+ * - 
  * - 使用 border-2 定义边界
  * - 白色背景
  */
@@ -97,8 +97,7 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg",
-        "border-2 border-gray-200 bg-white shadow-none",
-        "text-gray-900",
+        "border-2 border-gray-200 bg-white text-gray-900",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

@@ -220,7 +220,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <label
               className={cn(
                 'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
-                trueFalseValue === 'TRUE' && 'border-green-500 bg-green-50',
+                trueFalseValue === 'TRUE' && 'border-secondary-500 bg-secondary-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
             >
@@ -235,7 +235,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <label
               className={cn(
                 'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
-                trueFalseValue === 'FALSE' && 'border-red-500 bg-red-50',
+                trueFalseValue === 'FALSE' && 'border-destructive-500 bg-destructive-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
             >
@@ -286,20 +286,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           className={cn(
             'mt-5 p-4 rounded-lg border',
             answer.is_correct
-              ? 'bg-green-50 border-green-300'
-              : 'bg-red-50 border-red-300'
+              ? 'bg-secondary-50 border-secondary-300'
+              : 'bg-destructive-50 border-destructive-300'
           )}
         >
           <div className="flex items-center gap-2 mb-2">
             {answer.is_correct ? (
-              <CheckCircle className="w-4.5 h-4.5 text-green-500" />
+              <CheckCircle className="w-4.5 h-4.5 text-secondary-500" />
             ) : (
-              <XCircle className="w-4.5 h-4.5 text-red-500" />
+              <XCircle className="w-4.5 h-4.5 text-destructive-500" />
             )}
             <span
               className={cn(
                 'font-semibold',
-                answer.is_correct ? 'text-green-600' : 'text-red-600'
+                answer.is_correct ? 'text-secondary-600' : 'text-destructive-600'
               )}
             >
               {answer.is_correct ? '回答正确' : '回答错误'}

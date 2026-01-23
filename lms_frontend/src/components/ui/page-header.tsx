@@ -81,7 +81,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 标题区域 */}
         <div className="flex items-center gap-6">
           {icon && (
-            <div className="w-20 h-20 bg-blue-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
+            <div className="w-20 h-20 bg-primary-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
                 className: cn(icon.props.className, "text-white w-10 h-10")
               }) : icon}
@@ -93,7 +93,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             </h2>
             {subtitle && (
               <p className="text-lg font-semibold text-gray-600 uppercase tracking-wider mt-2 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                <span className="w-10 h-1 bg-blue-600 rounded-full" />
+                <span className="w-10 h-1 bg-primary-600 rounded-full" />
                 {subtitle}
               </p>
             )}

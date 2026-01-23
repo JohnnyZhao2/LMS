@@ -98,7 +98,7 @@ export function SearchableSelect<T>({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-0 border border-gray-100 shadow-2xl rounded-lg overflow-hidden z-[1001]"
+                className="w-[var(--radix-popover-trigger-width)] p-0 border border-gray-100  rounded-lg overflow-hidden z-[1001]"
                 align="start"
                 asChild
             >

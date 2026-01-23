@@ -215,7 +215,7 @@ export const KnowledgeForm: React.FC = () => {
   if (isEdit && detailLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gray-100 z-[1000]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
       </div>
     );
   }
@@ -242,10 +242,9 @@ export const KnowledgeForm: React.FC = () => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入知识标题..."
             className={cn(
-              "text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm",
-              "hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
+              "text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
               "transition-all duration-200",
-              errors.title && "border-red-300 placeholder:text-red-300 focus:border-red-500 focus:ring-red-100"
+              errors.title && "border-destructive-300 placeholder:text-destructive-300 focus:border-destructive-500 focus:ring-destructive-100"
             )}
           />
         </div>
@@ -260,8 +259,8 @@ export const KnowledgeForm: React.FC = () => {
           )}
           <Badge
             className={`flex items-center gap-1.5 px-3 py-1 font-semibold rounded-full text-[10px] uppercase border ${statusInfo.isDraft
-              ? 'bg-amber-50 text-amber-600 border-amber-200'
-              : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              ? 'bg-warning-50 text-warning-600 border-warning-200'
+              : 'bg-secondary-50 text-secondary-600 border-secondary-200'
               }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -403,7 +402,7 @@ export const KnowledgeForm: React.FC = () => {
                                 else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
                               }}
                               placeholder={`在此输入${tab.label}详情...`}
-                              className="border-none shadow-none ring-0 w-full h-full"
+                              className="border-none  ring-0 w-full h-full"
                               contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
                             />
                           </Suspense>
@@ -420,14 +419,14 @@ export const KnowledgeForm: React.FC = () => {
                         value={content}
                         onChange={setContent}
                         placeholder="请输入知识正文..."
-                        className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
+                        className="border-none  ring-0 h-full min-h-[calc(100vh-160px)]"
                         contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
                       />
                     </Suspense>
                   </div>
                   {errors.content && (
-                    <div className="m-6 p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-semibold text-red-600 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <div className="m-6 p-4 bg-destructive-50 border border-destructive-100 rounded-lg text-xs font-semibold text-destructive-600 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-destructive-500 animate-pulse" />
                       {errors.content}
                     </div>
                   )}
@@ -472,7 +471,7 @@ export const KnowledgeForm: React.FC = () => {
             {/* 内容摘要 */}
             <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <div className="w-1.5 h-1.5 rounded-full bg-secondary-500" />
                 内容摘要
               </h3>
               <div className="space-y-4">
@@ -488,7 +487,7 @@ export const KnowledgeForm: React.FC = () => {
             {/* 分类归属 */}
             <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 分类归属
               </h3>
               <div className="space-y-4">
@@ -514,7 +513,7 @@ export const KnowledgeForm: React.FC = () => {
             {/* 精细标签 */}
             <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
               <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <div className="w-1.5 h-1.5 rounded-full bg-warning-500" />
                 精细标签
               </h3>
               <div className="space-y-6">
@@ -527,7 +526,7 @@ export const KnowledgeForm: React.FC = () => {
                     {systemTagIds.map(id => {
                       const tag = systemTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-blue-50 text-blue-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setSystemTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>
@@ -557,7 +556,7 @@ export const KnowledgeForm: React.FC = () => {
                     {operationTagIds.map(id => {
                       const tag = operationTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-secondary-50 text-secondary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setOperationTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>

@@ -1,5 +1,3 @@
-"use client"
-
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -383,7 +381,7 @@ export const QuizForm: React.FC = () => {
         <DialogContent className="max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-bold">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <div className="w-2 h-2 rounded-full bg-secondary-500 animate-pulse"></div>
               试卷创建成功
             </DialogTitle>
           </DialogHeader>

@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
@@ -64,19 +62,18 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
               {selectedQuestions.map((item, idx) => (
                 <div key={item.id} className="relative flex gap-4 animate-fadeInUp">
                   <div className="absolute -left-12 top-0 flex flex-col items-center">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md"
-                      style={{ background: 'var(--color-primary-500)' }}
-                    >
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white bg-primary-500">
                       <span className="text-sm font-bold">{idx + 1}</span>
                     </div>
                   </div>
-                  <div className={cn(
-                    "flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all hover:shadow-md",
-                    item.is_current === false ? "border-amber-300 bg-amber-50/30" : "border-gray-200 hover:border-primary-300"
-                  )}>
+                  <div
+                    className={cn(
+                      "flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all",
+                      item.is_current === false ? "border-warning-300 bg-warning-50/30" : "border-gray-200 hover:border-primary-300"
+                    )}
+                  >
                     {item.is_current === false && (
-                      <div className="flex items-center gap-2 text-xs text-amber-600 mb-1">
+                      <div className="flex items-center gap-2 text-xs text-warning-600 mb-1">
                         <AlertCircle className="w-3.5 h-3.5" />
                         <span>题目有新版本</span>
                         {onUpgradeQuestion && (
@@ -84,7 +81,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-5 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                              className="h-5 px-2 text-xs text-warning-700 hover:text-warning-800 hover:bg-warning-100"
                               onClick={() => onUpgradeQuestion(idx, item.resource_uuid)}
                             >
                               <RefreshCw className="w-3 h-3 mr-1" />
@@ -127,7 +124,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                           variant="ghost"
                           size="icon"
                           title="从试卷移除"
-                          className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                          className="h-8 w-8 text-gray-400 hover:text-destructive-500 hover:bg-destructive-50"
                           onClick={() => onRemoveQuestion(idx)}
                         >
                           <X className="w-4 h-4" />

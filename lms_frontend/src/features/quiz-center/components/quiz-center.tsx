@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useState } from 'react';
 import { Plus, Search, Layout, FileText, CheckCircle, RefreshCw } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -45,7 +43,7 @@ export const QuizCenter: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
+              className="h-14 py-3 px-6 rounded-md border-4 border-gray-200 font-semibold text-gray-500 hover:bg-gray-100 flex items-center gap-2 "
               onClick={() => {
                 refetchQuizzes();
                 refetchQuestions();
@@ -56,7 +54,7 @@ export const QuizCenter: React.FC = () => {
             </Button>
             <Button
               onClick={handleAdd}
-              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
+              className="h-14 px-8 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 "
             >
               <Plus className="mr-2 h-5 w-5" />
               构建全新试卷
@@ -71,7 +69,7 @@ export const QuizCenter: React.FC = () => {
           title="总试卷数"
           value={stats.totalQuizzes}
           icon={Layout}
-          color="#3B82F6"
+          accentClassName="bg-primary"
           gradient=""
           delay="stagger-delay-1"
         />
@@ -79,7 +77,7 @@ export const QuizCenter: React.FC = () => {
           title="题库总量"
           value={stats.totalQuestions}
           icon={FileText}
-          color="#10B981"
+          accentClassName="bg-secondary"
           gradient=""
           delay="stagger-delay-2"
         />
@@ -87,7 +85,7 @@ export const QuizCenter: React.FC = () => {
           title="及格标准"
           value="60%"
           icon={CheckCircle}
-          color="#F59E0B"
+          accentClassName="bg-warning"
           gradient=""
           delay="stagger-delay-3"
         />
@@ -103,9 +101,9 @@ export const QuizCenter: React.FC = () => {
               <div className="flex-1 max-w-2xl flex flex-col md:flex-row items-start md:items-center gap-4">
                 {/* 搜索框 */}
                 <div className="relative group w-full md:w-80">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-blue-600 transition-colors" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary-600 transition-colors" />
                   <Input
-                    className="pl-12 h-12 bg-[#F3F4F6] border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500 text-sm font-medium shadow-none transition-all"
+                    className="pl-12 h-12 bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary-500 text-sm font-medium  transition-all"
                     placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}

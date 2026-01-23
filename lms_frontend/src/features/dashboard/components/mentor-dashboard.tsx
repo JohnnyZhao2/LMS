@@ -54,7 +54,7 @@ export const MentorDashboard: React.FC = () => {
           title="学员数量"
           value={data?.mentees_count || 0}
           icon={Users}
-          color="var(--color-primary-500)"
+          accentClassName="bg-primary"
           gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
           delay="stagger-delay-1"
         />
@@ -62,7 +62,7 @@ export const MentorDashboard: React.FC = () => {
           title="任务完成率"
           value={data?.completion_rate || '0%'}
           icon={CheckCircle}
-          color="var(--color-success-500)"
+          accentClassName="bg-secondary"
           gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
           delay="stagger-delay-2"
         />
@@ -70,8 +70,8 @@ export const MentorDashboard: React.FC = () => {
           title="平均分"
           value={data?.average_score || '0'}
           icon={Trophy}
-          color="var(--color-purple-500)"
-          gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
+          accentClassName="bg-primary-500"
+          gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
           delay="stagger-delay-3"
         />
       </div>
@@ -88,24 +88,24 @@ export const MentorDashboard: React.FC = () => {
             description="对学员进行知识抽查"
             icon={FileSearch}
             route={ROUTES.SPOT_CHECKS}
-            iconColor="text-[#DC2626]"
-            iconBg="bg-[#FEE2E2]"
+            iconColor="text-destructive"
+            iconBg="bg-destructive-100"
           />
           <ActionCard
             title="发布任务"
             description="创建学习/练习/考试任务"
             icon={Send}
             route={`${ROUTES.TASKS}/create`}
-            iconColor="text-[#3B82F6]"
-            iconBg="bg-[#DBEAFE]"
+            iconColor="text-primary"
+            iconBg="bg-primary-100"
           />
           <ActionCard
             title="新建试卷"
             description="创建新的考试或练习试卷"
             icon={Plus}
             route={ROUTES.QUIZ_CENTER}
-            iconColor="text-[#10B981]"
-            iconBg="bg-[#D1FAE5]"
+            iconColor="text-secondary"
+            iconBg="bg-secondary-100"
           />
         </div>
       </div>

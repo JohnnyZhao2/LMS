@@ -99,7 +99,7 @@ export const LoginForm: React.FC = () => {
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus {
-          -webkit-text-fill-color: #1A1A1A;
+          -webkit-text-fill-color: var(--color-foreground);
           -webkit-box-shadow: 0 0 0px 1000px transparent inset;
           transition: background-color 5000s ease-in-out 0s;
         }
@@ -119,27 +119,27 @@ export const LoginForm: React.FC = () => {
                 name="employee_id"
                 render={({ field }) => (
                   <FormItem className="space-y-4">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
-                      <span className="w-1 h-1 bg-[#B33535]/30" />
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-gray-900/40 tracking-[0.3em]">
+                      <span className="w-1 h-1 bg-primary/30" />
                       工号
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
                           placeholder="请输入工号"
-                          className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                          className="h-10 bg-transparent border-gray-900/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-gray-900/10 text-gray-900 font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
                           {...field}
                         />
                         <motion.div
                           initial={{ scaleX: 0 }}
                           whileFocus={{ scaleX: 1 }}
                           transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left"
+                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary origin-left"
                           style={{ scaleX: form.watch('employee_id') ? 1 : undefined }}
                         />
                       </div>
                     </FormControl>
-                    <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
+                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
                   </FormItem>
                 )}
               />
@@ -151,8 +151,8 @@ export const LoginForm: React.FC = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem className="space-y-4">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
-                      <span className="w-1 h-1 bg-[#B33535]/30" />
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-gray-900/40 tracking-[0.3em]">
+                      <span className="w-1 h-1 bg-primary/30" />
                       密码
                     </FormLabel>
                     <FormControl>
@@ -160,19 +160,19 @@ export const LoginForm: React.FC = () => {
                         <Input
                           type="password"
                           placeholder="请输入密码"
-                          className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                          className="h-10 bg-transparent border-gray-900/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-gray-900/10 text-gray-900 font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
                           {...field}
                         />
                         <motion.div
                           initial={{ scaleX: 0 }}
                           whileFocus={{ scaleX: 1 }}
                           transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left"
+                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary origin-left"
                           style={{ scaleX: form.watch('password') ? 1 : undefined }}
                         />
                       </div>
                     </FormControl>
-                    <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
+                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
                   </FormItem>
                 )}
               />
@@ -183,7 +183,7 @@ export const LoginForm: React.FC = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-[#B33535] hover:bg-[#962D2D] text-white rounded-none font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] shadow-[0_20px_40px_-12px_rgba(179,53,53,0.25)] border-none soft-press"
+              className="w-full h-14 bg-primary hover:bg-primary-600 text-white rounded-none font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press"
             >
               {loading ? "正在验证身份..." : "登录"}
             </Button>
@@ -191,17 +191,17 @@ export const LoginForm: React.FC = () => {
             <div className="flex justify-between items-center py-2 px-1">
               <button
                 type="button"
-                className="text-[11px] font-bold text-[#1A1A1A]/20 hover:text-[#B33535] transition-colors tracking-widest"
+                className="text-[11px] font-bold text-gray-900/20 hover:text-primary transition-colors tracking-widest"
               >
                 无法访问账号?
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex gap-1.5">
-                  <div className="w-1 h-1 bg-[#B33535]/10 rounded-full" />
-                  <div className="w-1 h-1 bg-[#B33535]/20 rounded-full" />
-                  <div className="w-1 h-1 bg-[#B33535]/30 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/10 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/20 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/30 rounded-full" />
                 </div>
-                <span className="text-[10px] font-bold text-[#1A1A1A]/20 tracking-widest">安全链接已建立</span>
+                <span className="text-[10px] font-bold text-gray-900/20 tracking-widest">安全链接已建立</span>
               </div>
             </div>
           </motion.div>

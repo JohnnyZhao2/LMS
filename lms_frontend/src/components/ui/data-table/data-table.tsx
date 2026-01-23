@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   flexRender,
@@ -99,7 +97,7 @@ export function DataTable<TData, TValue>({
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
       <div className="flex-1 overflow-auto">
-        <div className="rounded-lg bg-white shadow-none border-0">
+        <div className="rounded-lg bg-white  border-0">
           <Table className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -155,7 +153,7 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => onRowClick?.(row.original)}
-                    className={onRowClick ? `cursor-pointer hover:bg-[#F9FAFB] ${rowClassName || ''}` : rowClassName}
+                    className={onRowClick ? `cursor-pointer hover:bg-gray-50 ${rowClassName || ''}` : rowClassName}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -178,7 +176,7 @@ export function DataTable<TData, TValue>({
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
-                    className="h-24 text-center text-[#6B7280]"
+                    className="h-24 text-center text-gray-500"
                   >
                     暂无数据
                   </TableCell>

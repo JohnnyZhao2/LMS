@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 import { Eye, FileEdit, Settings } from 'lucide-react';
 
@@ -77,9 +75,9 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
         {showInfoPanel ? (
           <><Settings className="w-4 h-4 text-primary-500" />试卷配置属性</>
         ) : showEditPanel ? (
-          <><FileEdit className="w-4 h-4 text-emerald-500" />{editingQuestionId ? '编辑题目' : '新建题目'}</>
+          <><FileEdit className="w-4 h-4 text-secondary-500" />{editingQuestionId ? '编辑题目' : '新建题目'}</>
         ) : (
-          <><Eye className="w-4 h-4 text-sky-500" />题目预览</>
+          <><Eye className="w-4 h-4 text-primary-500" />题目预览</>
         )}
         {!showInfoPanel && (
           <Button variant="ghost" size="sm" onClick={onBackToInfo} className="ml-auto text-gray-500">

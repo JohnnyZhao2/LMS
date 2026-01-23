@@ -14,8 +14,8 @@ interface CellWithIconProps {
     icon: React.ReactNode;
     title: string;
     subtitle?: string;
-    iconBg?: string;
-    iconColor?: string;
+    iconBgClass?: string;
+    iconColorClass?: string;
     className?: string;
 }
 
@@ -23,23 +23,26 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
     icon,
     title,
     subtitle,
-    iconBg = '#DBEAFE',
-    iconColor = '#3B82F6',
+    iconBgClass = 'bg-primary-100',
+    iconColorClass = 'text-primary',
     className,
 }) => (
     <div className={cn('flex items-center gap-4 py-1', className)}>
         <div
-            className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-            style={{ backgroundColor: iconBg, color: iconColor }}
+            className={cn(
+                'w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform',
+                iconBgClass,
+                iconColorClass
+            )}
         >
             {icon}
         </div>
         <div className="flex flex-col">
-            <span className="font-bold text-[#111827] hover:text-[#3B82F6] cursor-pointer transition-colors">
+            <span className="font-bold text-gray-900 hover:text-primary cursor-pointer transition-colors">
                 {title}
             </span>
             {subtitle && (
-                <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                     {subtitle}
                 </span>
             )}
@@ -54,8 +57,7 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
 interface CellWithAvatarProps {
     name: string;
     subtitle?: string;
-    avatarBg?: string;
-    avatarColor?: string;
+    avatarClassName?: string;
     size?: 'sm' | 'md' | 'lg';
     className?: string;
 }
@@ -63,8 +65,7 @@ interface CellWithAvatarProps {
 export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
     name,
     subtitle,
-    avatarBg = '#DBEAFE',
-    avatarColor = '#3B82F6',
+    avatarClassName = 'bg-primary-100 text-primary',
     size = 'md',
     className,
 }) => {
@@ -80,18 +81,18 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
             <div
                 className={cn(
                     s.avatar,
-                    'rounded-md flex items-center justify-center flex-shrink-0 font-bold group-hover:scale-110 transition-transform'
+                    'rounded-md flex items-center justify-center flex-shrink-0 font-bold group-hover:scale-110 transition-transform',
+                    avatarClassName
                 )}
-                style={{ backgroundColor: avatarBg, color: avatarColor }}
             >
                 {name?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div className="flex flex-col">
-                <span className={cn('font-bold text-[#111827] line-clamp-1', s.text)}>
+                <span className={cn('font-bold text-gray-900 line-clamp-1', s.text)}>
                     {name}
                 </span>
                 {subtitle && (
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                         {subtitle}
                     </span>
                 )}
@@ -105,13 +106,13 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
  * 用于：角色、资源统计等需要多个标签的列
  */
 interface CellTagsProps {
-    tags: { key: string; label: string; color?: string; bg?: string }[];
+    tags: { key: string; label: string; textClass?: string; bgClass?: string; className?: string }[];
     className?: string;
 }
 
 export const CellTags: React.FC<CellTagsProps> = ({ tags, className }) => {
     if (tags.length === 0) {
-        return <span className="text-[#9CA3AF] italic text-xs">—</span>;
+        return <span className="text-gray-400 italic text-xs">—</span>;
     }
 
     return (
@@ -119,11 +120,12 @@ export const CellTags: React.FC<CellTagsProps> = ({ tags, className }) => {
             {tags.map((tag) => (
                 <div
                     key={tag.key}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-bold border-0 shadow-none"
-                    style={{
-                        backgroundColor: tag.bg || '#DBEAFE',
-                        color: tag.color || '#3B82F6',
-                    }}
+                    className={cn(
+                        'px-2 py-0.5 rounded-md text-[10px] font-bold border-0',
+                        tag.bgClass || 'bg-primary-100',
+                        tag.textClass || 'text-primary',
+                        tag.className
+                    )}
                 >
                     {tag.label}
                 </div>
@@ -152,8 +154,8 @@ export const CellStatus: React.FC<CellStatusProps> = ({
     <div className={cn('', className)}>
         <Badge
             className={cn(
-                'border-0 shadow-none',
-                isActive ? 'bg-[#D1FAE5] text-[#10B981]' : 'bg-[#F3F4F6] text-[#6B7280]'
+                'border-0',
+                isActive ? 'bg-secondary-100 text-secondary' : 'bg-gray-100 text-gray-500'
             )}
         >
             {isActive ? activeText : inactiveText}
@@ -177,8 +179,8 @@ export const CellIconText: React.FC<CellIconTextProps> = ({
     className,
 }) => (
     <div className={cn('flex items-center gap-2', className)}>
-        <span className="text-[#9CA3AF]">{icon}</span>
-        <span className="text-sm font-medium text-[#111827]">{text}</span>
+        <span className="text-gray-400">{icon}</span>
+        <span className="text-sm font-medium text-gray-900">{text}</span>
     </div>
 );
 
@@ -196,9 +198,9 @@ export const CellSmallAvatar: React.FC<CellSmallAvatarProps> = ({
     className,
 }) => (
     <div className={cn('flex items-center gap-2', className)}>
-        <div className="w-6 h-6 rounded-full bg-[#DBEAFE] text-[#3B82F6] flex items-center justify-center text-[10px] font-bold">
+        <div className="w-6 h-6 rounded-full bg-primary-100 text-primary flex items-center justify-center text-[10px] font-bold">
             {name?.charAt(0)?.toUpperCase() || '?'}
         </div>
-        <span className="text-sm font-medium text-[#111827]">{name}</span>
+        <span className="text-sm font-medium text-gray-900">{name}</span>
     </div>
 );

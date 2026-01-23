@@ -35,11 +35,11 @@ export const DecorativeBlurShapes: React.FC<DecorativeBlurShapesProps> = ({
     ];
 
     const getColor = (index: number) => {
-      if (variant === 'primary') return 'bg-blue-600/5';
-      if (variant === 'secondary') return 'bg-emerald-500/5';
-      if (variant === 'tertiary') return 'bg-amber-500/5';
+      if (variant === 'primary') return 'bg-primary-600/5';
+      if (variant === 'secondary') return 'bg-secondary-500/5';
+      if (variant === 'tertiary') return 'bg-warning-500/5';
       // mixed: 循环使用不同颜色
-      const colors = ['bg-blue-600/5', 'bg-emerald-500/5', 'bg-amber-500/5'];
+      const colors = ['bg-primary-600/5', 'bg-secondary-500/5', 'bg-warning-500/5'];
       return colors[index % colors.length];
     };
 

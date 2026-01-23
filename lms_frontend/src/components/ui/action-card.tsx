@@ -36,8 +36,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
   icon: Icon,
   route,
   onClick,
-  iconColor = 'text-[#3B82F6]',
-  iconBg = 'bg-[#DBEAFE]',
+  iconColor = 'text-primary',
+  iconBg = 'bg-primary-100',
   className,
 }) => {
   const { roleNavigate } = useRoleNavigate();
@@ -62,7 +62,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       )}
     >
       {/* 装饰性背景圆 */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#F3F4F6] rounded-full translate-x-10 -translate-y-10 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gray-100 rounded-full translate-x-10 -translate-y-10 opacity-50 group-hover:scale-110 transition-transform duration-500" />
 
       <div className="relative z-10 flex flex-col gap-4">
         <div className={cn(
@@ -73,11 +73,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           <Icon className={cn('w-7 h-7', iconColor)} />
         </div>
         <div>
-          <div className="text-lg font-bold text-[#111827] mb-1 group-hover:text-[#3B82F6] transition-colors duration-200">
+          <div className="text-lg font-bold text-gray-900 mb-1 group-hover:text-primary transition-colors duration-200">
             {title}
           </div>
           {description && (
-            <div className="text-xs font-bold text-[#6B7280] uppercase tracking-wider">
+            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
               {description}
             </div>
           )}

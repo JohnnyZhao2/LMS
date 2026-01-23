@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 import { ArrowLeft, Loader2, Send } from 'lucide-react';
 
@@ -47,7 +45,7 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="输入试卷标题..."
-          className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+          className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4  hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
         />
       </div>
 

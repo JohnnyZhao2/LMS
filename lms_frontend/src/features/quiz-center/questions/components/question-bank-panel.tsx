@@ -1,5 +1,3 @@
-"use client"
-
 import React from 'react';
 import { Eye, FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 
@@ -95,7 +93,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
             {questionsData?.results.map(q => (
               <div
                 key={q.id}
-                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 transition-all hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 group"
+                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 transition-all hover:bg-white  border border-transparent hover:border-gray-200 group"
               >
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary-500 text-white">
                   <FileText className="w-4 h-4" />

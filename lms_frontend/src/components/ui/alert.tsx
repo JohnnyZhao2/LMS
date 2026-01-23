@@ -7,7 +7,7 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: 'bg-background text-foreground',
-        warning: 'border-yellow-200 bg-yellow-50 text-yellow-900 [&>svg]:text-yellow-600',
+        warning: 'border-warning-200 bg-warning-50 text-warning-900 [&>svg]:text-warning-600',
       },
     },
     defaultVariants: {

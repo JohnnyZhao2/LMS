@@ -159,7 +159,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             onValueChange={handlePageSizeChange}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 w-[110px] ml-2 font-bold text-xs shadow-none border-gray-100">
+            <SelectTrigger className="h-8 w-[110px] ml-2 font-bold text-xs  border-gray-100">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

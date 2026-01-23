@@ -39,9 +39,9 @@ const formatPassRate = (rate?: number | null) => {
 // Utility: Color helpers based on pass rate
 const getPassRateColor = (rate?: number | null) => {
   if (rate === null || rate === undefined) return 'bg-slate-100 text-slate-500 border border-slate-200';
-  if (rate >= 80) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-  if (rate >= 60) return 'bg-amber-50 text-amber-700 border border-amber-200';
-  return 'bg-rose-50 text-rose-700 border border-rose-200';
+  if (rate >= 80) return 'bg-secondary-50 text-secondary-700 border border-secondary-200';
+  if (rate >= 60) return 'bg-warning-50 text-warning-700 border border-warning-200';
+  return 'bg-destructive-50 text-destructive-700 border border-destructive-200';
 };
 
 const formatAnswerText = (answer?: string | null) => {
@@ -188,7 +188,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="w-full lg:w-[380px] flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+        className="w-full lg:w-[380px] flex flex-col bg-white rounded-2xl border border-slate-200  overflow-hidden"
       >
         {/* Header/Filter */}
         <div className="p-4 border-b border-slate-100 bg-slate-50/50">
@@ -200,7 +200,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                 className={cn(
                   'flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-all duration-200',
                   questionFilter === filter.value
-                    ? 'bg-white text-slate-900 shadow-sm'
+                    ? 'bg-white text-slate-900'
                     : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                 )}
               >
@@ -228,7 +228,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                 className={cn(
                   'w-full text-left p-4 rounded-xl transition-all duration-200 border group relative mb-3',
                   isActive
-                    ? 'border-blue-200 bg-blue-50/60 shadow-sm ring-1 ring-blue-100'
+                    ? 'border-primary-200 bg-primary-50/60  ring-1 ring-primary-100'
                     : 'border-transparent bg-white hover:bg-slate-50 hover:border-slate-200'
                 )}
               >
@@ -237,13 +237,13 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     <span className={cn(
                       "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
                       question.question_type === 'SHORT_ANSWER'
-                        ? 'bg-purple-50 text-purple-600 border-purple-100'
-                        : 'bg-white text-slate-500 border-slate-200 shadow-sm'
+                        ? 'bg-primary-50 text-primary-600 border-primary-100'
+                        : 'bg-white text-slate-500 border-slate-200'
                     )}>
                       {question.question_type_display}
                     </span>
                     {question.question_type === 'SHORT_ANSWER' && (
-                      <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                      <span className="text-[10px] font-medium text-warning-600 bg-warning-50 px-1.5 py-0.5 rounded border border-warning-100">
                         人工
                       </span>
                     )}
@@ -260,7 +260,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                 </h3>
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span className="font-medium bg-slate-100/50 px-2 py-1 rounded">分值: {question.max_score}</span>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
                 </div>
               </button>
             );
@@ -272,7 +272,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+        className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200  overflow-hidden"
       >
         <AnimatePresence mode="wait">
           {selectedQuestion ? (
@@ -345,35 +345,35 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             <div
                               key={option.option_key}
                               className={cn(
-                                "group rounded-xl border bg-white overflow-hidden transition-all shadow-sm hover:shadow-md",
-                                isCorrect ? "border-emerald-200 ring-1 ring-emerald-100" : "border-slate-200"
+                                "group rounded-xl border bg-white overflow-hidden transition-all",
+                                isCorrect ? "border-secondary-200 ring-1 ring-secondary-100" : "border-slate-200"
                               )}
                             >
                               <div className={cn(
                                 "relative px-4 py-3 flex items-center justify-between gap-4 overflow-hidden",
-                                isCorrect ? "bg-emerald-50/30" : "bg-white"
+                                isCorrect ? "bg-secondary-50/30" : "bg-white"
                               )}>
                                 {/* Progress Bar Background - Subtler */}
                                 <div
                                   className={cn(
                                     "absolute left-0 top-0 bottom-0 transition-all duration-1000 mix-blend-multiply",
-                                    isCorrect ? "bg-emerald-50" : "bg-slate-100/50"
+                                    isCorrect ? "bg-secondary-50" : "bg-slate-100/50"
                                   )}
                                   style={{ width: `${percent}%` }}
                                 />
 
                                 <div className="flex items-center gap-3 relative z-10 flex-1">
                                   <span className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm border shadow-sm shrink-0",
+                                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm border  shrink-0",
                                     isCorrect
-                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                      ? "bg-secondary-100 text-secondary-700 border-secondary-200"
                                       : "bg-white text-slate-600 border-slate-200"
                                   )}>
                                     {option.option_key}
                                   </span>
                                   <span className={cn(
                                     "text-sm font-medium leading-relaxed",
-                                    isCorrect ? "text-emerald-900" : "text-slate-700"
+                                    isCorrect ? "text-secondary-900" : "text-slate-700"
                                   )}>
                                     {option.option_text}
                                   </span>
@@ -387,7 +387,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                     <span className="text-[10px] text-slate-400 font-medium tabular-nums">{percent}%</span>
                                   </div>
                                   {isCorrect && (
-                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                    <div className="w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center text-secondary-600">
                                       <Check className="w-5 h-5" />
                                     </div>
                                   )}
@@ -399,7 +399,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 <div className="p-3 bg-slate-50/50 border-t border-slate-100/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                   {option.students.map(student => (
                                     <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-colors text-xs">
-                                      <div className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0 text-[10px] shadow-sm">
+                                      <div className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0 text-[10px]">
                                         {student.student_name.slice(0, 1)}
                                       </div>
                                       <div className="min-w-0">
@@ -434,12 +434,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             key={answer.student_id}
-                            className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-4 group hover:shadow-md transition-shadow"
+                            className="rounded-xl border border-slate-200 bg-white overflow-hidden mb-4 group"
                           >
                             {/* Header: Student Info + Score */}
                             <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shadow-sm">
+                                <div className="w-9 h-9 rounded-full bg-white border border-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">
                                   {answer.student_name.slice(0, 1)}
                                 </div>
                                 <div>
@@ -462,7 +462,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                     value={scoresByStudent[answer.student_id] ?? ''}
                                     onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
                                     onBlur={(e) => commitScore(answer.student_id, e.target.value)}
-                                    className="w-20 h-9 font-mono text-base font-bold border-slate-200 focus:ring-blue-500/20 text-right pr-2 bg-white"
+                                    className="w-20 h-9 font-mono text-base font-bold border-slate-200 focus:ring-primary-500/20 text-right pr-2 bg-white"
                                   />
                                   <span className="ml-2 text-sm text-slate-400 font-medium select-none">/ {selectedQuestion?.max_score}</span>
                                 </div>
@@ -482,13 +482,13 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 {/* Quick Actions Footer */}
                                 <div className="flex justify-end pt-2">
                                   <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors border border-emerald-100">
+                                    <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
                                       <ThumbsUp className="w-3.5 h-3.5" /> 满分
                                     </button>
-                                    <button onClick={() => handleQuickScore(answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors border border-amber-100">
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100">
                                       <Check className="w-3.5 h-3.5" /> 及格
                                     </button>
-                                    <button onClick={() => handleQuickScore(answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors border border-rose-100">
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100">
                                       <ThumbsDown className="w-3.5 h-3.5" /> 零分
                                     </button>
                                   </div>

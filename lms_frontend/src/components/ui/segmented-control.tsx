@@ -29,8 +29,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 }) => {
   const activeStyles = {
     gray: 'bg-gray-900 text-white',
-    blue: 'bg-blue-600 text-white',
-    white: 'bg-white text-gray-900 shadow-sm',
+    blue: 'bg-primary text-white',
+    white: 'bg-white text-gray-900',
   };
 
   return (
@@ -44,15 +44,15 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
         </span>
       )}
       <div className={cn(
-        'flex w-full p-1 rounded-md shadow-none overflow-x-auto no-scrollbar',
-        variant === 'premium' ? 'bg-[#F3F4F6]' : 'bg-white'
+        'flex w-full p-1 rounded-md overflow-x-auto no-scrollbar',
+        variant === 'premium' ? 'bg-gray-100' : 'bg-white'
       )}>
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap shadow-none border-none outline-none ring-0',
+              'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border-none outline-none ring-0',
               value === opt.value
                 ? activeStyles[activeColor]
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'

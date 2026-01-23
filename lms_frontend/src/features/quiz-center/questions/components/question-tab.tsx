@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useState } from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
@@ -75,8 +73,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     icon={<FileText className="w-5 h-5" />}
                     title={row.original.content}
                     subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
-                    iconBg="#F0FDF4"
-                    iconColor="#16A34A"
+                    iconBgClass="bg-secondary-50"
+                    iconColorClass="text-secondary-600"
                 />
             )
         },
@@ -90,8 +88,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         tags={[{
                             key: row.original.question_type,
                             label: getQuestionTypeLabel(row.original.question_type as QuestionType),
-                            bg: typeStyle.bg,
-                            color: typeStyle.color,
+                            bgClass: typeStyle.bg,
+                            textClass: typeStyle.color,
                         }]}
                     />
                 );
@@ -111,10 +109,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             header: '更新时间',
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#111827]">
+                    <span className="text-sm font-bold text-gray-900">
                         {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
                     </span>
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                         {dayjs(row.original.updated_at).format('HH:mm:ss')}
                     </span>
                 </div>
@@ -129,11 +127,11 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md shadow-none">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
                                     <MoreHorizontal className="w-4 h-4 text-gray-500" strokeWidth={2} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200 shadow-none bg-white">
+                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200  bg-white">
                                 <DropdownMenuItem
                                     className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-xs"
                                     onClick={() => setPreviewQuestion(record)}
@@ -142,7 +140,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-gray-200 mx-2" />
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold text-destructive-600 focus:bg-destructive-50 cursor-pointer transition-colors text-xs"
                                     onClick={() => setDeleteId(record.id)}
                                 >
                                     <Trash2 className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 彻底删除
@@ -172,16 +170,16 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         setPage(1);
                     },
                 }}
-                rowClassName="hover:bg-[#F3F4F6] transition-colors group cursor-pointer"
+                rowClassName="hover:bg-gray-100 transition-colors group cursor-pointer"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
 
             {/* 预览对话框 (Keep this as Dialog since it's a detail view, not a confirmation) */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
-                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-xl">
+                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none  bg-white rounded-xl">
                     <DialogHeader className="px-6 py-4 bg-gray-50/80 border-b border-gray-100">
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-                            <FileText className="w-5 h-5 text-emerald-500" />
+                            <FileText className="w-5 h-5 text-secondary-500" />
                             题目详情预览
                             <span className="ml-2 text-xs font-medium text-gray-400"></span>
                         </DialogTitle>
@@ -214,8 +212,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 title="彻底从系统中清除此题目?"
                 description="此操作将永久删除该题目记录。如果已有试卷正在引用此题目,可能会导致作业显示异常。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
-                iconBgColor="bg-[#FEE2E2]"
-                iconColor="text-[#DC2626]"
+                iconBgColor="bg-destructive-100"
+                iconColor="text-destructive"
                 confirmText="确认删除"
                 cancelText="取消"
                 confirmVariant="destructive"
