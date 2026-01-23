@@ -81,29 +81,29 @@ export const TaskPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10 min-h-screen bg-slate-50/30">
+    <div className="space-y-6 animate-fadeIn pb-10 min-h-screen bg-gray-50/30">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60 px-6 py-4">
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200/60 px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/${role}/tasks`)}
-              className="h-10 w-10 rounded-xl hover:bg-slate-100 transition-colors duration-150"
+              className="h-10 w-10 rounded-xl hover:bg-gray-100 transition-colors duration-150"
             >
-              <ArrowLeft className="h-5 w-5 text-slate-600" />
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">{task.title}</h1>
-              <p className="text-xs text-slate-500 font-medium mt-0.5 ml-0.5">
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">{task.title}</h1>
+              <p className="text-xs text-gray-500 font-medium mt-0.5 ml-0.5">
                 {activeTab === 'grading' ? '阅卷中心' : '任务进度监控'}
               </p>
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
+            <TabsList className="bg-gray-100/80 p-1 rounded-xl border border-gray-200/50">
               <TabsTrigger
                 value="progress"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary-600  transition-all"
@@ -155,7 +155,7 @@ export const TaskPreviewPage: React.FC = () => {
                           ? isExam
                             ? "border-destructive-500 bg-destructive-50/30 ring-4 ring-destructive-100" // Active Exam
                             : "border-primary-500 bg-primary-50/30 ring-4 ring-primary-100" // Active Quiz
-                          : "border-white bg-white hover:border-slate-300" // Inactive
+                          : "border-white bg-white hover:border-gray-300" // Inactive
                       )}
                     >
                       {/* Selection Indicator */}
@@ -181,7 +181,7 @@ export const TaskPreviewPage: React.FC = () => {
                           {quiz.quiz_type_display || (isExam ? '考试' : '练习')}
                         </Badge>
                         {/* Duration or Score Tag */}
-                        <div className="flex items-center text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                        <div className="flex items-center text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
                           <Clock className="w-3 h-3 mr-1" />
                           {quiz.duration ? `${quiz.duration}分` : '不限时'}
                         </div>
@@ -189,12 +189,12 @@ export const TaskPreviewPage: React.FC = () => {
 
                       <h3 className={cn(
                         "font-bold text-lg leading-tight mb-2 line-clamp-2",
-                        isActive ? "text-slate-900" : "text-slate-700"
+                        isActive ? "text-gray-900" : "text-gray-700"
                       )}>
                         {quiz.quiz_title}
                       </h3>
 
-                      <div className="mt-auto pt-2 w-full flex items-center justify-between text-xs text-slate-500 border-t border-slate-100/50">
+                      <div className="mt-auto pt-2 w-full flex items-center justify-between text-xs text-gray-500 border-t border-gray-100/50">
                         <span>{quiz.question_count} 道题目</span>
                         <span className="font-mono font-medium">总分: {quiz.total_score}</span>
                       </div>
@@ -204,7 +204,7 @@ export const TaskPreviewPage: React.FC = () => {
               </div>
             ) : (
               // Only one quiz - show a simple banner context
-              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl">
+              <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-2xl">
                 <div className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center",
                   quizzes[0]?.quiz_type === 'EXAM' ? "bg-destructive-100 text-destructive-600" : "bg-primary-100 text-primary-600"
@@ -213,12 +213,12 @@ export const TaskPreviewPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-slate-900">{quizzes[0]?.quiz_title || '试卷详情'}</h2>
+                    <h2 className="font-bold text-gray-900">{quizzes[0]?.quiz_title || '试卷详情'}</h2>
                     <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
                       {quizzes[0]?.quiz_type_display}
                     </Badge>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
+                  <div className="text-xs text-gray-500 mt-0.5">
                     共 {quizzes[0]?.question_count} 道题目 · 总分 {quizzes[0]?.total_score}
                   </div>
                 </div>

@@ -78,7 +78,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       id: 'student_info',
       cell: ({ row }) => (
         <CellWithIcon
-          icon={<Users className="h-4 w-4 text-slate-400" />}
+          icon={<Users className="h-4 w-4 text-gray-400" />}
           title={row.original.student_name}
           subtitle={`${row.original.employee_id} · ${row.original.department}`}
         />
@@ -112,7 +112,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '任务节点进度',
       id: 'node_progress',
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-slate-700 tabular-nums">
+        <span className="text-sm font-medium text-gray-700 tabular-nums">
           {row.original.node_progress}
         </span>
       ),
@@ -123,7 +123,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       cell: ({ row }) => (
         <span className={cn(
           'text-sm font-bold tabular-nums',
-          row.original.score !== null ? 'text-slate-900' : 'text-slate-400'
+          row.original.score !== null ? 'text-gray-900' : 'text-gray-400'
         )}>
           {row.original.score !== null ? row.original.score : '-'}
         </span>
@@ -133,7 +133,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '用时',
       id: 'time_spent',
       cell: ({ row }) => (
-        <span className="text-sm text-slate-600 tabular-nums">
+        <span className="text-sm text-gray-600 tabular-nums">
           {row.original.time_spent} 分钟
         </span>
       ),
@@ -205,13 +205,13 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Node Progress (Aggregated by Category) */}
         <Card className="p-6 border border-gray-100">
-          <h3 className="text-base font-semibold text-slate-900 mb-5">任务节点完成情况</h3>
+          <h3 className="text-base font-semibold text-gray-900 mb-5">任务节点完成情况</h3>
           <div className="space-y-4">
             {aggregatedProgress.map((category) => (
               <CategoryProgressBar key={category.key} category={category} />
             ))}
             {aggregatedProgress.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-4">暂无任务节点</p>
+              <p className="text-sm text-gray-400 text-center py-4">暂无任务节点</p>
             )}
           </div>
         </Card>
@@ -220,7 +220,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         <Card className="p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-4">
-              <h3 className="text-base font-semibold text-slate-900">分布统计</h3>
+              <h3 className="text-base font-semibold text-gray-900">分布统计</h3>
               {analytics.pass_rate !== null && (
                 <div className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border",
@@ -239,14 +239,14 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
               )}
             </div>
             {hasScoreDistribution && (
-              <div className="flex bg-slate-100 rounded-lg p-1">
+              <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setChartType('time')}
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'time'
-                      ? 'bg-white text-slate-900'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900'
                   )}
                 >
                   时间分布
@@ -256,8 +256,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'score'
-                      ? 'bg-white text-slate-900'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-white text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900'
                   )}
                 >
                   分数分布
@@ -274,11 +274,11 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
 
       {/* Row 3: Student Execution Table */}
       <Card className="p-6 border border-gray-100">
-        <h3 className="text-base font-semibold text-slate-900 mb-5">学员执行情况</h3>
+        <h3 className="text-base font-semibold text-gray-900 mb-5">学员执行情况</h3>
         <DataTable
           columns={columns}
           data={students || []}
-          rowClassName="hover:bg-slate-50 transition-colors duration-150 cursor-pointer"
+          rowClassName="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
         />
       </Card>
     </div>
@@ -302,10 +302,10 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, i
         <Icon className={cn("h-6 w-6", iconClassName)} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">{title}</p>
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
         <div className="flex items-baseline gap-1.5 mt-0.5">
-          <span className="text-2xl font-bold text-slate-900 tabular-nums">{value}</span>
-          {subtitle && <span className="text-sm text-slate-500">{subtitle}</span>}
+          <span className="text-2xl font-bold text-gray-900 tabular-nums">{value}</span>
+          {subtitle && <span className="text-sm text-gray-500">{subtitle}</span>}
         </div>
       </div>
     </div>
@@ -340,18 +340,18 @@ const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) =
           >
             <Icon className={cn("h-3.5 w-3.5", category.textClass)} />
           </div>
-          <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors duration-200">
+          <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
             {category.label}
           </span>
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-gray-400">
             ({category.nodeCount}项)
           </span>
         </div>
-        <span className="text-sm text-slate-500 tabular-nums">
-          {category.completedCount}/{category.totalCount} <span className="text-slate-400">({category.percentage}%)</span>
+        <span className="text-sm text-gray-500 tabular-nums">
+          {category.completedCount}/{category.totalCount} <span className="text-gray-400">({category.percentage}%)</span>
         </span>
       </div>
-      <div className="h-7 bg-slate-100 rounded-md overflow-hidden">
+      <div className="h-7 bg-gray-100 rounded-md overflow-hidden">
         <div
           className={cn("h-full rounded-md transition-all duration-500 ease-out", category.barClass)}
           style={{ width: `${category.percentage}%` }}
@@ -375,10 +375,10 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
     <div className="space-y-3">
       {data.map((item) => (
         <div key={item.range} className="flex items-center gap-3 group cursor-pointer">
-          <span className="w-16 text-xs text-slate-500 text-right tabular-nums font-medium">
+          <span className="w-16 text-xs text-gray-500 text-right tabular-nums font-medium">
             {item.range}
           </span>
-          <div className="flex-1 h-7 bg-slate-100 rounded-md overflow-hidden">
+          <div className="flex-1 h-7 bg-gray-100 rounded-md overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-80",

@@ -490,7 +490,12 @@ export const TaskForm: React.FC = () => {
                 key={type}
                 variant={resourceType === type ? 'default' : 'secondary'}
                 size="sm"
-                className={`flex-1 h-9 rounded-lg transition-all text-xs font-semibold ${resourceType === type ?  : 'bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500'}`}
+                className={cn(
+                  "flex-1 h-9 rounded-lg transition-all text-xs font-semibold",
+                  resourceType === type
+                    ? ""
+                    : "bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500"
+                )}
                 onClick={() => {
                   setResourceType(type);
                   setCurrentPage(1);

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
@@ -70,7 +70,7 @@ export const TaskManagement: React.FC = () => {
             opacity: 1,
             transition: { staggerChildren: 0.08, delayChildren: 0.1 }
         }
-    }
+    } satisfies Variants
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20, scale: 0.98 },
@@ -80,7 +80,7 @@ export const TaskManagement: React.FC = () => {
             scale: 1,
             transition: { type: "spring", stiffness: 260, damping: 20 }
         }
-    }
+    } satisfies Variants
 
     // 统计逻辑
     const stats = React.useMemo(() => {

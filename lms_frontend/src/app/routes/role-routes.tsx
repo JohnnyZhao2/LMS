@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * 角色前缀下的路由配置
  * 所有路由都在 /:role 下，路径不需要开头的 /

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type {
   TaskAnalytics,
   StudentExecution,
@@ -12,11 +13,12 @@ import type {
  * 获取任务分析数据
  */
 export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } = {}) => {
+  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['task-analytics', taskId],
+    queryKey: ['task-analytics', currentRole ?? 'UNKNOWN', taskId],
     queryFn: () => apiClient.get<TaskAnalytics>(`/tasks/${taskId}/analytics/`),
-    enabled: Boolean(taskId) && enabled,
+    enabled: Boolean(taskId) && currentRole !== null && enabled,
   });
 };
 
@@ -24,11 +26,12 @@ export const useTaskAnalytics = (taskId: number, options: { enabled?: boolean } 
  * 获取学员执行情况
  */
 export const useStudentExecutions = (taskId: number, options: { enabled?: boolean } = {}) => {
+  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['student-executions', taskId],
+    queryKey: ['student-executions', currentRole ?? 'UNKNOWN', taskId],
     queryFn: () => apiClient.get<StudentExecution[]>(`/tasks/${taskId}/student-executions/`),
-    enabled: Boolean(taskId) && enabled,
+    enabled: Boolean(taskId) && currentRole !== null && enabled,
   });
 };
 
@@ -40,11 +43,12 @@ export const useGradingQuestions = (
   quizId: number | null,
   options: { enabled?: boolean } = {}
 ) => {
+  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-questions', taskId, quizId],
+    queryKey: ['grading-questions', currentRole ?? 'UNKNOWN', taskId, quizId],
     queryFn: () => apiClient.get<GradingQuestion[]>(`/tasks/${taskId}/grading/questions/?quiz_id=${quizId}`),
-    enabled: Boolean(taskId) && Boolean(quizId) && enabled,
+    enabled: Boolean(taskId) && Boolean(quizId) && currentRole !== null && enabled,
   });
 };
 
@@ -57,14 +61,15 @@ export const useGradingAnswers = (
   quizId: number | null,
   options: { enabled?: boolean } = {}
 ) => {
+  const currentRole = useCurrentRole();
   const { enabled = true } = options;
   return useQuery({
-    queryKey: ['grading-answers', taskId, quizId, questionId],
+    queryKey: ['grading-answers', currentRole ?? 'UNKNOWN', taskId, quizId, questionId],
     queryFn: () =>
       apiClient.get<GradingAnswerResponse>(
         `/tasks/${taskId}/grading/answers/?question_id=${questionId}&quiz_id=${quizId}`
       ),
-    enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && enabled,
+    enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && currentRole !== null && enabled,
   });
 };
 
@@ -77,10 +82,10 @@ export const useSubmitGrading = (taskId: number) => {
     mutationFn: (data: GradingSubmitRequest) =>
       apiClient.post(`/tasks/${taskId}/grading/submit/`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['grading-answers', taskId] });
-      queryClient.invalidateQueries({ queryKey: ['grading-questions', taskId] });
-      queryClient.invalidateQueries({ queryKey: ['task-analytics', taskId] });
-      queryClient.invalidateQueries({ queryKey: ['student-executions', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['grading-answers'] });
+      queryClient.invalidateQueries({ queryKey: ['grading-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['task-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['student-executions'] });
     },
   });
 };

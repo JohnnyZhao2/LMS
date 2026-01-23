@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Clock, Plus, Search, Star, User } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
@@ -10,6 +10,7 @@ import { PageHeader, SimplePagination } from '@/components/ui';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ROUTES } from '@/config/routes';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { SpotCheck } from '@/types/api';
 import { useSpotChecks } from '../api/get-spot-checks';
@@ -35,8 +36,12 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  */
 export const SpotCheckList: React.FC = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useSpotChecks({ page });
+  const currentRole = useCurrentRole();
+  const { data, isLoading } = useSpotChecks({ page, role: currentRole });
   const { roleNavigate } = useRoleNavigate();
+  useEffect(() => {
+    setPage(1);
+  }, [currentRole]);
 
   const columns: ColumnDef<SpotCheck>[] = [
     {

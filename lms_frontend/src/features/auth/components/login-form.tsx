@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,7 +47,7 @@ export const LoginForm: React.FC = () => {
         delayChildren: 0.2,
       }
     }
-  };
+  } satisfies Variants;
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
@@ -57,7 +57,7 @@ export const LoginForm: React.FC = () => {
       scale: 1,
       transition: { type: "spring", stiffness: 300, damping: 24 }
     }
-  };
+  } satisfies Variants;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

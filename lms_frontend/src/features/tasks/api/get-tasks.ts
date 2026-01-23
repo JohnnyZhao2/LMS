@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type {
   PaginatedResponse,
   StudentTaskCenterResponse,
@@ -26,11 +27,12 @@ export const useStudentTasks = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
+  const currentRole = useCurrentRole();
   const { page = 1, pageSize = 20, status } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['student-tasks', page, pageSize, status],
+    queryKey: ['student-tasks', currentRole ?? 'UNKNOWN', page, pageSize, status],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -41,7 +43,7 @@ export const useStudentTasks = (
         `/tasks/my-assignments/${queryString}`
       );
     },
-    enabled,
+    enabled: currentRole !== null && enabled,
     placeholderData: keepPreviousData,
   });
 };
@@ -53,11 +55,12 @@ export const useTaskList = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
+  const currentRole = useCurrentRole();
   const { page = 1, pageSize = 20, isClosed } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', page, pageSize, isClosed],
+    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, isClosed],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -68,6 +71,6 @@ export const useTaskList = (
         `/tasks/${queryString}`
       );
     },
-    enabled,
+    enabled: currentRole !== null && enabled,
   });
 };

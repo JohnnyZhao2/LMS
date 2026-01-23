@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type { KnowledgeDetail } from '@/types/api';
 
 /**
@@ -8,9 +9,10 @@ import type { KnowledgeDetail } from '@/types/api';
  * @param taskKnowledgeId - 任务知识关联ID
  */
 export const useStudentTaskKnowledgeDetail = (taskKnowledgeId: number) => {
+  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['student-task-knowledge-detail', taskKnowledgeId],
+    queryKey: ['student-task-knowledge-detail', currentRole ?? 'UNKNOWN', taskKnowledgeId],
     queryFn: () => apiClient.get<KnowledgeDetail>(`/knowledge/task/${taskKnowledgeId}/`),
-    enabled: !!taskKnowledgeId,
+    enabled: !!taskKnowledgeId && currentRole !== null,
   });
 };

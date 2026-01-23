@@ -19,11 +19,10 @@ export const useCompleteLearning = () => {
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-detail', variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task-detail'] });
       queryClient.invalidateQueries({
-        queryKey: ['student-learning-task-detail', variables.taskId],
+        queryKey: ['student-learning-task-detail'],
       });
     },
   });
 };
-

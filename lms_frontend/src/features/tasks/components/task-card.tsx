@@ -140,7 +140,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-[210px] bg-white rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-slate-100/50 hover:-translate-y-1",
+        "group relative flex flex-col h-[210px] bg-white rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-gray-100/50 hover:-translate-y-1",
         isStudentView && studentTask?.status === 'COMPLETED' && "bg-gray-50/80 border-transparent"
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
@@ -155,17 +155,17 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 isUrgent ? "bg-destructive-500 animate-pulse" : missionConfig.bgClass
               )}
             />
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
               {isUrgent ? '紧急任务' : missionConfig.label}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-[11px] font-bold text-slate-500">
+          <div className="text-[11px] font-bold text-gray-500">
             {task.created_by_name || '发布人'}
           </div>
-          <div className="text-[11px] font-bold text-slate-400">
+          <div className="text-[11px] font-bold text-gray-400">
             {dayjs(task.deadline).format('YYYY-MM-DD')}
           </div>
 
@@ -173,21 +173,21 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
             <div onClick={e => e.stopPropagation()} className="ml-1">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="h-6 w-6 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+                  <button className="h-6 w-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors">
                     <MoreHorizontal className="w-3.5 h-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl p-2 border border-slate-200 bg-white">
+                <DropdownMenuContent align="end" className="w-48 rounded-xl p-2 border border-gray-200 bg-white">
                   <DropdownMenuLabel className="text-[10px] font-bold text-gray-500 uppercase px-3 py-2">任务控制</DropdownMenuLabel>
-                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-slate-50" onClick={() => roleNavigate(`tasks/${targetTaskId}/edit`)}>
+                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-50" onClick={() => roleNavigate(`tasks/${targetTaskId}/edit`)}>
                     <Pencil className="w-4 h-4 mr-2" /> 编辑任务
                   </DropdownMenuItem>
                   {!managerClosed && (
-                    <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-slate-50" onClick={() => setCloseModalOpen(true)}>
+                    <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-50" onClick={() => setCloseModalOpen(true)}>
                       <StopCircle className="w-4 h-4 mr-2" /> 终止任务
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuSeparator className="bg-slate-100 mx-2" />
+                  <DropdownMenuSeparator className="bg-gray-100 mx-2" />
                   <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold text-destructive-500 hover:bg-destructive-50 cursor-pointer" onClick={() => setDeleteModalOpen(true)}>
                     <Trash2 className="w-4 h-4 mr-2" /> 彻底删除
                   </DropdownMenuItem>
@@ -200,10 +200,10 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
 
       {/* 中部：标题 & 描述 */}
       <div className="flex-1 min-h-0">
-        <h3 className="text-xl font-black text-slate-900 leading-tight mb-1 truncate group-hover:text-primary-600 transition-colors">
+        <h3 className="text-xl font-black text-gray-900 leading-tight mb-1 truncate group-hover:text-primary-600 transition-colors">
           {title}
         </h3>
-        <p className="text-[14px] font-medium text-slate-500/80 truncate">
+        <p className="text-[14px] font-medium text-gray-500/80 truncate">
           {description || '此任务暂无描述...'}
         </p>
       </div>
@@ -218,7 +218,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   <span className={cn(
                     "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
                     (studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0)
-                      ? "text-slate-400 bg-slate-50"
+                      ? "text-gray-400 bg-gray-50"
                       : "text-secondary-600 bg-secondary-50"
                   )}>
                     {studentTask?.progress.knowledge_total} 知识
@@ -228,7 +228,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   <span className={cn(
                     "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
                     (studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0)
-                      ? "text-slate-400 bg-slate-50"
+                      ? "text-gray-400 bg-gray-50"
                       : "text-warning-600 bg-warning-50"
                   )}>
                     {studentTask?.progress.practice_total} 测验
@@ -238,16 +238,16 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   <span className={cn(
                     "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
                     (studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0)
-                      ? "text-slate-400 bg-slate-50"
+                      ? "text-gray-400 bg-gray-50"
                       : "text-primary-600 bg-primary-50"
                   )}>
                     {studentTask?.progress.exam_total} 考试
                   </span>
                 )}
               </div>
-              <span className="text-base font-black text-slate-900">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
+              <span className="text-base font-black text-gray-900">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
             </div>
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-700 ease-out",
@@ -278,24 +278,24 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 </span>
               )}
             </div>
-            <div className="flex gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+            <div className="flex gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
               <div className="flex gap-4">
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-slate-900">{managerTask?.assignee_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">学员</span>
+                  <span className="text-base font-black text-gray-900">{managerTask?.assignee_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">学员</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-slate-900">{managerTask?.completed_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">完成</span>
+                  <span className="text-base font-black text-gray-900">{managerTask?.completed_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">完成</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-slate-900">
+                  <span className="text-base font-black text-gray-900">
                     {managerTask?.pass_rate !== null && managerTask?.pass_rate !== undefined
                       ? `${managerTask.pass_rate}%`
                       : '-'
                     }
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">及格率</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">及格率</span>
                 </div>
               </div>
             </div>
