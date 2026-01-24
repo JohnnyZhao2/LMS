@@ -55,14 +55,14 @@ export const ActionCard: React.FC<ActionCardProps> = ({
       onClick={handleClick}
       className={cn(
         // Flat Design 统一样式
-        'group relative bg-white p-6 rounded-lg',
+        'group relative bg-background p-6 rounded-lg',
         'hover:scale-[1.02]',
         'transition-all duration-200 cursor-pointer overflow-hidden',
         className
       )}
     >
       {/* 装饰性背景圆 */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gray-100 rounded-full translate-x-10 -translate-y-10 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-muted rounded-full translate-x-10 -translate-y-10 opacity-50 group-hover:scale-110 transition-transform duration-500" />
 
       <div className="relative z-10 flex flex-col gap-4">
         <div className={cn(
@@ -73,11 +73,11 @@ export const ActionCard: React.FC<ActionCardProps> = ({
           <Icon className={cn('w-7 h-7', iconColor)} />
         </div>
         <div>
-          <div className="text-lg font-bold text-gray-900 mb-1 group-hover:text-primary transition-colors duration-200">
+          <div className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors duration-200">
             {title}
           </div>
           {description && (
-            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <div className="text-xs font-bold text-muted uppercase tracking-wider">
               {description}
             </div>
           )}

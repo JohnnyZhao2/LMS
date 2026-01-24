@@ -56,11 +56,11 @@ export const StatCard: React.FC<StatCardProps> = ({
             </div>
 
             <div className="flex flex-col">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 leading-none">
+                <p className="text-xs font-bold text-muted uppercase tracking-wider mb-1 leading-none">
                     {title}
                 </p>
                 <div className="flex items-baseline gap-2">
-                    <h3 className="text-4xl font-bold text-gray-900 tracking-tight leading-none">
+                    <h3 className="text-4xl font-bold text-foreground tracking-tight leading-none">
                         {value}
                     </h3>
                     {trend && (

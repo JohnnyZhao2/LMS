@@ -37,7 +37,7 @@ const statusStyles: Record<StatusType, string> = {
   open: 'bg-warning-50 text-warning-500 border border-warning-500',
   closed: 'bg-destructive-50 text-destructive border border-destructive',
   processing: 'bg-primary-50 text-primary border border-primary',
-  default: 'bg-gray-100 text-gray-700',
+  default: 'bg-muted text-foreground',
 };
 
 /**

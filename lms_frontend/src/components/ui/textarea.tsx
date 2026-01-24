@@ -16,11 +16,11 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"tex
     return (
       <textarea
         className={cn(
-          "flex min-h-[120px] w-full rounded-md border-none bg-gray-100 px-4 py-3",
-          "text-base font-normal text-gray-900 leading-relaxed",
-          "placeholder:text-gray-500",
-          "focus:outline-none focus:bg-white focus:border-2 focus:border-primary-600",
-          "disabled:bg-gray-50 disabled:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed",
+          "flex min-h-[120px] w-full rounded-md border-none bg-muted px-4 py-3",
+          "text-base font-normal text-foreground leading-relaxed",
+          "placeholder:text-muted",
+          "focus:outline-none focus:bg-background focus:border-2 focus:border-primary",
+          "disabled:bg-muted disabled:text-muted disabled:opacity-50 disabled:cursor-not-allowed",
           "transition-all duration-200 resize-y",
           className
         )}
