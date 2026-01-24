@@ -80,7 +80,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
                 <div className="flex flex-col min-w-0 flex-1">
                     <p className={cn(
-                        "font-bold text-muted uppercase tracking-wider leading-none",
+                        "font-bold text-text-muted uppercase tracking-wider leading-none",
                         isLarge ? "text-xs mb-1" : "text-xs truncate"
                     )}>
                         {title}
@@ -93,7 +93,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                             {value}
                         </h3>
                         {subtitle && (
-                            <span className="text-sm text-muted">{subtitle}</span>
+                            <span className="text-sm text-text-muted">{subtitle}</span>
                         )}
                         {trend && (
                             <span className={cn(

@@ -77,7 +77,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             {title}
           </div>
           {description && (
-            <div className="text-xs font-bold text-muted uppercase tracking-wider">
+            <div className="text-xs font-bold text-text-muted uppercase tracking-wider">
               {description}
             </div>
           )}

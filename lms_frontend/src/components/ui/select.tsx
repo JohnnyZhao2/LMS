@@ -28,9 +28,9 @@ const SelectTrigger = React.forwardRef<
       "flex h-12 w-full items-center justify-between gap-2 whitespace-nowrap",
       "rounded-md border-none bg-muted px-4 py-3",
       "text-base font-medium text-foreground",
-      "placeholder:text-muted",
+      "placeholder:text-text-muted",
       "focus:outline-none focus:bg-background focus:border-2 focus:border-primary",
-      "disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-50",
+      "disabled:cursor-not-allowed disabled:bg-muted disabled:text-text-muted disabled:opacity-50",
       "transition-all duration-200",
       "[&>span]:line-clamp-1",
       className

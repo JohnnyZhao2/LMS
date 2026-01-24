@@ -49,7 +49,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {Icon && (
         <div className={cn(
           'mb-4 transform hover:scale-110 transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]',
-          'text-muted'
+          'text-text-muted'
         )}>
           {React.isValidElement(Icon) ? (
             React.cloneElement(Icon as React.ReactElement<{ className?: string }>, {
@@ -66,11 +66,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {title}
         </h3>
       )}
-      <p className="text-muted font-normal">
+      <p className="text-text-muted font-normal">
         {description}
       </p>
       {subDescription && (
-        <p className="text-sm text-muted opacity-60 mt-1 font-normal">
+        <p className="text-sm text-text-muted opacity-60 mt-1 font-normal">
           {subDescription}
         </p>
       )}

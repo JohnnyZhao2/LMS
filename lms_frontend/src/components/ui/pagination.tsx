@@ -98,7 +98,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     <div className={cn('flex items-center justify-between gap-4', className)}>
       {/* Total info */}
       {showTotal && (
-        <span className="text-sm text-muted">
+        <span className="text-sm text-text-muted">
           {showTotal(total, [startItem, endItem])}
         </span>
       )}
@@ -122,7 +122,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               key={`ellipsis-${index}`}
               className="flex h-8 w-8 items-center justify-center"
             >
-              <MoreHorizontal className="h-4 w-4 text-muted" />
+              <MoreHorizontal className="h-4 w-4 text-text-muted" />
             </span>
           ) : (
             <Button
