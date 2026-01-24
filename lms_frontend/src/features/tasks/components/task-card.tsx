@@ -216,18 +216,21 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 {(studentTask?.progress.knowledge_total ?? 0) > 0 && (
                   <CategoryBadge
                     variant={(studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0) ? 'completed' : 'knowledge'}
+                    label={(studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0) ? '知识' : undefined}
                     count={studentTask?.progress.knowledge_total}
                   />
                 )}
                 {(studentTask?.progress.practice_total ?? 0) > 0 && (
                   <CategoryBadge
                     variant={(studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0) ? 'completed' : 'practice'}
+                    label={(studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0) ? '测验' : undefined}
                     count={studentTask?.progress.practice_total}
                   />
                 )}
                 {(studentTask?.progress.exam_total ?? 0) > 0 && (
                   <CategoryBadge
                     variant={(studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0) ? 'completed' : 'exam'}
+                    label={(studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0) ? '考试' : undefined}
                     count={studentTask?.progress.exam_total}
                   />
                 )}
