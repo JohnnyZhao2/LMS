@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { OptionItem } from '@/components/common';
 import type { Answer } from '@/types/api';
 
 type OptionItem = { key: string; label: string };
@@ -151,25 +152,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             disabled={disabled}
             className="flex flex-col gap-2"
           >
-            {optionItems.map(({ key, label }) => {
-              const isSelected = singleValue === key;
-              return (
-                <label
-                  key={key}
-                  className={cn(
-                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
-                    isSelected && 'border-primary-500 bg-primary-50',
-                    disabled && 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <RadioGroupItem value={key} id={`option-${answer.id}-${key}`} />
-                  <span className="flex-1 text-gray-900">
-                    <span className="font-medium">{key}.</span>{' '}
-                    <span>{label}</span>
-                  </span>
-                </label>
-              );
-            })}
+            {optionItems.map(({ key, label }) => (
+              <OptionItem
+                key={key}
+                type="radio"
+                optionKey={key}
+                label={label}
+                value={key}
+                isSelected={singleValue === key}
+                disabled={disabled}
+                id={`option-${answer.id}-${key}`}
+                onChange={onAnswerChange}
+              />
+            ))}
           </RadioGroup>
         );
       }
@@ -178,32 +173,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         const multipleValue = getMultipleChoiceValue();
         return (
           <div className="flex flex-col gap-2">
-            {optionItems.map(({ key, label }) => {
-              const isSelected = multipleValue.includes(key);
-              return (
-                <label
-                  key={key}
-                  className={cn(
-                    'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
-                    isSelected && 'border-primary-500 bg-primary-50',
-                    disabled && 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <Checkbox
-                    id={`option-${answer.id}-${key}`}
-                    checked={isSelected}
-                    onCheckedChange={(checked) =>
-                      handleMultipleChoiceChange(key, checked === true)
-                    }
-                    disabled={disabled}
-                  />
-                  <span className="flex-1 text-gray-900">
-                    <span className="font-medium">{key}.</span>{' '}
-                    <span>{label}</span>
-                  </span>
-                </label>
-              );
-            })}
+            {optionItems.map(({ key, label }) => (
+              <OptionItem
+                key={key}
+                type="checkbox"
+                optionKey={key}
+                label={label}
+                value={key}
+                isSelected={multipleValue.includes(key)}
+                disabled={disabled}
+                id={`option-${answer.id}-${key}`}
+                onChange={handleMultipleChoiceChange}
+              />
+            ))}
           </div>
         );
       }

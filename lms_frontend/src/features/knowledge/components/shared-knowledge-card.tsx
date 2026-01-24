@@ -9,6 +9,7 @@ import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { UserInfoRow, StatusDot } from '@/components/common';
 
 export interface SharedKnowledgeCardProps {
   item: KnowledgeListItem;
@@ -51,10 +52,10 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       {/* 状态排布 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <div className={cn(
-            "w-2.5 h-2.5 rounded-full",
-            isEmergency ? "bg-destructive" : "bg-secondary"
-          )} />
+          <StatusDot
+            size="lg"
+            color={isEmergency ? "bg-destructive" : "bg-secondary"}
+          />
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-wider",
             isEmergency ? "text-destructive" : "text-secondary"
@@ -113,15 +114,11 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
 
       {/* 底部信息 */}
       <div className="mt-auto pt-6 border-t border-gray-200 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 bg-gray-100 rounded-md flex items-center justify-center text-gray-600 font-bold text-sm group-hover:scale-110 transition-transform duration-200">
-            {(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-gray-900 leading-none mb-1">{item.updated_by_name || item.created_by_name || '系统'}</span>
-            <span className="text-[10px] font-medium text-gray-500">{dayjs(item.updated_at).format('YYYY.MM.DD')}</span>
-          </div>
-        </div>
+        <UserInfoRow
+          name={item.updated_by_name || item.created_by_name || '系统'}
+          metadata={dayjs(item.updated_at).format('YYYY.MM.DD')}
+          avatarText={(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
+        />
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 text-gray-500">

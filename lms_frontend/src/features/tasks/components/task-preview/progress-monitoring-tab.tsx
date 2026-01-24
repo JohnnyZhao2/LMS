@@ -7,6 +7,7 @@ import {
   BookOpen,
   FileQuestion,
   GraduationCap,
+  type LucideIcon,
 } from 'lucide-react';
 import { Card, Skeleton } from '@/components/ui';
 import {
@@ -19,6 +20,8 @@ import type {
   StudentExecution,
 } from '@/types/task-analytics';
 import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
+import { IconBox, CategoryBadge } from '@/components/common';
+import { StatCard } from '@/components/ui/stat-card';
 
 interface ProgressMonitoringTabProps {
   taskId?: number;
@@ -167,37 +170,41 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
     <div className="space-y-6">
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
+        <StatCard
           title="完成人数"
           value={`${analytics.completion.completed_count}/${analytics.completion.total_count}`}
           subtitle={`${analytics.completion.percentage}%`}
           icon={Users}
           iconClassName="text-primary"
-          iconBgClassName="bg-primary-50"
+          accentClassName="bg-primary-50"
+          size="sm"
         />
-        <KPICard
+        <StatCard
           title="平均用时"
           value={`${analytics.average_time}`}
           subtitle="分钟"
           icon={Clock}
           iconClassName="text-secondary"
-          iconBgClassName="bg-secondary-50"
+          accentClassName="bg-secondary-50"
+          size="sm"
         />
-        <KPICard
+        <StatCard
           title={analytics.accuracy.has_quiz ? '准确率' : '考试情况'}
           value={analytics.accuracy.has_quiz ? `${analytics.accuracy.percentage}%` : '无考试'}
           subtitle={analytics.accuracy.has_quiz ? '平均正确率' : ''}
           icon={Target}
           iconClassName="text-primary-500"
-          iconBgClassName="bg-primary-50"
+          accentClassName="bg-primary-50"
+          size="sm"
         />
-        <KPICard
+        <StatCard
           title="异常人数"
           value={analytics.abnormal_count.toString()}
           subtitle="需关注"
           icon={AlertTriangle}
           iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-gray-500'}
-          iconBgClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-gray-100'}
+          accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-gray-100'}
+          size="sm"
         />
       </div>
 
@@ -285,39 +292,12 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
   );
 };
 
-// KPI Card Component
-interface KPICardProps {
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: React.ElementType;
-  iconClassName: string;
-  iconBgClassName: string;
-}
-
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon: Icon, iconClassName, iconBgClassName }) => (
-  <Card className="p-5 cursor-pointer transition-colors duration-200 ease-out border border-gray-100">
-    <div className="flex items-center gap-4">
-      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-transform duration-200", iconBgClassName)}>
-        <Icon className={cn("h-6 w-6", iconClassName)} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
-        <div className="flex items-baseline gap-1.5 mt-0.5">
-          <span className="text-2xl font-bold text-gray-900 tabular-nums">{value}</span>
-          {subtitle && <span className="text-sm text-gray-500">{subtitle}</span>}
-        </div>
-      </div>
-    </div>
-  </Card>
-);
-
 // Category Progress Bar Component (Aggregated)
 interface CategoryProgressBarProps {
   category: {
     key: string;
     label: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     textClass: string;
     bgClass: string;
     barClass: string;
@@ -329,17 +309,18 @@ interface CategoryProgressBarProps {
 }
 
 const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) => {
-  const Icon = category.icon;
-
   return (
     <div className="space-y-2 group cursor-pointer">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className={cn("w-6 h-6 rounded-md flex items-center justify-center transition-colors duration-200", category.bgClass)}
-          >
-            <Icon className={cn("h-3.5 w-3.5", category.textClass)} />
-          </div>
+          <IconBox
+            icon={category.icon}
+            size="sm"
+            bgColor={category.bgClass}
+            iconColor={category.textClass}
+            rounded="md"
+            hoverScale={false}
+          />
           <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
             {category.label}
           </span>

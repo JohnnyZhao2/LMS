@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { CategoryBadge, StatusDot, CardHeader } from '@/components/common';
 
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
@@ -149,11 +150,9 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "w-2 h-2 rounded-full",
-                isUrgent ? "bg-destructive-500 animate-pulse" : missionConfig.bgClass
-              )}
+            <StatusDot
+              color={isUrgent ? "bg-destructive-500" : missionConfig.bgClass}
+              animate={isUrgent}
             />
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
               {isUrgent ? '紧急任务' : missionConfig.label}
@@ -215,34 +214,22 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
             <div className="flex items-center justify-between">
               <div className="flex flex-wrap gap-2">
                 {(studentTask?.progress.knowledge_total ?? 0) > 0 && (
-                  <span className={cn(
-                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
-                    (studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0)
-                      ? "text-gray-400 bg-gray-50"
-                      : "text-secondary-600 bg-secondary-50"
-                  )}>
-                    {studentTask?.progress.knowledge_total} 知识
-                  </span>
+                  <CategoryBadge
+                    variant={(studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0) ? 'completed' : 'knowledge'}
+                    count={studentTask?.progress.knowledge_total}
+                  />
                 )}
                 {(studentTask?.progress.practice_total ?? 0) > 0 && (
-                  <span className={cn(
-                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
-                    (studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0)
-                      ? "text-gray-400 bg-gray-50"
-                      : "text-warning-600 bg-warning-50"
-                  )}>
-                    {studentTask?.progress.practice_total} 测验
-                  </span>
+                  <CategoryBadge
+                    variant={(studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0) ? 'completed' : 'practice'}
+                    count={studentTask?.progress.practice_total}
+                  />
                 )}
                 {(studentTask?.progress.exam_total ?? 0) > 0 && (
-                  <span className={cn(
-                    "text-[11px] font-bold px-2 py-0.5 rounded-md transition-colors",
-                    (studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0)
-                      ? "text-gray-400 bg-gray-50"
-                      : "text-primary-600 bg-primary-50"
-                  )}>
-                    {studentTask?.progress.exam_total} 考试
-                  </span>
+                  <CategoryBadge
+                    variant={(studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0) ? 'completed' : 'exam'}
+                    count={studentTask?.progress.exam_total}
+                  />
                 )}
               </div>
               <span className="text-base font-black text-gray-900">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
@@ -263,19 +250,13 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {(managerTask?.knowledge_count ?? 0) > 0 && (
-                <span className="text-[11px] font-bold text-secondary-600 bg-secondary-50 px-2 py-0.5 rounded-md">
-                  {managerTask?.knowledge_count} 知识
-                </span>
+                <CategoryBadge variant="knowledge" count={managerTask?.knowledge_count} />
               )}
               {(managerTask?.practice_count ?? 0) > 0 && (
-                <span className="text-[11px] font-bold text-warning-600 bg-warning-50 px-2 py-0.5 rounded-md">
-                  {managerTask?.practice_count} 测验
-                </span>
+                <CategoryBadge variant="practice" count={managerTask?.practice_count} />
               )}
               {(managerTask?.exam_count ?? 0) > 0 && (
-                <span className="text-[11px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md">
-                  {managerTask?.exam_count} 考试
-                </span>
+                <CategoryBadge variant="exam" count={managerTask?.exam_count} />
               )}
             </div>
             <div className="flex gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
