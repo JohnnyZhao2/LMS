@@ -36,7 +36,7 @@ export interface CardHeaderProps {
 export const CardHeader: React.FC<CardHeaderProps> = ({
   statusDot,
   statusLabel,
-  statusLabelColor = 'text-gray-500',
+  statusLabelColor = 'text-muted-foreground',
   actions,
   className,
 }) => {

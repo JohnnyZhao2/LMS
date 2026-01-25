@@ -5,8 +5,11 @@
  * 用于提高代码复用性和维护性
  */
 
+export { AvatarCircle, type AvatarCircleProps } from './avatar-circle';
 export { CategoryBadge, type CategoryBadgeProps } from './category-badge';
 export { IconBox, type IconBoxProps } from './icon-box';
+export { MetricBadge, type MetricBadgeProps } from './metric-badge';
+export { MicroLabel, type MicroLabelProps } from './micro-label';
 export { OptionItem, type OptionItemProps } from './option-item';
 export { UserInfoRow, type UserInfoRowProps } from './user-info-row';
 export { CardHeader, type CardHeaderProps } from './card-header';

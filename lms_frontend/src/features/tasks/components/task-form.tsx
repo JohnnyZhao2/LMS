@@ -45,6 +45,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { MicroLabel } from '@/components/common';
 import {
   Dialog,
   DialogContent,
@@ -680,10 +681,9 @@ export const TaskForm: React.FC = () => {
 
           <div className="p-6 space-y-6 shrink-0 border-b border-gray-50/50">
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-gray-500">
-                <FileText className="w-3.5 h-3.5" />
-                <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">任务标题</Label>
-              </div>
+              <MicroLabel icon={<FileText className="w-3.5 h-3.5" />} asLabel>
+                任务标题
+              </MicroLabel>
               <Input
                 placeholder="请输入标题..."
                 className="h-12 bg-gray-50/50 border-gray-100/50 focus:bg-white focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
@@ -693,10 +693,9 @@ export const TaskForm: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-gray-500">
-                <Plus className="w-3.5 h-3.5" />
-                <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">截止时间</Label>
-              </div>
+              <MicroLabel icon={<Plus className="w-3.5 h-3.5" />} asLabel>
+                截止时间
+              </MicroLabel>
               <DatePicker
                 date={deadline}
                 onDateChange={setDeadline}
@@ -706,10 +705,9 @@ export const TaskForm: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-gray-500">
-                <BookOpen className="w-3.5 h-3.5" />
-                <Label className="text-xs font-bold uppercase tracking-widest text-gray-400">任务描述</Label>
-              </div>
+              <MicroLabel icon={<BookOpen className="w-3.5 h-3.5" />} asLabel>
+                任务描述
+              </MicroLabel>
               <textarea
                 className="w-full p-4 bg-gray-50/50 border border-gray-100/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-white focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
                 placeholder="输入任务指引..."

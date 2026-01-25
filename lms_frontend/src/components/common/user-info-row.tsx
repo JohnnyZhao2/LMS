@@ -57,8 +57,8 @@ export const UserInfoRow: React.FC<UserInfoRowProps> = ({
   name,
   metadata,
   avatarText,
-  avatarBgColor = 'bg-gray-100',
-  avatarTextColor = 'text-gray-600',
+  avatarBgColor = 'bg-muted',
+  avatarTextColor = 'text-muted-foreground',
   avatarSize = 'md',
   className,
 }) => {
@@ -78,11 +78,11 @@ export const UserInfoRow: React.FC<UserInfoRowProps> = ({
         {displayAvatarText}
       </div>
       <div className="flex flex-col">
-        <span className="text-[11px] font-bold text-gray-900 leading-none mb-1">
+        <span className="text-[11px] font-bold text-foreground leading-none mb-1">
           {name}
         </span>
         {metadata && (
-          <span className="text-[10px] font-medium text-gray-500">
+          <span className="text-[10px] font-medium text-muted-foreground">
             {metadata}
           </span>
         )}

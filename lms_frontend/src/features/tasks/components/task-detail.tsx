@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { MetricBadge, MicroLabel, IconBox } from '@/components/common';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';
@@ -171,7 +172,7 @@ export const TaskDetail: React.FC = () => {
   const studentStatus = learningDetail?.status;
   const studentStatusDisplay = learningDetail?.status_display;
 
-  const canStartQuiz = isStudent
+  const canStartExam = isStudent
     ? (studentStatus === 'IN_PROGRESS')
     : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
   const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
@@ -181,10 +182,11 @@ export const TaskDetail: React.FC = () => {
   const hasQuizzes = displayQuizzes.length > 0;
 
 
-  const handleStartQuiz = (quizId: number) => {
-    if (!isStudent || !canStartQuiz) return;
+  const handleStartQuiz = (quizId: number, quizType?: string) => {
+    if (!isStudent) return;
     const assignmentId = learningDetail?.id;
-    if (!assignmentId) return;
+    if (!assignmentId || !quizId) return;
+    if (quizType === 'EXAM' && !canStartExam) return;
     navigate(getRolePath(`quiz/${quizId}?assignment=${assignmentId}&task=${taskId}`));
   };
 
@@ -243,14 +245,16 @@ export const TaskDetail: React.FC = () => {
 
         <div className="flex items-center gap-4 lg:gap-6 text-sm flex-shrink-0">
           <div className="hidden md:flex items-center gap-6 text-gray-500">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
-              <User className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-700">{task.updated_by_name || task.created_by_name}</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-100">
-              <Calendar className="w-3.5 h-3.5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-700">{dayjs(task.deadline).format('MM-DD HH:mm')} 截止</span>
-            </div>
+            <MetricBadge
+              icon={<User className="w-3.5 h-3.5" />}
+              iconColor="text-muted-foreground"
+              label={task.updated_by_name || task.created_by_name}
+            />
+            <MetricBadge
+              icon={<Calendar className="w-3.5 h-3.5" />}
+              iconColor="text-muted-foreground"
+              label={`${dayjs(task.deadline).format('MM-DD HH:mm')} 截止`}
+            />
           </div>
 
           {canEditTask && (
@@ -278,10 +282,9 @@ export const TaskDetail: React.FC = () => {
 
             {task.description && (
               <section className="bg-white rounded-2xl border border-gray-100 p-8   transition-all duration-300">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <FileText className="w-3 h-3" />
+                <MicroLabel icon={<FileText className="w-3 h-3" />} className="mb-4">
                   任务描述
-                </h3>
+                </MicroLabel>
                 <div className="prose prose-sm prose-gray max-w-none">
                   <p className="text-gray-600 leading-relaxed whitespace-pre-line text-[15px]">
                     {task.description}
@@ -293,9 +296,7 @@ export const TaskDetail: React.FC = () => {
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
-                  <div className="p-2 bg-primary-50 text-primary-600 rounded-lg">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
+                  <IconBox icon={BookOpen} size="sm" bgColor="bg-primary-50" iconColor="text-primary-600" rounded="lg" />
                   学习资料
                   <span className="text-sm font-medium text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md ml-1">
                     {knowledgeList.length}
@@ -368,9 +369,7 @@ export const TaskDetail: React.FC = () => {
             <section className="space-y-6 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3 tracking-tight">
-                  <div className="p-2 bg-warning-50 text-warning-600 rounded-lg">
-                    <Trophy className="w-5 h-5" />
-                  </div>
+                  <IconBox icon={Trophy} size="sm" bgColor="bg-warning-50" iconColor="text-warning-600" rounded="lg" />
                   能力考核
                   <span className="text-sm font-medium text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md ml-1">
                     {displayQuizzes.length}
@@ -397,7 +396,10 @@ export const TaskDetail: React.FC = () => {
                     return (
                       <div
                         key={item.id}
-                        onClick={() => handleStartQuiz(studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0))}
+                        onClick={() => handleStartQuiz(
+                          studentQuizItem ? studentQuizItem.quiz_id : (adminQuizItem?.quiz || 0),
+                          item.quiz_type
+                        )}
                         className={cn(
                           "group relative bg-white rounded-xl border p-6 transition-all duration-300 h-[140px] cursor-pointer",
                           isCompleted
@@ -474,10 +476,9 @@ export const TaskDetail: React.FC = () => {
 
             {isStudent && learningDetail && (
               <div className="bg-white rounded-2xl border border-gray-100  p-6 sticky top-24">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-primary-500" />
+                <MicroLabel icon={<Activity className="w-4 h-4 text-primary-500" />} className="mb-6">
                   总体进度
-                </h3>
+                </MicroLabel>
 
                 <div className="mb-8 text-center relative">
                   <div className="text-6xl font-bold text-gray-900 mb-2 font-mono tracking-tighter">
@@ -497,9 +498,7 @@ export const TaskDetail: React.FC = () => {
                   {Number(learningDetail.progress?.knowledge_total) > 0 && (
                     <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary-100 text-primary-600 rounded-lg">
-                          <BookOpen className="w-4 h-4" />
-                        </div>
+                        <IconBox icon={BookOpen} size="sm" bgColor="bg-primary-100" iconColor="text-primary-600" rounded="lg" hoverScale={false} />
                         <span className="text-gray-600 font-medium">知识学习</span>
                       </div>
                       <span className="font-bold text-gray-900 font-mono">
@@ -510,9 +509,7 @@ export const TaskDetail: React.FC = () => {
                   {Number(learningDetail.progress?.quiz_total) > 0 && (
                     <div className="flex justify-between items-center text-sm p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-warning-100 text-warning-600 rounded-lg">
-                          <Trophy className="w-4 h-4" />
-                        </div>
+                        <IconBox icon={Trophy} size="sm" bgColor="bg-warning-100" iconColor="text-warning-600" rounded="lg" hoverScale={false} />
                         <span className="text-gray-600 font-medium">测验进度</span>
                       </div>
                       <span className="font-bold text-gray-900 font-mono">
@@ -538,10 +535,9 @@ export const TaskDetail: React.FC = () => {
 
             {!isStudent && (
               <div className="bg-white rounded-2xl border border-gray-100  p-6 sticky top-24">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Info className="w-4 h-4 text-gray-500" />
+                <MicroLabel icon={<Info className="w-4 h-4 text-gray-500" />} className="mb-6">
                   任务信息
-                </h3>
+                </MicroLabel>
                 <div className="space-y-4 text-sm">
                   <div className="flex justify-between items-center py-3 border-b border-gray-50">
                     <span className="text-gray-500">截止日期</span>

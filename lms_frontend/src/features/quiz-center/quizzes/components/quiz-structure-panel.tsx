@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
 import { Badge, Button, Input, Tooltip } from '@/components/ui';
+import { AvatarCircle } from '@/components/common';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { cn } from '@/lib/utils';
 import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';
@@ -62,9 +63,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
               {selectedQuestions.map((item, idx) => (
                 <div key={item.id} className="relative flex gap-4 animate-fadeInUp">
                   <div className="absolute -left-12 top-0 flex flex-col items-center">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-white bg-primary-500">
-                      <span className="text-sm font-bold">{idx + 1}</span>
-                    </div>
+                    <AvatarCircle size="md" text={String(idx + 1)} />
                   </div>
                   <div
                     className={cn(

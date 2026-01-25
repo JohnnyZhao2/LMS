@@ -53,6 +53,10 @@ class SubmissionService(BaseService):
             status='IN_PROGRESS'
         ).first()
 
+    def get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        """Public wrapper for in-progress submission lookup."""
+        return self._get_in_progress(task_assignment_id=task_assignment_id, quiz_id=quiz_id)
+
     def _get_existing_submitted(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,6 +19,23 @@ import { Checkbox } from '@/components/ui/checkbox';
  *   onChange={(value) => console.log(value)}
  * />
  */
+
+const optionItemVariants = cva(
+  'flex items-start gap-3 p-4 rounded-lg border transition-all',
+  {
+    variants: {
+      state: {
+        default: 'bg-muted border-border hover:bg-muted/80 cursor-pointer',
+        selected: 'border-primary bg-primary/10 cursor-pointer',
+        disabled: 'cursor-not-allowed opacity-60',
+      },
+    },
+    defaultVariants: {
+      state: 'default',
+    },
+  }
+);
+
 export interface OptionItemProps {
   /** 选项类型 */
   type: 'radio' | 'checkbox';
@@ -71,13 +89,12 @@ export const OptionItem: React.FC<OptionItemProps> = ({
     }
   };
 
+  const state = disabled ? 'disabled' : isSelected ? 'selected' : 'default';
+
   return (
     <label
       className={cn(
-        'flex items-start gap-3 p-4 rounded-lg border transition-all cursor-pointer',
-        'bg-gray-50 border-gray-200 hover:bg-gray-100',
-        isSelected && 'border-primary-500 bg-primary-50',
-        disabled && 'cursor-not-allowed opacity-60',
+        optionItemVariants({ state }),
         className
       )}
     >
@@ -91,7 +108,7 @@ export const OptionItem: React.FC<OptionItemProps> = ({
           disabled={disabled}
         />
       )}
-      <span className="flex-1 text-gray-900">
+      <span className="flex-1 text-foreground">
         <span className="font-medium">{optionKey}.</span> <span>{label}</span>
       </span>
     </label>

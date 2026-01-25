@@ -5,6 +5,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { AvatarCircle } from '@/components/common';
 
 /**
  * Cell 带图标和文字
@@ -198,9 +199,12 @@ export const CellSmallAvatar: React.FC<CellSmallAvatarProps> = ({
     className,
 }) => (
     <div className={cn('flex items-center gap-2', className)}>
-        <div className="w-6 h-6 rounded-full bg-primary-100 text-primary flex items-center justify-center text-[10px] font-bold">
-            {name?.charAt(0)?.toUpperCase() || '?'}
-        </div>
-        <span className="text-sm font-medium text-gray-900">{name}</span>
+        <AvatarCircle
+            size="sm"
+            text={name?.charAt(0)?.toUpperCase() || '?'}
+            bgColor="bg-primary-100"
+            textColor="text-primary"
+        />
+        <span className="text-sm font-medium text-foreground">{name}</span>
     </div>
 );

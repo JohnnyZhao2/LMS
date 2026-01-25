@@ -22,6 +22,7 @@ import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
+import { AvatarCircle } from "@/components/common"
 import {
   DataTable,
   CellWithAvatar,
@@ -368,10 +369,10 @@ export const UserList: React.FC = () => {
       >
         <DialogContent className="rounded-lg max-w-md p-8 border border-gray-200">
           <DialogHeader>
-            <div className="w-16 h-16 bg-secondary-100 text-secondary-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+            <AvatarCircle size="lg" variant="secondary" className="mb-6 mx-auto">
               <ShieldCheck className="h-8 w-8" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-gray-900 text-center">重置成功</DialogTitle>
+            </AvatarCircle>
+            <DialogTitle className="text-xl font-bold text-foreground text-center">重置成功</DialogTitle>
             <DialogDescription className="text-gray-500 text-center text-sm">
               请务必将此密码<span className="text-gray-900 font-semibold">安全地</span>转交给用户
             </DialogDescription>

@@ -9,6 +9,7 @@ import { DataTable } from '@/components/ui/data-table/data-table';
 import { PageHeader, SimplePagination } from '@/components/ui';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
+import { AvatarCircle } from '@/components/common';
 import { ROUTES } from '@/config/routes';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -51,12 +52,10 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary"
-            >
-              {record.student_name?.charAt(0) || <User className="w-4 h-4" />}
-            </div>
-            <span className="font-semibold text-gray-900">{record.student_name}</span>
+            <AvatarCircle size="md" text={record.student_name?.charAt(0)}>
+              {!record.student_name && <User className="w-4 h-4" />}
+            </AvatarCircle>
+            <span className="font-semibold text-foreground">{record.student_name}</span>
           </div>
         );
       },
@@ -99,12 +98,10 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-secondary-100 text-secondary"
-            >
+            <AvatarCircle size="sm" variant="secondary">
               <User className="w-3 h-3" />
-            </div>
-            <span className="text-gray-900">{record.checker_name}</span>
+            </AvatarCircle>
+            <span className="text-foreground">{record.checker_name}</span>
           </div>
         );
       },

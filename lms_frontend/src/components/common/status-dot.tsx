@@ -39,7 +39,7 @@ const variantConfig = {
   destructive: 'bg-destructive-500',
   warning: 'bg-warning',
   success: 'bg-secondary',
-  gray: 'bg-gray-400',
+  gray: 'bg-muted-foreground',
 };
 
 const sizeConfig = {

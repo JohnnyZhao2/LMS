@@ -139,7 +139,7 @@ class StartQuizSerializer(serializers.Serializer):
                 raise serializers.ValidationError(str(e))
         else:
             # 练习模式：也检查进行中的提交，复用已有记录
-            in_progress = service.repository.get_in_progress(
+            in_progress = service.get_in_progress(
                 task_assignment_id=assignment.id,
                 quiz_id=quiz_id
             )

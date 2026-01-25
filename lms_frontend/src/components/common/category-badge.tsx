@@ -20,7 +20,7 @@ const categoryBadgeVariants = cva(
         knowledge: 'text-secondary-600 bg-secondary-50',      // 知识学习 - 绿色
         practice: 'text-warning-600 bg-warning-50',           // 随堂测验 - 橙色
         exam: 'text-primary-600 bg-primary-50',               // 结业考核 - 蓝色
-        completed: 'text-gray-400 bg-gray-50',                // 已完成 - 灰色
+        completed: 'text-muted-foreground bg-muted',          // 已完成 - 灰色
         'in-progress': 'text-primary-600 bg-primary-100',     // 进行中 - 蓝色
         overdue: 'text-destructive bg-destructive-100',       // 已逾期 - 红色
         abnormal: 'text-warning bg-warning-100',              // 异常 - 黄色
