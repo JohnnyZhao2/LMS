@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Input, Skeleton } from '@/components/ui';
+import { Input, Skeleton, EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import {
@@ -175,9 +175,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[500px] text-gray-400 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
-        <Filter className="w-12 h-12 mb-3 text-gray-300" />
-        <p>暂无可分析的题目数据</p>
+      <div className="h-[500px] bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+        <EmptyState
+          icon={Filter}
+          description="暂无可分析的题目数据"
+        />
       </div>
     );
   }
@@ -331,8 +333,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
                       <div className="space-y-4 max-w-3xl mx-auto">
                         {sortedOptions.length === 0 && (
-                          <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed">
-                            暂无选项数据
+                          <div className="bg-white rounded-2xl border border-dashed">
+                            <EmptyState
+                              description="暂无选项数据"
+                              iconSize="sm"
+                            />
                           </div>
                         )}
                         {sortedOptions.map((option) => {

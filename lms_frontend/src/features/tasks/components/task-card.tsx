@@ -12,15 +12,8 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import { ConfirmDialog } from '@/components/ui';
+import { ActionDropdown } from '@/components/common';
 import {
   Dialog,
   DialogContent,
@@ -170,28 +163,29 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
 
           {canEditTask && (
             <div onClick={e => e.stopPropagation()} className="ml-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="h-6 w-6 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors">
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 rounded-xl p-2 border border-gray-200 bg-white">
-                  <DropdownMenuLabel className="text-[10px] font-bold text-gray-500 uppercase px-3 py-2">任务控制</DropdownMenuLabel>
-                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-50" onClick={() => roleNavigate(`tasks/${targetTaskId}/edit`)}>
-                    <Pencil className="w-4 h-4 mr-2" /> 编辑任务
-                  </DropdownMenuItem>
-                  {!managerClosed && (
-                    <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-50" onClick={() => setCloseModalOpen(true)}>
-                      <StopCircle className="w-4 h-4 mr-2" /> 终止任务
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="bg-gray-100 mx-2" />
-                  <DropdownMenuItem className="rounded-lg px-3 py-2.5 font-semibold text-destructive-500 hover:bg-destructive-50 cursor-pointer" onClick={() => setDeleteModalOpen(true)}>
-                    <Trash2 className="w-4 h-4 mr-2" /> 彻底删除
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ActionDropdown
+                triggerIcon={MoreHorizontal}
+                triggerSize="sm"
+                label="任务控制"
+                items={[
+                  {
+                    icon: Pencil,
+                    label: '编辑任务',
+                    onClick: () => roleNavigate(`tasks/${targetTaskId}/edit`),
+                  },
+                  ...(!managerClosed ? [{
+                    icon: StopCircle,
+                    label: '终止任务',
+                    onClick: () => setCloseModalOpen(true),
+                  }] : []),
+                  {
+                    icon: Trash2,
+                    label: '彻底删除',
+                    onClick: () => setDeleteModalOpen(true),
+                    variant: 'destructive' as const,
+                  },
+                ]}
+              />
             </div>
           )}
         </div>

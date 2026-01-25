@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/ui';
 
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
@@ -349,12 +350,13 @@ export const KnowledgeForm: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-60 px-6 text-center text-gray-400">
-                    <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center mb-4">
-                      <FileText className="w-8 h-8 opacity-20" />
-                    </div>
-                    <p className="text-xs font-semibold text-gray-500">暂无大纲数据</p>
-                    <p className="text-[10px] mt-2 opacity-60">添加标题后将自动在此生成目录</p>
+                  <div className="h-60">
+                    <EmptyState
+                      icon={FileText}
+                      description="暂无大纲数据"
+                      subDescription="添加标题后将自动在此生成目录"
+                      iconSize="md"
+                    />
                   </div>
                 )}
               </div>

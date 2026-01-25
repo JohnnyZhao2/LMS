@@ -21,15 +21,9 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { MetricBadge, MicroLabel, IconBox } from '@/components/common';
+import { MetricBadge, MicroLabel, IconBox, ActionDropdown } from '@/components/common';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';
@@ -258,19 +252,15 @@ export const TaskDetail: React.FC = () => {
           </div>
 
           {canEditTask && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 text-gray-500 rounded-full">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200  rounded-xl p-1 w-48">
-                <DropdownMenuItem onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))} className="cursor-pointer font-medium rounded-lg py-2 focus:bg-gray-50">
-                  <Edit className="w-4 h-4 mr-2 text-gray-500" />
-                  编辑任务
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ActionDropdown
+              items={[
+                {
+                  icon: Edit,
+                  label: '编辑任务',
+                  onClick: () => navigate(getRolePath(`tasks/${taskId}/edit`)),
+                },
+              ]}
+            />
           )}
         </div>
       </header>

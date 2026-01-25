@@ -5,6 +5,7 @@
  * 用于提高代码复用性和维护性
  */
 
+export { ActionDropdown, type ActionDropdownProps, type ActionDropdownItem } from './action-dropdown';
 export { AvatarCircle, type AvatarCircleProps } from './avatar-circle';
 export { CategoryBadge, type CategoryBadgeProps } from './category-badge';
 export { IconBox, type IconBoxProps } from './icon-box';

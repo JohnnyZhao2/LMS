@@ -16,6 +16,7 @@ import { useMentorDashboard } from '../api/mentor-dashboard';
 
 import { ROUTES } from '@/config/routes';
 import { Card, Button, StatCard, PageHeader, StatusBadge, Skeleton, ActionCard } from '@/components/ui';
+import { IconBox } from '@/components/common';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useKnowledgeStats } from '@/features/knowledge/api/get-knowledge-stats';
 
@@ -148,9 +149,7 @@ export const AdminDashboard: React.FC = () => {
           <Card className="h-full bg-gray-100 p-8 rounded-lg">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md bg-gray-200 flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-gray-500" />
-                </div>
+                <IconBox icon={Shield} size="md" bgColor="bg-gray-200" iconColor="text-gray-500" rounded="md" hoverScale={false} />
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">系统安全日志</h3>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">System Security Audit</p>
@@ -194,9 +193,7 @@ export const AdminDashboard: React.FC = () => {
           <Card className="bg-primary p-8 rounded-lg text-white relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-primary-400" />
-                </div>
+                <IconBox icon={BookOpen} size="md" bgColor="bg-white/10" iconColor="text-primary-400" rounded="md" hoverScale={false} />
                 <div>
                   <h3 className="text-lg font-bold">知识库概览</h3>
                   <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Asset Distribution</p>

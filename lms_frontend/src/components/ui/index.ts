@@ -153,3 +153,7 @@ export * from "./stat-card";
 export { ActionCard } from './action-card';
 export { ContentPanel } from './content-panel';
 export { SegmentedControl } from './segmented-control';
+
+// Empty State
+export { EmptyState } from './empty-state';
+export type { EmptyStateProps } from './empty-state';

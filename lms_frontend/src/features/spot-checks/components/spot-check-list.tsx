@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { PageHeader, SimplePagination } from '@/components/ui';
+import { PageHeader, SimplePagination, EmptyState } from '@/components/ui';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import { AvatarCircle } from '@/components/common';
@@ -157,17 +157,18 @@ export const SpotCheckList: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <Search className="w-12 h-12 text-gray-400 mb-4" />
-                <span className="text-base mb-4">暂无抽查记录</span>
+              <EmptyState
+                icon={Search}
+                description="暂无抽查记录"
+              >
                 <Button
                   onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
-                  className="bg-primary text-white hover:bg-primary-600"
+                  className="bg-primary text-white hover:bg-primary-600 mt-4"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   发起第一次抽查
                 </Button>
-              </div>
+              </EmptyState>
             )}
           </Spinner>
         </CardContent>

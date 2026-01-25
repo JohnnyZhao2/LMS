@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * Material You 空状态组件
  * 用于显示空列表、无数据等状态
  */
-interface EmptyStateProps {
+export interface EmptyStateProps {
   /** 图标 */
   icon?: LucideIcon | React.ReactNode;
   /** 主标题 */
