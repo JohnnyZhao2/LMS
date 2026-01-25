@@ -39,15 +39,6 @@ export const AppRouter: React.FC = () => {
           {roleRoutes}
         </Route>
 
-        {/* 兼容旧路由：重定向到带角色前缀的路由 */}
-        <Route path="/dashboard" element={<DefaultRedirect />} />
-        <Route path="/tasks/*" element={<DefaultRedirect />} />
-        <Route path="/knowledge/*" element={<DefaultRedirect />} />
-        <Route path="/quiz-center/*" element={<DefaultRedirect />} />
-        <Route path="/spot-checks/*" element={<DefaultRedirect />} />
-        <Route path="/users/*" element={<DefaultRedirect />} />
-        <Route path="/personal" element={<DefaultRedirect />} />
-
         {/* 默认重定向 */}
         <Route path="/" element={<DefaultRedirect />} />
         <Route path="*" element={<DefaultRedirect />} />

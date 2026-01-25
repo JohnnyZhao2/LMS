@@ -11,6 +11,7 @@ import { ProtectedRoute } from '@/components/protected-route';
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
 const MentorDashboard = lazy(() => import('@/features/dashboard/components/mentor-dashboard').then(m => ({ default: m.MentorDashboard })));
 const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/team-manager-dashboard').then(m => ({ default: m.TeamManagerDashboard })));
+const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 // Tasks
 const TaskList = lazy(() => import('@/features/tasks/components/task-list').then(m => ({ default: m.TaskList })));
@@ -62,7 +63,7 @@ const Dashboard = () => {
     return <TeamManagerDashboard />;
   }
   if (currentRole === 'ADMIN') {
-    return <MentorDashboard />;
+    return <AdminDashboard />;
   }
 
   return <StudentDashboard />;
