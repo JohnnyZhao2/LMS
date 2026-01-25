@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { MoreVertical, MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { MoreVertical, type LucideIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,

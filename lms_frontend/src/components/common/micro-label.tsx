@@ -18,7 +18,6 @@ const microLabelVariants = cva(
     variants: {
       variant: {
         default: 'text-muted-foreground',
-        muted: 'text-muted-foreground',
         primary: 'text-primary',
       },
     },

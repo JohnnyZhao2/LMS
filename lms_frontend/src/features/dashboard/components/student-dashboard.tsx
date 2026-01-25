@@ -13,6 +13,7 @@ import { useStudentDashboard } from '../api/student-dashboard';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
 import { Skeleton } from '@/components/ui';
+import { IconBox } from '@/components/common';
 import { cn } from '@/lib/utils';
 
 
@@ -30,9 +31,14 @@ export const StudentDashboard: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white  rounded-xl flex items-center justify-center text-secondary-600 border border-gray-100">
-              <BookOpen className="w-5 h-5" />
-            </div>
+            <IconBox
+              icon={BookOpen}
+              size="md"
+              bgColor="bg-white border border-gray-100"
+              iconColor="text-secondary-600"
+              rounded="xl"
+              hoverScale={false}
+            />
             <div>
               <h3 className="text-xl font-black text-gray-900 tracking-tight">知识速递</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fresh Insights</p>
@@ -87,9 +93,14 @@ export const StudentDashboard: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white  rounded-xl flex items-center justify-center text-primary-600 border border-gray-100">
-              <Calendar className="w-5 h-5" />
-            </div>
+            <IconBox
+              icon={Calendar}
+              size="md"
+              bgColor="bg-white border border-gray-100"
+              iconColor="text-primary-600"
+              rounded="xl"
+              hoverScale={false}
+            />
             <div>
               <h3 className="text-xl font-black text-gray-900 tracking-tight">任务中心</h3>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Engagements</p>
@@ -118,12 +129,14 @@ export const StudentDashboard: React.FC = () => {
                   className="group relative flex flex-col p-6 rounded-3xl bg-white border border-gray-100    hover:border-primary-100 cursor-pointer transition-all duration-300"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110",
-                      isUrgent ? "bg-destructive-50 text-destructive-500" : "bg-primary-50 text-primary-500"
-                    )}>
-                      {task.task_title.includes('考试') ? <GraduationCap className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-                    </div>
+                    <IconBox
+                      icon={task.task_title.includes('考试') ? GraduationCap : FileText}
+                      size="md"
+                      bgColor={isUrgent ? "bg-destructive-50" : "bg-primary-50"}
+                      iconColor={isUrgent ? "text-destructive-500" : "text-primary-500"}
+                      rounded="xl"
+                      hoverScale={true}
+                    />
                     {isUrgent && (
                       <div className="px-2 py-0.5 bg-destructive-500 text-white text-[9px] font-black rounded-md uppercase">
                         即将截止

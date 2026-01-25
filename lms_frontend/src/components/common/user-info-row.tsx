@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { AvatarCircle } from './avatar-circle';
 
 /**
  * 用户信息行组件
@@ -17,8 +18,7 @@ import { cn } from '@/lib/utils';
  * <UserInfoRow
  *   name="李四"
  *   metadata="工号: 12345 · 技术部"
- *   avatarBgColor="bg-primary-100"
- *   avatarTextColor="text-primary-700"
+ *   avatarVariant="primary"
  * />
  */
 export interface UserInfoRowProps {
@@ -31,11 +31,8 @@ export interface UserInfoRowProps {
   /** 头像显示文本（通常是首字母） */
   avatarText?: string;
 
-  /** 头像背景色类名 */
-  avatarBgColor?: string;
-
-  /** 头像文字颜色类名 */
-  avatarTextColor?: string;
+  /** 头像变体样式 */
+  avatarVariant?: 'primary' | 'secondary' | 'muted';
 
   /** 头像尺寸 */
   avatarSize?: 'sm' | 'md' | 'lg';
@@ -44,12 +41,6 @@ export interface UserInfoRowProps {
   className?: string;
 }
 
-const avatarSizeConfig = {
-  sm: 'h-8 w-8 text-xs',
-  md: 'h-9 w-9 text-sm',
-  lg: 'h-12 w-12 text-base',
-};
-
 /**
  * 用户信息行组件
  */
@@ -57,8 +48,7 @@ export const UserInfoRow: React.FC<UserInfoRowProps> = ({
   name,
   metadata,
   avatarText,
-  avatarBgColor = 'bg-muted',
-  avatarTextColor = 'text-muted-foreground',
+  avatarVariant = 'muted',
   avatarSize = 'md',
   className,
 }) => {
@@ -67,16 +57,12 @@ export const UserInfoRow: React.FC<UserInfoRowProps> = ({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <div
-        className={cn(
-          'rounded-md flex items-center justify-center font-bold transition-transform duration-200 group-hover:scale-110',
-          avatarSizeConfig[avatarSize],
-          avatarBgColor,
-          avatarTextColor
-        )}
-      >
-        {displayAvatarText}
-      </div>
+      <AvatarCircle
+        text={displayAvatarText}
+        size={avatarSize}
+        variant={avatarVariant}
+        className="group-hover:scale-110"
+      />
       <div className="flex flex-col">
         <span className="text-[11px] font-bold text-foreground leading-none mb-1">
           {name}

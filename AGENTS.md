@@ -205,6 +205,12 @@ Usage notes:
 </skill>
 
 <skill>
+<name>component-extraction</name>
+<description>组件提取与重构技能。用于分析页面代码，识别重复或相似的 UI 模式，提取可复用组件到 src/components 目录，并应用统一的样式规范。适用于代码重构、组件库建设、减少代码重复的场景。</description>
+<location>project</location>
+</skill>
+
+<skill>
 <name>internal-comms</name>
 <description>A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).</description>
 <location>project</location>
@@ -213,6 +219,12 @@ Usage notes:
 <skill>
 <name>mcp-builder</name>
 <description>Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).</description>
+<location>project</location>
+</skill>
+
+<skill>
+<name>shadcn-tailwind-styles</name>
+<description>shadcn/ui 和 Tailwind CSS v4 样式代码规范和最佳实践。当编写或修改前端组件代码时使用此技能，确保：(1) 使用 CSS 变量而不是硬编码颜色，(2) 遵循 Tailwind v4 的新特性和语法，(3) 正确自定义 shadcn/ui 组件，(4) 保持样式代码的一致性和可维护性。适用于所有涉及样式的前端开发任务。</description>
 <location>project</location>
 </skill>
 
