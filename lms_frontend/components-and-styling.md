@@ -96,7 +96,6 @@ With the rise of headless component libraries, there is another tier of componen
 
 - [ShadCN UI](https://ui.shadcn.com/)
 - [Park UI](https://park-ui.com/)
-
 ## Storybook
 
 [Storybook](https://storybook.js.org/) is a great tool for developing and testing components in isolation. Think of it as a catalogue of all the components your application is using. Very useful for developing and discoverability of components.
