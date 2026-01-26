@@ -13,6 +13,7 @@ from django.utils import timezone
 import uuid
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
+from core.decorators import log_content_action
 from .models import Quiz, QuizQuestion
 from apps.questions.models import Question
 from apps.knowledge.models import Tag
@@ -113,6 +114,7 @@ class QuizService(BaseService):
         return quiz.created_by_id == self.user.id
 
     @transaction.atomic
+    @log_content_action('quiz', 'create', '创建试卷《{result.title}》')
     def create(
         self,
         data: dict,
@@ -157,9 +159,11 @@ class QuizService(BaseService):
             self._create_and_add_question(quiz, question_data)
         quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
+
         return quiz
 
     @transaction.atomic
+    @log_content_action('quiz', 'update', '更新试卷《{result.title}》（版本 {result.version_number}）')
     def update(
         self,
         pk: int,
@@ -201,13 +205,16 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    def delete(self, pk: int) -> None:
+    @log_content_action('quiz', 'delete', '删除试卷《{result.title}》')
+    def delete(self, pk: int) -> Quiz:
         """
         删除试卷
         Property 14: 被引用试卷删除保护
         Property 16: 试卷所有权编辑控制
         Args:
             pk: 主键
+        Returns:
+            删除前的试卷对象
         Raises:
             BusinessError: 如果被引用无法删除或无权限
         """
@@ -223,10 +230,18 @@ class QuizService(BaseService):
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该试卷已被任务引用，无法删除'
             )
+
         # 软删除
         quiz.soft_delete()
+        return quiz
 
     @transaction.atomic
+    @log_content_action(
+        'quiz',
+        'update',
+        '向试卷《{result.title}》添加题目',
+        action_key='content.quiz.add_questions'
+    )
     def add_questions(
         self,
         pk: int,
@@ -281,6 +296,12 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
+    @log_content_action(
+        'quiz',
+        'update',
+        '从试卷《{result.title}》移除题目',
+        action_key='content.quiz.remove_questions'
+    )
     def remove_questions(
         self,
         pk: int,
@@ -312,70 +333,6 @@ class QuizService(BaseService):
         )
         quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
-        return quiz
-
-    @transaction.atomic
-    def publish(self, pk: int) -> Quiz:
-        """
-        发布试卷
-        Args:
-            pk: 主键
-        Returns:
-            发布后的试卷对象
-        Raises:
-            BusinessError: 如果无法发布
-        """
-        quiz = self.get_by_id(pk)
-        # 检查是否已经是当前版本
-        if quiz.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='试卷已经是当前版本'
-            )
-        # 检查是否有题目
-        if not quiz.questions.exists():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='试卷必须至少包含一道题目'
-            )
-        # 设置为当前版本
-        quiz.is_current = True
-        quiz.updated_by = self.user
-        quiz.save(update_fields=['is_current', 'updated_by'])
-        # 取消其他版本的 is_current 标志
-        Quiz.objects.filter(
-            resource_uuid=quiz.resource_uuid
-        ).exclude(pk=pk).update(is_current=False)
-        return quiz
-
-    @transaction.atomic
-    def unpublish(self, pk: int) -> Quiz:
-        """
-        取消发布试卷
-        Args:
-            pk: 主键
-        Returns:
-            取消发布后的试卷对象
-        Raises:
-            BusinessError: 如果无法取消发布
-        """
-        quiz = self.get_by_id(pk)
-        # 检查是否是当前版本
-        if not quiz.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='试卷不是当前版本'
-            )
-        # 检查是否被引用
-        if self._is_referenced_by_task(pk):
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该试卷已被任务引用，无法取消发布'
-            )
-        # 取消当前版本标志
-        quiz.is_current = False
-        quiz.updated_by = self.user
-        quiz.save(update_fields=['is_current', 'updated_by'])
         return quiz
 
     def _create_and_add_question(
@@ -527,6 +484,7 @@ class QuizService(BaseService):
         Quiz.objects.filter(
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_quiz.pk).update(is_current=False)
+
         return new_quiz
 
     def _sync_question_order(

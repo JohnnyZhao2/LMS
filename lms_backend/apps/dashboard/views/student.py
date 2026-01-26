@@ -3,25 +3,23 @@ Student dashboard views.
 Implements:
 - Student dashboard API
 """
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+from core.base_view import BaseAPIView
 from apps.dashboard.serializers import (
     StudentPendingTaskSerializer,
     StudentDashboardSerializer,
 )
 from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.dashboard.services import StudentDashboardService
-class StudentDashboardView(APIView):
+class StudentDashboardView(BaseAPIView):
     """
     学员仪表盘 API 端点
     GET /api/dashboard/student/
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = StudentDashboardService()
+    service_class = StudentDashboardService
     @extend_schema(
         summary='获取学员仪表盘数据',
         description='获取学员仪表盘数据，包括待办任务、最新知识和任务统计',

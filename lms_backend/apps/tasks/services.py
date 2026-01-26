@@ -14,6 +14,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
+from core.decorators import log_operation
 from apps.users.models import User
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
@@ -172,6 +173,7 @@ class TaskService(BaseService):
         return timezone.now() > task.deadline
 
     @transaction.atomic
+    @log_operation('task_management', 'create_and_assign', '创建任务《{title}》并分配给 {assignee_count} 名学员')
     def create_task(
         self,
         title: str,
@@ -313,6 +315,7 @@ class TaskService(BaseService):
         )
 
     @transaction.atomic
+    @log_operation('task_management', 'update_task', '更新任务《{task.title}》')
     def update_task(
         self,
         task: Task,
@@ -471,6 +474,7 @@ class TaskService(BaseService):
             assignee_ids=list(to_add)
         )
 
+    @log_operation('task_management', 'delete_task', '删除任务《{task.title}》')
     def delete_task(self, task: Task) -> None:
         """
         Soft delete a task.
@@ -479,6 +483,7 @@ class TaskService(BaseService):
         """
         task.soft_delete()
 
+    @log_operation('task_management', 'close_task', '关闭任务《{task.title}》')
     def close_task(self, task: Task) -> Task:
         """
         Force close a task.
@@ -645,6 +650,7 @@ class StudentTaskService(BaseService):
                     is_completed=False
                 )
 
+    @log_operation('learning', 'complete_knowledge', '完成学习：{result.task_knowledge.knowledge.title}')
     def complete_knowledge_learning(
         self,
         assignment: TaskAssignment,

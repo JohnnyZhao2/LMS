@@ -2,6 +2,37 @@ from django.db import models
 from django.conf import settings
 
 
+class ActivityLogPolicy(models.Model):
+    """活动日志策略 - 用于控制动作级别的记录开关（白名单）"""
+
+    CATEGORY_CHOICES = [
+        ('user', '用户日志'),
+        ('content', '内容日志'),
+        ('operation', '操作日志'),
+    ]
+
+    key = models.CharField(max_length=120, unique=True, verbose_name='动作标识')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, verbose_name='日志类型')
+    group = models.CharField(max_length=50, verbose_name='分组')
+    label = models.CharField(max_length=100, verbose_name='动作名称')
+    enabled = models.BooleanField(default=True, verbose_name='是否记录')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'activity_log_policies'
+        verbose_name = '活动日志策略'
+        verbose_name_plural = '活动日志策略'
+        ordering = ['category', 'group', 'label']
+        indexes = [
+            models.Index(fields=['category', 'group'], name='activity_log_policy_cg_idx'),
+            models.Index(fields=['key'], name='activity_log_policy_key_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.key} ({self.label})'
+
+
 class UserLog(models.Model):
     """用户日志 - 记录用户登录、登出、密码修改等操作"""
 
@@ -11,6 +42,10 @@ class UserLog(models.Model):
         ('password_change', '修改密码'),
         ('login_failed', '登录失败'),
         ('role_assigned', '角色分配'),
+        ('mentor_assigned', '分配导师'),
+        ('activate', '启用账号'),
+        ('deactivate', '停用账号'),
+        ('switch_role', '切换角色'),
     ]
 
     STATUS_CHOICES = [
@@ -111,6 +146,8 @@ class OperationLog(models.Model):
         ('grading', '评分操作'),
         ('spot_check', '抽查记录'),
         ('data_export', '数据导出'),
+        ('submission', '答题/考试'),
+        ('learning', '学习进度'),
     ]
 
     STATUS_CHOICES = [
@@ -145,4 +182,3 @@ class OperationLog(models.Model):
 
     def __str__(self):
         return f'{self.operator.username} - {self.action} - {self.created_at}'
-

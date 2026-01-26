@@ -3,12 +3,21 @@ Activity logs views.
 提供用户日志、内容日志、操作日志的查询接口。
 """
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response
 from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from .models import UserLog, ContentLog, OperationLog
-from .serializers import UserLogSerializer, ContentLogSerializer, OperationLogSerializer
+from .models import ActivityLogPolicy, UserLog, ContentLog, OperationLog
+from .serializers import (
+    ActivityLogPolicySerializer,
+    ActivityLogPolicyUpdateSerializer,
+    UserLogSerializer,
+    ContentLogSerializer,
+    OperationLogSerializer,
+)
+from .services import ActivityLogService
 
 
 class UserLogListView(BaseAPIView):
@@ -42,7 +51,7 @@ class UserLogListView(BaseAPIView):
 
         # 如果不分页，直接返回
         serializer = UserLogSerializer(queryset, many=True)
-        return self.success_response(serializer.data)
+        return success_response(serializer.data)
 
 
 class ContentLogListView(BaseAPIView):
@@ -76,7 +85,7 @@ class ContentLogListView(BaseAPIView):
 
         # 如果不分页，直接返回
         serializer = ContentLogSerializer(queryset, many=True)
-        return self.success_response(serializer.data)
+        return success_response(serializer.data)
 
 
 class OperationLogListView(BaseAPIView):
@@ -110,4 +119,53 @@ class OperationLogListView(BaseAPIView):
 
         # 如果不分页，直接返回
         serializer = OperationLogSerializer(queryset, many=True)
-        return self.success_response(serializer.data)
+        return success_response(serializer.data)
+
+
+class ActivityLogPolicyView(BaseAPIView):
+    """
+    活动日志策略管理（仅超级用户）
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _ensure_superuser(self, request):
+        if not request.user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='仅超级用户可管理日志策略'
+            )
+
+    @extend_schema(
+        summary='获取日志策略列表',
+        description='获取动作级日志记录白名单（仅超级用户）',
+        responses={200: ActivityLogPolicySerializer(many=True)},
+        tags=['活动日志']
+    )
+    def get(self, request):
+        self._ensure_superuser(request)
+        ActivityLogService.sync_policies()
+        queryset = ActivityLogPolicy.objects.all().order_by('category', 'group', 'label')
+        serializer = ActivityLogPolicySerializer(queryset, many=True)
+        return success_response(serializer.data)
+
+    @extend_schema(
+        summary='更新日志策略',
+        description='更新动作级日志记录开关（仅超级用户）',
+        request=ActivityLogPolicyUpdateSerializer,
+        responses={
+            200: ActivityLogPolicySerializer,
+            403: OpenApiResponse(description='无权限'),
+        },
+        tags=['活动日志']
+    )
+    def patch(self, request):
+        self._ensure_superuser(request)
+        serializer = ActivityLogPolicyUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        key = serializer.validated_data['key']
+        enabled = serializer.validated_data['enabled']
+        policy = ActivityLogService._ensure_policy(key)
+        policy.enabled = enabled
+        policy.save(update_fields=['enabled', 'updated_at'])
+        ActivityLogService.invalidate_policy_cache(key)
+        return success_response(ActivityLogPolicySerializer(policy).data)

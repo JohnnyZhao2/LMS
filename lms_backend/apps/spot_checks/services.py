@@ -10,6 +10,7 @@ Properties: 35, 36
 from typing import Optional, List
 from django.utils import timezone
 from core.base_service import BaseService
+from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.models import User
 from apps.users.permissions import get_accessible_students
@@ -61,6 +62,7 @@ class SpotCheckService(BaseService):
         qs = self._get_queryset_for_user(student_id, ordering)
         return list(qs)
 
+    @log_operation('spot_check', 'create', '创建抽查记录：学员 {result.student.username}')
     def create(self, data: dict) -> SpotCheck:
         """
         创建抽查记录
@@ -100,10 +102,13 @@ class SpotCheckService(BaseService):
         # 3. 准备数据
         data['student'] = student
         data['checker'] = self.user
-        
-        # 4. 创建记录
-        return SpotCheck.objects.create(**data)
 
+        # 4. 创建记录
+        spot_check = SpotCheck.objects.create(**data)
+
+        return spot_check
+
+    @log_operation('spot_check', 'update', '更新抽查记录：学员 {result.student.username}')
     def update(self, pk: int, data: dict) -> SpotCheck:
         """
         更新抽查记录
@@ -139,10 +144,11 @@ class SpotCheckService(BaseService):
             for key, value in data.items():
                 setattr(spot_check, key, value)
             spot_check.save(update_fields=list(data.keys()))
-        
+
         return spot_check
 
-    def delete(self, pk: int) -> None:
+    @log_operation('spot_check', 'delete', '删除抽查记录：学员 {result.student.username}')
+    def delete(self, pk: int) -> SpotCheck:
         """
         删除抽查记录
         
@@ -159,9 +165,10 @@ class SpotCheckService(BaseService):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只能删除自己创建的抽查记录'
             )
-        
+
         # 删除记录（硬删除）
         spot_check.delete()
+        return spot_check
 
     def _get_queryset_for_user(
         self,

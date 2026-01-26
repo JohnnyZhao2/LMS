@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
+from core.base_view import BaseAPIView
 from ..services import SubmissionService
 from ..serializers import (
     SubmissionDetailSerializer,
@@ -50,14 +51,12 @@ class StartQuizView(APIView):
         if serializer.validated_data.get('in_progress_submission'):
             return Response(response_serializer.data, status=status.HTTP_200_OK)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-class SubmitView(APIView):
+class SubmitView(BaseAPIView):
     """
     统一的提交答卷接口，根据 quiz_type 自动判断行为。
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SubmissionService()
+    service_class = SubmissionService
     @extend_schema(
         summary='提交答卷',
         description='''
@@ -79,14 +78,12 @@ class SubmitView(APIView):
         submission = self.service.submit(submission, is_practice=is_practice)
         response_serializer = SubmissionDetailSerializer(submission)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-class SaveAnswerView(APIView):
+class SaveAnswerView(BaseAPIView):
     """
     Save an answer during practice/exam.
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SubmissionService()
+    service_class = SubmissionService
     @extend_schema(
         summary='保存答案',
         description='''

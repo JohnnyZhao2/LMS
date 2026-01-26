@@ -35,6 +35,9 @@ const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-
 // Users
 const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
 
+// Activity Logs
+const ActivityLogSettingsPage = lazy(() => import('@/features/activity-logs/pages/activity-log-settings').then(m => ({ default: m.ActivityLogSettingsPage })));
+
 // Submissions
 const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
 const AnswerReview = lazy(() => import('@/features/submissions/components/answer-review').then(m => ({ default: m.AnswerReview })));
@@ -183,6 +186,17 @@ export const roleRoutes = [
     element={
       <ProtectedRoute allowedRoles={['ADMIN']}>
         <UserList />
+      </ProtectedRoute>
+    }
+  />,
+
+  // Activity Logs Settings
+  <Route
+    key="activity-log-settings"
+    path="activity-logs/settings"
+    element={
+      <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ActivityLogSettingsPage />
       </ProtectedRoute>
     }
   />,

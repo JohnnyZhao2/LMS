@@ -12,6 +12,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, QuerySet
+from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
 from apps.users.models import User
@@ -189,6 +190,7 @@ class SubmissionService(BaseService):
         return in_progress
 
     @transaction.atomic
+    @log_operation('submission', 'start_quiz', '开始答题：试卷《{result.quiz.title}》')
     def start_quiz(
         self,
         assignment: TaskAssignment,
@@ -275,6 +277,7 @@ class SubmissionService(BaseService):
         return answer
 
     @transaction.atomic
+    @log_operation('submission', 'submit', '提交答卷：试卷《{result.quiz.title}》')
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
         Submit a quiz/exam.

@@ -84,7 +84,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'employee_id', 'username',
-            'department', 'mentor', 'is_active'
+            'department', 'mentor', 'is_active', 'is_superuser'
         ]
 # ============ User Management Serializers ============
 class UserListSerializer(serializers.ModelSerializer):

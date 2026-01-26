@@ -11,6 +11,7 @@ export const ROUTES = {
   QUIZ_CENTER: '/quiz-center',
   QUIZ_CENTER_QUIZZES: '/quiz-center/quizzes',
   USERS: '/users',
+  ACTIVITY_LOG_SETTINGS: '/activity-logs/settings',
   ANALYTICS: '/analytics',
   QUIZ: '/quiz',
   REVIEW_PRACTICE: '/review/practice',

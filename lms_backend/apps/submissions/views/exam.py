@@ -6,21 +6,19 @@ Properties:
 - Property 32: 纯客观题直接完成
 """
 from rest_framework import status
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
+from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from ..services import SubmissionService
 from ..serializers import SubmissionDetailSerializer
-class ExamResultView(APIView):
+class ExamResultView(BaseAPIView):
     """
     View exam result.
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = SubmissionService()
+    service_class = SubmissionService
     @extend_schema(
         summary='查看考试结果',
         description='''

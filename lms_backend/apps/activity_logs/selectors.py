@@ -54,7 +54,11 @@ def list_operation_logs(
     """
     获取操作日志列表
     """
-    queryset = OperationLog.objects.select_related('operator__roles').all()
+    queryset = (
+        OperationLog.objects.select_related('operator')
+        .prefetch_related('operator__roles')
+        .all()
+    )
 
     if operation_type:
         queryset = queryset.filter(operation_type=operation_type)

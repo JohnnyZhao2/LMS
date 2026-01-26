@@ -2,8 +2,10 @@
 User services for LMS.
 """
 from typing import Optional, List
+from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
+from apps.activity_logs.services import ActivityLogService
 from .models import User, Role, UserRole
 
 
@@ -19,6 +21,7 @@ class UserManagementService(BaseService):
             'mentor'
         ).prefetch_related('roles').filter(pk=user_id).first()
 
+    @log_user_action('deactivate', '管理员 {self.user.employee_id} 停用用户 {result.employee_id}')
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -43,6 +46,7 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
+    @log_user_action('activate', '管理员 {self.user.employee_id} 启用用户 {result.employee_id}')
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
@@ -95,13 +99,17 @@ class UserManagementService(BaseService):
         roles_to_remove = current_role_codes - roles_to_assign
         if 'STUDENT' in roles_to_remove:
             roles_to_remove.remove('STUDENT')  # Never remove STUDENT
+        # Add new roles
+        roles_to_add = roles_to_assign - current_role_codes
+
+        if not roles_to_add and not roles_to_remove:
+            return user
+
         if roles_to_remove:
             UserRole.objects.filter(
                 user_id=user.id,
                 role__code__in=list(roles_to_remove)
             ).delete()
-        # Add new roles
-        roles_to_add = roles_to_assign - current_role_codes
         for role_code in roles_to_add:
             role = Role.objects.filter(code=role_code).first()
             if not role:
@@ -119,6 +127,32 @@ class UserManagementService(BaseService):
                 )
         # Refresh user from database
         user.refresh_from_db()
+
+        # 记录用户日志（只记录实际变更）
+        try:
+            role_name_map = dict(Role.ROLE_CHOICES)
+            added_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
+            removed_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+            if roles_to_add and roles_to_remove:
+                description = (
+                    f'管理员 {assigned_by.employee_id} 调整用户 {user.employee_id} 角色：'
+                    f'新增 {added_names}；移除 {removed_names}'
+                )
+            elif roles_to_add:
+                description = f'管理员 {assigned_by.employee_id} 为用户 {user.employee_id} 新增角色：{added_names}'
+            else:
+                description = f'管理员 {assigned_by.employee_id} 移除用户 {user.employee_id} 角色：{removed_names}'
+
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=assigned_by,
+                action='role_assigned',
+                description=description,
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         return user
 
     def assign_mentor(self, user_id: int, mentor_id: Optional[int]) -> User:
@@ -162,4 +196,23 @@ class UserManagementService(BaseService):
             # Assign new mentor (automatically replaces old one due to FK)
             user.mentor_id = mentor_id
             user.save(update_fields=['mentor'])
+
+        # 记录用户日志
+        try:
+            if mentor_id is None:
+                description = f'管理员 {self.user.employee_id} 移除了用户 {user.employee_id} 的导师'
+            else:
+                mentor = self._get_user(mentor_id)
+                description = f'管理员 {self.user.employee_id} 为学员 {user.employee_id} 分配了导师 {mentor.employee_id}'
+
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=self.user,
+                action='mentor_assigned',
+                description=description,
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         return user

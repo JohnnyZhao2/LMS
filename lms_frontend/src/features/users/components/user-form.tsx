@@ -87,19 +87,30 @@ export const UserForm: React.FC<UserFormProps> = ({
     mentor_id: null,
   });
 
+  const [initialRoleCodes, setInitialRoleCodes] = useState<RoleCode[]>([]);
+  const [initialMentorId, setInitialMentorId] = useState<number | null>(null);
+  const [mentorTouched, setMentorTouched] = useState(false);
+
   const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     if (open) {
       if (isEdit && userDetail) {
+        const roleCodes = userDetail.roles
+          .filter((r) => r.code !== 'STUDENT')
+          .map((r) => r.code as RoleCode);
+        const mentorId = userDetail.mentor?.id || null;
         setFormData({
           username: userDetail.username,
           employee_id: userDetail.employee_id,
           password: '',
           department_id: userDetail.department?.id,
-          role_codes: userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode),
-          mentor_id: userDetail.mentor?.id || null,
+          role_codes: roleCodes,
+          mentor_id: mentorId,
         });
+        setInitialRoleCodes(roleCodes);
+        setInitialMentorId(mentorId);
+        setMentorTouched(false);
       } else {
         setFormData({
           username: '',
@@ -109,6 +120,9 @@ export const UserForm: React.FC<UserFormProps> = ({
           role_codes: [],
           mentor_id: null,
         });
+        setInitialRoleCodes([]);
+        setInitialMentorId(null);
+        setMentorTouched(false);
       }
       setErrors({});
     }
@@ -132,8 +146,15 @@ export const UserForm: React.FC<UserFormProps> = ({
           id: userId!,
           data: { username: formData.username, employee_id: formData.employee_id, department_id: formData.department_id },
         });
-        await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
-        if (userDetail?.mentor?.id !== formData.mentor_id) {
+        const roleSet = new Set(formData.role_codes);
+        const initialRoleSet = new Set(initialRoleCodes);
+        const rolesChanged =
+          roleSet.size !== initialRoleSet.size ||
+          [...roleSet].some((code) => !initialRoleSet.has(code));
+        if (rolesChanged) {
+          await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
+        }
+        if (mentorTouched && formData.mentor_id !== initialMentorId) {
           await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
         }
         toast.success("账号信息已更新");
@@ -282,7 +303,10 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">分配导师 (可选)</label>
                 <Select
                   value={formData.mentor_id?.toString() || ''}
-                  onValueChange={(v) => setFormData({ ...formData, mentor_id: v ? Number(v) : null })}
+                  onValueChange={(v) => {
+                    setMentorTouched(true);
+                    setFormData({ ...formData, mentor_id: v ? Number(v) : null });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="选择带教导师..." />

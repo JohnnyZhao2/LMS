@@ -7,12 +7,12 @@
     question = service.get_by_id(pk=123)
 """
 import uuid
-from typing import List
 from django.db import transaction
 from core.base_service import BaseService
+from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
-from .models import Question
 from apps.knowledge.models import Tag
+from .models import Question
 from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
 
 
@@ -124,6 +124,7 @@ class QuestionService(BaseService):
         return True
 
     @transaction.atomic
+    @log_content_action('question', 'create', '创建题目：{result.question_type}')
     def create(self, data: dict) -> Question:
         """
         创建题目
@@ -152,9 +153,11 @@ class QuestionService(BaseService):
         # 4. 设置条线类型
         if line_type_id:
             self._set_line_type(question, line_type_id)
+
         return question
 
     @transaction.atomic
+    @log_content_action('question', 'update', '更新题目：{result.question_type}（版本 {result.version_number}）')
     def update(self, pk: int, data: dict) -> Question:
         """
         更新题目
@@ -194,11 +197,14 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def delete(self, pk: int) -> None:
+    @log_content_action('question', 'delete', '删除题目：{result.question_type}')
+    def delete(self, pk: int) -> Question:
         """
         删除题目
         Args:
             pk: 主键
+        Returns:
+            删除前的题目对象
         Raises:
             BusinessError: 如果被引用无法删除
         """
@@ -212,71 +218,9 @@ class QuestionService(BaseService):
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该题目已被试卷引用，无法删除'
             )
+
         # 软删除
         question.soft_delete()
-
-    @transaction.atomic
-    def publish(self, pk: int) -> Question:
-        """
-        发布题目
-        Args:
-            pk: 主键
-        Returns:
-            发布后的题目对象
-        Raises:
-            BusinessError: 如果无法发布
-        """
-        question = self.get_by_id(pk)
-        # 检查是否已经是当前版本
-        if question.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='题目已经是当前版本'
-            )
-        # 验证题目内容
-        if not question.content.strip():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='题目内容不能为空'
-            )
-        # 设置为当前版本
-        question.is_current = True
-        question.updated_by = self.user
-        question.save(update_fields=['is_current', 'updated_by'])
-        # 取消其他版本的 is_current 标志
-        Question.objects.filter(
-            resource_uuid=question.resource_uuid
-        ).exclude(pk=pk).update(is_current=False)
-        return question
-
-    @transaction.atomic
-    def unpublish(self, pk: int) -> Question:
-        """
-        取消发布题目
-        Args:
-            pk: 主键
-        Returns:
-            取消发布后的题目对象
-        Raises:
-            BusinessError: 如果无法取消发布
-        """
-        question = self.get_by_id(pk)
-        # 检查是否是当前版本
-        if not question.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='题目不是当前版本'
-            )
-        # 检查是否被引用
-        if self._is_referenced_by_quiz(pk):
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该题目已被试卷引用，无法取消发布'
-            )
-        # 取消当前版本标志
-        question.is_current = False
-        question.updated_by = self.user
-        question.save(update_fields=['is_current', 'updated_by'])
         return question
 
     def _validate_question_data(self, data: dict) -> None:
@@ -411,6 +355,7 @@ class QuestionService(BaseService):
         Question.objects.filter(
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
+
         return new_question
 
     def _is_referenced_by_quiz(self, question_id: int) -> bool:

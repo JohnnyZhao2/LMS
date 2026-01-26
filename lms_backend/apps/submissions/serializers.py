@@ -84,7 +84,8 @@ class SaveAnswerSerializer(serializers.Serializer):
         return attrs
     def save(self):
         """Save the answer - 委托给 SubmissionService"""
-        service = SubmissionService()
+        request = self.context.get('request')
+        service = SubmissionService(request)
         submission = self.context.get('submission')
         return service.save_answer(
             submission=submission,
@@ -123,7 +124,7 @@ class StartQuizSerializer(serializers.Serializer):
         assignment_id = attrs['assignment_id']
         quiz_id = attrs['quiz_id']
         # 使用 SubmissionService 验证
-        service = SubmissionService()
+        service = SubmissionService(request)
         try:
             assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
                 assignment_id, quiz_id, user
@@ -152,7 +153,8 @@ class StartQuizSerializer(serializers.Serializer):
         return attrs
     def create(self, validated_data):
         """Create or return existing submission - 委托给 SubmissionService"""
-        service = SubmissionService()
+        request = self.context.get('request')
+        service = SubmissionService(request)
         in_progress = validated_data.get('in_progress_submission')
         # 无论练习还是考试，有进行中的提交就直接返回
         if in_progress:

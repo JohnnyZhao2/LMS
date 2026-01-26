@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.services import UserManagementService
 from apps.users.serializers import (
@@ -148,15 +149,13 @@ class UserDetailView(APIView):
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-class UserDeactivateView(APIView):
+class UserDeactivateView(BaseAPIView):
     """
     User deactivation endpoint.
     """
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailSerializer
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = UserManagementService()
+    service_class = UserManagementService
     @extend_schema(
         summary='停用用户',
         description='停用指定用户，用户将无法登录',
@@ -176,15 +175,13 @@ class UserDeactivateView(APIView):
         user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-class UserActivateView(APIView):
+class UserActivateView(BaseAPIView):
     """
     User activation endpoint.
     """
     permission_classes = [IsAuthenticated]
     serializer_class = UserDetailSerializer
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = UserManagementService()
+    service_class = UserManagementService
     @extend_schema(
         summary='启用用户',
         description='启用已停用的用户，恢复登录能力',
@@ -204,14 +201,12 @@ class UserActivateView(APIView):
         user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
-class UserAssignRolesView(APIView):
+class UserAssignRolesView(BaseAPIView):
     """
     Role assignment endpoint.
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = UserManagementService()
+    service_class = UserManagementService
     @extend_schema(
         summary='分配角色',
         description='为用户分配角色，学员角色自动保留',
@@ -239,14 +234,12 @@ class UserAssignRolesView(APIView):
         )
         response_serializer = UserDetailSerializer(user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
-class UserAssignMentorView(APIView):
+class UserAssignMentorView(BaseAPIView):
     """
     Mentor assignment endpoint.
     """
     permission_classes = [IsAuthenticated]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = UserManagementService()
+    service_class = UserManagementService
     @extend_schema(
         summary='指定导师',
         description='为学员指定导师，传入null解除绑定',

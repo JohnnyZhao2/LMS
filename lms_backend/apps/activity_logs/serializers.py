@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserLog, ContentLog, OperationLog
+from .models import ActivityLogPolicy, UserLog, ContentLog, OperationLog
 
 
 class SimpleUserSerializer(serializers.Serializer):
@@ -66,3 +66,22 @@ class OperationLogSerializer(serializers.ModelSerializer):
             'username': obj.operator.username,
             'role': ', '.join([role.name for role in obj.operator.roles.all()]),
         }
+
+
+class ActivityLogPolicySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActivityLogPolicy
+        fields = [
+            'id',
+            'key',
+            'category',
+            'group',
+            'label',
+            'enabled',
+            'updated_at',
+        ]
+
+
+class ActivityLogPolicyUpdateSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    enabled = serializers.BooleanField()

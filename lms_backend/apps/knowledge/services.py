@@ -10,6 +10,7 @@ from typing import Optional, List
 from django.db import transaction
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
+from core.decorators import log_content_action
 from .models import Knowledge, Tag
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
 
@@ -55,6 +56,7 @@ class KnowledgeService(BaseService):
         return list(qs)
 
     @transaction.atomic
+    @log_content_action('knowledge', 'create', '创建知识文档《{result.title}》')
     def create(self, data: dict) -> Knowledge:
         """
         创建知识文档
@@ -89,6 +91,7 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
+    @log_content_action('knowledge', 'update', '更新知识文档《{result.title}》（版本 {result.version_number}）')
     def update(self, pk: int, data: dict) -> Knowledge:
         """
         更新知识文档
@@ -122,11 +125,14 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    def delete(self, pk: int) -> None:
+    @log_content_action('knowledge', 'delete', '删除知识文档《{result.title}》')
+    def delete(self, pk: int) -> Knowledge:
         """
         删除知识文档
         Args:
             pk: 主键
+        Returns:
+            删除前的知识文档对象
         Raises:
             BusinessError: 如果被引用无法删除
         """
@@ -143,6 +149,7 @@ class KnowledgeService(BaseService):
             )
         # 软删除
         knowledge.soft_delete()
+        return knowledge
 
     def increment_view_count(self, pk: int) -> int:
         """
