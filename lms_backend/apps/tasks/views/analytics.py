@@ -6,7 +6,7 @@ Implements:
 """
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from django.db.models import Sum
+from django.db.models import Max, Sum
 
 from core.responses import success_response, list_response
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
@@ -215,8 +215,6 @@ class TaskAnalyticsView(BaseAPIView):
         distribution = {r[0]: 0 for r in ranges}
 
         # 获取每个学员在考试中的最高分提交（只统计 EXAM）
-        from django.db.models import Max
-        
         highest_scores = Submission.objects.filter(
             task_assignment__task=task,
             quiz__quiz_type='EXAM',  # 只统计考试
