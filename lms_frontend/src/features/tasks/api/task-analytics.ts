@@ -47,7 +47,7 @@ export const useGradingQuestions = (
   const { enabled = true } = options;
   return useQuery({
     queryKey: ['grading-questions', currentRole ?? 'UNKNOWN', taskId, quizId],
-    queryFn: () => apiClient.get<GradingQuestion[]>(`/tasks/${taskId}/grading/questions/?quiz_id=${quizId}`),
+    queryFn: () => apiClient.get<GradingQuestion[]>(`/grading/tasks/${taskId}/questions/?quiz_id=${quizId}`),
     enabled: Boolean(taskId) && Boolean(quizId) && currentRole !== null && enabled,
   });
 };
@@ -67,7 +67,7 @@ export const useGradingAnswers = (
     queryKey: ['grading-answers', currentRole ?? 'UNKNOWN', taskId, quizId, questionId],
     queryFn: () =>
       apiClient.get<GradingAnswerResponse>(
-        `/tasks/${taskId}/grading/answers/?question_id=${questionId}&quiz_id=${quizId}`
+        `/grading/tasks/${taskId}/answers/?question_id=${questionId}&quiz_id=${quizId}`
       ),
     enabled: Boolean(taskId) && Boolean(quizId) && Boolean(questionId) && currentRole !== null && enabled,
   });
@@ -80,7 +80,7 @@ export const useSubmitGrading = (taskId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: GradingSubmitRequest) =>
-      apiClient.post(`/tasks/${taskId}/grading/submit/`, data),
+      apiClient.post(`/grading/tasks/${taskId}/submit/`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grading-answers'] });
       queryClient.invalidateQueries({ queryKey: ['grading-questions'] });

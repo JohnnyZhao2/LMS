@@ -13,9 +13,6 @@ from .views import (
     CompleteKnowledgeLearningView,
     TaskAnalyticsView,
     StudentExecutionsView,
-    GradingQuestionsView,
-    GradingAnswersView,
-    GradingSubmitView,
 )
 urlpatterns = [
     # Task list and detail
@@ -34,8 +31,4 @@ urlpatterns = [
     # Task analytics (admin preview)
     path('<int:pk>/analytics/', TaskAnalyticsView.as_view(), name='task-analytics'),
     path('<int:pk>/student-executions/', StudentExecutionsView.as_view(), name='student-executions'),
-    # Grading center
-    path('<int:pk>/grading/questions/', GradingQuestionsView.as_view(), name='grading-questions'),
-    path('<int:pk>/grading/answers/', GradingAnswersView.as_view(), name='grading-answers'),
-    path('<int:pk>/grading/submit/', GradingSubmitView.as_view(), name='grading-submit'),
 ]

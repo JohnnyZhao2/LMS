@@ -210,14 +210,13 @@ curl -X POST http://127.0.0.1:8000/api/auth/refresh/ \
 | POST | /exam/{assignment_id}/submit/ | 提交考试 |
 | GET | /exam/{assignment_id}/result/ | 考试结果 |
 
-### 评分 `/api/grading/`
+### 阅卷中心 `/api/grading/`
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
-| GET | /pending/ | 待评分列表 |
-| GET | /{submission_id}/ | 评分详情 |
-| POST | /{submission_id}/grade/ | 提交评分 |
-| POST | /batch-grade/ | 批量评分 |
+| GET | /tasks/{task_id}/questions/?quiz_id={quiz_id} | 获取阅卷中心题目列表 |
+| GET | /tasks/{task_id}/answers/?question_id={question_id}&quiz_id={quiz_id} | 获取题目分析详情 |
+| POST | /tasks/{task_id}/submit/ | 提交评分 |
 
 ### 抽查 `/api/spot-checks/`
 
