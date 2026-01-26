@@ -82,6 +82,7 @@ class MentorDashboardSummarySerializer(serializers.Serializer):
     """
     # Student count
     total_students = serializers.IntegerField(read_only=True)
+    weekly_active_users = serializers.IntegerField(read_only=True)
     # Task statistics
     total_tasks = serializers.IntegerField(read_only=True)
     completed_tasks = serializers.IntegerField(read_only=True)

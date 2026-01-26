@@ -18,7 +18,15 @@ export interface StudentDashboard {
  * 导师仪表盘
  */
 export interface MentorDashboard {
-  mentees_count: number;
-  completion_rate: string;
-  average_score?: string;
+  summary: MentorDashboardSummary;
+  students: Record<string, unknown>[];
+  quick_links: Record<string, string>;
+  current_role: string;
+}
+
+export interface MentorDashboardSummary {
+  total_students: number;
+  weekly_active_users: number;
+  overall_completion_rate: number;
+  overall_avg_score: number | null;
 }

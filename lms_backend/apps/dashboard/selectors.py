@@ -3,7 +3,12 @@ Dashboard selectors.
 集中管理仪表盘读模型查询与统计。
 """
 from typing import List, Dict, Any, Optional
+from datetime import timedelta, datetime, time
+from django.conf import settings
 from django.db.models import QuerySet, Avg
+from django.utils import timezone
+from apps.users.models import User
+from apps.activity_logs.models import UserLog
 from apps.tasks.models import TaskAssignment
 from apps.knowledge.models import Knowledge
 from apps.submissions.models import Submission
@@ -82,3 +87,30 @@ def calculate_avg_score(
         qs = qs.filter(user_id=user_id)
     result = qs.aggregate(avg_score=Avg('obtained_score'))
     return float(result['avg_score']) if result['avg_score'] else None
+
+
+def get_weekly_active_users_count(user_ids: List[int]) -> int:
+    if not user_ids:
+        return 0
+    if settings.USE_TZ:
+        today = timezone.localdate()
+    else:
+        today = datetime.now().date()
+    start_date = today - timedelta(days=today.weekday())
+    start_dt = datetime.combine(start_date, time.min)
+    end_dt = start_dt + timedelta(days=7)
+    if settings.USE_TZ:
+        tz = timezone.get_current_timezone()
+        start_dt = timezone.make_aware(start_dt, tz)
+        end_dt = timezone.make_aware(end_dt, tz)
+    active_user_ids = UserLog.objects.filter(
+        user_id__in=user_ids,
+        action='login',
+        status='success',
+        created_at__gte=start_dt,
+        created_at__lt=end_dt
+    ).values_list('user_id', flat=True).distinct()
+    return User.objects.filter(
+        id__in=active_user_ids,
+        is_active=True
+    ).count()

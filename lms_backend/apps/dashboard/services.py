@@ -18,6 +18,7 @@ from .selectors import (
     get_latest_knowledge,
     get_pending_tasks,
     get_student_assignments,
+    get_weekly_active_users_count,
 )
 
 
@@ -104,6 +105,7 @@ class MentorDashboardService(BaseService):
         if not student_ids:
             return {
                 'total_students': 0,
+                'weekly_active_users': 0,
                 'total_tasks': 0,
                 'completed_tasks': 0,
                 'in_progress_tasks': 0,
@@ -117,9 +119,11 @@ class MentorDashboardService(BaseService):
         assignments = get_assignments_by_students(student_ids=student_ids)
         stats = calculate_task_stats(assignments)
         overall_avg_score = calculate_avg_score(student_ids=student_ids)
+        weekly_active_users = get_weekly_active_users_count(user_ids=student_ids)
         default_stats = {'total': 0, 'completed': 0, 'completion_rate': 0.0}
         return {
             'total_students': len(student_ids),
+            'weekly_active_users': weekly_active_users,
             'total_tasks': stats['total_tasks'],
             'completed_tasks': stats['completed_tasks'],
             'in_progress_tasks': stats['in_progress_tasks'],

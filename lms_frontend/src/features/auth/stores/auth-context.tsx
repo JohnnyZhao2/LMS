@@ -131,20 +131,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * 切换角色
    */
   const switchRole = useCallback(async (roleCode: RoleCode) => {
-    const response = await switchRoleApi.switchRole({ role_code: roleCode });
-    // 更新存储
-    tokenStorage.setTokens(response.access_token, response.refresh_token);
-    tokenStorage.setUserInfo(response.user);
-    tokenStorage.setCurrentRole(response.current_role);
-    tokenStorage.setAvailableRoles(response.available_roles);
+    setState((prev) => ({ ...prev, isSwitching: true }));
+    try {
+      const response = await switchRoleApi.switchRole({ role_code: roleCode });
+      // 更新存储
+      tokenStorage.setTokens(response.access_token, response.refresh_token);
+      tokenStorage.setUserInfo(response.user);
+      tokenStorage.setCurrentRole(response.current_role);
+      tokenStorage.setAvailableRoles(response.available_roles);
 
-    setState((prev) => ({
-      ...prev,
-      user: response.user,
-      currentRole: response.current_role,
-      availableRoles: response.available_roles,
-      isSwitching: true, // 切换完成后保持 true，由 Header 处理导航后通过 setIsSwitching(false) 关闭
-    }));
+      setState((prev) => ({
+        ...prev,
+        user: response.user,
+        currentRole: response.current_role,
+        availableRoles: response.available_roles,
+        isSwitching: true, // 切换完成后保持 true，由 Header 处理导航后通过 setIsSwitching(false) 关闭
+      }));
+    } catch (error) {
+      setState((prev) => ({ ...prev, isSwitching: false }));
+      throw error;
+    }
   }, []);
 
   /**

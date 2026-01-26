@@ -58,7 +58,11 @@ def log_user_action(
                     description = f'{action} 操作'
 
                 # 确定目标用户和操作者
-                user = result if hasattr(result, 'employee_id') else kwargs.get('user') or args[0] if args else None
+                user = (
+                    result
+                    if hasattr(result, 'employee_id')
+                    else (kwargs.get('user') or (args[0] if args else None))
+                )
                 operator = kwargs.get('operator') or kwargs.get('assigned_by') or getattr(self, 'user', None)
 
                 ActivityLogService.log_user_action(

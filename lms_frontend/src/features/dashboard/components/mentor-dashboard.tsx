@@ -52,7 +52,7 @@ export const MentorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="学员数量"
-          value={data?.mentees_count || 0}
+          value={data?.summary?.total_students ?? 0}
           icon={Users}
           accentClassName="bg-primary"
           gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
@@ -60,7 +60,7 @@ export const MentorDashboard: React.FC = () => {
         />
         <StatCard
           title="任务完成率"
-          value={data?.completion_rate || '0%'}
+          value={`${data?.summary?.overall_completion_rate ?? 0}%`}
           icon={CheckCircle}
           accentClassName="bg-secondary"
           gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
@@ -68,7 +68,7 @@ export const MentorDashboard: React.FC = () => {
         />
         <StatCard
           title="平均分"
-          value={data?.average_score || '0'}
+          value={data?.summary?.overall_avg_score ?? 0}
           icon={Trophy}
           accentClassName="bg-primary-500"
           gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"

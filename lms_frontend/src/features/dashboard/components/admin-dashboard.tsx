@@ -54,8 +54,8 @@ export const AdminDashboard: React.FC = () => {
       {/* STATS GRID - Flat Design */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="注册成员总数"
-          value={data?.mentees_count || 0}
+          title="周活跃用户数"
+          value={data?.summary?.weekly_active_users ?? 0}
           icon={Users}
           accentClassName="bg-primary"
           gradient=""

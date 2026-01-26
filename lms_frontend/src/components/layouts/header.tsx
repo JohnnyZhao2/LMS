@@ -114,9 +114,26 @@ export const Header: React.FC = () => {
     }
   }
 
+  const prevPathRef = React.useRef(location.pathname)
+
   React.useEffect(() => {
-    if (isSwitching) {
+    const prevPath = prevPathRef.current
+    prevPathRef.current = location.pathname
+
+    if (!isSwitching) {
+      return
+    }
+
+    if (prevPath === location.pathname) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
       setIsSwitching(false)
+    }, 400)
+
+    return () => {
+      window.clearTimeout(timeoutId)
     }
   }, [location.pathname, isSwitching, setIsSwitching])
 
