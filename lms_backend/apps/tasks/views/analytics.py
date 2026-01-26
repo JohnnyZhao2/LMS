@@ -6,7 +6,7 @@ Implements:
 """
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from django.db.models import Avg, Sum, Count
+from django.db.models import Sum
 
 from core.responses import success_response, list_response
 from apps.users.permissions import IsAdminOrMentorOrDeptManager

@@ -27,9 +27,6 @@ import { ActivityLogsPanel } from '@/features/activity-logs/components/activity-
 export const AdminDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
 
-
-
-
   if (isLoading) {
     return (
       <div className="p-10 space-y-6">
