@@ -83,7 +83,7 @@ def paginated_response(
     Args:
         page: 分页后的数据列表
         serialized_data: 序列化后的数据
-        paginator: 分页器实例
+        paginator: 分页器实例（StandardResultsSetPagination 或 SmallResultsSetPagination）
     Returns:
         Response 对象
     Example:
@@ -91,11 +91,17 @@ def paginated_response(
         page = paginator.paginate_queryset(queryset, request)
         serializer = MySerializer(page, many=True)
         return paginated_response(page, serializer.data, paginator)
-        # => {"code": "SUCCESS", "message": "success", "data": {..., "results": [...]}}
+        # => {"code": "SUCCESS", "message": "success", "data": {
+        #       "count": 123, "total_pages": 7, "current_page": 1, "page_size": 20,
+        #       "next": "...", "previous": "...", "results": [...]
+        #    }}
     """
-    # 获取分页器的响应数据
+    # 获取分页器的响应数据（包含完整的分页元数据）
     paginated_data = {
         'count': paginator.page.paginator.count,
+        'total_pages': paginator.page.paginator.num_pages,
+        'current_page': paginator.page.number,
+        'page_size': paginator.get_page_size(paginator.request),
         'next': paginator.get_next_link(),
         'previous': paginator.get_previous_link(),
         'results': serialized_data,

@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from core.base_view import BaseAPIView
+from core.pagination import StandardResultsSetPagination
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from .serializers import (
     QuestionListSerializer,
@@ -25,6 +26,7 @@ class QuestionListCreateView(BaseAPIView):
     Question list and create endpoint.
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    pagination_class = StandardResultsSetPagination
     service_class = QuestionService
 
     @extend_schema(
@@ -54,29 +56,26 @@ class QuestionListCreateView(BaseAPIView):
             filters['created_by_id'] = int(request.query_params.get('created_by'))
         if request.query_params.get('line_type_id'):
             filters['line_type_id'] = int(request.query_params.get('line_type_id'))
-        
+
         search = request.query_params.get('search')
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
-        
-        # 使用Service获取题目列表（不再传user参数）
-        result = self.service.get_list(
+
+        # 使用 Service 获取 QuerySet（不再传分页参数）
+        queryset = self.service.get_queryset(
             filters=filters if filters else None,
             search=search,
-            ordering='-created_at',
-            page=page,
-            page_size=page_size
+            ordering='-created_at'
         )
-        
-        # 序列化
-        serializer = QuestionListSerializer(result['results'], many=True)
-        return Response({
-            'count': result['count'],
-            'results': serializer.data,
-            'page': result['page'],
-            'page_size': result['page_size'],
-            'total_pages': result['total_pages']
-        }, status=status.HTTP_200_OK)
+
+        # 使用 DRF 分页器处理分页
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QuestionListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        # 如果不分页，直接返回
+        serializer = QuestionListSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(
         summary='创建题目',

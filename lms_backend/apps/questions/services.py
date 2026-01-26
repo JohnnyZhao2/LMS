@@ -35,6 +35,37 @@ class QuestionService(BaseService):
         self.check_published_resource_access(question, resource_name='题目')
         return question
 
+    def get_queryset(
+        self,
+        filters: dict = None,
+        search: str = None,
+        ordering: str = '-created_at'
+    ):
+        """
+        获取题目 QuerySet（用于分页）
+        Args:
+            filters: 过滤条件
+            search: 搜索关键词
+            ordering: 排序字段
+        Returns:
+            QuerySet
+        """
+        # 非管理员默认只显示当前版本的题目
+        if self.user and self.get_current_role() != 'ADMIN':
+            if not filters:
+                filters = {}
+            if 'is_current' not in filters:
+                filters['is_current'] = True
+
+        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
+        queryset = apply_question_filters(queryset, filters, search)
+
+        # 排序
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
+
     def get_list(
         self,
         filters: dict = None,
@@ -44,7 +75,7 @@ class QuestionService(BaseService):
         page_size: int = 10
     ) -> dict:
         """
-        获取题目列表
+        获取题目列表（已废弃，请使用 get_queryset）
         Args:
             filters: 过滤条件
             search: 搜索关键词
@@ -54,26 +85,14 @@ class QuestionService(BaseService):
         Returns:
             包含题目列表和分页信息的字典
         """
-        # 非管理员默认只显示当前版本的题目
-        if self.user and self.get_current_role() != 'ADMIN':
-            if not filters:
-                filters = {}
-            if 'is_current' not in filters:
-                filters['is_current'] = True
-        
-        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
-        queryset = apply_question_filters(queryset, filters, search)
-        
-        # 排序
-        if ordering:
-            queryset = queryset.order_by(ordering)
-        
+        queryset = self.get_queryset(filters, search, ordering)
+
         # 分页处理
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
         questions = queryset[start:end]
-        
+
         return {
             'count': total_count,
             'results': list(questions),

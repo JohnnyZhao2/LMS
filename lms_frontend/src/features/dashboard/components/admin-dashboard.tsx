@@ -12,6 +12,7 @@ import { useMentorDashboard } from '../api/mentor-dashboard';
 
 import { ROUTES } from '@/config/routes';
 import { StatCard, PageHeader, Skeleton, ActionCard } from '@/components/ui';
+import { ActivityLogsPanel } from '@/features/activity-logs/components/activity-logs-panel';
 
 
 /**
@@ -119,6 +120,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Activity Logs Panel */}
+      <ActivityLogsPanel />
     </div>
   );
 };

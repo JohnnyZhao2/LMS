@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'apps.submissions',
     'apps.spot_checks',
     'apps.dashboard',
+    'apps.activity_logs',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

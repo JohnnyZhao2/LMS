@@ -118,14 +118,15 @@ export interface UserList extends UserInfo {
 // ==================== 分页相关 ====================
 
 /**
- * 分页响应
+ * 统一分页响应格式
+ * 后端返回格式：{code, message, data}，其中 data 包含以下字段
  */
 export interface PaginatedResponse<T> {
   count: number;
-  total_pages?: number;
-  current_page?: number;
-  page_size?: number;
-  next?: string | null;
-  previous?: string | null;
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  next: string | null;
+  previous: string | null;
   results: T[];
 }

@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/submissions/', include('apps.submissions.urls.submissions')),
     path('api/spot-checks/', include('apps.spot_checks.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
+    path('api/logs/', include('apps.activity_logs.urls')),
     # API documentation - OpenAPI 3.0
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema.yaml', SpectacularAPIView.as_view(renderer_classes=[]), name='schema-yaml'),
