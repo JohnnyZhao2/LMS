@@ -91,7 +91,7 @@ class ActivityLogService:
 
         Args:
             user: 目标用户
-            action: 操作类型 (login, logout, password_change, login_failed, role_assigned)
+            action: 操作类型 (login, logout, password_change, login_failed, role_assigned, mentor_assigned, activate, deactivate, switch_role)
             description: 操作描述
             operator: 操作者（如果是管理员操作）
             status: 状态 (success, failed)
@@ -160,7 +160,7 @@ class ActivityLogService:
 
         Args:
             operator: 操作者
-            operation_type: 操作类型 (task_management, grading, spot_check, data_export)
+            operation_type: 操作类型 (task_management, grading, spot_check, data_export, submission, learning)
             action: 操作
             description: 操作描述
             duration: 耗时（毫秒）
