@@ -4,18 +4,22 @@ Implements unified interfaces and common functionality:
 - Unified quiz interface (StartQuizView, SubmitView)
 - Save answer during quiz
 """
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from core.base_view import BaseAPIView
-from ..services import SubmissionService
+
 from ..serializers import (
-    SubmissionDetailSerializer,
     SaveAnswerSerializer,
     StartQuizSerializer,
+    SubmissionDetailSerializer,
 )
+from ..services import SubmissionService
+
+
 class StartQuizView(APIView):
     """
     统一的开始答题接口，根据 quiz_type 自动判断行为。

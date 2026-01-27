@@ -5,10 +5,12 @@ Implements URL routing for:
 - Mentor/Department manager dashboard
 """
 from django.urls import path
+
 from .views import (
-    StudentDashboardView,
     MentorDashboardView,
+    StudentDashboardView,
 )
+
 urlpatterns = [
     # Student dashboard
     path('student/', StudentDashboardView.as_view(), name='student-dashboard'),

@@ -5,13 +5,15 @@ Implements URL routing for:
 - Exam submissions
 """
 from django.urls import path
+
 from ..views import (
-    SaveAnswerView,
+    ExamResultView,
     PracticeResultView,
+    SaveAnswerView,
     StartQuizView,
     SubmitView,
-    ExamResultView,
 )
+
 urlpatterns = [
     # Unified endpoints (new)
     path('start/', StartQuizView.as_view(), name='start-quiz'),

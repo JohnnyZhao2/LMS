@@ -5,8 +5,11 @@ Implements serializers for:
 - Mentor/Department manager dashboard
 """
 from rest_framework import serializers
-from apps.tasks.models import TaskAssignment
+
 from apps.knowledge.serializers import KnowledgeListSerializer
+from apps.tasks.models import TaskAssignment
+
+
 class StudentPendingTaskSerializer(serializers.ModelSerializer):
     """
     Serializer for student's pending tasks on dashboard.

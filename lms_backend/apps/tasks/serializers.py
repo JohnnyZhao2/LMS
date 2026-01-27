@@ -7,13 +7,22 @@ Serializers for task management.
 - 业务逻辑已提取到 services.py
 """
 from rest_framework import serializers
+
 from apps.users.permissions import (
-    get_current_role,
     get_accessible_student_ids,
+    get_current_role,
 )
-from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
-from .task_service import TaskService
+
+from .models import (
+    KnowledgeLearningProgress,
+    Task,
+    TaskAssignment,
+    TaskKnowledge,
+    TaskQuiz,
+)
 from .student_task_service import StudentTaskService, extract_knowledge_summary
+from .task_service import TaskService
+
 
 def validate_assignee_scope(user, assignee_ids: list[int], request=None) -> None:
     invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request=request))

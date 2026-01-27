@@ -6,16 +6,17 @@ Split into:
 - exam.py: Exam submission views
 """
 from .common import (
+    SaveAnswerView,
     StartQuizView,
     SubmitView,
-    SaveAnswerView,
-)
-from .practice import (
-    PracticeResultView,
 )
 from .exam import (
     ExamResultView,
 )
+from .practice import (
+    PracticeResultView,
+)
+
 __all__ = [
     # Common views
     'StartQuizView',

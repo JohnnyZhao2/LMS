@@ -6,11 +6,14 @@ Dashboard 应用服务
 - 部门/团队分析
 - 知识热度统计
 """
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 from django.db.models import QuerySet
-from core.base_service import BaseService
+
 from apps.users.models import User
-from apps.users.permissions import get_current_role, get_accessible_students
+from apps.users.permissions import get_accessible_students, get_current_role
+from core.base_service import BaseService
+
 from .selectors import (
     calculate_avg_score,
     calculate_task_stats,

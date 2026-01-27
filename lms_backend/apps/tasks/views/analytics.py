@@ -4,17 +4,17 @@ Implements:
 - Task analytics API
 - Student executions API
 """
+from django.db.models import Max, Prefetch, Sum
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from django.db.models import Max, Sum
 
-from core.responses import success_response, list_response
+from apps.submissions.models import Submission
+from apps.tasks.models import KnowledgeLearningProgress
+from apps.tasks.serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
+from apps.tasks.task_service import TaskService
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
-from apps.tasks.models import KnowledgeLearningProgress
-from apps.tasks.serializers import TaskAnalyticsSerializer, StudentExecutionSerializer
-from apps.tasks.task_service import TaskService
-from apps.submissions.models import Submission
+from core.responses import list_response, success_response
 
 
 class TaskAnalyticsView(BaseAPIView):
@@ -41,7 +41,19 @@ class TaskAnalyticsView(BaseAPIView):
 
     def _compute_analytics(self, task):
         """计算任务分析数据"""
-        assignments = task.assignments.select_related('assignee', 'assignee__department')
+        # 预加载关联数据避免 N+1 查询
+        submissions_prefetch = Prefetch(
+            'submissions',
+            queryset=Submission.objects.select_related('quiz').filter(
+                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            )
+        )
+        assignments = task.assignments.select_related(
+            'assignee', 'assignee__department'
+        ).prefetch_related(
+            'knowledge_progress',
+            submissions_prefetch
+        )
         total_count = assignments.count()
         completed_count = assignments.filter(status='COMPLETED').count()
 
@@ -121,20 +133,18 @@ class TaskAnalyticsView(BaseAPIView):
         abnormal_ids = set()
 
         for assignment in assignments.filter(status='COMPLETED'):
-            # 检查知识学习时长
-            for progress in assignment.knowledge_progress.filter(is_completed=True):
+            # 检查知识学习时长（使用预加载的 knowledge_progress）
+            for progress in assignment.knowledge_progress.all():
+                if not progress.is_completed:
+                    continue
                 if progress.completed_at and progress.created_at:
                     duration = (progress.completed_at - progress.created_at).total_seconds() / 60
                     if duration < 5:
                         abnormal_ids.add(assignment.assignee_id)
                         break
 
-            # 检查测验/考试时长
-            submissions = Submission.objects.filter(
-                task_assignment=assignment,
-                status__in=['SUBMITTED', 'GRADED']
-            )
-            for sub in submissions:
+            # 检查测验/考试时长（使用预加载的 submissions）
+            for sub in assignment.submissions.all():
                 if sub.submitted_at and sub.started_at:
                     duration = (sub.submitted_at - sub.started_at).total_seconds() / 60
                     is_exam = sub.quiz.quiz_type == 'EXAM'
@@ -294,41 +304,50 @@ class StudentExecutionsView(BaseAPIView):
 
     def _get_student_executions(self, task):
         """获取学员执行情况列表"""
+        # 预加载关联数据避免 N+1 查询
+        submissions_prefetch = Prefetch(
+            'submissions',
+            queryset=Submission.objects.select_related('quiz').filter(
+                status__in=['SUBMITTED', 'GRADING', 'GRADED']
+            )
+        )
         assignments = task.assignments.select_related(
             'assignee', 'assignee__department'
+        ).prefetch_related(
+            'knowledge_progress',
+            submissions_prefetch
         ).order_by('-created_at')
 
         total_nodes = task.task_knowledge.count() + task.task_quizzes.count()
         results = []
 
         for assignment in assignments:
-            # 计算完成节点数
-            completed_knowledge = assignment.knowledge_progress.filter(is_completed=True).count()
-            completed_quizzes = Submission.objects.filter(
-                task_assignment=assignment,
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            ).values('quiz').distinct().count()
-            completed_nodes = completed_knowledge + completed_quizzes
+            # 计算完成节点数（使用预加载的数据）
+            completed_knowledge = sum(
+                1 for p in assignment.knowledge_progress.all() if p.is_completed
+            )
+            completed_quiz_ids = set(
+                sub.quiz_id for sub in assignment.submissions.all()
+            )
+            completed_nodes = completed_knowledge + len(completed_quiz_ids)
 
             # 计算用时
             time_spent = 0
             if assignment.completed_at and assignment.created_at:
                 time_spent = int((assignment.completed_at - assignment.created_at).total_seconds() / 60)
 
-            # 获取分数（只显示考试分数）
+            # 获取分数（只显示考试分数，使用预加载的数据）
             score = None
-            exam_submission = Submission.objects.filter(
-                task_assignment=assignment,
-                quiz__quiz_type='EXAM',
-                status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-                obtained_score__isnull=False
-            ).order_by('-obtained_score').first()
-            
-            if exam_submission:
-                score = float(exam_submission.obtained_score)
+            exam_submissions = [
+                sub for sub in assignment.submissions.all()
+                if sub.quiz.quiz_type == 'EXAM' and sub.obtained_score is not None
+            ]
+            if exam_submissions:
+                best_submission = max(exam_submissions, key=lambda s: s.obtained_score)
+                score = float(best_submission.obtained_score)
 
-            # 检查是否异常
-            is_abnormal = self._check_abnormal(assignment)
+            # 检查是否异常（使用预加载的数据）
+            is_abnormal = self._check_abnormal_from_prefetched(assignment)
 
             # 确定状态
             status = assignment.status
@@ -350,21 +369,19 @@ class StudentExecutionsView(BaseAPIView):
 
         return results
 
-    def _check_abnormal(self, assignment):
-        """检查学员是否异常"""
+    def _check_abnormal_from_prefetched(self, assignment):
+        """检查学员是否异常（使用预加载的数据）"""
         # 检查知识学习时长
-        for progress in assignment.knowledge_progress.filter(is_completed=True):
+        for progress in assignment.knowledge_progress.all():
+            if not progress.is_completed:
+                continue
             if progress.completed_at and progress.created_at:
                 duration = (progress.completed_at - progress.created_at).total_seconds() / 60
                 if duration < 5:
                     return True
 
         # 检查测验/考试时长
-        submissions = Submission.objects.filter(
-            task_assignment=assignment,
-            status__in=['SUBMITTED', 'GRADED']
-        )
-        for sub in submissions:
+        for sub in assignment.submissions.all():
             if sub.submitted_at and sub.started_at:
                 duration = (sub.submitted_at - sub.started_at).total_seconds() / 60
                 is_exam = sub.quiz.quiz_type == 'EXAM'

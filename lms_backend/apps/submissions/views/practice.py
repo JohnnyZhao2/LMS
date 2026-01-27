@@ -4,14 +4,18 @@ Implements practice result endpoint.
 Properties:
 - Property 30: 客观题自动评分
 """
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.response import Response
+
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from ..services import SubmissionService
+
 from ..serializers import PracticeResultSerializer
+from ..services import SubmissionService
+
+
 class PracticeResultView(BaseAPIView):
     """
     View practice result.

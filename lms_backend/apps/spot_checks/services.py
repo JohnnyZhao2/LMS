@@ -7,30 +7,43 @@ Properties: 35, 36
     service = SpotCheckService(request)
     records = service.get_list(student_id=123)
 """
-from typing import Optional, List
+from typing import List, Optional
+
+from django.db.models import QuerySet
 from django.utils import timezone
+
+from apps.users.models import User
+from apps.users.permissions import get_accessible_students
 from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
-from apps.users.models import User
-from apps.users.permissions import get_accessible_students
+
 from .models import SpotCheck
 
 
 class SpotCheckService(BaseService):
     """
     抽查记录应用服务
-    
+
     通过构造器注入 request，内部通过 self.user 和 self.get_current_role() 访问。
     """
 
-    def _with_relations(self, qs):
-        return qs.select_related('student', 'checker', 'student__department')
+    def _base_queryset(self) -> QuerySet:
+        """基础查询集，统一 select_related"""
+        return SpotCheck.objects.select_related(
+            'student',
+            'checker',
+            'student__department'
+        )
+
+    def _get_by_id(self, pk: int) -> Optional[SpotCheck]:
+        """按 ID 获取抽查记录"""
+        return self._base_queryset().filter(pk=pk).first()
 
     def get_by_id(self, pk: int) -> SpotCheck:
         """
         获取抽查记录详情
-        
+
         Args:
             pk: 主键
         Returns:
@@ -38,9 +51,8 @@ class SpotCheckService(BaseService):
         Raises:
             BusinessError: 如果不存在或无权限
         """
-        spot_check = self._with_relations(SpotCheck.objects).filter(pk=pk).first()
+        spot_check = self._get_by_id(pk)
         self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
-        # 验证数据权限
         self._validate_data_scope_access(spot_check)
         return spot_check
 
@@ -174,35 +186,33 @@ class SpotCheckService(BaseService):
         self,
         student_id: Optional[int] = None,
         ordering: str = '-checked_at'
-    ):
-        """
-        根据用户角色获取相应范围的查询集
-        """
+    ) -> QuerySet:
+        """根据用户角色获取相应范围的查询集"""
         current_role = self.get_current_role()
-        
+        qs = self._base_queryset()
+
         if current_role == 'ADMIN':
-            qs = SpotCheck.objects.all()
+            pass  # 管理员可以看所有
         elif current_role == 'MENTOR':
-            qs = SpotCheck.objects.filter(student__mentor_id=self.user.id)
+            qs = qs.filter(student__mentor_id=self.user.id)
         elif current_role == 'DEPT_MANAGER':
             if not self.user.department_id:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='您未分配部门，无法查看抽查记录'
                 )
-            qs = SpotCheck.objects.filter(student__department_id=self.user.department_id)
+            qs = qs.filter(student__department_id=self.user.department_id)
         else:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问抽查记录'
             )
-        
+
         if student_id:
             qs = qs.filter(student_id=student_id)
         if ordering:
             qs = qs.order_by(ordering)
-        
-        return self._with_relations(qs)
+        return qs
 
     def _validate_data_scope_access(self, spot_check: SpotCheck) -> None:
         """验证用户是否有权限访问该抽查记录"""

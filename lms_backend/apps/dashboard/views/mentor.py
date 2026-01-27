@@ -3,12 +3,13 @@ Mentor/Department Manager dashboard views.
 Implements:
 - Mentor/Department manager dashboard API
 """
-from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from core.exceptions import BusinessError, ErrorCodes
-from core.base_view import BaseAPIView
+from rest_framework.response import Response
+
 from apps.dashboard.services import MentorDashboardService
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 
 
 class MentorDashboardView(BaseAPIView):

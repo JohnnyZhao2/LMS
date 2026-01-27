@@ -2,16 +2,18 @@
 Dashboard selectors.
 集中管理仪表盘读模型查询与统计。
 """
-from typing import List, Dict, Any, Optional
-from datetime import timedelta, datetime, time
+from datetime import datetime, time, timedelta
+from typing import Any, Dict, List, Optional
+
 from django.conf import settings
-from django.db.models import QuerySet, Avg
+from django.db.models import Avg, QuerySet
 from django.utils import timezone
-from apps.users.models import User
+
 from apps.activity_logs.models import UserLog
-from apps.tasks.models import TaskAssignment
 from apps.knowledge.models import Knowledge
 from apps.submissions.models import Submission
+from apps.tasks.models import TaskAssignment
+from apps.users.models import User
 
 
 def get_pending_tasks(user_id: int, limit: int = 10) -> QuerySet:

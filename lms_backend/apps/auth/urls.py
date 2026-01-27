@@ -9,14 +9,16 @@ Endpoints:
 - GET /api/auth/me/ - Get current user info
 """
 from django.urls import path
+
 from apps.auth.views import (
     LoginView,
     LogoutView,
-    RefreshTokenView,
-    SwitchRoleView,
     MeView,
+    RefreshTokenView,
     ResetPasswordView,
+    SwitchRoleView,
 )
+
 urlpatterns = [
     path('login/', LoginView.as_view(), name='auth-login'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),

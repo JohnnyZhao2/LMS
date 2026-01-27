@@ -1,15 +1,14 @@
 """
 User services for LMS.
 """
-from typing import Optional, List
-
-from core.decorators import log_user_action
-from core.exceptions import BusinessError, ErrorCodes
-from core.base_service import BaseService
+from typing import List, Optional
 
 from apps.activity_logs.services import ActivityLogService
+from core.base_service import BaseService
+from core.decorators import log_user_action
+from core.exceptions import BusinessError, ErrorCodes
 
-from .models import User, Role, UserRole
+from .models import Role, User, UserRole
 from .selectors import get_user_by_id
 
 

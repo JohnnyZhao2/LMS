@@ -6,11 +6,14 @@
 - is_current=True 表示当前最新版本
 """
 import uuid
-from typing import Optional, List
+from typing import List, Optional
+
 from django.db import transaction
+
 from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
 from core.decorators import log_content_action
+from core.exceptions import BusinessError, ErrorCodes
+
 from .models import Knowledge, Tag
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
 

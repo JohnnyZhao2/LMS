@@ -2,7 +2,10 @@
 Serializers for knowledge management.
 """
 from rest_framework import serializers
+
 from .models import Knowledge, Tag
+
+
 class TagSerializer(serializers.ModelSerializer):
     """
     标签序列化器

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import ActivityLogPolicy, UserLog, ContentLog, OperationLog
+
+from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
 
 
 class SimpleUserSerializer(serializers.Serializer):

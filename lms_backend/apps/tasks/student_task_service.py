@@ -6,16 +6,16 @@ Provides business logic for:
 - Task completion logic
 """
 from typing import List
+
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
-from core.decorators import log_operation
-
 from apps.submissions.models import Submission
+from core.base_service import BaseService
+from core.decorators import log_operation
+from core.exceptions import BusinessError, ErrorCodes
 
-from .models import TaskAssignment, KnowledgeLearningProgress
+from .models import KnowledgeLearningProgress, TaskAssignment
 from .selectors import (
     assignment_detail_queryset,
     assignment_list_queryset,

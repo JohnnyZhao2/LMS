@@ -12,7 +12,10 @@ Implements:
 """
 from django.db import models
 from django.utils import timezone
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
+
+from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+
+
 class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
     任务主模型

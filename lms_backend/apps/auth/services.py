@@ -6,18 +6,23 @@ Implements:
 - Role switching
 - Inactive user login rejection
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from django.contrib.auth import authenticate
 from django.db.models import QuerySet
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+
+from apps.activity_logs.services import ActivityLogService
+from apps.users.models import Role, User
+from apps.users.serializers import UserInfoSerializer
+from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
-from core.base_service import BaseService
-from apps.users.models import User, Role
-from apps.users.serializers import UserInfoSerializer
-from apps.activity_logs.services import ActivityLogService
 
 
 class AuthenticationService(BaseService):

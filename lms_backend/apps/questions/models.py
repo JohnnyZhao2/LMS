@@ -4,11 +4,20 @@ Implements:
 - Question: 题目模型
 """
 import uuid
+
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.core.exceptions import ValidationError
-from django.contrib.contenttypes.models import ContentType
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
+
+from core.mixins import (
+    CreatorMixin,
+    SoftDeleteMixin,
+    TimestampMixin,
+    VersionedResourceMixin,
+)
+
+
 class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     题目模型
@@ -83,8 +92,9 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         return relation.line_type if relation else None
     def set_line_type(self, line_type):
         """设置条线类型"""
-        from apps.knowledge.models import ResourceLineType
         from django.core.exceptions import ValidationError
+
+        from apps.knowledge.models import ResourceLineType
         if line_type and line_type.tag_type != 'LINE':
             raise ValidationError('只能设置条线类型标签')
         # 删除旧的关系
@@ -162,6 +172,7 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         # 延迟导入避免循环依赖
         try:
             from apps.quizzes.models import QuizQuestion
+
             # 只检查未被软删除的试卷的引用
             return QuizQuestion.objects.filter(
                 question=self,

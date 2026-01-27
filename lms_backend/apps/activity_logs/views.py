@@ -2,20 +2,22 @@
 Activity logs views.
 提供用户日志、内容日志、操作日志的查询接口。
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+
+from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from core.responses import success_response
 from core.pagination import StandardResultsSetPagination
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from .models import ActivityLogPolicy, UserLog, ContentLog, OperationLog
+from core.responses import success_response
+
+from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
 from .serializers import (
     ActivityLogPolicySerializer,
     ActivityLogPolicyUpdateSerializer,
-    UserLogSerializer,
     ContentLogSerializer,
     OperationLogSerializer,
+    UserLogSerializer,
 )
 from .services import ActivityLogService
 

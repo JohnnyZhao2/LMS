@@ -3,14 +3,15 @@ Knowledge URLs.
 API endpoints for knowledge document management.
 """
 from django.urls import path
+
 from .views import (
-    KnowledgeListCreateView,
     KnowledgeDetailView,
-    KnowledgeStatsView,
     KnowledgeIncrementViewCountView,
+    KnowledgeListCreateView,
+    KnowledgeStatsView,
     StudentTaskKnowledgeDetailView,
-    TagListView,
     TagCreateView,
+    TagListView,
 )
 
 urlpatterns = [

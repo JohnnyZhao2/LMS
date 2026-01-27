@@ -6,11 +6,18 @@ Implements:
 - User: 用户模型
 - UserRole: 用户角色关联
 """
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
-from django.db import models
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.utils.functional import cached_property
+
 from core.mixins import TimestampMixin
+
+
 class UserManager(BaseUserManager):
     """自定义 User Manager，支持使用 employee_id 作为用户名字段"""
     def create_user(self, employee_id, username, password=None, **extra_fields):
@@ -194,6 +201,8 @@ class UserRole(TimestampMixin, models.Model):
 # Signal handlers for automatic role assignment
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+
 @receiver(post_save, sender=User)
 def assign_default_student_role(sender, instance, created, **kwargs):
     """

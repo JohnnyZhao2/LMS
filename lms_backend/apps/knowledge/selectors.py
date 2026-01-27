@@ -3,8 +3,10 @@ Knowledge selectors.
 集中管理知识相关查询与过滤规则。
 """
 from typing import Optional
-from django.db.models import Q, QuerySet
+
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q, QuerySet
+
 from .models import Knowledge, ResourceLineType
 
 

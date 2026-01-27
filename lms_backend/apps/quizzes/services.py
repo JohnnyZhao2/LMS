@@ -6,18 +6,21 @@
     service = QuizService(request)
     quiz = service.get_by_id(pk=123)
 """
-from typing import Optional, List
+import uuid
+from typing import List, Optional
+
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
-import uuid
-from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
-from core.decorators import log_content_action
-from .models import Quiz, QuizQuestion
-from apps.questions.models import Question
+
 from apps.knowledge.models import Tag
-from .selectors import get_quiz_by_id, get_question_ids, list_quiz_questions
+from apps.questions.models import Question
+from core.base_service import BaseService
+from core.decorators import log_content_action
+from core.exceptions import BusinessError, ErrorCodes
+
+from .models import Quiz, QuizQuestion
+from .selectors import get_question_ids, get_quiz_by_id, list_quiz_questions
 
 
 class QuizService(BaseService):

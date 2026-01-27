@@ -5,7 +5,10 @@ Usage:
 """
 from django.core.management.base import BaseCommand
 from django.db import transaction
+
 from apps.users.models import Department, Role, User, UserRole
+
+
 class Command(BaseCommand):
     help = '初始化系统基础数据（部门、角色、管理员账号）'
     def handle(self, *args, **options):

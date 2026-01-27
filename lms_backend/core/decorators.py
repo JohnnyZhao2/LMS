@@ -2,9 +2,9 @@
 日志记录装饰器
 用于自动记录业务操作日志
 """
+import time
 from functools import wraps
 from typing import Callable, Optional
-import time
 
 
 def log_user_action(

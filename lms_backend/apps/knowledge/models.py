@@ -6,14 +6,18 @@ Implements:
 - Knowledge: 知识文档
 """
 import uuid
+
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.core.exceptions import ValidationError
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
 from django.utils.html import strip_tags
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
+
+from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+
+
 class Tag(TimestampMixin, models.Model):
     """
     统一标签模型
@@ -271,6 +275,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             int: 更新后的阅读次数
         """
         from django.db.models import F
+
         # 使用原子操作更新计数
         Knowledge.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
         # 刷新对象以获取最新值

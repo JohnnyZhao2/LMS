@@ -7,9 +7,9 @@
     result = service.do_something()  # 内部通过 self.user, self.request 访问
 """
 from typing import Optional, TypeVar
-from core.exceptions import BusinessError, ErrorCodes
-from apps.users.permissions import get_current_role as _get_current_role
 
+from apps.users.permissions import get_current_role as _get_current_role
+from core.exceptions import BusinessError, ErrorCodes
 
 T = TypeVar('T')
 

@@ -7,13 +7,20 @@
     question = service.get_by_id(pk=123)
 """
 import uuid
+
 from django.db import transaction
+
+from apps.knowledge.models import Tag
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
-from apps.knowledge.models import Tag
+
 from .models import Question
-from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
+from .selectors import (
+    apply_question_filters,
+    get_question_by_id,
+    question_base_queryset,
+)
 
 
 class QuestionService(BaseService):

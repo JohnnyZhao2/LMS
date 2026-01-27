@@ -2,7 +2,8 @@
 清理答题记录的管理命令
 """
 from django.core.management.base import BaseCommand
-from apps.submissions.models import Submission, Answer
+
+from apps.submissions.models import Answer, Submission
 
 
 class Command(BaseCommand):

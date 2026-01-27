@@ -2,8 +2,10 @@
 Quiz selectors.
 集中管理试卷查询与关联读取。
 """
-from typing import Optional, List
+from typing import List, Optional
+
 from django.db.models import QuerySet
+
 from .models import Quiz, QuizQuestion
 
 

@@ -5,21 +5,27 @@ Provides business logic for:
 - Task assignment management
 - Permission checks for task operations
 """
-from typing import List, Any, Tuple, Callable
+from typing import Any, Callable, List, Tuple
+
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
-from core.decorators import log_operation
-
-from apps.users.models import User
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
+from apps.users.models import User
+from core.base_service import BaseService
+from core.decorators import log_operation
+from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
+from .models import (
+    KnowledgeLearningProgress,
+    Task,
+    TaskAssignment,
+    TaskKnowledge,
+    TaskQuiz,
+)
 from .selectors import (
     task_base_queryset,
     task_detail_queryset,

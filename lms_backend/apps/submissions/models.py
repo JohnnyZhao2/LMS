@@ -6,10 +6,14 @@ Implements:
 Properties: 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34
 """
 from decimal import Decimal
-from django.db import models
+
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.utils import timezone
+
 from core.mixins import TimestampMixin
+
+
 class Submission(TimestampMixin, models.Model):
     """
     答题记录模型

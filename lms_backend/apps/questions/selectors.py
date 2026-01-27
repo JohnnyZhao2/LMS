@@ -3,10 +3,13 @@ Question selectors.
 集中管理题目查询与过滤逻辑。
 """
 from typing import Optional
-from django.db.models import QuerySet
+
 from django.contrib.contenttypes.models import ContentType
-from .models import Question
+from django.db.models import QuerySet
+
 from apps.knowledge.models import ResourceLineType
+
+from .models import Question
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:

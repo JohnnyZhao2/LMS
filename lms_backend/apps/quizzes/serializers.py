@@ -6,9 +6,13 @@ Properties:
 - Property 16: 试卷所有权编辑控制
 """
 from rest_framework import serializers
+
 from apps.questions.models import Question
 from apps.questions.serializers import QuestionCreateSerializer
+
 from .models import Quiz, QuizQuestion
+
+
 class QuizQuestionSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz-question relationship.

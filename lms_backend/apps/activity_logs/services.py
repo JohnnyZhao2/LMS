@@ -2,10 +2,13 @@
 活动日志服务 - 用于在业务操作中自动记录日志
 """
 from typing import Optional
+
 from django.core.cache import cache
+
 from apps.users.models import User
+
 from .constants import LOG_ACTION_INDEX
-from .models import ActivityLogPolicy, UserLog, ContentLog, OperationLog
+from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
 
 
 class ActivityLogService:

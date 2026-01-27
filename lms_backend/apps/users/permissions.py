@@ -8,7 +8,7 @@ Properties:
 - Property 40: 无权限请求拒绝
 - Property 41: 团队经理只读访问
 """
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 def get_current_role(user, request=None):

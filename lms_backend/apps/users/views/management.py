@@ -7,38 +7,39 @@ Implements:
 - Mentor assignment
 - Reference data (mentors, departments, roles)
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
-
-from apps.users.services import UserManagementService
-from apps.users.serializers import (
-    UserListSerializer,
-    UserDetailSerializer,
-    UserCreateSerializer,
-    UserUpdateSerializer,
-    AssignRolesSerializer,
-    AssignMentorSerializer,
-    MenteeListSerializer,
-    DepartmentMemberListSerializer,
-    MentorSerializer,
-    RoleSerializer,
-    DepartmentSerializer,
-)
 from apps.users.models import User
 from apps.users.permissions import get_current_role
 from apps.users.selectors import (
     get_user_by_id,
-    list_users,
-    list_mentors,
     list_departments,
+    list_mentors,
     list_roles,
+    list_users,
 )
+from apps.users.serializers import (
+    AssignMentorSerializer,
+    AssignRolesSerializer,
+    DepartmentMemberListSerializer,
+    DepartmentSerializer,
+    MenteeListSerializer,
+    MentorSerializer,
+    RoleSerializer,
+    UserCreateSerializer,
+    UserDetailSerializer,
+    UserListSerializer,
+    UserUpdateSerializer,
+)
+from apps.users.services import UserManagementService
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
+
+
 class UserListCreateView(APIView):
     """
     User list and create endpoint.

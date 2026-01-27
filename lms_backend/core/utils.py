@@ -3,7 +3,10 @@ Utility functions for LMS.
 """
 import random
 import string
+
 from django.utils import timezone
+
+
 def generate_random_password(length: int = 8) -> str:
     """
     Generate a random password.

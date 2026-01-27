@@ -2,18 +2,20 @@
 Tasks URLs for task management.
 """
 from django.urls import path
+
 from .views import (
     AssignableUserListView,
-    TaskCreateView,
-    TaskListView,
-    TaskDetailView,
-    TaskCloseView,
-    StudentAssignmentListView,
-    StudentTaskDetailView,
     CompleteKnowledgeLearningView,
-    TaskAnalyticsView,
+    StudentAssignmentListView,
     StudentExecutionsView,
+    StudentTaskDetailView,
+    TaskAnalyticsView,
+    TaskCloseView,
+    TaskCreateView,
+    TaskDetailView,
+    TaskListView,
 )
+
 urlpatterns = [
     # Task list and detail
     path('', TaskListView.as_view(), name='task-list'),

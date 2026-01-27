@@ -1,9 +1,10 @@
 """
 Serializers for user management.
 """
-from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import User, Role, Department
+from rest_framework import serializers
+
+from .models import Department, Role, User
 
 
 def validate_mentor(mentor_id):

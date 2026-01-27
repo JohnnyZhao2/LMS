@@ -2,12 +2,14 @@
 Quiz URLs for LMS.
 """
 from django.urls import path
+
 from .views import (
-    QuizListCreateView,
-    QuizDetailView,
     QuizAddQuestionsView,
+    QuizDetailView,
+    QuizListCreateView,
     QuizRemoveQuestionsView,
 )
+
 urlpatterns = [
     # Quiz CRUD
     path('', QuizListCreateView.as_view(), name='quiz-list-create'),

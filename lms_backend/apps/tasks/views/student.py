@@ -5,20 +5,21 @@ Implements:
 - Student task detail
 - Complete knowledge learning
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
-from apps.tasks.models import TaskAssignment, TaskKnowledge, KnowledgeLearningProgress
+from rest_framework.response import Response
+
+from apps.tasks.models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from apps.tasks.serializers import (
-    StudentAssignmentListSerializer,
-    StudentTaskDetailSerializer,
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
+    StudentAssignmentListSerializer,
+    StudentTaskDetailSerializer,
 )
 from apps.tasks.student_task_service import StudentTaskService
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 
 
 class StudentAssignmentListView(BaseAPIView):

@@ -5,9 +5,18 @@ Implements:
 - QuizQuestion: 试卷题目关联模型
 """
 import uuid
+
 from django.db import models
 from django.db.models import Q
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
+
+from core.mixins import (
+    CreatorMixin,
+    SoftDeleteMixin,
+    TimestampMixin,
+    VersionedResourceMixin,
+)
+
+
 class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     试卷模型

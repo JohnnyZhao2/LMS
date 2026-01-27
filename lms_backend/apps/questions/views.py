@@ -5,17 +5,19 @@ Properties:
 - Property 13: 被引用题目删除保护
 - Property 15: 题目所有权编辑控制
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from rest_framework.response import Response
+
+from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
+
 from .serializers import (
-    QuestionListSerializer,
-    QuestionDetailSerializer,
     QuestionCreateSerializer,
+    QuestionDetailSerializer,
+    QuestionListSerializer,
     QuestionUpdateSerializer,
 )
 from .services import QuestionService

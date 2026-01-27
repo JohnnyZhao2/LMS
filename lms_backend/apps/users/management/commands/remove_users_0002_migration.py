@@ -7,6 +7,8 @@ Usage:
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.migrations.recorder import MigrationRecorder
+
+
 class Command(BaseCommand):
     help = '删除 users.0002_convert_naive_datetimes_to_utc 的迁移记录（仅迁移表）'
     def add_arguments(self, parser):

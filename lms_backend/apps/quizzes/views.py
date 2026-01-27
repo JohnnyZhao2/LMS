@@ -2,24 +2,26 @@
 试卷视图
 只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from core.exceptions import BusinessError
-from core.pagination import StandardResultsSetPagination
-from core.mixins import BusinessErrorHandlerMixin
-from core.base_view import BaseAPIView
+from rest_framework.response import Response
+
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from .services import QuizService
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError
+from core.mixins import BusinessErrorHandlerMixin
+from core.pagination import StandardResultsSetPagination
+
 from .serializers import (
-    QuizListSerializer,
-    QuizDetailSerializer,
-    QuizCreateSerializer,
-    QuizUpdateSerializer,
     AddQuestionsSerializer,
+    QuizCreateSerializer,
+    QuizDetailSerializer,
+    QuizListSerializer,
+    QuizUpdateSerializer,
     RemoveQuestionsSerializer,
 )
+from .services import QuizService
 
 
 class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):

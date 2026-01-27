@@ -5,27 +5,34 @@ Implements:
 - Task close
 - Assignable user list
 """
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.db.models import Q
-from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
-from core.responses import success_response, created_response, no_content_response, list_response, paginated_response
-from core.pagination import StandardResultsSetPagination
-from apps.users.permissions import (
-    IsAdminOrMentorOrDeptManager,
-    get_current_role,
-    get_accessible_students,
-)
-from apps.users.serializers import UserListSerializer
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+
 from apps.tasks.serializers import (
-    TaskListSerializer,
-    TaskDetailSerializer,
     TaskCreateSerializer,
+    TaskDetailSerializer,
+    TaskListSerializer,
     TaskUpdateSerializer,
 )
 from apps.tasks.task_service import TaskService
+from apps.users.permissions import (
+    IsAdminOrMentorOrDeptManager,
+    get_accessible_students,
+    get_current_role,
+)
+from apps.users.serializers import UserListSerializer
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
+from core.pagination import StandardResultsSetPagination
+from core.responses import (
+    created_response,
+    list_response,
+    no_content_response,
+    paginated_response,
+    success_response,
+)
 
 
 class AssignableUserListView(APIView):

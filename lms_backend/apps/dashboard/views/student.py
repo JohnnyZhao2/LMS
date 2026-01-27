@@ -3,16 +3,19 @@ Student dashboard views.
 Implements:
 - Student dashboard API
 """
-from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from core.base_view import BaseAPIView
+from rest_framework.response import Response
+
 from apps.dashboard.serializers import (
-    StudentPendingTaskSerializer,
     StudentDashboardSerializer,
+    StudentPendingTaskSerializer,
 )
-from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.dashboard.services import StudentDashboardService
+from apps.knowledge.serializers import KnowledgeListSerializer
+from core.base_view import BaseAPIView
+
+
 class StudentDashboardView(BaseAPIView):
     """
     学员仪表盘 API 端点

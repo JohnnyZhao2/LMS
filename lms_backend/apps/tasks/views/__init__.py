@@ -7,20 +7,21 @@ Split into:
 """
 from .admin import (
     AssignableUserListView,
-    TaskCreateView,
-    TaskListView,
-    TaskDetailView,
     TaskCloseView,
-)
-from .student import (
-    StudentAssignmentListView,
-    StudentTaskDetailView,
-    CompleteKnowledgeLearningView,
+    TaskCreateView,
+    TaskDetailView,
+    TaskListView,
 )
 from .analytics import (
-    TaskAnalyticsView,
     StudentExecutionsView,
+    TaskAnalyticsView,
 )
+from .student import (
+    CompleteKnowledgeLearningView,
+    StudentAssignmentListView,
+    StudentTaskDetailView,
+)
+
 __all__ = [
     # Admin views
     'AssignableUserListView',

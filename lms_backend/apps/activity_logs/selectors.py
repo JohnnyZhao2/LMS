@@ -1,6 +1,8 @@
 from typing import Optional
+
 from django.db.models import QuerySet
-from .models import UserLog, ContentLog, OperationLog
+
+from .models import ContentLog, OperationLog, UserLog
 
 
 def list_user_logs(

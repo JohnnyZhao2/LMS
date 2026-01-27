@@ -5,15 +5,18 @@ Implements:
 - Tag listing with cascade filtering
 """
 from django.contrib.contenttypes.models import ContentType
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from core.exceptions import BusinessError, ErrorCodes
-from apps.knowledge.models import Knowledge, Tag, ResourceLineType
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.knowledge.models import Knowledge, ResourceLineType, Tag
 from apps.knowledge.serializers import TagSerializer
 from apps.users.permissions import get_current_role
+from core.exceptions import BusinessError, ErrorCodes
+
+
 class TagListView(APIView):
     """
     统一标签列表端点

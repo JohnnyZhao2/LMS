@@ -1,11 +1,12 @@
 import pytest
+
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import (
-    TaskFactory,
-    TaskAssignmentFactory,
-    TaskKnowledgeFactory,
     KnowledgeLearningProgressFactory,
     SubmissionFactory,
+    TaskAssignmentFactory,
+    TaskFactory,
+    TaskKnowledgeFactory,
     UserFactory,
 )
 from core.exceptions import BusinessError, ErrorCodes

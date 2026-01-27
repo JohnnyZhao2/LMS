@@ -9,29 +9,33 @@ Implements:
 """
 import secrets
 import string
+
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
-from core.throttles import AuthThrottle
-from apps.auth.services import AuthenticationService
+from rest_framework.response import Response
+
+from apps.activity_logs.services import ActivityLogService
 from apps.auth.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
-    SwitchRoleRequestSerializer,
-    SwitchRoleResponseSerializer,
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
+    SwitchRoleRequestSerializer,
+    SwitchRoleResponseSerializer,
 )
-from apps.users.serializers import UserInfoSerializer
+from apps.auth.services import AuthenticationService
 from apps.users.models import User
 from apps.users.permissions import get_current_role
-from apps.activity_logs.services import ActivityLogService
+from apps.users.serializers import UserInfoSerializer
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
+from core.throttles import AuthThrottle
+
+
 class LoginView(BaseAPIView):
     """
     User login endpoint.

@@ -4,18 +4,19 @@ Split into:
 - management.py: User management views (CRUD, roles, mentors, departments)
 """
 from .management import (
-    UserListCreateView,
-    UserDetailView,
-    UserDeactivateView,
-    UserActivateView,
-    UserAssignRolesView,
-    UserAssignMentorView,
-    MenteesListView,
     DepartmentMembersListView,
-    MentorsListView,
     DepartmentsListView,
+    MenteesListView,
+    MentorsListView,
     RolesListView,
+    UserActivateView,
+    UserAssignMentorView,
+    UserAssignRolesView,
+    UserDeactivateView,
+    UserDetailView,
+    UserListCreateView,
 )
+
 __all__ = [
     # Management views
     'UserListCreateView',

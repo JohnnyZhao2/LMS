@@ -6,25 +6,28 @@ Implements:
 - Student knowledge list
 - View count increment
 """
-from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers as drf_serializers
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.knowledge.models import Knowledge, ResourceLineType
+from apps.knowledge.serializers import (
+    KnowledgeCreateSerializer,
+    KnowledgeDetailSerializer,
+    KnowledgeListSerializer,
+    KnowledgeStatsSerializer,
+    KnowledgeUpdateSerializer,
+)
+from apps.knowledge.services import KnowledgeService
+from apps.tasks.models import TaskAssignment, TaskKnowledge
+from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
-from apps.knowledge.models import Knowledge, ResourceLineType
-from apps.tasks.models import TaskKnowledge, TaskAssignment
-from apps.knowledge.services import KnowledgeService
-from apps.knowledge.serializers import (
-    KnowledgeListSerializer,
-    KnowledgeDetailSerializer,
-    KnowledgeCreateSerializer,
-    KnowledgeUpdateSerializer,
-    KnowledgeStatsSerializer,
-)
-from core.base_view import BaseAPIView
+
+
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()

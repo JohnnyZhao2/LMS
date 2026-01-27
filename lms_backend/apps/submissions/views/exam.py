@@ -5,14 +5,18 @@ Properties:
 - Property 31: 主观题待评分状态
 - Property 32: 纯客观题直接完成
 """
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.response import Response
+
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from ..services import SubmissionService
+
 from ..serializers import SubmissionDetailSerializer
+from ..services import SubmissionService
+
+
 class ExamResultView(BaseAPIView):
     """
     View exam result.

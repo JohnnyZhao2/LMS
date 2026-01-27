@@ -13,9 +13,12 @@
     # 错误响应（通常通过 BusinessError 自动处理）
     return error_response(code='VALIDATION_ERROR', message='参数错误')
 """
-from typing import Any, Optional, List
-from rest_framework.response import Response
+from typing import Any, List, Optional
+
 from rest_framework import status
+from rest_framework.response import Response
+
+
 def success_response(
     data: Any = None,
     message: str = 'success',

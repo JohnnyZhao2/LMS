@@ -3,7 +3,7 @@ Grading URLs.
 """
 from django.urls import path
 
-from .views import GradingQuestionsView, GradingAnswersView, GradingSubmitView
+from .views import GradingAnswersView, GradingQuestionsView, GradingSubmitView
 
 urlpatterns = [
     path('tasks/<int:task_id>/questions/', GradingQuestionsView.as_view(), name='grading-questions'),

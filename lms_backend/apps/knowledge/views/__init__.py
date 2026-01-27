@@ -5,16 +5,17 @@ Split into:
 - tags.py: Tag management views
 """
 from .knowledge import (
-    KnowledgeListCreateView,
     KnowledgeDetailView,
+    KnowledgeIncrementViewCountView,
+    KnowledgeListCreateView,
     KnowledgeStatsView,
     StudentTaskKnowledgeDetailView,
-    KnowledgeIncrementViewCountView,
 )
 from .tags import (
-    TagListView,
     TagCreateView,
+    TagListView,
 )
+
 __all__ = [
     # Knowledge views
     'KnowledgeListCreateView',

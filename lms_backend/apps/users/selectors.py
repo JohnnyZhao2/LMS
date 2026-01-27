@@ -3,9 +3,10 @@ User selectors for LMS.
 Provides optimized query functions for user-related data retrieval.
 """
 from typing import Optional
+
 from django.db.models import Q, QuerySet
 
-from .models import User, Role, Department
+from .models import Department, Role, User
 
 
 def user_base_queryset() -> QuerySet:

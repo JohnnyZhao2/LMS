@@ -9,9 +9,13 @@ Properties:
 业务逻辑已提取到 services.py，Serializer 仅负责验证和委托。
 """
 from rest_framework import serializers
+
 from apps.tasks.models import TaskAssignment, TaskQuiz
-from .models import Submission, Answer
+
+from .models import Answer, Submission
 from .services import SubmissionService
+
+
 class AnswerSerializer(serializers.ModelSerializer):
     """Serializer for Answer model."""
     question_content = serializers.CharField(source='question.content', read_only=True)
