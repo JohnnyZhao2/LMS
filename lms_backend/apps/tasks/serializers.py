@@ -12,7 +12,8 @@ from apps.users.permissions import (
     get_accessible_student_ids,
 )
 from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
-from .services import TaskService, StudentTaskService, extract_knowledge_summary
+from .task_service import TaskService
+from .student_task_service import StudentTaskService, extract_knowledge_summary
 
 def validate_assignee_scope(user, assignee_ids: list[int], request=None) -> None:
     invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request=request))

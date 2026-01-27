@@ -18,7 +18,7 @@ from apps.tasks.serializers import (
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
 )
-from apps.tasks.services import StudentTaskService
+from apps.tasks.student_task_service import StudentTaskService
 
 
 class StudentAssignmentListView(BaseAPIView):

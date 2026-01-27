@@ -13,7 +13,7 @@ from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from apps.tasks.models import KnowledgeLearningProgress
 from apps.tasks.serializers import TaskAnalyticsSerializer, StudentExecutionSerializer
-from apps.tasks.services import TaskService
+from apps.tasks.task_service import TaskService
 from apps.submissions.models import Submission
 
 

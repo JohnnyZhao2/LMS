@@ -9,16 +9,29 @@ improving code reusability and testability.
 """
 from typing import List, Optional, Any, Tuple
 from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Sum, QuerySet
+
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
+
 from apps.users.models import User
 from apps.tasks.models import TaskAssignment, TaskQuiz
 from apps.quizzes.models import Quiz
+
 from .models import Submission, Answer
+from .selectors import (
+    submission_base_queryset,
+    get_submission_by_id as _get_submission_by_id,
+    get_in_progress_submission,
+    get_submitted_submission,
+    count_submission_attempts,
+    get_answer_by_submission_and_question,
+    list_objective_answers,
+)
 
 
 class SubmissionService(BaseService):
@@ -32,44 +45,23 @@ class SubmissionService(BaseService):
     """
 
     def _submission_queryset(self, user: Optional[User] = None) -> QuerySet:
-        qs = Submission.objects.select_related(
-            'task_assignment__task',
-            'quiz',
-            'user'
-        ).prefetch_related(
-            'answers__question',
-            'answers__graded_by'
-        )
-        if user:
-            qs = qs.filter(user=user)
-        return qs
+        return submission_base_queryset(user=user)
 
     def _get_submission_by_id(self, pk: int, user: Optional[User] = None) -> Optional[Submission]:
-        return self._submission_queryset(user=user).filter(pk=pk).first()
+        return _get_submission_by_id(pk=pk, user=user)
 
     def _get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
-        return Submission.objects.filter(
-            task_assignment_id=task_assignment_id,
-            quiz_id=quiz_id,
-            status='IN_PROGRESS'
-        ).first()
+        return get_in_progress_submission(task_assignment_id, quiz_id)
 
     def get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
         """Public wrapper for in-progress submission lookup."""
         return self._get_in_progress(task_assignment_id=task_assignment_id, quiz_id=quiz_id)
 
     def _get_existing_submitted(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
-        return Submission.objects.filter(
-            task_assignment_id=task_assignment_id,
-            quiz_id=quiz_id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).first()
+        return get_submitted_submission(task_assignment_id, quiz_id)
 
     def _count_attempts(self, task_assignment_id: int, quiz_id: int) -> int:
-        return Submission.objects.filter(
-            task_assignment_id=task_assignment_id,
-            quiz_id=quiz_id
-        ).count()
+        return count_submission_attempts(task_assignment_id, quiz_id)
 
     def _create_with_answers(self, answers_data: List[dict], **submission_data) -> Submission:
         submission = Submission.objects.create(**submission_data)
@@ -267,10 +259,7 @@ class SubmissionService(BaseService):
                 code=ErrorCodes.INVALID_OPERATION,
                 message='只能在答题中保存答案'
             )
-        answer = Answer.objects.select_related('question').filter(
-            submission_id=submission.id,
-            question_id=question_id
-        ).first()
+        answer = get_answer_by_submission_and_question(submission.id, question_id)
         self.validate_not_none(answer, '该题目不在此答卷中')
         answer.user_answer = user_answer
         answer.save(update_fields=['user_answer'])
@@ -325,10 +314,7 @@ class SubmissionService(BaseService):
         自动评分客观题
         Property 30: 客观题自动评分
         """
-        objective_answers = Answer.objects.filter(
-            submission_id=submission.id,
-            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ).select_related('question')
+        objective_answers = list_objective_answers(submission.id)
         for answer in objective_answers:
             answer.auto_grade()
 

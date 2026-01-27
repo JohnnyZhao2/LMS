@@ -1,5 +1,5 @@
 import pytest
-from apps.tasks.services import TaskService
+from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import (
     TaskFactory,
     TaskAssignmentFactory,

@@ -5,7 +5,7 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import success_response, list_response
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from apps.tasks.services import TaskService
+from apps.tasks.task_service import TaskService
 from apps.questions.models import Question
 from apps.grading.serializers import (
     GradingQuestionSerializer,

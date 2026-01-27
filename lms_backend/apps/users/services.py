@@ -2,11 +2,15 @@
 User services for LMS.
 """
 from typing import Optional, List
+
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from core.base_service import BaseService
+
 from apps.activity_logs.services import ActivityLogService
+
 from .models import User, Role, UserRole
+from .selectors import get_user_by_id
 
 
 class UserManagementService(BaseService):
@@ -15,11 +19,9 @@ class UserManagementService(BaseService):
     Provides methods for user CRUD operations, activation/deactivation,
     role assignment, and mentor assignment.
     """
+
     def _get_user(self, user_id: int) -> Optional[User]:
-        return User.objects.select_related(
-            'department',
-            'mentor'
-        ).prefetch_related('roles').filter(pk=user_id).first()
+        return get_user_by_id(user_id)
 
     @log_user_action('deactivate', '管理员 {self.user.employee_id} 停用用户 {result.employee_id}')
     def deactivate_user(self, user_id: int) -> User:

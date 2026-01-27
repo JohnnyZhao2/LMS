@@ -25,7 +25,7 @@ from apps.tasks.serializers import (
     TaskCreateSerializer,
     TaskUpdateSerializer,
 )
-from apps.tasks.services import TaskService
+from apps.tasks.task_service import TaskService
 
 
 class AssignableUserListView(APIView):

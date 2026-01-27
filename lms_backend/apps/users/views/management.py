@@ -7,14 +7,15 @@ Implements:
 - Mentor assignment
 - Reference data (mentors, departments, roles)
 """
-from django.db import models
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
+
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+
 from apps.users.services import UserManagementService
 from apps.users.serializers import (
     UserListSerializer,
@@ -29,8 +30,15 @@ from apps.users.serializers import (
     RoleSerializer,
     DepartmentSerializer,
 )
-from apps.users.models import User, Role, Department
+from apps.users.models import User
 from apps.users.permissions import get_current_role
+from apps.users.selectors import (
+    get_user_by_id,
+    list_users,
+    list_mentors,
+    list_departments,
+    list_roles,
+)
 class UserListCreateView(APIView):
     """
     User list and create endpoint.
@@ -56,19 +64,15 @@ class UserListCreateView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看用户列表'
             )
-        queryset = User.objects.select_related('department', 'mentor').prefetch_related('roles').all()
         is_active = request.query_params.get('is_active')
+        is_active_bool = None
         if is_active is not None:
-            queryset = queryset.filter(is_active=is_active.lower() == 'true')
-        department_id = request.query_params.get('department_id')
-        if department_id:
-            queryset = queryset.filter(department_id=department_id)
-        search = request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                models.Q(username__icontains=search) |
-                models.Q(employee_id__icontains=search)
-            )
+            is_active_bool = is_active.lower() == 'true'
+        queryset = list_users(
+            is_active=is_active_bool,
+            department_id=request.query_params.get('department_id'),
+            search=request.query_params.get('search'),
+        )
         serializer = UserListSerializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
@@ -99,13 +103,13 @@ class UserDetailView(APIView):
     """
     permission_classes = [IsAuthenticated]
     def get_object(self, pk):
-        try:
-            return User.objects.select_related('department', 'mentor').prefetch_related('roles').get(pk=pk)
-        except User.DoesNotExist:
+        user = get_user_by_id(pk)
+        if not user:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='用户不存在'
             )
+        return user
     @extend_schema(
         summary='获取用户详情',
         description='获取指定用户的详细信息',
@@ -326,12 +330,11 @@ class MentorsListView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看导师列表'
             )
-        mentors = User.objects.filter(
-            roles__code='MENTOR',
-            is_active=True
-        ).distinct().order_by('username')
+        mentors = list_mentors()
         serializer = MentorSerializer(mentors, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class DepartmentsListView(APIView):
     """List all departments."""
     permission_classes = [IsAuthenticated]
@@ -350,9 +353,11 @@ class DepartmentsListView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看部门列表'
             )
-        departments = Department.objects.all().order_by('code')
+        departments = list_departments()
         serializer = DepartmentSerializer(departments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class RolesListView(APIView):
     """List all available roles."""
     permission_classes = [IsAuthenticated]
@@ -371,6 +376,6 @@ class RolesListView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看角色列表'
             )
-        roles = Role.objects.exclude(code='STUDENT').order_by('code')
+        roles = list_roles(exclude_student=True)
         serializer = RoleSerializer(roles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
