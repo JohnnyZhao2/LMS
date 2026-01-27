@@ -36,9 +36,9 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   onAddQuestion,
 }) => {
   return (
-    <div className="w-80 flex flex-col bg-white border-r border-gray-200 shrink-0">
+    <div className="w-80 flex flex-col bg-background border-r border-border shrink-0">
       <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <LayoutGrid className="w-4 h-4 text-primary-500" />
           公共题库
         </div>
@@ -49,7 +49,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
 
       <div className="px-5 mb-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
             placeholder="检索题目内容..."
             className="pl-9"
@@ -81,10 +81,10 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
       <div className="flex-1 overflow-y-auto px-5 pb-5">
         {questionsLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-text-muted" />
           </div>
         ) : questionsData?.results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-8 text-text-muted">
             <FileText className="w-8 h-8 mb-2" />
             <span className="text-sm">暂无资源</span>
           </div>
@@ -93,7 +93,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
             {questionsData?.results.map(q => (
               <div
                 key={q.id}
-                className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 transition-all hover:bg-white  border border-transparent hover:border-gray-200 group"
+                className="flex items-start gap-3 p-3 rounded-lg bg-muted transition-all hover:bg-background  border border-transparent hover:border-border group"
               >
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary-500 text-white">
                   <FileText className="w-4 h-4" />
@@ -105,11 +105,11 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
                     >
                       {getQuestionTypeLabel(q.question_type as QuestionType)}
                     </Badge>
-                    <span className="text-xs text-gray-400">#{q.id}</span>
+                    <span className="text-xs text-text-muted">#{q.id}</span>
                   </div>
-                  <div className="text-sm text-gray-700 line-clamp-2 group-hover:text-primary-600 flex items-center gap-1">
+                  <div className="text-sm text-foreground line-clamp-2 group-hover:text-primary-600 flex items-center gap-1">
                     <span className="truncate">{q.content}</span>
-                    <Eye className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
+                    <Eye className="w-3 h-3 text-text-muted opacity-0 group-hover:opacity-100" />
                   </div>
                 </div>
                 <Button

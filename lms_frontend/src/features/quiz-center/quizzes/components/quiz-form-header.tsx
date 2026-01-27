@@ -27,17 +27,17 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
   isSubmitting,
 }) => {
   return (
-    <div className="flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-4">
+    <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
       <div className="flex items-center gap-4 shrink-0">
         <Button
           variant="ghost"
           onClick={onBack}
-          className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
+          className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
         >
           <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           <span className="text-sm font-semibold">返回列表</span>
         </Button>
-        <div className="w-px h-5 bg-gray-200" />
+        <div className="w-px h-5 bg-muted" />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -45,13 +45,13 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="输入试卷标题..."
-          className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4  hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+          className="text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4  hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
         />
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
         {isEdit && quizData && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-2 text-xs text-text-muted">
             <span>{quizData.updated_by_name || quizData.created_by_name}</span>
             <span>·</span>
             <span>{new Date(quizData.updated_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>

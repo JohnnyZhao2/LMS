@@ -129,8 +129,8 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
-        <div className="flex items-center justify-between p-4 px-6 bg-white border-b-2 border-gray-200">
+      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <div className="flex items-center justify-between p-4 px-6 bg-background border-b-2 border-border">
           <div className="flex items-center gap-4">
             <Skeleton className="w-9 h-9 rounded-md" />
             <div>
@@ -140,8 +140,8 @@ export const KnowledgeDetail: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="w-52 border-r-2 border-gray-200 bg-white" />
-          <div className="flex-1 m-4 bg-white rounded-lg">
+          <div className="w-52 border-r-2 border-border bg-background" />
+          <div className="flex-1 m-4 bg-background rounded-lg">
             <div className="p-12 px-20">
               <Skeleton className="h-10 w-3/4 mb-8" />
               <Skeleton className="h-6 w-full mb-4" />
@@ -156,31 +156,31 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (!knowledge) {
     return (
-      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
-        <div className="flex items-center justify-center h-full text-gray-600 font-semibold">知识文档不存在</div>
+      <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
+        <div className="flex items-center justify-center h-full text-text-muted font-semibold">知识文档不存在</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-gray-50 overflow-hidden" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="flex flex-col h-[calc(100vh-var(--header-height))] -m-6 bg-muted overflow-hidden" style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 顶部栏 */}
-      <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 shrink-0">
+      <div className="flex items-center justify-between h-16 px-6 bg-background border-b border-border shrink-0">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             onClick={handleBack}
-            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
+            className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             <span className="text-sm font-semibold">{taskId ? '返回任务' : '返回列表'}</span>
           </Button>
-          <div className="w-px h-5 bg-gray-200" />
+          <div className="w-px h-5 bg-muted" />
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold text-gray-900 m-0 leading-tight">{knowledge.title}</h1>
+              <h1 className="text-lg font-semibold text-foreground m-0 leading-tight">{knowledge.title}</h1>
             </div>
-            <div className="flex items-center gap-4 text-[11px] text-gray-500">
+            <div className="flex items-center gap-4 text-[11px] text-text-muted">
               {(knowledge.updated_by_name || knowledge.created_by_name) && (
                 <span className="flex items-center gap-1">
                   <User className="w-3 h-3" />
@@ -241,7 +241,7 @@ export const KnowledgeDetail: React.FC = () => {
       {/* 主体内容 */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* 左侧目录 */}
-        <div className="flex flex-col border-r border-gray-200 bg-white w-52 max-lg:hidden">
+        <div className="flex flex-col border-r border-border bg-background w-52 max-lg:hidden">
           {outlineCollapsed ? (
             <div className="flex flex-col items-center py-4">
               <Button
@@ -255,7 +255,7 @@ export const KnowledgeDetail: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 text-sm font-semibold text-gray-900 shrink-0">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
                 <div className="flex items-center gap-2">
                   <List className="w-4 h-4 text-primary-500" />
                   内容大纲
@@ -263,7 +263,7 @@ export const KnowledgeDetail: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-400 hover:text-primary-500"
+                  className="h-8 w-8 text-text-muted hover:text-primary-500"
                   onClick={() => setOutlineCollapsed(true)}
                 >
                   <PanelLeftClose className="w-4 h-4" />
@@ -277,7 +277,7 @@ export const KnowledgeDetail: React.FC = () => {
                         key={item.id}
                         className={cn(
                           "flex items-center gap-3 py-2.5 px-4 text-xs rounded-lg cursor-pointer transition-all",
-                          item.level === 1 ? 'font-semibold text-gray-900 hover:bg-gray-50' : 'text-gray-500 hover:bg-gray-50'
+                          item.level === 1 ? 'font-semibold text-foreground hover:bg-muted' : 'text-text-muted hover:bg-muted'
                         )}
                         style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
                         onClick={() => {
@@ -292,7 +292,7 @@ export const KnowledgeDetail: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-[10px] text-gray-400 text-center font-medium">暂无目录</div>
+                  <div className="p-4 text-[10px] text-text-muted text-center font-medium">暂无目录</div>
                 )}
               </div>
             </div>
@@ -300,10 +300,10 @@ export const KnowledgeDetail: React.FC = () => {
         </div>
 
         {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col bg-background overflow-hidden min-w-0">
           {/* 标签栏 */}
           {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className="flex items-center gap-2 py-4 px-6 md:px-20 border-b border-gray-200 flex-wrap bg-gray-50">
+            <div className="flex items-center gap-2 py-4 px-6 md:px-20 border-b border-border flex-wrap bg-muted">
               {knowledge.system_tags?.map((tag) => (
                 <Badge key={tag.id} variant="info" className="text-[10px] rounded-md border-none px-2.5 py-1">
                   {tag.name}
@@ -319,7 +319,7 @@ export const KnowledgeDetail: React.FC = () => {
 
           {/* 内容 */}
           <div className="flex-1 overflow-y-auto p-8 md:p-12 px-6 md:px-20 w-full">
-            <h1 className="text-3xl font-bold text-gray-900 mb-10 tracking-tight">{knowledge.title}</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-10 tracking-tight">{knowledge.title}</h1>
             {isEmergency ? (
               <div className="space-y-12">
                 {[
@@ -330,12 +330,12 @@ export const KnowledgeDetail: React.FC = () => {
                   { key: 'recovery_plan', label: '恢复方案', content: knowledge.recovery_plan, id: 'tab-4' },
                 ].filter(s => s.content).map((section) => (
                   <div key={section.key} id={section.id} className="scroll-mt-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3 -ml-4.5">
+                    <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-3 -ml-4.5">
                       <span className="w-1.5 h-6 bg-primary-500 rounded-full" />
                       {section.label}
                     </h3>
                     <div
-                      className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-gray-700"
+                      className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
                       dangerouslySetInnerHTML={{ __html: section.content || '' }}
                     />
                   </div>
@@ -343,7 +343,7 @@ export const KnowledgeDetail: React.FC = () => {
               </div>
             ) : (
               <div
-                className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-gray-700"
+                className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
                 dangerouslySetInnerHTML={{ __html: knowledge.content || '' }}
               />
             )}
@@ -363,7 +363,7 @@ export const KnowledgeDetail: React.FC = () => {
           confirmVariant="destructive"
           onConfirm={executeConfirmAction}
           isConfirming={deleteKnowledge.isPending}
-          contentClassName="sm:max-w-md rounded-lg border-2 border-gray-200"
+          contentClassName="sm:max-w-md rounded-lg border-2 border-border"
         />
       )}
     </div>

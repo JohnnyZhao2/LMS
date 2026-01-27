@@ -386,8 +386,8 @@ export const QuizForm: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-4">
-            <p className="text-sm text-gray-600 leading-relaxed">
-              恭喜！试卷 <span className="font-bold text-gray-900">「{title}」</span> 已成功保存至系统库。
+            <p className="text-sm text-text-muted leading-relaxed">
+              恭喜！试卷 <span className="font-bold text-foreground">「{title}」</span> 已成功保存至系统库。
             </p>
             <Button variant="outline" onClick={() => roleNavigate('quiz-center')}>返回列表</Button>
           </div>

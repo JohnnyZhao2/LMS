@@ -194,11 +194,11 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-gray-200 h-[85vh] flex flex-col bg-white">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-border h-[85vh] flex flex-col bg-background">
 
         {/* Header */}
-        <DialogHeader className="px-8 py-6 shrink-0 border-b border-gray-200">
-          <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-4 tracking-tight">
+        <DialogHeader className="px-8 py-6 shrink-0 border-b border-border">
+          <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-4 tracking-tight">
             <div className={cn(
               "w-14 h-14 rounded-lg flex items-center justify-center text-white",
               isEdit ? "bg-destructive" : "bg-secondary"
@@ -215,18 +215,18 @@ export const UserForm: React.FC<UserFormProps> = ({
         </DialogHeader>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-white">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-background">
 
           {/* 1. Basic Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-1 h-5 rounded-full bg-primary" />
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">基础信息</h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">基础信息</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">真实姓名</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">真实姓名</label>
                 <Input
                   value={formData.username}
                   onChange={e => setFormData({ ...formData, username: e.target.value })}
@@ -236,7 +236,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">员工工号</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">员工工号</label>
                 <Input
                   value={formData.employee_id}
                   onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
@@ -248,7 +248,7 @@ export const UserForm: React.FC<UserFormProps> = ({
 
               {!isEdit && (
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">初始密码</label>
+                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">初始密码</label>
                   <Input
                     type="password"
                     value={formData.password}
@@ -262,18 +262,18 @@ export const UserForm: React.FC<UserFormProps> = ({
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-200" />
+          <div className="h-px w-full bg-muted" />
 
           {/* 2. Organization */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-1 h-5 rounded-full bg-secondary" />
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">组织归属</h3>
+              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">组织归属</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">选择部门</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">选择部门</label>
                 <div className="grid grid-cols-2 gap-3">
                   {departments.map(dept => {
                     const active = formData.department_id === dept.id;
@@ -285,7 +285,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                           "cursor-pointer group flex items-center justify-center gap-2 px-4 h-14 rounded-md transition-all duration-200",
                           active
                             ? "bg-secondary text-white"
-                            : "bg-gray-100 border-0 text-gray-900 hover:bg-gray-200"
+                            : "bg-muted border-0 text-foreground hover:bg-muted"
                         )}
                       >
                         <Building2 className="w-4 h-4" />
@@ -300,7 +300,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">分配导师 (可选)</label>
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">分配导师 (可选)</label>
                 <Select
                   value={formData.mentor_id?.toString() || ''}
                   onValueChange={(v) => {
@@ -320,7 +320,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                               {getAvatarText(m.username)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium text-gray-900">{m.username}</span>
+                          <span className="font-medium text-foreground">{m.username}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -330,24 +330,24 @@ export const UserForm: React.FC<UserFormProps> = ({
             </div>
           </div>
 
-          <div className="h-px w-full bg-gray-200" />
+          <div className="h-px w-full bg-muted" />
 
           {/* 3. Roles */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-1 h-5 rounded-full bg-warning" />
-              <h3 className="text-base font-bold text-gray-900 tracking-tight">系统权限</h3>
+              <h3 className="text-base font-bold text-foreground tracking-tight">系统权限</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Default Role */}
-              <div className="flex items-center gap-4 p-5 rounded-lg bg-gray-100 opacity-60">
-                <div className="w-12 h-12 rounded-lg bg-white text-gray-400 flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-4 p-5 rounded-lg bg-muted opacity-60">
+                <div className="w-12 h-12 rounded-lg bg-background text-text-muted flex items-center justify-center shrink-0">
                   <User className="w-6 h-6" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-bold text-gray-500">普通学员</span>
-                  <span className="text-xs text-gray-400 font-semibold uppercase mt-0.5 tracking-wider">Default</span>
+                  <span className="text-base font-bold text-text-muted">普通学员</span>
+                  <span className="text-xs text-text-muted font-semibold uppercase mt-0.5 tracking-wider">Default</span>
                 </div>
               </div>
 
@@ -369,15 +369,15 @@ export const UserForm: React.FC<UserFormProps> = ({
                     className={cn(
                       "group cursor-pointer relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
                       active
-                        ? cn("bg-white border-2", colorConfig.borderClass)
-                        : "bg-gray-100 border-2 border-transparent hover:bg-white hover:scale-[1.02]"
+                        ? cn("bg-background border-2", colorConfig.borderClass)
+                        : "bg-muted border-2 border-transparent hover:bg-background hover:scale-[1.02]"
                     )}
                   >
                     <div className={cn(
                       "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
                       active
                         ? cn("text-white", colorConfig.iconBgClass)
-                        : "bg-white text-gray-500 group-hover:text-gray-900"
+                        : "bg-background text-text-muted group-hover:text-foreground"
                     )}
                     >
                       {roleIcons[role.code] || <User className="w-6 h-6" />}
@@ -391,7 +391,7 @@ export const UserForm: React.FC<UserFormProps> = ({
                       >
                         {role.name}
                       </div>
-                      {active && <div className="text-[10px] font-semibold uppercase text-gray-500 tracking-wider">Enabled</div>}
+                      {active && <div className="text-[10px] font-semibold uppercase text-text-muted tracking-wider">Enabled</div>}
                     </div>
 
                     {active && (
@@ -405,11 +405,11 @@ export const UserForm: React.FC<UserFormProps> = ({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="px-8 py-6 border-t border-gray-200 bg-white shrink-0 sm:justify-end gap-4">
+        <DialogFooter className="px-8 py-6 border-t border-border bg-background shrink-0 sm:justify-end gap-4">
           <Button
             variant="ghost"
             onClick={onClose}
-            className="h-14 px-8 rounded-md font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200"
+            className="h-14 px-8 rounded-md font-semibold text-text-muted hover:bg-muted hover:text-foreground transition-all duration-200"
           >
             取消
           </Button>

@@ -78,7 +78,7 @@ export const MentorDashboard: React.FC = () => {
 
       {/* 快捷操作 */}
       <div className="space-y-6 reveal-item stagger-delay-2">
-        <h3 className="text-lg font-black text-gray-900 pl-2 flex items-center gap-2">
+        <h3 className="text-lg font-black text-foreground pl-2 flex items-center gap-2">
           <Layout className="w-5 h-5 text-primary-500" />
           快速开始
         </h3>

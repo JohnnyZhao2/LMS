@@ -15,7 +15,7 @@ import { Card, StatCard, PageHeader, Skeleton } from '@/components/ui';
  */
 const EmptyState: React.FC<{ description: string; subDescription?: string }> = ({ description, subDescription }) => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
-    <div className="text-gray-400 mb-2">
+    <div className="text-text-muted mb-2">
       <svg width="64" height="41" viewBox="0 0 64 41" xmlns="http://www.w3.org/2000/svg">
         <g transform="translate(0 1)" fill="none" fillRule="evenodd">
           <ellipse fill="var(--color-gray-100)" cx="32" cy="33" rx="32" ry="7" />
@@ -26,9 +26,9 @@ const EmptyState: React.FC<{ description: string; subDescription?: string }> = (
         </g>
       </svg>
     </div>
-    <span className="text-gray-500 font-bold">{description}</span>
+    <span className="text-text-muted font-bold">{description}</span>
     {subDescription && (
-      <span className="text-sm text-gray-400 mt-1 font-medium">
+      <span className="text-sm text-text-muted mt-1 font-medium">
         {subDescription}
       </span>
     )}
@@ -103,12 +103,12 @@ export const TeamManagerDashboard: React.FC = () => {
       {/* 数据看板占位 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 reveal-item stagger-delay-2">
         <div className="lg:col-span-8">
-          <Card className="h-full bg-gray-100 p-6 rounded-lg">
+          <Card className="h-full bg-muted p-6 rounded-lg">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
                 <BarChart3 className="w-5 h-5 text-primary-500" />
               </div>
-              <span className="font-black text-lg text-gray-900">
+              <span className="font-black text-lg text-foreground">
                 学习趋势
               </span>
             </div>
@@ -120,12 +120,12 @@ export const TeamManagerDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-4">
-          <Card className="h-full bg-gray-100 p-6 rounded-lg">
+          <Card className="h-full bg-muted p-6 rounded-lg">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-success-50 flex items-center justify-center">
                 <Trophy className="w-5 h-5 text-success-500" />
               </div>
-              <span className="font-black text-lg text-gray-900">
+              <span className="font-black text-lg text-foreground">
                 排行榜
               </span>
             </div>

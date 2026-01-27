@@ -28,16 +28,16 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   variant = 'default',
 }) => {
   const activeStyles = {
-    gray: 'bg-gray-900 text-white',
+    gray: 'bg-foreground text-background',
     blue: 'bg-primary text-white',
-    white: 'bg-white text-gray-900',
+    white: 'bg-background text-foreground',
   };
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {label && (
         <span
-          className="text-[10px] font-bold text-gray-500 uppercase tracking-wider px-1"
+          className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1"
           style={{ fontFamily: "'Outfit', sans-serif" }}
         >
           {label}
@@ -45,7 +45,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
       )}
       <div className={cn(
         'flex w-full p-1 rounded-md overflow-x-auto no-scrollbar',
-        variant === 'premium' ? 'bg-gray-100' : 'bg-white'
+        variant === 'premium' ? 'bg-muted' : 'bg-background'
       )}>
         {options.map((opt) => (
           <button
@@ -55,7 +55,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border-none outline-none ring-0',
               value === opt.value
                 ? activeStyles[activeColor]
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                : 'text-text-muted hover:text-foreground hover:bg-muted'
             )}
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >

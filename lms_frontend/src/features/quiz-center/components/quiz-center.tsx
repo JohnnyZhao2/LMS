@@ -43,7 +43,7 @@ export const QuizCenter: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-gray-200 font-semibold text-gray-500 hover:bg-gray-100 flex items-center gap-2 "
+              className="h-14 py-3 px-6 rounded-md border-4 border-border font-semibold text-text-muted hover:bg-muted flex items-center gap-2 "
               onClick={() => {
                 refetchQuizzes();
                 refetchQuestions();
@@ -101,9 +101,9 @@ export const QuizCenter: React.FC = () => {
               <div className="flex-1 max-w-2xl flex flex-col md:flex-row items-start md:items-center gap-4">
                 {/* 搜索框 */}
                 <div className="relative group w-full md:w-80">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary-600 transition-colors" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary-600 transition-colors" />
                   <Input
-                    className="pl-12 h-12 bg-gray-100 border-0 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary-500 text-sm font-medium  transition-all"
+                    className="pl-12 h-12 bg-muted border-0 rounded-lg focus:bg-background focus:ring-2 focus:ring-primary-500 text-sm font-medium  transition-all"
                     placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}

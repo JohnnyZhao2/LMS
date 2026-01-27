@@ -179,7 +179,7 @@ export const UserList: React.FC = () => {
       size: 140,
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-gray-400 italic text-xs">未分配</span>
+        if (!mentor) return <span className="text-text-muted italic text-xs">未分配</span>
         return <CellSmallAvatar name={mentor.username} />
       },
     },
@@ -199,12 +199,12 @@ export const UserList: React.FC = () => {
         <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-gray-400">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200">
-              <DropdownMenuLabel className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2">
+            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border">
+              <DropdownMenuLabel className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-3 py-2">
                 账号控制台
               </DropdownMenuLabel>
 
@@ -258,7 +258,7 @@ export const UserList: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-gray-200 font-semibold text-gray-500 hover:bg-gray-100 flex items-center gap-2 "
+              className="h-14 py-3 px-6 rounded-md border-4 border-border font-semibold text-text-muted hover:bg-muted flex items-center gap-2 "
               onClick={() => refetch()}
             >
               <RefreshCw className="h-4 w-4" />
@@ -295,12 +295,12 @@ export const UserList: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
             <div className="relative flex-1 max-w-lg group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="检索姓名、工号、部位..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 bg-white border-2 border-gray-100 rounded-md focus:border-primary text-base font-medium  transition-all"
+                className="pl-14 h-14 bg-background border-2 border-border rounded-md focus:border-primary text-base font-medium  transition-all"
               />
             </div>
           </div>
@@ -318,7 +318,7 @@ export const UserList: React.FC = () => {
                 onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
                 onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
               }}
-              rowClassName="group cursor-pointer hover:bg-gray-50 transition-colors"
+              rowClassName="group cursor-pointer hover:bg-muted transition-colors"
               onRowClick={(row) => {
                 setEditingUserId(row.id)
                 setFormModalOpen(true)
@@ -367,14 +367,14 @@ export const UserList: React.FC = () => {
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-lg max-w-md p-8 border border-gray-200">
+        <DialogContent className="rounded-lg max-w-md p-8 border border-border">
           <DialogHeader>
             <AvatarCircle size="lg" variant="secondary" className="mb-6 mx-auto">
               <ShieldCheck className="h-8 w-8" />
             </AvatarCircle>
             <DialogTitle className="text-xl font-bold text-foreground text-center">重置成功</DialogTitle>
-            <DialogDescription className="text-gray-500 text-center text-sm">
-              请务必将此密码<span className="text-gray-900 font-semibold">安全地</span>转交给用户
+            <DialogDescription className="text-text-muted text-center text-sm">
+              请务必将此密码<span className="text-foreground font-semibold">安全地</span>转交给用户
             </DialogDescription>
           </DialogHeader>
 
@@ -382,12 +382,12 @@ export const UserList: React.FC = () => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="bg-gray-50 rounded-lg p-6 text-center hover:bg-gray-100 transition-colors">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">临时密码</span>
+            <div className="bg-muted rounded-lg p-6 text-center hover:bg-muted transition-colors">
+              <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 block">临时密码</span>
               <code className="text-2xl font-bold text-primary-600 tracking-widest font-mono">
                 {tempPasswordDialog.password}
               </code>
-              <div className="mt-3 text-xs font-medium text-gray-400">点击复制</div>
+              <div className="mt-3 text-xs font-medium text-text-muted">点击复制</div>
             </div>
           </div>
 

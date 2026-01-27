@@ -118,8 +118,8 @@ export const LoginForm: React.FC = () => {
                 control={form.control}
                 name="employee_id"
                 render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-gray-900/40 tracking-[0.3em]">
+                  <FormItem className="space-y-4 group">
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
                       <span className="w-1 h-1 bg-primary/30" />
                       工号
                     </FormLabel>
@@ -127,15 +127,15 @@ export const LoginForm: React.FC = () => {
                       <div className="relative">
                         <Input
                           placeholder="请输入工号"
-                          className="h-10 bg-transparent border-gray-900/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-gray-900/10 text-gray-900 font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        <motion.div
-                          initial={{ scaleX: 0 }}
-                          whileFocus={{ scaleX: 1 }}
-                          transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary origin-left"
-                          style={{ scaleX: form.watch('employee_id') ? 1 : undefined }}
+                        {/* 墨水跟随效果 - 底线 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                        
+                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>
                     </FormControl>
@@ -150,8 +150,8 @@ export const LoginForm: React.FC = () => {
                 control={form.control}
                 name="password"
                 render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-gray-900/40 tracking-[0.3em]">
+                  <FormItem className="space-y-4 group">
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
                       <span className="w-1 h-1 bg-primary/30" />
                       密码
                     </FormLabel>
@@ -160,15 +160,15 @@ export const LoginForm: React.FC = () => {
                         <Input
                           type="password"
                           placeholder="请输入密码"
-                          className="h-10 bg-transparent border-gray-900/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-300 placeholder:text-gray-900/10 text-gray-900 font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
+                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        <motion.div
-                          initial={{ scaleX: 0 }}
-                          whileFocus={{ scaleX: 1 }}
-                          transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary origin-left"
-                          style={{ scaleX: form.watch('password') ? 1 : undefined }}
+                        {/* 墨水跟随效果 - 底线 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                        
+                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>
                     </FormControl>
@@ -183,7 +183,7 @@ export const LoginForm: React.FC = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-primary hover:bg-primary-600 text-white rounded-none font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press"
+              className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
             >
               {loading ? "正在验证身份..." : "登录"}
             </Button>
@@ -191,7 +191,7 @@ export const LoginForm: React.FC = () => {
             <div className="flex justify-between items-center py-2 px-1">
               <button
                 type="button"
-                className="text-[11px] font-bold text-gray-900/20 hover:text-primary transition-colors tracking-widest"
+                className="text-[11px] font-bold text-foreground/20 hover:text-primary transition-colors tracking-widest"
               >
                 无法访问账号?
               </button>
@@ -201,7 +201,7 @@ export const LoginForm: React.FC = () => {
                   <div className="w-1 h-1 bg-primary/20 rounded-full" />
                   <div className="w-1 h-1 bg-primary/30 rounded-full" />
                 </div>
-                <span className="text-[10px] font-bold text-gray-900/20 tracking-widest">安全链接已建立</span>
+                <span className="text-[10px] font-bold text-foreground/20 tracking-widest">安全链接已建立</span>
               </div>
             </div>
           </motion.div>

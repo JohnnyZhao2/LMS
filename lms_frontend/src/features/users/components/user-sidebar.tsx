@@ -70,7 +70,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
 
             {/* 层级列表标题 */}
             <div className="flex items-center gap-2 px-2">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                     {viewMode === 'department' ? '部门架构' : '师徒列表'}
                 </span>
             </div>
@@ -101,7 +101,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                     'group relative flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200',
                                     isSelected
                                         ? 'text-primary-700'
-                                        : 'bg-white hover:bg-gray-50 text-gray-700'
+                                        : 'bg-background hover:bg-muted text-foreground'
                                 )}
                             >
                                 {isSelected && (
@@ -116,21 +116,21 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                                     'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors',
                                     isSelected
                                         ? 'bg-primary-100 text-primary-700'
-                                        : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
+                                        : 'bg-muted text-text-muted group-hover:bg-muted'
                                 )}>
                                     <Icon className="w-5 h-5" />
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                     <span className={cn(
                                         'text-sm font-semibold truncate',
-                                        isSelected ? 'text-primary-700' : 'text-gray-900'
+                                        isSelected ? 'text-primary-700' : 'text-foreground'
                                     )}>
                                         {item.name}
                                     </span>
                                     {item.subtitle && (
                                         <span className={cn(
                                             'text-[10px] font-medium uppercase tracking-wider truncate',
-                                            isSelected ? 'text-primary/80' : 'text-gray-400'
+                                            isSelected ? 'text-primary/80' : 'text-text-muted'
                                         )}>
                                             {item.subtitle}
                                         </span>

@@ -41,7 +41,6 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -405,8 +404,8 @@ export const TaskForm: React.FC = () => {
   if (taskError) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <FileText className="w-12 h-12 text-gray-300 mb-4" />
-        <span className="text-gray-500 mb-4">加载任务失败</span>
+        <FileText className="w-12 h-12 text-text-muted mb-4" />
+        <span className="text-text-muted mb-4">加载任务失败</span>
         <Button onClick={() => roleNavigate('tasks')}>返回</Button>
       </div>
     );
@@ -414,19 +413,19 @@ export const TaskForm: React.FC = () => {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50/50">
+    <div className="flex flex-col min-h-screen bg-muted/50">
       {/* Header */}
-      <div className="flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-4">
+      <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
         <div className="flex items-center gap-4 shrink-0">
           <Button
             variant="ghost"
             onClick={() => roleNavigate('tasks')}
-            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg soft-press"
+            className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg soft-press"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             <span className="text-sm font-semibold">返回列表</span>
           </Button>
-          <div className="w-px h-5 bg-gray-200" />
+          <div className="w-px h-5 bg-muted" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -434,13 +433,13 @@ export const TaskForm: React.FC = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入任务标题..."
-            className="text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4  hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+            className="text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4  hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
           />
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           {isEdit && task && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <span>{task.updated_by_name || task.created_by_name}</span>
               <span>·</span>
               <span>{new Date(task.updated_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -462,20 +461,20 @@ export const TaskForm: React.FC = () => {
       </div>
 
       {/* Body - Three columns with fixed baseline height (Header:54 + Search:77 + Filter:52 + List:580 + Pagination:65 = 828px) */}
-      <div className="flex bg-white h-[828px] border-b border-gray-200  overflow-hidden shrink-0">
+      <div className="flex bg-background h-[828px] border-b border-border  overflow-hidden shrink-0">
         {/* Left Sidebar - Resource Library */}
-        <div className="w-80 flex flex-col bg-white border-r border-gray-100 shrink-0 h-full">
-          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-gray-900 border-b border-gray-100">
+        <div className="w-80 flex flex-col bg-background border-r border-border shrink-0 h-full">
+          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-foreground border-b border-border">
             <LayoutGrid className="w-4 h-4 text-primary-500" />
             资源库
           </div>
 
           <div className="px-6 py-4">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary-500 transition-colors" />
               <Input
                 placeholder="搜索文档/测验..."
-                className="pl-9 h-11 bg-gray-50 border-transparent focus:bg-white focus:border-primary-100 transition-all rounded-xl"
+                className="pl-9 h-11 bg-muted border-transparent focus:bg-background focus:border-primary-100 transition-all rounded-xl"
                 value={resourceSearch}
                 onChange={e => {
                   setResourceSearch(e.target.value);
@@ -495,7 +494,7 @@ export const TaskForm: React.FC = () => {
                   "flex-1 h-9 rounded-lg transition-all text-xs font-semibold",
                   resourceType === type
                     ? ""
-                    : "bg-gray-50 border-transparent hover:bg-gray-100 text-gray-500"
+                    : "bg-muted border-transparent hover:bg-muted text-text-muted"
                 )}
                 onClick={() => {
                   setResourceType(type);
@@ -522,18 +521,18 @@ export const TaskForm: React.FC = () => {
             <div className="space-y-3 h-[580px] overflow-hidden">
               {isLoading ? (
                 Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="h-[72px] rounded-xl bg-gray-50/50 border border-gray-100 flex items-center px-4 gap-3 animate-pulse">
-                    <div className="w-10 h-10 rounded-xl bg-gray-100" />
+                  <div key={i} className="h-[72px] rounded-xl bg-muted/50 border border-border flex items-center px-4 gap-3 animate-pulse">
+                    <div className="w-10 h-10 rounded-xl bg-muted" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 bg-gray-100 rounded w-3/4" />
-                      <div className="h-2 bg-gray-100/50 rounded w-1/2" />
+                      <div className="h-3 bg-muted rounded w-3/4" />
+                      <div className="h-2 bg-muted/50 rounded w-1/2" />
                     </div>
                   </div>
                 ))
               ) : availableResources.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                  <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                    <Search className="w-6 h-6 text-gray-300" />
+                <div className="flex flex-col items-center justify-center h-full text-text-muted">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Search className="w-6 h-6 text-text-muted" />
                   </div>
                   <span className="text-sm">暂无匹配资源</span>
                 </div>
@@ -542,7 +541,7 @@ export const TaskForm: React.FC = () => {
                   {availableResources.map(res => (
                     <div
                       key={`${res.resourceType}-${res.id}-${res.title}`}
-                      className={`group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-white border border-gray-100 transition-all ${
+                      className={`group flex items-center gap-3 p-3 h-[72px] rounded-xl bg-background border border-border transition-all ${
                         resourcesDisabled
                           ? 'opacity-50 cursor-not-allowed'
                           : 'cursor-pointer hover:border-primary-300 hover:-translate-y-0.5 animate-fadeIn'
@@ -562,16 +561,16 @@ export const TaskForm: React.FC = () => {
                         {res.resourceType === 'DOCUMENT' ? <BookOpen className="w-5 h-5" /> : <ClipboardList className="w-5 h-5" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-gray-800 truncate mb-1">{res.title}</div>
-                        <div className="text-[11px] text-gray-400 flex items-center gap-2 font-semibold">
+                        <div className="text-sm font-bold text-foreground truncate mb-1">{res.title}</div>
+                        <div className="text-[11px] text-text-muted flex items-center gap-2 font-semibold">
                           <span className={res.resourceType === 'DOCUMENT' ? 'text-secondary-600' : res.quizType === 'EXAM' ? 'text-destructive-500' : 'text-primary-500'}>
                             {res.resourceType === 'DOCUMENT' ? '文档' : res.quizType === 'EXAM' ? '考试' : '练习'}
                           </span>
-                          <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                          <span className="w-0.5 h-0.5 rounded-full bg-muted" />
                           <span className="truncate">{res.category}</span>
                         </div>
                       </div>
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-50 text-gray-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary-500 hover:text-white">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center bg-muted text-text-muted opacity-0 group-hover:opacity-100 transition-all hover:bg-primary-500 hover:text-white">
                         <Plus className="w-4 h-4" />
                       </div>
                     </div>
@@ -581,15 +580,15 @@ export const TaskForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
-            <div className="text-[11px] text-gray-400 font-bold tracking-tight">
-              第 {safeCurrentPage} 页 <span className="text-gray-200 mx-1">/</span> 共 {totalPages} 页
+          <div className="px-6 py-4 bg-background border-t border-border flex items-center justify-between shrink-0">
+            <div className="text-[11px] text-text-muted font-bold tracking-tight">
+              第 {safeCurrentPage} 页 <span className="text-border mx-1">/</span> 共 {totalPages} 页
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg hover:bg-gray-50 soft-press"
+                className="h-8 w-8 rounded-lg hover:bg-muted soft-press"
                 disabled={safeCurrentPage === 1}
                 onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
               >
@@ -598,7 +597,7 @@ export const TaskForm: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-lg hover:bg-gray-50 soft-press"
+                className="h-8 w-8 rounded-lg hover:bg-muted soft-press"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
               >
@@ -609,8 +608,8 @@ export const TaskForm: React.FC = () => {
         </div>
 
         {/* Center - Task Pipeline */}
-        <div className="flex-1 flex flex-col bg-gray-50/50 min-w-0">
-          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-gray-900 bg-white border-b border-gray-100">
+        <div className="flex-1 flex flex-col bg-muted/50 min-w-0">
+          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-foreground bg-background border-b border-border">
             <Send className="w-4 h-4 text-primary-500 -rotate-45" />
             任务流程
           </div>
@@ -618,14 +617,14 @@ export const TaskForm: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-6">
             {selectedResources.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full max-w-sm mx-auto text-center">
-                <div className="w-24 h-24 rounded-[2rem] bg-white   flex items-center justify-center mb-8 animate-fadeInUp">
+                <div className="w-24 h-24 rounded-[2rem] bg-background   flex items-center justify-center mb-8 animate-fadeInUp">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary-100 blur-xl opacity-50 scale-150" />
                     <Send className="w-10 h-10 text-primary-500 relative -rotate-45" />
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3 tracking-tight">开启你的学习任务</h3>
-                <p className="text-sm text-gray-500 leading-relaxed font-medium">
+                <h3 className="text-xl font-bold text-foreground mb-3 tracking-tight">开启你的学习任务</h3>
+                <p className="text-sm text-text-muted leading-relaxed font-medium">
                   从左侧资源库中挑选精彩内容，通过拖动确定步骤先后，为学习者打造完美的知识闭环。
                 </p>
                 <div className="mt-10 flex flex-col items-center gap-2">
@@ -638,7 +637,7 @@ export const TaskForm: React.FC = () => {
               <div className="relative w-full max-w-[480px] mx-auto pl-12">
                 {selectedResources.length > 1 && (
                   <div
-                    className="absolute left-[17px] top-[18px] w-0.5 bg-gray-200"
+                    className="absolute left-[17px] top-[18px] w-0.5 bg-muted"
                     style={{ height: `calc(100% - 36px)` }}
                   />
                 )}
@@ -673,20 +672,20 @@ export const TaskForm: React.FC = () => {
         </div>
 
         {/* Right Sidebar - Configuration */}
-        <div className="w-[400px] flex flex-col bg-white border-l border-gray-100 shrink-0 h-full overflow-hidden font-sans">
-          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-gray-900 border-b border-gray-50 shrink-0">
+        <div className="w-[400px] flex flex-col bg-background border-l border-border shrink-0 h-full overflow-hidden font-sans">
+          <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-foreground border-b border-border shrink-0">
             <FileText className="w-4 h-4 text-primary-500" />
             任务配置
           </div>
 
-          <div className="p-6 space-y-6 shrink-0 border-b border-gray-50/50">
+          <div className="p-6 space-y-6 shrink-0 border-b border-border/50">
             <div className="space-y-3">
               <MicroLabel icon={<FileText className="w-3.5 h-3.5" />} asLabel>
                 任务标题
               </MicroLabel>
               <Input
                 placeholder="请输入标题..."
-                className="h-12 bg-gray-50/50 border-gray-100/50 focus:bg-white focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
+                className="h-12 bg-muted/50 border-border/50 focus:bg-background focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -700,7 +699,7 @@ export const TaskForm: React.FC = () => {
                 date={deadline}
                 onDateChange={setDeadline}
                 placeholder="选择截止日期"
-                className="h-12 bg-gray-50/50 border-gray-100/50 hover:bg-white hover:border-primary-500 transition-all rounded-xl text-sm"
+                className="h-12 bg-muted/50 border-border/50 hover:bg-background hover:border-primary-500 transition-all rounded-xl text-sm"
               />
             </div>
 
@@ -709,7 +708,7 @@ export const TaskForm: React.FC = () => {
                 任务描述
               </MicroLabel>
               <textarea
-                className="w-full p-4 bg-gray-50/50 border border-gray-100/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-white focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
+                className="w-full p-4 bg-muted/50 border border-border/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-background focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -717,11 +716,11 @@ export const TaskForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col flex-1 min-h-0 border-t border-gray-100">
-            <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-gray-900 border-b border-gray-50">
+          <div className="flex flex-col flex-1 min-h-0 border-t border-border">
+            <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-foreground border-b border-border">
               <UserPlus className="w-4 h-4 text-primary-500" />
               指派人员
-              <Badge variant="secondary" className="ml-auto bg-gray-50 text-gray-400 font-bold px-2 h-5 border-none">已选 {selectedUserIds.length}</Badge>
+              <Badge variant="secondary" className="ml-auto bg-muted text-text-muted font-bold px-2 h-5 border-none">已选 {selectedUserIds.length}</Badge>
             </div>
 
             <div className="px-6 py-4">
@@ -748,21 +747,21 @@ export const TaskForm: React.FC = () => {
 
             <div className="px-6 flex-1 overflow-y-auto pb-6">
               {selectedUserDetails.length === 0 ? (
-                <div className="text-gray-400 text-xs text-center py-10 font-medium">
+                <div className="text-text-muted text-xs text-center py-10 font-medium">
                   暂未选择人员
                 </div>
               ) : (
                 <div className="space-y-2">
                   {selectedUserDetails.map(u => (
-                    <div key={u.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/50 border border-gray-100 group hover:bg-white hover:border-primary-100 transition-all">
+                    <div key={u.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 border border-border group hover:bg-background hover:border-primary-100 transition-all">
                       <Avatar className="w-9 h-9">
                         <AvatarFallback className="bg-primary-500 text-white text-[10px] font-bold">
                           {u.username[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-gray-800 truncate">{u.username}</div>
-                        <div className="text-[10px] text-gray-500">{u.employee_id}</div>
+                        <div className="text-sm font-bold text-foreground truncate">{u.username}</div>
+                        <div className="text-[10px] text-text-muted">{u.employee_id}</div>
                       </div>
                       {canRemoveAssignee && (
                         <Button
@@ -792,7 +791,7 @@ export const TaskForm: React.FC = () => {
 
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
               <Input
                 placeholder="搜索姓名或工号..."
                 className="pl-9"
@@ -802,7 +801,7 @@ export const TaskForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={isAllSelected}
@@ -826,19 +825,19 @@ export const TaskForm: React.FC = () => {
               return (
                 <div
                   key={user.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-primary-50' : 'hover:bg-gray-50'
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-primary-50' : 'hover:bg-muted'
                     }`}
                   onClick={() => toggleUser(user.id)}
                 >
                   <Checkbox checked={checked} />
-                  <Avatar className={checked ? 'bg-primary-500' : 'bg-gray-300'}>
+                  <Avatar className={checked ? 'bg-primary-500' : 'bg-muted'}>
                     <AvatarFallback className="text-white">
                       {user.username[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-800">{user.username}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-sm font-medium text-foreground">{user.username}</div>
+                    <div className="text-xs text-text-muted">
                       {user.employee_id} | {user.department?.name || '无部门'}
                     </div>
                   </div>
@@ -849,7 +848,7 @@ export const TaskForm: React.FC = () => {
           </div>
 
           <DialogFooter className="flex items-center justify-between mt-4">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-text-muted">
               已选择 {selectedUserIds.length} 人
             </span>
             <Button onClick={() => setIsUserModalOpen(false)}>
@@ -921,12 +920,12 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </div>
       </div>
       <div
-        className={`flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all ${
+        className={`flex-1 flex flex-col gap-2 p-4 bg-background border rounded-xl transition-all ${
           item.is_current === false
             ? 'border-warning-300 bg-warning-50/30'
             : item.quizType === 'EXAM'
               ? 'border-destructive-100 hover:border-destructive-200'
-              : 'border-gray-200 hover:border-primary-300'
+              : 'border-border hover:border-primary-300'
         }`}
       >
         {item.is_current === false && (
@@ -949,7 +948,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
           <div
             {...(disabled ? {} : attributes)}
             {...(disabled ? {} : listeners)}
-            className={disabled ? 'p-1 -ml-2 text-gray-300 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing p-1 -ml-2 text-gray-300 hover:text-gray-400'}
+            className={disabled ? 'p-1 -ml-2 text-text-muted cursor-not-allowed' : 'cursor-grab active:cursor-grabbing p-1 -ml-2 text-text-muted hover:text-text-muted'}
           >
             <GripVertical className="w-4 h-4" />
           </div>
@@ -965,7 +964,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             >
               步骤 {idx + 1} {item.quizType === 'EXAM' && '• 考试'}
             </Badge>
-            <div className="text-base font-bold text-gray-900 truncate">{item.title}</div>
+            <div className="text-base font-bold text-foreground truncate">{item.title}</div>
           </div>
           <div className="flex items-center gap-1">
             <Button

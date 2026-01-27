@@ -32,8 +32,8 @@ export const SimplePagination: React.FC<SimplePaginationProps> = ({
   className,
 }) => {
   return (
-    <div className={`flex items-center justify-between mt-4 pt-4 border-t border-gray-200 ${className || ''}`}>
-      <span className="text-sm text-gray-500">
+    <div className={`flex items-center justify-between mt-4 pt-4 border-t border-border ${className || ''}`}>
+      <span className="text-sm text-text-muted">
         共 {totalCount || 0} {countLabel}
       </span>
       <div className="flex gap-2">
@@ -42,7 +42,7 @@ export const SimplePagination: React.FC<SimplePaginationProps> = ({
           size="sm"
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
-          className="border-4 border-gray-200"
+          className="border-4 border-border"
         >
           上一页
         </Button>
@@ -51,7 +51,7 @@ export const SimplePagination: React.FC<SimplePaginationProps> = ({
           size="sm"
           disabled={!hasNext}
           onClick={() => onPageChange(currentPage + 1)}
-          className="border-4 border-gray-200"
+          className="border-4 border-border"
         >
           下一页
         </Button>

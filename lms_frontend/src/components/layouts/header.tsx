@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 import type { RoleCode } from "@/types/api"
 
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
@@ -170,7 +171,7 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-8 bg-white border-b-2 border-gray-200"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-8 bg-background border-b-2 border-border transition-colors duration-200"
       style={{ fontFamily: "'Outfit', sans-serif" }}
     >
       {/* 左侧：Logo + 品牌名 + 导航菜单 */}
@@ -185,7 +186,7 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight leading-none text-gray-900">
+            <span className="text-lg font-bold tracking-tight leading-none text-foreground">
               SyncLearn
             </span>
             <span className="text-[10px] font-bold text-primary tracking-wider uppercase mt-0.5">
@@ -213,8 +214,8 @@ export const Header: React.FC = () => {
                     className={cn(
                       "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
                       isActive
-                        ? "text-primary-600"
-                        : "text-gray-600 hover:text-gray-900"
+                        ? "text-primary"
+                        : "text-text-muted hover:text-foreground"
                     )}
                   >
                     {/* 活跃状态背景动画 */}
@@ -228,7 +229,7 @@ export const Header: React.FC = () => {
 
                     <span className={cn(
                       "transition-transform duration-200 group-hover:scale-110 shrink-0",
-                      isActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"
+                      isActive ? "text-primary" : "text-text-muted group-hover:text-primary"
                     )}>
                       {icon}
                     </span>
@@ -255,10 +256,13 @@ export const Header: React.FC = () => {
         </nav>
       </div>
 
-      {/* 右侧：通知 + 角色切换器 + 用户信息 */}
-      <div className="flex items-center gap-6">
+      {/* 右侧：主题切换 + 通知 + 角色切换器 + 用户信息 */}
+      <div className="flex items-center gap-4">
+        {/* 主题切换 */}
+        <ThemeSwitcher />
+
         {/* 通知图标 */}
-        <button className="p-2.5 bg-gray-100 rounded-md text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-all duration-200">
+        <button className="p-2.5 bg-muted rounded-md text-text-muted hover:text-primary hover:bg-primary-50 transition-all duration-200">
           <Bell className="w-5 h-5" />
         </button>
 
@@ -266,7 +270,7 @@ export const Header: React.FC = () => {
         {availableRoles.length > 1 && currentRole && (
           <div
             key={location.pathname} // 强制在路径变化时重新渲染
-            className="hidden md:flex items-center bg-gray-100 p-1 rounded-md gap-1"
+            className="hidden md:flex items-center bg-muted p-1 rounded-md gap-1"
           >
             {roleOptions.map((option) => {
               // 从当前 URL 实时解析角色，而不是依赖 state
@@ -280,8 +284,8 @@ export const Header: React.FC = () => {
                   className={cn(
                     "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
                     isActive
-                      ? "bg-white text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-background text-foreground"
+                      : "text-text-muted hover:text-foreground"
                   )}
                 >
                   {option.label}
@@ -296,10 +300,10 @@ export const Header: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-3 p-1 rounded-md hover:bg-gray-100 transition-all duration-200 group"
+                className="flex items-center gap-3 p-1 rounded-md hover:bg-muted transition-all duration-200 group"
               >
                 <div className="relative">
-                  <Avatar className="h-9 w-9 border-2 border-gray-200 transition-transform duration-200 group-hover:scale-105">
+                  <Avatar className="h-9 w-9 border-2 border-border transition-transform duration-200 group-hover:scale-105">
                     <AvatarFallback
                       className={cn(
                         "text-white font-bold text-sm",
@@ -318,22 +322,22 @@ export const Header: React.FC = () => {
                 </div>
 
                 <div className="hidden sm:flex flex-col items-start pr-2">
-                  <span className="text-sm font-bold text-gray-900 leading-tight">
+                  <span className="text-sm font-bold text-foreground leading-tight">
                     {user.username}
                   </span>
-                  <span className="text-[10px] font-bold text-gray-500 leading-tight uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-text-muted leading-tight uppercase tracking-wider">
                     {ROLE_FULL_LABELS[currentRole!]}
                   </span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <ChevronDown className="w-4 h-4 text-text-muted group-hover:text-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-2 rounded-lg border-2 border-gray-200">
-              <div className="px-3 py-3 border-b-2 border-gray-200 mb-1">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">当前角色</p>
+            <DropdownMenuContent align="end" className="w-56 p-2 rounded-lg border-2 border-border">
+              <div className="px-3 py-3 border-b-2 border-border mb-1">
+                <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">当前角色</p>
                 <div className="flex items-center gap-2">
                   <div className={cn("w-2 h-2 rounded-full", ROLE_COLOR_CLASSES[currentRole!] || "bg-primary")} />
-                  <span className="text-sm font-bold text-gray-900">{ROLE_FULL_LABELS[currentRole!]}</span>
+                  <span className="text-sm font-bold text-foreground">{ROLE_FULL_LABELS[currentRole!]}</span>
                 </div>
               </div>
 
@@ -345,7 +349,7 @@ export const Header: React.FC = () => {
                 个人设置
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-gray-200" />
+              <DropdownMenuSeparator className="bg-border" />
 
               <DropdownMenuItem
                 onClick={handleLogout}

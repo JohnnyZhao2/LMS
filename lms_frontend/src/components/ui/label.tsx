@@ -16,8 +16,8 @@ const labelVariants = cva(
   {
     variants: {
       variant: {
-        default: "text-sm font-semibold text-gray-700 uppercase tracking-wider",
-        description: "text-sm font-medium text-gray-600",
+        default: "text-sm font-semibold text-foreground uppercase tracking-wider",
+        description: "text-sm font-medium text-text-muted",
       },
     },
     defaultVariants: {

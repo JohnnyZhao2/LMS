@@ -17,7 +17,7 @@ export const useCompleteLearning = () => {
       apiClient.post(`/tasks/${taskId}/complete-knowledge/`, {
         knowledge_id: knowledgeId,
       }),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task-detail'] });
       queryClient.invalidateQueries({

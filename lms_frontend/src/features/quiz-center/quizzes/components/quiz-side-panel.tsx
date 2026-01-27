@@ -70,8 +70,8 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
   const showPreviewPanel = mode === 'PREVIEW_QUESTION';
 
   return (
-    <div className="w-[400px] flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
-      <div className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">
+    <div className="w-[400px] flex flex-col bg-background border-l border-border shrink-0 overflow-y-auto">
+      <div className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-foreground border-b border-border">
         {showInfoPanel ? (
           <><Settings className="w-4 h-4 text-primary-500" />试卷配置属性</>
         ) : showEditPanel ? (
@@ -80,7 +80,7 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
           <><Eye className="w-4 h-4 text-primary-500" />题目预览</>
         )}
         {!showInfoPanel && (
-          <Button variant="ghost" size="sm" onClick={onBackToInfo} className="ml-auto text-gray-500">
+          <Button variant="ghost" size="sm" onClick={onBackToInfo} className="ml-auto text-text-muted">
             返回
           </Button>
         )}

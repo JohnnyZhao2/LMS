@@ -64,7 +64,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     await onConfirm();
   };
 
-  const defaultContentClassName = 'rounded-lg max-w-md p-10 border-0 bg-white';
+  const defaultContentClassName = 'rounded-lg max-w-md p-10 border-0 bg-background';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,10 +75,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               {icon}
             </div>
           )}
-          <DialogTitle className="text-2xl font-bold text-gray-900 mb-2 text-center">
+          <DialogTitle className="text-2xl font-bold text-foreground mb-2 text-center">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+          <DialogDescription className="text-text-muted font-medium text-center leading-relaxed">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -86,7 +86,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-md h-14 font-semibold text-gray-500 hover:bg-gray-100 "
+            className="flex-1 rounded-md h-14 font-semibold text-text-muted hover:bg-muted "
           >
             {cancelText}
           </Button>
@@ -97,7 +97,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             className={`flex-1 text-white rounded-md h-14 font-semibold  hover:scale-105 transition-all duration-200 ${
               confirmVariant === 'destructive'
                 ? 'bg-destructive hover:bg-destructive'
-                : 'bg-gray-900 hover:bg-gray-700'
+                : 'bg-foreground hover:bg-foreground/80'
             }`}
           >
             {isConfirming ? '处理中...' : confirmText}

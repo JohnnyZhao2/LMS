@@ -35,7 +35,7 @@ function Calendar({
         ),
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
-        weekday: "text-gray-500 rounded-md w-8 font-normal text-[0.8rem]",
+        weekday: "text-text-muted rounded-md w-8 font-normal text-[0.8rem]",
         week: "flex w-full mt-2",
         day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
         day_button: cn(
@@ -46,10 +46,10 @@ function Calendar({
         range_end: "day-range-end",
         selected:
           "bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white rounded-md",
-        today: "bg-gray-100 text-gray-900 rounded-md",
-        outside: "text-gray-400 aria-selected:bg-gray-100/50 aria-selected:text-gray-400",
-        disabled: "text-gray-400 opacity-50",
-        range_middle: "aria-selected:bg-gray-100 aria-selected:text-gray-900",
+        today: "bg-muted text-foreground rounded-md",
+        outside: "text-text-muted aria-selected:bg-muted/50 aria-selected:text-text-muted",
+        disabled: "text-text-muted opacity-50",
+        range_middle: "aria-selected:bg-muted aria-selected:text-foreground",
         hidden: "invisible",
         ...classNames,
       }}

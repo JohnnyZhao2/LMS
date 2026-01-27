@@ -39,11 +39,11 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
             {icon}
         </div>
         <div className="flex flex-col">
-            <span className="font-bold text-gray-900 hover:text-primary cursor-pointer transition-colors">
+            <span className="font-bold text-foreground hover:text-primary cursor-pointer transition-colors">
                 {title}
             </span>
             {subtitle && (
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                     {subtitle}
                 </span>
             )}
@@ -89,11 +89,11 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
                 {name?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div className="flex flex-col">
-                <span className={cn('font-bold text-gray-900 line-clamp-1', s.text)}>
+                <span className={cn('font-bold text-foreground line-clamp-1', s.text)}>
                     {name}
                 </span>
                 {subtitle && (
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                         {subtitle}
                     </span>
                 )}
@@ -113,7 +113,7 @@ interface CellTagsProps {
 
 export const CellTags: React.FC<CellTagsProps> = ({ tags, className }) => {
     if (tags.length === 0) {
-        return <span className="text-gray-400 italic text-xs">—</span>;
+        return <span className="text-text-muted italic text-xs">—</span>;
     }
 
     return (
@@ -156,7 +156,7 @@ export const CellStatus: React.FC<CellStatusProps> = ({
         <Badge
             className={cn(
                 'border-0',
-                isActive ? 'bg-secondary-100 text-secondary' : 'bg-gray-100 text-gray-500'
+                isActive ? 'bg-secondary-100 text-secondary' : 'bg-muted text-text-muted'
             )}
         >
             {isActive ? activeText : inactiveText}
@@ -180,8 +180,8 @@ export const CellIconText: React.FC<CellIconTextProps> = ({
     className,
 }) => (
     <div className={cn('flex items-center gap-2', className)}>
-        <span className="text-gray-400">{icon}</span>
-        <span className="text-sm font-medium text-gray-900">{text}</span>
+        <span className="text-text-muted">{icon}</span>
+        <span className="text-sm font-medium text-foreground">{text}</span>
     </div>
 );
 

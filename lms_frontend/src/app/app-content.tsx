@@ -15,10 +15,10 @@ export const AppContent: React.FC = () => {
   // 只有在既没有登录信息，又正在加载时，才显示全屏加载
   if (isLoading && !isAuthenticated) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="flex justify-center items-center min-h-screen bg-muted">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary-600 border-t-transparent" />
-          <span className="text-sm font-bold text-gray-500 tracking-wider">SECURE_CONNECTING...</span>
+          <span className="text-sm font-bold text-text-muted tracking-wider">SECURE_CONNECTING...</span>
         </div>
       </div>
     );

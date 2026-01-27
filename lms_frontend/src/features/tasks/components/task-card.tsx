@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { CategoryBadge, StatusDot, CardHeader } from '@/components/common';
+import { CategoryBadge, StatusDot } from '@/components/common';
 
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
@@ -134,8 +134,8 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-[210px] bg-white rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-gray-100/50 hover:-translate-y-1",
-        isStudentView && studentTask?.status === 'COMPLETED' && "bg-gray-50/80 border-transparent"
+        "group relative flex flex-col h-[210px] bg-background rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-border/50 hover:-translate-y-1",
+        isStudentView && studentTask?.status === 'COMPLETED' && "bg-muted/80 border-transparent"
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
@@ -147,17 +147,17 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
               color={isUrgent ? "bg-destructive-500" : missionConfig.bgClass}
               animate={isUrgent}
             />
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
               {isUrgent ? '紧急任务' : missionConfig.label}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-[11px] font-bold text-gray-500">
+          <div className="text-[11px] font-bold text-text-muted">
             {task.created_by_name || '发布人'}
           </div>
-          <div className="text-[11px] font-bold text-gray-400">
+          <div className="text-[11px] font-bold text-text-muted">
             {dayjs(task.deadline).format('YYYY-MM-DD')}
           </div>
 
@@ -193,10 +193,10 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
 
       {/* 中部：标题 & 描述 */}
       <div className="flex-1 min-h-0">
-        <h3 className="text-xl font-black text-gray-900 leading-tight mb-1 truncate group-hover:text-primary-600 transition-colors">
+        <h3 className="text-xl font-black text-foreground leading-tight mb-1 truncate group-hover:text-primary-600 transition-colors">
           {title}
         </h3>
-        <p className="text-[14px] font-medium text-gray-500/80 truncate">
+        <p className="text-[14px] font-medium text-text-muted/80 truncate">
           {description || '此任务暂无描述...'}
         </p>
       </div>
@@ -229,9 +229,9 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   />
                 )}
               </div>
-              <span className="text-base font-black text-gray-900">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
+              <span className="text-base font-black text-foreground">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
             </div>
-            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-700 ease-out",
@@ -256,24 +256,24 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 <CategoryBadge variant="exam" count={managerTask?.exam_count} />
               )}
             </div>
-            <div className="flex gap-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+            <div className="flex gap-4 p-4 bg-muted/50 rounded-xl border border-border">
               <div className="flex gap-4">
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-gray-900">{managerTask?.assignee_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">学员</span>
+                  <span className="text-base font-black text-foreground">{managerTask?.assignee_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-text-muted uppercase">学员</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-gray-900">{managerTask?.completed_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">完成</span>
+                  <span className="text-base font-black text-foreground">{managerTask?.completed_count ?? 0}</span>
+                  <span className="text-[10px] font-bold text-text-muted uppercase">完成</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-base font-black text-gray-900">
+                  <span className="text-base font-black text-foreground">
                     {managerTask?.pass_rate !== null && managerTask?.pass_rate !== undefined
                       ? `${managerTask.pass_rate}%`
                       : '-'
                     }
                   </span>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">及格率</span>
+                  <span className="text-[10px] font-bold text-text-muted uppercase">及格率</span>
                 </div>
               </div>
             </div>
@@ -283,13 +283,13 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
 
       {/* 终止对话框 - Flat Design */}
       <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
-        <DialogContent className="rounded-lg max-w-md p-8 border-2 border-gray-200">
+        <DialogContent className="rounded-lg max-w-md p-8 border-2 border-border">
           <DialogHeader>
             <div className="w-16 h-16 bg-warning-100 text-warning rounded-md flex items-center justify-center mb-6 mx-auto">
               <StopCircle className="w-8 h-8" />
             </div>
-            <DialogTitle className="text-xl font-bold text-gray-900 mb-2 text-center">终止当前任务？</DialogTitle>
-            <DialogDescription className="text-gray-500 font-medium text-center leading-relaxed">
+            <DialogTitle className="text-xl font-bold text-foreground mb-2 text-center">终止当前任务？</DialogTitle>
+            <DialogDescription className="text-text-muted font-medium text-center leading-relaxed">
               终止后，所有未完成的学员记录将同步标记为"已逾期"。此操作不可撤回。
             </DialogDescription>
           </DialogHeader>
@@ -314,7 +314,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
         confirmVariant="destructive"
         onConfirm={handleDelete}
         isConfirming={deleteTask.isPending}
-        contentClassName="rounded-lg max-w-md p-8 border-2 border-gray-200"
+        contentClassName="rounded-lg max-w-md p-8 border-2 border-border"
       />
     </div>
   );

@@ -72,18 +72,18 @@ export function SearchableSelect<T>({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "w-full h-12 flex items-center justify-between px-4 rounded-md bg-gray-100 hover:bg-gray-200 active:scale-[0.98] transition-all duration-200 group",
+                        "w-full h-12 flex items-center justify-between px-4 rounded-md bg-muted hover:bg-muted active:scale-[0.98] transition-all duration-200 group",
                         className
                     )}
                 >
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <span className="text-gray-400 group-hover:text-primary-500 transition-colors">
+                        <span className="text-text-muted group-hover:text-primary-500 transition-colors">
                             {icon}
                         </span>
                         <span
                             className={cn(
                                 "text-sm truncate transition-colors",
-                                selectedItem ? "text-gray-900 font-bold" : "text-gray-500 group-hover:text-gray-700"
+                                selectedItem ? "text-foreground font-bold" : "text-text-muted group-hover:text-foreground"
                             )}
                         >
                             {selectedItem ? getLabel(selectedItem) : placeholder}
@@ -91,14 +91,14 @@ export function SearchableSelect<T>({
                     </div>
                     <ChevronDown
                         className={cn(
-                            "w-4 h-4 text-gray-400 transition-all duration-300",
-                            open ? "rotate-180 text-primary-500" : "group-hover:text-gray-600"
+                            "w-4 h-4 text-text-muted transition-all duration-300",
+                            open ? "rotate-180 text-primary-500" : "group-hover:text-text-muted"
                         )}
                     />
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-0 border border-gray-100  rounded-lg overflow-hidden z-[1001]"
+                className="w-[var(--radix-popover-trigger-width)] p-0 border border-border  rounded-lg overflow-hidden z-[1001]"
                 align="start"
                 asChild
             >
@@ -108,14 +108,14 @@ export function SearchableSelect<T>({
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                 >
-                    <div className="p-2.5 border-b border-gray-50 bg-gray-50">
+                    <div className="p-2.5 border-b border-border bg-muted">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
                             <Input
                                 value={searchValue}
                                 onChange={(e) => setSearchValue(e.target.value)}
                                 placeholder={searchPlaceholder}
-                                className="h-10 pl-9 text-sm border-none bg-white focus:ring-2 focus:ring-primary-500/10 transition-all placeholder:text-gray-300"
+                                className="h-10 pl-9 text-sm border-none bg-background focus:ring-2 focus:ring-primary-500/10 transition-all placeholder:text-text-muted"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !exactMatch && searchValue.trim() && onCreate) {
                                         handleCreate();
@@ -162,7 +162,7 @@ export function SearchableSelect<T>({
                                                 "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md transition-all text-left group/item",
                                                 isSelected
                                                     ? "bg-primary-100 text-primary-700 font-bold"
-                                                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                                    : "text-text-muted hover:bg-muted hover:text-foreground"
                                             )}
                                         >
                                             <span className="truncate group-hover/item:translate-x-0.5 transition-transform duration-200">
@@ -175,10 +175,10 @@ export function SearchableSelect<T>({
                             ) : (
                                 !(searchValue.trim() && onCreate) && (
                                     <div className="px-3 py-10 text-center">
-                                        <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                            <Search className="w-5 h-5 text-gray-300" />
+                                        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <Search className="w-5 h-5 text-text-muted" />
                                         </div>
-                                        <p className="text-xs text-gray-400 font-medium">{emptyMessage}</p>
+                                        <p className="text-xs text-text-muted font-medium">{emptyMessage}</p>
                                     </div>
                                 )
                             )}

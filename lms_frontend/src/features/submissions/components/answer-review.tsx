@@ -25,7 +25,7 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   if (!submissionId) {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-gray-500">缺少有效的 submission 参数</CardContent>
+        <CardContent className="p-6 text-center text-text-muted">缺少有效的 submission 参数</CardContent>
       </Card>
     );
   }
@@ -53,7 +53,7 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   if (!data) {
     return (
       <Card>
-        <CardContent className="p-6 text-center text-gray-500">结果不存在</CardContent>
+        <CardContent className="p-6 text-center text-text-muted">结果不存在</CardContent>
       </Card>
     );
   }
@@ -68,22 +68,22 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
           <h3 className="text-xl font-semibold mb-6">{data.quiz_title}</h3>
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <div className="text-sm text-gray-500 mb-1">总分</div>
+              <div className="text-sm text-text-muted mb-1">总分</div>
               <div className="text-2xl font-bold">
                 <span className="text-primary-500">{data.obtained_score || 0}</span>
-                <span className="text-gray-400 text-lg font-normal"> / {data.total_score}</span>
+                <span className="text-text-muted text-lg font-normal"> / {data.total_score}</span>
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-1">答对题数</div>
+              <div className="text-sm text-text-muted mb-1">答对题数</div>
               <div className="text-2xl font-bold">
                 <span className="text-success-500">{correctCount}</span>
-                <span className="text-gray-400 text-lg font-normal"> / {data.answers.length}</span>
+                <span className="text-text-muted text-lg font-normal"> / {data.answers.length}</span>
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500 mb-1">答题次数</div>
-              <div className="text-2xl font-bold text-gray-900">{data.attempt_number}</div>
+              <div className="text-sm text-text-muted mb-1">答题次数</div>
+              <div className="text-2xl font-bold text-foreground">{data.attempt_number}</div>
             </div>
           </div>
         </CardContent>

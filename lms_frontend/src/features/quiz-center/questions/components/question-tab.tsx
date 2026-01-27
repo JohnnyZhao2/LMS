@@ -99,7 +99,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             id: 'line_type',
             header: '所属条线',
             cell: ({ row }) => (
-                <span className="text-sm font-medium text-gray-600">
+                <span className="text-sm font-medium text-text-muted">
                     {row.original.line_type?.name || '—'}
                 </span>
             )
@@ -109,10 +109,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             header: '更新时间',
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-foreground">
                         {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
                     </span>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                         {dayjs(row.original.updated_at).format('HH:mm:ss')}
                     </span>
                 </div>
@@ -128,17 +128,17 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
-                                    <MoreHorizontal className="w-4 h-4 text-gray-500" strokeWidth={2} />
+                                    <MoreHorizontal className="w-4 h-4 text-text-muted" strokeWidth={2} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200  bg-white">
+                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border  bg-background">
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-muted transition-colors text-xs"
                                     onClick={() => setPreviewQuestion(record)}
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-gray-200 mx-2" />
+                                <DropdownMenuSeparator className="bg-muted mx-2" />
                                 <DropdownMenuItem
                                     className="rounded-md px-3 py-2.5 font-semibold text-destructive-600 focus:bg-destructive-50 cursor-pointer transition-colors text-xs"
                                     onClick={() => setDeleteId(record.id)}
@@ -170,18 +170,18 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         setPage(1);
                     },
                 }}
-                rowClassName="hover:bg-gray-100 transition-colors group cursor-pointer"
+                rowClassName="hover:bg-muted transition-colors group cursor-pointer"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
 
             {/* 预览对话框 (Keep this as Dialog since it's a detail view, not a confirmation) */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
-                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none  bg-white rounded-xl">
-                    <DialogHeader className="px-6 py-4 bg-gray-50/80 border-b border-gray-100">
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none  bg-background rounded-xl">
+                    <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
                             <FileText className="w-5 h-5 text-secondary-500" />
                             题目详情预览
-                            <span className="ml-2 text-xs font-medium text-gray-400"></span>
+                            <span className="ml-2 text-xs font-medium text-text-muted"></span>
                         </DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto">
@@ -197,7 +197,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                             showActions={false}
                         />
                     </div>
-                    <DialogFooter className="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
+                    <DialogFooter className="px-6 py-4 bg-muted/50 border-t border-border">
                         <Button onClick={() => setPreviewQuestion(null)} className="font-bold">
                             关闭预览
                         </Button>

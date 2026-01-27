@@ -18,7 +18,7 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md"
+                    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md"
                 >
                     <motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
@@ -46,16 +46,16 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                         </div>
 
                         <div className="flex flex-col items-center gap-2">
-                            <span className="text-xl font-bold text-gray-900 tracking-tight">
+                            <span className="text-xl font-bold text-foreground tracking-tight">
                                 正在切换角色
                             </span>
-                            <span className="text-sm font-medium text-gray-500">
+                            <span className="text-sm font-medium text-text-muted">
                                 正在为您准备工作台...
                             </span>
                         </div>
 
                         {/* 自定义进度条 */}
-                        <div className="w-48 h-1 bg-gray-100 rounded-full overflow-hidden mt-2">
+                        <div className="w-48 h-1 bg-muted rounded-full overflow-hidden mt-2">
                             <motion.div
                                 initial={{ x: "-100%" }}
                                 animate={{ x: "100%" }}

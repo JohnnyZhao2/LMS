@@ -69,7 +69,7 @@ export const SpotCheckForm: React.FC = () => {
 
   return (
     <div className="animate-fadeIn">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">发起抽查</h2>
+      <h2 className="text-2xl font-bold text-foreground mb-6">发起抽查</h2>
       
       <Card className="max-w-2xl">
         <CardHeader>
@@ -96,7 +96,7 @@ export const SpotCheckForm: React.FC = () => {
           <div className="space-y-2">
             <Label>抽查内容/主题</Label>
             <textarea
-              className="w-full p-3 border border-gray-200 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               rows={3}
               placeholder="请输入抽查内容或主题"
               value={content}
@@ -120,7 +120,7 @@ export const SpotCheckForm: React.FC = () => {
           <div className="space-y-2">
             <Label>评语（可选）</Label>
             <textarea
-              className="w-full p-3 border border-gray-200 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               rows={3}
               placeholder="请输入评语（可选）"
               value={comment}

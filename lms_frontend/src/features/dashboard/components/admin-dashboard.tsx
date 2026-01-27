@@ -77,7 +77,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-12 gap-6">
         {/* QUICK COMMANDS */}
         <div className="col-span-12">
-          <h3 className="text-lg font-bold text-gray-900 mb-6 pl-2 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-foreground mb-6 pl-2 flex items-center gap-2">
             <Activity className="w-5 h-5 text-primary" />
             快捷操作
           </h3>

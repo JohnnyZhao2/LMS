@@ -34,7 +34,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
   setPassScore,
 }) => {
   return (
-    <div className="p-5 space-y-4 bg-white rounded-lg mx-5 mt-5 border border-gray-100">
+    <div className="p-5 space-y-4 bg-background rounded-lg mx-5 mt-5 border border-border">
       <div className="space-y-2">
         <Label>试卷标题</Label>
         <Input placeholder="输入试卷标题..." value={title} onChange={e => setTitle(e.target.value)} />
@@ -53,11 +53,11 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
 
       <div className="space-y-2">
         <Label>试卷性质</Label>
-        <div className="flex p-1 bg-gray-100 rounded-lg gap-1">
+        <div className="flex p-1 bg-muted rounded-lg gap-1">
           <button
             className={cn(
               "flex-1 py-2 text-sm font-semibold rounded-md transition-all",
-              quizType === 'PRACTICE' ? "bg-white text-primary-600" : "text-gray-500 hover:text-gray-700"
+              quizType === 'PRACTICE' ? "bg-background text-primary-600" : "text-text-muted hover:text-foreground"
             )}
             onClick={() => setQuizType('PRACTICE')}
           >
@@ -66,7 +66,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
           <button
             className={cn(
               "flex-1 py-2 text-sm font-semibold rounded-md transition-all",
-              quizType === 'EXAM' ? "bg-destructive-500 text-white" : "text-gray-500 hover:text-gray-700"
+              quizType === 'EXAM' ? "bg-destructive-500 text-white" : "text-text-muted hover:text-foreground"
             )}
             onClick={() => setQuizType('EXAM')}
           >
@@ -84,7 +84,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
                 type="number"
                 value={duration ?? ''}
                 onChange={e => setDuration(Number(e.target.value) || undefined)}
-                className="bg-white border-destructive-200"
+                className="bg-background border-destructive-200"
               />
             </div>
             <div className="space-y-1.5">
@@ -93,7 +93,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
                 type="number"
                 value={passScore ?? ''}
                 onChange={e => setPassScore(Number(e.target.value) || undefined)}
-                className="bg-white border-destructive-200"
+                className="bg-background border-destructive-200"
               />
             </div>
           </div>
@@ -105,13 +105,13 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
           <div className="text-xs text-primary-600 font-semibold mb-1">当前总分</div>
           <div className="text-2xl font-bold text-primary-700">{totalScore}<span className="text-sm ml-1 font-normal">pts</span></div>
         </div>
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-          <div className="text-xs text-gray-500 font-semibold mb-1">各题分布</div>
+        <div className="bg-muted p-4 rounded-xl border border-border">
+          <div className="text-xs text-text-muted font-semibold mb-1">各题分布</div>
           <div className="space-y-1 mt-2">
             {Object.entries(typeStats).map(([t, c]) => (
               <div key={t} className="flex justify-between items-center text-xs">
-                <span className="text-gray-400">{t}</span>
-                <span className="text-gray-900 font-semibold">{c}</span>
+                <span className="text-text-muted">{t}</span>
+                <span className="text-foreground font-semibold">{c}</span>
               </div>
             ))}
           </div>

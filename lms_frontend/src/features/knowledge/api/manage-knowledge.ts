@@ -29,7 +29,7 @@ export const useUpdateKnowledge = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: KnowledgeUpdateRequest }) =>
       apiClient.patch<KnowledgeDetail>(`/knowledge/${id}/`, data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });

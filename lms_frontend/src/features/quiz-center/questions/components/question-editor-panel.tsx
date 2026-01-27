@@ -104,7 +104,7 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
             }}
             disabled={readOnly}
           />
-          <p className="text-[10px] text-gray-400 mt-1 italic">* 点击选项前的图标即可直接设置该项为正确答案</p>
+          <p className="text-[10px] text-text-muted mt-1 italic">* 点击选项前的图标即可直接设置该项为正确答案</p>
         </div>
       ) : (
         <div className="space-y-2 p-3 bg-secondary-50/50 rounded-xl border border-secondary-100">

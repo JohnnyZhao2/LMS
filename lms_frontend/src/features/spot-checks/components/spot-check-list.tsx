@@ -25,7 +25,7 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
       {Array.from({ length: max }).map((_, i) => (
         <Star
           key={i}
-          className={`w-3.5 h-3.5 ${i < value ? 'fill-warning-400 text-warning-400' : 'text-gray-300'}`}
+          className={`w-3.5 h-3.5 ${i < value ? 'fill-warning-400 text-warning-400' : 'text-text-muted'}`}
         />
       ))}
     </div>
@@ -113,7 +113,7 @@ export const SpotCheckList: React.FC = () => {
       cell: ({ row }) => {
         const record = row.original;
         return (
-          <div className="flex items-center gap-2 text-gray-500">
+          <div className="flex items-center gap-2 text-text-muted">
             <Clock className="w-3 h-3" />
             <span>{dayjs(record.checked_at).format('YYYY-MM-DD HH:mm')}</span>
           </div>

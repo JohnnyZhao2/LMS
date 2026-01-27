@@ -6,22 +6,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-wide transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 active:scale-95",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold tracking-wide transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 active:scale-[0.98] active:translate-y-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-white hover:bg-primary-hover hover:scale-105",
+          "bg-primary text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-primary-hover",
         destructive:
-          "bg-destructive text-white hover:bg-destructive hover:scale-105",
+          "bg-destructive text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:bg-destructive",
         outline:
-          "border-2 border-primary bg-transparent text-primary hover:bg-primary hover:text-white",
+          "border border-primary bg-transparent text-primary hover:bg-primary hover:text-white hover:shadow-sm",
         secondary:
-          "bg-muted text-foreground hover:bg-muted-hover hover:scale-105",
-        ghost: "text-foreground hover:bg-muted",
+          "bg-muted text-foreground hover:bg-muted-hover hover:-translate-y-0.5 hover:shadow-sm",
+        ghost: "text-foreground hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         success:
-          "bg-secondary text-white hover:bg-secondary-hover hover:scale-105",
+          "bg-secondary text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 hover:bg-secondary-hover",
       },
       size: {
         default: "h-12 px-6 py-3 text-base rounded-md [&_svg]:size-5",
@@ -48,7 +48,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, className }), "theme-button")}
         ref={ref}
         {...props}
       />

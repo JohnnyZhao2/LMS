@@ -34,14 +34,14 @@ export const StudentDashboard: React.FC = () => {
             <IconBox
               icon={BookOpen}
               size="md"
-              bgColor="bg-white border border-gray-100"
+              bgColor="bg-background border border-border"
               iconColor="text-secondary-600"
               rounded="xl"
               hoverScale={false}
             />
             <div>
-              <h3 className="text-xl font-black text-gray-900 tracking-tight">知识速递</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fresh Insights</p>
+              <h3 className="text-xl font-black text-foreground tracking-tight">知识速递</h3>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Fresh Insights</p>
             </div>
           </div>
           <button
@@ -60,20 +60,20 @@ export const StudentDashboard: React.FC = () => {
               <div
                 key={knowledge.id}
                 onClick={() => roleNavigate(`knowledge/${knowledge.id}`)}
-                className="group flex flex-col p-6 rounded-3xl bg-white border border-gray-100    hover:border-secondary-100 cursor-pointer transition-all duration-300"
+                className="group flex flex-col p-6 rounded-3xl bg-background border border-border    hover:border-secondary-100 cursor-pointer transition-all duration-300"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span className="px-2 py-0.5 bg-secondary-50 text-secondary-600 text-[10px] font-black rounded-md uppercase tracking-tighter">
                     最新
                   </span>
-                  <span className="text-[10px] font-bold text-gray-400">
+                  <span className="text-[10px] font-bold text-text-muted">
                     {dayjs(knowledge.updated_at).format('YYYY.MM.DD')}
                   </span>
                 </div>
-                <h5 className="font-extrabold text-gray-800 mb-2 group-hover:text-secondary-600 transition-colors leading-snug line-clamp-1">
+                <h5 className="font-extrabold text-foreground mb-2 group-hover:text-secondary-600 transition-colors leading-snug line-clamp-1">
                   {knowledge.title}
                 </h5>
-                <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed font-medium mb-4">
+                <p className="text-xs text-text-muted line-clamp-2 leading-relaxed font-medium mb-4">
                   {knowledge.content_preview || '暂无详细内容'}
                 </p>
                 <div className="mt-auto flex items-center gap-1 text-[10px] font-bold text-secondary-600 opacity-0 group-hover:opacity-100 transition-all">
@@ -82,7 +82,7 @@ export const StudentDashboard: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-full py-10 bg-gray-50/50 rounded-3xl text-center border border-dashed border-gray-200 text-gray-400 font-bold">
+            <div className="col-span-full py-10 bg-muted/50 rounded-3xl text-center border border-dashed border-border text-text-muted font-bold">
               暂无知识更新
             </div>
           )}
@@ -96,14 +96,14 @@ export const StudentDashboard: React.FC = () => {
             <IconBox
               icon={Calendar}
               size="md"
-              bgColor="bg-white border border-gray-100"
+              bgColor="bg-background border border-border"
               iconColor="text-primary-600"
               rounded="xl"
               hoverScale={false}
             />
             <div>
-              <h3 className="text-xl font-black text-gray-900 tracking-tight">任务中心</h3>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Engagements</p>
+              <h3 className="text-xl font-black text-foreground tracking-tight">任务中心</h3>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Active Engagements</p>
             </div>
           </div>
           {data?.pending_tasks && data.pending_tasks.length > 0 && (
@@ -126,7 +126,7 @@ export const StudentDashboard: React.FC = () => {
                 <div
                   key={task.id}
                   onClick={() => roleNavigate(`tasks/${task.task_id}`)}
-                  className="group relative flex flex-col p-6 rounded-3xl bg-white border border-gray-100    hover:border-primary-100 cursor-pointer transition-all duration-300"
+                  className="group relative flex flex-col p-6 rounded-3xl bg-background border border-border    hover:border-primary-100 cursor-pointer transition-all duration-300"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <IconBox
@@ -144,18 +144,18 @@ export const StudentDashboard: React.FC = () => {
                     )}
                   </div>
 
-                  <h4 className="font-extrabold text-gray-800 text-base mb-4 group-hover:text-primary-600 transition-colors line-clamp-2 leading-snug h-12">
+                  <h4 className="font-extrabold text-foreground text-base mb-4 group-hover:text-primary-600 transition-colors line-clamp-2 leading-snug h-12">
                     {task.task_title}
                   </h4>
 
-                  <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-gray-400">
+                  <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-text-muted">
                       <Clock className={cn("w-3.5 h-3.5", isUrgent && "text-destructive-500")} />
-                      <span className={cn("text-[10px] font-bold", isUrgent ? "text-destructive-500" : "text-gray-500")}>
+                      <span className={cn("text-[10px] font-bold", isUrgent ? "text-destructive-500" : "text-text-muted")}>
                         {dayjs(task.deadline).format('MM.DD HH:mm')}
                       </span>
                     </div>
-                    <div className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-primary-600 group-hover:text-white transition-all">
+                    <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-text-muted group-hover:bg-primary-600 group-hover:text-white transition-all">
                       <ArrowRight className="w-3.5 h-3.5" />
                     </div>
                   </div>
@@ -163,12 +163,12 @@ export const StudentDashboard: React.FC = () => {
               );
             })
           ) : (
-            <div className="col-span-full py-16 bg-gray-50/50 rounded-3xl flex flex-col items-center justify-center text-center border border-dashed border-gray-200">
-              <div className="w-16 h-16 bg-white rounded-2xl  flex items-center justify-center mb-4">
+            <div className="col-span-full py-16 bg-muted/50 rounded-3xl flex flex-col items-center justify-center text-center border border-dashed border-border">
+              <div className="w-16 h-16 bg-background rounded-2xl  flex items-center justify-center mb-4">
                 <Trophy className="w-8 h-8 text-warning-400" />
               </div>
-              <h4 className="text-lg font-bold text-gray-900 mb-1">任务全部完成！</h4>
-              <p className="text-xs text-gray-500 font-medium">所有的学习目标都已达成</p>
+              <h4 className="text-lg font-bold text-foreground mb-1">任务全部完成！</h4>
+              <p className="text-xs text-text-muted font-medium">所有的学习目标都已达成</p>
             </div>
           )}
         </div>

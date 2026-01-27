@@ -1,6 +1,5 @@
 import { CheckCircle, XCircle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -201,7 +200,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           >
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
                 trueFalseValue === 'TRUE' && 'border-secondary-500 bg-secondary-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
@@ -209,14 +208,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <RadioGroupItem value="TRUE" id={`true-${answer.id}`} />
               <Label
                 htmlFor={`true-${answer.id}`}
-                className="font-medium cursor-pointer text-gray-900"
+                className="font-medium cursor-pointer text-foreground"
               >
                 ✓ 正确
               </Label>
             </label>
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-gray-50 border-gray-200 hover:bg-gray-100',
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
                 trueFalseValue === 'FALSE' && 'border-destructive-500 bg-destructive-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
@@ -224,7 +223,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <RadioGroupItem value="FALSE" id={`false-${answer.id}`} />
               <Label
                 htmlFor={`false-${answer.id}`}
-                className="font-medium cursor-pointer text-gray-900"
+                className="font-medium cursor-pointer text-foreground"
               >
                 ✗ 错误
               </Label>
@@ -241,7 +240,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             rows={6}
             placeholder="请在此输入您的答案..."
             disabled={disabled}
-            className="text-base bg-gray-50 border-gray-200 text-gray-900"
+            className="text-base bg-muted border-border text-foreground"
           />
         );
 
@@ -254,7 +253,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     <div>
       {/* 题目内容 */}
       <div className="mb-5">
-        <h5 className="text-base font-medium leading-relaxed m-0 text-gray-900">
+        <h5 className="text-base font-medium leading-relaxed m-0 text-foreground">
           {answer.question_content}
         </h5>
       </div>
@@ -286,13 +285,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             >
               {answer.is_correct ? '回答正确' : '回答错误'}
             </span>
-            <span className="ml-auto text-gray-600">
+            <span className="ml-auto text-text-muted">
               得分: {answer.obtained_score || 0}/{questionScore ?? '--'}
             </span>
           </div>
           {answer.explanation && (
             <div className="mt-2">
-              <span className="text-gray-600">
+              <span className="text-text-muted">
                 💡 解析: {answer.explanation}
               </span>
             </div>

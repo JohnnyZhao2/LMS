@@ -30,7 +30,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [currentRole])
 
   return (
-    <div className={cn("min-h-screen relative isolate bg-gray-100 flex flex-col", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className={cn("min-h-screen relative isolate bg-muted flex flex-col", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
       <div className="fixed inset-0 -z-10 pointer-events-none" aria-hidden="true">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/5 rounded-full -translate-y-1/2 translate-x-1/2 will-change-transform" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-secondary-500/5 rounded-full translate-y-1/2 -translate-x-1/2 will-change-transform" />

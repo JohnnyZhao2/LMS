@@ -19,7 +19,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   className,
 }) => {
   return (
-    <div className="min-h-screen relative flex flex-col lg:flex-row bg-white text-gray-900 selection:bg-primary selection:text-white font-sans overflow-hidden">
+    <div className="min-h-screen relative flex flex-col lg:flex-row bg-background text-foreground selection:bg-primary selection:text-white font-sans overflow-hidden">
       {/* 现代“米字格/稿纸”底纹 */}
       <div
         className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none"
@@ -53,7 +53,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
                 {/* 悬停微动效 */}
                 <motion.div
-                  className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"
+                  className="absolute inset-0 bg-background opacity-0 group-hover:opacity-10 transition-opacity"
                 />
               </motion.div>
             ))}
@@ -81,7 +81,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 <span className="inline-block w-1 h-1 bg-primary" />
                 岁在丙午 · 智启新章
               </div>
-              <p className="text-sm font-medium leading-[1.8] text-gray-900/50 [writing-mode:vertical-rl] lg:[writing-mode:horizontal-tb]">
+              <p className="text-sm font-medium leading-[1.8] text-foreground/50 [writing-mode:vertical-rl] lg:[writing-mode:horizontal-tb]">
                 格物致知，诚意正心。每一份知识的存档，都是通往卓越的阶梯。
               </p>
             </motion.div>
@@ -89,13 +89,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         </div>
 
         {/* 背景大字装饰 */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[40vw] font-black text-gray-900/[0.015] select-none pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[40vw] font-black text-foreground/[0.015] select-none pointer-events-none">
           悟
         </div>
       </div>
 
       {/* 右侧：登录操作区 (The Chamber) */}
-      <div className="relative w-full lg:w-[40rem] min-h-screen flex flex-col items-center justify-center p-8 lg:p-24 bg-white">
+      <div className="relative w-full lg:w-[40rem] min-h-screen flex flex-col items-center justify-center p-8 lg:p-24 bg-background">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -107,14 +107,14 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               卷首
             </div>
             {title && (
-              <h2 className="text-5xl font-black tracking-tight text-gray-900 mb-4">
+              <h2 className="text-5xl font-black tracking-tight text-foreground mb-4">
                 {title}
               </h2>
             )}
             {description && (
               <div className="flex items-center gap-4">
                 <div className="h-[1px] w-8 bg-gray-900/20" />
-                <p className="text-sm font-medium text-gray-900/40 tracking-widest">
+                <p className="text-sm font-medium text-foreground/40 tracking-widest">
                   {description}
                 </p>
               </div>
@@ -129,7 +129,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* 页脚细节 */}
         <div className="absolute bottom-12 flex flex-col items-center gap-4">
           <div className="h-10 w-[1px] bg-gradient-to-b from-transparent to-primary/30" />
-          <p className="text-[10px] font-bold text-gray-900/20 tracking-[0.5em] uppercase">
+          <p className="text-[10px] font-bold text-foreground/20 tracking-[0.5em] uppercase">
             &copy; {new Date().getFullYear()} 学习平台
           </p>
         </div>

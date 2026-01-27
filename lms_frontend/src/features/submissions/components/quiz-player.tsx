@@ -169,15 +169,15 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
-    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-gray-100">
+    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-muted">
       {/* 顶部信息栏 - Flat Design */}
-      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-white">
+      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-background">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="h-10 w-10 shrink-0 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            className="h-10 w-10 shrink-0 text-text-muted hover:text-foreground hover:bg-muted"
           >
             <ChevronLeft className="w-6 h-6" />
           </Button>
@@ -191,10 +191,10 @@ export const QuizPlayer: React.FC = () => {
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-lg font-semibold m-0 text-gray-900">
+              <h4 className="text-lg font-semibold m-0 text-foreground">
                 {submission.quiz_title}
               </h4>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-text-muted">
                 总分：{submission.total_score}分 · {submission.answers.length} 道题
               </span>
             </div>
@@ -216,11 +216,11 @@ export const QuizPlayer: React.FC = () => {
         {/* 题目导航 */}
         <div className="lg:col-span-1">
           <div className="sticky top-[88px]">
-            <Card className="rounded-lg bg-white">
+            <Card className="rounded-lg bg-background">
               <CardContent className="p-5">
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-text-muted">
                       答题进度
                     </span>
                     <span className={cn(
@@ -237,7 +237,7 @@ export const QuizPlayer: React.FC = () => {
                   />
                 </div>
 
-                <span className="text-xs block mb-3 text-gray-500">
+                <span className="text-xs block mb-3 text-text-muted">
                   题目导航
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -262,7 +262,7 @@ export const QuizPlayer: React.FC = () => {
                                   ? 'bg-secondary-800 text-secondary-400'
                                   : 'bg-secondary-100 text-secondary'
                               )
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              : 'bg-muted text-text-muted hover:bg-muted'
                         )}
                       >
                         {isAnswered && !isCurrent ? (
@@ -281,10 +281,10 @@ export const QuizPlayer: React.FC = () => {
 
         {/* 答题区域 */}
         <div className="lg:col-span-3">
-          <Card className="rounded-lg bg-white">
+          <Card className="rounded-lg bg-background">
             <CardContent className="p-6">
               {/* 题号指示 */}
-              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
+              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-border">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
@@ -296,12 +296,12 @@ export const QuizPlayer: React.FC = () => {
                   >
                     {currentIndex + 1}
                   </div>
-                  <span className="text-gray-500">
+                  <span className="text-text-muted">
                     第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
                   </span>
                 </div>
                 {currentQuestion && (
-                  <span className="text-gray-500">
+                  <span className="text-text-muted">
                     分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                   </span>
                 )}
@@ -319,7 +319,7 @@ export const QuizPlayer: React.FC = () => {
               )}
 
               {/* 底部操作栏 */}
-              <div className="flex justify-between mt-8 pt-5 border-t-2 border-gray-100">
+              <div className="flex justify-between mt-8 pt-5 border-t-2 border-border">
                 <Button
                   variant="outline"
                   size="lg"

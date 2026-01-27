@@ -57,16 +57,16 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 面包屑 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
-            <Link to={getDashboardPath()} className="text-gray-400 hover:text-primary-500 transition-colors">
+            <Link to={getDashboardPath()} className="text-text-muted hover:text-primary-500 transition-colors">
               <Home className="w-3.5 h-3.5" />
             </Link>
             {breadcrumbs.map((item, index) => (
               <React.Fragment key={index}>
-                <ChevronRight className="w-3 h-3 text-gray-300" />
+                <ChevronRight className="w-3 h-3 text-text-muted" />
                 {item.path ? (
                   <Link
                     to={item.path}
-                    className="flex items-center gap-1 text-gray-400 hover:text-primary-500 transition-colors"
+                    className="flex items-center gap-1 text-text-muted hover:text-primary-500 transition-colors"
                   >
                     {item.title}
                   </Link>
@@ -88,11 +88,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             </div>
           )}
           <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
               {title}
             </h2>
             {subtitle && (
-              <p className="text-lg font-semibold text-gray-600 uppercase tracking-wider mt-2 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <p className="text-lg font-semibold text-text-muted uppercase tracking-wider mt-2 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
                 <span className="w-10 h-1 bg-primary-600 rounded-full" />
                 {subtitle}
               </p>

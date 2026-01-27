@@ -20,7 +20,7 @@ import type {
   StudentExecution,
 } from '@/types/task-analytics';
 import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
-import { IconBox, CategoryBadge } from '@/components/common';
+import { IconBox } from '@/components/common';
 import { StatCard } from '@/components/ui/stat-card';
 
 interface ProgressMonitoringTabProps {
@@ -44,7 +44,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
   const aggregatedProgress = React.useMemo(() => {
     if (!analytics?.node_progress) return [];
 
-    const categories = [
+    const categories: { key: string; label: string; icon: LucideIcon; textClass: string; bgClass: string; barClass: string }[] = [
       { key: 'KNOWLEDGE', label: '知识学习', icon: BookOpen, textClass: 'text-secondary', bgClass: 'bg-secondary-50', barClass: 'bg-secondary' },
       { key: 'PRACTICE', label: '随堂测验', icon: FileQuestion, textClass: 'text-primary', bgClass: 'bg-primary-50', barClass: 'bg-primary' },
       { key: 'EXAM', label: '结业考核', icon: GraduationCap, textClass: 'text-primary-500', bgClass: 'bg-primary-50', barClass: 'bg-primary-500' },
@@ -64,7 +64,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
     }).filter(Boolean) as {
       key: string;
       label: string;
-      icon: React.ElementType;
+      icon: LucideIcon;
       textClass: string;
       bgClass: string;
       barClass: string;
@@ -81,7 +81,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       id: 'student_info',
       cell: ({ row }) => (
         <CellWithIcon
-          icon={<Users className="h-4 w-4 text-gray-400" />}
+          icon={<Users className="h-4 w-4 text-text-muted" />}
           title={row.original.student_name}
           subtitle={`${row.original.employee_id} · ${row.original.department}`}
         />
@@ -115,7 +115,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '任务节点进度',
       id: 'node_progress',
       cell: ({ row }) => (
-        <span className="text-sm font-medium text-gray-700 tabular-nums">
+        <span className="text-sm font-medium text-foreground tabular-nums">
           {row.original.node_progress}
         </span>
       ),
@@ -126,7 +126,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       cell: ({ row }) => (
         <span className={cn(
           'text-sm font-bold tabular-nums',
-          row.original.score !== null ? 'text-gray-900' : 'text-gray-400'
+          row.original.score !== null ? 'text-foreground' : 'text-text-muted'
         )}>
           {row.original.score !== null ? row.original.score : '-'}
         </span>
@@ -136,7 +136,7 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '用时',
       id: 'time_spent',
       cell: ({ row }) => (
-        <span className="text-sm text-gray-600 tabular-nums">
+        <span className="text-sm text-text-muted tabular-nums">
           {row.original.time_spent} 分钟
         </span>
       ),
@@ -202,8 +202,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
           value={analytics.abnormal_count.toString()}
           subtitle="需关注"
           icon={AlertTriangle}
-          iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-gray-500'}
-          accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-gray-100'}
+          iconClassName={analytics.abnormal_count > 0 ? 'text-destructive' : 'text-text-muted'}
+          accentClassName={analytics.abnormal_count > 0 ? 'bg-destructive-50' : 'bg-muted'}
           size="sm"
         />
       </div>
@@ -211,23 +211,23 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       {/* Row 2: Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Node Progress (Aggregated by Category) */}
-        <Card className="p-6 border border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900 mb-5">任务节点完成情况</h3>
+        <Card className="p-6 border border-border">
+          <h3 className="text-base font-semibold text-foreground mb-5">任务节点完成情况</h3>
           <div className="space-y-4">
             {aggregatedProgress.map((category) => (
               <CategoryProgressBar key={category.key} category={category} />
             ))}
             {aggregatedProgress.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">暂无任务节点</p>
+              <p className="text-sm text-text-muted text-center py-4">暂无任务节点</p>
             )}
           </div>
         </Card>
 
         {/* Right: Distribution Chart */}
-        <Card className="p-6 border border-gray-100">
+        <Card className="p-6 border border-border">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-4">
-              <h3 className="text-base font-semibold text-gray-900">分布统计</h3>
+              <h3 className="text-base font-semibold text-foreground">分布统计</h3>
               {analytics.pass_rate !== null && (
                 <div className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border",
@@ -246,14 +246,14 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
               )}
             </div>
             {hasScoreDistribution && (
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="flex bg-muted rounded-lg p-1">
                 <button
                   onClick={() => setChartType('time')}
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'time'
-                      ? 'bg-white text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-background text-foreground'
+                      : 'text-text-muted hover:text-foreground'
                   )}
                 >
                   时间分布
@@ -263,8 +263,8 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
                   className={cn(
                     'px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer',
                     chartType === 'score'
-                      ? 'bg-white text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-background text-foreground'
+                      : 'text-text-muted hover:text-foreground'
                   )}
                 >
                   分数分布
@@ -280,12 +280,12 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       </div>
 
       {/* Row 3: Student Execution Table */}
-      <Card className="p-6 border border-gray-100">
-        <h3 className="text-base font-semibold text-gray-900 mb-5">学员执行情况</h3>
+      <Card className="p-6 border border-border">
+        <h3 className="text-base font-semibold text-foreground mb-5">学员执行情况</h3>
         <DataTable
           columns={columns}
           data={students || []}
-          rowClassName="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
+          rowClassName="hover:bg-muted transition-colors duration-150 cursor-pointer"
         />
       </Card>
     </div>
@@ -321,18 +321,18 @@ const CategoryProgressBar: React.FC<CategoryProgressBarProps> = ({ category }) =
             rounded="md"
             hoverScale={false}
           />
-          <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+          <span className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors duration-200">
             {category.label}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-text-muted">
             ({category.nodeCount}项)
           </span>
         </div>
-        <span className="text-sm text-gray-500 tabular-nums">
-          {category.completedCount}/{category.totalCount} <span className="text-gray-400">({category.percentage}%)</span>
+        <span className="text-sm text-text-muted tabular-nums">
+          {category.completedCount}/{category.totalCount} <span className="text-text-muted">({category.percentage}%)</span>
         </span>
       </div>
-      <div className="h-7 bg-gray-100 rounded-md overflow-hidden">
+      <div className="h-7 bg-muted rounded-md overflow-hidden">
         <div
           className={cn("h-full rounded-md transition-all duration-500 ease-out", category.barClass)}
           style={{ width: `${category.percentage}%` }}
@@ -356,10 +356,10 @@ const DistributionChart: React.FC<DistributionChartProps> = ({ data, type }) => 
     <div className="space-y-3">
       {data.map((item) => (
         <div key={item.range} className="flex items-center gap-3 group cursor-pointer">
-          <span className="w-16 text-xs text-gray-500 text-right tabular-nums font-medium">
+          <span className="w-16 text-xs text-text-muted text-right tabular-nums font-medium">
             {item.range}
           </span>
-          <div className="flex-1 h-7 bg-gray-100 rounded-md overflow-hidden">
+          <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-md transition-all duration-300 ease-out flex items-center justify-end pr-2 group-hover:opacity-80",

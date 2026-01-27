@@ -78,7 +78,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               }]}
             />
             {isExam && row.original.duration && (
-              <span className="text-[10px] font-medium text-gray-400 whitespace-nowrap" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <span className="text-[10px] font-medium text-text-muted whitespace-nowrap" style={{ fontFamily: "'Outfit', sans-serif" }}>
                 {row.original.duration}min / {row.original.pass_score}分
               </span>
             )}
@@ -97,9 +97,9 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           <div className="flex items-center gap-3">
             {/* Primary Stats */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-50 border border-gray-200">
-                <span className="text-[10px] text-gray-500 font-medium">题量</span>
-                <span className="text-sm font-bold text-gray-900" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted border border-border">
+                <span className="text-[10px] text-text-muted font-medium">题量</span>
+                <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Outfit', sans-serif" }}>
                   {row.original.question_count}
                 </span>
               </div>
@@ -114,11 +114,11 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             {/* Type Breakdown */}
             {hasTypes && (
               <>
-                <div className="h-3 w-px bg-gray-200 shrink-0" />
+                <div className="h-3 w-px bg-muted shrink-0" />
                 <div className="flex items-center gap-2">
                   {Object.entries(row.original.question_type_counts!).map(([type, count]) => {
                     let label = '单';
-                    let colorClass = "text-gray-500 bg-gray-100";
+                    let colorClass = "text-text-muted bg-muted";
 
                     if (type === 'MULTIPLE_CHOICE') { label = '多'; colorClass = "text-secondary-600 bg-secondary-50"; }
                     if (type === 'TRUE_FALSE') { label = '判'; colorClass = "text-warning-600 bg-warning-50"; }
@@ -133,7 +133,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                           <span className={`flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-medium ${colorClass}`}>
                             {label}
                           </span>
-                          <span className="text-[11px] font-medium text-gray-400 font-mono">
+                          <span className="text-[11px] font-medium text-text-muted font-mono">
                             {count}
                           </span>
                         </div>
@@ -153,10 +153,10 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       size: 100,
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-bold text-gray-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Outfit', sans-serif" }}>
             {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
           </span>
-          <span className="text-[11px] font-medium text-gray-400" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-[11px] font-medium text-text-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
             {dayjs(row.original.updated_at).format('HH:mm')}
           </span>
         </div>
@@ -214,7 +214,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             setPage(1);
           },
         }}
-        rowClassName="hover:bg-gray-100 transition-colors cursor-pointer group"
+        rowClassName="hover:bg-muted transition-colors cursor-pointer group"
         onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${row.id}/edit`)}
       />
 

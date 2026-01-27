@@ -7,12 +7,29 @@ import { AuthLayout } from '@/components/layouts';
  */
 export const LoginPage: React.FC = () => {
   return (
-    <AuthLayout
-      title="欢迎回来"
-      description="请登录您的账号以继续"
+    <div 
+      className="min-h-screen w-full relative auth-page-scope"
+      style={{
+        // @ts-ignore
+        "--theme-primary": "#C41230",
+        "--theme-primary-hover": "#A30F28",
+        "--theme-background": "#FFFBF5",
+        "--theme-foreground": "#1A1A1A",
+        "--theme-muted": "#F5F0E8",
+        "--theme-border": "#E8DFD0",
+        "--color-primary": "#C41230", // 确保直接引用的也生效
+        "--theme-radius-sm": "2px",
+        "--theme-radius-md": "4px",
+        "--theme-radius-lg": "6px",
+      } as React.CSSProperties}
     >
-      <LoginForm />
-    </AuthLayout>
+      <AuthLayout
+        title="欢迎回来"
+        description="请登录您的账号以继续"
+      >
+        <LoginForm />
+      </AuthLayout>
+    </div>
   );
 };
 
