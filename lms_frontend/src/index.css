@@ -138,7 +138,8 @@
     --theme-radius-xl: 12px;
 
     /* 主色调 - Trust Blue */
-    --theme-background: #FFFFFF;
+    --theme-background: #F6F8FC;
+    /* Clean, Cool White */
     --theme-foreground: #1E293B;
     --theme-primary: #2563EB;
     --theme-primary-hover: #1D4ED8;
@@ -481,6 +482,9 @@
         font-family: var(--theme-font-sans);
         overflow-x: hidden;
         transition: background-color var(--theme-transition), color var(--theme-transition);
+
+        /* Clean Canvas Background */
+        background-color: #F6F8FC;
     }
 
     h1,

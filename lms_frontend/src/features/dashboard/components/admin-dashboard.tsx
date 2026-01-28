@@ -99,36 +99,32 @@ export const AdminDashboard: React.FC = () => {
                 description="权限与身份"
                 icon={Users}
                 route={ROUTES.USERS}
-                iconColor="text-primary"
-                iconBg="bg-primary-100"
-                className="bg-background/60"
+                actionColor="indigo"
+                delay="stagger-delay-1"
               />
               <ActionCard
                 title="资源库"
                 description="知识与文档"
                 icon={Database}
                 route={ROUTES.KNOWLEDGE}
-                iconColor="text-primary-500"
-                iconBg="bg-primary-100"
-                className="bg-background/60"
+                actionColor="cyan"
+                delay="stagger-delay-2"
               />
               <ActionCard
                 title="测评引擎"
                 description="试卷与题库"
                 icon={ClipboardCheck}
                 route={ROUTES.QUIZ_CENTER}
-                iconColor="text-pink-500"
-                iconBg="bg-pink-100"
-                className="bg-background/60"
+                actionColor="rose"
+                delay="stagger-delay-3"
               />
               <ActionCard
                 title="系统审计"
                 description="操作与日志"
                 icon={Shield}
                 route={ROUTES.ANALYTICS}
-                iconColor="text-warning-500"
-                iconBg="bg-warning-100"
-                className="bg-background/60"
+                actionColor="amber"
+                delay="stagger-delay-4"
               />
             </div>
           </div>

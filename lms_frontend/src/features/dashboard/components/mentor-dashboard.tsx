@@ -88,24 +88,24 @@ export const MentorDashboard: React.FC = () => {
             description="对学员进行知识抽查"
             icon={FileSearch}
             route={ROUTES.SPOT_CHECKS}
-            iconColor="text-destructive"
-            iconBg="bg-destructive-100"
+            actionColor="rose" // Was destructive
+            delay="stagger-delay-1"
           />
           <ActionCard
             title="发布任务"
             description="创建学习/练习/考试任务"
             icon={Send}
             route={`${ROUTES.TASKS}/create`}
-            iconColor="text-primary"
-            iconBg="bg-primary-100"
+            actionColor="indigo" // Was primary
+            delay="stagger-delay-2"
           />
           <ActionCard
             title="新建试卷"
             description="创建新的考试或练习试卷"
             icon={Plus}
             route={ROUTES.QUIZ_CENTER}
-            iconColor="text-secondary"
-            iconBg="bg-secondary-100"
+            actionColor="emerald" // Was secondary
+            delay="stagger-delay-3"
           />
         </div>
       </div>
