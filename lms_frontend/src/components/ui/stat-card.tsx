@@ -59,15 +59,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             )}
             style={{ fontFamily: "'Outfit', sans-serif" }}
         >
-            {/* Flat Design 背景装饰 - 仅大尺寸显示 */}
-            {isLarge && (
-                <div
-                    className={cn(
-                        "absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-5 pointer-events-none",
-                        accentClassName
-                    )}
-                />
-            )}
+
 
             <div className={cn("flex items-center relative z-10", isLarge ? "gap-6" : "gap-4")}>
                 <IconBox
