@@ -50,7 +50,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5",
+      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8",
       className
     )}>
       <div className="flex flex-col gap-1.5">

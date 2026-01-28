@@ -41,85 +41,101 @@ export const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title="系统概览"
         subtitle="系统资源分配、用户权限审计及核心性能指标监控。"
         icon={<Settings />}
       />
 
-      {/* STATS GRID - Flat Design */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="周活跃用户数"
-          value={data?.summary?.weekly_active_users ?? 0}
-          icon={Users}
-          accentClassName="bg-primary"
-          gradient=""
-        />
-
-        <StatCard
-          title="本月发布任务"
-          value={28}
-          icon={ClipboardCheck}
-          accentClassName="bg-warning"
-          gradient=""
-        />
-        <StatCard
-          title="系统正常运行时间"
-          value="99.9%"
-          icon={Cloud}
-          accentClassName="bg-cyan-500"
-          gradient=""
-        />
-      </div>
-
-      <div className="grid grid-cols-12 gap-6">
-        {/* QUICK COMMANDS */}
-        <div className="col-span-12">
-          <h3 className="text-lg font-bold text-foreground mb-6 pl-2 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-primary" />
-            快捷操作
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ActionCard
-              title="成员管理"
-              description="管理权限与身份"
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* 左侧主要区域 - 占据 8 列 */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* 统计指标网格 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <StatCard
+              title="周活跃用户数"
+              value={data?.summary?.weekly_active_users ?? 0}
               icon={Users}
-              route={ROUTES.USERS}
-              iconColor="text-primary"
-              iconBg="bg-primary-100"
+              accentClassName="bg-primary"
+              className="h-full"
             />
-            <ActionCard
-              title="资源库"
-              description="编排知识与文档"
-              icon={Database}
-              route={ROUTES.KNOWLEDGE}
-              iconColor="text-primary-500"
-              iconBg="bg-primary-100"
+            <StatCard
+              title="系统正常运行时间"
+              value="99.9%"
+              icon={Cloud}
+              accentClassName="bg-cyan-500"
+              className="h-full"
             />
-            <ActionCard
-              title="测评引擎"
-              description="试卷与题库维护"
-              icon={ClipboardCheck}
-              route={ROUTES.QUIZ_CENTER}
-              iconColor="text-pink-500"
-              iconBg="bg-pink-100"
-            />
-            <ActionCard
-              title="系统审计"
-              description="查看操作与日志"
-              icon={Shield}
-              route={ROUTES.ANALYTICS}
-              iconColor="text-warning-500"
-              iconBg="bg-warning-100"
-            />
+          </div>
+
+          {/* 活动日志面板 - 放在主栏下方 */}
+          <div className="bg-background rounded-3xl">
+            <ActivityLogsPanel />
+          </div>
+        </div>
+
+        {/* 右侧边栏 - 占据 4 列 */}
+        <div className="lg:col-span-4 space-y-8">
+          {/* 本月任务统计 - 放在侧边栏顶部作为强调 */}
+          <StatCard
+            title="本月发布任务"
+            value={28}
+            icon={ClipboardCheck}
+            accentClassName="bg-warning"
+            className="w-full"
+          />
+
+          {/* 快捷操作卡片 */}
+          <div className="bg-muted/10 border border-border/40 rounded-3xl p-6 space-y-6">
+            <div className="flex items-center gap-2 px-2">
+              <Activity className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-extrabold text-foreground uppercase tracking-widest">
+                快捷指令
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <ActionCard
+                title="成员管理"
+                description="权限与身份"
+                icon={Users}
+                route={ROUTES.USERS}
+                iconColor="text-primary"
+                iconBg="bg-primary-100"
+                className="bg-background/60"
+              />
+              <ActionCard
+                title="资源库"
+                description="知识与文档"
+                icon={Database}
+                route={ROUTES.KNOWLEDGE}
+                iconColor="text-primary-500"
+                iconBg="bg-primary-100"
+                className="bg-background/60"
+              />
+              <ActionCard
+                title="测评引擎"
+                description="试卷与题库"
+                icon={ClipboardCheck}
+                route={ROUTES.QUIZ_CENTER}
+                iconColor="text-pink-500"
+                iconBg="bg-pink-100"
+                className="bg-background/60"
+              />
+              <ActionCard
+                title="系统审计"
+                description="操作与日志"
+                icon={Shield}
+                route={ROUTES.ANALYTICS}
+                iconColor="text-warning-500"
+                iconBg="bg-warning-100"
+                className="bg-background/60"
+              />
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Activity Logs Panel */}
-      <ActivityLogsPanel />
     </div>
   );
 };

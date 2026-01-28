@@ -163,72 +163,70 @@ export const ActivityLogsPanel: React.FC = () => {
   }, [operationLogsData]);
 
   return (
-    <div className="space-y-6">
-      {/* Page Title Area (Outside) */}
-      <div className="flex items-center gap-3 px-0.5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-          <Activity className="w-5 h-5" />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-foreground tracking-tight">活动记录</h2>
-          <p className="text-[12px] text-text-muted font-medium opacity-80">查看系统内的关键操作与审计日志</p>
-        </div>
-      </div>
-
-      <ContentPanel padding="none" className="overflow-hidden border-border/60 shadow-sm bg-background">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <ContentPanel padding="none" className="overflow-hidden border-border/40 shadow-sm bg-background rounded-3xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Card Header (Controls & Tabs) */}
-          <div className="px-6 py-4 border-b border-border/40 bg-muted/5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList className="bg-muted/30 p-1 h-auto rounded-lg w-fit border border-border/30">
-                <TabsTrigger
-                  value="user"
-                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
-                >
-                  用户日志
-                </TabsTrigger>
-                <TabsTrigger
-                  value="content"
-                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
-                >
-                  内容日志
-                </TabsTrigger>
-                <TabsTrigger
-                  value="operation"
-                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
-                >
-                  操作日志
-                </TabsTrigger>
-              </TabsList>
+          {/* Card Header (Title & Controls & Tabs) */}
+          <div className="px-6 py-4 border-b border-border/30">
+            <div className="flex items-center justify-between gap-6">
+              {/* Left Side: Title */}
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-4 h-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">活动日志</h2>
+              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-text-muted transition-transform group-hover:rotate-180" />
-                  <span>刷新</span>
-                </button>
+              {/* Right Side: Tools & Tabs */}
+              <div className="flex items-center gap-4">
+                <TabsList className="bg-muted/40 p-1 h-auto rounded-xl w-fit border border-border/20">
+                  <TabsTrigger
+                    value="user"
+                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                  >
+                    用户行为
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="content"
+                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                  >
+                    内容变更
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="operation"
+                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                  >
+                    系统操作
+                  </TabsTrigger>
+                </TabsList>
 
-                <button
-                  type="button"
-                  className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
-                >
-                  <Filter className="w-3.5 h-3.5 text-text-muted" />
-                  <span>筛选</span>
-                </button>
-
-                {isSuperuser && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => roleNavigate(ROUTES.ACTIVITY_LOG_SETTINGS)}
-                    className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                    onClick={handleRefresh}
+                    className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                    title="刷新"
                   >
-                    <Settings className="w-3.5 h-3.5 text-text-muted transition-transform group-hover:rotate-45" />
-                    设置
+                    <RefreshCw className="w-4 h-4 text-text-muted transition-transform group-hover:rotate-180" />
                   </button>
-                )}
+
+                  <button
+                    type="button"
+                    className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                    title="筛选"
+                  >
+                    <Filter className="w-4 h-4 text-text-muted" />
+                  </button>
+
+                  {isSuperuser && (
+                    <button
+                      type="button"
+                      onClick={() => roleNavigate(ROUTES.ACTIVITY_LOG_SETTINGS)}
+                      className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                      title="系统设置"
+                    >
+                      <Settings className="w-4 h-4 text-text-muted transition-transform group-hover:rotate-45" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -236,13 +234,13 @@ export const ActivityLogsPanel: React.FC = () => {
           {/* Card Content Section */}
           <div className="p-0">
             <TabsContent value="user" className="mt-0 outline-none">
-              <div className="p-6 space-y-6">
+              <div className="px-8 py-6 space-y-6">
                 <ActivityLogTimeline
                   items={userTimelineItems}
                   isLoading={userLogsLoading}
                   emptyText="暂无用户日志"
                 />
-                <div className="pt-4 border-t border-border/30">
+                <div className="pt-6 border-t border-border/20">
                   <Pagination
                     current={userPagination.page}
                     total={userLogsData?.count || 0}
@@ -257,13 +255,13 @@ export const ActivityLogsPanel: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="content" className="mt-0 outline-none">
-              <div className="p-6 space-y-6">
+              <div className="px-8 py-6 space-y-6">
                 <ActivityLogTimeline
                   items={contentTimelineItems}
                   isLoading={contentLogsLoading}
                   emptyText="暂无内容日志"
                 />
-                <div className="pt-4 border-t border-border/30">
+                <div className="pt-6 border-t border-border/20">
                   <Pagination
                     current={contentPagination.page}
                     total={contentLogsData?.count || 0}
@@ -278,13 +276,13 @@ export const ActivityLogsPanel: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="operation" className="mt-0 outline-none">
-              <div className="p-6 space-y-6">
+              <div className="px-8 py-6 space-y-6">
                 <ActivityLogTimeline
                   items={operationTimelineItems}
                   isLoading={operationLogsLoading}
                   emptyText="暂无操作日志"
                 />
-                <div className="pt-4 border-t border-border/30">
+                <div className="pt-6 border-t border-border/20">
                   <Pagination
                     current={operationPagination.page}
                     total={operationLogsData?.count || 0}
