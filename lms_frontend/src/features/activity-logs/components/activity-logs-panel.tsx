@@ -1,17 +1,21 @@
 import React, { useMemo, useState } from 'react';
-import { Activity, FileText, Filter, RefreshCw, Settings, User } from 'lucide-react';
+import { Activity, FileText, RefreshCw, Settings, User } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
-import { ContentPanel } from '@/components/ui';
-import { useAuth } from '@/features/auth/stores/auth-context';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import { ROUTES } from '@/config/routes';
 import {
   useUserLogs,
   useContentLogs,
   useOperationLogs,
 } from '../api/use-activity-logs';
 import { ActivityLogTimeline, type ActivityLogTimelineItem } from './activity-log-timeline';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { ActivityLogPolicyPanel } from './activity-log-policy-panel';
 
 const ACTION_LABELS: Record<string, string> = {
   login: '登录系统',
@@ -69,10 +73,8 @@ const getOperationTypeLabel = (type: string): string => {
  */
 export const ActivityLogsPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState('user');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const { user } = useAuth();
-  const isSuperuser = Boolean(user?.is_superuser);
-  const { roleNavigate } = useRoleNavigate();
 
   // 分页状态
   const [userPagination, setUserPagination] = useState({ page: 1, pageSize: 10 });
@@ -112,13 +114,13 @@ export const ActivityLogsPanel: React.FC = () => {
       createdAt: log.created_at,
       status: log.status,
       title: (
-        <span className="text-foreground">
-          <span className="font-semibold text-foreground">{log.user.username}</span>
+        <>
+          <span className="font-bold">{log.user.username}</span>
           <span> {getActionLabel(log.action)}</span>
-        </span>
+        </>
       ),
       description: log.description,
-      icon: <User className="h-4 w-4" />,
+      icon: <User />,
     }));
   }, [userLogsData]);
 
@@ -129,16 +131,16 @@ export const ActivityLogsPanel: React.FC = () => {
       createdAt: log.created_at,
       status: log.status,
       title: (
-        <span className="text-foreground">
-          <span className="font-semibold text-foreground">{log.operator.username}</span>
+        <>
+          <span className="font-bold">{log.operator.username}</span>
           <span>
             {' '}
             {getActionLabel(log.action)} {getContentTypeLabel(log.content_type)} · {log.content_title}
           </span>
-        </span>
+        </>
       ),
       description: log.description,
-      icon: <FileText className="h-4 w-4" />,
+      icon: <FileText />,
     }));
   }, [contentLogsData]);
 
@@ -149,83 +151,77 @@ export const ActivityLogsPanel: React.FC = () => {
       createdAt: log.created_at,
       status: log.status,
       title: (
-        <span className="text-foreground">
-          <span className="font-semibold text-foreground">{log.operator.username}</span>
+        <>
+          <span className="font-bold">{log.operator.username}</span>
           <span>
             {' '}
             {getActionLabel(log.action)} · {getOperationTypeLabel(log.operation_type)}
           </span>
-        </span>
+        </>
       ),
       description: log.description,
-      icon: <Activity className="h-4 w-4" />,
+      icon: <Activity />,
     }));
   }, [operationLogsData]);
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <ContentPanel padding="none" className="overflow-hidden border-border/40 shadow-sm bg-background rounded-3xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Card Header (Title & Controls & Tabs) */}
-          <div className="px-6 py-4 border-b border-border/30">
-            <div className="flex items-center justify-between gap-6">
-              {/* Left Side: Title */}
-              <div className="flex items-center gap-2.5">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
+        {/* Subtle Noise Texture - The DNA of the design system */}
+        <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">
+          {/* Dashboard-style Slim Header */}
+          <div className="px-6 py-4 border-b border-border/30 bg-background/40 backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Left Side: System Title with LED */}
+              <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-primary" />
-                <h2 className="text-base font-semibold text-foreground">活动日志</h2>
+                <div>
+                  <h2 className="text-sm font-bold text-foreground uppercase tracking-[0.15em]" style={{ fontFamily: "'Outfit', sans-serif" }}>审计流水线</h2>
+                </div>
               </div>
 
-              {/* Right Side: Tools & Tabs */}
+              {/* Right Side: Segmented Controls */}
               <div className="flex items-center gap-4">
-                <TabsList className="bg-muted/40 p-1 h-auto rounded-xl w-fit border border-border/20">
+                <TabsList className="bg-muted/40 p-1 h-9 rounded-xl border border-border/20">
                   <TabsTrigger
                     value="user"
-                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                    className="px-4 py-1 text-[11px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
                   >
-                    用户行为
+                    用户日志
                   </TabsTrigger>
                   <TabsTrigger
                     value="content"
-                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                    className="px-4 py-1 text-[11px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
                   >
-                    内容变更
+                    内容日志
                   </TabsTrigger>
                   <TabsTrigger
                     value="operation"
-                    className="px-6 py-2 text-[12px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                    className="px-4 py-1 text-[11px] font-bold rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
                   >
-                    系统操作
+                    系统日志
                   </TabsTrigger>
                 </TabsList>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 border-l border-border/40 pl-4">
                   <button
                     type="button"
                     onClick={handleRefresh}
-                    className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted/50 transition-all text-muted-foreground hover:text-primary active:scale-90"
                     title="刷新"
                   >
-                    <RefreshCw className="w-4 h-4 text-text-muted transition-transform group-hover:rotate-180" />
+                    <RefreshCw className="w-3.5 h-3.5" />
                   </button>
-
                   <button
                     type="button"
-                    className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
-                    title="筛选"
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted/50 transition-all text-muted-foreground active:scale-90"
+                    title="设置"
                   >
-                    <Filter className="w-4 h-4 text-text-muted" />
+                    <Settings className="w-3.5 h-3.5" />
                   </button>
-
-                  {isSuperuser && (
-                    <button
-                      type="button"
-                      onClick={() => roleNavigate(ROUTES.ACTIVITY_LOG_SETTINGS)}
-                      className="group flex h-9 items-center justify-center px-4 bg-background border border-border/60 rounded-xl hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
-                      title="系统设置"
-                    >
-                      <Settings className="w-4 h-4 text-text-muted transition-transform group-hover:rotate-45" />
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -297,7 +293,28 @@ export const ActivityLogsPanel: React.FC = () => {
             </TabsContent>
           </div>
         </Tabs>
-      </ContentPanel>
+      </div>
+
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+          <div className="relative p-8 bg-background">
+            {/* Subtle Background Glow */}
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+
+            <DialogHeader className="mb-8 relative z-10">
+              <DialogTitle className="text-xl font-bold tracking-tight">审计策略配置</DialogTitle>
+              <DialogDescription className="text-xs font-medium text-slate-500">
+                精细化控制系统日志的记录范围，优化存储与性能。
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="relative z-10 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+              <ActivityLogPolicyPanel />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -49,51 +49,19 @@ export const AdminDashboard: React.FC = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* 左侧主要区域 - 占据 8 列 */}
-        <div className="lg:col-span-8 space-y-8">
-          {/* 统计指标网格 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <StatCard
-              title="周活跃用户数"
-              value={data?.summary?.weekly_active_users ?? 0}
-              icon={Users}
-              accentClassName="bg-primary"
-            />
-            <StatCard
-              title="系统正常运行时间"
-              value="99.9%"
-              icon={Cloud}
-              accentClassName="bg-cyan-500"
-            />
-          </div>
-
-          {/* 活动日志面板 - 放在主栏下方 */}
-          <div className="bg-background rounded-3xl">
-            <ActivityLogsPanel />
-          </div>
-        </div>
-
-        {/* 右侧边栏 - 占据 4 列 */}
+        {/* 左侧边栏 - 占据 4 列 */}
         <div className="lg:col-span-4 space-y-8">
-          {/* 本月任务统计 - 放在侧边栏顶部作为强调 */}
-          <StatCard
-            title="本月发布任务"
-            value={28}
-            icon={ClipboardCheck}
-            accentClassName="bg-warning"
-            className="w-full"
-          />
 
           {/* 快捷操作卡片 */}
-          <div className="bg-muted/10 border border-border/40 rounded-3xl p-6 space-y-6">
-            <div className="flex items-center gap-2 px-2">
+          <div className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-6">
+            <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-extrabold text-foreground uppercase tracking-widest">
                 快捷指令
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="flex flex-col gap-4 grow justify-center">
               <ActionCard
                 title="成员管理"
                 description="权限与身份"
@@ -128,6 +96,37 @@ export const AdminDashboard: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* 右侧主要区域 - 占据 8 列 */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* 统计指标网格 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StatCard
+              title="本月任务"
+              value={28}
+              icon={ClipboardCheck}
+              accentClassName="bg-warning"
+              size="sm"
+            />
+            <StatCard
+              title="周活跃用户"
+              value={data?.summary?.weekly_active_users ?? 0}
+              icon={Users}
+              accentClassName="bg-primary"
+              size="sm"
+            />
+            <StatCard
+              title="运行时间"
+              value="99.9%"
+              icon={Cloud}
+              accentClassName="bg-cyan-500"
+              size="sm"
+            />
+          </div>
+
+          {/* 活动日志面板 - 放在主栏下方 */}
+          <ActivityLogsPanel />
         </div>
       </div>
     </div>

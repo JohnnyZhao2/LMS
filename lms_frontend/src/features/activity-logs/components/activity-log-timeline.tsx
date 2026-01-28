@@ -20,15 +20,6 @@ interface ActivityLogTimelineProps {
   emptyText?: string;
 }
 
-const getDescriptionClass = (status: ActivityLogStatus) => {
-  if (status === 'failed') {
-    return 'text-error-500';
-  }
-  if (status === 'partial') {
-    return 'text-warning-700';
-  }
-  return 'text-text-muted';
-};
 
 const getDateKeyFromDate = (date: Date) => {
   const year = date.getFullYear();
@@ -91,66 +82,130 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
   }
 
   return (
-    <div className="space-y-8">
-      {groupedItems.map((group) => (
-        <div key={group.dateKey} className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-sm font-bold text-foreground/80">{getDateLabel(group.dateKey)}</span>
-            <span className="text-[10px] font-medium text-text-muted bg-muted px-1.5 py-0.5 rounded-full">
-              {group.items.length}
+    <div className="space-y-6 px-1 pb-6 relative z-10">
+      {groupedItems.map((group, groupIdx) => (
+        <div
+          key={group.dateKey}
+          className={cn(
+            "space-y-2 animate-in fade-in slide-in-from-left-4 duration-700",
+            `stagger-delay-${(groupIdx % 5) + 1}`
+          )}
+        >
+          {/* Subtle Condensed Date Header */}
+          <div className="flex items-center gap-2 px-2 py-1">
+            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              {getDateLabel(group.dateKey)}
+            </span>
+            <div className="h-px flex-1 bg-border/20" />
+            <span className="text-[9px] font-bold text-muted-foreground/30 tabular-nums uppercase tracking-tighter" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              Batch: {group.items.length}
             </span>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border/50 bg-background shadow-sm shadow-black/5">
-            <div className="divide-y divide-border/40">
-              {group.items.map((item) => {
-                return (
-                  <div
-                    key={item.id}
-                    className="group relative flex items-start gap-3 p-3 transition-colors hover:bg-muted/30"
-                  >
-                    {/* Time Column */}
-                    <div className="w-12 shrink-0 pt-1 text-[11px] font-medium text-text-muted/70 tabular-nums">
-                      {getTimeLabel(item.createdAt)}
-                    </div>
+          <div className="space-y-0.5">
+            {group.items.map((item) => {
+              // Status-based stylistic DNA
+              const isError = item.status === 'failed';
+              const isWarning = item.status === 'partial';
 
-                    {/* Icon Column */}
-                    <div className="shrink-0 pt-0.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50 text-foreground/70 ring-1 ring-border/5 group-hover:bg-background group-hover:shadow-sm transition-all text-xs">
-                        {item.icon ? (
-                          <span className="transition-transform group-hover:scale-110">
-                            {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 14 })}
-                          </span>
-                        ) : (
-                          <Activity size={14} />
-                        )}
-                      </div>
-                    </div>
+              const statusColors = {
+                success: {
+                  bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
+                  title: 'text-foreground group-hover/item:text-primary',
+                  indicator: 'bg-emerald-500'
+                },
+                failed: {
+                  bg: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
+                  title: 'text-rose-600 dark:text-rose-400',
+                  indicator: 'bg-rose-500'
+                },
+                partial: {
+                  bg: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
+                  title: 'text-amber-600 dark:text-amber-400',
+                  indicator: 'bg-amber-500'
+                }
+              };
 
-                    {/* Content Column */}
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-[13px] font-medium text-foreground truncate">
-                          {item.title}
-                        </div>
-                        {item.meta && (
-                          <div className="shrink-0 text-[10px] text-text-muted">
-                            {item.meta}
-                          </div>
-                        )}
-                      </div>
+              const current = statusColors[item.status] || statusColors.success;
 
-                      <div className={cn(
-                        "text-[12px] leading-relaxed break-words opacity-90",
-                        getDescriptionClass(item.status)
-                      )}>
-                        {item.description || "无详细描述"}
-                      </div>
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "group/item relative flex items-center gap-4 py-2.5 px-4 rounded-2xl transition-all duration-300 border border-transparent hover:border-border/40",
+                    isError
+                      ? "bg-rose-50/20 dark:bg-rose-500/5 hover:bg-rose-50/40"
+                      : (isWarning ? "bg-amber-50/20 dark:bg-amber-500/5 hover:bg-amber-50/40" : "hover:bg-white/40 hover:backdrop-blur-md hover:shadow-sm")
+                  )}
+                >
+                  {/* 1. Status Beam - Sharper architectural detail */}
+                  <div className={cn(
+                    "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full transition-all duration-500",
+                    isError || isWarning ? "h-6 opacity-100" : "h-3 opacity-20 group-hover/item:h-8 group-hover/item:opacity-100",
+                    isError ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" :
+                      isWarning ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
+                        "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]"
+                  )} />
+
+
+                  {/* 3. Machined Icon Container */}
+                  <div className="shrink-0 z-10">
+                    <div className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 border",
+                      "bg-muted/10 border-border/10",
+                      current.bg,
+                      isError && "animate-[pulse_2s_infinite]"
+                    )}>
+                      {item.icon ? (
+                        React.cloneElement(item.icon as React.ReactElement<any>, { size: 15, strokeWidth: 2.5 })
+                      ) : (
+                        <Activity size={15} strokeWidth={2.5} />
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* 4. High-Density Content Hub */}
+                  <div className="flex-1 min-w-0 z-10">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "text-[13px] font-bold tracking-tight leading-tight truncate transition-colors",
+                        isError ? "text-rose-600 dark:text-rose-400" :
+                          isWarning ? "text-amber-600 dark:text-amber-400" :
+                            "text-slate-800 dark:text-slate-200 group-hover/item:text-primary"
+                      )}>
+                        {item.title}
+                      </div>
+                      {item.meta && (
+                        <div className="shrink-0 text-[8px] font-black text-slate-500/40 dark:text-slate-400/40 uppercase tracking-[0.15em] bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          {item.meta}
+                        </div>
+                      )}
+                    </div>
+                    {/* Description: Distinctive color, not just reduced opacity */}
+                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate tracking-tight transition-colors group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300">
+                      {item.description || "System operation event"}
+                    </div>
+                  </div>
+
+                  {/* 5. Right-side Status & Time */}
+                  <div className="flex items-center gap-4 shrink-0 z-10 ml-auto">
+                    {(isError || isWarning) && (
+                      <div className={cn(
+                        "px-2.5 py-1 rounded text-[8px] font-black uppercase tracking-[0.2em] border transition-all duration-300 cursor-default",
+                        isError ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20",
+                        "group-hover/item:bg-background group-hover/item:border-current/40 shadow-sm"
+                      )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {item.status}
+                      </div>
+                    )}
+
+                    <div className="text-[10px] font-bold text-muted-foreground/20 tabular-nums text-right min-w-[40px] tracking-tighter" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      {getTimeLabel(item.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

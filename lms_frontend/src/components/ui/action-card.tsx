@@ -61,12 +61,12 @@ export const ActionCard: React.FC<ActionCardProps> = ({
     <div
       onClick={handleClick}
       className={cn(
-        "group relative overflow-hidden bg-card border border-border/50 rounded-xl",
+        "group relative overflow-hidden bg-card border border-border/50 rounded-2xl w-full",
         "cursor-pointer transition-all duration-500 ease-out",
         "hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]", // StatCard Shadow
         "hover:border-primary/20 hover:-translate-y-1",
         delay,
-        "animate-fadeInUp opacity-0 translate-y-4 fill-mode-forwards",
+        "animate-fadeInUp",
         // Ensure nice height for content
         "h-28",
         className
