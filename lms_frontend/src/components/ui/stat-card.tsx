@@ -132,8 +132,6 @@ export const StatCard: React.FC<StatCardProps> = ({
                         />
                     </div>
 
-                    {/* Linear fade edge */}
-                    <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-card to-transparent pointer-events-none" />
                 </div>
             </div>
         </Card>

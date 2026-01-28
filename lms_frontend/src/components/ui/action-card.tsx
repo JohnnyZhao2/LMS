@@ -72,8 +72,8 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         className
       )}
     >
-      {/* Subtle Noise Texture - Exact match to StatCard */}
-      <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+      {/* Subtle Noise Texture - stronger grain for solid card background */}
+      <div className="absolute inset-0 opacity-[0.6] mix-blend-multiply pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-200 dark:mix-blend-soft-light dark:opacity-[0.4]" />
 
       <div className="flex h-full relative z-10">
         {/* Content Zone (Left) */}
@@ -126,8 +126,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               strokeWidth={0.5}
             />
           </div>
-          {/* Linear fade edge for specific masking effect */}
-          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-card to-transparent pointer-events-none" />
         </div>
       </div>
     </div>

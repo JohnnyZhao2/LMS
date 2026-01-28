@@ -27,6 +27,8 @@
     /* 语义化颜色 - 引用 CSS 变量 */
     --color-background: var(--theme-background);
     --color-foreground: var(--theme-foreground);
+    --color-card: var(--theme-background);
+    --color-card-foreground: var(--theme-foreground);
     --color-primary: var(--theme-primary);
     --color-primary-hover: var(--theme-primary-hover);
     --color-secondary: var(--theme-secondary);
@@ -752,6 +754,7 @@
     .animate-pulse-slow {
         animation: pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
 }
 
 /* ============================================
