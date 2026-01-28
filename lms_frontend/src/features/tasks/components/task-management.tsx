@@ -74,9 +74,9 @@ export const TaskManagement: React.FC = () => {
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20, scale: 0.98 },
-        visible: { 
-            opacity: 1, 
-            y: 0, 
+        visible: {
+            opacity: 1,
+            y: 0,
             scale: 1,
             transition: { type: "spring", stiffness: 260, damping: 20 }
         }
@@ -266,11 +266,11 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="space-y-10 overflow-x-hidden pb-10"
+            className="space-y-10 pb-10"
         >
             <motion.div variants={itemVariants}>
                 <PageHeader
@@ -281,7 +281,7 @@ export const TaskManagement: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <Button
                                 variant="outline"
-                                className="h-14 py-3 px-6 rounded-md border-4 border-border font-semibold text-text-muted hover:bg-muted flex items-center gap-2  soft-press"
+                                className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm soft-press"
                                 onClick={() => refetch()}
                             >
                                 <RefreshCw className="h-4 w-4" />
@@ -289,9 +289,9 @@ export const TaskManagement: React.FC = () => {
                             </Button>
                             <Button
                                 onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
-                                className="h-14 px-8 rounded-md bg-primary text-white font-semibold hover:bg-primary-600  soft-press"
+                                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 shadow-sm soft-press"
                             >
-                                <Plus className="mr-2 h-5 w-5" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 发布新任务
                             </Button>
                         </div>
@@ -356,7 +356,7 @@ export const TaskManagement: React.FC = () => {
                     <div className="overflow-hidden rounded-lg border-0">
                         <AnimatePresence mode="wait">
                             {isLoading ? (
-                                <motion.div 
+                                <motion.div
                                     key="skeleton"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}

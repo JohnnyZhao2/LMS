@@ -64,7 +64,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             <div className={cn("flex items-center relative z-10", isLarge ? "gap-6" : "gap-4")}>
                 <IconBox
                     icon={icon}
-                    size={isLarge ? 'xl' : 'md'}
+                    size={isLarge ? 'lg' : 'md'}
                     bgColor={accentClassName}
                     iconColor={iconClassName}
                     rounded={isLarge ? 'md' : 'xl'}

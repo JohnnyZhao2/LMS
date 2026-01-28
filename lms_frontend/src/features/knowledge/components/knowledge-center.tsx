@@ -102,27 +102,27 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 extra={
                     <div className="flex items-center gap-4">
                         <div className="relative group min-w-[300px]">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-primary transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-primary transition-colors" />
                             <Input
                                 placeholder="搜索知识文档..."
                                 value={searchValue}
                                 onChange={(e) => setSearchValue(e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
-                                className="pl-11 h-14 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm "
+                                className="pl-9 h-10 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm"
                             />
                         </div>
                         {isAdminView ? (
                             <Button
                                 onClick={handleCreate}
-                                className="h-14 px-6 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 transition duration-200 hover:scale-105 "
+                                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 transition duration-200 hover:scale-105 shadow-sm"
                             >
-                                <Plus className="mr-2 h-5 w-5" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 新建知识
                             </Button>
                         ) : (
                             <Button
                                 onClick={submitSearch}
-                                className="h-14 px-6 rounded-md bg-primary text-white font-bold hover:bg-primary-600 transition duration-200 hover:scale-105 "
+                                className="h-10 px-6 rounded-md bg-primary text-white font-bold hover:bg-primary-600 transition duration-200 hover:scale-105 shadow-sm"
                             >
                                 搜索
                             </Button>

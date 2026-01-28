@@ -43,7 +43,7 @@ export const QuizCenter: React.FC = () => {
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-border font-semibold text-text-muted hover:bg-muted flex items-center gap-2 "
+              className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm"
               onClick={() => {
                 refetchQuizzes();
                 refetchQuestions();
@@ -54,9 +54,9 @@ export const QuizCenter: React.FC = () => {
             </Button>
             <Button
               onClick={handleAdd}
-              className="h-14 px-8 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 "
+              className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
             >
-              <Plus className="mr-2 h-5 w-5" />
+              <Plus className="mr-2 h-4 w-4" />
               构建全新试卷
             </Button>
           </div>

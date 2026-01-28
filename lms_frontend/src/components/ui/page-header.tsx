@@ -50,19 +50,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6",
+      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5",
       className
     )}>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {/* 面包屑 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
+          <nav className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase mb-1">
             <Link to={getDashboardPath()} className="text-text-muted hover:text-primary-500 transition-colors">
-              <Home className="w-3.5 h-3.5" />
+              <Home className="w-3 h-3" />
             </Link>
             {breadcrumbs.map((item, index) => (
               <React.Fragment key={index}>
-                <ChevronRight className="w-3 h-3 text-text-muted" />
+                <ChevronRight className="w-2.5 h-2.5 text-text-muted" />
                 {item.path ? (
                   <Link
                     to={item.path}
@@ -81,9 +81,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {/* 标题区域 */}
         <div className="flex items-center gap-4">
           {icon && (
-            <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
+            <div className="w-14 h-14 bg-primary-600 rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-105 shadow-sm">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "text-white w-6 h-6")
+                className: cn(icon.props.className, "text-white w-7 h-7")
               }) : icon}
             </div>
           )}
@@ -92,8 +92,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm font-semibold text-text-muted uppercase tracking-wider mt-1 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                <span className="w-6 h-1 bg-primary-600 rounded-full" />
+              <p className="text-sm font-semibold text-text-muted uppercase tracking-wider mt-1.5 flex items-center gap-2.5 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="w-5 h-1 bg-primary-600 rounded-full" />
                 {subtitle}
               </p>
             )}
@@ -103,7 +103,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
       {/* 操作区 */}
       {extra && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-end md:self-auto">
           {extra}
         </div>
       )}
