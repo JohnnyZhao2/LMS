@@ -58,14 +58,12 @@ export const AdminDashboard: React.FC = () => {
               value={data?.summary?.weekly_active_users ?? 0}
               icon={Users}
               accentClassName="bg-primary"
-              className="h-full"
             />
             <StatCard
               title="系统正常运行时间"
               value="99.9%"
               icon={Cloud}
               accentClassName="bg-cyan-500"
-              className="h-full"
             />
           </div>
 

@@ -2,19 +2,18 @@ import type { LucideIcon } from 'lucide-react';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Card } from './card';
-import { IconBox } from '@/components/common';
 
 interface StatCardProps {
     title: string;
     value: string | number;
     icon: LucideIcon;
-    /** 主题色类名（用于图标背景） */
+    /** Subject color class (used for decorative elements) */
     accentClassName: string;
-    /** 图标颜色类名（默认为 text-white） */
+    /** Icon color class (default: text-white) */
     iconClassName?: string;
-    /** 卡片尺寸 */
+    /** Card size variant */
     size?: 'sm' | 'lg';
-    /** 副标题 */
+    /** Optional subtitle text */
     subtitle?: string;
     gradient?: string;
     delay?: string;
@@ -26,21 +25,17 @@ interface StatCardProps {
 }
 
 /**
- * 统计项卡片组件 - 支持两种尺寸
- *
- * @example
- * // 大尺寸（默认）- 用于仪表板
- * <StatCard title="用户总数" value={1000} icon={Users} accentClassName="bg-primary" />
- *
- * // 小尺寸 - 用于 KPI 监控
- * <StatCard title="完成人数" value="10/20" subtitle="50%" icon={Users} accentClassName="bg-primary-50" iconClassName="text-primary" size="sm" />
+ * Modern "Architectural" StatCard - The "Outfit" Edition
+ * Feature: 
+ * 1. Numbers now use 'Outfit' font (modern, geometric).
+ * 2. Icon lines carry a subtle tint of the accent color.
  */
 export const StatCard: React.FC<StatCardProps> = ({
     title,
     value,
-    icon,
+    icon: Icon,
     accentClassName,
-    iconClassName = 'text-white',
+    iconClassName, // Optional override
     size = 'lg',
     subtitle,
     delay = '',
@@ -49,53 +44,96 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
     const isLarge = size === 'lg';
 
+    // Heuristic: Try to convert 'bg-blue-500' to 'text-blue-500' 
+    const inferredTextColor = accentClassName.replace('bg-', 'text-');
+
+    // Use provided iconClassName OR inferred color OR fallback to text-muted-foreground if all else fails
+    // But for the specific design request of "tinted lines", inferredTextColor is the primary strategy unless overridden.
+    const finalIconColor = iconClassName || inferredTextColor;
+
     return (
         <Card
             className={cn(
-                "relative overflow-hidden group transition-all duration-200 hover:scale-[1.02]",
-                isLarge ? "p-8" : "p-5",
+                "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]",
+                "hover:border-primary/20",
+                isLarge ? "h-36" : "h-28",
                 delay,
                 className
             )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
         >
+            {/* Subtle Noise Texture */}
+            <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
 
+            <div className="flex h-full relative z-10">
+                {/* Content Zone */}
+                <div className="flex-1 flex flex-col justify-between py-5 px-6 relative z-10">
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                        {/* Glowing LED Indicator */}
+                        <div className={cn(
+                            "w-1 h-3 rounded-full transition-all duration-500 ease-out group-hover:h-5",
+                            accentClassName,
+                            "shadow-[0_0_12px_rgba(0,0,0,0.3)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                        )}
+                        />
+                        <p className="font-semibold text-muted-foreground/80 uppercase tracking-widest leading-none text-[10px] truncate group-hover:text-foreground transition-colors duration-300">
+                            {title}
+                        </p>
+                    </div>
 
-            <div className={cn("flex items-center relative z-10", isLarge ? "gap-6" : "gap-4")}>
-                <IconBox
-                    icon={icon}
-                    size={isLarge ? 'lg' : 'md'}
-                    bgColor={accentClassName}
-                    iconColor={iconClassName}
-                    rounded={isLarge ? 'md' : 'xl'}
-                />
-
-                <div className="flex flex-col min-w-0 flex-1">
-                    <p className={cn(
-                        "font-bold text-text-muted uppercase tracking-wider leading-none",
-                        isLarge ? "text-xs mb-1" : "text-xs truncate"
-                    )}>
-                        {title}
-                    </p>
-                    <div className={cn("flex items-baseline gap-2", isLarge ? "" : "mt-0.5")}>
+                    {/* Value Area */}
+                    <div className="flex items-end gap-3 mt-auto transform transition-transform duration-500 group-hover:translate-x-0.5">
                         <h3 className={cn(
-                            "font-bold text-foreground tracking-tight leading-none tabular-nums",
-                            isLarge ? "text-4xl" : "text-2xl"
-                        )}>
+                            "font-bold text-foreground tabular-nums leading-none tracking-tight",
+                            isLarge ? "text-4xl" : "text-3xl"
+                        )} style={{ fontFamily: "'Outfit', sans-serif" }}>
                             {value}
                         </h3>
-                        {subtitle && (
-                            <span className="text-sm text-text-muted">{subtitle}</span>
-                        )}
-                        {trend && (
-                            <span className={cn(
-                                "text-[10px] font-bold px-2 py-0.5 rounded-md select-none border-0",
-                                trend.isUp ? "text-secondary bg-secondary-100" : "text-destructive bg-destructive-100"
-                            )}>
-                                {trend.isUp ? '↑' : '↓'} {trend.value}
-                            </span>
-                        )}
+
+                        <div className="flex flex-col justify-end mb-1">
+                            {/* Trend/Subtitle */}
+                            {trend ? (
+                                <div className={cn(
+                                    "flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded w-fit leading-none select-none transition-colors",
+                                    trend.isUp
+                                        ? "text-emerald-600 bg-emerald-500/10"
+                                        : "text-rose-600 bg-rose-500/10"
+                                )}>
+                                    <span className="mr-0.5">{trend.isUp ? '↑' : '↓'}</span>
+                                    {trend.value}
+                                </div>
+                            ) : subtitle && (
+                                <span className="text-xs font-medium text-muted-foreground/60 lowercase mb-0.5 whitespace-nowrap">
+                                    {subtitle}
+                                </span>
+                            )}
+                        </div>
                     </div>
+                </div>
+
+                {/* Right Visual Zone */}
+                <div className={cn(
+                    "relative h-full flex items-center justify-center overflow-hidden w-32 shrink-0"
+                )}>
+                    {/* The Icon: Watermark Style - Tinted Lines */}
+                    <div className={cn(
+                        "absolute -right-6 -bottom-6 w-32 h-32 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-bottom-right",
+                        "group-hover:scale-110 group-hover:-rotate-6 group-hover:-translate-y-2",
+                    )}>
+                        <Icon
+                            className={cn(
+                                "w-full h-full",
+                                // Use the final calculated color
+                                finalIconColor,
+                                "opacity-[0.12] group-hover:opacity-[0.2]",
+                                "dark:opacity-[0.15] dark:group-hover:opacity-[0.25]"
+                            )}
+                            strokeWidth={0.5}
+                        />
+                    </div>
+
+                    {/* Linear fade edge */}
+                    <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-card to-transparent pointer-events-none" />
                 </div>
             </div>
         </Card>
