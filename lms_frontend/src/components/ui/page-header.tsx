@@ -50,10 +50,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10",
+      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6",
       className
     )}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
         {/* 面包屑 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
@@ -79,21 +79,21 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
 
         {/* 标题区域 */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           {icon && (
-            <div className="w-20 h-20 bg-primary-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
+            <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center transition-transform duration-200 hover:scale-110">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "text-white w-10 h-10")
+                className: cn(icon.props.className, "text-white w-6 h-6")
               }) : icon}
             </div>
           )}
           <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
               {title}
             </h2>
             {subtitle && (
-              <p className="text-lg font-semibold text-text-muted uppercase tracking-wider mt-2 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                <span className="w-10 h-1 bg-primary-600 rounded-full" />
+              <p className="text-sm font-semibold text-text-muted uppercase tracking-wider mt-1 flex items-center gap-3 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="w-6 h-1 bg-primary-600 rounded-full" />
                 {subtitle}
               </p>
             )}

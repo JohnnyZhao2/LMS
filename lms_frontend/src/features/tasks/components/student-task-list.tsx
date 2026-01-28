@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Inbox, Activity, Search } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
-import { Skeleton, SegmentedControl } from '@/components/ui';
+import { Skeleton, SegmentedControl, PageHeader } from '@/components/ui';
 import { Input } from '@/components/ui/input';
 import type { TaskStatus } from '@/types/api';
 
@@ -38,32 +38,23 @@ export const StudentTaskList: React.FC = () => {
     return (
         <div className="space-y-10">
             {/* 顶部标题栏 - Flat Design */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-4">
-                    <h2 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight flex items-center gap-4">
-                        <div className="w-14 h-14 bg-primary rounded-md flex items-center justify-center text-white">
-                            <Activity className="w-8 h-8" />
-                        </div>
-                        任务治理中心
-                    </h2>
-                    <p className="text-lg font-semibold text-text-muted uppercase tracking-widest flex items-center gap-3">
-                        <span className="w-8 h-[3px] bg-primary rounded-full" />
-                        战略学习任务
-                    </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* 顶部标题栏 - Refactored to use PageHeader */}
+            <PageHeader
+                title="任务治理中心"
+                subtitle="战略学习任务"
+                icon={<Activity />}
+                extra={
                     <div className="relative group min-w-[320px]">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-primary transition-colors" />
                         <Input
-                            className="pl-14 h-14 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-base font-medium "
+                            className="pl-14 h-12 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm font-medium"
                             placeholder="搜索任务标题或编号..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             {/* 分段筛选器 - Flat Design */}
             <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b-2 border-border">
