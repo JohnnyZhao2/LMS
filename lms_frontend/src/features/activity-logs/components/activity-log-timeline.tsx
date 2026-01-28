@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type ActivityLogStatus = 'success' | 'failed' | 'partial';
@@ -91,52 +91,66 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {groupedItems.map((group) => (
         <div key={group.dateKey} className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <span>{getDateLabel(group.dateKey)}</span>
-            <Badge variant="secondary">{group.items.length}</Badge>
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-sm font-bold text-foreground/80">{getDateLabel(group.dateKey)}</span>
+            <span className="text-[10px] font-medium text-text-muted bg-muted px-1.5 py-0.5 rounded-full">
+              {group.items.length}
+            </span>
           </div>
-          <div className="space-y-4">
-            {group.items.map((item) => {
-              return (
-                <div key={item.id} className="flex items-start gap-4">
-                  <div className="w-16 pt-1 text-xs font-semibold text-text-muted">
-                    {getTimeLabel(item.createdAt)}
-                  </div>
+
+          <div className="overflow-hidden rounded-xl border border-border/50 bg-background shadow-sm shadow-black/5">
+            <div className="divide-y divide-border/40">
+              {group.items.map((item) => {
+                return (
                   <div
-                    className={cn(
-                      'relative flex-1 rounded-lg border border-border bg-background p-4'
-                    )}
+                    key={item.id}
+                    className="group relative flex items-start gap-3 p-3 transition-colors hover:bg-muted/30"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
+                    {/* Time Column */}
+                    <div className="w-12 shrink-0 pt-1 text-[11px] font-medium text-text-muted/70 tabular-nums">
+                      {getTimeLabel(item.createdAt)}
+                    </div>
+
+                    {/* Icon Column */}
+                    <div className="shrink-0 pt-0.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50 text-foreground/70 ring-1 ring-border/5 group-hover:bg-background group-hover:shadow-sm transition-all text-xs">
                         {item.icon ? (
-                          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground">
-                            {item.icon}
+                          <span className="transition-transform group-hover:scale-110">
+                            {React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 14 })}
                           </span>
-                        ) : null}
-                        <div className="space-y-1">
-                          <div className="text-sm leading-tight text-foreground">{item.title}</div>
-                          <div
-                            className={cn(
-                              'rounded-md bg-muted px-2.5 py-1.5 text-xs leading-tight',
-                              getDescriptionClass(item.status)
-                            )}
-                          >
-                            {item.description || '无详细描述'}
-                          </div>
-                          {item.meta ? (
-                            <div className="text-xs text-text-muted">{item.meta}</div>
-                          ) : null}
+                        ) : (
+                          <Activity size={14} />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content Column */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[13px] font-medium text-foreground truncate">
+                          {item.title}
                         </div>
+                        {item.meta && (
+                          <div className="shrink-0 text-[10px] text-text-muted">
+                            {item.meta}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className={cn(
+                        "text-[12px] leading-relaxed break-words opacity-90",
+                        getDescriptionClass(item.status)
+                      )}>
+                        {item.description || "无详细描述"}
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       ))}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Activity, FileText, RefreshCw, Settings, User } from 'lucide-react';
+import { Activity, FileText, Filter, RefreshCw, Settings, User } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
 import { ContentPanel } from '@/components/ui';
@@ -92,9 +92,6 @@ export const ActivityLogsPanel: React.FC = () => {
     operationPagination.pageSize
   );
 
-  const userLogs = userLogsData?.results || [];
-  const contentLogs = contentLogsData?.results || [];
-  const operationLogs = operationLogsData?.results || [];
 
   const handleRefresh = () => {
     if (activeTab === 'user') {
@@ -109,7 +106,8 @@ export const ActivityLogsPanel: React.FC = () => {
   };
 
   const userTimelineItems = useMemo<ActivityLogTimelineItem[]>(() => {
-    return userLogs.map((log) => ({
+    const logs = userLogsData?.results || [];
+    return logs.map((log) => ({
       id: `user-${log.id}`,
       createdAt: log.created_at,
       status: log.status,
@@ -122,10 +120,11 @@ export const ActivityLogsPanel: React.FC = () => {
       description: log.description,
       icon: <User className="h-4 w-4" />,
     }));
-  }, [userLogs]);
+  }, [userLogsData]);
 
   const contentTimelineItems = useMemo<ActivityLogTimelineItem[]>(() => {
-    return contentLogs.map((log) => ({
+    const logs = contentLogsData?.results || [];
+    return logs.map((log) => ({
       id: `content-${log.id}`,
       createdAt: log.created_at,
       status: log.status,
@@ -141,10 +140,11 @@ export const ActivityLogsPanel: React.FC = () => {
       description: log.description,
       icon: <FileText className="h-4 w-4" />,
     }));
-  }, [contentLogs]);
+  }, [contentLogsData]);
 
   const operationTimelineItems = useMemo<ActivityLogTimelineItem[]>(() => {
-    return operationLogs.map((log) => ({
+    const logs = operationLogsData?.results || [];
+    return logs.map((log) => ({
       id: `operation-${log.id}`,
       createdAt: log.created_at,
       status: log.status,
@@ -160,105 +160,146 @@ export const ActivityLogsPanel: React.FC = () => {
       description: log.description,
       icon: <Activity className="h-4 w-4" />,
     }));
-  }, [operationLogs]);
+  }, [operationLogsData]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Activity className="w-6 h-6 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">活动记录</h2>
+      {/* Page Title Area (Outside) */}
+      <div className="flex items-center gap-3 px-0.5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+          <Activity className="w-5 h-5" />
         </div>
-        <div className="flex items-center gap-2">
-          {isSuperuser && (
-            <button
-              type="button"
-              onClick={() => roleNavigate(ROUTES.ACTIVITY_LOG_SETTINGS)}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-foreground bg-muted rounded-lg hover:bg-muted-hover transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              设置
-            </button>
-          )}
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-foreground bg-muted rounded-lg hover:bg-muted-hover transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-            刷新
-          </button>
+        <div>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">活动记录</h2>
+          <p className="text-[12px] text-text-muted font-medium opacity-80">查看系统内的关键操作与审计日志</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="user">用户日志</TabsTrigger>
-          <TabsTrigger value="content">内容日志</TabsTrigger>
-          <TabsTrigger value="operation">操作日志</TabsTrigger>
-        </TabsList>
+      <ContentPanel padding="none" className="overflow-hidden border-border/60 shadow-sm bg-background">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Card Header (Controls & Tabs) */}
+          <div className="px-6 py-4 border-b border-border/40 bg-muted/5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList className="bg-muted/30 p-1 h-auto rounded-lg w-fit border border-border/30">
+                <TabsTrigger
+                  value="user"
+                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                >
+                  用户日志
+                </TabsTrigger>
+                <TabsTrigger
+                  value="content"
+                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                >
+                  内容日志
+                </TabsTrigger>
+                <TabsTrigger
+                  value="operation"
+                  className="px-5 py-1.5 text-[13px] rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+                >
+                  操作日志
+                </TabsTrigger>
+              </TabsList>
 
-        {/* User Logs Tab */}
-        <TabsContent value="user">
-          <ContentPanel padding="md" className="space-y-6">
-            <ActivityLogTimeline
-              items={userTimelineItems}
-              isLoading={userLogsLoading}
-              emptyText="暂无用户日志"
-            />
-            <Pagination
-              current={userPagination.page}
-              total={userLogsData?.count || 0}
-              pageSize={userPagination.pageSize}
-              showSizeChanger
-              showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
-              onChange={(page, pageSize) => setUserPagination({ page, pageSize })}
-              onShowSizeChange={(page, size) => setUserPagination({ page, pageSize: size })}
-            />
-          </ContentPanel>
-        </TabsContent>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-text-muted transition-transform group-hover:rotate-180" />
+                  <span>刷新</span>
+                </button>
 
-        {/* Content Logs Tab */}
-        <TabsContent value="content">
-          <ContentPanel padding="md" className="space-y-6">
-            <ActivityLogTimeline
-              items={contentTimelineItems}
-              isLoading={contentLogsLoading}
-              emptyText="暂无内容日志"
-            />
-            <Pagination
-              current={contentPagination.page}
-              total={contentLogsData?.count || 0}
-              pageSize={contentPagination.pageSize}
-              showSizeChanger
-              showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
-              onChange={(page, pageSize) => setContentPagination({ page, pageSize })}
-              onShowSizeChange={(page, size) => setContentPagination({ page, pageSize: size })}
-            />
-          </ContentPanel>
-        </TabsContent>
+                <button
+                  type="button"
+                  className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                >
+                  <Filter className="w-3.5 h-3.5 text-text-muted" />
+                  <span>筛选</span>
+                </button>
 
-        {/* Operation Logs Tab */}
-        <TabsContent value="operation">
-          <ContentPanel padding="md" className="space-y-6">
-            <ActivityLogTimeline
-              items={operationTimelineItems}
-              isLoading={operationLogsLoading}
-              emptyText="暂无操作日志"
-            />
-            <Pagination
-              current={operationPagination.page}
-              total={operationLogsData?.count || 0}
-              pageSize={operationPagination.pageSize}
-              showSizeChanger
-              showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
-              onChange={(page, pageSize) => setOperationPagination({ page, pageSize })}
-              onShowSizeChange={(page, size) => setOperationPagination({ page, pageSize: size })}
-            />
-          </ContentPanel>
-        </TabsContent>
-      </Tabs>
+                {isSuperuser && (
+                  <button
+                    type="button"
+                    onClick={() => roleNavigate(ROUTES.ACTIVITY_LOG_SETTINGS)}
+                    className="group flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium text-foreground bg-background border border-border/60 rounded-lg hover:bg-muted/50 transition-all active:scale-95 shadow-sm"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-text-muted transition-transform group-hover:rotate-45" />
+                    设置
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card Content Section */}
+          <div className="p-0">
+            <TabsContent value="user" className="mt-0 outline-none">
+              <div className="p-6 space-y-6">
+                <ActivityLogTimeline
+                  items={userTimelineItems}
+                  isLoading={userLogsLoading}
+                  emptyText="暂无用户日志"
+                />
+                <div className="pt-4 border-t border-border/30">
+                  <Pagination
+                    current={userPagination.page}
+                    total={userLogsData?.count || 0}
+                    pageSize={userPagination.pageSize}
+                    showSizeChanger
+                    showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
+                    onChange={(page, pageSize) => setUserPagination({ page, pageSize })}
+                    onShowSizeChange={(page, size) => setUserPagination({ page, pageSize: size })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="content" className="mt-0 outline-none">
+              <div className="p-6 space-y-6">
+                <ActivityLogTimeline
+                  items={contentTimelineItems}
+                  isLoading={contentLogsLoading}
+                  emptyText="暂无内容日志"
+                />
+                <div className="pt-4 border-t border-border/30">
+                  <Pagination
+                    current={contentPagination.page}
+                    total={contentLogsData?.count || 0}
+                    pageSize={contentPagination.pageSize}
+                    showSizeChanger
+                    showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
+                    onChange={(page, pageSize) => setContentPagination({ page, pageSize })}
+                    onShowSizeChange={(page, size) => setContentPagination({ page, pageSize: size })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="operation" className="mt-0 outline-none">
+              <div className="p-6 space-y-6">
+                <ActivityLogTimeline
+                  items={operationTimelineItems}
+                  isLoading={operationLogsLoading}
+                  emptyText="暂无操作日志"
+                />
+                <div className="pt-4 border-t border-border/30">
+                  <Pagination
+                    current={operationPagination.page}
+                    total={operationLogsData?.count || 0}
+                    pageSize={operationPagination.pageSize}
+                    showSizeChanger
+                    showTotal={(total, range) => `共 ${total} 条，当前 ${range[0]}-${range[1]} 条`}
+                    onChange={(page, pageSize) => setOperationPagination({ page, pageSize })}
+                    onShowSizeChange={(page, size) => setOperationPagination({ page, pageSize: size })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </ContentPanel>
     </div>
   );
 };
