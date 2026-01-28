@@ -748,4 +748,96 @@
             opacity: 1 !important;
         }
     }
+
+    .animate-pulse-slow {
+        animation: pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+}
+
+/* ============================================
+   🎓 Role-Based Themes (角色色彩人格)
+   覆盖全局变量，实现角色专属的主题色
+   ============================================ */
+
+/* STUDENT - Emerald/Teal (生长、希望) */
+.theme-student {
+    /* Primary: Emerald-500 */
+    --theme-primary: #10B981;
+    --theme-primary-hover: #059669;
+
+    /* Primary Palette (Emerald) */
+    --theme-primary-50: #ECFDF5;
+    --theme-primary-100: #D1FAE5;
+    --theme-primary-200: #A7F3D0;
+    --theme-primary-300: #6EE7B7;
+    --theme-primary-400: #34D399;
+    --theme-primary-500: #10B981;
+    --theme-primary-600: #059669;
+    --theme-primary-700: #047857;
+    --theme-primary-800: #065F46;
+    --theme-primary-900: #064E3B;
+
+    /* Background: Slight Warmth/Green Tint */
+    --theme-background: #F8FCF8;
+    --theme-muted: #F0FDF4;
+    /* Emerald-50 */
+    --theme-muted-hover: #D1FAE5;
+
+    /* Secondary: Teal */
+    --theme-secondary: #14B8A6;
+
+    /* 圆角：稍微圆润一点，亲和力 */
+    --theme-radius-sm: 6px;
+    --theme-radius-md: 8px;
+    --theme-radius-lg: 12px;
+    --theme-radius-xl: 16px;
+}
+
+/* MENTOR - Indigo/Violet (专业、睿智) */
+.theme-mentor {
+    /* Primary: Indigo-600 */
+    --theme-primary: #4F46E5;
+    --theme-primary-hover: #4338CA;
+
+    /* Primary Palette (Indigo) */
+    --theme-primary-50: #EEF2FF;
+    --theme-primary-100: #E0E7FF;
+    --theme-primary-200: #C7D2FE;
+    --theme-primary-300: #A5B4FC;
+    --theme-primary-400: #818CF8;
+    --theme-primary-500: #6366F1;
+    --theme-primary-600: #4F46E5;
+    --theme-primary-700: #4338CA;
+    --theme-primary-800: #3730A3;
+    --theme-primary-900: #312E81;
+
+    /* Background: Cool White */
+    --theme-background: #FAFAFF;
+    --theme-muted: #F5F3FF;
+    /* Violet-50 */
+    --theme-muted-hover: #EDE9FE;
+
+    /* Accent: Rose (for margins) */
+    --theme-accent: #E11D48;
+
+    /* 圆角：保持适中专业 */
+    --theme-radius-sm: 4px;
+    --theme-radius-md: 6px;
+    --theme-radius-lg: 8px;
+    --theme-radius-xl: 12px;
+}
+
+/* ADMIN - Slate/Blue (系统、理性) - 默认Light主题即可，也可微调 */
+.theme-admin {
+    /* 使用默认 Light 主题变量，或者微调得更冷一些 */
+    --theme-background: #F8FAFC;
+    /* Slate-50 */
+    --theme-muted: #F1F5F9;
+    /* Slate-100 */
+
+    /* 更加硬朗的圆角 */
+    --theme-radius-sm: 2px;
+    --theme-radius-md: 4px;
+    --theme-radius-lg: 6px;
+    --theme-radius-xl: 8px;
 }
