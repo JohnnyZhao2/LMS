@@ -2,16 +2,64 @@
  * 仪表盘相关类型定义
  */
 
-import type { StudentPendingTask } from './task';
 import type { LatestKnowledge } from './knowledge';
+
+/**
+ * 学员统计数据
+ */
+export interface StudentStats {
+  in_progress_count: number;
+  urgent_count: number;
+  completion_rate: number;
+  exam_avg_score: number | null;
+  total_tasks: number;
+  completed_count: number;
+  overdue_count: number;
+}
+
+/**
+ * 任务参与者进度
+ */
+export interface TaskParticipant {
+  id: number;
+  name: string;
+  progress: number;
+  rank: number;
+  is_me: boolean;
+}
+
+/**
+ * 学员仪表盘任务
+ */
+export interface StudentDashboardTask {
+  id: number;
+  task_id: number;
+  task_title: string;
+  deadline: string;
+  created_by_name: string;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
+  status_display: string;
+  progress: {
+    completed: number;
+    total: number;
+    percentage: number;
+    knowledge_total?: number;
+    knowledge_completed?: number;
+    quiz_total?: number;
+    quiz_completed?: number;
+  };
+  score?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+}
 
 /**
  * 学员仪表盘
  */
 export interface StudentDashboard {
-  pending_tasks: StudentPendingTask[];
+  stats: StudentStats;
+  tasks: StudentDashboardTask[];
   latest_knowledge: LatestKnowledge[];
-  task_summary: Record<string, unknown>;
 }
 
 /**

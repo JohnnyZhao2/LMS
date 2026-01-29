@@ -1,19 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { StudentDashboard } from '@/types/api';
+import type { StudentDashboard, TaskParticipant } from '@/types/api';
 
 /**
  * 获取学员仪表盘数据
  */
-export const useStudentDashboard = (knowledgeLimit = 6, pendingLimit = 10) => {
+export const useStudentDashboard = (taskLimit = 10, knowledgeLimit = 6) => {
   const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['student-dashboard', currentRole ?? 'UNKNOWN', knowledgeLimit, pendingLimit],
+    queryKey: ['student-dashboard', currentRole ?? 'UNKNOWN', taskLimit, knowledgeLimit],
     queryFn: () =>
       apiClient.get<StudentDashboard>(
-        `/dashboard/student/?knowledge_limit=${knowledgeLimit}&pending_limit=${pendingLimit}`,
+        `/dashboard/student/?task_limit=${taskLimit}&knowledge_limit=${knowledgeLimit}`,
       ),
     enabled: currentRole !== null,
+  });
+};
+
+/**
+ * 获取任务参与者进度
+ */
+export const useTaskParticipants = (taskId: number | null) => {
+  return useQuery({
+    queryKey: ['task-participants', taskId],
+    queryFn: () =>
+      apiClient.get<TaskParticipant[]>(
+        `/dashboard/student/task/${taskId}/participants/`,
+      ),
+    enabled: taskId !== null,
   });
 };

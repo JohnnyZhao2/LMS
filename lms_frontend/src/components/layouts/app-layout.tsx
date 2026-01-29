@@ -33,31 +33,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <div className={cn("min-h-screen relative isolate bg-muted flex flex-col", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
       {/* 动态背景层 - 万卷书海 (The Ancient Scroll) - 以“竹简古籍”为核心意蕴的设计 */}
       {(() => {
-        // 角色配色与标签配置
+        // 角色配色与标签配置 - 每个角色固定颜色，与 header.tsx 保持一致
         const configs = {
           STUDENT: {
-            color: "#10B981", // 翠绿 (Emerald)
+            color: "#0EA5E9", // 天蓝 (Sky-500)
             label: "学 员 模 式 // 专注 · 成长 · 探索",
             ref: "卷号索引: STU-2026",
-            bgTint: "rgba(16, 185, 129, 0.025)" // 增强底色
+            bgTint: "rgba(14, 165, 233, 0.025)"
           },
           MENTOR: {
-            color: "#4F46E5", // 靛蓝 (Indigo)
+            color: "#10B981", // 翠绿 (Emerald-500)
             label: "导 师 模 式 // 指导 · 评估 · 严谨",
             ref: "卷号索引: MEN-2026",
-            bgTint: "rgba(79, 70, 229, 0.025)"
+            bgTint: "rgba(16, 185, 129, 0.025)"
           },
-          ADMIN: {
-            color: "#C41230", // 招行红 (Cinnabar)
-            label: "管 理 后 台 // 架构 · 权限 · 全局",
-            ref: "卷号索引: ROOT-ADMIN",
-            bgTint: "rgba(196, 18, 48, 0.025)"
+          DEPT_MANAGER: {
+            color: "#8B5CF6", // 紫色 (Violet-500)
+            label: "室 经 理 模 式 // 管理 · 协调 · 统筹",
+            ref: "卷号索引: DEPT-2026",
+            bgTint: "rgba(139, 92, 246, 0.025)"
           },
           TEAM_MANAGER: {
-            color: "#C41230",
+            color: "#F59E0B", // 琥珀色 (Amber-500)
             label: "团 队 管 理 // 协作 · 效能",
-            ref: "卷号索引: DEPT-MGMT",
-            bgTint: "rgba(196, 18, 48, 0.025)"
+            ref: "卷号索引: TEAM-MGMT",
+            bgTint: "rgba(245, 158, 11, 0.025)"
+          },
+          ADMIN: {
+            color: "#F43F5E", // 玫红 (Rose-500)
+            label: "管 理 后 台 // 架构 · 权限 · 全局",
+            ref: "卷号索引: ROOT-ADMIN",
+            bgTint: "rgba(244, 63, 94, 0.025)"
           }
         };
 

@@ -46,12 +46,13 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   TEAM_MANAGER: "团队经理",
 }
 
+// 角色颜色 - 每个角色固定颜色，不随主题变化
 const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
-  STUDENT: "bg-primary",
-  MENTOR: "bg-secondary",
-  DEPT_MANAGER: "bg-primary-500",
-  TEAM_MANAGER: "bg-warning-500",
-  ADMIN: "bg-destructive",
+  STUDENT: "bg-sky-500",         // 天蓝
+  MENTOR: "bg-emerald-500",      // 翠绿
+  DEPT_MANAGER: "bg-violet-500", // 紫色
+  TEAM_MANAGER: "bg-amber-500",  // 琥珀色
+  ADMIN: "bg-rose-500",          // 玫红
 }
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]

@@ -135,3 +135,173 @@ def get_monthly_tasks_count() -> int:
         is_deleted=False,
         created_at__gte=start_dt
     ).count()
+
+
+def get_student_all_tasks(user_id: int, limit: int = 10) -> QuerySet:
+    """
+    获取学员的任务列表
+    按截止日期排序，进行中的在前
+    """
+    from django.db.models import Case, When, Value, IntegerField
+
+    return TaskAssignment.objects.filter(
+        assignee_id=user_id,
+        task__is_deleted=False,
+    ).select_related(
+        'task', 'task__created_by'
+    ).prefetch_related(
+        'task__task_knowledge',
+        'task__task_quizzes',
+        'knowledge_progress'
+    ).annotate(
+        status_order=Case(
+            When(status='IN_PROGRESS', then=Value(0)),
+            When(status='COMPLETED', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField()
+        )
+    ).order_by(
+        'status_order',
+        'task__deadline'
+    )[:limit]
+
+
+def get_urgent_tasks_count(user_id: int, hours: int = 48) -> int:
+    """获取即将截止的任务数量（默认48小时内）"""
+    deadline_threshold = timezone.now() + timedelta(hours=hours)
+    return TaskAssignment.objects.filter(
+        assignee_id=user_id,
+        status='IN_PROGRESS',
+        task__is_deleted=False,
+        task__is_closed=False,
+        task__deadline__lte=deadline_threshold,
+        task__deadline__gt=timezone.now()
+    ).count()
+
+
+def get_student_exam_avg_score(user_id: int) -> Optional[float]:
+    """获取学员的考试平均分"""
+    result = Submission.objects.filter(
+        user_id=user_id,
+        status='GRADED',
+        task_assignment__task__is_deleted=False,
+        quiz__quiz_type='EXAM'
+    ).aggregate(avg_score=Avg('obtained_score'))
+    return float(result['avg_score']) if result['avg_score'] else None
+
+
+def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    获取同组学员的完成率排名
+    基于同一导师下的学员进行排名
+    """
+    user = User.objects.filter(id=user_id).select_related('mentor').first()
+    if not user or not user.mentor:
+        return []
+
+    # 获取同导师下的所有学员
+    peers = User.objects.filter(
+        mentor=user.mentor,
+        is_active=True
+    ).exclude(
+        role__in=['ADMIN', 'DEPT_MANAGER', 'TEAM_MANAGER', 'MENTOR']
+    )
+
+    peer_stats = []
+    for peer in peers:
+        assignments = get_student_assignments(user_id=peer.id)
+        stats = calculate_task_stats(assignments)
+        peer_stats.append({
+            'id': peer.id,
+            'name': peer.username,
+            'progress': stats['completion_rate'],
+            'is_me': peer.id == user_id
+        })
+
+    # 按完成率排序
+    peer_stats.sort(key=lambda x: x['progress'], reverse=True)
+
+    # 添加排名
+    for i, peer in enumerate(peer_stats):
+        peer['rank'] = i + 1
+
+    # 找到当前用户的位置，返回其周围的学员
+    my_index = next((i for i, p in enumerate(peer_stats) if p['is_me']), 0)
+    start = max(0, my_index - 2)
+    end = min(len(peer_stats), start + limit)
+    if end - start < limit:
+        start = max(0, end - limit)
+
+    return peer_stats[start:end]
+
+
+def get_task_participants_progress(
+    task_id: int,
+    current_user_id: int,
+    limit: int = 5
+) -> List[Dict[str, Any]]:
+    """
+    获取任务参与者的进度
+    Args:
+        task_id: 任务ID
+        current_user_id: 当前用户ID
+        limit: 返回数量限制
+    Returns:
+        参与者进度列表
+    """
+    from apps.submissions.models import Submission
+
+    # 获取该任务的所有分配
+    assignments = TaskAssignment.objects.filter(
+        task_id=task_id,
+        task__is_deleted=False
+    ).select_related(
+        'assignee', 'task'
+    ).prefetch_related(
+        'task__task_knowledge',
+        'task__task_quizzes',
+        'knowledge_progress'
+    )
+
+    if not assignments.exists():
+        return []
+
+    participants = []
+    for assignment in assignments:
+        task = assignment.task
+        total_k = task.task_knowledge.count()
+        total_q = task.task_quizzes.count()
+        total = total_k + total_q
+
+        if total == 0:
+            progress = 0
+        else:
+            completed_k = assignment.knowledge_progress.filter(is_completed=True).count()
+            completed_q = Submission.objects.filter(
+                task_assignment=assignment
+            ).values_list('quiz_id', flat=True).distinct().count()
+            completed = completed_k + completed_q
+            progress = round(completed / total * 100, 1)
+
+        participants.append({
+            'id': assignment.assignee.id,
+            'name': assignment.assignee.username,
+            'progress': progress,
+            'is_me': assignment.assignee.id == current_user_id
+        })
+
+    # 按进度排序
+    participants.sort(key=lambda x: x['progress'], reverse=True)
+
+    # 添加排名
+    for i, p in enumerate(participants):
+        p['rank'] = i + 1
+
+    # 找到当前用户位置，返回周围的参与者
+    my_index = next((i for i, p in enumerate(participants) if p['is_me']), 0)
+    start = max(0, my_index - 2)
+    end = min(len(participants), start + limit)
+    if end - start < limit:
+        start = max(0, end - limit)
+
+    return participants[start:end]

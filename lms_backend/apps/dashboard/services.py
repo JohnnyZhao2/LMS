@@ -20,8 +20,13 @@ from .selectors import (
     get_assignments_by_students,
     get_latest_knowledge,
     get_monthly_tasks_count,
+    get_peer_ranking,
     get_pending_tasks,
+    get_student_all_tasks,
     get_student_assignments,
+    get_student_exam_avg_score,
+    get_task_participants_progress,
+    get_urgent_tasks_count,
     get_weekly_active_users_count,
 )
 
@@ -30,10 +35,60 @@ class StudentDashboardService(BaseService):
     """
     学员仪表盘服务
     处理：
-    - 待办任务获取
+    - 统计数据获取
+    - 任务列表获取
     - 最新知识获取
-    - 任务摘要统计
+    - 同伴排名获取
     """
+
+    def get_dashboard_data(
+        self,
+        user: User,
+        task_limit: int = 10,
+        knowledge_limit: int = 6
+    ) -> Dict[str, Any]:
+        """
+        获取学员仪表盘完整数据
+        """
+        stats = self.get_stats(user)
+        tasks = get_student_all_tasks(user.id, limit=task_limit)
+        latest_knowledge = get_latest_knowledge(limit=knowledge_limit)
+
+        return {
+            'stats': stats,
+            'tasks': tasks,
+            'latest_knowledge': latest_knowledge,
+        }
+
+    def get_task_participants(
+        self,
+        user: User,
+        task_id: int
+    ) -> List[Dict[str, Any]]:
+        """
+        获取任务参与者进度
+        """
+        return get_task_participants_progress(task_id, user.id)
+
+    def get_stats(self, user: User) -> Dict[str, Any]:
+        """
+        获取学员统计数据
+        """
+        assignments = get_student_assignments(user_id=user.id)
+        task_stats = calculate_task_stats(assignments)
+        urgent_count = get_urgent_tasks_count(user.id)
+        exam_avg_score = get_student_exam_avg_score(user.id)
+
+        return {
+            'in_progress_count': task_stats['in_progress_tasks'],
+            'urgent_count': urgent_count,
+            'completion_rate': task_stats['completion_rate'],
+            'exam_avg_score': round(exam_avg_score, 1) if exam_avg_score else None,
+            'total_tasks': task_stats['total_tasks'],
+            'completed_count': task_stats['completed_tasks'],
+            'overdue_count': task_stats['overdue_tasks']
+        }
+
     def get_pending_tasks(self, user: User, limit: int = 10) -> QuerySet:
         """
         获取学员的待办任务
