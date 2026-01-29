@@ -27,40 +27,92 @@ interface MiniCalendarProps {
 }
 
 const MiniCalendar: React.FC<MiniCalendarProps> = ({ className }) => {
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  const monthNum = dayjs().format('MM');
+  const year = dayjs().format('YYYY');
+  const daysInMonth = dayjs().daysInMonth();
+  const startDay = dayjs().startOf('month').day();
   const currentDay = dayjs().date();
 
+  const activeDays = [5, 12, 18, 26, 29];
+
   return (
-    <Card className={cn("p-6 border-border/50 bg-card/50 backdrop-blur-sm", className)}>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-primary-500" />
-          <span className="font-black text-sm text-foreground">学习日历</span>
+    <Card className={cn(
+      "relative border-border/40 bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-200/50 flex flex-col overflow-hidden group/calendar transition-all duration-500 hover:shadow-primary-500/10",
+      className
+    )}>
+      {/* 极简背景氛围层 */}
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary-50/50 rounded-full blur-3xl transition-all duration-1000 group-hover/calendar:bg-primary-100/40" />
+      <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-secondary-50/30 rounded-full blur-3xl transition-all duration-1000 group-hover/calendar:bg-secondary-100/30" />
+
+      {/* 2026 年份：右上角工业风装饰标识 */}
+      <div className="absolute top-6 right-8 z-20 flex flex-col items-end gap-1.5">
+        <span className="text-[10px] font-black text-slate-400 font-mono tracking-[0.5em] pointer-events-none select-none leading-none">
+          {year}
+        </span>
+        <div className="flex gap-1">
+          <div className="h-[1px] w-6 bg-slate-200" />
+          <div className="h-[1px] w-1.5 bg-primary-300" />
         </div>
-        <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
-          {dayjs().format('MMMM YYYY')}
+      </div>
+
+      {/* 01 月份：全局中心极简大气水印 */}
+      <div className="absolute inset-x-0 top-20 bottom-0 z-0 flex items-center justify-center overflow-hidden">
+        <span className="text-[220px] font-black text-slate-900/[0.018] tracking-tighter leading-none select-none pointer-events-none italic">
+          {monthNum}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-          <span key={d} className="text-[9px] font-black text-text-muted pb-2">{d}</span>
-        ))}
-        {Array.from({ length: dayjs().startOf('month').day() }).map((_, i) => (
-          <div key={`empty-${i}`} />
-        ))}
-        {days.map(d => (
-          <div
-            key={d}
-            className={cn(
-              "aspect-square flex items-center justify-center text-[10px] font-bold rounded-lg transition-all",
-              d === currentDay
-                ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                : "hover:bg-muted text-text-muted"
-            )}
-          >
-            {d}
-          </div>
-        ))}
+
+      {/* 日历网格：增加顶部空间，确保不与年份冲突 */}
+      <div className="relative z-10 px-8 pb-10 pt-16 flex-1 flex flex-col">
+        <div className="grid grid-cols-7 mb-6">
+          {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
+            <span key={d} className="text-[9px] font-black text-slate-300 text-center tracking-widest">{d}</span>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: startDay }).map((_, i) => (
+            <div key={`empty-${i}`} className="aspect-square" />
+          ))}
+
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const day = i + 1;
+            const isToday = day === currentDay;
+            const hasTask = activeDays.includes(day);
+
+            return (
+              <div key={day} className="aspect-square relative flex items-center justify-center cursor-pointer group/day">
+                {/* 悬停反馈 */}
+                {!isToday && (
+                  <div className="absolute inset-1 rounded-xl bg-slate-50 opacity-0 transition-all duration-200 group-hover/day:opacity-100 scale-90 group-hover/day:scale-100" />
+                )}
+
+                {isToday ? (
+                  /* 选中状态：艺术化衬线体日期 + 简笔背景 */
+                  <div className="relative w-11 h-11 flex items-center justify-center animate-in zoom-in duration-500 z-20">
+                    <CalendarIcon className="w-10 h-10 text-slate-400/20 stroke-[1.5]" />
+                    <span className="absolute inset-0 flex items-center justify-center text-lg font-serif italic text-slate-900 translate-y-0.5">
+                      {day}
+                    </span>
+                  </div>
+                ) : (
+                  /* 常规状态 */
+                  <div className="relative w-10 h-10 flex flex-col items-center justify-center transition-all duration-300">
+                    <span className="text-[14px] font-black text-slate-600 group-hover/day:text-slate-900 leading-none">
+                      {day}
+                    </span>
+
+                    {/* 任务圆点：仅在非选中日期显示，消除冗余 */}
+                    {hasTask && (
+                      <div className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary-500/60 transition-all duration-300 group-hover/day:scale-150 group-hover/day:bg-primary-500" />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </Card>
   );
@@ -239,7 +291,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         <div className="lg:col-span-4">
-          <MiniCalendar className="h-full shadow-sm" />
+          <MiniCalendar className="shadow-sm" />
         </div>
 
         {/* 第二行：知识速递 (8) + 同伴/贴士 (4) */}
