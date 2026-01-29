@@ -10,6 +10,7 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -22,7 +23,7 @@ import type { LatestKnowledge, StudentDashboardTask } from '@/types/api';
 import { cn } from '@/lib/utils';
 
 /**
- * 迷你学习日历
+ * 迷你学习日历 - 北欧社论风格 + 任务截止日期功能
  */
 interface MiniCalendarProps {
   className?: string;
@@ -40,6 +41,8 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
     }
   }, [selectedTask]);
 
+  const monthNum = displayDate.format('MM');
+  const year = displayDate.format('YYYY');
   const daysInMonth = displayDate.daysInMonth();
   const startDay = displayDate.startOf('month').day();
 
@@ -55,48 +58,68 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
 
   return (
     <Card className={cn(
-      "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)] hover:border-primary/20 flex flex-col h-full",
+      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 dark:shadow-none flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-[420px]",
       className
     )}>
-      {/* 噪点纹理 */}
-      <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+      <style>{`
+        @keyframes draw {
+          from { stroke-dashoffset: 400; }
+          to { stroke-dashoffset: 0; }
+        }
+        .animate-draw {
+          animation: draw 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}</style>
 
-      {/* 头部 */}
-      <div className="relative z-10 px-5 pt-5 pb-3">
-        <div className="flex items-center justify-between">
+      {/* 纸张纹理 */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
+
+      {/* 顶部标题区 */}
+      <div className="relative z-10 px-6 pt-5 pb-2">
+        <div className="relative flex flex-col pl-0.5">
+          {/* 年份水印 - 触碰底部虚线对齐 */}
+          <span className="absolute right-0 bottom-[-12px] text-[70px] font-black text-foreground/[0.03] tracking-tighter leading-none italic select-none">
+            {year}
+          </span>
+
+          {/* 月份 + 切换按钮 */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/60 hover:text-foreground" onClick={prevMonth}>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/40 hover:text-foreground" onClick={prevMonth}>
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-sm font-semibold text-foreground/80 min-w-[90px] text-center">
-              {displayDate.format('YYYY年M月')}
+            <span className="text-3xl font-black text-foreground tracking-tighter leading-none">
+              {monthNum}
             </span>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/60 hover:text-foreground" onClick={nextMonth}>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/40 hover:text-foreground" onClick={nextMonth}>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
+            {!isCurrentMonth && (
+              <Button variant="ghost" size="sm" className="text-[9px] h-5 px-2 text-muted-foreground/50 hover:text-foreground font-bold ml-1" onClick={goToToday}>
+                今日
+              </Button>
+            )}
           </div>
-          {!isCurrentMonth && (
-            <Button variant="ghost" size="sm" className="text-xs h-6 text-muted-foreground/60 hover:text-foreground" onClick={goToToday}>
-              今天
-            </Button>
-          )}
         </div>
       </div>
 
-      <div className="relative z-10 mx-5 border-b border-border/50" />
+      {/* 撕纸虚线 */}
+      <div className="relative z-10 mx-6 border-b border-dashed border-border/50" />
 
       {/* 日历主体 */}
-      <div className="relative z-10 px-5 pb-4 pt-3 flex-1 flex flex-col">
-        <div className="grid grid-cols-7 mb-3">
+      <div className="relative z-10 px-6 pb-6 pt-3 flex-1 flex flex-col">
+        <div className="grid grid-cols-7 mb-4">
           {['日', '一', '二', '三', '四', '五', '六'].map((d, i) => (
-            <span key={i} className={cn(
-              "text-[10px] font-medium text-center",
-              (i === 0 || i === 6) ? "text-rose-400" : "text-muted-foreground/60"
+            <span key={d} className={cn(
+              "text-[8px] font-black text-center tracking-[0.2em]",
+              (i === 0 || i === 6) ? "text-rose-400/60" : "text-muted-foreground/40"
             )}>{d}</span>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-y-0.5">
-          {Array.from({ length: startDay }).map((_, i) => <div key={i} />)}
+
+        <div className="grid grid-cols-7 gap-y-0 gap-x-0.5">
+          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
+
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
             const isToday = isCurrentMonth && day === currentDay;
@@ -104,12 +127,13 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
             const isInRange = selectedTask && isCurrentMonth && isDeadlineMonth && day >= currentDay && day <= deadlineDay!;
 
             return (
-              <div key={day} className="aspect-square relative flex items-center justify-center">
+              <div key={day} className="aspect-square relative flex items-center justify-center group/day">
+                {/* 范围内的日期显示非闭合圆圈 */}
                 {isInRange && (
                   <svg
                     className={cn(
                       "absolute inset-0 w-full h-full -rotate-[10deg]",
-                      isToday ? "text-primary" : isDeadline ? "text-primary" : "text-primary/30"
+                      isToday ? "text-primary/50" : isDeadline ? "text-primary" : "text-primary/20"
                     )}
                     viewBox="0 0 100 100"
                   >
@@ -117,20 +141,39 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
                       d="M35,15 C55,10 85,25 90,50 C95,75 75,90 50,92 C25,94 10,75 12,50 C14,25 35,15 42,18"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth={isToday || isDeadline ? "3" : "2"}
+                      strokeWidth={isToday || isDeadline ? "3.5" : "2"}
                       strokeLinecap="round"
+                      className={isToday ? "animate-draw" : ""}
+                      style={isToday ? { strokeDasharray: 400, strokeDashoffset: 400 } : {}}
                     />
                   </svg>
                 )}
+
+                {/* 今天但不在范围内时也显示圆圈 */}
+                {isToday && !isInRange && (
+                  <svg className="absolute inset-0 w-full h-full text-primary/40 -rotate-[10deg]" viewBox="0 0 100 100">
+                    <path
+                      d="M35,15 C55,10 85,25 90,50 C95,75 75,90 50,92 C25,94 10,75 12,50 C14,25 35,15 42,18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                      className="animate-draw"
+                      style={{ strokeDasharray: 400, strokeDashoffset: 400 }}
+                    />
+                  </svg>
+                )}
+
                 <span className={cn(
-                  "relative z-10 text-xs font-medium transition-colors",
-                  isToday ? "text-primary font-semibold" :
-                    isDeadline ? "text-primary font-semibold" :
+                  "relative z-10 text-xs font-bold transition-colors",
+                  isToday ? "text-primary font-black" :
+                    isDeadline ? "text-primary font-black" :
                       isInRange ? "text-primary/80" :
-                        "text-muted-foreground/80"
+                        "text-muted-foreground/70 group-hover/day:text-foreground"
                 )}>{day}</span>
+
                 {isDeadline && (
-                  <div className="absolute -top-0.5 -right-1 px-1 py-0.5 bg-primary text-primary-foreground text-[5px] font-medium rounded">
+                  <div className="absolute -top-0.5 -right-1 px-1 py-0.5 bg-primary text-primary-foreground text-[5px] font-bold rounded">
                     截止
                   </div>
                 )}
@@ -139,17 +182,19 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
           })}
         </div>
 
-        {/* 底部提示 */}
-        <div className="mt-auto pt-2 border-t border-border/50">
+        {/* 底部任务提示 */}
+        <div className="mt-auto pt-3 border-t border-dashed border-border/30">
           {selectedTask ? (
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground/60 truncate max-w-[55%]">{selectedTask.task_title}</span>
-              <span className="text-primary font-medium">
-                {dayjs(selectedTask.deadline).diff(today, 'day')}天后截止
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-muted-foreground/60 truncate max-w-[55%] uppercase tracking-wider">
+                {selectedTask.task_title}
+              </span>
+              <span className="text-[10px] font-black text-primary">
+                剩余 {dayjs(selectedTask.deadline).diff(today, 'day')} 天
               </span>
             </div>
           ) : (
-            <p className="text-[10px] text-muted-foreground/40 text-center">选择任务查看截止日期</p>
+            <p className="text-[9px] text-muted-foreground/40 text-center font-bold tracking-widest uppercase">选择任务查看截止日期</p>
           )}
         </div>
       </div>
@@ -169,17 +214,14 @@ const EditorialCard: React.FC<{
   accentColor?: string;
 }> = ({ title, icon: Icon, action, children, className, accentColor = "text-primary-500" }) => (
   <Card className={cn(
-    "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)] hover:border-primary/20 flex flex-col h-full",
+    "relative border-border/40 bg-card flex flex-col h-full shadow-none overflow-hidden",
     className
   )}>
-    {/* 噪点纹理 */}
-    <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
-
     {/* 头部 */}
-    <div className="relative z-10 px-6 pt-5 pb-3 flex items-center justify-between">
+    <div className="relative z-10 px-6 py-4 flex items-center justify-between border-b border-black/[0.02]">
       <div className="flex items-center gap-2.5">
-        <Icon className={cn("w-[18px] h-[18px]", accentColor)} strokeWidth={1.8} />
-        <h3 className="text-sm font-semibold text-foreground/80 tracking-tight group-hover:text-foreground transition-colors duration-300">
+        <Icon className={cn("w-[19px] h-[19px]", accentColor)} strokeWidth={2.2} />
+        <h3 className="text-sm font-bold text-foreground/80 tracking-tight">
           {title}
         </h3>
       </div>
@@ -187,91 +229,135 @@ const EditorialCard: React.FC<{
     </div>
 
     {/* 内容区 */}
-    <div className="relative z-10 px-6 pb-5 flex-1">
+    <div className="relative z-10 p-5 flex-1 bg-muted/[0.02]">
       {children}
     </div>
   </Card>
 );
 
-const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: string) => void; index: number }> = ({ knowledge, navigate, index }) => {
-  const colors = ['text-teal-500', 'text-sky-500', 'text-violet-500', 'text-amber-500'];
-  const hoverColors = ['hover:text-teal-600', 'hover:text-sky-600', 'hover:text-violet-600', 'hover:text-amber-600'];
-  const textColor = colors[index % colors.length];
-  const hoverColor = hoverColors[index % hoverColors.length];
+const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: string) => void }> = ({ knowledge, navigate }) => {
+  const isNew = dayjs().diff(dayjs(knowledge.updated_at), 'day') <= 3;
+
+  // 识别应急类 vs 标准类
+  const knowledgeType = (knowledge as any).knowledge_type;
+  const isEmergency = knowledgeType === 'EMERGENCY' || knowledge.title?.includes('应急');
+  const tagText = isEmergency ? '应急类' : '标准类';
+  const tagColor = isEmergency
+    ? "text-rose-600 bg-rose-50 border-rose-100/60"
+    : "text-slate-600 bg-slate-50 border-slate-200/60";
 
   return (
     <div
       onClick={() => navigate(`knowledge/${knowledge.id}`)}
-      className="group py-3 cursor-pointer flex items-center gap-3 border-b border-border/30 last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded transition-colors"
+      className="group relative bg-card border border-border/40 p-4 rounded-xl transition-all duration-300 cursor-pointer hover:border-primary/30 hover:bg-muted/20 flex flex-col justify-between h-[98px]"
     >
-      <div className="flex-1 min-w-0">
-        <h5 className={cn(
-          "text-sm font-medium text-foreground/70 transition-colors truncate",
-          hoverColor, "group-hover:text-foreground"
-        )}>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded border tracking-tight transition-colors", tagColor)}>
+              {tagText}
+            </span>
+            {isNew && (
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                </span>
+                <span className="text-[10px] font-bold text-rose-500/80 uppercase">NEW</span>
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-mono text-muted-foreground/30 font-bold tracking-tighter">
+            {dayjs(knowledge.updated_at).format('YYYY.MM.DD')}
+          </span>
+        </div>
+
+        <h5 className="text-[14.5px] font-bold text-foreground/90 truncate group-hover:text-primary transition-colors duration-300 tracking-tight">
           {knowledge.title}
         </h5>
-        <span className="text-xs text-muted-foreground/60 mt-0.5 block">
-          {dayjs(knowledge.updated_at).format('M月D日')}
-        </span>
+
+        <p className="text-[11px] text-muted-foreground/50 line-clamp-1 font-medium mt-0.5">
+          {knowledge.summary || knowledge.content_preview || "点击进入深度学习与实践探索"}
+        </p>
       </div>
-      <ArrowRight className={cn("w-4 h-4 opacity-0 group-hover:opacity-100 transition-all", textColor)} />
+
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-1 group-hover:translate-x-0">
+          <span className="text-[9px] font-black text-primary tracking-widest uppercase">详情</span>
+          <ArrowRight className="w-3 h-3 text-primary" />
+        </div>
+      </div>
     </div>
   );
 };
 
-const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void }> = ({ task, isSelected, onSelect }) => {
+
+const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void; onNavigate: () => void }> = ({ task, isSelected, onSelect, onNavigate }) => {
   const isCompleted = task.status === 'COMPLETED';
   const isUrgent = !isCompleted && dayjs(task.deadline).isAfter(dayjs()) && dayjs(task.deadline).diff(dayjs(), 'hour') <= 48;
   const progress = task.progress?.percentage ?? 0;
 
   return (
     <div
-      onClick={onSelect}
       className={cn(
-        "group relative py-3 flex items-center gap-3 transition-all cursor-pointer border-b border-border/30 last:border-0",
+        "group relative py-3 flex items-center gap-3 transition-all border-b border-border/30 last:border-0",
         isCompleted && !isSelected ? "opacity-50" : "opacity-100",
-        isSelected ? "bg-primary/5 -mx-2 px-2 rounded border-transparent" : "hover:bg-muted/30 -mx-2 px-2 rounded"
+        isSelected ? "bg-primary/5 -mx-2 px-2 rounded border-transparent" : "-mx-2 px-2 rounded"
       )}
     >
-      {/* 简洁进度指示 */}
-      <div className="relative w-8 h-8 shrink-0">
-        <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
-          <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" className="text-border" strokeWidth="2.5" />
-          <circle
-            cx="18" cy="18" r="14" fill="none"
-            stroke={isCompleted ? "#10b981" : isUrgent ? "#f43f5e" : "hsl(var(--primary))"}
-            strokeWidth="2.5"
-            strokeDasharray={`${progress * 0.88} 100`}
-            strokeLinecap="round"
-          />
-        </svg>
-        <span className={cn(
-          "absolute inset-0 flex items-center justify-center text-[9px] font-semibold",
-          isCompleted ? "text-emerald-600" : isUrgent ? "text-rose-500" : "text-primary"
-        )}>
-          {isCompleted ? '✓' : `${Math.round(progress)}`}
-        </span>
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <h4 className={cn(
-          "text-sm font-medium tracking-tight transition-all truncate",
-          isCompleted && !isSelected ? "text-muted-foreground line-through" : isSelected ? "text-primary" : "text-foreground/80"
-        )}>
-          {task.task_title}
-        </h4>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-muted-foreground/60">
-            {dayjs(task.deadline).format('M/D')} {isCompleted ? '已完成' : '截止'}
+      {/* 点击选择区域 */}
+      <div
+        onClick={onSelect}
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-muted/30 -my-3 py-3 -ml-2 pl-2 rounded-l transition-colors"
+      >
+        {/* 简洁进度指示 */}
+        <div className="relative w-8 h-8 shrink-0">
+          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" className="text-border" strokeWidth="2.5" />
+            <circle
+              cx="18" cy="18" r="14" fill="none"
+              stroke={isCompleted ? "#10b981" : isUrgent ? "#f43f5e" : "hsl(var(--primary))"}
+              strokeWidth="2.5"
+              strokeDasharray={`${progress * 0.88} 100`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className={cn(
+            "absolute inset-0 flex items-center justify-center text-[9px] font-semibold",
+            isCompleted ? "text-emerald-600" : isUrgent ? "text-rose-500" : "text-primary"
+          )}>
+            {isCompleted ? '✓' : `${Math.round(progress)}`}
           </span>
-          {isUrgent && (
-            <span className="text-[10px] font-medium text-rose-500">
-              紧急
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h4 className={cn(
+            "text-sm font-medium tracking-tight transition-all truncate",
+            isCompleted && !isSelected ? "text-muted-foreground line-through" : isSelected ? "text-primary" : "text-foreground/80"
+          )}>
+            {task.task_title}
+          </h4>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-xs text-muted-foreground/60">
+              {dayjs(task.deadline).format('M/D')} {isCompleted ? '已完成' : '截止'}
             </span>
-          )}
+            {isUrgent && (
+              <span className="text-[10px] font-medium text-rose-500">
+                紧急
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* 进入详情按钮 */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+        className="shrink-0 p-1.5 rounded-md text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+        title="查看任务详情"
+      >
+        <ExternalLink className="w-4 h-4" />
+      </button>
     </div>
   );
 };
@@ -306,19 +392,21 @@ export const StudentDashboard: React.FC = () => {
             title="知识速递"
             icon={BookOpen}
             accentColor="text-teal-500"
+            className="overflow-visible"
             action={
               <button
                 onClick={() => roleNavigate('knowledge')}
-                className="text-xs font-medium text-muted-foreground/60 hover:text-teal-500 transition-colors"
+                className="group/btn flex items-center gap-1.5 text-xs font-semibold text-muted-foreground/50 hover:text-primary transition-all duration-300"
               >
-                查看全部 →
+                探索大千世界
+                <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
               </button>
             }
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-16 mb-3" />) :
-                data?.latest_knowledge?.slice(0, 4).map((k, index) => (
-                  <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} index={index} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[98px] rounded-xl" />) :
+                data?.latest_knowledge?.slice(0, 6).map((k) => (
+                  <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
                 ))}
             </div>
           </EditorialCard>
@@ -337,7 +425,13 @@ export const StudentDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
               {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 mb-3" />) :
                 tasks.map(t => (
-                  <TaskItem key={t.id} task={t} isSelected={selectedTask?.id === t.id} onSelect={() => setSelectedTask(selectedTask?.id === t.id ? null : t)} />
+                  <TaskItem
+                    key={t.id}
+                    task={t}
+                    isSelected={selectedTask?.id === t.id}
+                    onSelect={() => setSelectedTask(selectedTask?.id === t.id ? null : t)}
+                    onNavigate={() => roleNavigate(`tasks/${t.task_id}`)}
+                  />
                 ))}
             </div>
           </EditorialCard>
