@@ -13,10 +13,12 @@ import {
   CheckCircle2,
   Users,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useStudentDashboard } from '../api/student-dashboard';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
-import { Skeleton, StatCard, Card } from '@/components/ui';
+import { StatCard, Skeleton, Card } from '@/components/ui';
+import type { LatestKnowledge } from '@/types/api';
 import { cn } from '@/lib/utils';
 
 /**
@@ -33,45 +35,83 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className }) => {
   const startDay = dayjs().startOf('month').day();
   const currentDay = dayjs().date();
 
+  // 模拟有任务的日期
   const activeDays = [5, 12, 18, 26, 29];
 
   return (
     <Card className={cn(
-      "relative border-border/40 bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-200/50 flex flex-col overflow-hidden group/calendar transition-all duration-500 hover:shadow-primary-500/10",
+      "relative border-border/40 bg-[#fdfdfd] shadow-2xl shadow-slate-200/40 flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary-500/5",
       className
     )}>
-      {/* 极简背景氛围层 */}
-      <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-      <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary-50/50 rounded-full blur-3xl transition-all duration-1000 group-hover/calendar:bg-primary-100/40" />
-      <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-secondary-50/30 rounded-full blur-3xl transition-all duration-1000 group-hover/calendar:bg-secondary-100/30" />
+      <style>{`
+        @keyframes draw {
+          from { stroke-dashoffset: 400; }
+          to { stroke-dashoffset: 0; }
+        }
+        .animate-draw {
+          animation: draw 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}</style>
 
-      {/* 2026 年份：右上角工业风装饰标识 */}
-      <div className="absolute top-6 right-8 z-20 flex flex-col items-end gap-1.5">
-        <span className="text-[10px] font-black text-slate-400 font-mono tracking-[0.5em] pointer-events-none select-none leading-none">
-          {year}
-        </span>
-        <div className="flex gap-1">
-          <div className="h-[1px] w-6 bg-slate-200" />
-          <div className="h-[1px] w-1.5 bg-primary-300" />
+      {/* 极简氛围层：模拟纸张纹理 */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-slate-50 to-transparent opacity-50" />
+
+      {/* 全局悬挂导轨 & 挂钩 (Architectural Rail System) */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-slate-100/50 z-20" />
+      <div className="absolute top-0 left-0 right-0 flex justify-center gap-48 pointer-events-none z-30">
+        <div className="relative w-2 h-6 bg-slate-900 rounded-b-sm shadow-xl shadow-black/10">
+          <div className="absolute top-0 inset-x-0 h-1 bg-black/20" /> {/* 顶部阴影 */}
+        </div>
+        <div className="relative w-2 h-6 bg-slate-900 rounded-b-sm shadow-xl shadow-black/10">
+          <div className="absolute top-0 inset-x-0 h-1 bg-black/20" />
         </div>
       </div>
 
-      {/* 01 月份：全局中心极简大气水印 */}
-      <div className="absolute inset-x-0 top-20 bottom-0 z-0 flex items-center justify-center overflow-hidden">
-        <span className="text-[220px] font-black text-slate-900/[0.018] tracking-tighter leading-none select-none pointer-events-none italic">
-          {monthNum}
-        </span>
+      {/* 顶部标题区：非对称“北欧杂志”排版 - 压缩布局 (Editorial Header - Compact Path) */}
+      <div className="relative z-10 px-8 pt-8 pb-2 flex items-start justify-between">
+        <div className="relative">
+          {/* 月份数字：作为半透明结构背板 */}
+          <span className="absolute -left-2 -top-4 text-[110px] font-black text-slate-900/[0.03] tracking-tighter leading-none italic select-none">
+            {monthNum}
+          </span>
+          {/* 实文排版 */}
+          <div className="relative flex flex-col pt-4 pl-1">
+            <span className="text-4xl font-black text-slate-900 tracking-tighter leading-none flex items-baseline gap-2">
+              {monthNum}
+              <span className="text-[11px] font-black text-primary-500 uppercase tracking-[0.4em]">Jan</span>
+            </span>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-0.5 w-10 bg-slate-900" />
+              <span className="text-[9px] font-black text-slate-400 font-mono tracking-[0.2em] uppercase">Calendar_2026</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧年份：垂直侧显 */}
+        <div className="flex flex-col items-end pt-4">
+          <div className="flex flex-col items-center gap-1 opacity-20">
+            <div className="w-1 h-1 rounded-full bg-slate-900" />
+            <div className="w-px h-8 bg-slate-900" />
+          </div>
+          <span className="text-[12px] font-black text-slate-900 mt-2 font-mono tracking-widest [writing-mode:vertical-rl] rotate-180">
+            {year}
+          </span>
+        </div>
       </div>
 
-      {/* 日历网格：增加顶部空间，确保不与年份冲突 */}
-      <div className="relative z-10 px-8 pb-10 pt-16 flex-1 flex flex-col">
-        <div className="grid grid-cols-7 mb-6">
+      {/* 撕纸虚线语义 */}
+      <div className="relative z-10 mx-8 border-b border-dashed border-slate-100" />
+
+      {/* 日历主体网格 - 压缩间距 */}
+      <div className="relative z-10 px-8 pb-10 pt-4 flex-1 flex flex-col">
+        <div className="grid grid-cols-7 mb-8">
           {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-            <span key={d} className="text-[9px] font-black text-slate-300 text-center tracking-widest">{d}</span>
+            <span key={d} className="text-[9px] font-black text-slate-300 text-center tracking-[0.3em]">{d}</span>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-y-2 gap-x-1">
           {Array.from({ length: startDay }).map((_, i) => (
             <div key={`empty-${i}`} className="aspect-square" />
           ))}
@@ -85,27 +125,38 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className }) => {
               <div key={day} className="aspect-square relative flex items-center justify-center cursor-pointer group/day">
                 {/* 悬停反馈 */}
                 {!isToday && (
-                  <div className="absolute inset-1 rounded-xl bg-slate-50 opacity-0 transition-all duration-200 group-hover/day:opacity-100 scale-90 group-hover/day:scale-100" />
+                  <div className="absolute inset-2 rounded-full bg-slate-50 opacity-0 transition-all duration-300 group-hover/day:opacity-100 scale-75 group-hover/day:scale-100" />
                 )}
 
                 {isToday ? (
-                  /* 选中状态：艺术化衬线体日期 + 简笔背景 */
-                  <div className="relative w-11 h-11 flex items-center justify-center animate-in zoom-in duration-500 z-20">
-                    <CalendarIcon className="w-10 h-10 text-slate-400/20 stroke-[1.5]" />
-                    <span className="absolute inset-0 flex items-center justify-center text-lg font-serif italic text-slate-900 translate-y-0.5">
+                  /* 选中状态：动态“非闭合手绘圆圈” - 极简人文感 */
+                  <div className="relative w-12 h-12 flex items-center justify-center z-20">
+                    <svg className="absolute inset-0 w-full h-full text-primary-500/40 -rotate-[10deg] scale-110" viewBox="0 0 100 100">
+                      <path
+                        d="M35,15 C55,10 85,25 90,50 C95,75 75,90 50,92 C25,94 10,75 12,50 C14,25 35,15 42,18"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        className="animate-draw"
+                        style={{ strokeDasharray: 400, strokeDashoffset: 400 }}
+                      />
+                    </svg>
+                    <span className="relative text-xl font-serif italic font-bold text-slate-950 leading-none">
                       {day}
                     </span>
                   </div>
                 ) : (
-                  /* 常规状态 */
+                  /* 常规日期 - 视觉降噪处理 */
                   <div className="relative w-10 h-10 flex flex-col items-center justify-center transition-all duration-300">
-                    <span className="text-[14px] font-black text-slate-600 group-hover/day:text-slate-900 leading-none">
+                    <span className={cn(
+                      "text-[14px] font-black transition-colors duration-300",
+                      "text-slate-500 group-hover/day:text-slate-950"
+                    )}>
                       {day}
                     </span>
-
-                    {/* 任务圆点：仅在非选中日期显示，消除冗余 */}
                     {hasTask && (
-                      <div className="absolute bottom-1.5 w-1 h-1 rounded-full bg-primary-500/60 transition-all duration-300 group-hover/day:scale-150 group-hover/day:bg-primary-500" />
+                      <div className="absolute bottom-1 w-1 h-1 rounded-full bg-primary-400/30 ring-1 ring-primary-500/10 transition-all duration-300 group-hover/day:scale-125" />
                     )}
                   </div>
                 )}
@@ -119,7 +170,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className }) => {
 };
 
 /**
- * 同伴进度组件 (Peer Progress Placeholder)
+ * 同伴进度组件 (Peer Progress - Clean Modern)
  */
 const PeerProgress: React.FC = () => {
   const peers = [
@@ -130,34 +181,48 @@ const PeerProgress: React.FC = () => {
   ];
 
   return (
-    <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card className="p-6 border-slate-200/60 bg-white shadow-sm flex flex-col h-full">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-secondary-500" />
-          <span className="font-black text-sm text-foreground">同伴进度</span>
+          <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+            <Users size={16} />
+          </div>
+          <span className="font-bold text-sm text-slate-800">同伴进度</span>
         </div>
-        <TrendingUp className="w-3 h-3 text-secondary-500" />
+        <TrendingUp className="w-4 h-4 text-emerald-500" />
       </div>
-      <div className="space-y-4">
+
+      <div className="space-y-5">
         {peers.map((peer) => (
-          <div key={peer.name} className="flex items-center gap-3">
+          <div key={peer.name} className="flex items-center gap-4">
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border-2",
-              peer.isMe ? "bg-primary-50 border-primary-200 text-primary-600" : "bg-muted border-border text-text-muted"
+              "w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold border",
+              peer.isMe
+                ? "bg-primary-600 border-primary-600 text-white"
+                : "bg-slate-50 border-slate-100 text-slate-500"
             )}>
               {peer.avatar}
             </div>
+
             <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center mb-1">
-                <span className={cn("text-[11px] font-bold truncate", peer.isMe ? "text-primary-600" : "text-foreground")}>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className={cn(
+                  "text-xs font-bold truncate",
+                  peer.isMe ? "text-primary-600" : "text-slate-700"
+                )}>
                   {peer.name}
                 </span>
-                <span className="text-[10px] font-black text-text-muted">{peer.progress}%</span>
+                <span className="text-[10px] font-bold text-slate-400">{peer.progress}%</span>
               </div>
-              <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                <div
-                  className={cn("h-full rounded-full transition-all duration-1000", peer.isMe ? "bg-primary-500" : "bg-secondary-400")}
-                  style={{ width: `${peer.progress}%` }}
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${peer.progress}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={cn(
+                    "h-full rounded-full",
+                    peer.isMe ? "bg-primary-500" : "bg-emerald-400"
+                  )}
                 />
               </div>
             </div>
@@ -165,6 +230,42 @@ const PeerProgress: React.FC = () => {
         ))}
       </div>
     </Card>
+  );
+};
+
+const KnowledgeCard: React.FC<{
+  knowledge: LatestKnowledge;
+  roleNavigate: (path: string) => void;
+}> = ({ knowledge, roleNavigate }) => {
+  return (
+    <div
+      onClick={() => roleNavigate(`knowledge/${knowledge.id}`)}
+      className="group/item flex flex-col p-5 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/10 cursor-pointer transition-all duration-300 h-[180px]"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+            New
+          </span>
+          <span className="text-[10px] font-bold text-slate-400">
+            {dayjs(knowledge.updated_at).format('YYYY.MM.DD')}
+          </span>
+        </div>
+      </div>
+
+      <h5 className="font-bold text-slate-800 text-sm mb-2 group-hover/item:text-emerald-700 transition-colors line-clamp-1">
+        {knowledge.title}
+      </h5>
+
+      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed mb-4">
+        {knowledge.content_preview || '查看详情了解更多知识内容...'}
+      </p>
+
+      <div className="mt-auto flex items-center gap-1.5 text-[10px] font-bold text-emerald-600">
+        <span>阅读详情</span>
+        <ArrowRight className="w-3 h-3 group-hover/item:translate-x-0.5 transition-transform" />
+      </div>
+    </div>
   );
 };
 
@@ -296,63 +397,41 @@ export const StudentDashboard: React.FC = () => {
 
         {/* 第二行：知识速递 (8) + 同伴/贴士 (4) */}
         <div className="lg:col-span-8">
-          <Card className="border-border/50 bg-white shadow-sm overflow-hidden flex flex-col">
+          <Card className="h-full border-border/50 bg-white shadow-sm overflow-hidden flex flex-col">
             <div className="px-6 pt-6 flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-secondary-500" />
-                <span className="font-black text-sm text-foreground">知识速递</span>
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                  <BookOpen size={16} />
+                </div>
+                <span className="font-bold text-sm text-slate-800">知识速递</span>
               </div>
               <button
                 onClick={() => roleNavigate('knowledge')}
-                className="text-[10px] font-bold text-secondary-600 hover:text-secondary-700 transition-colors flex items-center gap-0.5"
+                className="text-[11px] font-bold text-slate-400 hover:text-emerald-600 transition-all flex items-center gap-1 group/all"
               >
-                查看全部 <ArrowRight className="w-3 h-3" />
+                查看全部
+                <ArrowRight className="w-3 h-3 group-hover/all:translate-x-0.5 transition-transform" />
               </button>
             </div>
 
             <div className="px-6 pb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {data?.latest_knowledge?.slice(0, 4).map((knowledge) => (
-                  <div
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {isLoading ? (
+                  [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[180px] rounded-2xl" />)
+                ) : data?.latest_knowledge?.slice(0, 4).map((knowledge) => (
+                  <KnowledgeCard
                     key={knowledge.id}
-                    onClick={() => roleNavigate(`knowledge/${knowledge.id}`)}
-                    className="group/item flex flex-col p-5 rounded-2xl border border-border/60 hover:border-secondary-200 hover:bg-secondary-50/5 cursor-pointer transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-black text-secondary-600/70">NEW</span>
-                      <span className="text-[9px] font-bold text-text-muted">
-                        {dayjs(knowledge.updated_at).format('YYYY.MM.DD')}
-                      </span>
-                    </div>
-                    <h5 className="font-bold text-foreground text-sm mb-2 group-hover:text-secondary-600 transition-colors leading-snug line-clamp-1">
-                      {knowledge.title}
-                    </h5>
-                    <p className="text-[11px] text-text-muted line-clamp-2 leading-relaxed mb-3">
-                      {knowledge.content_preview || '暂无详细内容'}
-                    </p>
-                    <div className="mt-auto flex items-center gap-1 text-[10px] font-black text-secondary-600/80">
-                      阅读详情 <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
+                    knowledge={knowledge}
+                    roleNavigate={roleNavigate}
+                  />
                 ))}
               </div>
             </div>
           </Card>
         </div>
 
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4">
           <PeerProgress />
-
-          {/* 温馨提示卡片 */}
-          <Card className="p-6 bg-gradient-to-br from-primary-600 to-indigo-700 text-white border-0 overflow-hidden relative">
-            <div className="relative z-10">
-              <h4 className="font-black text-lg mb-2">学习小贴士</h4>
-              <p className="text-xs text-primary-100 font-medium leading-relaxed opacity-90">
-                “博观而约取，厚积而薄发。” 保持节奏，每天进步一点点。
-              </p>
-            </div>
-            <Trophy className="absolute -right-4 -bottom-4 w-20 h-20 text-white/10 rotate-12" />
-          </Card>
         </div>
       </div>
     </div>
