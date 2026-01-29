@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ActivityLogPolicyPanel } from './activity-log-policy-panel';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -309,9 +310,9 @@ export const ActivityLogsPanel: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="relative z-10 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+            <ScrollArea className="relative z-10 h-[70vh] pr-4">
               <ActivityLogPolicyPanel />
-            </div>
+            </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>

@@ -104,7 +104,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatCard
               title="本月任务"
-              value={28}
+              value={data?.summary?.monthly_tasks ?? 0}
               icon={ClipboardCheck}
               accentClassName="bg-warning"
               size="sm"

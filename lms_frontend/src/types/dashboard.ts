@@ -27,6 +27,11 @@ export interface MentorDashboard {
 export interface MentorDashboardSummary {
   total_students: number;
   weekly_active_users: number;
+  monthly_tasks: number;
+  total_tasks: number;
+  completed_tasks: number;
+  in_progress_tasks: number;
+  overdue_tasks: number;
   overall_completion_rate: number;
   overall_avg_score: number | null;
 }

@@ -19,6 +19,7 @@ from .selectors import (
     calculate_task_stats,
     get_assignments_by_students,
     get_latest_knowledge,
+    get_monthly_tasks_count,
     get_pending_tasks,
     get_student_assignments,
     get_weekly_active_users_count,
@@ -83,7 +84,7 @@ class MentorDashboardService(BaseService):
     def get_dashboard_data(self) -> Dict[str, Any]:
         """
         获取导师/室经理的完整仪表盘数据
-        
+
         Returns:
             包含摘要、学员、快捷链接、当前角色的字典
         """
@@ -105,10 +106,12 @@ class MentorDashboardService(BaseService):
         student_ids: List[int]
     ) -> Dict[str, Any]:
         """计算总体摘要统计"""
+        monthly_tasks = get_monthly_tasks_count()
         if not student_ids:
             return {
                 'total_students': 0,
                 'weekly_active_users': 0,
+                'monthly_tasks': monthly_tasks,
                 'total_tasks': 0,
                 'completed_tasks': 0,
                 'in_progress_tasks': 0,
@@ -127,6 +130,7 @@ class MentorDashboardService(BaseService):
         return {
             'total_students': len(student_ids),
             'weekly_active_users': weekly_active_users,
+            'monthly_tasks': monthly_tasks,
             'total_tasks': stats['total_tasks'],
             'completed_tasks': stats['completed_tasks'],
             'in_progress_tasks': stats['in_progress_tasks'],

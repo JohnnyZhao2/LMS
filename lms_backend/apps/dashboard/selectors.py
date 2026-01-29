@@ -116,3 +116,22 @@ def get_weekly_active_users_count(user_ids: List[int]) -> int:
         id__in=active_user_ids,
         is_active=True
     ).count()
+
+
+def get_monthly_tasks_count() -> int:
+    """获取本月发布的任务数量"""
+    if settings.USE_TZ:
+        today = timezone.localdate()
+    else:
+        today = datetime.now().date()
+    start_of_month = today.replace(day=1)
+    start_dt = datetime.combine(start_of_month, time.min)
+    if settings.USE_TZ:
+        tz = timezone.get_current_timezone()
+        start_dt = timezone.make_aware(start_dt, tz)
+
+    from apps.tasks.models import Task
+    return Task.objects.filter(
+        is_deleted=False,
+        created_at__gte=start_dt
+    ).count()
