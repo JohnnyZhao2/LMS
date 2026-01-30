@@ -140,10 +140,8 @@ def get_monthly_tasks_count() -> int:
 def get_student_all_tasks(user_id: int, limit: int = 10) -> QuerySet:
     """
     获取学员的任务列表
-    按截止日期排序，进行中的在前
+    排序：按截止日期倒序（最新截止的在前）
     """
-    from django.db.models import Case, When, Value, IntegerField
-
     return TaskAssignment.objects.filter(
         assignee_id=user_id,
         task__is_deleted=False,
@@ -153,17 +151,7 @@ def get_student_all_tasks(user_id: int, limit: int = 10) -> QuerySet:
         'task__task_knowledge',
         'task__task_quizzes',
         'knowledge_progress'
-    ).annotate(
-        status_order=Case(
-            When(status='IN_PROGRESS', then=Value(0)),
-            When(status='COMPLETED', then=Value(1)),
-            default=Value(2),
-            output_field=IntegerField()
-        )
-    ).order_by(
-        'status_order',
-        'task__deadline'
-    )[:limit]
+    ).order_by('-task__deadline')[:limit]
 
 
 def get_urgent_tasks_count(user_id: int, hours: int = 48) -> int:
@@ -188,6 +176,47 @@ def get_student_exam_avg_score(user_id: int) -> Optional[float]:
         quiz__quiz_type='EXAM'
     ).aggregate(avg_score=Avg('obtained_score'))
     return float(result['avg_score']) if result['avg_score'] else None
+
+
+def calculate_assignment_progress(assignment: 'TaskAssignment') -> Dict[str, Any]:
+    """
+    计算单个任务分配的进度
+    Args:
+        assignment: TaskAssignment 实例（需要预加载 task, task__task_knowledge, task__task_quizzes, knowledge_progress）
+    Returns:
+        进度字典，包含 completed, total, percentage, knowledge_total, knowledge_completed, quiz_total, quiz_completed
+    """
+    task = assignment.task
+    total_k = task.task_knowledge.count()
+    total_q = task.task_quizzes.count()
+    total = total_k + total_q
+
+    if total == 0:
+        return {
+            'completed': 0,
+            'total': 0,
+            'percentage': 0,
+            'knowledge_total': 0,
+            'knowledge_completed': 0,
+            'quiz_total': 0,
+            'quiz_completed': 0
+        }
+
+    completed_k = assignment.knowledge_progress.filter(is_completed=True).count()
+    completed_q = Submission.objects.filter(
+        task_assignment=assignment
+    ).values_list('quiz_id', flat=True).distinct().count()
+    completed = completed_k + completed_q
+
+    return {
+        'completed': completed,
+        'total': total,
+        'percentage': round(completed / total * 100, 1),
+        'knowledge_total': total_k,
+        'knowledge_completed': completed_k,
+        'quiz_total': total_q,
+        'quiz_completed': completed_q
+    }
 
 
 def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
@@ -249,8 +278,6 @@ def get_task_participants_progress(
     Returns:
         参与者进度列表
     """
-    from apps.submissions.models import Submission
-
     # 获取该任务的所有分配
     assignments = TaskAssignment.objects.filter(
         task_id=task_id,
@@ -268,25 +295,11 @@ def get_task_participants_progress(
 
     participants = []
     for assignment in assignments:
-        task = assignment.task
-        total_k = task.task_knowledge.count()
-        total_q = task.task_quizzes.count()
-        total = total_k + total_q
-
-        if total == 0:
-            progress = 0
-        else:
-            completed_k = assignment.knowledge_progress.filter(is_completed=True).count()
-            completed_q = Submission.objects.filter(
-                task_assignment=assignment
-            ).values_list('quiz_id', flat=True).distinct().count()
-            completed = completed_k + completed_q
-            progress = round(completed / total * 100, 1)
-
+        progress_data = calculate_assignment_progress(assignment)
         participants.append({
             'id': assignment.assignee.id,
             'name': assignment.assignee.username,
-            'progress': progress,
+            'progress': progress_data['percentage'],
             'is_me': assignment.assignee.id == current_user_id
         })
 

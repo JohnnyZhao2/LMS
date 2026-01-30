@@ -211,4 +211,4 @@ class StudentTaskService(BaseService):
             qs = qs.filter(status=status_filter)
         if search:
             qs = qs.filter(task__title__icontains=search)
-        return qs.order_by('-created_at')
+        return qs.order_by('-task__deadline')

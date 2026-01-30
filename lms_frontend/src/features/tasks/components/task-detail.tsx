@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   BookOpen,
@@ -53,8 +53,12 @@ interface KnowledgeListViewItem {
 export const TaskDetail: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { roleNavigate, getRolePath } = useRoleNavigate();
   const { currentRole, user, isLoading: authLoading } = useAuth();
+
+  const searchParams = new URLSearchParams(location.search);
+  const fromDashboard = searchParams.get('from') === 'dashboard';
 
   const effectiveRole = role?.toUpperCase() || currentRole;
   const isStudent = !authLoading && effectiveRole === 'STUDENT';
@@ -222,7 +226,7 @@ export const TaskDetail: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => roleNavigate('tasks')}
+            onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
             className="text-text-muted hover:text-foreground hover:bg-muted/80 rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />

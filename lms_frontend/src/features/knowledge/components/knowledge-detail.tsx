@@ -47,6 +47,7 @@ export const KnowledgeDetail: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
   const taskId = Number(searchParams.get('task') || 0);
+  const fromDashboard = searchParams.get('from') === 'dashboard';
 
   const { currentRole } = useAuth();
   const effectiveRole = role?.toUpperCase() || currentRole;
@@ -98,7 +99,9 @@ export const KnowledgeDetail: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (taskId) {
+    if (fromDashboard) {
+      navigate(getRolePath('dashboard'));
+    } else if (taskId) {
       navigate(getRolePath(`tasks/${taskId}`));
     } else {
       navigate(getRolePath('knowledge'));
@@ -173,7 +176,7 @@ export const KnowledgeDetail: React.FC = () => {
             className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            <span className="text-sm font-semibold">{taskId ? '返回任务' : '返回列表'}</span>
+            <span className="text-sm font-semibold">{fromDashboard ? '返回首页' : taskId ? '返回任务' : '返回列表'}</span>
           </Button>
           <div className="w-px h-5 bg-muted" />
           <div className="flex flex-col gap-0.5">

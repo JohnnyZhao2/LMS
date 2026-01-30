@@ -9,6 +9,8 @@ from rest_framework import serializers
 from apps.knowledge.serializers import KnowledgeListSerializer
 from apps.tasks.models import TaskAssignment
 
+from .selectors import calculate_assignment_progress
+
 
 class StudentTaskSerializer(serializers.ModelSerializer):
     """
@@ -32,31 +34,7 @@ class StudentTaskSerializer(serializers.ModelSerializer):
 
     def get_progress(self, obj):
         """计算任务进度"""
-        task = obj.task
-        total_k = task.task_knowledge.count()
-        total_q = task.task_quizzes.count()
-        total = total_k + total_q
-        if total == 0:
-            return {'completed': 0, 'total': 0, 'percentage': 0}
-
-        completed_k = obj.knowledge_progress.filter(is_completed=True).count()
-        from apps.submissions.models import Submission
-        completed_q_ids = set(
-            Submission.objects.filter(
-                task_assignment=obj
-            ).values_list('quiz_id', flat=True).distinct()
-        )
-        completed_q = len(completed_q_ids)
-        completed = completed_k + completed_q
-        return {
-            'completed': completed,
-            'total': total,
-            'percentage': round(completed / total * 100, 1),
-            'knowledge_total': total_k,
-            'knowledge_completed': completed_k,
-            'quiz_total': total_q,
-            'quiz_completed': completed_q
-        }
+        return calculate_assignment_progress(obj)
 
 
 class StudentStatsSerializer(serializers.Serializer):

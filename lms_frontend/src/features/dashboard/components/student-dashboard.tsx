@@ -70,7 +70,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
       `}</style>
 
       {/* 纸张纹理 */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
 
       {/* 顶部标题区 */}
@@ -201,7 +201,7 @@ const EditorialCard: React.FC<{
       className
     )}>
       {/* 噪点纹理 - 与 StatCard 保持一致 */}
-      <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+      <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[image:var(--noise-texture)] brightness-100 contrast-150" />
 
       {/* 头部 - 建筑级美学布局 */}
       <div className="relative z-10 px-8 py-6 flex items-center justify-between">
@@ -225,7 +225,7 @@ const EditorialCard: React.FC<{
 const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: string) => void }> = ({ knowledge, navigate }) => {
   return (
     <div
-      onClick={() => navigate(`knowledge/${knowledge.id}`)}
+      onClick={() => navigate(`knowledge/${knowledge.id}?from=dashboard`)}
       className={cn(
         "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex flex-col h-[100px] overflow-hidden",
         "bg-slate-50/40 dark:bg-card/40 border border-slate-200/30 dark:border-white/5",
@@ -267,7 +267,7 @@ const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: str
   );
 };
 
-const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void }> = ({ task, isSelected, onSelect }) => {
+const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void; onNavigate: () => void }> = ({ task, isSelected, onSelect, onNavigate }) => {
   const isCompleted = task.status === 'COMPLETED';
   const progress = task.progress?.percentage ?? 0;
 
@@ -339,16 +339,19 @@ const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSe
           </span>
         </div>
 
-        {/* 箭头：滑入动画 */}
+        {/* 箭头：滑入动画 - 点击跳转 */}
         <div className="h-4 flex items-center justify-center">
-          <div className={cn(
-            "transition-all duration-500",
-            isSelected
-              ? "opacity-100 translate-y-0 text-primary"
-              : "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 text-primary/40"
-          )}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onNavigate(); }}
+            className={cn(
+              "transition-all duration-500 hover:scale-125",
+              isSelected
+                ? "opacity-100 translate-y-0 text-primary"
+                : "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 text-primary/40"
+            )}
+          >
             <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-          </div>
+          </button>
         </div>
       </div>
     </div>
@@ -366,10 +369,7 @@ export const StudentDashboard: React.FC = () => {
   );
 
   const stats = data?.stats;
-  const tasks = React.useMemo(() =>
-    [...(data?.tasks || [])].sort((a, b) => dayjs(b.deadline).valueOf() - dayjs(a.deadline).valueOf()),
-    [data?.tasks]
-  );
+  const tasks = data?.tasks || [];
 
   return (
     <div className="space-y-12 pb-14 animate-in fade-in slide-in-from-bottom-4 duration-1000 pt-2 font-sans">
@@ -427,6 +427,7 @@ export const StudentDashboard: React.FC = () => {
                     task={t}
                     isSelected={selectedTask?.id === t.id}
                     onSelect={() => setSelectedTask(selectedTask?.id === t.id ? null : t)}
+                    onNavigate={() => roleNavigate(`tasks/${t.task_id}?from=dashboard`)}
                   />
                 ))}
             </div>
