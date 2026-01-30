@@ -43,37 +43,32 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
 
-      <div className="relative z-10 px-6 pt-5 pb-2">
-        <div className="relative flex flex-col pl-0.5">
-          <span className="absolute right-0 bottom-[-12px] text-[70px] font-black text-foreground/[0.03] tracking-tighter leading-none italic select-none">
-            {year}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/40 hover:text-foreground" onClick={prevMonth}>
+      <div className="relative z-10 px-6 pt-2 pb-0">
+        <div className="relative flex items-center justify-between h-14">
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-foreground" onClick={prevMonth}>
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-3xl font-black text-foreground tracking-tighter leading-none">
+            <span className="text-4xl font-black text-foreground tracking-tighter leading-none">
               {monthNum}
             </span>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/40 hover:text-foreground" onClick={nextMonth}>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-foreground" onClick={nextMonth}>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
             {!isCurrentMonth && (
-              <Button variant="ghost" size="sm" className="text-[9px] h-5 px-2 text-muted-foreground/50 hover:text-foreground font-bold ml-1" onClick={goToToday}>
+              <Button variant="ghost" size="sm" className="text-[9px] h-5 px-2 text-muted-foreground/40 hover:text-foreground font-bold ml-1" onClick={goToToday}>
                 今日
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[9px] font-bold text-muted-foreground/30 tracking-[0.3em] uppercase">
-              {displayDate.format('MMMM')}
-            </span>
-          </div>
+          <span className="text-[60px] font-black text-foreground/[0.04] tracking-tighter leading-none italic select-none">
+            {year}
+          </span>
         </div>
       </div>
 
       <div className="relative z-10 px-6 pb-5 flex-1 flex flex-col">
-        <div className="grid grid-cols-7 gap-x-0.5 mb-2 border-b border-dashed border-border/30 pb-2">
+        <div className="grid grid-cols-7 gap-x-0.5 mb-2 border-t border-dashed border-border/40 pt-3 pb-1">
           {['日', '一', '二', '三', '四', '五', '六'].map((d, i) => (
             <span key={d} className={cn(
               "text-[8px] font-black text-center tracking-[0.2em]",
@@ -124,7 +119,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
           })}
         </div>
 
-        <div className="mt-auto pt-3 border-t border-dashed border-border/30">
+        <div className="mt-auto pt-3 border-t border-dashed border-border/40">
           {selectedTask ? (() => {
             const daysLeft = dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day');
             const isOverdue = daysLeft < 0;
