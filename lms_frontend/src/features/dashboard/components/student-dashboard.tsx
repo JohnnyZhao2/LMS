@@ -124,59 +124,41 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
             const day = i + 1;
             const isToday = isCurrentMonth && day === currentDay;
             const isDeadline = isDeadlineMonth && day === deadlineDay;
-            const isInRange = selectedTask && isCurrentMonth && isDeadlineMonth && day >= currentDay && day <= deadlineDay!;
 
             return (
-              <div key={day} className="aspect-square relative flex items-center justify-center group/day">
-                {/* 范围内的日期显示非闭合圆圈 */}
-                {isInRange && (
-                  <svg
-                    className={cn(
-                      "absolute inset-0 w-full h-full -rotate-[10deg]",
-                      isToday ? "text-primary/50" : isDeadline ? "text-primary" : "text-primary/20"
-                    )}
-                    viewBox="0 0 100 100"
-                  >
-                    <path
-                      d="M35,15 C55,10 85,25 90,50 C95,75 75,90 50,92 C25,94 10,75 12,50 C14,25 35,15 42,18"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={isToday || isDeadline ? "3.5" : "2"}
-                      strokeLinecap="round"
-                      className={isToday ? "animate-draw" : ""}
-                      style={isToday ? { strokeDasharray: 400, strokeDashoffset: 400 } : {}}
-                    />
-                  </svg>
+              <div key={day} className="aspect-square relative flex items-center justify-center">
+                {/* 1. 今日：外部精密对焦框架 (Today Focus Frame) */}
+                {isToday && (
+                  <div className="absolute inset-1 pointer-events-none transition-all duration-500">
+                    <div className="absolute top-0 left-0 w-3 h-3 border-t-[1.5px] border-l-[1.5px] border-slate-400/60" />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[1.5px] border-r-[1.5px] border-slate-400/60" />
+                  </div>
                 )}
 
-                {/* 今天但不在范围内时也显示圆圈 */}
-                {isToday && !isInRange && (
-                  <svg className="absolute inset-0 w-full h-full text-primary/40 -rotate-[10deg]" viewBox="0 0 100 100">
-                    <path
-                      d="M35,15 C55,10 85,25 90,50 C95,75 75,90 50,92 C25,94 10,75 12,50 C14,25 35,15 42,18"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      className="animate-draw"
-                      style={{ strokeDasharray: 400, strokeDashoffset: 400 }}
-                    />
-                  </svg>
+                {/* 2. 截止日期：内部印鉴盒 (Deadline Seal Case) */}
+                {isDeadline && (
+                  <div className="absolute inset-[6px] flex items-center justify-center pointer-events-none">
+                    {/* 背景：超淡衬线影纹 */}
+                    <span className="absolute text-[6px] font-serif font-black uppercase tracking-widest text-rose-600/[0.04] rotate-[-12deg] scale-[1.2]">
+                      DEAD
+                    </span>
+                    {/* 阶梯压印框 */}
+                    <div className="absolute inset-0 border-[1.5px] border-rose-600/20 rotate-[-4deg]">
+                      {/* 嵌套在边框上的精致标签 - 移除背景块 */}
+                      <span className="absolute -top-1.5 left-0.5 text-[5px] font-black text-rose-600/40 tracking-tighter">D.L.</span>
+                    </div>
+                    <div className="absolute inset-[2.5px] border-[0.5px] border-rose-600/10 rotate-[2deg]" />
+                  </div>
                 )}
 
                 <span className={cn(
-                  "relative z-10 text-xs font-bold transition-colors",
-                  isToday ? "text-primary font-black" :
-                    isDeadline ? "text-primary font-black" :
-                      isInRange ? "text-primary/80" :
-                        "text-muted-foreground/70 group-hover/day:text-foreground"
-                )}>{day}</span>
-
-                {isDeadline && (
-                  <div className="absolute -top-0.5 -right-1 px-1 py-0.5 bg-primary text-primary-foreground text-[5px] font-bold rounded">
-                    截止
-                  </div>
-                )}
+                  "relative z-10 transition-all duration-300",
+                  isToday ? "text-[14px] font-[900] text-slate-800 dark:text-white scale-110 tracking-tighter" :
+                    isDeadline ? "text-[12px] font-serif font-black text-rose-600/80 scale-105" :
+                      "text-[11px] font-bold text-muted-foreground/30 hover:text-foreground hover:scale-110"
+                )}>
+                  {day}
+                </span>
               </div>
             );
           })}
@@ -190,7 +172,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
                 {selectedTask.task_title}
               </span>
               <span className="text-[10px] font-black text-primary">
-                剩余 {dayjs(selectedTask.deadline).diff(today, 'day')} 天
+                剩余 {dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day')} 天
               </span>
             </div>
           ) : (
@@ -198,7 +180,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
           )}
         </div>
       </div>
-    </Card>
+    </Card >
   );
 };
 
