@@ -200,9 +200,9 @@ const EditorialCard: React.FC<{
     className
   )}>
     {/* 头部 */}
-    <div className="relative z-10 px-6 py-4 flex items-center justify-between border-b border-black/[0.02]">
+    <div className="relative z-10 px-6 py-3.5 flex items-center justify-between border-b border-black/[0.02]">
       <div className="flex items-center gap-2.5">
-        <Icon className={cn("w-[19px] h-[19px]", accentColor)} strokeWidth={2.2} />
+        <Icon className={cn("w-[17px] h-[17px]", accentColor)} strokeWidth={2.5} />
         <h3 className="text-sm font-bold text-foreground/80 tracking-tight">
           {title}
         </h3>
@@ -211,7 +211,7 @@ const EditorialCard: React.FC<{
     </div>
 
     {/* 内容区 */}
-    <div className="relative z-10 p-5 flex-1 bg-muted/[0.04]">
+    <div className="relative z-10 p-4 flex-1">
       {children}
     </div>
   </Card>
@@ -268,69 +268,66 @@ const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: str
 
 const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void; onNavigate: () => void }> = ({ task, isSelected, onSelect, onNavigate }) => {
   const isCompleted = task.status === 'COMPLETED';
-  const isUrgent = !isCompleted && dayjs(task.deadline).isAfter(dayjs()) && dayjs(task.deadline).diff(dayjs(), 'hour') <= 48;
   const progress = task.progress?.percentage ?? 0;
 
   return (
     <div
       className={cn(
-        "group relative py-3 flex items-center gap-3 transition-all border-b border-border/30 last:border-0",
-        isCompleted && !isSelected ? "opacity-50" : "opacity-100",
-        isSelected ? "bg-primary/5 -mx-2 px-2 rounded border-transparent" : "-mx-2 px-2 rounded"
+        "group relative py-3 px-3 -mx-3 rounded-lg transition-all duration-200 flex items-center gap-4 cursor-pointer",
+        isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/40"
       )}
+      onClick={onSelect}
     >
-      {/* 点击选择区域 */}
-      <div
-        onClick={onSelect}
-        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:bg-muted/30 -my-3 py-3 -ml-2 pl-2 rounded-l transition-colors"
-      >
-        {/* 简洁进度指示 */}
-        <div className="relative w-8 h-8 shrink-0">
-          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" className="text-border" strokeWidth="2.5" />
+      {/* 简洁状态指示 */}
+      <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
+        <svg className="w-10 h-10 -rotate-90 absolute inset-0" viewBox="0 0 40 40">
+          <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" className="text-border/40" strokeWidth="2" />
+          {!isCompleted && (
             <circle
-              cx="18" cy="18" r="14" fill="none"
-              stroke={isCompleted ? "#10b981" : isUrgent ? "#f43f5e" : "hsl(var(--primary))"}
-              strokeWidth="2.5"
-              strokeDasharray={`${progress * 0.88} 100`}
+              cx="20" cy="20" r="18" fill="none"
+              stroke="currentColor"
+              className="text-primary/60"
+              strokeWidth="2"
+              strokeDasharray={`${progress * 1.13} 113`}
               strokeLinecap="round"
             />
-          </svg>
-          <span className={cn(
-            "absolute inset-0 flex items-center justify-center text-[9px] font-semibold",
-            isCompleted ? "text-emerald-600" : isUrgent ? "text-rose-500" : "text-primary"
-          )}>
-            {isCompleted ? '✓' : `${Math.round(progress)}`}
-          </span>
-        </div>
+          )}
+        </svg>
+        {isCompleted ? (
+          <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2.5} />
+        ) : (
+          <span className="text-[11px] font-bold text-foreground/60">{Math.round(progress)}%</span>
+        )}
+      </div>
 
-        <div className="flex-1 min-w-0">
-          <h4 className={cn(
-            "text-sm font-medium tracking-tight transition-all truncate",
-            isCompleted && !isSelected ? "text-muted-foreground line-through" : isSelected ? "text-primary" : "text-foreground/80"
-          )}>
-            {task.task_title}
-          </h4>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs text-muted-foreground/60">
-              {dayjs(task.deadline).format('M/D')} {isCompleted ? '已完成' : '截止'}
-            </span>
-            {isUrgent && (
-              <span className="text-[10px] font-medium text-rose-500">
-                紧急
-              </span>
-            )}
-          </div>
+      {/* 任务信息 */}
+      <div className="flex-1 min-w-0">
+        <h4 className={cn(
+          "text-sm font-semibold truncate transition-colors",
+          isCompleted ? "text-muted-foreground/60 line-through" : "text-foreground",
+          isSelected && "text-primary"
+        )}>
+          {task.task_title}
+        </h4>
+        <div className="flex items-center gap-3 mt-0.5">
+          <span className="text-[11px] text-muted-foreground/50">
+            {dayjs(task.deadline).format('MM月DD日')}截止
+          </span>
+          {isCompleted && (
+            <span className="text-[10px] font-bold text-emerald-500/70">已完成</span>
+          )}
         </div>
       </div>
 
-      {/* 进入详情按钮 */}
+      {/* 侧边操作 */}
       <button
         onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-        className="shrink-0 p-1.5 rounded-md text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
-        title="查看任务详情"
+        className={cn(
+          "p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100",
+          isSelected ? "opacity-100 text-primary bg-primary/10" : "text-muted-foreground/30 hover:text-primary hover:bg-primary/5"
+        )}
       >
-        <ExternalLink className="w-4 h-4" />
+        <ExternalLink className="w-3.5 h-3.5" />
       </button>
     </div>
   );
@@ -411,64 +408,70 @@ export const StudentDashboard: React.FC = () => {
           </EditorialCard>
         </div>
 
-        {/* 同伴进度 (4) - 显示选中任务的参与者进度 */}
         <div className="lg:col-span-4">
-          <EditorialCard title="同伴进度" icon={TrendingUp} accentColor="text-violet-500">
-            <div className="space-y-1 min-h-[288px]">
+          <EditorialCard
+            title="同伴进度"
+            icon={TrendingUp}
+            accentColor="text-violet-500"
+          >
+            <div className="space-y-1 min-h-[300px]">
               {!selectedTask ? (
-                <div className="flex flex-col items-center justify-center h-[288px] text-muted-foreground/40">
-                  <TrendingUp className="w-6 h-6 mb-2" strokeWidth={1.5} />
-                  <p className="text-xs">选择任务查看进度</p>
+                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground/30">
+                  <TrendingUp className="w-8 h-8 opacity-10 mb-2" />
+                  <p className="text-[11px] font-medium">选择任务查看进度</p>
                 </div>
               ) : participantsLoading ? (
-                [1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="h-8 mb-1" />)
+                <div className="space-y-4 p-2">
+                  {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-6 w-full rounded" />)}
+                </div>
               ) : participants && participants.length > 0 ? (
-                participants.map((p, index) => (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      "flex items-center justify-between py-2 px-2 -mx-2 rounded transition-colors",
-                      p.is_me ? "bg-violet-500/5" : "hover:bg-muted/30"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        "text-xs font-medium w-4",
-                        p.is_me ? "text-violet-500" : "text-muted-foreground/60"
-                      )}>
-                        {index + 1}
-                      </span>
-                      <span className={cn(
-                        "text-sm",
-                        p.is_me ? "text-violet-600 font-medium" : "text-foreground/70"
-                      )}>
-                        {p.is_me ? '我' : p.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 bg-border/50 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${p.progress}%` }}
-                          transition={{ duration: 0.6, ease: "easeOut", delay: index * 0.08 }}
-                          className={cn(
-                            "h-full rounded-full",
-                            p.is_me ? "bg-violet-400" : p.progress >= 80 ? "bg-emerald-400" : p.progress >= 50 ? "bg-sky-400" : "bg-muted-foreground/30"
-                          )}
-                        />
+                <div className="flex flex-col gap-0.5">
+                  {participants.map((p, index) => (
+                    <div
+                      key={p.id}
+                      className={cn(
+                        "flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors",
+                        p.is_me ? "bg-violet-500/[0.04]" : "hover:bg-muted/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "text-[10px] font-bold w-4",
+                          index < 3 ? "text-violet-500" : "text-muted-foreground/30"
+                        )}>
+                          {index + 1}
+                        </span>
+                        <span className={cn(
+                          "text-sm",
+                          p.is_me ? "font-bold text-violet-600" : "text-foreground/70"
+                        )}>
+                          {p.is_me ? '我' : p.name}
+                        </span>
                       </div>
-                      <span className={cn(
-                        "text-xs w-8 text-right",
-                        p.is_me ? "text-violet-500 font-medium" : "text-muted-foreground/60"
-                      )}>
-                        {p.progress}%
-                      </span>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-20 h-1 bg-border/40 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-1000 ease-out",
+                              p.is_me ? "bg-violet-500" : "bg-muted-foreground/20"
+                            )}
+                            style={{ width: `${p.progress}%` }}
+                          />
+                        </div>
+                        <span className={cn(
+                          "text-[11px] font-medium w-8 text-right",
+                          p.is_me ? "text-violet-500" : "text-muted-foreground/50"
+                        )}>
+                          {Math.round(p.progress)}%
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-[288px] text-muted-foreground/40">
-                  <p className="text-xs">暂无其他参与者</p>
+                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground/30">
+                  <p className="text-[11px]">暂无数据</p>
                 </div>
               )}
             </div>
