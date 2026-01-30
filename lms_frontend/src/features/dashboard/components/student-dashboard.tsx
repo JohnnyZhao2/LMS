@@ -312,25 +312,42 @@ const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSe
       {/* 垂直分割线 - 增强系统一致性 */}
       <div className="w-[1px] bg-black/[0.03] dark:bg-white/[0.02] h-10 my-auto" />
 
-      {/* 右侧元数据与动作 */}
-      <div className="w-24 flex flex-col items-center justify-center gap-1.5">
+      {/* 右侧元数据与动作 - 与知识速递保持高度一致 */}
+      <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
+        {/* 年份：仅在选中或聚焦时显现 */}
+        <span className={cn(
+          "text-[9px] font-mono font-bold uppercase tracking-widest transition-all duration-500",
+          isSelected ? "text-primary/40 opacity-100" : "text-slate-500/40 opacity-0 group-hover:opacity-100"
+        )}>
+          {dayjs(task.deadline).format('YYYY')}
+        </span>
+
+        {/* 日期/状态 */}
         {isCompleted ? (
-          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500/60 mb-1" strokeWidth={2.5} />
-            <span className="text-[8px] font-black text-emerald-500/50 uppercase tracking-[0.2em]">Success</span>
+          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500 py-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500/60" strokeWidth={2.5} />
           </div>
         ) : (
-          <>
-            <span className="text-[11px] font-bold text-slate-400/60 tracking-tight group-hover:text-slate-500 transition-colors">
-              {dayjs(task.deadline).format('MM.DD')}
-            </span>
+          <span className={cn(
+            "text-[11px] font-mono font-bold tracking-wider transition-colors duration-500",
+            isSelected ? "text-primary" : "text-slate-500/60 group-hover:text-slate-500"
+          )}>
+            {dayjs(task.deadline).format('MM.DD')}
+          </span>
+        )}
+
+        {/* 箭头：滑入动画 */}
+        {!isCompleted && (
+          <div className="h-4 flex items-center justify-center">
             <div className={cn(
-              "p-2 rounded-full transition-all duration-500",
-              isSelected ? "text-primary translate-x-1" : "text-slate-200 group-hover:text-slate-300"
+              "transition-all duration-500",
+              isSelected
+                ? "opacity-100 translate-y-0 text-primary"
+                : "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 text-primary/40"
             )}>
-              <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
