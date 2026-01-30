@@ -196,7 +196,7 @@ const EditorialCard: React.FC<{
 
   return (
     <Card className={cn(
-      "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group/card",
+      "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group/card flex flex-col",
       "hover:shadow-[0_12px_40px_rgba(0,0,0,0.04)] hover:border-primary/20",
       className
     )}>
@@ -227,41 +227,38 @@ const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: str
     <div
       onClick={() => navigate(`knowledge/${knowledge.id}`)}
       className={cn(
-        "group relative p-5 rounded-2xl transition-all duration-500 cursor-pointer flex flex-col h-[96px] overflow-hidden",
-        "bg-white/40 dark:bg-card/40 backdrop-blur-md border border-white/60 dark:border-white/5",
-        "hover:bg-white/90 hover:shadow-[0_20px_40px_rgba(0,0,0,0.03)] hover:-translate-y-1 active:scale-[0.98]"
+        "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex flex-col h-[100px] overflow-hidden",
+        "bg-slate-50/40 dark:bg-card/40 border border-slate-200/30 dark:border-white/5",
+        "hover:bg-white dark:hover:bg-slate-900 hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] hover:border-slate-200 dark:hover:border-white/10 hover:-translate-y-0.5 active:scale-[0.98]"
       )}
     >
       <div className="relative z-10 w-full flex h-full items-stretch">
-        {/* 左侧：内容主场 - 重归沉稳深色 */}
-        <div className="flex-1 min-w-0 pl-5 pr-8 flex flex-col justify-center">
-          <h5 className="text-[16px] font-bold text-foreground/80 truncate tracking-tight leading-none mb-2.5">
+        {/* 内容主场 */}
+        <div className="flex-1 min-w-0 pr-8 flex flex-col justify-center">
+          <h5 className="text-[16px] font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight leading-none mb-3 group-hover:text-primary transition-colors">
             {knowledge.title}
           </h5>
-          <p className="text-[12px] text-muted-foreground/45 line-clamp-1 break-all font-medium group-hover:text-muted-foreground/60 transition-colors tracking-tight leading-none">
+          <p className="text-[12px] text-slate-400/80 line-clamp-1 break-all font-medium leading-none tracking-tight">
             {knowledge.summary || knowledge.content_preview || "点击进入深度学习..."}
           </p>
         </div>
 
         {/* 垂直分割线 */}
-        <div className="w-[1px] bg-black/[0.04] dark:bg-white/[0.02] h-10 my-auto" />
+        <div className="w-[1px] bg-slate-200/50 dark:bg-white/5 h-10 my-auto" />
 
-        {/* 右侧：纵向有序元数据 - 全部横向排版 */}
+        {/* 右侧元数据 */}
         <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
-          {/* 年份：顶部横排，仅聚焦时显现 - 增强可见度 */}
-          <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500/40 opacity-0 group-hover:opacity-100 transition-all duration-500">
+          <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400/40 opacity-0 group-hover:opacity-100 transition-all duration-500">
             {dayjs(knowledge.updated_at).format('YYYY')}
           </span>
 
-          {/* 日期：中部横排 - 增强可见度 */}
-          <span className="text-[11px] font-mono font-bold text-slate-500/60 tracking-wider group-hover:text-slate-500 transition-colors duration-500">
+          <span className="text-[11px] font-mono font-bold text-slate-400/60 tracking-wider group-hover:text-slate-600 transition-colors duration-500">
             {dayjs(knowledge.updated_at).format('MM.DD')}
           </span>
 
-          {/* 箭头：底部滑入 */}
           <div className="h-4 flex items-center justify-center">
             <div className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-500">
-              <ArrowRight className="w-3.5 h-3.5 text-primary/40 stroke-[2.5]" />
+              <ArrowRight className="w-3.5 h-3.5 text-primary/50 stroke-[2.5]" />
             </div>
           </div>
         </div>
@@ -269,7 +266,6 @@ const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: str
     </div>
   );
 };
-
 
 const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void }> = ({ task, isSelected, onSelect }) => {
   const isCompleted = task.status === 'COMPLETED';
@@ -279,16 +275,16 @@ const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSe
     <div
       onClick={onSelect}
       className={cn(
-        "group relative p-6 rounded-2xl transition-all duration-500 cursor-pointer flex items-center gap-6",
+        "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex items-center gap-6",
         isSelected
-          ? "bg-slate-50/80 dark:bg-slate-900/50 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-slate-200/50 dark:border-slate-800 scale-[1.01]"
-          : "hover:bg-slate-50/40 border border-transparent"
+          ? "bg-white dark:bg-slate-900 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] border border-slate-200 dark:border-white/10 scale-[1.01]"
+          : "bg-slate-50/40 dark:bg-card/40 border border-slate-200/30 dark:border-white/5 hover:bg-slate-50/80"
       )}
     >
       {/* 内容主场 */}
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <h5 className={cn(
-          "text-[16px] font-bold tracking-tight mb-2.5 transition-colors",
+          "text-[16px] font-bold tracking-tight mb-3 transition-colors",
           isCompleted ? "text-slate-300 line-through" : "text-slate-800 dark:text-slate-100",
           isSelected && !isCompleted && "text-primary"
         )}>
@@ -296,7 +292,7 @@ const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSe
         </h5>
         {!isCompleted && (
           <div className="flex items-center gap-3">
-            <div className="w-20 h-[1.5px] bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="w-20 h-[1.5px] bg-slate-200/50 dark:bg-white/5 rounded-full overflow-hidden">
               <div
                 className={cn("h-full transition-all duration-1000", isSelected ? "bg-primary" : "bg-slate-300/40")}
                 style={{ width: `${progress}%` }}
@@ -309,46 +305,51 @@ const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSe
         )}
       </div>
 
-      {/* 垂直分割线 - 增强系统一致性 */}
-      <div className="w-[1px] bg-black/[0.03] dark:bg-white/[0.02] h-10 my-auto" />
+      {/* 垂直分割线 */}
+      <div className="w-[1px] bg-slate-200/50 dark:bg-white/5 h-10 my-auto" />
 
-      {/* 右侧元数据与动作 - 与知识速递保持高度一致 */}
+      {/* 右侧元数据与动作 - 智能交互展示逻辑 */}
       <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
         {/* 年份：仅在选中或聚焦时显现 */}
         <span className={cn(
           "text-[9px] font-mono font-bold uppercase tracking-widest transition-all duration-500",
-          isSelected ? "text-primary/40 opacity-100" : "text-slate-500/40 opacity-0 group-hover:opacity-100"
+          isSelected ? "text-primary/40 opacity-100" : "text-slate-400/40 opacity-0 group-hover:opacity-100"
         )}>
           {dayjs(task.deadline).format('YYYY')}
         </span>
 
-        {/* 日期/状态 */}
-        {isCompleted ? (
-          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500 py-1">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500/60" strokeWidth={2.5} />
-          </div>
-        ) : (
+        {/* 核心展示区：状态图标与日期的智能切换 */}
+        <div className="relative h-4 flex items-center justify-center w-full">
+          {isCompleted && (
+            <div className={cn(
+              "absolute transition-all duration-500",
+              isSelected ? "opacity-0 scale-50" : "opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-50"
+            )}>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500/60" strokeWidth={2.5} />
+            </div>
+          )}
+
           <span className={cn(
-            "text-[11px] font-mono font-bold tracking-wider transition-colors duration-500",
-            isSelected ? "text-primary" : "text-slate-500/60 group-hover:text-slate-500"
+            "text-[11px] font-mono font-bold tracking-wider transition-all duration-500",
+            isCompleted
+              ? (isSelected ? "opacity-100 scale-100 text-primary" : "opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 group-hover:text-slate-500")
+              : (isSelected ? "text-primary" : "text-slate-400/60 group-hover:text-slate-500")
           )}>
             {dayjs(task.deadline).format('MM.DD')}
           </span>
-        )}
+        </div>
 
         {/* 箭头：滑入动画 */}
-        {!isCompleted && (
-          <div className="h-4 flex items-center justify-center">
-            <div className={cn(
-              "transition-all duration-500",
-              isSelected
-                ? "opacity-100 translate-y-0 text-primary"
-                : "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 text-primary/40"
-            )}>
-              <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-            </div>
+        <div className="h-4 flex items-center justify-center">
+          <div className={cn(
+            "transition-all duration-500",
+            isSelected
+              ? "opacity-100 translate-y-0 text-primary"
+              : "opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 text-primary/40"
+          )}>
+            <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -365,7 +366,10 @@ export const StudentDashboard: React.FC = () => {
   );
 
   const stats = data?.stats;
-  const tasks = data?.tasks || [];
+  const tasks = React.useMemo(() =>
+    [...(data?.tasks || [])].sort((a, b) => dayjs(b.deadline).valueOf() - dayjs(a.deadline).valueOf()),
+    [data?.tasks]
+  );
 
   return (
     <div className="space-y-12 pb-14 animate-in fade-in slide-in-from-bottom-4 duration-1000 pt-2 font-sans">
@@ -413,8 +417,9 @@ export const StudentDashboard: React.FC = () => {
             title="任务中心"
             icon={CalendarIcon}
             accentColor="text-sky-500"
+            className="h-full"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 mb-3" />) :
                 tasks.map(t => (
                   <TaskItem
@@ -433,63 +438,76 @@ export const StudentDashboard: React.FC = () => {
             title="同伴进度"
             icon={TrendingUp}
             accentColor="text-violet-500"
+            className="h-full"
           >
-            <div className="space-y-1 min-h-[320px] flex flex-col">
+            <div className="space-y-1 flex flex-col pt-2">
               {!selectedTask ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
-                  <TrendingUp className="w-10 h-10 opacity-10" strokeWidth={1} />
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Select a task to sync</p>
+                  <div className="p-4 rounded-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative group/icon">
+                    <TrendingUp className="w-8 h-8 opacity-20 group-hover/icon:scale-110 transition-transform duration-500" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400/40">Select task to sync</p>
                 </div>
               ) : participantsLoading ? (
-                <div className="space-y-4 pt-2">
+                <div className="space-y-6 px-2">
                   {[1, 2, 3, 4, 5].map(i => (
                     <div key={i} className="flex items-center gap-4">
-                      <Skeleton className="w-10 h-10 rounded-xl" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-2 w-1/3" />
-                        <Skeleton className="h-1.5 w-full" />
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <div className="flex-1 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <Skeleton className="h-3 w-1/4 rounded" />
+                          <Skeleton className="h-3 w-8 rounded" />
+                        </div>
+                        <Skeleton className="h-[1.5px] w-full rounded-full" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : participants && participants.length > 0 ? (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1 px-1">
                   {participants.map((p, index) => (
                     <div
                       key={p.id}
                       className={cn(
-                        "flex items-center gap-4 p-3.5 rounded-xl transition-all duration-300",
-                        p.is_me ? "bg-slate-50 dark:bg-slate-900 border border-slate-200/50" : "hover:bg-slate-50/50"
+                        "group/peer flex items-center gap-5 p-3.5 rounded-[18px] transition-all duration-500",
+                        p.is_me
+                          ? "bg-primary/[0.03] dark:bg-primary/5 shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
+                          : "hover:bg-slate-50/60 dark:hover:bg-slate-900/40"
                       )}
                     >
-                      {/* 名次标识 */}
+                      {/* 极简名次标识 */}
                       <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0",
-                        index === 0 ? "bg-amber-100 text-amber-600" :
-                          index === 1 ? "bg-slate-100 text-slate-500" :
-                            index === 2 ? "bg-orange-50 text-orange-600" :
-                              "bg-slate-50 text-slate-400"
-                      )}>
-                        {index + 1}
+                        "w-6 h-6 flex items-center justify-center text-[13px] font-black italic tracking-tighter shrink-0 transition-transform group-hover/peer:scale-110 duration-500",
+                        index === 0 ? "text-amber-500 font-black" :
+                          index === 1 ? "text-slate-400" :
+                            index === 2 ? "text-orange-400" :
+                              "text-slate-200 dark:text-slate-800"
+                      )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {String(index + 1).padStart(2, '0')}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-2">
                           <span className={cn(
-                            "text-sm font-bold tracking-tight",
-                            p.is_me ? "text-primary" : "text-slate-600"
+                            "text-[13px] font-bold tracking-tight transition-colors",
+                            p.is_me ? "text-primary" : "text-slate-600 dark:text-slate-400"
                           )}>
                             {p.is_me ? '我' : p.name}
                           </span>
-                          <span className="text-[11px] font-black text-slate-400" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          <span className={cn(
+                            "text-[10px] font-black transition-colors",
+                            p.is_me ? "text-primary/70" : "text-slate-300 dark:text-slate-700"
+                          )} style={{ fontFamily: "'Outfit', sans-serif" }}>
                             {Math.round(p.progress)}%
                           </span>
                         </div>
-                        <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+
+                        {/* 极细贯通进度条 - 系统一致性 */}
+                        <div className="h-[1.5px] w-full bg-slate-100 dark:bg-slate-800/50 rounded-full overflow-hidden">
                           <div
                             className={cn(
-                              "h-full rounded-full transition-all duration-1000",
-                              p.is_me ? "bg-primary" : "bg-slate-300"
+                              "h-full transition-all duration-1000 ease-out",
+                              p.is_me ? "bg-primary" : "bg-slate-300/40"
                             )}
                             style={{ width: `${p.progress}%` }}
                           />
@@ -499,8 +517,9 @@ export const StudentDashboard: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">No data available</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-300/40 gap-3">
+                  <TrendingUp className="w-6 h-6 opacity-20" strokeWidth={1} />
+                  <p className="text-[10px] font-black uppercase tracking-widest">No participants found</p>
                 </div>
               )}
             </div>
