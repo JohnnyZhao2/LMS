@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 from typing import Any, Dict, List, Optional
 
 from django.conf import settings
-from django.db.models import Avg, QuerySet
+from django.db.models import Avg, Count, OuterRef, QuerySet, Subquery
 from django.utils import timezone
 
 from apps.activity_logs.models import UserLog
@@ -178,11 +178,15 @@ def get_student_exam_avg_score(user_id: int) -> Optional[float]:
     return float(result['avg_score']) if result['avg_score'] else None
 
 
-def calculate_assignment_progress(assignment: 'TaskAssignment') -> Dict[str, Any]:
+def calculate_assignment_progress(
+    assignment: 'TaskAssignment',
+    quiz_completed: Optional[int] = None
+) -> Dict[str, Any]:
     """
     计算单个任务分配的进度
     Args:
         assignment: TaskAssignment 实例（需要预加载 task, task__task_knowledge, task__task_quizzes, knowledge_progress）
+        quiz_completed: 预计算的已完成测验数量（避免 N+1 查询）
     Returns:
         进度字典，包含 completed, total, percentage, knowledge_total, knowledge_completed, quiz_total, quiz_completed
     """
@@ -203,9 +207,12 @@ def calculate_assignment_progress(assignment: 'TaskAssignment') -> Dict[str, Any
         }
 
     completed_k = assignment.knowledge_progress.filter(is_completed=True).count()
-    completed_q = Submission.objects.filter(
-        task_assignment=assignment
-    ).values_list('quiz_id', flat=True).distinct().count()
+    if quiz_completed is None:
+        completed_q = Submission.objects.filter(
+            task_assignment=assignment
+        ).values_list('quiz_id', flat=True).distinct().count()
+    else:
+        completed_q = quiz_completed
     completed = completed_k + completed_q
 
     return {
@@ -278,7 +285,14 @@ def get_task_participants_progress(
     Returns:
         参与者进度列表
     """
-    # 获取该任务的所有分配
+    # 子查询：计算每个 assignment 的已完成测验数量
+    quiz_completed_subquery = Submission.objects.filter(
+        task_assignment=OuterRef('pk')
+    ).values('task_assignment').annotate(
+        cnt=Count('quiz_id', distinct=True)
+    ).values('cnt')
+
+    # 获取该任务的所有分配，并预计算已完成测验数量
     assignments = TaskAssignment.objects.filter(
         task_id=task_id,
         task__is_deleted=False
@@ -288,6 +302,8 @@ def get_task_participants_progress(
         'task__task_knowledge',
         'task__task_quizzes',
         'knowledge_progress'
+    ).annotate(
+        quiz_completed_count=Subquery(quiz_completed_subquery)
     )
 
     if not assignments.exists():
@@ -295,7 +311,8 @@ def get_task_participants_progress(
 
     participants = []
     for assignment in assignments:
-        progress_data = calculate_assignment_progress(assignment)
+        quiz_completed = assignment.quiz_completed_count or 0
+        progress_data = calculate_assignment_progress(assignment, quiz_completed)
         participants.append({
             'id': assignment.assignee.id,
             'name': assignment.assignee.username,

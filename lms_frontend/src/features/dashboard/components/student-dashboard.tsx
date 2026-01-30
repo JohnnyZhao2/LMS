@@ -164,16 +164,24 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
 
         {/* 底部任务提示 */}
         <div className="mt-auto pt-3 border-t border-dashed border-border/30">
-          {selectedTask ? (
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted-foreground/60 truncate max-w-[55%] uppercase tracking-wider">
-                {selectedTask.task_title}
-              </span>
-              <span className="text-[10px] font-black text-primary">
-                剩余 {dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day')} 天
-              </span>
-            </div>
-          ) : (
+          {selectedTask ? (() => {
+            const daysLeft = dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day');
+            const isOverdue = daysLeft < 0;
+            const isToday = daysLeft === 0;
+            return (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-muted-foreground/60 truncate max-w-[55%] uppercase tracking-wider">
+                  {selectedTask.task_title}
+                </span>
+                <span className={cn(
+                  "text-[10px] font-black",
+                  isOverdue ? "text-rose-500" : isToday ? "text-amber-500" : "text-primary"
+                )}>
+                  {isOverdue ? `已逾期 ${Math.abs(daysLeft)} 天` : isToday ? '今日截止' : `剩余 ${daysLeft} 天`}
+                </span>
+              </div>
+            );
+          })() : (
             <p className="text-[9px] text-muted-foreground/40 text-center font-bold tracking-widest uppercase">选择任务查看截止日期</p>
           )}
         </div>
