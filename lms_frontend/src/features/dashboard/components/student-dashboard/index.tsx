@@ -81,7 +81,7 @@ export const StudentDashboard: React.FC = () => {
             className="h-full"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 mb-3" />) :
+              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-28 rounded-xl" />) :
                 tasks.map(t => (
                   <TaskItem
                     key={t.id}
