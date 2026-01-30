@@ -10,10 +10,8 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useStudentDashboard, useTaskParticipants } from '../api/student-dashboard';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
@@ -194,28 +192,35 @@ const EditorialCard: React.FC<{
   children: React.ReactNode;
   className?: string;
   accentColor?: string;
-}> = ({ title, icon: Icon, action, children, className, accentColor = "text-primary-500" }) => (
-  <Card className={cn(
-    "relative border-border/40 bg-card flex flex-col h-full shadow-none overflow-hidden",
-    className
-  )}>
-    {/* 头部 */}
-    <div className="relative z-10 px-6 py-3.5 flex items-center justify-between border-b border-black/[0.02]">
-      <div className="flex items-center gap-2.5">
-        <Icon className={cn("w-[17px] h-[17px]", accentColor)} strokeWidth={2.5} />
-        <h3 className="text-sm font-bold text-foreground/80 tracking-tight">
-          {title}
-        </h3>
-      </div>
-      {action}
-    </div>
+}> = ({ title, icon: Icon, action, children, className, accentColor = "text-primary" }) => {
 
-    {/* 内容区 */}
-    <div className="relative z-10 p-4 flex-1">
-      {children}
-    </div>
-  </Card>
-);
+  return (
+    <Card className={cn(
+      "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group/card",
+      "hover:shadow-[0_12px_40px_rgba(0,0,0,0.04)] hover:border-primary/20",
+      className
+    )}>
+      {/* 噪点纹理 - 与 StatCard 保持一致 */}
+      <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
+
+      {/* 头部 - 建筑级美学布局 */}
+      <div className="relative z-10 px-8 py-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Icon className={cn("w-4 h-4 opacity-40", accentColor)} strokeWidth={2.5} />
+          <h3 className="font-bold text-muted-foreground/80 uppercase tracking-[0.25em] leading-none text-[11px] truncate group-hover/card:text-foreground transition-colors duration-300">
+            {title}
+          </h3>
+        </div>
+        {action}
+      </div>
+
+      {/* 内容区 */}
+      <div className="relative z-10 px-8 pb-8 pt-2 flex-1 flex flex-col">
+        {children}
+      </div>
+    </Card>
+  );
+};
 
 const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: string) => void }> = ({ knowledge, navigate }) => {
   return (
@@ -266,69 +271,68 @@ const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: str
 };
 
 
-const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void; onNavigate: () => void }> = ({ task, isSelected, onSelect, onNavigate }) => {
+const TaskItem: React.FC<{ task: StudentDashboardTask; isSelected: boolean; onSelect: () => void }> = ({ task, isSelected, onSelect }) => {
   const isCompleted = task.status === 'COMPLETED';
   const progress = task.progress?.percentage ?? 0;
 
   return (
     <div
-      className={cn(
-        "group relative py-3 px-3 -mx-3 rounded-lg transition-all duration-200 flex items-center gap-4 cursor-pointer",
-        isSelected ? "bg-primary/[0.04]" : "hover:bg-muted/40"
-      )}
       onClick={onSelect}
+      className={cn(
+        "group relative p-6 rounded-2xl transition-all duration-500 cursor-pointer flex items-center gap-6",
+        isSelected
+          ? "bg-slate-50/80 dark:bg-slate-900/50 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-slate-200/50 dark:border-slate-800 scale-[1.01]"
+          : "hover:bg-slate-50/40 border border-transparent"
+      )}
     >
-      {/* 简洁状态指示 */}
-      <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
-        <svg className="w-10 h-10 -rotate-90 absolute inset-0" viewBox="0 0 40 40">
-          <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" className="text-border/40" strokeWidth="2" />
-          {!isCompleted && (
-            <circle
-              cx="20" cy="20" r="18" fill="none"
-              stroke="currentColor"
-              className="text-primary/60"
-              strokeWidth="2"
-              strokeDasharray={`${progress * 1.13} 113`}
-              strokeLinecap="round"
-            />
-          )}
-        </svg>
-        {isCompleted ? (
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" strokeWidth={2.5} />
-        ) : (
-          <span className="text-[11px] font-bold text-foreground/60">{Math.round(progress)}%</span>
-        )}
-      </div>
-
-      {/* 任务信息 */}
-      <div className="flex-1 min-w-0">
-        <h4 className={cn(
-          "text-sm font-semibold truncate transition-colors",
-          isCompleted ? "text-muted-foreground/60 line-through" : "text-foreground",
-          isSelected && "text-primary"
+      {/* 内容主场 */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <h5 className={cn(
+          "text-[16px] font-bold tracking-tight mb-2.5 transition-colors",
+          isCompleted ? "text-slate-300 line-through" : "text-slate-800 dark:text-slate-100",
+          isSelected && !isCompleted && "text-primary"
         )}>
           {task.task_title}
-        </h4>
-        <div className="flex items-center gap-3 mt-0.5">
-          <span className="text-[11px] text-muted-foreground/50">
-            {dayjs(task.deadline).format('MM月DD日')}截止
-          </span>
-          {isCompleted && (
-            <span className="text-[10px] font-bold text-emerald-500/70">已完成</span>
-          )}
-        </div>
+        </h5>
+        {!isCompleted && (
+          <div className="flex items-center gap-3">
+            <div className="w-20 h-[1.5px] bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className={cn("h-full transition-all duration-1000", isSelected ? "bg-primary" : "bg-slate-300/40")}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              {Math.round(progress)}%
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* 侧边操作 */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onNavigate(); }}
-        className={cn(
-          "p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100",
-          isSelected ? "opacity-100 text-primary bg-primary/10" : "text-muted-foreground/30 hover:text-primary hover:bg-primary/5"
+      {/* 垂直分割线 - 增强系统一致性 */}
+      <div className="w-[1px] bg-black/[0.03] dark:bg-white/[0.02] h-10 my-auto" />
+
+      {/* 右侧元数据与动作 */}
+      <div className="w-24 flex flex-col items-center justify-center gap-1.5">
+        {isCompleted ? (
+          <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500/60 mb-1" strokeWidth={2.5} />
+            <span className="text-[8px] font-black text-emerald-500/50 uppercase tracking-[0.2em]">Success</span>
+          </div>
+        ) : (
+          <>
+            <span className="text-[11px] font-bold text-slate-400/60 tracking-tight group-hover:text-slate-500 transition-colors">
+              {dayjs(task.deadline).format('MM.DD')}
+            </span>
+            <div className={cn(
+              "p-2 rounded-full transition-all duration-500",
+              isSelected ? "text-primary translate-x-1" : "text-slate-200 group-hover:text-slate-300"
+            )}>
+              <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+            </div>
+          </>
         )}
-      >
-        <ExternalLink className="w-3.5 h-3.5" />
-      </button>
+      </div>
     </div>
   );
 };
@@ -393,15 +397,14 @@ export const StudentDashboard: React.FC = () => {
             icon={CalendarIcon}
             accentColor="text-sky-500"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 mb-3" />) :
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+              {isLoading ? [1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 mb-3" />) :
                 tasks.map(t => (
                   <TaskItem
                     key={t.id}
                     task={t}
                     isSelected={selectedTask?.id === t.id}
                     onSelect={() => setSelectedTask(selectedTask?.id === t.id ? null : t)}
-                    onNavigate={() => roleNavigate(`tasks/${t.task_id}`)}
                   />
                 ))}
             </div>
@@ -414,64 +417,73 @@ export const StudentDashboard: React.FC = () => {
             icon={TrendingUp}
             accentColor="text-violet-500"
           >
-            <div className="space-y-1 min-h-[300px]">
+            <div className="space-y-1 min-h-[320px] flex flex-col">
               {!selectedTask ? (
-                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground/30">
-                  <TrendingUp className="w-8 h-8 opacity-10 mb-2" />
-                  <p className="text-[11px] font-medium">选择任务查看进度</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
+                  <TrendingUp className="w-10 h-10 opacity-10" strokeWidth={1} />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Select a task to sync</p>
                 </div>
               ) : participantsLoading ? (
-                <div className="space-y-4 p-2">
-                  {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-6 w-full rounded" />)}
+                <div className="space-y-4 pt-2">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="w-10 h-10 rounded-xl" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-2 w-1/3" />
+                        <Skeleton className="h-1.5 w-full" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : participants && participants.length > 0 ? (
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1.5">
                   {participants.map((p, index) => (
                     <div
                       key={p.id}
                       className={cn(
-                        "flex items-center justify-between py-2.5 px-3 rounded-lg transition-colors",
-                        p.is_me ? "bg-violet-500/[0.04]" : "hover:bg-muted/30"
+                        "flex items-center gap-4 p-3.5 rounded-xl transition-all duration-300",
+                        p.is_me ? "bg-slate-50 dark:bg-slate-900 border border-slate-200/50" : "hover:bg-slate-50/50"
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "text-[10px] font-bold w-4",
-                          index < 3 ? "text-violet-500" : "text-muted-foreground/30"
-                        )}>
-                          {index + 1}
-                        </span>
-                        <span className={cn(
-                          "text-sm",
-                          p.is_me ? "font-bold text-violet-600" : "text-foreground/70"
-                        )}>
-                          {p.is_me ? '我' : p.name}
-                        </span>
+                      {/* 名次标识 */}
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0",
+                        index === 0 ? "bg-amber-100 text-amber-600" :
+                          index === 1 ? "bg-slate-100 text-slate-500" :
+                            index === 2 ? "bg-orange-50 text-orange-600" :
+                              "bg-slate-50 text-slate-400"
+                      )}>
+                        {index + 1}
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-20 h-1 bg-border/40 rounded-full overflow-hidden">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={cn(
+                            "text-sm font-bold tracking-tight",
+                            p.is_me ? "text-primary" : "text-slate-600"
+                          )}>
+                            {p.is_me ? '我' : p.name}
+                          </span>
+                          <span className="text-[11px] font-black text-slate-400" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                            {Math.round(p.progress)}%
+                          </span>
+                        </div>
+                        <div className="h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div
                             className={cn(
-                              "h-full rounded-full transition-all duration-1000 ease-out",
-                              p.is_me ? "bg-violet-500" : "bg-muted-foreground/20"
+                              "h-full rounded-full transition-all duration-1000",
+                              p.is_me ? "bg-primary" : "bg-slate-300"
                             )}
                             style={{ width: `${p.progress}%` }}
                           />
                         </div>
-                        <span className={cn(
-                          "text-[11px] font-medium w-8 text-right",
-                          p.is_me ? "text-violet-500" : "text-muted-foreground/50"
-                        )}>
-                          {Math.round(p.progress)}%
-                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground/30">
-                  <p className="text-[11px]">暂无数据</p>
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">No data available</p>
                 </div>
               )}
             </div>
