@@ -1,17 +1,7 @@
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { LogOut, User, ChevronDown, Bell } from "lucide-react"
+import { LogOut, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  LayoutGrid,
-  BookOpen,
-  FileText,
-  Users,
-  HelpCircle,
-  FileSearch,
-  BarChart3,
-  Sparkles,
-} from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
 import { useCurrentRole } from "@/hooks/use-current-role"
@@ -29,6 +19,84 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import type { RoleCode } from "@/types/api"
+
+// Minimal 线条图标 - 统一 1.5px 描边
+const IconDashboard = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="2.5" y="2.5" width="6" height="6" rx="1" />
+    <rect x="11.5" y="2.5" width="6" height="6" rx="1" />
+    <rect x="2.5" y="11.5" width="6" height="6" rx="1" />
+    <rect x="11.5" y="11.5" width="6" height="6" rx="1" />
+  </svg>
+)
+
+const IconKnowledge = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M3 16V4.5A1.5 1.5 0 0 1 4.5 3H16v14H4.5A1.5 1.5 0 0 1 3 15.5V16z" />
+    <path d="M3 15.5A1.5 1.5 0 0 1 4.5 14H16" />
+  </svg>
+)
+
+const IconTask = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="3" y="3" width="14" height="14" rx="2" />
+    <path d="M7 10l2 2 4-4" />
+  </svg>
+)
+
+const IconUsers = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="7" cy="6" r="2.5" />
+    <path d="M2 17v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1" />
+    <circle cx="14" cy="6" r="2" />
+    <path d="M18 17v-.5a3 3 0 0 0-3-3" />
+  </svg>
+)
+
+const IconQuiz = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="10" cy="10" r="7" />
+    <path d="M8 8a2 2 0 1 1 2.5 1.94c-.39.12-.5.44-.5.81V12" />
+    <circle cx="10" cy="14" r="0.5" fill="currentColor" />
+  </svg>
+)
+
+const IconSpotCheck = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M12 2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-5-5z" />
+    <path d="M12 2v5h5" />
+    <circle cx="9" cy="12" r="2.5" />
+    <path d="M11 14l2 2" />
+  </svg>
+)
+
+const IconAnalytics = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M3 3v14h14" />
+    <path d="M6 13l3-3 3 3 4-5" />
+  </svg>
+)
+
+const IconPersonal = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="10" cy="6" r="3" />
+    <path d="M4 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" />
+  </svg>
+)
+
+const IconBell = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M10 2a5 5 0 0 0-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 0 0-5-5z" />
+    <path d="M8 14.5a2 2 0 0 0 4 0" />
+  </svg>
+)
+
+const IconLogo = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M8 12l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
 
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   STUDENT: "学",
@@ -57,24 +125,23 @@ const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
 
-// 根据路径后缀获取图标
+// 图标映射
 const getMenuIcon = (path: string): React.ReactNode => {
-  // 移除角色前缀，获取实际路径
   const pathParts = path.split('/').filter(Boolean)
   const actualPath = pathParts.length > 1 ? pathParts.slice(1).join('/') : pathParts[0]
 
   const iconMap: Record<string, React.ReactNode> = {
-    'dashboard': <LayoutGrid className="h-4 w-4" />,
-    'knowledge': <BookOpen className="h-4 w-4" />,
-    'tasks': <FileText className="h-4 w-4" />,
-    'users': <Users className="h-4 w-4" />,
-    'quiz-center': <HelpCircle className="h-4 w-4" />,
-    'spot-checks': <FileSearch className="h-4 w-4" />,
-    'analytics': <BarChart3 className="h-4 w-4" />,
-    'personal': <User className="h-4 w-4" />,
+    'dashboard': <IconDashboard className="w-4 h-4" />,
+    'knowledge': <IconKnowledge className="w-4 h-4" />,
+    'tasks': <IconTask className="w-4 h-4" />,
+    'users': <IconUsers className="w-4 h-4" />,
+    'quiz-center': <IconQuiz className="w-4 h-4" />,
+    'spot-checks': <IconSpotCheck className="w-4 h-4" />,
+    'analytics': <IconAnalytics className="w-4 h-4" />,
+    'personal': <IconPersonal className="w-4 h-4" />,
   }
 
-  return iconMap[actualPath] || <LayoutGrid className="h-4 w-4" />
+  return iconMap[actualPath] || <IconDashboard className="w-4 h-4" />
 }
 
 /**
@@ -171,33 +238,24 @@ export const Header: React.FC = () => {
   const selectedNavKey = getSelectedNavKey()
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-8 bg-background border-b-2 border-border transition-colors duration-200"
-      style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
-      {/* 左侧：Logo + 品牌名 + 导航菜单 */}
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-6 bg-background border-b border-border">
+      {/* 左侧：Logo + 导航菜单 */}
       <div className="flex items-center gap-10">
         {/* Logo */}
         <div
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate(getDashboardPath())}
         >
-          <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
-            <Sparkles className="text-white w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <IconLogo className="text-white w-5 h-5" />
           </div>
-
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight leading-none text-foreground">
-              SyncLearn
-            </span>
-            <span className="text-[10px] font-bold text-primary tracking-wider uppercase mt-0.5">
-              Platform
-            </span>
-          </div>
+          <span className="text-[15px] font-semibold text-foreground">
+            学习平台
+          </span>
         </div>
 
         {/* 导航菜单 */}
-        <nav className="hidden lg:flex items-center gap-1 h-10 relative">
+        <nav className="hidden lg:flex items-center gap-1">
           <AnimatePresence mode="popLayout" initial={false}>
             {menuItems.length > 0 ? (
               menuItems.map((item) => {
@@ -213,43 +271,40 @@ export const Header: React.FC = () => {
                     layout
                     onClick={() => handleNavClick(menuItem.key!)}
                     className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
+                      "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
                       isActive
                         ? "text-primary"
                         : "text-text-muted hover:text-foreground"
                     )}
                   >
-                    {/* 活跃状态背景动画 */}
                     {isActive && (
                       <motion.div
                         layoutId="active-nav-bg"
-                        className="absolute inset-0 bg-primary-50 rounded-md -z-10"
+                        className="absolute inset-0 bg-primary/10 rounded-md -z-10"
                         transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                       />
                     )}
-
                     <span className={cn(
-                      "transition-transform duration-200 group-hover:scale-110 shrink-0",
-                      isActive ? "text-primary" : "text-text-muted group-hover:text-primary"
+                      "shrink-0",
+                      isActive ? "text-primary" : "text-text-muted"
                     )}>
                       {icon}
                     </span>
-                    <span className="relative z-10">{menuItem.label}</span>
+                    <span>{menuItem.label}</span>
                   </motion.button>
                 )
               })
             ) : isLoading ? (
-              // 只有在真的没有数据且还在加载时才显示 Skeleton
               Array.from({ length: 4 }).map((_, i) => (
                 <motion.div
                   key={`skeleton-${i}`}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 px-4 py-2"
+                  className="flex items-center gap-1.5 px-3 py-1.5"
                 >
-                  <Skeleton className="h-4 w-4 rounded-sm" />
-                  <Skeleton className="h-4 w-12 rounded-sm" />
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-10 rounded" />
                 </motion.div>
               ))
             ) : null}
@@ -258,23 +313,23 @@ export const Header: React.FC = () => {
       </div>
 
       {/* 右侧：主题切换 + 通知 + 角色切换器 + 用户信息 */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1">
         {/* 主题切换 */}
         <ThemeSwitcher />
 
-        {/* 通知图标 */}
-        <button className="p-2.5 bg-muted rounded-md text-text-muted hover:text-primary hover:bg-primary-50 transition-all duration-200">
-          <Bell className="w-5 h-5" />
+        {/* 通知 */}
+        <button className="relative w-8 h-8 flex items-center justify-center rounded-md text-text-muted hover:text-foreground hover:bg-muted transition-colors">
+          <IconBell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
         </button>
 
         {/* 角色切换器 */}
         {availableRoles.length > 1 && currentRole && (
           <div
-            key={location.pathname} // 强制在路径变化时重新渲染
-            className="hidden md:flex items-center bg-muted p-1 rounded-md gap-1"
+            key={location.pathname}
+            className="hidden md:flex items-center bg-muted p-0.5 rounded-md gap-0.5 ml-2"
           >
             {roleOptions.map((option) => {
-              // 从当前 URL 实时解析角色，而不是依赖 state
               const pathRole = location.pathname.split('/')[1]?.toUpperCase() as RoleCode
               const isActive = pathRole === option.value || currentRole === option.value
 
@@ -283,9 +338,9 @@ export const Header: React.FC = () => {
                   key={option.value}
                   onClick={() => handleRoleChange(option.value)}
                   className={cn(
-                    "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
+                    "w-8 h-8 flex items-center justify-center text-xs font-medium rounded transition-colors",
                     isActive
-                      ? "bg-background text-foreground"
+                      ? "bg-background text-foreground shadow-sm"
                       : "text-text-muted hover:text-foreground"
                   )}
                 >
@@ -300,63 +355,52 @@ export const Header: React.FC = () => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-3 p-1 rounded-md hover:bg-muted transition-all duration-200 group"
-              >
-                <div className="relative">
-                  <Avatar className="h-9 w-9 border-2 border-border transition-transform duration-200 group-hover:scale-105">
-                    <AvatarFallback
-                      className={cn(
-                        "text-white font-bold text-sm",
-                        ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
-                      )}
-                    >
-                      {user.username.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
+              <button className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted transition-colors ml-2">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback
                     className={cn(
-                      "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",
+                      "text-white text-xs font-medium",
                       ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
                     )}
-                  />
-                </div>
-
-                <div className="hidden sm:flex flex-col items-start pr-2">
-                  <span className="text-sm font-bold text-foreground leading-tight">
+                  >
+                    {user.username.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:flex flex-col items-start">
+                  <span className="text-sm font-medium text-foreground leading-tight">
                     {user.username}
                   </span>
-                  <span className="text-[10px] font-bold text-text-muted leading-tight uppercase tracking-wider">
+                  <span className="text-[10px] text-text-muted leading-tight">
                     {ROLE_FULL_LABELS[currentRole!]}
                   </span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-text-muted group-hover:text-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-2 rounded-lg border-2 border-border">
-              <div className="px-3 py-3 border-b-2 border-border mb-1">
-                <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">当前角色</p>
-                <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full", ROLE_COLOR_CLASSES[currentRole!] || "bg-primary")} />
-                  <span className="text-sm font-bold text-foreground">{ROLE_FULL_LABELS[currentRole!]}</span>
+            <DropdownMenuContent align="end" className="w-48 p-1">
+              <div className="px-2 py-2 border-b border-border mb-1">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">当前角色</p>
+                <div className="flex items-center gap-1.5">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", ROLE_COLOR_CLASSES[currentRole!] || "bg-primary")} />
+                  <span className="text-sm font-medium text-foreground">{ROLE_FULL_LABELS[currentRole!]}</span>
                 </div>
               </div>
 
               <DropdownMenuItem
                 onClick={() => navigate(`/${currentRole!.toLowerCase()}/personal`)}
-                className="rounded-md py-2.5 focus:bg-primary-50 focus:text-primary-600 cursor-pointer"
+                className="rounded-md py-2 text-sm cursor-pointer"
               >
-                <User className="mr-3 h-4 w-4" />
+                <IconPersonal className="mr-2 w-4 h-4" />
                 个人设置
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuSeparator />
 
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="rounded-md py-2.5 text-destructive-600 focus:text-destructive-700 focus:bg-destructive-50 cursor-pointer"
+                className="rounded-md py-2 text-sm text-destructive focus:text-destructive cursor-pointer"
               >
-                <LogOut className="mr-3 h-4 w-4" />
+                <LogOut className="mr-2 h-4 w-4" />
                 退出登录
               </DropdownMenuItem>
             </DropdownMenuContent>

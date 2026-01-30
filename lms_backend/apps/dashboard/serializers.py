@@ -59,51 +59,6 @@ class StudentTaskSerializer(serializers.ModelSerializer):
         }
 
 
-class StudentPendingTaskSerializer(serializers.ModelSerializer):
-    """
-    Serializer for student's pending tasks on dashboard.
-    """
-    task_id = serializers.IntegerField(source='task.id', read_only=True)
-    task_title = serializers.CharField(source='task.title', read_only=True)
-    deadline = serializers.DateTimeField(source='task.deadline', read_only=True)
-    created_by_name = serializers.CharField(source='task.created_by.username', read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    progress = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TaskAssignment
-        fields = [
-            'id', 'task_id', 'task_title',
-            'deadline', 'created_by_name', 'status', 'status_display',
-            'progress', 'created_at'
-        ]
-
-    def get_progress(self, obj):
-        """
-        Calculate progress based on total items (knowledge + quizzes).
-        """
-        task = obj.task
-        total_k = task.task_knowledge.count()
-        total_q = task.task_quizzes.count()
-        total = total_k + total_q
-        if total == 0:
-            return {'completed': 0, 'total': 0, 'percentage': 0}
-        completed_k = obj.knowledge_progress.filter(is_completed=True).count()
-        from apps.submissions.models import Submission
-        completed_q_ids = set(
-            Submission.objects.filter(
-                task_assignment=obj
-            ).values_list('quiz_id', flat=True).distinct()
-        )
-        completed_q = len(completed_q_ids)
-        completed = completed_k + completed_q
-        return {
-            'completed': completed,
-            'total': total,
-            'percentage': round(completed / total * 100, 1)
-        }
-
-
 class StudentStatsSerializer(serializers.Serializer):
     """学员统计数据序列化器"""
     in_progress_count = serializers.IntegerField()
