@@ -58,7 +58,7 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
 
   return (
     <Card className={cn(
-      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 dark:shadow-none flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-[420px]",
+      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 dark:shadow-none flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-full",
       className
     )}>
       <style>{`
@@ -229,62 +229,54 @@ const EditorialCard: React.FC<{
     </div>
 
     {/* 内容区 */}
-    <div className="relative z-10 p-5 flex-1 bg-muted/[0.02]">
+    <div className="relative z-10 p-5 flex-1 bg-muted/[0.04]">
       {children}
     </div>
   </Card>
 );
 
 const KnowledgeItem: React.FC<{ knowledge: LatestKnowledge; navigate: (path: string) => void }> = ({ knowledge, navigate }) => {
-  const isNew = dayjs().diff(dayjs(knowledge.updated_at), 'day') <= 3;
-
-  // 识别应急类 vs 标准类
-  const knowledgeType = (knowledge as any).knowledge_type;
-  const isEmergency = knowledgeType === 'EMERGENCY' || knowledge.title?.includes('应急');
-  const tagText = isEmergency ? '应急类' : '标准类';
-  const tagColor = isEmergency
-    ? "text-rose-600 bg-rose-50 border-rose-100/60"
-    : "text-slate-600 bg-slate-50 border-slate-200/60";
-
   return (
     <div
       onClick={() => navigate(`knowledge/${knowledge.id}`)}
-      className="group relative bg-card border border-border/40 p-4 rounded-xl transition-all duration-300 cursor-pointer hover:border-primary/30 hover:bg-muted/20 flex flex-col justify-between h-[98px]"
+      className={cn(
+        "group relative p-5 rounded-2xl transition-all duration-500 cursor-pointer flex flex-col h-[96px] overflow-hidden",
+        "bg-white/40 dark:bg-card/40 backdrop-blur-md border border-white/60 dark:border-white/5",
+        "hover:bg-white/90 hover:shadow-[0_20px_40px_rgba(0,0,0,0.03)] hover:-translate-y-1 active:scale-[0.98]"
+      )}
     >
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded border tracking-tight transition-colors", tagColor)}>
-              {tagText}
-            </span>
-            {isNew && (
-              <span className="flex items-center gap-1.5">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
-                </span>
-                <span className="text-[10px] font-bold text-rose-500/80 uppercase">NEW</span>
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-mono text-muted-foreground/30 font-bold tracking-tighter">
-            {dayjs(knowledge.updated_at).format('YYYY.MM.DD')}
-          </span>
+      <div className="relative z-10 w-full flex h-full items-stretch">
+        {/* 左侧：内容主场 - 重归沉稳深色 */}
+        <div className="flex-1 min-w-0 pl-5 pr-8 flex flex-col justify-center">
+          <h5 className="text-[16px] font-bold text-foreground/80 truncate tracking-tight leading-none mb-2.5">
+            {knowledge.title}
+          </h5>
+          <p className="text-[12px] text-muted-foreground/45 line-clamp-1 break-all font-medium group-hover:text-muted-foreground/60 transition-colors tracking-tight leading-none">
+            {knowledge.summary || knowledge.content_preview || "点击进入深度学习..."}
+          </p>
         </div>
 
-        <h5 className="text-[14.5px] font-bold text-foreground/90 truncate group-hover:text-primary transition-colors duration-300 tracking-tight">
-          {knowledge.title}
-        </h5>
+        {/* 垂直分割线 */}
+        <div className="w-[1px] bg-black/[0.04] dark:bg-white/[0.02] h-10 my-auto" />
 
-        <p className="text-[11px] text-muted-foreground/50 line-clamp-1 font-medium mt-0.5">
-          {knowledge.summary || knowledge.content_preview || "点击进入深度学习与实践探索"}
-        </p>
-      </div>
+        {/* 右侧：纵向有序元数据 - 全部横向排版 */}
+        <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
+          {/* 年份：顶部横排，仅聚焦时显现 - 增强可见度 */}
+          <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-500/40 opacity-0 group-hover:opacity-100 transition-all duration-500">
+            {dayjs(knowledge.updated_at).format('YYYY')}
+          </span>
 
-      <div className="flex items-center justify-end">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-x-1 group-hover:translate-x-0">
-          <span className="text-[9px] font-black text-primary tracking-widest uppercase">详情</span>
-          <ArrowRight className="w-3 h-3 text-primary" />
+          {/* 日期：中部横排 - 增强可见度 */}
+          <span className="text-[11px] font-mono font-bold text-slate-500/60 tracking-wider group-hover:text-slate-500 transition-colors duration-500">
+            {dayjs(knowledge.updated_at).format('MM.DD')}
+          </span>
+
+          {/* 箭头：底部滑入 */}
+          <div className="h-4 flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-500">
+              <ArrowRight className="w-3.5 h-3.5 text-primary/40 stroke-[2.5]" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -404,7 +396,7 @@ export const StudentDashboard: React.FC = () => {
             }
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[98px] rounded-xl" />) :
+              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[96px] rounded-xl" />) :
                 data?.latest_knowledge?.slice(0, 6).map((k) => (
                   <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
                 ))}
