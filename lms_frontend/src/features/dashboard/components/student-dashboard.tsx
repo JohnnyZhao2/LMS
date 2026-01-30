@@ -59,16 +59,6 @@ const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedTask }) 
       "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 dark:shadow-none flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-full",
       className
     )}>
-      <style>{`
-        @keyframes draw {
-          from { stroke-dashoffset: 400; }
-          to { stroke-dashoffset: 0; }
-        }
-        .animate-draw {
-          animation: draw 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        }
-      `}</style>
-
       {/* 纸张纹理 */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
