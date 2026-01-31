@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion, type Variants } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,28 +35,6 @@ export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  // 动画配置
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      }
-    }
-  } satisfies Variants;
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
-      scale: 1,
-      transition: { type: "spring", stiffness: 300, damping: 24 }
-    }
-  } satisfies Variants;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -105,15 +82,12 @@ export const LoginForm: React.FC = () => {
         }
       ` }} />
       <Form {...form}>
-        <motion.form 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          onSubmit={form.handleSubmit(handleSubmit)} 
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
           className="space-y-14"
         >
           <div className="space-y-12">
-            <motion.div variants={itemVariants}>
+            <div>
               <FormField
                 control={form.control}
                 name="employee_id"
@@ -143,9 +117,9 @@ export const LoginForm: React.FC = () => {
                   </FormItem>
                 )}
               />
-            </motion.div>
+            </div>
 
-            <motion.div variants={itemVariants}>
+            <div>
               <FormField
                 control={form.control}
                 name="password"
@@ -176,10 +150,10 @@ export const LoginForm: React.FC = () => {
                   </FormItem>
                 )}
               />
-            </motion.div>
+            </div>
           </div>
 
-          <motion.div variants={itemVariants} className="space-y-8">
+          <div className="space-y-8">
             <Button
               type="submit"
               disabled={loading}
@@ -204,8 +178,8 @@ export const LoginForm: React.FC = () => {
                 <span className="text-[10px] font-bold text-foreground/20 tracking-widest">安全链接已建立</span>
               </div>
             </div>
-          </motion.div>
-        </motion.form>
+          </div>
+        </form>
       </Form>
     </div>
   );

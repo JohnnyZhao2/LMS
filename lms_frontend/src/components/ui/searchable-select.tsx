@@ -4,7 +4,6 @@ import { Search, ChevronDown, Plus, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { motion, AnimatePresence } from "framer-motion";
 
 export interface SearchableSelectProps<T> {
     items: T[];
@@ -102,12 +101,7 @@ export function SearchableSelect<T>({
                 align="start"
                 asChild
             >
-                <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                >
+                <div>
                     <div className="p-2.5 border-b border-border bg-muted">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
@@ -126,25 +120,19 @@ export function SearchableSelect<T>({
                         </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto p-1.5 scrollbar-hide">
-                        <AnimatePresence mode="popLayout">
-                            {onCreate && searchValue.trim() && !exactMatch && (
-                                <motion.button
-                                    layout
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    onClick={handleCreate}
-                                    disabled={isAdding}
-                                    className="w-full flex items-center justify-between px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 bg-primary-50 hover:bg-primary-50 rounded-md mb-1.5 transition-all group overflow-hidden"
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Plus className="w-4 h-4 transform group-hover:rotate-90 transition-transform" />
-                                        <span>创建 "{searchValue.trim()}"</span>
-                                    </div>
-                                    {isAdding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                </motion.button>
-                            )}
-                        </AnimatePresence>
+                        {onCreate && searchValue.trim() && !exactMatch && (
+                            <button
+                                onClick={handleCreate}
+                                disabled={isAdding}
+                                className="w-full flex items-center justify-between px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 bg-primary-50 hover:bg-primary-50 rounded-md mb-1.5 transition-all group overflow-hidden"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Plus className="w-4 h-4 transform group-hover:rotate-90 transition-transform" />
+                                    <span>创建 "{searchValue.trim()}"</span>
+                                </div>
+                                {isAdding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            </button>
+                        )}
 
                         <div className="grid gap-0.5">
                             {filteredItems.length > 0 ? (
@@ -184,7 +172,7 @@ export function SearchableSelect<T>({
                             )}
                         </div>
                     </div>
-                </motion.div>
+                </div>
             </PopoverContent>
         </Popover>
     );

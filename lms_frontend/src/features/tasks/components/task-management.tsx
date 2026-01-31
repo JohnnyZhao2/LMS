@@ -1,5 +1,4 @@
 import * as React from "react"
-import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
@@ -62,25 +61,6 @@ export const TaskManagement: React.FC = () => {
 
     const { data: tasksData, isLoading, refetch } = useTaskList({ page, pageSize })
     const deleteTask = useDeleteTask()
-
-    // 动画配置
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.08, delayChildren: 0.1 }
-        }
-    } satisfies Variants
-
-    const itemVariants = {
-        hidden: { opacity: 0, y: 20, scale: 0.98 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            transition: { type: "spring", stiffness: 260, damping: 20 }
-        }
-    } satisfies Variants
 
     // 统计逻辑
     const stats = React.useMemo(() => {
@@ -147,11 +127,9 @@ export const TaskManagement: React.FC = () => {
                             <TrendingUp className="w-3 h-3 text-secondary opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
                         <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${percent}%` }}
-                                transition={{ type: "spring", stiffness: 50, damping: 20, delay: 0.5 }}
+                            <div
                                 className="h-full bg-primary rounded-full"
+                                style={{ width: `${percent}%` }}
                             />
                         </div>
                     </div>
@@ -266,13 +244,8 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-10 pb-10"
-        >
-            <motion.div variants={itemVariants}>
+        <div className="space-y-10 pb-10">
+            <div>
                 <PageHeader
                     title="任务中心"
                     subtitle="管理与监督"
@@ -297,10 +270,10 @@ export const TaskManagement: React.FC = () => {
                         </div>
                     }
                 />
-            </motion.div>
+            </div>
 
             {/* 统计网格 */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard
                     title="活跃任务"
                     value={stats.active}
@@ -319,10 +292,10 @@ export const TaskManagement: React.FC = () => {
                     icon={Layout}
                     accentClassName="bg-secondary"
                 />
-            </motion.div>
+            </div>
 
             {/* 列表主体 */}
-            <motion.div variants={itemVariants}>
+            <div>
                 <ContentPanel className="overflow-hidden">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -354,55 +327,42 @@ export const TaskManagement: React.FC = () => {
 
                     {/* 表格 */}
                     <div className="overflow-hidden rounded-lg border-0">
-                        <AnimatePresence mode="wait">
-                            {isLoading ? (
-                                <motion.div
-                                    key="skeleton"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="p-10 space-y-5"
-                                >
-                                    {[1, 2, 3, 4, 5].map((i) => (
-                                        <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                                    ))}
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="content"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                >
-                                    <DataTable
-                                        columns={columns}
-                                        data={tasksData?.results?.filter((t: TaskListItem) => {
-                                            const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                            const matchesStatus = statusFilter === 'all' ||
-                                                (statusFilter === 'open' && !t.is_closed) ||
-                                                (statusFilter === 'closed' && t.is_closed);
-                                            return matchesSearch && matchesStatus;
-                                        }) || []}
-                                        pagination={{
-                                            pageIndex: page - 1,
-                                            pageSize: pageSize,
-                                            pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
-                                            totalCount: tasksData?.count || 0,
-                                            onPageChange: (p: number) => setPage(p + 1),
-                                            onPageSizeChange: (size: number) => {
-                                                setPageSize(size);
-                                                setPage(1);
-                                            },
-                                        }}
-                                        rowClassName="hover:bg-muted transition-colors cursor-pointer group"
-                                        onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
-                                    />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        {isLoading ? (
+                            <div className="p-10 space-y-5">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                                ))}
+                            </div>
+                        ) : (
+                            <div>
+                                <DataTable
+                                    columns={columns}
+                                    data={tasksData?.results?.filter((t: TaskListItem) => {
+                                        const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
+                                        const matchesStatus = statusFilter === 'all' ||
+                                            (statusFilter === 'open' && !t.is_closed) ||
+                                            (statusFilter === 'closed' && t.is_closed);
+                                        return matchesSearch && matchesStatus;
+                                    }) || []}
+                                    pagination={{
+                                        pageIndex: page - 1,
+                                        pageSize: pageSize,
+                                        pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
+                                        totalCount: tasksData?.count || 0,
+                                        onPageChange: (p: number) => setPage(p + 1),
+                                        onPageSizeChange: (size: number) => {
+                                            setPageSize(size);
+                                            setPage(1);
+                                        },
+                                    }}
+                                    rowClassName="hover:bg-muted transition-colors cursor-pointer group"
+                                    onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
+                                />
+                            </div>
+                        )}
                     </div>
                 </ContentPanel>
-            </motion.div>
+            </div>
 
             {/* 删除确认对话框 */}
             <ConfirmDialog
@@ -419,6 +379,6 @@ export const TaskManagement: React.FC = () => {
                 onConfirm={handleDeleteTask}
                 isConfirming={isDeleting}
             />
-        </motion.div>
+        </div>
     )
 }

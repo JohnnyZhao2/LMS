@@ -1,7 +1,6 @@
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { LogOut, ChevronDown } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
 import { useCurrentRole } from "@/hooks/use-current-role"
@@ -256,59 +255,49 @@ export const Header: React.FC = () => {
 
         {/* 导航菜单 */}
         <nav className="hidden lg:flex items-center gap-1">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {menuItems.length > 0 ? (
-              menuItems.map((item) => {
-                const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
-                if (!menuItem.key) return null
+          {menuItems.length > 0 ? (
+            menuItems.map((item) => {
+              const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
+              if (!menuItem.key) return null
 
-                const isActive = selectedNavKey === menuItem.key
-                const icon = getMenuIcon(menuItem.key)
+              const isActive = selectedNavKey === menuItem.key
+              const icon = getMenuIcon(menuItem.key)
 
-                return (
-                  <motion.button
-                    key={menuItem.key}
-                    layout
-                    onClick={() => handleNavClick(menuItem.key!)}
-                    className={cn(
-                      "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
-                      isActive
-                        ? "text-primary"
-                        : "text-text-muted hover:text-foreground"
-                    )}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="active-nav-bg"
-                        className="absolute inset-0 bg-primary/10 rounded-md -z-10"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                      />
-                    )}
-                    <span className={cn(
-                      "shrink-0",
-                      isActive ? "text-primary" : "text-text-muted"
-                    )}>
-                      {icon}
-                    </span>
-                    <span>{menuItem.label}</span>
-                  </motion.button>
-                )
-              })
-            ) : isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <motion.div
-                  key={`skeleton-${i}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-1.5 px-3 py-1.5"
+              return (
+                <button
+                  key={menuItem.key}
+                  onClick={() => handleNavClick(menuItem.key!)}
+                  className={cn(
+                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    isActive
+                      ? "text-primary"
+                      : "text-text-muted hover:text-foreground"
+                  )}
                 >
-                  <Skeleton className="h-4 w-4 rounded" />
-                  <Skeleton className="h-4 w-10 rounded" />
-                </motion.div>
-              ))
-            ) : null}
-          </AnimatePresence>
+                  {isActive && (
+                    <div className="absolute inset-0 bg-primary/10 rounded-md -z-10" />
+                  )}
+                  <span className={cn(
+                    "shrink-0",
+                    isActive ? "text-primary" : "text-text-muted"
+                  )}>
+                    {icon}
+                  </span>
+                  <span>{menuItem.label}</span>
+                </button>
+              )
+            })
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className="flex items-center gap-1.5 px-3 py-1.5"
+              >
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-10 rounded" />
+              </div>
+            ))
+          ) : null}
         </nav>
       </div>
 

@@ -1,5 +1,4 @@
 import * as React from "react"
-import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 interface AuthLayoutProps {
@@ -40,11 +39,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               { char: '练', delay: 0.2 },
               { char: '考', delay: 0.4 }
             ].map((item) => (
-              <motion.div
+              <div
                 key={item.char}
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: item.delay, duration: 1, ease: [0.22, 1, 0.36, 1] }}
                 className="w-14 h-14 bg-primary flex items-center justify-center relative overflow-hidden group"
               >
                 {/* 装饰性暗纹 */}
@@ -52,31 +48,21 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 <span className="text-white text-2xl font-serif font-black leading-none relative z-10">{item.char}</span>
 
                 {/* 悬停微动效 */}
-                <motion.div
-                  className="absolute inset-0 bg-background opacity-0 group-hover:opacity-10 transition-opacity"
-                />
-              </motion.div>
+                <div className="absolute inset-0 bg-background opacity-0 group-hover:opacity-10 transition-opacity" />
+              </div>
             ))}
           </div>
 
           {/* 纵向大标题 - 书院风骨 */}
           <div className="relative flex flex-col items-center lg:items-start">
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 1 }}
+            <h1
               className="text-6xl lg:text-8xl font-black leading-tight [writing-mode:vertical-rl] tracking-[0.2em] relative"
             >
               博学笃行
               <div className="absolute -right-4 top-0 bottom-0 w-[1px] bg-primary/20" />
-            </motion.h1>
+            </h1>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="mt-12 lg:mt-0 lg:ml-20 max-w-[12rem]"
-            >
+            <div className="mt-12 lg:mt-0 lg:ml-20 max-w-[12rem]">
               <div className="flex items-center gap-2 text-[10px] font-black tracking-[0.4em] text-primary mb-4">
                 <span className="inline-block w-1 h-1 bg-primary" />
                 岁在丙午 · 智启新章
@@ -84,7 +70,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               <p className="text-sm font-medium leading-[1.8] text-foreground/50 [writing-mode:vertical-rl] lg:[writing-mode:horizontal-tb]">
                 格物致知，诚意正心。每一份知识的存档，都是通往卓越的阶梯。
               </p>
-            </motion.div>
+            </div>
           </div>
         </div>
 
@@ -96,12 +82,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
       {/* 右侧：登录操作区 (The Chamber) */}
       <div className="relative w-full lg:w-[40rem] min-h-screen flex flex-col items-center justify-center p-8 lg:p-24 bg-background">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="w-full max-w-sm"
-        >
+        <div className="w-full max-w-sm">
           <div className="mb-20 flex flex-col items-center lg:items-start">
             <div className="inline-block px-3 py-1 bg-primary text-white text-[10px] font-black tracking-[0.5em] mb-8">
               卷首
@@ -124,7 +105,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <div className={cn("w-full", className)}>
             {children}
           </div>
-        </motion.div>
+        </div>
 
         {/* 页脚细节 */}
         <div className="absolute bottom-12 flex flex-col items-center gap-4">

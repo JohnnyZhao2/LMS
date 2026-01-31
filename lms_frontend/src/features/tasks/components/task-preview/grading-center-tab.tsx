@@ -8,7 +8,6 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Input, Skeleton, EmptyState } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
@@ -187,11 +186,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-180px)] min-h-[600px]">
       {/* Left Column: Question List */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="w-full lg:w-[380px] flex flex-col bg-background rounded-2xl border border-border  overflow-hidden"
-      >
+      <div className="w-full lg:w-[380px] flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
         {/* Header/Filter */}
         <div className="p-4 border-b border-border bg-muted/50">
           <div className="flex p-1 bg-muted/50 rounded-lg">
@@ -268,23 +263,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
             );
           })}
         </div>
-      </motion.div>
+      </div>
 
       {/* Right Column: Content */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex-1 flex flex-col bg-background rounded-2xl border border-border  overflow-hidden"
-      >
-        <AnimatePresence mode="wait">
-          {selectedQuestion ? (
-            <motion.div
-              key={selectedQuestion.question_id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col h-full"
-            >
+      <div className="flex-1 flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
+        {selectedQuestion ? (
+          <div className="flex flex-col h-full">
               {/* Detail Header */}
               <div className="p-6 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
                 <div className="flex justify-between items-start gap-4">
@@ -434,10 +418,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                           </div>
                         )}
                         {questionDetail?.subjective_answers?.map((answer) => (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
+                          <div
                             key={answer.student_id}
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
                           >
@@ -500,22 +481,21 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 </div>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     )}
                   </>
                 )}
               </div>
-            </motion.div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-text-muted">
-              <BarChart3 className="w-16 h-16 mb-4 text-muted" />
-              <p>请选择左侧题目进行评阅</p>
-            </div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-text-muted">
+            <BarChart3 className="w-16 h-16 mb-4 text-muted" />
+            <p>请选择左侧题目进行评阅</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -2,8 +2,6 @@ import * as React from "react"
 import { Header } from "./header"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { cn } from "@/lib/utils"
-import { motion, AnimatePresence } from "framer-motion"
-import { useLocation } from "react-router-dom"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -14,7 +12,6 @@ interface AppLayoutProps {
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { currentRole } = useAuth()
-  const location = useLocation()
 
   // 根据角色映射主题类名
   const themeClass = React.useMemo(() => {
@@ -141,18 +138,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             maxWidth: "var(--container-max-width, 1400px)"
           }}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className="flex-1 flex flex-col h-full"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div className="flex-1 flex flex-col h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

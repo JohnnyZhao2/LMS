@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import {
   Button,
   Tabs,
@@ -126,13 +125,9 @@ export const TaskPreviewPage: React.FC = () => {
       <div className="max-w-[1600px] mx-auto px-6">
         {/* PROGRESS TAB */}
         {activeTab === 'progress' && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+          <div>
             <ProgressMonitoringTab taskId={taskId} />
-          </motion.div>
+          </div>
         )}
 
         {/* GRADING TAB */}
