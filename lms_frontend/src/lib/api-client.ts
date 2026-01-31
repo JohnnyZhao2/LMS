@@ -90,6 +90,14 @@ class ApiClient {
     }
   }
 
+  private buildBody(data?: unknown): BodyInit | undefined {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      return data;
+    }
+
+    return data ? JSON.stringify(data) : undefined;
+  }
+
   /**
    * 发送请求
    */
@@ -207,8 +215,7 @@ class ApiClient {
    * POST 请求
    */
   post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
-    const body =
-      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
@@ -220,8 +227,7 @@ class ApiClient {
    * PUT 请求
    */
   put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
-    const body =
-      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
@@ -233,8 +239,7 @@ class ApiClient {
    * PATCH 请求
    */
   patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
-    const body =
-      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'PATCH',
