@@ -11,6 +11,8 @@ import {
   Loader2,
   ListOrdered,
   X,
+  Upload,
+  ExternalLink,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,7 @@ import { EmptyState } from '@/components/ui';
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
+import { useParseDocument } from '../api/parse-document';
 import { EMERGENCY_TABS, parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -49,6 +52,7 @@ export const KnowledgeForm: React.FC = () => {
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const createTag = useCreateTag();
+  const parseDocument = useParseDocument();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
@@ -58,6 +62,7 @@ export const KnowledgeForm: React.FC = () => {
   const [lineTypeId, setLineTypeId] = useState<number | undefined>();
   const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
   const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
+  const [sourceUrl, setSourceUrl] = useState('');
 
   const { data: systemTags = [] } = useSystemTags();
   const { data: operationTags = [] } = useOperationTags();
@@ -88,6 +93,7 @@ export const KnowledgeForm: React.FC = () => {
       setSolution(knowledgeDetail.solution || '');
       setVerificationPlan(knowledgeDetail.verification_plan || '');
       setRecoveryPlan(knowledgeDetail.recovery_plan || '');
+      setSourceUrl(knowledgeDetail.source_url || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, knowledgeDetail]);
@@ -106,7 +112,24 @@ export const KnowledgeForm: React.FC = () => {
     roleNavigate('knowledge');
   }, [roleNavigate]);
 
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    try {
+      const result = await parseDocument.mutateAsync(file);
+      if (!title.trim()) {
+        setTitle(result.suggested_title);
+      }
+      setContent(result.content);
+      toast.success('文档解析成功');
+    } catch (error) {
+      showApiError(error, '文档解析失败');
+    }
+
+    // 清空 input 以便重复上传同一文件
+    e.target.value = '';
+  }, [parseDocument, title]);
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -141,6 +164,7 @@ export const KnowledgeForm: React.FC = () => {
       system_tag_ids: systemTagIds,
       operation_tag_ids: operationTagIds,
       summary,
+      source_url: sourceUrl || undefined,
     };
 
     if (knowledgeType === 'EMERGENCY') {
@@ -162,7 +186,7 @@ export const KnowledgeForm: React.FC = () => {
     return requestData;
   }, [
     title, knowledgeType, lineTypeId, systemTagIds, operationTagIds,
-    content, summary, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
+    content, summary, sourceUrl, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
   ]);
 
   const handleSave = useCallback(async () => {
@@ -248,6 +272,27 @@ export const KnowledgeForm: React.FC = () => {
               errors.title && "border-destructive-300 placeholder:text-destructive-300 focus:border-destructive-500 focus:ring-destructive-100"
             )}
           />
+        </div>
+
+        {/* 原始文档链接 */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="原始文档链接..."
+            className="w-48 h-10 text-sm"
+          />
+          {sourceUrl && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={() => window.open(sourceUrl, '_blank')}
+              title="打开原始文档"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
@@ -366,6 +411,31 @@ export const KnowledgeForm: React.FC = () => {
 
         {/* 中间编辑区 */}
         <div className="flex-1 flex flex-col bg-background min-w-0">
+          {/* 文档上传区域 - 仅在非应急类型时显示 */}
+          {knowledgeType === 'OTHER' && (
+            <div className="px-8 py-4 border-b border-border">
+              <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg cursor-pointer hover:bg-primary-100 transition-colors">
+                <Upload className="w-4 h-4" />
+                <span className="text-sm font-medium">上传文档解析</span>
+                <input
+                  type="file"
+                  accept=".docx,.pptx,.pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={parseDocument.isPending}
+                />
+              </label>
+              <span className="ml-3 text-xs text-text-muted">
+                支持 .docx, .pptx, .pdf 格式
+              </span>
+              {parseDocument.isPending && (
+                <span className="ml-3 text-xs text-primary-600">
+                  <Loader2 className="w-3 h-3 inline animate-spin mr-1" />
+                  解析中...
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto">
             <div className="w-full h-full">
               {knowledgeType === 'EMERGENCY' ? (

@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   CheckCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 import { Button, ConfirmDialog } from '@/components/ui';
@@ -182,6 +183,17 @@ export const KnowledgeDetail: React.FC = () => {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-semibold text-foreground m-0 leading-tight">{knowledge.title}</h1>
+              {knowledge.source_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-primary-600 hover:text-primary-700"
+                  onClick={() => window.open(knowledge.source_url, '_blank')}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                  <span className="text-xs">原始文档</span>
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-4 text-[11px] text-text-muted">
               {(knowledge.updated_by_name || knowledge.created_by_name) && (

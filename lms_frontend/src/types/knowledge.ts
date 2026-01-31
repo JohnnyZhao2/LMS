@@ -51,7 +51,7 @@ export interface StudentKnowledgeDetail {
   verification_plan?: string;
   recovery_plan?: string;
   structured_content?: string;
-  table_of_contents?: string;
+  table_of_contents?: TableOfContentsItem[];
   primary_category_name?: string;
   secondary_category_name?: string;
   created_by_name?: string;
@@ -104,6 +104,8 @@ export interface KnowledgeListItem {
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
+  // 原始文档链接
+  source_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -141,6 +143,8 @@ export interface KnowledgeDetail {
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
+  // 原始文档链接
+  source_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -164,6 +168,8 @@ export interface KnowledgeCreateRequest {
   content?: string;
   // 知识概要
   summary?: string;
+  // 原始文档链接
+  source_url?: string;
   // 标签（使用ID）
   system_tag_ids?: number[];
   operation_tag_ids?: number[];
@@ -184,6 +190,17 @@ export interface KnowledgeUpdateRequest {
   content?: string;
   // 知识概要
   summary?: string;
+  // 原始文档链接
+  source_url?: string;
   system_tag_ids?: number[];
   operation_tag_ids?: number[];
+}
+
+/**
+ * 文档解析响应
+ */
+export interface ParseDocumentResponse {
+  suggested_title: string;
+  content: string;
+  file_type: string;
 }

@@ -12,11 +12,13 @@ from .views import (
     StudentTaskKnowledgeDetailView,
     TagCreateView,
     TagListView,
+    ParseDocumentView,
 )
 
 urlpatterns = [
     # Knowledge endpoints
     path('', KnowledgeListCreateView.as_view(), name='knowledge-list-create'),
+    path('parse-document/', ParseDocumentView.as_view(), name='parse-document'),
     path('task/<int:task_knowledge_id>/', StudentTaskKnowledgeDetailView.as_view(), name='student-task-knowledge-detail'),
     path('stats/', KnowledgeStatsView.as_view(), name='knowledge-stats'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),

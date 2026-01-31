@@ -116,7 +116,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     知识文档模型
     知识类型:
     - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
-    - OTHER: 其他类型知识 - 使用 Markdown/富文本自由正文
+    - OTHER: 其他类型知识 - 使用富文本自由正文
     标签关系:
     - line_type: 通过ResourceLineType关联（多态关系，单选）
     - system_tags: 系统标签（多对多，多选）
@@ -210,6 +210,14 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     )
     # 阅读统计
     view_count = models.PositiveIntegerField(default=0, verbose_name='阅读次数')
+    # 原始文档链接
+    source_url = models.URLField(
+        verbose_name='原始文档链接',
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='在线文档链接（腾讯文档/飞书等）'
+    )
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
@@ -312,10 +320,10 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     @property
     def table_of_contents(self):
         """
-        从 Markdown 内容中提取目录结构（用于卡片预览显示）
+        从 HTML 内容中提取目录结构（用于卡片预览显示）
         返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
         对于应急类知识：返回结构化字段的标题
-        对于其他类型知识：从 Markdown 内容中解析标题
+        对于其他类型知识：从 HTML 内容中解析 h1/h2/h3 标签
         """
         import re
         if self.knowledge_type == 'EMERGENCY':
@@ -333,18 +341,17 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 if value and value.strip():
                     toc.append({'level': 1, 'text': label})
             return toc
-        # 其他类型知识：从 Markdown 解析标题
+        # 其他类型知识：从 HTML 解析标题
         if not self.content:
             return []
         toc = []
-        lines = self.content.split('\n')
-        for line in lines:
-            # 匹配 Markdown 标题 (# ## ### 等)
-            match = re.match(r'^(#{1,6})\s+(.+)$', line.strip())
-            if match:
-                level = len(match.group(1))
-                text = match.group(2).strip()
-                # 只提取前3级标题，限制数量
-                if level <= 3 and len(toc) < 10:
-                    toc.append({'level': level, 'text': text})
+        # 匹配 HTML 标题标签 <h1>~<h3>
+        pattern = r'<h([1-3])[^>]*>(.*?)</h\1>'
+        matches = re.findall(pattern, self.content, re.IGNORECASE | re.DOTALL)
+        for level_str, text in matches:
+            level = int(level_str)
+            # 清除 HTML 标签，只保留纯文本
+            clean_text = strip_tags(text).strip()
+            if clean_text and len(toc) < 10:
+                toc.append({'level': level, 'text': clean_text})
         return toc

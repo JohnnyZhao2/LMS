@@ -5,10 +5,13 @@
 - 使用 resource_uuid + version_number + is_current 管理版本
 - is_current=True 表示当前最新版本
 """
+import os
+import re
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from django.db import transaction
+from django.utils.html import escape
 
 from core.base_service import BaseService
 from core.decorators import log_content_action
@@ -263,3 +266,164 @@ class KnowledgeService(BaseService):
             new_version.system_tags.set(source.system_tags.all())
             new_version.operation_tags.set(source.operation_tags.all())
         return new_version
+
+
+class DocumentParserService:
+    """
+    文档解析服务
+    支持解析 Word (.docx), PowerPoint (.pptx), PDF (.pdf) 文档
+    提取文本内容并转换为 HTML 格式
+    """
+
+    SUPPORTED_EXTENSIONS = {'.docx', '.pptx', '.pdf'}
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+    def parse(self, file) -> Tuple[str, str]:
+        """
+        解析文档，返回 (suggested_title, html_content)
+
+        Args:
+            file: Django UploadedFile 对象
+
+        Returns:
+            Tuple[str, str]: (建议标题, HTML内容)
+
+        Raises:
+            ValueError: 文件格式不支持或文件过大
+        """
+        # 检查文件大小
+        if file.size > self.MAX_FILE_SIZE:
+            raise ValueError(f'文件大小超过限制（最大 {self.MAX_FILE_SIZE // 1024 // 1024}MB）')
+
+        filename = file.name
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext not in self.SUPPORTED_EXTENSIONS:
+            raise ValueError(f'不支持的文件格式，仅支持 {", ".join(self.SUPPORTED_EXTENSIONS)}')
+
+        if ext == '.docx':
+            return self._parse_docx(file)
+        elif ext == '.pptx':
+            return self._parse_pptx(file)
+        elif ext == '.pdf':
+            return self._parse_pdf(file)
+
+    def _parse_docx(self, file) -> Tuple[str, str]:
+        """解析 Word 文档"""
+        from docx import Document
+
+        doc = Document(file)
+        html_parts = []
+        title = None
+
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if not text:
+                continue
+
+            # 检测标题样式
+            style_name = para.style.name if para.style else ''
+
+            if style_name.startswith('Heading'):
+                # 提取标题级别
+                level_match = re.search(r'\d+', style_name)
+                level = int(level_match.group()) if level_match else 1
+                level = min(level, 6)  # 限制最大为 h6
+
+                if title is None and level == 1:
+                    title = text
+
+                html_parts.append(f'<h{level}>{escape(text)}</h{level}>')
+            elif style_name == 'List Bullet':
+                # 无序列表项
+                html_parts.append(f'<ul><li>{escape(text)}</li></ul>')
+            elif style_name == 'List Number':
+                # 有序列表项
+                html_parts.append(f'<ol><li>{escape(text)}</li></ol>')
+            else:
+                # 普通段落
+                html_parts.append(f'<p>{escape(text)}</p>')
+
+        # 合并连续的列表项
+        content = '\n'.join(html_parts)
+        content = self._merge_consecutive_lists(content)
+
+        return title or self._extract_title_from_filename(file.name), content
+
+    def _parse_pptx(self, file) -> Tuple[str, str]:
+        """解析 PowerPoint 文档"""
+        from pptx import Presentation
+
+        prs = Presentation(file)
+        html_parts = []
+        title = None
+
+        for i, slide in enumerate(prs.slides, 1):
+            slide_texts = []
+            slide_title = None
+
+            for shape in slide.shapes:
+                if hasattr(shape, 'text') and shape.text.strip():
+                    text = shape.text.strip()
+                    # 第一个文本框通常是标题
+                    if slide_title is None:
+                        slide_title = text
+                    else:
+                        slide_texts.append(text)
+
+            if slide_title:
+                # 第一页的标题作为文档标题
+                if title is None and i == 1:
+                    title = slide_title
+
+                html_parts.append(f'<h2>第 {i} 页：{escape(slide_title)}</h2>')
+
+                for text in slide_texts:
+                    # 处理多行文本
+                    lines = text.split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if line:
+                            html_parts.append(f'<p>{escape(line)}</p>')
+
+        return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
+
+    def _parse_pdf(self, file) -> Tuple[str, str]:
+        """解析 PDF 文档"""
+        import pdfplumber
+
+        html_parts = []
+        title = None
+
+        with pdfplumber.open(file) as pdf:
+            for i, page in enumerate(pdf.pages, 1):
+                text = page.extract_text()
+                if text:
+                    text = text.strip()
+                    lines = text.split('\n')
+
+                    # 第一页第一行作为标题
+                    if title is None and i == 1 and lines:
+                        title = lines[0].strip()
+
+                    html_parts.append(f'<h2>第 {i} 页</h2>')
+
+                    for line in lines:
+                        line = line.strip()
+                        if line:
+                            html_parts.append(f'<p>{escape(line)}</p>')
+
+        return title or self._extract_title_from_filename(file.name), '\n'.join(html_parts)
+
+    def _merge_consecutive_lists(self, html: str) -> str:
+        """合并连续的列表项"""
+        # 合并连续的 ul
+        html = re.sub(r'</ul>\s*<ul>', '', html)
+        # 合并连续的 ol
+        html = re.sub(r'</ol>\s*<ol>', '', html)
+        return html
+
+    def _extract_title_from_filename(self, filename: str) -> str:
+        """从文件名提取标题"""
+        name = os.path.splitext(filename)[0]
+        return name or '未命名文档'
