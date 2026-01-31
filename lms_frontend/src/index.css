@@ -10,6 +10,34 @@
 @plugin "@tailwindcss/typography";
 
 /* ============================================
+   Scrollbar - Subtle
+   ============================================ */
+.scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: var(--theme-border) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+    background-color: var(--theme-border);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+    background-color: var(--theme-muted-hover);
+}
+
+/* ============================================
    Tailwind CSS v4 Theme Configuration
    使用 @theme 注册 CSS 变量供 Tailwind 使用
    ============================================ */

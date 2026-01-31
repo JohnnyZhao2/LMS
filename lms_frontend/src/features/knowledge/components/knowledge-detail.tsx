@@ -291,7 +291,7 @@ export const KnowledgeDetail: React.FC = () => {
                   <PanelLeftClose className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex-1 overflow-y-auto py-4 px-2">
+              <div className="flex-1 overflow-y-auto py-4 px-2 scrollbar-subtle">
                 {outline.length > 0 ? (
                   <div className="space-y-0.5">
                     {outline.map((item) => (
@@ -343,7 +343,7 @@ export const KnowledgeDetail: React.FC = () => {
           ) : null}
 
           {/* 内容 */}
-          <div className="flex-1 overflow-y-auto w-full">
+          <div className="flex-1 overflow-y-auto w-full scrollbar-subtle">
             <div className={cn(
               "p-8 md:p-12 px-6 min-h-full transition-[padding] duration-300",
               contentPaddingClass
