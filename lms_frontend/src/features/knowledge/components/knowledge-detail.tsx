@@ -15,7 +15,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-import { Button, ConfirmDialog } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';

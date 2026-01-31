@@ -1,7 +1,8 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
-import { Card, Button } from '@/components/ui';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudentDashboardTask } from '@/types/api';
 

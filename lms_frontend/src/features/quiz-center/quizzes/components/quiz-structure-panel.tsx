@@ -1,8 +1,11 @@
 import React from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
-import { Badge, Button, Input, Tooltip } from '@/components/ui';
-import { AvatarCircle } from '@/components/common';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { AvatarCircle } from '@/components/common/avatar-circle';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { cn } from '@/lib/utils';
 import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';

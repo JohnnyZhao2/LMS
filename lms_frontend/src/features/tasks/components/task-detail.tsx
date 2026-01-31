@@ -22,7 +22,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { MetricBadge, MicroLabel, IconBox, ActionDropdown } from '@/components/common';
+import { MetricBadge } from '@/components/common/metric-badge';
+import { MicroLabel } from '@/components/common/micro-label';
+import { IconBox } from '@/components/common/icon-box';
+import { ActionDropdown } from '@/components/common/action-dropdown';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';

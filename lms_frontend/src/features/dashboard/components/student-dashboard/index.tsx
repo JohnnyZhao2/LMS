@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useStudentDashboard, useTaskParticipants } from '../../api/student-dashboard';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import { Skeleton } from '@/components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import type { StudentDashboardTask } from '@/types/api';
 import { cn } from '@/lib/utils';

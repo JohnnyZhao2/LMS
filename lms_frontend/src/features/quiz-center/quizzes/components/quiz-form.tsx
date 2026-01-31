@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';

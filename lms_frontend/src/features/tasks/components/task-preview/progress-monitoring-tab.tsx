@@ -9,18 +9,17 @@ import {
   GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
-import { Card, Skeleton } from '@/components/ui';
-import {
-  DataTable,
-  CellWithIcon,
-} from '@/components/ui/data-table';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   StudentExecution,
 } from '@/types/task-analytics';
 import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
-import { IconBox } from '@/components/common';
+import { IconBox } from '@/components/common/icon-box';
 import { StatCard } from '@/components/ui/stat-card';
 
 interface ProgressMonitoringTabProps {

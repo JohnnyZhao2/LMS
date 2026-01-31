@@ -8,7 +8,10 @@ import {
   Users2
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { Card, StatCard, PageHeader, Skeleton } from '@/components/ui';
+import { Card } from '@/components/ui/card';
+import { StatCard } from '@/components/ui/stat-card';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * 空状态组件

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Card } from '@/components/ui';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface EditorialCardProps {

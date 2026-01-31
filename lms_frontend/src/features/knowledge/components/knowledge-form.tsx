@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
-import { EmptyState } from '@/components/ui';
+import { EmptyState } from '@/components/ui/empty-state';
 
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';

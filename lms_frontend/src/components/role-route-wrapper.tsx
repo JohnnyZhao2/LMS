@@ -1,6 +1,6 @@
 import { Navigate, useParams, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { roleState } from '@/lib/role-state';
 import { tokenStorage } from '@/lib/token-storage';

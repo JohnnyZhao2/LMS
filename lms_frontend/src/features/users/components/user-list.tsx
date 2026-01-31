@@ -22,36 +22,16 @@ import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
-import { AvatarCircle } from "@/components/common"
-import {
-  DataTable,
-  CellWithAvatar,
-  CellTags,
-  CellIconText,
-  CellSmallAvatar,
-  CellStatus,
-} from "@/components/ui/data-table"
+import { AvatarCircle } from '@/components/common/avatar-circle';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ContentPanel } from "@/components/ui"
-import {
-  ConfirmDialog,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  PageHeader,
-} from "@/components/ui"
+import { ContentPanel } from '@/components/ui/content-panel';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PageHeader } from '@/components/ui/page-header';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"

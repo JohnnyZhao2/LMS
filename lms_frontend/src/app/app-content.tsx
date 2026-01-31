@@ -1,5 +1,5 @@
 import { AppRouter } from './router';
-import { AppLayout } from '@/components/layouts';
+import { AppLayout } from '@/components/layouts/app-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
@@ -42,4 +42,3 @@ export const AppContent: React.FC = () => {
     </>
   );
 };
-

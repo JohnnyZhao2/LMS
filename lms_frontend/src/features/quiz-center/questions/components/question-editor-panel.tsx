@@ -1,17 +1,11 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-import {
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { QUESTION_TYPE_LABELS } from '@/features/quiz-center/questions/constants';
 import type { QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
 

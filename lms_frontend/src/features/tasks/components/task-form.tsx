@@ -44,7 +44,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MicroLabel } from '@/components/common';
+import { MicroLabel } from '@/components/common/micro-label';
 import {
   Dialog,
   DialogContent,

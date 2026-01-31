@@ -9,15 +9,9 @@ import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-cent
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
-import {
-    Button,
-    ConfirmDialog,
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,7 +19,8 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { DataTable, CellWithIcon, CellTags } from '@/components/ui/data-table';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {

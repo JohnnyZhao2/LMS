@@ -8,7 +8,9 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input, Skeleton, EmptyState } from '@/components/ui';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import {

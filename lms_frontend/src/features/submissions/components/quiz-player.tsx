@@ -13,20 +13,12 @@ import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';
 import { useSaveAnswer } from '../api/save-answer';
 import { QuestionCard } from './question-card';
 import { Timer } from './timer';
-import {
-  Button,
-  Card,
-  CardContent,
-  Progress,
-  Spinner,
-  StatusBadge,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';

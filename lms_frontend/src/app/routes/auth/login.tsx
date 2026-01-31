@@ -1,5 +1,5 @@
 import { LoginForm } from '@/features/auth/components/login-form';
-import { AuthLayout } from '@/components/layouts';
+import { AuthLayout } from '@/components/layouts/auth-layout';
 
 /**
  * 登录页面

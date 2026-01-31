@@ -9,14 +9,10 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import {
-  Button,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  Skeleton,
-  Badge,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';

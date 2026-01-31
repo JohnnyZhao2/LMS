@@ -12,8 +12,10 @@ import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 
-import { ConfirmDialog, Tooltip } from '@/components/ui';
-import { DataTable, CellWithIcon, CellTags } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Tooltip } from '@/components/ui/tooltip';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuizTabProps {

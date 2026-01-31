@@ -18,26 +18,23 @@ import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
-import {
-    Button,
-    Input,
-    Tooltip,
-    Skeleton,
-    SegmentedControl,
-} from "@/components/ui"
-import { ConfirmDialog } from "@/components/ui"
-import {
-    DataTable,
-    CellWithIcon,
-    CellTags,
-} from "@/components/ui/data-table"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
-import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
+import { PageHeader } from '@/components/ui/page-header';
+import { StatCard } from '@/components/ui/stat-card';
+import { ContentPanel } from '@/components/ui/content-panel';
 
 /**
  * 辅助组件: 趋势图标

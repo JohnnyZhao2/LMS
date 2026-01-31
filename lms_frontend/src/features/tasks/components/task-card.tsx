@@ -12,8 +12,8 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui';
-import { ActionDropdown } from '@/components/common';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ActionDropdown } from '@/components/common/action-dropdown';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { CategoryBadge, StatusDot } from '@/components/common';
+import { CategoryBadge } from '@/components/common/category-badge';
+import { StatusDot } from '@/components/common/status-dot';
 
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';

@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Inbox, Activity, Search } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
-import { Skeleton, SegmentedControl, PageHeader } from '@/components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import type { TaskStatus } from '@/types/api';
 

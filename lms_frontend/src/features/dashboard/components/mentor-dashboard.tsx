@@ -13,7 +13,10 @@ import { useMentorDashboard } from '../api/mentor-dashboard';
 
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { StatCard, PageHeader, Skeleton, ActionCard } from '@/components/ui';
+import { StatCard } from '@/components/ui/stat-card';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ActionCard } from '@/components/ui/action-card';
 
 
 /**

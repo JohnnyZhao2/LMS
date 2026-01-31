@@ -3,7 +3,7 @@
  */
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense } from 'react';
-import { Spinner } from '@/components/ui/spinner';
+import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/components/role-route-wrapper';
 import { roleRoutes } from './routes/role-routes';
 import { authRoutes } from './routes/auth';
@@ -29,7 +29,7 @@ const DefaultRedirect = () => {
  */
 export const AppRouter: React.FC = () => {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen"><Spinner /></div>}>
+    <Suspense fallback={<RouteSkeleton />}>
       <Routes>
         {/* 认证路由（不需要角色前缀） */}
         {authRoutes}

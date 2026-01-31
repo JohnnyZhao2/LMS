@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, FileEdit, Settings } from 'lucide-react';
 
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 import type { Question, QuestionCreateRequest, QuizType, Tag } from '@/types/api';
 import { QuestionEditorPanel } from '@/features/quiz-center/questions/components/question-editor-panel';
 

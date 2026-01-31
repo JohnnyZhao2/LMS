@@ -11,7 +11,10 @@ import {
 import { useMentorDashboard } from '../api/mentor-dashboard';
 
 import { ROUTES } from '@/config/routes';
-import { StatCard, PageHeader, Skeleton, ActionCard } from '@/components/ui';
+import { StatCard } from '@/components/ui/stat-card';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ActionCard } from '@/components/ui/action-card';
 import { ActivityLogsPanel } from '@/features/activity-logs/components/activity-logs-panel';
 
 

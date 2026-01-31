@@ -1,5 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom';
-import { Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';

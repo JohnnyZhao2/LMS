@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { AvatarCircle } from '@/components/common';
+import { AvatarCircle } from '@/components/common/avatar-circle';
 
 /**
  * Cell 带图标和文字

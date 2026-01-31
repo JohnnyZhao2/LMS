@@ -9,7 +9,8 @@ import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { UserInfoRow, StatusDot } from '@/components/common';
+import { UserInfoRow } from '@/components/common/user-info-row';
+import { StatusDot } from '@/components/common/status-dot';
 
 export interface SharedKnowledgeCardProps {
   item: KnowledgeListItem;
