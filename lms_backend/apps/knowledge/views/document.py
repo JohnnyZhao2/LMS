@@ -23,7 +23,7 @@ class ParseDocumentView(APIView):
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
-            return error_response('请上传文件', code='VALIDATION_ERROR')
+            return error_response(code='VALIDATION_ERROR', message='请上传文件')
 
         try:
             parser = DocumentParserService()
@@ -37,6 +37,6 @@ class ParseDocumentView(APIView):
                 'file_type': ext
             })
         except ValueError as e:
-            return error_response(str(e), code='VALIDATION_ERROR')
+            return error_response(code='VALIDATION_ERROR', message=str(e))
         except Exception as e:
-            return error_response(f'文档解析失败：{str(e)}', code='PARSE_ERROR')
+            return error_response(code='PARSE_ERROR', message=f'文档解析失败：{str(e)}')

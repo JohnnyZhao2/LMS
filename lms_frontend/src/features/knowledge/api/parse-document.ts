@@ -12,11 +12,6 @@ export const parseDocument = async (file: File): Promise<ParseDocumentResponse> 
   const response = await apiClient.post<ParseDocumentResponse>(
     '/knowledge/parse-document/',
     formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }
   );
   return response;
 };

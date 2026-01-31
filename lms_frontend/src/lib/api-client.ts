@@ -100,15 +100,23 @@ class ApiClient {
     const { skipAuth = false, ...fetchOptions } = options;
     const url = `${this.baseURL}${endpoint}`;
 
+    const isFormData =
+      typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
+
     // 准备请求头
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // 合并现有 headers
     if (fetchOptions.headers) {
       const existingHeaders = fetchOptions.headers as Record<string, string>;
       Object.assign(headers, existingHeaders);
+    }
+
+    if (isFormData) {
+      delete headers['Content-Type'];
     }
 
     // 添加认证头
@@ -199,10 +207,12 @@ class ApiClient {
    * POST 请求
    */
   post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body =
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -210,10 +220,12 @@ class ApiClient {
    * PUT 请求
    */
   put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body =
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -221,10 +233,12 @@ class ApiClient {
    * PATCH 请求
    */
   patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body =
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined;
     return this.request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 

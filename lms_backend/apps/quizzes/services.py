@@ -26,6 +26,13 @@ from .selectors import get_question_ids, get_quiz_by_id, list_quiz_questions
 class QuizService(BaseService):
     """试卷应用服务"""
 
+    # 创建新版本时需要复制的内容字段
+    # 添加新的内容字段时，只需在此列表中添加即可
+    VERSION_COPY_FIELDS = [
+        'title', 'description', 'quiz_type',
+        'duration', 'pass_score',
+    ]
+
     def _add_question(self, quiz_id: int, question_id: int, order: int = None) -> QuizQuestion:
         if order is None:
             max_order = QuizQuestion.objects.filter(
@@ -453,19 +460,17 @@ class QuizService(BaseService):
             ).values_list('version_number', flat=True)
         )
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
-        # 准备新版本数据
+        # 准备新版本数据：自动复制所有内容字段
         new_quiz_data = {
             'resource_uuid': source.resource_uuid,
             'version_number': new_version_number,
-            'title': data.get('title', source.title),
-            'description': data.get('description', source.description),
-            'quiz_type': data.get('quiz_type', source.quiz_type),
-            'duration': data.get('duration', source.duration),
-            'pass_score': data.get('pass_score', source.pass_score),
             'is_current': True,
             'created_by': self.user,
             'updated_by': self.user,
         }
+        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
+        for field in self.VERSION_COPY_FIELDS:
+            new_quiz_data[field] = data.get(field, getattr(source, field, None))
         new_quiz = Quiz.objects.create(**new_quiz_data)
         # 复制题目顺序
         if question_ids is None:

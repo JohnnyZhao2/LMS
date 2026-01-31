@@ -24,6 +24,15 @@ from .selectors import get_knowledge_by_id, get_knowledge_queryset
 class KnowledgeService(BaseService):
     """知识文档应用服务"""
 
+    # 创建新版本时需要复制的内容字段
+    # 添加新的内容字段时，只需在此列表中添加即可
+    VERSION_COPY_FIELDS = [
+        'title', 'knowledge_type', 'summary',
+        'fault_scenario', 'trigger_process', 'solution',
+        'verification_plan', 'recovery_plan',
+        'content', 'source_url',
+    ]
+
     def get_by_id(self, pk: int) -> Knowledge:
         """
         获取知识文档
@@ -232,24 +241,18 @@ class KnowledgeService(BaseService):
         line_type_id = data.pop('line_type_id', None)
         system_tag_ids = data.pop('system_tag_ids', None)
         operation_tag_ids = data.pop('operation_tag_ids', None)
-        # 准备新版本数据
+        # 准备新版本数据：自动复制所有内容字段
         new_version_data = {
             'resource_uuid': source.resource_uuid,
             'version_number': next_version,
-            'title': data.get('title', source.title),
-            'knowledge_type': data.get('knowledge_type', source.knowledge_type),
-            'summary': data.get('summary', source.summary),
-            'fault_scenario': data.get('fault_scenario', source.fault_scenario),
-            'trigger_process': data.get('trigger_process', source.trigger_process),
-            'solution': data.get('solution', source.solution),
-            'verification_plan': data.get('verification_plan', source.verification_plan),
-            'recovery_plan': data.get('recovery_plan', source.recovery_plan),
-            'content': data.get('content', source.content),
             'is_current': True,
             'created_by': self.user,
             'updated_by': self.user,
             'view_count': source.view_count,
         }
+        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
+        for field in self.VERSION_COPY_FIELDS:
+            new_version_data[field] = data.get(field, getattr(source, field, None))
         # 创建新版本
         new_version = Knowledge.objects.create(**new_version_data)
         # 取消旧版本的 is_current 标志

@@ -26,6 +26,13 @@ from .selectors import (
 class QuestionService(BaseService):
     """题目应用服务"""
 
+    # 创建新版本时需要复制的内容字段
+    # 添加新的内容字段时，只需在此列表中添加即可
+    VERSION_COPY_FIELDS = [
+        'content', 'question_type', 'options', 'answer',
+        'explanation', 'score',
+    ]
+
     def get_by_id(self, pk: int) -> Question:
         """
         获取题目
@@ -338,20 +345,17 @@ class QuestionService(BaseService):
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
-        # 准备新版本数据
+        # 准备新版本数据：自动复制所有内容字段
         new_question_data = {
             'resource_uuid': source.resource_uuid,
             'version_number': new_version_number,
-            'content': data.get('content', source.content),
-            'question_type': data.get('question_type', source.question_type),
-            'options': data.get('options', source.options),
-            'answer': data.get('answer', source.answer),
-            'explanation': data.get('explanation', source.explanation),
-            'score': data.get('score', source.score),
             'is_current': True,
             'created_by': self.user,
             'updated_by': self.user,
         }
+        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
+        for field in self.VERSION_COPY_FIELDS:
+            new_question_data[field] = data.get(field, getattr(source, field, None))
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型
         if line_type_id:
