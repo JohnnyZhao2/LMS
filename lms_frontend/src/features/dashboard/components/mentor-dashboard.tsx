@@ -90,7 +90,7 @@ export const MentorDashboard: React.FC = () => {
             title="发起抽查"
             description="对学员进行知识抽查"
             icon={FileSearch}
-            route={ROUTES.SPOT_CHECKS}
+            route={`${ROUTES.SPOT_CHECKS}/create`}
             actionColor="rose" // Was destructive
             delay="stagger-delay-1"
           />
@@ -106,7 +106,7 @@ export const MentorDashboard: React.FC = () => {
             title="新建试卷"
             description="创建新的考试或练习试卷"
             icon={Plus}
-            route={ROUTES.QUIZ_CENTER}
+            route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
             actionColor="emerald" // Was secondary
             delay="stagger-delay-3"
           />
