@@ -27,7 +27,7 @@ import { ActionCard } from '@/components/ui/action-card';
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
 
-  const { user, availableRoles, currentRole } = useAuth();
+  const { availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
 
@@ -48,7 +48,6 @@ export const MentorDashboard: React.FC = () => {
     <div className="space-y-10 pb-10">
       <PageHeader
         title={`${roleName}工作台`}
-        subtitle={`欢迎回来，${user?.username || '老师'}。今天各项教学工作正有序进行。`}
         icon={<GraduationCap />}
       />
 

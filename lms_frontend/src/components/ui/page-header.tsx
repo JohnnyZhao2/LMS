@@ -13,8 +13,6 @@ export interface BreadcrumbItem {
 export interface PageHeaderProps {
   /** 页面标题 */
   title: string;
-  /** 副标题/描述 (英文版或小标题) */
-  subtitle?: string;
   /** 面包屑导航 */
   breadcrumbs?: BreadcrumbItem[];
   /** 右侧操作区 */
@@ -26,15 +24,10 @@ export interface PageHeaderProps {
 }
 
 /**
- * 页面头部组件 - 极致美学版
- * 包含：
- * 1. 现代排版 (Outfit font + Tracking tight)
- * 2. 动态图标背景
- * 3. 玻璃拟态面包屑 (可选)
+ * 页面头部组件
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
-  subtitle,
   breadcrumbs,
   extra,
   icon,
@@ -42,7 +35,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   const { role: urlRole } = useParams<{ role: string }>();
 
-  // 获取带角色前缀的 dashboard 路径
   const getDashboardPath = () => {
     const role = urlRole || tokenStorage.getCurrentRole();
     return role ? `/${role.toLowerCase()}/dashboard` : '/dashboard';
@@ -50,28 +42,31 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8",
+      "flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8",
       className
     )}>
-      <div className="flex flex-col gap-1.5">
-        {/* 面包屑 */}
+      <div className="flex flex-col gap-1">
+        {/* 面包屑导航 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase mb-1">
-            <Link to={getDashboardPath()} className="text-text-muted hover:text-primary-500 transition-colors">
-              <Home className="w-3 h-3" />
+          <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-2">
+            <Link
+              to={getDashboardPath()}
+              className="hover:text-foreground transition-colors"
+            >
+              <Home className="w-3.5 h-3.5" />
             </Link>
             {breadcrumbs.map((item, index) => (
               <React.Fragment key={index}>
-                <ChevronRight className="w-2.5 h-2.5 text-text-muted" />
+                <ChevronRight className="w-3 h-3 text-border" />
                 {item.path ? (
                   <Link
                     to={item.path}
-                    className="flex items-center gap-1 text-text-muted hover:text-primary-500 transition-colors"
+                    className="hover:text-foreground transition-colors"
                   >
                     {item.title}
                   </Link>
                 ) : (
-                  <span className="text-primary-500">{item.title}</span>
+                  <span className="text-foreground font-medium">{item.title}</span>
                 )}
               </React.Fragment>
             ))}
@@ -79,31 +74,23 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
 
         {/* 标题区域 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {icon && (
-            <div className="w-14 h-14 bg-primary-600 rounded-xl flex items-center justify-center transition-transform duration-200 hover:scale-105 shadow-sm">
+            <div className="flex items-center justify-center text-text-muted">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "text-white w-7 h-7")
+                className: cn(icon.props.className, "w-6 h-6")
               }) : icon}
             </div>
           )}
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="text-sm font-semibold text-text-muted uppercase tracking-wider mt-1.5 flex items-center gap-2.5 leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                <span className="w-5 h-1 bg-primary-600 rounded-full" />
-                {subtitle}
-              </p>
-            )}
-          </div>
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            {title}
+          </h1>
         </div>
       </div>
 
       {/* 操作区 */}
       {extra && (
-        <div className="flex items-center gap-3 self-end md:self-auto">
+        <div className="flex items-center gap-3">
           {extra}
         </div>
       )}

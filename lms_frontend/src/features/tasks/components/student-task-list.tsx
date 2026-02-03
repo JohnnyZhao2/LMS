@@ -43,7 +43,6 @@ export const StudentTaskList: React.FC = () => {
             {/* 顶部标题栏 - Refactored to use PageHeader */}
             <PageHeader
                 title="任务治理中心"
-                subtitle="战略学习任务"
                 icon={<Activity />}
                 extra={
                     <div className="relative group min-w-[320px]">

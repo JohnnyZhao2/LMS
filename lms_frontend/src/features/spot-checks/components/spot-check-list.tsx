@@ -128,7 +128,6 @@ export const SpotCheckList: React.FC = () => {
     <div className="animate-fadeIn">
       <PageHeader
         title="抽查中心"
-        subtitle="对学员进行知识抽查，记录和追踪抽查结果"
         icon={<Search className="w-5 h-5" />}
         extra={
           <Button

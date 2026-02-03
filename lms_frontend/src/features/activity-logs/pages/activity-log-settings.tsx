@@ -8,7 +8,6 @@ export const ActivityLogSettingsPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <PageHeader
         title="日志设置"
-        subtitle="配置动作级白名单，决定哪些行为会被记录。"
         icon={<ShieldCheck />}
       />
       <ActivityLogPolicyPanel />

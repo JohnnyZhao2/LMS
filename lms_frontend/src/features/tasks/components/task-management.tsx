@@ -245,7 +245,6 @@ export const TaskManagement: React.FC = () => {
             <div>
                 <PageHeader
                     title="任务中心"
-                    subtitle="管理与监督"
                     icon={<FileText />}
                     extra={
                         <div className="flex items-center gap-3">

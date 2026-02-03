@@ -97,7 +97,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         <div className="space-y-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
             <PageHeader
                 title={isAdminView ? "知识库管理" : "知识中心"}
-                subtitle={isAdminView ? "Repository & Content Management" : "Knowledge & Resources"}
                 icon={<Database />}
                 extra={
                     <div className="flex items-center gap-4">

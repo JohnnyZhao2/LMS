@@ -48,7 +48,6 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-8 pb-10">
       <PageHeader
         title="系统概览"
-        subtitle="系统资源分配、用户权限审计及核心性能指标监控。"
         icon={<Settings />}
       />
 

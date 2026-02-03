@@ -7,7 +7,6 @@ import {
   User,
   Users2
 } from 'lucide-react';
-import { useAuth } from '@/features/auth/hooks/use-auth';
 import { Card } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
@@ -43,7 +42,6 @@ const EmptyState: React.FC<{ description: string; subDescription?: string }> = (
  * Sophisticated dashboard for Team Managers.
  */
 export const TeamManagerDashboard: React.FC = () => {
-  const { user } = useAuth();
   const isLoading = false; // Mock loading state if needed, or derived from data hooks
 
   if (isLoading) {
@@ -63,7 +61,6 @@ export const TeamManagerDashboard: React.FC = () => {
     <div className="space-y-10 pb-10">
       <PageHeader
         title="团队经理工作台"
-        subtitle={`欢迎回来，${user?.username || '经理'}。全面掌握团队学习动态。`}
         icon={<Users2 />}
       />
 

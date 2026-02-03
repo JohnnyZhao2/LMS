@@ -40,7 +40,6 @@ export const QuizCenter: React.FC = () => {
     <div className="space-y-10 pb-10">
       <PageHeader
         title="试卷中心"
-        subtitle="管理题目资源与评估引擎"
         icon={<Layout />}
         extra={
           <div className="flex items-center gap-3">

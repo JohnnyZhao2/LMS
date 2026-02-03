@@ -232,7 +232,6 @@ export const UserList: React.FC = () => {
     <div className="space-y-10 pb-20">
       <PageHeader
         title="用户中心"
-        subtitle="组织架构与权限管理"
         icon={<UsersIcon />}
         extra={
           <div className="flex items-center gap-3">

@@ -87,7 +87,6 @@ export const GradingCenterPage: React.FC = () => {
       <div className="flex flex-wrap items-center gap-4">
         <PageHeader
           title="阅卷中心"
-          subtitle="批阅学员提交的试卷答案"
           icon={<FileCheck />}
         />
 
