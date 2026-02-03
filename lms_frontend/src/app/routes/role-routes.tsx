@@ -42,6 +42,9 @@ const ActivityLogSettingsPage = lazy(() => import('@/features/activity-logs/page
 const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
 const AnswerReview = lazy(() => import('@/features/submissions/components/answer-review').then(m => ({ default: m.AnswerReview })));
 
+// Grading Center
+const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
+
 // Other
 const Personal = () => <div>个人中心（开发中）</div>;
 const Analytics = () => <div>团队数据看板（开发中）</div>;
@@ -205,6 +208,17 @@ export const roleRoutes = [
   <Route key="quiz" path="quiz/:id" element={<QuizPlayer />} />,
   <Route key="review-practice" path="review/practice" element={<AnswerReview type="practice" />} />,
   <Route key="review-exam" path="review/exam" element={<AnswerReview type="exam" />} />,
+
+  // Grading Center
+  <Route
+    key="grading-center"
+    path="grading-center"
+    element={
+      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+        <GradingCenterPage />
+      </ProtectedRoute>
+    }
+  />,
 
   // Other
   <Route

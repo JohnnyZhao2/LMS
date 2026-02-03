@@ -56,3 +56,24 @@ class GradingSubmitSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
     score = serializers.FloatField()
     comments = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class PendingQuizSerializer(serializers.Serializer):
+    """待阅卷试卷序列化器"""
+    quiz_id = serializers.IntegerField()
+    quiz_title = serializers.CharField()
+    quiz_type = serializers.CharField()
+    quiz_type_display = serializers.CharField()
+    question_count = serializers.IntegerField()
+    total_score = serializers.FloatField()
+    duration = serializers.IntegerField(allow_null=True)
+    pending_count = serializers.IntegerField()
+    total_count = serializers.IntegerField()
+
+
+class PendingTaskSerializer(serializers.Serializer):
+    """待阅卷任务序列化器"""
+    task_id = serializers.IntegerField()
+    task_title = serializers.CharField()
+    deadline = serializers.DateTimeField()
+    quizzes = PendingQuizSerializer(many=True)

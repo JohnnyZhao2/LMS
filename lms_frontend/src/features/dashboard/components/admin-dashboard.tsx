@@ -6,7 +6,8 @@ import {
   Database,
   Settings,
   ClipboardCheck,
-  Activity
+  Activity,
+  FileCheck
 } from 'lucide-react';
 import { useMentorDashboard } from '../api/mentor-dashboard';
 
@@ -74,7 +75,7 @@ export const AdminDashboard: React.FC = () => {
                 delay="stagger-delay-1"
               />
               <ActionCard
-                title="资源库"
+                title="知识管理"
                 description="知识与文档"
                 icon={Database}
                 route={ROUTES.KNOWLEDGE}
@@ -90,12 +91,20 @@ export const AdminDashboard: React.FC = () => {
                 delay="stagger-delay-3"
               />
               <ActionCard
+                title="阅卷中心"
+                description="批阅试卷"
+                icon={FileCheck}
+                route={ROUTES.GRADING_CENTER}
+                actionColor="emerald"
+                delay="stagger-delay-4"
+              />
+              <ActionCard
                 title="系统审计"
                 description="操作与日志"
                 icon={Shield}
                 route={ROUTES.ANALYTICS}
                 actionColor="amber"
-                delay="stagger-delay-4"
+                delay="stagger-delay-5"
               />
             </div>
           </div>

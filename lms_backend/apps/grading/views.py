@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
@@ -6,8 +7,10 @@ from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
     GradingSubmitSerializer,
+    PendingTaskSerializer,
 )
 from apps.questions.models import Question
+from apps.tasks.models import Task
 from apps.tasks.task_service import TaskService
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
@@ -268,3 +271,103 @@ class GradingSubmitView(GradingBaseView):
             )
 
         answer.grade(grader=grader, score=score, comment=comments)
+
+
+class PendingQuizzesView(GradingBaseView):
+    """获取当前用户待阅卷的任务和试卷列表"""
+
+    @extend_schema(
+        summary='获取待阅卷任务列表',
+        description='获取当前用户创建的所有任务中包含试卷的任务列表，支持按试卷类型筛选',
+        parameters=[
+            OpenApiParameter(
+                name='quiz_type',
+                type=str,
+                required=False,
+                description='试卷类型筛选: EXAM(考试) / PRACTICE(练习)'
+            ),
+        ],
+        responses={
+            200: PendingTaskSerializer(many=True),
+        },
+        tags=['阅卷中心']
+    )
+    def get(self, request):
+        user = request.user
+        quiz_type = request.query_params.get('quiz_type')
+
+        # 查询当前用户创建的、包含试卷的任务
+        tasks = Task.objects.filter(
+            created_by=user,
+            is_deleted=False,
+            task_quizzes__isnull=False
+        ).select_related('created_by').prefetch_related(
+            'task_quizzes__quiz',
+            'assignments'
+        ).distinct().order_by('-created_at')
+
+        results = []
+        for task in tasks:
+            task_quizzes = task.task_quizzes.select_related('quiz').all()
+
+            # 按试卷类型筛选
+            if quiz_type:
+                task_quizzes = [
+                    tq for tq in task_quizzes
+                    if tq.quiz.quiz_type == quiz_type
+                ]
+
+            if not task_quizzes:
+                continue
+
+            quizzes_data = []
+            for tq in task_quizzes:
+                quiz = tq.quiz
+                # 统计待批阅数量（主观题未评分的提交）
+                pending_count = self._count_pending_grading(task, quiz.id)
+                total_count = self._count_total_submissions(task, quiz.id)
+
+                quizzes_data.append({
+                    'quiz_id': quiz.id,
+                    'quiz_title': quiz.title,
+                    'quiz_type': quiz.quiz_type,
+                    'quiz_type_display': quiz.get_quiz_type_display(),
+                    'question_count': quiz.question_count,
+                    'total_score': float(quiz.total_score),
+                    'duration': quiz.duration,
+                    'pending_count': pending_count,
+                    'total_count': total_count,
+                })
+
+            if quizzes_data:
+                results.append({
+                    'task_id': task.id,
+                    'task_title': task.title,
+                    'deadline': task.deadline,
+                    'quizzes': quizzes_data,
+                })
+
+        serializer = PendingTaskSerializer(results, many=True)
+        return list_response(serializer.data)
+
+    def _count_pending_grading(self, task, quiz_id):
+        """统计待批阅的主观题答案数量"""
+        from apps.submissions.models import Answer
+
+        return Answer.objects.filter(
+            submission__task_assignment__task=task,
+            submission__quiz_id=quiz_id,
+            submission__status__in=['SUBMITTED', 'GRADING'],
+            question__question_type='SHORT_ANSWER',
+            graded_by__isnull=True
+        ).count()
+
+    def _count_total_submissions(self, task, quiz_id):
+        """统计总提交数量"""
+        from apps.submissions.models import Submission
+
+        return Submission.objects.filter(
+            task_assignment__task=task,
+            quiz_id=quiz_id,
+            status__in=['SUBMITTED', 'GRADING', 'GRADED']
+        ).count()

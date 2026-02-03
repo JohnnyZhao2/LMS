@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   CheckCircle,
+  FileCheck,
   FileSearch,
   Plus,
   Send,
@@ -109,6 +110,14 @@ export const MentorDashboard: React.FC = () => {
             route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
             actionColor="emerald" // Was secondary
             delay="stagger-delay-3"
+          />
+          <ActionCard
+            title="阅卷中心"
+            description="批阅学员试卷答案"
+            icon={FileCheck}
+            route={ROUTES.GRADING_CENTER}
+            actionColor="amber"
+            delay="stagger-delay-4"
           />
         </div>
       </div>
