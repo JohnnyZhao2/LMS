@@ -7,7 +7,7 @@ import type { LatestKnowledge } from './knowledge';
 /**
  * 学员预警类型
  */
-export type AlertType = 'overdue' | 'failed_exam' | 'inactive' | 'slow_progress' | 'score_decline';
+export type AlertType = 'overdue' | 'failed_exam' | 'slow_progress' | 'score_decline';
 export type AlertLevel = 'high' | 'medium' | 'low';
 
 /**

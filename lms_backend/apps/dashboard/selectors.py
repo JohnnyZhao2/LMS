@@ -275,7 +275,6 @@ def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
 
 def get_students_needing_attention(
     student_ids: List[int],
-    days_inactive: int = 7,
     recent_exam_limit: int = 3
 ) -> List[Dict[str, Any]]:
     """
@@ -283,20 +282,25 @@ def get_students_needing_attention(
     预警规则：
     1. 有逾期任务
     2. 最近 N 次考试中存在不及格（< 60分）
-    3. 近 N 天无活跃记录
     """
     if not student_ids:
         return []
 
-    from apps.quizzes.models import Quiz
-
     alerts_by_student: Dict[int, List[Dict[str, Any]]] = {}
+
+    if settings.USE_TZ:
+        now = timezone.now()
+    else:
+        now = datetime.now()
 
     # 1. 查询有逾期任务的学员
     overdue_assignments = TaskAssignment.objects.filter(
         assignee_id__in=student_ids,
-        status='OVERDUE',
-        task__is_deleted=False
+        task__is_deleted=False,
+        task__is_closed=False,
+        task__deadline__lt=now
+    ).exclude(
+        status='COMPLETED'
     ).select_related('task', 'assignee', 'assignee__department')
 
     for assignment in overdue_assignments:
@@ -337,7 +341,7 @@ def get_students_needing_attention(
             _row_number=Window(
                 expression=RowNumber(),
                 partition_by=[F('user_id')],
-                order_by=F('created_at').desc()
+                order_by=Coalesce('submitted_at', 'created_at').desc()
             ),
             _pass_score=Coalesce('quiz__pass_score', Value(Decimal('60')))
         ).filter(
@@ -372,30 +376,6 @@ def get_students_needing_attention(
                     'task_id': task.id if task else None,
                     'task_title': task.title if task else None
                 })
-
-    # 3. 查询近 N 天无活跃记录的学员
-    if settings.USE_TZ:
-        now = timezone.now()
-    else:
-        now = datetime.now()
-    inactive_threshold = now - timedelta(days=days_inactive)
-
-    # 获取近 N 天有活跃记录的学员 ID
-    active_user_ids = set(UserLog.objects.filter(
-        user_id__in=student_ids,
-        created_at__gte=inactive_threshold
-    ).values_list('user_id', flat=True).distinct())
-
-    # 找出不活跃的学员
-    inactive_user_ids = set(student_ids) - active_user_ids
-    for student_id in inactive_user_ids:
-        if student_id not in alerts_by_student:
-            alerts_by_student[student_id] = []
-        alerts_by_student[student_id].append({
-            'type': 'inactive',
-            'level': 'medium',
-            'message': f'近 {days_inactive} 天无活跃记录'
-        })
 
     # 构建返回结果
     result = []

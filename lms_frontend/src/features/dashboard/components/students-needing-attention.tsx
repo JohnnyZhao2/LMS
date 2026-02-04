@@ -22,7 +22,6 @@ interface StudentsNeedingAttentionProps {
 const alertConfig: Record<string, { icon: React.ElementType; label: string }> = {
   overdue: { icon: Clock, label: '逾期任务' },
   failed_exam: { icon: XCircle, label: '考试不及格' },
-  inactive: { icon: Users, label: '长期不活跃' },
 };
 
 const levelConfig: Record<AlertLevel, { bgClass: string; textClass: string; dotClass: string }> = {

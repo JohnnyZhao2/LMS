@@ -7,7 +7,9 @@ import {
   GraduationCap,
   BookOpen,
   CheckCircle2,
-  Clock
+  Clock,
+  User,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from './grading-center-tab';
+import dayjs from '@/lib/dayjs';
 
 export const TaskPreviewPage: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();
@@ -91,9 +94,22 @@ export const TaskPreviewPage: React.FC = () => {
             </Button>
             <div>
               <h1 className="text-xl font-bold text-foreground tracking-tight">{task.title}</h1>
-              <p className="text-xs text-text-muted font-medium mt-0.5 ml-0.5">
-                {activeTab === 'grading' ? '阅卷中心' : '任务进度监控'}
-              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-text-muted font-medium mt-1">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3.5 w-3.5" />
+                  创建人 {task.created_by_name}
+                </span>
+                {task.updated_by_name && (
+                  <span className="inline-flex items-center gap-1">
+                    <User className="h-3.5 w-3.5" />
+                    更新人 {task.updated_by_name}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  截止 {dayjs(task.deadline).format('YYYY-MM-DD HH:mm')}
+                </span>
+              </div>
             </div>
           </div>
 

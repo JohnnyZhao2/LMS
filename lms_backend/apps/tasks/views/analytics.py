@@ -5,6 +5,7 @@ Implements:
 - Student executions API
 """
 from django.db.models import Max, Prefetch, Sum
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
@@ -312,7 +313,7 @@ class StudentExecutionsView(BaseAPIView):
             )
         )
         assignments = task.assignments.select_related(
-            'assignee', 'assignee__department'
+            'assignee', 'assignee__department', 'task'
         ).prefetch_related(
             'knowledge_progress',
             submissions_prefetch
@@ -320,6 +321,7 @@ class StudentExecutionsView(BaseAPIView):
 
         total_nodes = task.task_knowledge.count() + task.task_quizzes.count()
         results = []
+        now = timezone.now()
 
         for assignment in assignments:
             # 计算完成节点数（使用预加载的数据）
@@ -351,6 +353,8 @@ class StudentExecutionsView(BaseAPIView):
 
             # 确定状态
             status = assignment.status
+            if status != 'COMPLETED' and assignment.task.deadline < now:
+                status = 'OVERDUE'
             if status == 'COMPLETED' and is_abnormal:
                 status = 'COMPLETED_ABNORMAL'
 
