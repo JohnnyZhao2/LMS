@@ -290,7 +290,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update user information including roles."""
         from django.db import transaction
-        from .models import Role, UserRole
+        from .services import UserManagementService
 
         department_id = validated_data.pop('department_id', None)
         username = validated_data.pop('username', None)
@@ -311,40 +311,17 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
 
             # 更新角色（如果提供了 role_codes）
             if role_codes is not None:
-                roles_to_assign = set(role_codes)
-                roles_to_assign.add('STUDENT')  # 始终保留学员角色
-
-                current_role_codes = set(instance.roles.values_list('code', flat=True))
-                roles_to_remove = current_role_codes - roles_to_assign
-                if 'STUDENT' in roles_to_remove:
-                    roles_to_remove.remove('STUDENT')
-                roles_to_add = roles_to_assign - current_role_codes
-
-                if roles_to_remove:
-                    UserRole.objects.filter(
-                        user_id=instance.id,
-                        role__code__in=list(roles_to_remove)
-                    ).delete()
-
-                for role_code in roles_to_add:
-                    role = Role.objects.filter(code=role_code).first()
-                    if not role:
-                        role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
-                        role = Role.objects.create(
-                            code=role_code,
-                            name=role_name,
-                            description=f'{role_name}角色'
-                        )
-                    if not instance.roles.filter(code=role_code).exists():
-                        # 使用 context 中的 request.user 作为 assigned_by
-                        assigned_by = self.context.get('request').user if self.context.get('request') else instance
-                        UserRole.objects.create(
-                            user_id=instance.id,
-                            role_id=role.id,
-                            assigned_by_id=assigned_by.id
-                        )
-
-                instance.refresh_from_db()
+                request = self.context.get('request')
+                if not request:
+                    raise serializers.ValidationError({
+                        'role_codes': '缺少请求上下文，无法记录角色分配人'
+                    })
+                service = UserManagementService()
+                instance = service.assign_roles(
+                    user_id=instance.id,
+                    role_codes=role_codes,
+                    assigned_by=request.user
+                )
 
         return instance
 class AssignRolesSerializer(serializers.Serializer):

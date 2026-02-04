@@ -10,15 +10,22 @@ import {
   Layout,
   GraduationCap
 } from 'lucide-react';
-import { useMentorDashboard } from '../api/mentor-dashboard';
-
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
+
+import { useMentorDashboard } from '../api/mentor-dashboard';
 import { StudentsNeedingAttention } from './students-needing-attention';
+import {
+  OverdueWarningCard,
+  PendingGradingCard,
+  ScoreDistributionCard,
+  SpotCheckStatsCard,
+  StudentRadarCard,
+} from './mentor-dashboard-widgets';
 
 
 /**
@@ -31,6 +38,22 @@ export const MentorDashboard: React.FC = () => {
   const { availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
+  const overdueWarning = data?.overdue_warning ?? {
+    overdue_count: 0,
+    due_soon_count: 0,
+    due_soon_hours: 12,
+    items: [],
+  };
+  const pendingGradingCount = data?.pending_grading?.count ?? 0;
+  const spotCheckStats = data?.spot_check_stats ?? { count: 0, avg_score: null };
+  const scoreDistribution = data?.score_distribution ?? {
+    excellent: 0,
+    good: 0,
+    pass: 0,
+    fail: 0,
+    total: 0,
+  };
+  const students = data?.students ?? [];
 
   if (isLoading) {
     return (
@@ -127,6 +150,22 @@ export const MentorDashboard: React.FC = () => {
               delay="stagger-delay-4"
             />
           </div>
+        </div>
+      </div>
+
+      {/* 新增卡片 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <OverdueWarningCard data={overdueWarning} />
+        <PendingGradingCard count={pendingGradingCount} />
+        <SpotCheckStatsCard stats={spotCheckStats} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-7">
+          <StudentRadarCard students={students} />
+        </div>
+        <div className="lg:col-span-5">
+          <ScoreDistributionCard distribution={scoreDistribution} />
         </div>
       </div>
     </div>

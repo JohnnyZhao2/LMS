@@ -6,22 +6,28 @@ Dashboard 应用服务
 - 部门/团队分析
 - 知识热度统计
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from django.db.models import QuerySet
 
+from core.base_service import BaseService
 from apps.users.models import User
 from apps.users.permissions import get_accessible_students, get_current_role
-from core.base_service import BaseService
 
 from .selectors import (
     calculate_avg_score,
     calculate_task_stats,
     get_assignments_by_students,
     get_latest_knowledge,
+    get_monthly_active_user_ids,
+    get_monthly_spot_check_stats,
+    get_monthly_spot_check_stats_by_student,
     get_monthly_tasks_count,
+    get_overdue_warning,
+    get_pending_grading_count,
     get_peer_ranking,
     get_pending_tasks,
+    get_score_distribution,
     get_student_all_tasks,
     get_student_assignments,
     get_student_exam_avg_score,
@@ -147,14 +153,30 @@ class MentorDashboardService(BaseService):
         current_role = self.get_current_role()
         students = get_accessible_students(self.user, current_role, self.request)
         student_ids = list(students.values_list('id', flat=True))
+        monthly_active_ids = get_monthly_active_user_ids(student_ids)
+        spot_check_map = get_monthly_spot_check_stats_by_student(student_ids)
         summary = self._calculate_summary(student_ids)
-        student_stats = self._calculate_student_stats(students)
+        student_stats = self._calculate_student_stats(
+            students=students,
+            monthly_active_ids=monthly_active_ids,
+            spot_check_map=spot_check_map
+        )
         quick_links = self._generate_quick_links()
+        overdue_warning = get_overdue_warning(student_ids, due_soon_hours=12, limit=3)
+        pending_grading_count = get_pending_grading_count(student_ids)
+        spot_check_stats = get_monthly_spot_check_stats(student_ids)
+        score_distribution = get_score_distribution(student_ids)
         return {
             'summary': summary,
             'students': student_stats,
             'quick_links': quick_links,
-            'current_role': current_role
+            'current_role': current_role,
+            'overdue_warning': overdue_warning,
+            'pending_grading': {
+                'count': pending_grading_count
+            },
+            'spot_check_stats': spot_check_stats,
+            'score_distribution': score_distribution
         }
 
     def _calculate_summary(
@@ -198,16 +220,25 @@ class MentorDashboardService(BaseService):
             'exam_tasks': {**default_stats, 'avg_score': None}
         }
 
-    def _calculate_student_stats(self, students: QuerySet) -> List[Dict[str, Any]]:
+    def _calculate_student_stats(
+        self,
+        students: QuerySet,
+        monthly_active_ids: Set[int],
+        spot_check_map: Dict[int, Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """计算每个学员的统计"""
         student_stats = []
         for student in students.select_related('department'):
             assignments = get_student_assignments(user_id=student.id)
             stats = calculate_task_stats(assignments)
             avg_score = calculate_avg_score(user_id=student.id)
+            total_tasks = stats['total_tasks']
+            overdue_rate = (stats['overdue_tasks'] / total_tasks * 100) if total_tasks > 0 else 0.0
+            spot_check_info = spot_check_map.get(student.id, {'count': 0, 'avg_score': None})
+            monthly_active = student.id in monthly_active_ids
             student_stats.append({
                 'id': student.id,
-                'employee_id': student.employee_id,
+                'employee_id': student.employee_id or '',
                 'username': student.username,
                 'department_name': student.department.name if student.department else None,
                 'total_tasks': stats['total_tasks'],
@@ -215,10 +246,21 @@ class MentorDashboardService(BaseService):
                 'in_progress_tasks': stats['in_progress_tasks'],
                 'overdue_tasks': stats['overdue_tasks'],
                 'completion_rate': stats['completion_rate'],
+                'overdue_rate': round(overdue_rate, 1),
                 'avg_score': round(avg_score, 2) if avg_score else None,
                 'exam_count': 0,
                 'exam_passed_count': 0,
-                'exam_pass_rate': None
+                'exam_pass_rate': None,
+                'monthly_active': monthly_active,
+                'spot_check_count_month': spot_check_info['count'],
+                'spot_check_avg_score_month': spot_check_info['avg_score'],
+                'radar_metrics': {
+                    'completion_rate': stats['completion_rate'],
+                    'overdue_rate': round(overdue_rate, 1),
+                    'avg_score': round(avg_score, 2) if avg_score else 0,
+                    'monthly_active': 100 if monthly_active else 0,
+                    'spot_check_avg_score': spot_check_info['avg_score'] or 0,
+                }
             })
         return student_stats
 

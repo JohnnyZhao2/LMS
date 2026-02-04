@@ -61,9 +61,6 @@ export const StatCard: React.FC<StatCardProps> = ({
                 className
             )}
         >
-            {/* Subtle Noise Texture */}
-            <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
-
             <div className="flex h-full relative z-10">
                 {/* Content Zone */}
                 <div className="flex-1 flex flex-col justify-between py-5 px-6 relative z-10">

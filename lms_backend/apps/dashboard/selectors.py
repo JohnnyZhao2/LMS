@@ -4,7 +4,7 @@ Dashboard selectors.
 """
 from datetime import datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from django.conf import settings
 from django.db.models import Avg, Count, F, OuterRef, QuerySet, Subquery, Value, Window
@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from apps.activity_logs.models import UserLog
 from apps.knowledge.models import Knowledge
+from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Submission
 from apps.tasks.models import TaskAssignment
 from apps.users.models import User
@@ -137,6 +138,20 @@ def get_monthly_tasks_count() -> int:
         is_deleted=False,
         created_at__gte=start_dt
     ).count()
+
+
+def get_month_start_datetime() -> datetime:
+    """获取本月起始时间（考虑时区）"""
+    if settings.USE_TZ:
+        today = timezone.localdate()
+    else:
+        today = datetime.now().date()
+    start_of_month = today.replace(day=1)
+    start_dt = datetime.combine(start_of_month, time.min)
+    if settings.USE_TZ:
+        tz = timezone.get_current_timezone()
+        start_dt = timezone.make_aware(start_dt, tz)
+    return start_dt
 
 
 def get_student_all_tasks(user_id: int, limit: int = 10) -> QuerySet:
@@ -354,7 +369,7 @@ def get_students_needing_attention(
             'user__department',
             'task_assignment',
             'task_assignment__task'
-        ).order_by('user_id', '-created_at')
+        ).order_by('user_id', Coalesce('submitted_at', 'created_at').desc())
 
         for submission in failed_submissions:
             student_id = submission.user_id
@@ -403,6 +418,220 @@ def get_students_needing_attention(
     result.sort(key=lambda x: (-x['alert_count'], {'high': 0, 'medium': 1, 'low': 2}.get(x['highest_level'], 2)))
 
     return result
+
+
+def get_overdue_warning(
+    student_ids: List[int],
+    due_soon_hours: int = 12,
+    limit: int = 3
+) -> Dict[str, Any]:
+    """
+    获取逾期/即将逾期任务预警
+    Returns:
+        {
+            "overdue_count": int,
+            "due_soon_count": int,
+            "due_soon_hours": int,
+            "items": [ ... ]
+        }
+    """
+    if not student_ids:
+        return {
+            'overdue_count': 0,
+            'due_soon_count': 0,
+            'due_soon_hours': due_soon_hours,
+            'items': []
+        }
+
+    now = timezone.now()
+    due_soon_deadline = now + timedelta(hours=due_soon_hours)
+
+    base_qs = TaskAssignment.objects.filter(
+        assignee_id__in=student_ids,
+        task__is_deleted=False,
+        task__is_closed=False,
+    ).select_related('task', 'assignee', 'assignee__department')
+
+    overdue_qs = base_qs.filter(
+        task__deadline__lt=now
+    ).exclude(
+        status='COMPLETED'
+    ).order_by('-task__deadline')
+
+    due_soon_qs = base_qs.filter(
+        status='IN_PROGRESS',
+        task__deadline__gte=now,
+        task__deadline__lte=due_soon_deadline
+    ).order_by('task__deadline')
+
+    overdue_count = overdue_qs.count()
+    due_soon_count = due_soon_qs.count()
+
+    items: List[Dict[str, Any]] = []
+
+    for assignment in overdue_qs[:limit]:
+        delta_hours = round((assignment.task.deadline - now).total_seconds() / 3600, 1)
+        items.append({
+            'assignment_id': assignment.id,
+            'task_id': assignment.task.id,
+            'task_title': assignment.task.title,
+            'student_id': assignment.assignee.id,
+            'student_name': assignment.assignee.username,
+            'employee_id': assignment.assignee.employee_id or '',
+            'department_name': assignment.assignee.department.name if assignment.assignee.department else None,
+            'deadline': assignment.task.deadline,
+            'urgency': 'OVERDUE',
+            'hours_to_deadline': delta_hours,
+        })
+
+    if len(items) < limit:
+        remaining = limit - len(items)
+        for assignment in due_soon_qs[:remaining]:
+            delta_hours = round((assignment.task.deadline - now).total_seconds() / 3600, 1)
+            items.append({
+                'assignment_id': assignment.id,
+                'task_id': assignment.task.id,
+                'task_title': assignment.task.title,
+                'student_id': assignment.assignee.id,
+                'student_name': assignment.assignee.username,
+                'employee_id': assignment.assignee.employee_id or '',
+                'department_name': assignment.assignee.department.name if assignment.assignee.department else None,
+                'deadline': assignment.task.deadline,
+                'urgency': 'DUE_SOON',
+                'hours_to_deadline': delta_hours,
+            })
+
+    return {
+        'overdue_count': overdue_count,
+        'due_soon_count': due_soon_count,
+        'due_soon_hours': due_soon_hours,
+        'items': items
+    }
+
+
+def get_pending_grading_count(student_ids: List[int]) -> int:
+    """获取待人工评分的提交数量（GRADING）"""
+    if not student_ids:
+        return 0
+    return Submission.objects.filter(
+        user_id__in=student_ids,
+        status='GRADING',
+        task_assignment__task__is_deleted=False
+    ).count()
+
+
+def get_monthly_spot_check_stats(student_ids: List[int]) -> Dict[str, Any]:
+    """获取本月抽查统计（名下学员）"""
+    if not student_ids:
+        return {'count': 0, 'avg_score': None}
+    start_dt = get_month_start_datetime()
+    result = SpotCheck.objects.filter(
+        student_id__in=student_ids,
+        checked_at__gte=start_dt
+    ).aggregate(
+        count=Count('id'),
+        avg_score=Avg('score')
+    )
+    avg_score = float(result['avg_score']) if result['avg_score'] is not None else None
+    return {
+        'count': result['count'],
+        'avg_score': round(avg_score, 1) if avg_score is not None else None
+    }
+
+
+def get_monthly_spot_check_stats_by_student(student_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+    """获取本月抽查统计（按学员分组）"""
+    if not student_ids:
+        return {}
+    start_dt = get_month_start_datetime()
+    stats = SpotCheck.objects.filter(
+        student_id__in=student_ids,
+        checked_at__gte=start_dt
+    ).values('student_id').annotate(
+        count=Count('id'),
+        avg_score=Avg('score')
+    )
+    result: Dict[int, Dict[str, Any]] = {}
+    for item in stats:
+        avg_score = float(item['avg_score']) if item['avg_score'] is not None else None
+        result[item['student_id']] = {
+            'count': item['count'],
+            'avg_score': round(avg_score, 1) if avg_score is not None else None
+        }
+    return result
+
+
+def get_monthly_active_user_ids(user_ids: List[int]) -> Set[int]:
+    """获取本月活跃用户 ID 集合（登录成功）"""
+    if not user_ids:
+        return set()
+    start_dt = get_month_start_datetime()
+    active_user_ids = UserLog.objects.filter(
+        user_id__in=user_ids,
+        action='login',
+        status='success',
+        created_at__gte=start_dt
+    ).values_list('user_id', flat=True).distinct()
+    return set(active_user_ids)
+
+
+def get_score_distribution(student_ids: List[int]) -> Dict[str, int]:
+    """
+    获取成绩分布（考试提交）
+    规则：
+    - 不及格：低于试卷 pass_score（默认 60）
+    - 及格/良/优：基于总分百分比 80/90 划分
+    """
+    if not student_ids:
+        return {
+            'excellent': 0,
+            'good': 0,
+            'pass': 0,
+            'fail': 0,
+            'total': 0
+        }
+
+    submissions = Submission.objects.filter(
+        user_id__in=student_ids,
+        status='GRADED',
+        quiz__quiz_type='EXAM',
+        task_assignment__task__is_deleted=False,
+        obtained_score__isnull=False
+    ).values_list(
+        'obtained_score',
+        'total_score',
+        'quiz__pass_score'
+    )
+
+    distribution = {
+        'excellent': 0,
+        'good': 0,
+        'pass': 0,
+        'fail': 0,
+        'total': 0
+    }
+
+    for obtained_score, total_score, pass_score in submissions:
+        score = float(obtained_score) if obtained_score is not None else 0.0
+        total = float(total_score) if total_score is not None else 0.0
+        pass_line = float(pass_score) if pass_score is not None else 60.0
+
+        distribution['total'] += 1
+
+        if score < pass_line:
+            distribution['fail'] += 1
+            continue
+
+        score_pct = (score / total * 100) if total > 0 else score
+
+        if score_pct >= 90:
+            distribution['excellent'] += 1
+        elif score_pct >= 80:
+            distribution['good'] += 1
+        else:
+            distribution['pass'] += 1
+
+    return distribution
 
 
 def get_task_participants_progress(

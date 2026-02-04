@@ -166,7 +166,12 @@ class UserDetailView(APIView):
                 message='只有管理员可以更新用户信息'
             )
         user = self.get_object(pk)
-        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
+        serializer = UserUpdateSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
