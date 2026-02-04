@@ -307,31 +307,48 @@ export const UserForm: React.FC<UserFormProps> = ({
 
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">分配导师 (可选)</label>
-                <Select
-                  value={formData.mentor_id?.toString() || ''}
-                  onValueChange={(v) => {
-                    setMentorTouched(true);
-                    setFormData({ ...formData, mentor_id: v ? Number(v) : null });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择带教导师..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 z-[9999]" sideOffset={8}>
-                    {mentors.filter(m => !userId || m.id !== userId).map(m => (
-                      <SelectItem key={m.id} value={m.id.toString()}>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-8 h-8 rounded-full">
-                            <AvatarFallback className="bg-primary text-white text-xs font-bold">
-                              {getAvatarText(m.username)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-foreground">{m.username}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={formData.mentor_id?.toString() || ''}
+                    onValueChange={(v) => {
+                      setMentorTouched(true);
+                      setFormData({ ...formData, mentor_id: v ? Number(v) : null });
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="选择带教导师..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 z-[9999]" sideOffset={8}>
+                      {mentors.filter(m => !userId || m.id !== userId).map(m => (
+                        <SelectItem key={m.id} value={m.id.toString()}>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="w-8 h-8 rounded-full">
+                              <AvatarFallback className="bg-primary text-white text-xs font-bold">
+                                {getAvatarText(m.username)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-foreground">{m.username}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.mentor_id && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0 text-text-muted hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setMentorTouched(true);
+                        setFormData({ ...formData, mentor_id: null });
+                      }}
+                    >
+                      <span className="sr-only">清除导师</span>
+                      ×
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>

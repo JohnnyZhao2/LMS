@@ -2,7 +2,7 @@
 User selectors for LMS.
 Provides optimized query functions for user-related data retrieval.
 """
-from typing import Optional
+from typing import List, Optional
 
 from django.db.models import Case, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
 
@@ -75,6 +75,40 @@ def list_users(
         qs = qs.order_by('employee_id')
 
     return qs
+
+
+def list_users_needing_attention(
+    student_ids: List[int],
+    is_active: Optional[bool] = None,
+    department_id: Optional[int] = None,
+    search: Optional[str] = None,
+) -> QuerySet:
+    """
+    List users who need attention based on dashboard alert rules.
+    Args:
+        student_ids: Candidate student IDs within data scope
+        is_active: Filter by active status
+        department_id: Filter by department
+        search: Search in username or employee_id
+    Returns:
+        Filtered QuerySet of users
+    """
+    if not student_ids:
+        return User.objects.none()
+
+    from apps.dashboard.selectors import get_students_needing_attention
+
+    alerts = get_students_needing_attention(student_ids)
+    alert_ids = [item['student_id'] for item in alerts]
+    if not alert_ids:
+        return User.objects.none()
+
+    qs = list_users(
+        is_active=is_active,
+        department_id=department_id,
+        search=search
+    )
+    return qs.filter(id__in=alert_ids)
 
 
 def list_mentors() -> QuerySet:

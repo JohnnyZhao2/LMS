@@ -21,6 +21,8 @@ export interface StudentAlert {
   tasks?: { task_id: number; task_title: string }[];
   score?: number;
   quiz_title?: string;
+  task_id?: number | null;
+  task_title?: string | null;
 }
 
 /**

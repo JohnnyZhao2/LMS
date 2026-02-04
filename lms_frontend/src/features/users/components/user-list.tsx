@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Building2,
 } from "lucide-react"
+import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
@@ -38,6 +39,12 @@ import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
+  const [searchParams] = useSearchParams()
+  const filterParam = searchParams.get('filter')
+  const needsAttentionFilter = filterParam === 'needs_attention' ? 'needs_attention' : undefined
+  const userIdParam = searchParams.get('user_id')
+  const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
+
   // 视图模式和筛选状态
   const [viewMode, setViewMode] = React.useState<ViewMode>('department')
   const [selectedHierarchyId, setSelectedHierarchyId] = React.useState<number | 'all'>('all')
@@ -67,7 +74,11 @@ export const UserList: React.FC = () => {
   const departmentFilter = viewMode === 'department' && selectedHierarchyId !== 'all'
     ? selectedHierarchyId as number
     : undefined
-  const { data, isLoading, refetch } = useUsers({ search, departmentId: departmentFilter })
+  const { data, isLoading, refetch } = useUsers({
+    search,
+    departmentId: departmentFilter,
+    filter: needsAttentionFilter,
+  })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
   const resetPassword = useResetPassword()
@@ -76,6 +87,12 @@ export const UserList: React.FC = () => {
   React.useEffect(() => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }))
   }, [search, viewMode, selectedHierarchyId])
+
+  React.useEffect(() => {
+    if (!userIdFromParam || Number.isNaN(userIdFromParam)) return
+    setEditingUserId(userIdFromParam)
+    setFormModalOpen(true)
+  }, [userIdFromParam])
 
   // 根据视图模式过滤用户列表
   const filteredUsers = React.useMemo(() => {

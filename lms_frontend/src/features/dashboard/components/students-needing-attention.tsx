@@ -7,11 +7,12 @@ import {
   Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useStudentsNeedingAttention } from '../api/mentor-dashboard';
 import type { StudentNeedingAttention, StudentAlert, AlertLevel } from '@/types/dashboard';
+import { useStudentsNeedingAttention } from '../api/mentor-dashboard';
 
 interface StudentsNeedingAttentionProps {
   limit?: number;
@@ -47,7 +48,10 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
   className,
 }) => {
   const navigate = useNavigate();
+  const currentRole = useCurrentRole();
   const { data, isLoading } = useStudentsNeedingAttention(limit);
+  const canNavigateToUserList = currentRole === 'ADMIN';
+  const userListPath = currentRole ? `/${currentRole.toLowerCase()}/users` : '/users';
 
   if (isLoading) {
     return (
@@ -96,9 +100,9 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
             {totalCount}
           </span>
         </div>
-        {totalCount > limit && (
+        {totalCount > limit && canNavigateToUserList && (
           <button
-            onClick={() => navigate('/users?filter=needs_attention')}
+            onClick={() => navigate(`${userListPath}?filter=needs_attention`)}
             className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors cursor-pointer"
           >
             查看全部
@@ -122,18 +126,27 @@ interface StudentAlertCardProps {
 
 const StudentAlertCard: React.FC<StudentAlertCardProps> = ({ student }) => {
   const navigate = useNavigate();
+  const currentRole = useCurrentRole();
   const levelStyle = levelConfig[student.highest_level];
+  const canNavigateToTaskPreview = Boolean(currentRole && ['MENTOR', 'DEPT_MANAGER', 'ADMIN'].includes(currentRole));
+  const rolePath = currentRole ? `/${currentRole.toLowerCase()}` : '';
+
+  const primaryTaskId =
+    student.alerts.find((alert) => alert.type === 'failed_exam' && alert.task_id)?.task_id ??
+    student.alerts.find((alert) => alert.type === 'overdue' && alert.tasks?.length)?.tasks?.[0]?.task_id ??
+    null;
 
   const handleClick = () => {
-    navigate(`/users/${student.student_id}`);
+    if (!canNavigateToTaskPreview || !primaryTaskId) return;
+    navigate(`${rolePath}/tasks/${primaryTaskId}/preview?tab=progress&student_id=${student.student_id}`);
   };
 
   return (
     <div
       onClick={handleClick}
       className={cn(
-        'p-4 rounded-lg border border-border cursor-pointer transition-all duration-200',
-        'hover:border-primary/30 hover:bg-muted/50',
+        'p-4 rounded-lg border border-border transition-all duration-200',
+        canNavigateToTaskPreview && primaryTaskId && 'cursor-pointer hover:border-primary/30 hover:bg-muted/50',
         levelStyle.bgClass
       )}
     >
@@ -156,7 +169,9 @@ const StudentAlertCard: React.FC<StudentAlertCardProps> = ({ student }) => {
             ))}
           </div>
         </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
+        {canNavigateToTaskPreview && primaryTaskId && (
+          <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />
+        )}
       </div>
     </div>
   );

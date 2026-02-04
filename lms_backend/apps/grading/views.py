@@ -2,7 +2,11 @@ from django.db.models import Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.grading.selectors import calculate_question_pass_rate, get_latest_answers
+from apps.grading.selectors import (
+    calculate_question_pass_rate,
+    get_latest_answers,
+    get_latest_quiz_answers,
+)
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -351,12 +355,8 @@ class PendingQuizzesView(GradingBaseView):
         return list_response(serializer.data)
 
     def _count_pending_grading(self, task, quiz_id):
-        """统计待批阅的主观题答案数量"""
-        from apps.submissions.models import Answer
-
-        return Answer.objects.filter(
-            submission__task_assignment__task=task,
-            submission__quiz_id=quiz_id,
+        """统计待批阅的主观题答案数量（仅统计最新提交）"""
+        return get_latest_quiz_answers(task, quiz_id).filter(
             submission__status__in=['SUBMITTED', 'GRADING'],
             question__question_type='SHORT_ANSWER',
             graded_by__isnull=True

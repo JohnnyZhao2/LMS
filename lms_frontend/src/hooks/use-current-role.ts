@@ -1,5 +1,5 @@
 import { useParams, useLocation } from 'react-router-dom';
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { roleState } from '@/lib/role-state';
 import { tokenStorage } from '@/lib/token-storage';
@@ -18,43 +18,44 @@ export function useCurrentRole() {
   const { availableRoles } = useAuth();
 
   const currentRole = useMemo((): RoleCode | null => {
+    let result: RoleCode | null = null;
+
     // 1. 优先从 URL path 获取 (解决在父级 Layout 中无法获取子路由参数的问题)
     const pathParts = location.pathname.split('/').filter(Boolean);
     const firstPart = pathParts[0]?.toUpperCase();
     if (firstPart && VALID_ROLES.includes(firstPart as RoleCode)) {
-      return firstPart as RoleCode;
+      result = firstPart as RoleCode;
     }
-
     // 2. 尝试从 useParams 获取 (保留作为兼容)
-    if (role) {
+    else if (role) {
       const roleCode = role.toUpperCase() as RoleCode;
       if (VALID_ROLES.includes(roleCode)) {
-        return roleCode;
+        result = roleCode;
+      }
+    }
+    // 3. fallback 到 localStorage
+    else {
+      const storedRole = tokenStorage.getCurrentRole();
+      if (storedRole && VALID_ROLES.includes(storedRole)) {
+        result = storedRole;
+      }
+      // 4. 使用第一个可用角色
+      else if (availableRoles.length > 0) {
+        result = availableRoles[0].code;
       }
     }
 
-    // 3. fallback 到 localStorage
-    const storedRole = tokenStorage.getCurrentRole();
-    if (storedRole && VALID_ROLES.includes(storedRole)) {
-      return storedRole;
+    // 🔧 关键修复：在返回值之前同步更新 roleState
+    // 这样可以避免竞态条件：React Query 发起请求时 roleState 已经是最新值
+    if (result) {
+      roleState.set(result);
+      tokenStorage.setCurrentRole(result);
     }
 
-    // 4. 使用第一个可用角色
-    if (availableRoles.length > 0) {
-      return availableRoles[0].code;
-    }
-
-    return null;
+    return result;
   }, [role, location.pathname, availableRoles]);
 
-  // 同步到全局状态（供 API 请求使用）和 localStorage
-  useEffect(() => {
-    if (currentRole) {
-      roleState.set(currentRole);
-      // 可选：同时也更新 localStorage，虽然后续主要依赖 URL
-      tokenStorage.setCurrentRole(currentRole);
-    }
-  }, [currentRole]);
+  // 注意：不再需要 useEffect 来更新 roleState，因为已在 useMemo 中同步更新
 
   return currentRole;
 }

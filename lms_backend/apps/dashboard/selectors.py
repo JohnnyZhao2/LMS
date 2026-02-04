@@ -3,10 +3,12 @@ Dashboard selectors.
 集中管理仪表盘读模型查询与统计。
 """
 from datetime import datetime, time, timedelta
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from django.conf import settings
-from django.db.models import Avg, Count, OuterRef, QuerySet, Subquery
+from django.db.models import Avg, Count, F, OuterRef, QuerySet, Subquery, Value, Window
+from django.db.models.functions import Coalesce, RowNumber
 from django.utils import timezone
 
 from apps.activity_logs.models import UserLog
@@ -273,13 +275,14 @@ def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
 
 def get_students_needing_attention(
     student_ids: List[int],
-    days_inactive: int = 7
+    days_inactive: int = 7,
+    recent_exam_limit: int = 3
 ) -> List[Dict[str, Any]]:
     """
     获取需要关注的学员列表
     预警规则：
     1. 有逾期任务
-    2. 最近考试不及格（< 60分）
+    2. 最近 N 次考试中存在不及格（< 60分）
     3. 近 N 天无活跃记录
     """
     if not student_ids:
@@ -323,17 +326,33 @@ def get_students_needing_attention(
                 }]
             })
 
-    # 2. 查询最近考试不及格的学员
-    failed_submissions = Submission.objects.filter(
-        user_id__in=student_ids,
-        status='GRADED',
-        quiz__quiz_type='EXAM',
-        task_assignment__task__is_deleted=False
-    ).select_related('quiz', 'user', 'user__department')
+    # 2. 查询最近 N 次考试中存在不及格的学员
+    if recent_exam_limit > 0:
+        failed_submissions = Submission.objects.filter(
+            user_id__in=student_ids,
+            status='GRADED',
+            quiz__quiz_type='EXAM',
+            task_assignment__task__is_deleted=False
+        ).annotate(
+            _row_number=Window(
+                expression=RowNumber(),
+                partition_by=[F('user_id')],
+                order_by=F('created_at').desc()
+            ),
+            _pass_score=Coalesce('quiz__pass_score', Value(Decimal('60')))
+        ).filter(
+            _row_number__lte=recent_exam_limit,
+            obtained_score__isnull=False,
+            obtained_score__lt=F('_pass_score')
+        ).select_related(
+            'quiz',
+            'user',
+            'user__department',
+            'task_assignment',
+            'task_assignment__task'
+        ).order_by('user_id', '-created_at')
 
-    for submission in failed_submissions:
-        pass_score = submission.quiz.pass_score or 60
-        if submission.obtained_score is not None and submission.obtained_score < pass_score:
+        for submission in failed_submissions:
             student_id = submission.user_id
             if student_id not in alerts_by_student:
                 alerts_by_student[student_id] = []
@@ -343,12 +362,15 @@ def get_students_needing_attention(
                 None
             )
             if not existing_failed:
+                task = submission.task_assignment.task if submission.task_assignment else None
                 alerts_by_student[student_id].append({
                     'type': 'failed_exam',
                     'level': 'high',
                     'message': '考试不及格',
                     'score': float(submission.obtained_score),
-                    'quiz_title': submission.quiz.title
+                    'quiz_title': submission.quiz.title,
+                    'task_id': task.id if task else None,
+                    'task_title': task.title if task else None
                 })
 
     # 3. 查询近 N 天无活跃记录的学员

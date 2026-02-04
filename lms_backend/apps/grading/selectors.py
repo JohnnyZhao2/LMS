@@ -3,24 +3,30 @@ from django.db.models import F, OuterRef, Subquery
 from apps.submissions.models import Answer, Submission
 
 
-def get_latest_answers(task, question_id, quiz_id):
-    """获取每位学员最新一次提交的答案"""
-    base_answers = Answer.objects.filter(
-        question_id=question_id,
-        submission__task_assignment__task=task,
-        submission__quiz_id=quiz_id,
-        submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
-    )
-
-    latest_submission_subquery = Submission.objects.filter(
+def _get_latest_submission_subquery():
+    return Submission.objects.filter(
         task_assignment_id=OuterRef('submission__task_assignment_id'),
         quiz_id=OuterRef('submission__quiz_id'),
         status__in=['GRADING', 'SUBMITTED', 'GRADED']
     ).order_by('-attempt_number', '-submitted_at', '-id').values('id')[:1]
 
+
+def get_latest_quiz_answers(task, quiz_id):
+    """获取每位学员在指定试卷的最新提交答案"""
+    base_answers = Answer.objects.filter(
+        submission__task_assignment__task=task,
+        submission__quiz_id=quiz_id,
+        submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
+    )
+
     return base_answers.annotate(
-        latest_submission_id=Subquery(latest_submission_subquery)
+        latest_submission_id=Subquery(_get_latest_submission_subquery())
     ).filter(submission_id=F('latest_submission_id'))
+
+
+def get_latest_answers(task, question_id, quiz_id):
+    """获取每位学员最新一次提交的答案"""
+    return get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id)
 
 
 def calculate_question_pass_rate(task, question, quiz_id):

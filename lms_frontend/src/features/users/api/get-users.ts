@@ -31,6 +31,7 @@ interface GetUsersParams {
   departmentId?: number;
   isActive?: boolean;
   search?: string;
+  filter?: 'needs_attention';
 }
 
 /**
@@ -39,15 +40,16 @@ interface GetUsersParams {
  */
 export const useUsers = (params: GetUsersParams = {}) => {
   const currentRole = useCurrentRole();
-  const { departmentId, isActive, search } = params;
+  const { departmentId, isActive, search, filter } = params;
 
   return useQuery({
-    queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, isActive, search],
+    queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, isActive, search, filter],
     queryFn: () => {
       const queryParams = {
         ...(departmentId && { department_id: String(departmentId) }),
         ...(isActive !== undefined && { is_active: String(isActive) }),
         ...(search && { search }),
+        ...(filter && { filter }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<UserList[]>(`/users${queryString}`);
