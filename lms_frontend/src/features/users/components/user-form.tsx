@@ -142,18 +142,24 @@ export const UserForm: React.FC<UserFormProps> = ({
     if (!validate()) return;
     try {
       if (isEdit) {
-        await updateUser.mutateAsync({
-          id: userId!,
-          data: { username: formData.username, employee_id: formData.employee_id, department_id: formData.department_id },
-        });
+        // 检查角色是否有变化
         const roleSet = new Set(formData.role_codes);
         const initialRoleSet = new Set(initialRoleCodes);
         const rolesChanged =
           roleSet.size !== initialRoleSet.size ||
           [...roleSet].some((code) => !initialRoleSet.has(code));
-        if (rolesChanged) {
-          await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
-        }
+
+        // 一次性更新用户信息（包括角色），后端会在一个事务中处理
+        await updateUser.mutateAsync({
+          id: userId!,
+          data: {
+            username: formData.username,
+            employee_id: formData.employee_id,
+            department_id: formData.department_id,
+            ...(rolesChanged ? { role_codes: formData.role_codes } : {}),
+          },
+        });
+
         if (mentorTouched && formData.mentor_id !== initialMentorId) {
           await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
         }

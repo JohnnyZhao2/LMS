@@ -309,15 +309,21 @@ def get_accessible_students(user, current_role=None, request=None):
     Returns:
         QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
+    Note: 排除专有角色用户（室经理、团队经理），这些用户不参与任务分配
     """
     from apps.users.models import User
     if not current_role:
         current_role = get_current_role(user, request)
 
-    # 基础查询：只返回有 STUDENT 角色的活跃用户
+    # 专有角色：这些角色的用户不参与任务分配
+    STAFF_ONLY_ROLES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+
+    # 基础查询：只返回有 STUDENT 角色的活跃用户，排除专有角色用户
     base_qs = User.objects.filter(
         is_active=True,
         roles__code='STUDENT'
+    ).exclude(
+        roles__code__in=STAFF_ONLY_ROLES
     ).distinct()
 
     # Admin can access all students (Property 39)

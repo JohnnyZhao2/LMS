@@ -4,9 +4,9 @@ Provides optimized query functions for user-related data retrieval.
 """
 from typing import Optional
 
-from django.db.models import Q, QuerySet
+from django.db.models import Case, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
 
-from .models import Department, Role, User
+from .models import Department, Role, User, UserRole
 
 
 def user_base_queryset() -> QuerySet:
@@ -44,7 +44,7 @@ def list_users(
         department_id: Filter by department
         search: Search in username or employee_id
     Returns:
-        Filtered QuerySet of users
+        Filtered QuerySet of users, with dept_manager at top when filtering by department
     """
     qs = user_base_queryset()
     if is_active is not None:
@@ -56,6 +56,24 @@ def list_users(
             Q(username__icontains=search) |
             Q(employee_id__icontains=search)
         )
+
+    # 按部门筛选时，室经理置顶
+    if department_id:
+        # 使用子查询判断是否是室经理，避免 JOIN 导致重复
+        dept_manager_subquery = UserRole.objects.filter(
+            user_id=OuterRef('pk'),
+            role__code='DEPT_MANAGER'
+        )
+        qs = qs.annotate(
+            _dept_manager_sort=Case(
+                When(Exists(dept_manager_subquery), then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('_dept_manager_sort', 'employee_id')
+    else:
+        qs = qs.order_by('employee_id')
+
     return qs
 
 

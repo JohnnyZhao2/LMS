@@ -200,6 +200,7 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating user information.
+    支持同时更新基本信息、部门和角色，在一个事务中处理以保证数据一致性。
     """
     department_id = serializers.IntegerField(
         required=False,
@@ -210,34 +211,141 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
         required=False,
         help_text='工号'
     )
+    role_codes = serializers.ListField(
+        child=serializers.ChoiceField(choices=[
+            ('MENTOR', '导师'),
+            ('DEPT_MANAGER', '室经理'),
+            ('ADMIN', '管理员'),
+            ('TEAM_MANAGER', '团队经理'),
+        ]),
+        required=False,
+        help_text='要分配的角色代码列表（不包含学员角色，学员角色自动保留）'
+    )
+
     class Meta:
         model = User
         fields = [
-            'username', 'employee_id', 'department_id'
+            'username', 'employee_id', 'department_id', 'role_codes'
         ]
+
     def validate_username(self, value):
         return self.validate_username_field(value, self.instance)
-    
+
     def validate_employee_id(self, value):
         return self.validate_employee_id_field(value, self.instance)
-    
+
     def validate_department_id(self, value):
         return self.validate_department_id_field(value)
+
+    def validate(self, attrs):
+        """验证角色和部门的约束，同时考虑两者的变化。"""
+        role_codes = attrs.get('role_codes')
+        department_id = attrs.get('department_id')
+
+        # 确定最终的角色和部门
+        final_has_dept_manager = (
+            'DEPT_MANAGER' in role_codes if role_codes is not None
+            else (self.instance.has_role('DEPT_MANAGER') if self.instance else False)
+        )
+        final_has_team_manager = (
+            'TEAM_MANAGER' in role_codes if role_codes is not None
+            else (self.instance.has_role('TEAM_MANAGER') if self.instance else False)
+        )
+        final_department_id = (
+            department_id if department_id is not None
+            else getattr(self.instance, 'department_id', None)
+        )
+
+        # 验证团队经理唯一性（全局只能有一个）
+        if final_has_team_manager:
+            existing_team_manager = User.objects.filter(
+                roles__code='TEAM_MANAGER',
+                is_active=True
+            ).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_team_manager:
+                raise serializers.ValidationError({
+                    'role_codes': f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
+                })
+
+        # 验证室经理唯一性（每个部门只能有一个）
+        if final_has_dept_manager:
+            if not final_department_id:
+                raise serializers.ValidationError({
+                    'role_codes': '用户未分配部门，无法设置为室经理'
+                })
+            existing_dept_manager = User.objects.filter(
+                roles__code='DEPT_MANAGER',
+                department_id=final_department_id,
+                is_active=True
+            ).exclude(pk=self.instance.pk if self.instance else None).first()
+            if existing_dept_manager:
+                dept = Department.objects.filter(id=final_department_id).first()
+                dept_name = dept.name if dept else final_department_id
+                raise serializers.ValidationError({
+                    'role_codes': f'部门 {dept_name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
+                })
+
+        return attrs
+
     def update(self, instance, validated_data):
-        """Update user information."""
+        """Update user information including roles."""
+        from django.db import transaction
+        from .models import Role, UserRole
+
         department_id = validated_data.pop('department_id', None)
-        username = validated_data.pop('username', None)  # username 用于存储显示名称
-        employee_id = validated_data.pop('employee_id', None)  # employee_id 可以更新
-        if department_id is not None:
-            instance.department_id = department_id
-        if username is not None:
-            instance.username = username
-        if employee_id is not None:
-            instance.employee_id = employee_id
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        # 保存时，Django 的 auto_now=True 会自动更新 updated_at
-        instance.save()
+        username = validated_data.pop('username', None)
+        employee_id = validated_data.pop('employee_id', None)
+        role_codes = validated_data.pop('role_codes', None)
+
+        with transaction.atomic():
+            # 更新基本信息
+            if department_id is not None:
+                instance.department_id = department_id
+            if username is not None:
+                instance.username = username
+            if employee_id is not None:
+                instance.employee_id = employee_id
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            # 更新角色（如果提供了 role_codes）
+            if role_codes is not None:
+                roles_to_assign = set(role_codes)
+                roles_to_assign.add('STUDENT')  # 始终保留学员角色
+
+                current_role_codes = set(instance.roles.values_list('code', flat=True))
+                roles_to_remove = current_role_codes - roles_to_assign
+                if 'STUDENT' in roles_to_remove:
+                    roles_to_remove.remove('STUDENT')
+                roles_to_add = roles_to_assign - current_role_codes
+
+                if roles_to_remove:
+                    UserRole.objects.filter(
+                        user_id=instance.id,
+                        role__code__in=list(roles_to_remove)
+                    ).delete()
+
+                for role_code in roles_to_add:
+                    role = Role.objects.filter(code=role_code).first()
+                    if not role:
+                        role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
+                        role = Role.objects.create(
+                            code=role_code,
+                            name=role_name,
+                            description=f'{role_name}角色'
+                        )
+                    if not instance.roles.filter(code=role_code).exists():
+                        # 使用 context 中的 request.user 作为 assigned_by
+                        assigned_by = self.context.get('request').user if self.context.get('request') else instance
+                        UserRole.objects.create(
+                            user_id=instance.id,
+                            role_id=role.id,
+                            assigned_by_id=assigned_by.id
+                        )
+
+                instance.refresh_from_db()
+
         return instance
 class AssignRolesSerializer(serializers.Serializer):
     """

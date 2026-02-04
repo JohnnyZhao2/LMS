@@ -66,6 +66,42 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
+    def _validate_exclusive_roles(self, user: User, role_codes: List[str]) -> None:
+        """
+        验证专有角色的唯一性约束。
+        - 每个部门只能有一个室经理 (DEPT_MANAGER)
+        - 全局只能有一个团队经理 (TEAM_MANAGER)
+        """
+        # 验证团队经理唯一性（全局只能有一个）
+        if 'TEAM_MANAGER' in role_codes:
+            existing_team_manager = User.objects.filter(
+                roles__code='TEAM_MANAGER',
+                is_active=True
+            ).exclude(pk=user.pk).first()
+            if existing_team_manager:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
+                )
+
+        # 验证室经理唯一性（每个部门只能有一个）
+        if 'DEPT_MANAGER' in role_codes:
+            if not user.department:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='用户未分配部门，无法设置为室经理'
+                )
+            existing_dept_manager = User.objects.filter(
+                roles__code='DEPT_MANAGER',
+                department=user.department,
+                is_active=True
+            ).exclude(pk=user.pk).first()
+            if existing_dept_manager:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'部门 {user.department.name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
+                )
+
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
@@ -77,12 +113,18 @@ class UserManagementService(BaseService):
         Returns:
             The updated user
         Raises:
-            BusinessError: If user not found
+            BusinessError: If user not found or role constraints violated
         Properties:
         - Property 9: 学员角色不可移除
+        - 每个部门只能有一个室经理
+        - 全局只能有一个团队经理
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+
+        # 验证专有角色的唯一性约束
+        self._validate_exclusive_roles(user, role_codes)
+
         # Get student role (must always be preserved)
         Role.objects.get_or_create(
             code='STUDENT',
