@@ -307,25 +307,29 @@ def get_accessible_students(user, current_role=None, request=None):
         current_role: The current active role (optional, will be determined from user if not provided)
         request: The HTTP request object (optional, for reading role from header)
     Returns:
-        QuerySet of User objects that the user can access
+        QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
     """
     from apps.users.models import User
     if not current_role:
         current_role = get_current_role(user, request)
+
+    # 基础查询：只返回有 STUDENT 角色的活跃用户
+    base_qs = User.objects.filter(
+        is_active=True,
+        roles__code='STUDENT'
+    ).distinct()
+
     # Admin can access all students (Property 39)
     if current_role == 'ADMIN':
-        return User.objects.filter(is_active=True)
+        return base_qs
     # Mentor can only access their mentees (Property 37)
     if current_role == 'MENTOR':
-        return User.objects.filter(mentor=user, is_active=True)
+        return base_qs.filter(mentor=user)
     # Department manager can only access department members (Property 38)
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
-            return User.objects.filter(
-                department_id=user.department_id,
-                is_active=True
-            ).exclude(pk=user.pk)
+            return base_qs.filter(department_id=user.department_id).exclude(pk=user.pk)
         return User.objects.none()
     # Default: no access
     return User.objects.none()

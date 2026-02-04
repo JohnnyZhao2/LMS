@@ -271,6 +271,138 @@ def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
     return peer_stats[start:end]
 
 
+def get_students_needing_attention(
+    student_ids: List[int],
+    days_inactive: int = 7
+) -> List[Dict[str, Any]]:
+    """
+    获取需要关注的学员列表
+    预警规则：
+    1. 有逾期任务
+    2. 最近考试不及格（< 60分）
+    3. 近 N 天无活跃记录
+    """
+    if not student_ids:
+        return []
+
+    from apps.quizzes.models import Quiz
+
+    alerts_by_student: Dict[int, List[Dict[str, Any]]] = {}
+
+    # 1. 查询有逾期任务的学员
+    overdue_assignments = TaskAssignment.objects.filter(
+        assignee_id__in=student_ids,
+        status='OVERDUE',
+        task__is_deleted=False
+    ).select_related('task', 'assignee', 'assignee__department')
+
+    for assignment in overdue_assignments:
+        student_id = assignment.assignee_id
+        if student_id not in alerts_by_student:
+            alerts_by_student[student_id] = []
+        # 检查是否已有逾期任务的预警
+        existing_overdue = next(
+            (a for a in alerts_by_student[student_id] if a['type'] == 'overdue'),
+            None
+        )
+        if existing_overdue:
+            existing_overdue['count'] += 1
+            existing_overdue['tasks'].append({
+                'task_id': assignment.task.id,
+                'task_title': assignment.task.title
+            })
+        else:
+            alerts_by_student[student_id].append({
+                'type': 'overdue',
+                'level': 'high',
+                'message': '有逾期任务',
+                'count': 1,
+                'tasks': [{
+                    'task_id': assignment.task.id,
+                    'task_title': assignment.task.title
+                }]
+            })
+
+    # 2. 查询最近考试不及格的学员
+    failed_submissions = Submission.objects.filter(
+        user_id__in=student_ids,
+        status='GRADED',
+        quiz__quiz_type='EXAM',
+        task_assignment__task__is_deleted=False
+    ).select_related('quiz', 'user', 'user__department')
+
+    for submission in failed_submissions:
+        pass_score = submission.quiz.pass_score or 60
+        if submission.obtained_score is not None and submission.obtained_score < pass_score:
+            student_id = submission.user_id
+            if student_id not in alerts_by_student:
+                alerts_by_student[student_id] = []
+            # 检查是否已有考试不及格的预警
+            existing_failed = next(
+                (a for a in alerts_by_student[student_id] if a['type'] == 'failed_exam'),
+                None
+            )
+            if not existing_failed:
+                alerts_by_student[student_id].append({
+                    'type': 'failed_exam',
+                    'level': 'high',
+                    'message': '考试不及格',
+                    'score': float(submission.obtained_score),
+                    'quiz_title': submission.quiz.title
+                })
+
+    # 3. 查询近 N 天无活跃记录的学员
+    if settings.USE_TZ:
+        now = timezone.now()
+    else:
+        now = datetime.now()
+    inactive_threshold = now - timedelta(days=days_inactive)
+
+    # 获取近 N 天有活跃记录的学员 ID
+    active_user_ids = set(UserLog.objects.filter(
+        user_id__in=student_ids,
+        created_at__gte=inactive_threshold
+    ).values_list('user_id', flat=True).distinct())
+
+    # 找出不活跃的学员
+    inactive_user_ids = set(student_ids) - active_user_ids
+    for student_id in inactive_user_ids:
+        if student_id not in alerts_by_student:
+            alerts_by_student[student_id] = []
+        alerts_by_student[student_id].append({
+            'type': 'inactive',
+            'level': 'medium',
+            'message': f'近 {days_inactive} 天无活跃记录'
+        })
+
+    # 构建返回结果
+    result = []
+    students = User.objects.filter(id__in=alerts_by_student.keys()).select_related('department')
+    student_map = {s.id: s for s in students}
+
+    for student_id, alerts in alerts_by_student.items():
+        student = student_map.get(student_id)
+        if not student:
+            continue
+        # 按优先级排序：high > medium > low
+        level_order = {'high': 0, 'medium': 1, 'low': 2}
+        alerts.sort(key=lambda x: level_order.get(x['level'], 2))
+        result.append({
+            'student_id': student_id,
+            'student_name': student.username,
+            'employee_id': student.employee_id or '',
+            'department_name': student.department.name if student.department else None,
+            'alerts': alerts,
+            'alert_count': len(alerts),
+            'highest_level': alerts[0]['level'] if alerts else 'low'
+        })
+
+    # 按预警数量和级别排序
+    result.sort(key=lambda x: (-x['alert_count'], {'high': 0, 'medium': 1, 'low': 2}.get(x['highest_level'], 2)))
+
+    return result
+
+
 def get_task_participants_progress(
     task_id: int,
     current_user_id: int,

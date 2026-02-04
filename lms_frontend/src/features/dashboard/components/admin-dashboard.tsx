@@ -17,13 +17,14 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
 import { ActivityLogsPanel } from '@/features/activity-logs/components/activity-logs-panel';
+import { StudentsNeedingAttention } from './students-needing-attention';
 
 
 /**
  * ADMIN DASHBOARD - Flat Design 版本
- * 
+ *
  * 设计规范：
- * - 无阴影 
+ * - 无阴影
  * - 无渐变 (no gradient)
  * - 实心背景色
  * - hover:scale 交互反馈
@@ -135,6 +136,9 @@ export const AdminDashboard: React.FC = () => {
               size="sm"
             />
           </div>
+
+          {/* 需要关注的学员 */}
+          <StudentsNeedingAttention limit={5} />
 
           {/* 活动日志面板 - 放在主栏下方 */}
           <ActivityLogsPanel />

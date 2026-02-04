@@ -5,6 +5,46 @@
 import type { LatestKnowledge } from './knowledge';
 
 /**
+ * 学员预警类型
+ */
+export type AlertType = 'overdue' | 'failed_exam' | 'inactive' | 'slow_progress' | 'score_decline';
+export type AlertLevel = 'high' | 'medium' | 'low';
+
+/**
+ * 学员预警信息
+ */
+export interface StudentAlert {
+  type: AlertType;
+  level: AlertLevel;
+  message: string;
+  count?: number;
+  tasks?: { task_id: number; task_title: string }[];
+  score?: number;
+  quiz_title?: string;
+}
+
+/**
+ * 需要关注的学员
+ */
+export interface StudentNeedingAttention {
+  student_id: number;
+  student_name: string;
+  employee_id: string;
+  department_name: string | null;
+  alerts: StudentAlert[];
+  alert_count: number;
+  highest_level: AlertLevel;
+}
+
+/**
+ * 需要关注的学员响应
+ */
+export interface StudentsNeedingAttentionResponse {
+  total_count: number;
+  students: StudentNeedingAttention[];
+}
+
+/**
  * 学员统计数据
  */
 export interface StudentStats {

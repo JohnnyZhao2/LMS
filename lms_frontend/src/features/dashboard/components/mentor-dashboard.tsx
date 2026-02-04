@@ -18,6 +18,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
+import { StudentsNeedingAttention } from './students-needing-attention';
 
 
 /**
@@ -79,45 +80,53 @@ export const MentorDashboard: React.FC = () => {
         />
       </div>
 
-      {/* 快捷操作 */}
-      <div className="space-y-6 reveal-item stagger-delay-2">
-        <h3 className="text-lg font-black text-foreground pl-2 flex items-center gap-2">
-          <Layout className="w-5 h-5 text-primary-500" />
-          快速开始
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <ActionCard
-            title="发起抽查"
-            description="对学员进行知识抽查"
-            icon={FileSearch}
-            route={`${ROUTES.SPOT_CHECKS}/create`}
-            actionColor="rose" // Was destructive
-            delay="stagger-delay-1"
-          />
-          <ActionCard
-            title="发布任务"
-            description="创建学习/练习/考试任务"
-            icon={Send}
-            route={`${ROUTES.TASKS}/create`}
-            actionColor="indigo" // Was primary
-            delay="stagger-delay-2"
-          />
-          <ActionCard
-            title="新建试卷"
-            description="创建新的考试或练习试卷"
-            icon={Plus}
-            route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
-            actionColor="emerald" // Was secondary
-            delay="stagger-delay-3"
-          />
-          <ActionCard
-            title="阅卷中心"
-            description="批阅学员试卷答案"
-            icon={FileCheck}
-            route={ROUTES.GRADING_CENTER}
-            actionColor="amber"
-            delay="stagger-delay-4"
-          />
+      {/* 主内容区域 */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* 左侧 - 需要关注的学员 */}
+        <div className="lg:col-span-5">
+          <StudentsNeedingAttention limit={5} />
+        </div>
+
+        {/* 右侧 - 快捷操作 */}
+        <div className="lg:col-span-7 space-y-6 reveal-item stagger-delay-2">
+          <h3 className="text-lg font-black text-foreground pl-2 flex items-center gap-2">
+            <Layout className="w-5 h-5 text-primary-500" />
+            快速开始
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <ActionCard
+              title="发起抽查"
+              description="对学员进行知识抽查"
+              icon={FileSearch}
+              route={`${ROUTES.SPOT_CHECKS}/create`}
+              actionColor="rose"
+              delay="stagger-delay-1"
+            />
+            <ActionCard
+              title="发布任务"
+              description="创建学习/练习/考试任务"
+              icon={Send}
+              route={`${ROUTES.TASKS}/create`}
+              actionColor="indigo"
+              delay="stagger-delay-2"
+            />
+            <ActionCard
+              title="新建试卷"
+              description="创建新的考试或练习试卷"
+              icon={Plus}
+              route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
+              actionColor="emerald"
+              delay="stagger-delay-3"
+            />
+            <ActionCard
+              title="阅卷中心"
+              description="批阅学员试卷答案"
+              icon={FileCheck}
+              route={ROUTES.GRADING_CENTER}
+              actionColor="amber"
+              delay="stagger-delay-4"
+            />
+          </div>
         </div>
       </div>
     </div>

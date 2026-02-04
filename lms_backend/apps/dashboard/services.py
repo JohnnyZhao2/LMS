@@ -25,6 +25,7 @@ from .selectors import (
     get_student_all_tasks,
     get_student_assignments,
     get_student_exam_avg_score,
+    get_students_needing_attention,
     get_task_participants_progress,
     get_urgent_tasks_count,
     get_weekly_active_users_count,
@@ -232,4 +233,24 @@ class MentorDashboardService(BaseService):
             'spot_checks': '/spot-checks',
             'question_bank': '/questions',
             'quiz_management': '/quizzes'
+        }
+
+    def get_students_needing_attention(self, limit: int = 10) -> Dict[str, Any]:
+        """
+        获取需要关注的学员列表
+        Args:
+            limit: 最大返回数量
+        Returns:
+            包含预警学员列表和统计的字典
+        """
+        current_role = self.get_current_role()
+        students = get_accessible_students(self.user, current_role, self.request)
+        student_ids = list(students.values_list('id', flat=True))
+
+        all_alerts = get_students_needing_attention(student_ids)
+        total_count = len(all_alerts)
+
+        return {
+            'total_count': total_count,
+            'students': all_alerts[:limit]
         }
