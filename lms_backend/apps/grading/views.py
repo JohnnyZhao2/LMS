@@ -127,11 +127,14 @@ class GradingAnswersView(GradingBaseView):
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
-        question = Question.objects.filter(id=question_id).first()
+        question = Question.objects.filter(
+            id=question_id,
+            question_quizzes__quiz_id=quiz_id
+        ).first()
         if not question:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='未找到对应题目'
+                message='未找到对应题目或题目不属于该试卷'
             )
         answers = get_latest_answers(task, question_id, quiz_id).select_related(
             'submission__task_assignment__assignee',
