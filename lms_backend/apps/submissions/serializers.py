@@ -96,6 +96,59 @@ class SaveAnswerSerializer(serializers.Serializer):
             question_id=self.validated_data['question_id'],
             user_answer=self.validated_data['user_answer']
         )
+
+
+class AnswerItemSerializer(serializers.Serializer):
+    """单个答案项的序列化器"""
+    question_id = serializers.IntegerField(help_text='题目ID')
+    user_answer = serializers.JSONField(help_text='用户答案', allow_null=True)
+
+
+class SaveAnswersSerializer(serializers.Serializer):
+    """
+    批量保存答案的序列化器。
+    支持一次保存多道题的答案，减少 API 调用次数。
+    """
+    answers = AnswerItemSerializer(many=True, help_text='答案列表')
+
+    def validate_answers(self, value):
+        """验证答案列表"""
+        if not value:
+            raise serializers.ValidationError('答案列表不能为空')
+        # 检查是否有重复的 question_id
+        question_ids = [item['question_id'] for item in value]
+        if len(question_ids) != len(set(question_ids)):
+            raise serializers.ValidationError('答案列表中存在重复的题目ID')
+        return value
+
+    def validate(self, attrs):
+        """验证所有答案"""
+        submission = self.context.get('submission')
+        answers_data = attrs['answers']
+        # 获取提交中所有题目的 ID
+        valid_question_ids = set(
+            Answer.objects.filter(submission=submission).values_list('question_id', flat=True)
+        )
+        # 验证每个答案的题目是否在提交中
+        invalid_ids = []
+        for item in answers_data:
+            if item['question_id'] not in valid_question_ids:
+                invalid_ids.append(item['question_id'])
+        if invalid_ids:
+            raise serializers.ValidationError({
+                'answers': f'以下题目不在此答卷中: {invalid_ids}'
+            })
+        return attrs
+
+    def save(self):
+        """批量保存答案 - 委托给 SubmissionService"""
+        request = self.context.get('request')
+        service = SubmissionService(request)
+        submission = self.context.get('submission')
+        return service.save_answers(
+            submission=submission,
+            answers_data=self.validated_data['answers']
+        )
 class PracticeResultSerializer(serializers.ModelSerializer):
     """
     Serializer for practice result view.

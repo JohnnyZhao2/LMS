@@ -7,6 +7,7 @@ Split into:
 """
 from .common import (
     SaveAnswerView,
+    SaveAnswersView,
     StartQuizView,
     SubmitView,
 )
@@ -22,6 +23,7 @@ __all__ = [
     'StartQuizView',
     'SubmitView',
     'SaveAnswerView',
+    'SaveAnswersView',
     # Practice views
     'PracticeResultView',
     # Exam views

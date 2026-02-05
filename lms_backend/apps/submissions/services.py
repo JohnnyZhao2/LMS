@@ -300,6 +300,49 @@ class SubmissionService(BaseService):
         return answer
 
     @transaction.atomic
+    def save_answers(
+        self,
+        submission: Submission,
+        answers_data: List[dict]
+    ) -> List[Answer]:
+        """
+        批量保存答案。
+        Args:
+            submission: The submission
+            answers_data: 答案数据列表，每项包含 question_id 和 user_answer
+        Returns:
+            更新后的 Answer 实例列表
+        Raises:
+            BusinessError: If submission not in progress
+        """
+        if submission.status != 'IN_PROGRESS':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='只能在答题中保存答案'
+            )
+        # 获取所有需要更新的答案
+        question_ids = [item['question_id'] for item in answers_data]
+        answers = Answer.objects.filter(
+            submission_id=submission.id,
+            question_id__in=question_ids
+        )
+        # 构建 question_id -> answer 映射
+        answer_map = {answer.question_id: answer for answer in answers}
+        # 构建 question_id -> user_answer 映射
+        answer_data_map = {item['question_id']: item['user_answer'] for item in answers_data}
+        # 批量更新
+        updated_answers = []
+        for question_id, user_answer in answer_data_map.items():
+            answer = answer_map.get(question_id)
+            if answer:
+                answer.user_answer = user_answer
+                updated_answers.append(answer)
+        # 使用 bulk_update 批量更新
+        if updated_answers:
+            Answer.objects.bulk_update(updated_answers, ['user_answer'])
+        return updated_answers
+
+    @transaction.atomic
     @log_operation('submission', 'submit', '提交答卷：试卷《{result.quiz.title}》')
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """

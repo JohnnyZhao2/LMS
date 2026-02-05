@@ -178,15 +178,21 @@ class QuizService(BaseService):
         self,
         pk: int,
         data: dict,
-        question_ids: List[int] = None
+        question_ids: List[int] = None,
+        add_question_ids: List[int] = None,
+        new_questions_data: List[dict] = None,
+        remove_question_ids: List[int] = None
     ) -> Quiz:
         """
-        更新试卷
+        更新试卷（支持原子性操作）
         Property 16: 试卷所有权编辑控制
         Args:
             pk: 主键
             data: 更新数据
-            question_ids: 新的题目 ID 顺序列表（可选）
+            question_ids: 新的题目 ID 顺序列表（可选，会覆盖现有顺序）
+            add_question_ids: 要添加的已有题目 ID 列表
+            new_questions_data: 要新建的题目数据列表
+            remove_question_ids: 要移除的题目 ID 列表
         Returns:
             更新后的试卷对象
         Raises:
@@ -209,9 +215,38 @@ class QuizService(BaseService):
                 for key, value in data.items():
                     setattr(quiz, key, value)
                 quiz.save(update_fields=list(data.keys()))
-        # 更新题目顺序（如果提供）
+
+        # 处理题目操作（在同一个事务中）
+        add_question_ids = add_question_ids or []
+        new_questions_data = new_questions_data or []
+        remove_question_ids = remove_question_ids or []
+
+        # 1. 先移除题目
+        if remove_question_ids:
+            self._remove_questions(quiz_id=quiz.id, question_ids=remove_question_ids)
+
+        # 2. 添加已有题目
+        existing_quiz_question_ids = set(get_question_ids(quiz.id))
+        for question_id in add_question_ids:
+            if question_id not in existing_quiz_question_ids:
+                question = Question.objects.filter(pk=question_id).first()
+                if not question:
+                    raise BusinessError(
+                        code=ErrorCodes.RESOURCE_NOT_FOUND,
+                        message=f'题目 {question_id} 不存在'
+                    )
+                self._add_question(quiz_id=quiz.id, question_id=question_id)
+
+        # 3. 创建并添加新题目
+        for question_data in new_questions_data:
+            self._create_and_add_question(quiz, question_data)
+
+        # 4. 更新题目顺序（如果提供）
         if question_ids is not None:
             self._sync_question_order(quiz, question_ids)
+
+        quiz.updated_by = self.user
+        quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic

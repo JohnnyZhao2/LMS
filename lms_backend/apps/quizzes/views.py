@@ -149,7 +149,13 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
 
     @extend_schema(
         summary='更新试卷',
-        description='更新试卷信息（仅创建者或管理员）',
+        description='''更新试卷信息（仅创建者或管理员）。
+        支持在一个请求中完成：
+        - 更新试卷基本信息（title, description, quiz_type, duration, pass_score）
+        - 同步题目顺序（existing_question_ids）
+        - 添加新题目（add_question_ids, new_questions）
+        - 移除题目（remove_question_ids）
+        ''',
         request=QuizUpdateSerializer,
         responses={
             200: QuizDetailSerializer,
@@ -167,21 +173,27 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         # 1. 反序列化输入
         serializer = QuizUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        
+
         # 2. 提取数据
         validated_data = serializer.validated_data
         question_ids = validated_data.pop('existing_question_ids', None)
-        
+        add_question_ids = validated_data.pop('add_question_ids', [])
+        new_questions_data = validated_data.pop('new_questions', [])
+        remove_question_ids = validated_data.pop('remove_question_ids', [])
+
         # 3. 调用 Service（不再传user参数）
         try:
             quiz = self.service.update(
                 pk=pk,
                 data=validated_data,
-                question_ids=question_ids
+                question_ids=question_ids,
+                add_question_ids=add_question_ids,
+                new_questions_data=new_questions_data,
+                remove_question_ids=remove_question_ids
             )
         except BusinessError as e:
             return self.handle_business_error(e)
-        
+
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)

@@ -58,6 +58,35 @@ class GradingSubmitSerializer(serializers.Serializer):
     comments = serializers.CharField(required=False, allow_blank=True, default='')
 
 
+class GradingItemSerializer(serializers.Serializer):
+    """单个评分项序列化器"""
+    question_id = serializers.IntegerField()
+    student_id = serializers.IntegerField()
+    score = serializers.FloatField()
+    comments = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class BatchGradingSubmitSerializer(serializers.Serializer):
+    """批量评分提交序列化器"""
+    quiz_id = serializers.IntegerField()
+    gradings = GradingItemSerializer(many=True, help_text='评分列表')
+
+    def validate_gradings(self, value):
+        """验证评分列表"""
+        if not value:
+            raise serializers.ValidationError('评分列表不能为空')
+        # 检查是否有重复的 (question_id, student_id) 组合
+        seen = set()
+        for item in value:
+            key = (item['question_id'], item['student_id'])
+            if key in seen:
+                raise serializers.ValidationError(
+                    f'评分列表中存在重复的题目-学员组合: question_id={item["question_id"]}, student_id={item["student_id"]}'
+                )
+            seen.add(key)
+        return value
+
+
 class PendingQuizSerializer(serializers.Serializer):
     """待阅卷试卷序列化器"""
     quiz_id = serializers.IntegerField()

@@ -124,6 +124,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating new users.
+    支持在一个请求中完成：
+    - 创建用户基本信息
+    - 设置部门
+    - 设置导师（可选）
+    - 分配角色（可选，学员角色自动保留）
     """
     password = serializers.CharField(
         write_only=True,
@@ -139,63 +144,128 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         allow_null=True,
         help_text='导师ID（可选）'
     )
+    role_codes = serializers.ListField(
+        child=serializers.ChoiceField(choices=[
+            ('MENTOR', '导师'),
+            ('DEPT_MANAGER', '室经理'),
+            ('ADMIN', '管理员'),
+            ('TEAM_MANAGER', '团队经理'),
+        ]),
+        required=False,
+        default=list,
+        help_text='要分配的角色代码列表（不包含学员角色，学员角色自动保留）'
+    )
+
     class Meta:
         model = User
         fields = [
             'password', 'employee_id', 'username',
-            'department_id', 'mentor_id'
+            'department_id', 'mentor_id', 'role_codes'
         ]
+
     def validate_username(self, value):
         return self.validate_username_field(value)
-    
+
     def validate_employee_id(self, value):
         return self.validate_employee_id_field(value)
-    
+
     def validate_department_id(self, value):
         return self.validate_department_id_field(value)
-    
+
     def validate_mentor_id(self, value):
         """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)
         return value
+
+    def validate(self, attrs):
+        """验证角色和部门的约束。"""
+        role_codes = attrs.get('role_codes', [])
+        department_id = attrs.get('department_id')
+
+        # 验证团队经理唯一性（全局只能有一个）
+        if 'TEAM_MANAGER' in role_codes:
+            existing_team_manager = User.objects.filter(
+                roles__code='TEAM_MANAGER',
+                is_active=True
+            ).first()
+            if existing_team_manager:
+                raise serializers.ValidationError({
+                    'role_codes': f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
+                })
+
+        # 验证室经理唯一性（每个部门只能有一个）
+        if 'DEPT_MANAGER' in role_codes:
+            if not department_id:
+                raise serializers.ValidationError({
+                    'role_codes': '用户未分配部门，无法设置为室经理'
+                })
+            existing_dept_manager = User.objects.filter(
+                roles__code='DEPT_MANAGER',
+                department_id=department_id,
+                is_active=True
+            ).first()
+            if existing_dept_manager:
+                dept = Department.objects.filter(id=department_id).first()
+                dept_name = dept.name if dept else department_id
+                raise serializers.ValidationError({
+                    'role_codes': f'部门 {dept_name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
+                })
+
+        return attrs
+
     def create(self, validated_data):
         """
-        创建用户并设置密码。
-        直接创建 User 对象而不是使用 create_user() 方法，因为：
-        1. 更直观，只传递实际存在的字段
-        2. 避免 UserManager 传递 email 等不存在的字段
-        3. 手动调用 set_password() 确保密码正确哈希
+        创建用户并设置密码、导师和角色（在一个事务中）。
         Args:
             validated_data: 已验证的数据字典
         Returns:
             User: 创建的用户对象
         """
+        from django.db import transaction
+
         # 提取特殊字段
         department_id = validated_data.pop('department_id')
         password = validated_data.pop('password')
         employee_id = validated_data.pop('employee_id')
         username = validated_data.pop('username')
         mentor_id = validated_data.pop('mentor_id', None)
-        # 设置部门
-        validated_data['department_id'] = department_id
-        # 直接创建 User 对象（不传递不存在的字段）
-        user = User(
-            username=username,
-            employee_id=employee_id,
-            **validated_data
-        )
-        # 手动设置密码（会自动哈希）
-        user.set_password(password)
-        user.save()
-        # 如果提供了导师ID，设置导师
-        if mentor_id is not None:
-            try:
-                mentor = User.objects.get(pk=mentor_id)
-                user.mentor = mentor
-                user.save()
-            except User.DoesNotExist:
-                # 验证阶段已经检查过，这里理论上不会发生
-                pass
+        role_codes = validated_data.pop('role_codes', [])
+
+        with transaction.atomic():
+            # 设置部门
+            validated_data['department_id'] = department_id
+
+            # 直接创建 User 对象（不传递不存在的字段）
+            user = User(
+                username=username,
+                employee_id=employee_id,
+                **validated_data
+            )
+            # 手动设置密码（会自动哈希）
+            user.set_password(password)
+            user.save()
+
+            # 如果提供了导师ID，设置导师
+            if mentor_id is not None:
+                try:
+                    mentor = User.objects.get(pk=mentor_id)
+                    user.mentor = mentor
+                    user.save(update_fields=['mentor'])
+                except User.DoesNotExist:
+                    pass
+
+            # 分配角色（学员角色自动保留）
+            if role_codes:
+                # 获取学员角色
+                student_role = Role.objects.filter(code='STUDENT').first()
+                # 获取要分配的角色
+                roles_to_assign = list(Role.objects.filter(code__in=role_codes))
+                # 确保学员角色存在
+                if student_role and student_role not in roles_to_assign:
+                    roles_to_assign.append(student_role)
+                # 设置角色
+                user.roles.set(roles_to_assign)
+
         return user
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
