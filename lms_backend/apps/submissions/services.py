@@ -7,17 +7,21 @@ Provides business logic for:
 This service layer separates business logic from Views and Serializers,
 improving code reusability and testability.
 """
-from typing import List, Optional, Any, Tuple
 from decimal import Decimal
+from typing import Any, List, Optional, Tuple
+
 from django.db import transaction
+from django.db.models import QuerySet, Sum
 from django.utils import timezone
-from django.db.models import Sum, QuerySet
-from core.exceptions import BusinessError, ErrorCodes
-from core.base_service import BaseService
-from apps.users.models import User
-from apps.tasks.models import TaskAssignment, TaskQuiz
+
 from apps.quizzes.models import Quiz
-from .models import Submission, Answer
+from apps.tasks.models import TaskAssignment, TaskQuiz
+from apps.users.models import User
+from core.base_service import BaseService
+from core.decorators import log_operation
+from core.exceptions import BusinessError, ErrorCodes
+
+from .models import Answer, Submission
 
 
 class SubmissionService(BaseService):
@@ -30,7 +34,8 @@ class SubmissionService(BaseService):
     - Submission status management
     """
 
-    def _submission_queryset(self, user: Optional[User] = None) -> QuerySet:
+    def _base_queryset(self, user: Optional[User] = None) -> QuerySet:
+        """基础查询集，统一 select_related/prefetch_related"""
         qs = Submission.objects.select_related(
             'task_assignment__task',
             'quiz',
@@ -44,16 +49,23 @@ class SubmissionService(BaseService):
         return qs
 
     def _get_submission_by_id(self, pk: int, user: Optional[User] = None) -> Optional[Submission]:
-        return self._submission_queryset(user=user).filter(pk=pk).first()
+        """按 ID 获取提交记录"""
+        return self._base_queryset(user=user).filter(pk=pk).first()
 
     def _get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        """获取进行中的提交记录"""
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             quiz_id=quiz_id,
             status='IN_PROGRESS'
         ).first()
 
+    def get_in_progress(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        """Public wrapper for in-progress submission lookup."""
+        return self._get_in_progress(task_assignment_id=task_assignment_id, quiz_id=quiz_id)
+
     def _get_existing_submitted(self, task_assignment_id: int, quiz_id: int) -> Optional[Submission]:
+        """获取已提交的提交记录"""
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             quiz_id=quiz_id,
@@ -61,10 +73,29 @@ class SubmissionService(BaseService):
         ).first()
 
     def _count_attempts(self, task_assignment_id: int, quiz_id: int) -> int:
+        """统计提交次数"""
         return Submission.objects.filter(
             task_assignment_id=task_assignment_id,
             quiz_id=quiz_id
         ).count()
+
+    def _get_answer_by_submission_and_question(
+        self,
+        submission_id: int,
+        question_id: int
+    ) -> Optional[Answer]:
+        """按提交和题目获取答案"""
+        return Answer.objects.select_related('question').filter(
+            submission_id=submission_id,
+            question_id=question_id
+        ).first()
+
+    def _list_objective_answers(self, submission_id: int) -> QuerySet:
+        """获取客观题答案列表"""
+        return Answer.objects.filter(
+            submission_id=submission_id,
+            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
+        ).select_related('question')
 
     def _create_with_answers(self, answers_data: List[dict], **submission_data) -> Submission:
         submission = Submission.objects.create(**submission_data)
@@ -185,6 +216,7 @@ class SubmissionService(BaseService):
         return in_progress
 
     @transaction.atomic
+    @log_operation('submission', 'start_quiz', '开始答题：试卷《{result.quiz.title}》')
     def start_quiz(
         self,
         assignment: TaskAssignment,
@@ -261,16 +293,57 @@ class SubmissionService(BaseService):
                 code=ErrorCodes.INVALID_OPERATION,
                 message='只能在答题中保存答案'
             )
-        answer = Answer.objects.select_related('question').filter(
-            submission_id=submission.id,
-            question_id=question_id
-        ).first()
+        answer = self._get_answer_by_submission_and_question(submission.id, question_id)
         self.validate_not_none(answer, '该题目不在此答卷中')
         answer.user_answer = user_answer
         answer.save(update_fields=['user_answer'])
         return answer
 
     @transaction.atomic
+    def save_answers(
+        self,
+        submission: Submission,
+        answers_data: List[dict]
+    ) -> List[Answer]:
+        """
+        批量保存答案。
+        Args:
+            submission: The submission
+            answers_data: 答案数据列表，每项包含 question_id 和 user_answer
+        Returns:
+            更新后的 Answer 实例列表
+        Raises:
+            BusinessError: If submission not in progress
+        """
+        if submission.status != 'IN_PROGRESS':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='只能在答题中保存答案'
+            )
+        # 获取所有需要更新的答案
+        question_ids = [item['question_id'] for item in answers_data]
+        answers = Answer.objects.filter(
+            submission_id=submission.id,
+            question_id__in=question_ids
+        )
+        # 构建 question_id -> answer 映射
+        answer_map = {answer.question_id: answer for answer in answers}
+        # 构建 question_id -> user_answer 映射
+        answer_data_map = {item['question_id']: item['user_answer'] for item in answers_data}
+        # 批量更新
+        updated_answers = []
+        for question_id, user_answer in answer_data_map.items():
+            answer = answer_map.get(question_id)
+            if answer:
+                answer.user_answer = user_answer
+                updated_answers.append(answer)
+        # 使用 bulk_update 批量更新
+        if updated_answers:
+            Answer.objects.bulk_update(updated_answers, ['user_answer'])
+        return updated_answers
+
+    @transaction.atomic
+    @log_operation('submission', 'submit', '提交答卷：试卷《{result.quiz.title}》')
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
         Submit a quiz/exam.
@@ -318,10 +391,7 @@ class SubmissionService(BaseService):
         自动评分客观题
         Property 30: 客观题自动评分
         """
-        objective_answers = Answer.objects.filter(
-            submission_id=submission.id,
-            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ).select_related('question')
+        objective_answers = self._list_objective_answers(submission.id)
         for answer in objective_answers:
             answer.auto_grade()
 

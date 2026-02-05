@@ -1,5 +1,3 @@
-"use client"
-
 import {
   ChevronLeft,
   ChevronRight,
@@ -38,14 +36,14 @@ export function DataTablePagination({
 
   return (
     <div className="flex items-center justify-between px-2">
-      <div className="flex-1 text-sm text-gray-500">
+      <div className="flex-1 text-sm text-text-muted">
         {totalRows !== undefined && (
           <span>共 {totalRows} 条记录</span>
         )}
       </div>
       <div className="flex items-center space-x-6 lg:space-x-8">
         <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium text-gray-700">每页显示</p>
+          <p className="text-sm font-medium text-foreground">每页显示</p>
           <Select
             value={`${pageSize}`}
             onValueChange={(value) => {
@@ -63,9 +61,9 @@ export function DataTablePagination({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-sm font-medium text-gray-700">条</p>
+          <p className="text-sm font-medium text-foreground">条</p>
         </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium text-gray-700">
+        <div className="flex w-[100px] items-center justify-center text-sm font-medium text-foreground">
           第 {pageIndex + 1} / {pageCount} 页
         </div>
         <div className="flex items-center space-x-2">

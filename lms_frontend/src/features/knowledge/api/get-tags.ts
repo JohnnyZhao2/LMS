@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type { Tag, TagType } from '@/types/api';
 
 /**
@@ -27,10 +28,11 @@ interface GetTagsParams {
  * - 当 tag_type=OPERATION 且提供 line_type_id 时，返回该条线下知识使用的操作标签
  */
 export const useTags = (params: GetTagsParams = {}) => {
+  const currentRole = useCurrentRole();
   const { tag_type, line_type_id, search, limit = 50, active_only = true } = params;
 
   return useQuery({
-    queryKey: ['tags', tag_type, line_type_id, search, limit, active_only],
+    queryKey: ['tags', currentRole ?? 'UNKNOWN', tag_type, line_type_id, search, limit, active_only],
     queryFn: () => {
       const queryParams = {
         ...(tag_type && { tag_type }),
@@ -43,6 +45,7 @@ export const useTags = (params: GetTagsParams = {}) => {
       return apiClient.get<Tag[]>(`/knowledge/tags${queryString}`);
     },
     staleTime: 2 * 60 * 1000, // 2分钟内不重新获取
+    enabled: currentRole !== null,
   });
 };
 
@@ -94,4 +97,3 @@ export const useCreateTag = () => {
     },
   });
 };
-

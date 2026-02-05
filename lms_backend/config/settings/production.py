@@ -2,6 +2,7 @@
 Django production settings for LMS project.
 """
 import os
+from corsheaders.defaults import default_headers
 from .base import *
 DEBUG = False
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
@@ -28,6 +29,7 @@ CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 # CORS
 CORS_ALLOWED_ORIGINS = [origin for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin]
+CORS_ALLOW_HEADERS = list(default_headers) + ['x-current-role']
 # Logging
 LOGGING = {
     'version': 1,

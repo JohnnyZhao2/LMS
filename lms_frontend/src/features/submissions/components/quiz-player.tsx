@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 import {
   ChevronLeft,
@@ -12,20 +13,12 @@ import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';
 import { useSaveAnswer } from '../api/save-answer';
 import { QuestionCard } from './question-card';
 import { Timer } from './timer';
-import {
-  Button,
-  Card,
-  CardContent,
-  Progress,
-  Spinner,
-  StatusBadge,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Spinner } from '@/components/ui/spinner';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/api';
@@ -34,7 +27,7 @@ import type { SubmissionDetail } from '@/types/api';
  * 答题界面组件 - Flat Design 版本
  * 
  * 设计规范：
- * - 无阴影 (shadow-none)
+ * - 无阴影 
  * - 无渐变 (no gradient)
  * - 实心背景色区分考试/练习模式
  */
@@ -42,6 +35,7 @@ export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const assignmentId = Number(searchParams.get('assignment') ?? NaN);
   const quizId = Number(quizIdStr ?? NaN);
 
@@ -106,8 +100,9 @@ export const QuizPlayer: React.FC = () => {
     setAnswers((prev) => {
       if (isEmpty) {
         // 如果答案为空，从对象中删除该键
-        const { [questionId]: _, ...rest } = prev;
-        return rest;
+        const nextAnswers = { ...prev };
+        delete nextAnswers[questionId];
+        return nextAnswers;
       }
       // 否则正常设置答案
       return { ...prev, [questionId]: value };
@@ -131,7 +126,7 @@ export const QuizPlayer: React.FC = () => {
       await submitMutation(submission.id);
       toast.success('提交成功');
       setShowSubmitDialog(false);
-      navigate(`/tasks`);
+      roleNavigate('tasks');
     } catch (error) {
       console.error('提交答卷失败:', error);
       showApiError(error, '提交失败');
@@ -148,7 +143,7 @@ export const QuizPlayer: React.FC = () => {
     }
     await submitMutation(submission.id);
     setShowTimeUpDialog(false);
-    navigate(`/tasks`);
+    roleNavigate('tasks');
   };
 
   if (!submission) {
@@ -166,15 +161,15 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
-    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-[#F3F4F6]">
+    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-muted">
       {/* 顶部信息栏 - Flat Design */}
-      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-white">
+      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-background">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="h-10 w-10 shrink-0 text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]"
+            className="h-10 w-10 shrink-0 text-text-muted hover:text-foreground hover:bg-muted"
           >
             <ChevronLeft className="w-6 h-6" />
           </Button>
@@ -182,16 +177,16 @@ export const QuizPlayer: React.FC = () => {
             <div
               className={cn(
                 'w-11 h-11 rounded-md flex items-center justify-center text-white text-xl',
-                isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
+                isExam ? 'bg-destructive' : 'bg-primary'
               )}
             >
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-lg font-semibold m-0 text-[#111827]">
+              <h4 className="text-lg font-semibold m-0 text-foreground">
                 {submission.quiz_title}
               </h4>
-              <span className="text-sm text-[#6B7280]">
+              <span className="text-sm text-text-muted">
                 总分：{submission.total_score}分 · {submission.answers.length} 道题
               </span>
             </div>
@@ -213,28 +208,28 @@ export const QuizPlayer: React.FC = () => {
         {/* 题目导航 */}
         <div className="lg:col-span-1">
           <div className="sticky top-[88px]">
-            <Card className="rounded-lg bg-white">
+            <Card className="rounded-lg bg-background">
               <CardContent className="p-5">
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
-                    <span className="text-sm text-[#6B7280]">
+                    <span className="text-sm text-text-muted">
                       答题进度
                     </span>
                     <span className={cn(
                       'font-semibold',
-                      isExam ? 'text-white' : 'text-[#3B82F6]'
+                      isExam ? 'text-white' : 'text-primary'
                     )}>
                       {answeredCount}/{submission.answers.length}
                     </span>
                   </div>
                   <Progress
                     percent={progressPercent}
-                    strokeColor={isExam ? '#EF4444' : '#3B82F6'}
-                    trailColor="#E5E7EB"
+                    strokeColor={isExam ? 'var(--color-error-500)' : 'var(--color-primary-500)'}
+                    trailColor="var(--color-gray-200)"
                   />
                 </div>
 
-                <span className="text-xs block mb-3 text-[#6B7280]">
+                <span className="text-xs block mb-3 text-text-muted">
                   题目导航
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -251,15 +246,15 @@ export const QuizPlayer: React.FC = () => {
                           isCurrent
                             ? cn(
                               'text-white',
-                              isExam ? 'bg-[#EF4444]' : 'bg-[#3B82F6]'
+                              isExam ? 'bg-destructive' : 'bg-primary'
                             )
                             : isAnswered
                               ? cn(
                                 isExam
-                                  ? 'bg-[#065F46] text-[#34D399]'
-                                  : 'bg-[#D1FAE5] text-[#10B981]'
+                                  ? 'bg-secondary-800 text-secondary-400'
+                                  : 'bg-secondary-100 text-secondary'
                               )
-                              : 'bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]'
+                              : 'bg-muted text-text-muted hover:bg-muted'
                         )}
                       >
                         {isAnswered && !isCurrent ? (
@@ -278,27 +273,27 @@ export const QuizPlayer: React.FC = () => {
 
         {/* 答题区域 */}
         <div className="lg:col-span-3">
-          <Card className="rounded-lg bg-white">
+          <Card className="rounded-lg bg-background">
             <CardContent className="p-6">
               {/* 题号指示 */}
-              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-[#F3F4F6]">
+              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-border">
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
                       'w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg border',
                       isExam
-                        ? 'bg-red-50 text-red-600 border-red-100'
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
+                        ? 'bg-destructive-50 text-destructive-600 border-destructive-100'
+                        : 'bg-primary-50 text-primary-600 border-primary-100'
                     )}
                   >
                     {currentIndex + 1}
                   </div>
-                  <span className="text-[#6B7280]">
+                  <span className="text-text-muted">
                     第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
                   </span>
                 </div>
                 {currentQuestion && (
-                  <span className="text-[#6B7280]">
+                  <span className="text-text-muted">
                     分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
                   </span>
                 )}
@@ -316,7 +311,7 @@ export const QuizPlayer: React.FC = () => {
               )}
 
               {/* 底部操作栏 */}
-              <div className="flex justify-between mt-8 pt-5 border-t-2 border-[#F3F4F6]">
+              <div className="flex justify-between mt-8 pt-5 border-t-2 border-border">
                 <Button
                   variant="outline"
                   size="lg"
@@ -335,8 +330,8 @@ export const QuizPlayer: React.FC = () => {
                       className={cn(
                         'h-12 px-6 rounded-md font-semibold hover:scale-105',
                         isExam
-                          ? 'bg-[#EF4444] hover:bg-[#DC2626]'
-                          : 'bg-[#3B82F6] hover:bg-[#2563EB]'
+                          ? 'bg-destructive hover:bg-destructive'
+                          : 'bg-primary hover:bg-primary-600'
                       )}
                     >
                       下一题
@@ -373,7 +368,7 @@ export const QuizPlayer: React.FC = () => {
             <DialogDescription asChild>
               <div>
                 {unansweredCount > 0 && (
-                  <div className="mb-3 text-[#F59E0B]">
+                  <div className="mb-3 text-warning">
                     ⚠️ 还有 {unansweredCount} 道题未作答
                   </div>
                 )}

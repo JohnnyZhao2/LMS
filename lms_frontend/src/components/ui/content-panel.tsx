@@ -34,7 +34,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
         <div
             className={cn(
                 // 扁平化风格 - 纯白不透明背景，不添加额外层次感
-                'bg-white rounded-lg',
+                'bg-background rounded-lg',
                 paddingMap[padding],
                 className
             )}

@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type {
   PaginatedResponse,
   StudentTaskCenterResponse,
@@ -13,6 +14,7 @@ interface GetTasksParams {
   pageSize?: number;
   status?: TaskStatus;
   isClosed?: boolean;
+  creatorSide?: 'all' | 'management' | 'non_management';
 }
 
 interface UseTasksOptions {
@@ -26,11 +28,12 @@ export const useStudentTasks = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
+  const currentRole = useCurrentRole();
   const { page = 1, pageSize = 20, status } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['student-tasks', page, pageSize, status],
+    queryKey: ['student-tasks', currentRole ?? 'UNKNOWN', page, pageSize, status],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -41,7 +44,7 @@ export const useStudentTasks = (
         `/tasks/my-assignments/${queryString}`
       );
     },
-    enabled,
+    enabled: currentRole !== null && enabled,
     placeholderData: keepPreviousData,
   });
 };
@@ -53,21 +56,23 @@ export const useTaskList = (
   params: GetTasksParams = {},
   options: UseTasksOptions = {}
 ) => {
-  const { page = 1, pageSize = 20, isClosed } = params;
+  const currentRole = useCurrentRole();
+  const { page = 1, pageSize = 20, isClosed, creatorSide = 'all' } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', page, pageSize, isClosed],
+    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, isClosed, creatorSide],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(typeof isClosed === 'boolean' && { is_closed: isClosed ? 'true' : 'false' }),
+        ...(creatorSide !== 'all' && { creator_side: creatorSide }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<TaskListItem>>(
         `/tasks/${queryString}`
       );
     },
-    enabled,
+    enabled: currentRole !== null && enabled,
   });
 };

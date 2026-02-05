@@ -7,18 +7,28 @@ Serializers for task management.
 - 业务逻辑已提取到 services.py
 """
 from rest_framework import serializers
-from apps.users.permissions import (
-    get_current_role,
-    get_accessible_student_ids,
-)
-from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
-from .services import TaskService, StudentTaskService, extract_knowledge_summary
 
-def validate_assignee_scope(user, assignee_ids: list[int]) -> None:
-    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user))
+from apps.users.permissions import (
+    get_accessible_student_ids,
+    get_current_role,
+)
+
+from .models import (
+    KnowledgeLearningProgress,
+    Task,
+    TaskAssignment,
+    TaskKnowledge,
+    TaskQuiz,
+)
+from .student_task_service import StudentTaskService, extract_knowledge_summary
+from .task_service import TaskService
+
+
+def validate_assignee_scope(user, assignee_ids: list[int], request=None) -> None:
+    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request=request))
     if not invalid_ids:
         return
-    current_role = get_current_role(user)
+    current_role = get_current_role(user, request)
     if current_role == 'MENTOR':
         raise serializers.ValidationError({
             'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
@@ -97,7 +107,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     practice_count = serializers.ReadOnlyField()
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
-    pass_rate = serializers.ReadOnlyField()
+
     is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
 
     class Meta:
@@ -106,7 +116,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline', 'is_closed', 'closed_at',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
-            'assignee_count', 'completed_count', 'pass_rate',
+            'assignee_count', 'completed_count',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 class TaskDetailSerializer(serializers.ModelSerializer):
@@ -199,18 +209,16 @@ class TaskCreateSerializer(serializers.Serializer):
         if not request or not request.user:
             raise serializers.ValidationError('无法获取当前用户信息')
         assignee_ids = attrs.get('assignee_ids', [])
-        validate_assignee_scope(request.user, assignee_ids)
+        validate_assignee_scope(request.user, assignee_ids, request)
         return attrs
     def create(self, validated_data):
         """创建任务 - 委托给 TaskService"""
         request = self.context.get('request')
-        service = TaskService()
+        service = TaskService(request)
         return service.create_task(
             title=validated_data['title'],
             description=validated_data.get('description', ''),
             deadline=validated_data['deadline'],
-            created_by=request.user,
-            updated_by=request.user,
             knowledge_ids=validated_data.get('knowledge_ids', []),
             quiz_ids=validated_data.get('quiz_ids', []),
             assignee_ids=validated_data.get('assignee_ids', []),
@@ -299,13 +307,12 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         quiz_ids = validated_data.pop('quiz_ids', None)
         assignee_ids = validated_data.pop('assignee_ids', None)
         # 委托给 TaskService 处理更新
-        service = TaskService()
         request = self.context.get('request')
         if not request or not request.user:
             raise serializers.ValidationError('无法获取当前用户信息')
+        service = TaskService(request)
         return service.update_task(
             task=instance,
-            updated_by=request.user,
             knowledge_ids=knowledge_ids,
             quiz_ids=quiz_ids,
             assignee_ids=assignee_ids,
@@ -418,7 +425,7 @@ class NodeProgressSerializer(serializers.Serializer):
     """节点进度序列化器"""
     node_id = serializers.IntegerField()
     node_name = serializers.CharField()
-    node_type = serializers.ChoiceField(choices=['KNOWLEDGE', 'QUIZ'])
+    category = serializers.ChoiceField(choices=['KNOWLEDGE', 'PRACTICE', 'EXAM'])
     completed_count = serializers.IntegerField()
     total_count = serializers.IntegerField()
     percentage = serializers.FloatField()
@@ -439,6 +446,7 @@ class TaskAnalyticsSerializer(serializers.Serializer):
     node_progress = NodeProgressSerializer(many=True)
     time_distribution = DistributionItemSerializer(many=True)
     score_distribution = DistributionItemSerializer(many=True, allow_null=True)
+    pass_rate = serializers.FloatField(allow_null=True)
 
 
 class StudentExecutionSerializer(serializers.Serializer):
@@ -455,33 +463,3 @@ class StudentExecutionSerializer(serializers.Serializer):
     time_spent = serializers.IntegerField()
     answer_details = serializers.CharField()
     is_abnormal = serializers.BooleanField()
-
-
-class GradingQuestionSerializer(serializers.Serializer):
-    """待评分题目序列化器"""
-    question_id = serializers.IntegerField()
-    question_text = serializers.CharField()
-    question_analysis = serializers.CharField(allow_blank=True)
-    max_score = serializers.FloatField()
-    ungraded_count = serializers.IntegerField()
-
-
-class GradingAnswerSerializer(serializers.Serializer):
-    """学员答案序列化器"""
-    student_id = serializers.IntegerField()
-    student_name = serializers.CharField()
-    employee_id = serializers.CharField()
-    department = serializers.CharField()
-    answer_text = serializers.CharField(allow_blank=True, allow_null=True)
-    submitted_at = serializers.DateTimeField()
-    score = serializers.FloatField(allow_null=True)
-    comments = serializers.CharField(allow_null=True, allow_blank=True)
-    is_graded = serializers.BooleanField()
-
-
-class GradingSubmitSerializer(serializers.Serializer):
-    """评分提交序列化器"""
-    question_id = serializers.IntegerField()
-    student_id = serializers.IntegerField()
-    score = serializers.FloatField()
-    comments = serializers.CharField(required=False, allow_blank=True, default='')

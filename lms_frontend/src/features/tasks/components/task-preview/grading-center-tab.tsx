@@ -1,388 +1,502 @@
 import * as React from 'react';
 import {
-  User,
-  CheckCircle,
-  Clock,
-  Send,
-  ChevronRight,
+  ThumbsDown,
+  ThumbsUp,
+  Check,
+  BarChart3,
+  Filter,
+  Users
 } from 'lucide-react';
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  Input,
-  Skeleton,
-} from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { TaskDetail } from '@/types/task';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/utils';
+import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import {
-  useGradingQuestions,
   useGradingAnswers,
+  useGradingQuestions,
   useSubmitGrading,
 } from '../../api/task-analytics';
 
 interface GradingCenterTabProps {
   taskId?: number;
-  task: TaskDetail;
+  quizId?: number | null;
 }
 
-export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({
-  taskId,
-  task,
-}) => {
-  const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = React.useState<number | null>(null);
-  const [score, setScore] = React.useState<string>('');
-  const [comments, setComments] = React.useState<string>('');
+type QuestionFilter = 'all' | 'subjective';
 
-  const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, {
-    enabled: Boolean(taskId),
+const questionFilters: { value: QuestionFilter; label: string }[] = [
+  { value: 'all', label: '全部题目' },
+  { value: 'subjective', label: '待批阅 (主观题)' },
+];
+
+// Utility: Format Percentage
+const formatPassRate = (rate?: number | null) => {
+  if (rate === null || rate === undefined) return '--';
+  return `${rate.toFixed(1)}%`;
+};
+
+// Utility: Color helpers based on pass rate
+const getPassRateColor = (rate?: number | null) => {
+  if (rate === null || rate === undefined) return 'bg-muted text-text-muted border border-border';
+  if (rate >= 80) return 'bg-secondary-50 text-secondary-700 border border-secondary-200';
+  if (rate >= 60) return 'bg-warning-50 text-warning-700 border border-warning-200';
+  return 'bg-destructive-50 text-destructive-700 border border-destructive-200';
+};
+
+const formatAnswerText = (answer?: string | null) => {
+  if (!answer) return <span className="text-text-muted italic">(未作答)</span>;
+  return answer;
+};
+
+const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
+  answers.reduce<Record<number, string>>((acc, answer) => {
+    acc[answer.student_id] = answer.score !== null && answer.score !== undefined ? answer.score.toString() : '';
+    return acc;
+  }, {});
+
+export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quizId }) => {
+  const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>('all');
+  const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
+  const [scoresByStudent, setScoresByStudent] = React.useState<Record<number, string>>({});
+
+  const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
+    enabled: Boolean(taskId) && Boolean(quizId),
   });
-  const { data: answers, isLoading: answersLoading } = useGradingAnswers(
+  const { data: questionDetail, isLoading: detailLoading } = useGradingAnswers(
     taskId || 0,
     selectedQuestionId,
-    { enabled: Boolean(taskId) && Boolean(selectedQuestionId) }
+    quizId ?? null,
+    { enabled: Boolean(taskId) && Boolean(selectedQuestionId) && Boolean(quizId) }
   );
   const submitGrading = useSubmitGrading(taskId || 0);
 
-  // Auto-select first question
+  const filteredQuestions = React.useMemo(() => {
+    if (!questions) return [];
+    if (questionFilter === 'subjective') {
+      return questions.filter((question) => question.question_type === 'SHORT_ANSWER');
+    }
+    return questions;
+  }, [questions, questionFilter]);
+
   React.useEffect(() => {
-    if (questions && questions.length > 0 && !selectedQuestionId) {
-      setSelectedQuestionId(questions[0].question_id);
+    if (filteredQuestions.length === 0) {
+      setSelectedQuestionId(null);
+      return;
     }
-  }, [questions, selectedQuestionId]);
+    const stillExists = filteredQuestions.some((question) => question.question_id === selectedQuestionId);
+    if (!selectedQuestionId || !stillExists) {
+      setSelectedQuestionId(filteredQuestions[0].question_id);
+    }
+  }, [filteredQuestions, selectedQuestionId]);
 
-  // Auto-select first ungraded student
   React.useEffect(() => {
-    if (answers && answers.length > 0) {
-      const firstUngraded = answers.find((a) => !a.is_graded);
-      if (firstUngraded && !selectedStudentId) {
-        setSelectedStudentId(firstUngraded.student_id);
-      } else if (!selectedStudentId && answers.length > 0) {
-        setSelectedStudentId(answers[0].student_id);
-      }
+    if (questionDetail?.subjective_answers) {
+      setScoresByStudent(buildScoreMap(questionDetail.subjective_answers));
+      return;
     }
-  }, [answers, selectedStudentId]);
+    setScoresByStudent({});
+  }, [questionDetail]);
 
-  const selectedQuestion = questions?.find((q) => q.question_id === selectedQuestionId);
-  const selectedAnswer = answers?.find((a) => a.student_id === selectedStudentId);
+  const selectedQuestion = React.useMemo<GradingQuestion | undefined>(
+    () => questions?.find((question) => question.question_id === selectedQuestionId),
+    [questions, selectedQuestionId]
+  );
 
-  // Load existing score/comments when selecting a student
-  React.useEffect(() => {
-    if (selectedAnswer) {
-      setScore(selectedAnswer.score?.toString() || '');
-      setComments(selectedAnswer.comments || '');
-    } else {
-      setScore('');
-      setComments('');
-    }
-  }, [selectedAnswer]);
+  const sortedOptions = React.useMemo(() => {
+    if (!questionDetail?.options) return [];
+    return [...questionDetail.options].sort((a, b) => Number(b.is_correct) - Number(a.is_correct));
+  }, [questionDetail]);
 
-  const handleQuickScore = (percentage: number) => {
-    if (selectedQuestion) {
-      const calculatedScore = Math.round(selectedQuestion.max_score * percentage);
-      setScore(calculatedScore.toString());
-    }
+  const totalAnswersCount = React.useMemo(() => {
+    if (!sortedOptions) return 0;
+    return sortedOptions.reduce((acc, opt) => acc + opt.students.length, 0);
+  }, [sortedOptions]);
+
+  const handleScoreChange = (studentId: number, value: string) => {
+    setScoresByStudent((prev) => ({ ...prev, [studentId]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (!selectedStudentId || !selectedQuestionId || !score) return;
+  const commitScore = async (studentId: number, rawScore: string) => {
+    if (!selectedQuestion || selectedQuestionId === null || rawScore === '' || !quizId) return;
+    const parsedScore = Number(rawScore);
+    if (Number.isNaN(parsedScore)) return;
+    const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
+
+    // Optimistic update
+    setScoresByStudent((prev) => ({ ...prev, [studentId]: normalizedScore.toString() }));
 
     try {
       await submitGrading.mutateAsync({
+        quiz_id: quizId,
         question_id: selectedQuestionId,
-        student_id: selectedStudentId,
-        score: parseFloat(score),
-        comments,
+        student_id: studentId,
+        score: normalizedScore,
+        comments: '',
       });
-      toast.success('评分成功');
-
-      // Move to next ungraded student
-      if (answers) {
-        const currentIndex = answers.findIndex((a) => a.student_id === selectedStudentId);
-        const nextUngraded = answers.slice(currentIndex + 1).find((a) => !a.is_graded);
-        if (nextUngraded) {
-          setSelectedStudentId(nextUngraded.student_id);
-        }
-      }
     } catch {
-      toast.error('评分失败');
+      toast.error('评分保存失败，请重试');
     }
   };
 
-  const handleNextStudent = () => {
-    if (answers) {
-      const currentIndex = answers.findIndex((a) => a.student_id === selectedStudentId);
-      if (currentIndex < answers.length - 1) {
-        setSelectedStudentId(answers[currentIndex + 1].student_id);
-      }
-    }
+  const handleQuickScore = async (studentId: number, ratio: number) => {
+    if (!selectedQuestion) return;
+    const score = Math.round(selectedQuestion.max_score * ratio * 10) / 10;
+    const formattedScore = score.toString();
+    setScoresByStudent((prev) => ({ ...prev, [studentId]: formattedScore }));
+    await commitScore(studentId, formattedScore);
   };
 
   if (questionsLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full" />
-        <div className="grid grid-cols-12 gap-4 h-[500px]">
-          <Skeleton className="col-span-3 h-full" />
-          <Skeleton className="col-span-6 h-full" />
-          <Skeleton className="col-span-3 h-full" />
+      <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)] h-[calc(100vh-200px)]">
+        <div className="rounded-2xl border border-border bg-background p-4 space-y-4">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+          </div>
         </div>
+        <div className="rounded-2xl border border-border bg-background p-6 space-y-6">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!quizId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[500px] text-text-muted bg-muted/50 rounded-3xl border border-dashed border-border">
+        <BarChart3 className="w-12 h-12 mb-3 text-text-muted" />
+        <p>请先从左侧选择试卷以开始阅卷</p>
       </div>
     );
   }
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="flex items-center justify-center h-96 text-gray-500">
-        该任务没有需要评分的简答题
+      <div className="h-[500px] bg-muted/50 rounded-3xl border border-dashed border-border">
+        <EmptyState
+          icon={Filter}
+          description="暂无可分析的题目数据"
+        />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200">
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">试卷信息:</span>
-          <span className="font-medium text-gray-900">
-            {task.quizzes?.[0]?.quiz_title || '综合测验'}
-          </span>
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-180px)] min-h-[600px]">
+      {/* Left Column: Question List */}
+      <div className="w-full lg:w-[380px] flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
+        {/* Header/Filter */}
+        <div className="p-4 border-b border-border bg-muted/50">
+          <div className="flex p-1 bg-muted/50 rounded-lg">
+            {questionFilters.map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setQuestionFilter(filter.value)}
+                className={cn(
+                  'flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-all duration-200',
+                  questionFilter === filter.value
+                    ? 'bg-background text-foreground'
+                    : 'text-text-muted hover:text-foreground hover:bg-muted/50'
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">简答题筛选:</span>
-          <Select
-            value={selectedQuestionId?.toString() || ''}
-            onValueChange={(v) => {
-              setSelectedQuestionId(Number(v));
-              setSelectedStudentId(null);
-            }}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="选择题目" />
-            </SelectTrigger>
-            <SelectContent>
-              {questions.map((q) => (
-                <SelectItem key={q.question_id} value={q.question_id.toString()}>
-                  <div className="flex items-center justify-between w-full">
-                    <span className="truncate max-w-[180px]">{q.question_text.slice(0, 20)}...</span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      待评 {q.ungraded_count}
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {filteredQuestions.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-40 text-text-muted text-sm">
+              <p>没有找到相关题目</p>
+            </div>
+          )}
+          {filteredQuestions.map((question) => {
+            const isActive = question.question_id === selectedQuestionId;
+            const passRateColor = getPassRateColor(question.pass_rate);
+
+            return (
+              <button
+                key={question.question_id}
+                onClick={() => setSelectedQuestionId(question.question_id)}
+                className={cn(
+                  'w-full text-left p-4 rounded-xl transition-all duration-200 border group relative mb-3',
+                  isActive
+                    ? 'border-primary-200 bg-primary-50/60  ring-1 ring-primary-100'
+                    : 'border-transparent bg-background hover:bg-muted hover:border-border'
+                )}
+              >
+                <div className="flex justify-between items-start mb-2 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                      question.question_type === 'SHORT_ANSWER'
+                        ? 'bg-primary-50 text-primary-600 border-primary-100'
+                        : 'bg-background text-text-muted border-border'
+                    )}>
+                      {question.question_type_display}
                     </span>
+                    {question.question_type === 'SHORT_ANSWER' && (
+                      <span className="text-[10px] font-medium text-warning-600 bg-warning-50 px-1.5 py-0.5 rounded border border-warning-100">
+                        人工
+                      </span>
+                    )}
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums", passRateColor)}>
+                    {formatPassRate(question.pass_rate)}
+                  </span>
+                </div>
+                <h3 className={cn(
+                  "text-sm font-medium leading-relaxed line-clamp-2 mb-3",
+                  isActive ? "text-foreground" : "text-foreground"
+                )}>
+                  {question.question_text}
+                </h3>
+                <div className="flex items-center justify-between text-xs text-text-muted">
+                  <span className="font-medium bg-muted/50 px-2 py-1 rounded">分值: {question.max_score}</span>
+                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Three-column layout */}
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-280px)] min-h-[500px]">
-        {/* Left: Student List */}
-        <div className="col-span-3 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
-          <div className="p-3 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-medium text-gray-900">学员列表</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              共 {answers?.length || 0} 人，待评 {answers?.filter((a) => !a.is_graded).length || 0} 人
-            </p>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {answersLoading ? (
-              <div className="p-4 space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16" />
-                ))}
-              </div>
-            ) : (
-              answers?.map((answer) => (
-                <button
-                  key={answer.student_id}
-                  onClick={() => setSelectedStudentId(answer.student_id)}
-                  className={cn(
-                    'w-full p-3 text-left border-b border-gray-100 hover:bg-gray-50 transition-colors',
-                    selectedStudentId === answer.student_id && 'bg-blue-50 border-l-2 border-l-blue-600'
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="h-4 w-4 text-gray-500" />
+      {/* Right Column: Content */}
+      <div className="flex-1 flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
+        {selectedQuestion ? (
+          <div className="flex flex-col h-full">
+              {/* Detail Header */}
+              <div className="p-6 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
+                        {selectedQuestion?.question_type_display || '题目详情'}
+                      </span>
+                      <span className="text-text-muted text-sm font-mono">
+                        ID: {selectedQuestion?.question_id}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-gray-900 text-sm">
-                          {answer.student_name}
-                        </span>
-                        {answer.is_graded ? (
-                          <span className="flex items-center gap-1 text-xs text-green-600">
-                            <CheckCircle className="h-3 w-3" />
-                            已评分
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs text-amber-600">
-                            <Clock className="h-3 w-3" />
-                            待评分
-                          </span>
+                    <h2 className="text-lg font-semibold text-foreground leading-snug">
+                      {selectedQuestion?.question_text}
+                    </h2>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs text-text-muted uppercase font-semibold tracking-wider">该题平均通过率</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold text-foreground tabular-nums">
+                        {formatPassRate(questionDetail?.pass_rate ?? selectedQuestion?.pass_rate)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedQuestion?.question_analysis && (
+                  <div className="mt-4 p-4 bg-muted rounded-xl border border-border text-sm text-text-muted leading-relaxed">
+                    <span className="font-semibold text-foreground mr-2">解析:</span>
+                    {selectedQuestion.question_analysis}
+                  </div>
+                )}
+              </div>
+
+              {/* Content Body */}
+              <div className="flex-1 overflow-y-auto p-6 bg-muted/50">
+                {detailLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                  </div>
+                ) : (
+                  <>
+                    {/* OBJECTIVE QUESTIONS */}
+                    {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
+                      <div className="space-y-4 max-w-3xl mx-auto">
+                        {sortedOptions.length === 0 && (
+                          <div className="bg-background rounded-2xl border border-dashed">
+                            <EmptyState
+                              description="暂无选项数据"
+                              iconSize="sm"
+                            />
+                          </div>
                         )}
+                        {sortedOptions.map((option) => {
+                          const isCorrect = option.is_correct;
+                          const percent = totalAnswersCount > 0
+                            ? Math.round((option.students.length / totalAnswersCount) * 100)
+                            : 0;
+
+                          return (
+                            <div
+                              key={option.option_key}
+                              className={cn(
+                                "group rounded-xl border bg-background overflow-hidden transition-all",
+                                isCorrect ? "border-secondary-200 ring-1 ring-secondary-100" : "border-border"
+                              )}
+                            >
+                              <div className={cn(
+                                "relative px-4 py-3 flex items-center justify-between gap-4 overflow-hidden",
+                                isCorrect ? "bg-secondary-50/30" : "bg-background"
+                              )}>
+                                {/* Progress Bar Background - Subtler */}
+                                <div
+                                  className={cn(
+                                    "absolute left-0 top-0 bottom-0 transition-all duration-1000 mix-blend-multiply",
+                                    isCorrect ? "bg-secondary-50" : "bg-muted/50"
+                                  )}
+                                  style={{ width: `${percent}%` }}
+                                />
+
+                                <div className="flex items-center gap-3 relative z-10 flex-1">
+                                  <span className={cn(
+                                    "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm border  shrink-0",
+                                    isCorrect
+                                      ? "bg-secondary-100 text-secondary-700 border-secondary-200"
+                                      : "bg-background text-text-muted border-border"
+                                  )}>
+                                    {option.option_key}
+                                  </span>
+                                  <span className={cn(
+                                    "text-sm font-medium leading-relaxed",
+                                    isCorrect ? "text-secondary-900" : "text-foreground"
+                                  )}>
+                                    {option.option_text}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-4 relative z-10 shrink-0">
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-sm font-bold text-foreground tabular-nums">
+                                      {option.selected_count} <span className="text-xs font-normal text-text-muted">人</span>
+                                    </span>
+                                    <span className="text-[10px] text-text-muted font-medium tabular-nums">{percent}%</span>
+                                  </div>
+                                  {isCorrect && (
+                                    <div className="w-8 h-8 rounded-full bg-secondary-100 flex items-center justify-center text-secondary-600">
+                                      <Check className="w-5 h-5" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Student List */}
+                              {option.students.length > 0 ? (
+                                <div className="p-3 bg-muted/50 border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                  {option.students.map(student => (
+                                    <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background border border-transparent hover:border-border transition-colors text-xs">
+                                      <div className="w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center text-text-muted font-bold shrink-0 text-[10px]">
+                                        {student.student_name.slice(0, 1)}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-foreground truncate">{student.student_name}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="px-4 py-2 bg-muted/30 border-t border-border text-xs text-text-muted italic flex items-center gap-2">
+                                  <Users className="w-3 h-3 text-text-muted" />
+                                  <span>无人选择此项</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                      <span className="text-xs text-gray-500">{answer.employee_id}</span>
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
+                    )}
+
+                    {/* SUBJECTIVE QUESTIONS */}
+                    {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
+                      <div className="space-y-4 max-w-4xl mx-auto">
+                        {questionDetail?.subjective_answers?.length === 0 && (
+                          <div className="text-center py-12 text-text-muted bg-background rounded-2xl border border-dashed">
+                            暂无学员回答
+                          </div>
+                        )}
+                        {questionDetail?.subjective_answers?.map((answer) => (
+                          <div
+                            key={answer.student_id}
+                            className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
+                          >
+                            {/* Header: Student Info + Score */}
+                            <div className="flex items-center justify-between p-4 bg-muted/50 border-b border-border">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-background border border-border text-text-muted flex items-center justify-center font-bold text-sm">
+                                  {answer.student_name.slice(0, 1)}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-foreground text-sm flex items-center gap-2">
+                                    {answer.student_name}
+                                    <span className="font-normal text-xs text-text-muted font-mono px-1.5 py-0.5 bg-background border border-border rounded-full">
+                                      {answer.department || '学员'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center">
+                                  <span className="mr-2 text-xs font-bold text-text-muted uppercase">得分</span>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={selectedQuestion?.max_score || 0}
+                                    value={scoresByStudent[answer.student_id] ?? ''}
+                                    onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
+                                    onBlur={(e) => commitScore(answer.student_id, e.target.value)}
+                                    className="w-20 h-9 font-mono text-base font-bold border-border focus:ring-primary-500/20 text-right pr-2 bg-background"
+                                  />
+                                  <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {selectedQuestion?.max_score}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-5">
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
+                                  <div className="text-foreground text-sm leading-relaxed p-4 bg-muted/50 rounded-xl border border-dashed border-border min-h-[80px]">
+                                    {formatAnswerText(answer.answer_text)}
+                                  </div>
+                                </div>
+
+                                {/* Quick Actions Footer */}
+                                <div className="flex justify-end pt-2">
+                                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
+                                      <ThumbsUp className="w-3.5 h-3.5" /> 满分
+                                    </button>
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0.6)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-warning-50 text-warning-700 hover:bg-warning-100 transition-colors border border-warning-100">
+                                      <Check className="w-3.5 h-3.5" /> 及格
+                                    </button>
+                                    <button onClick={() => handleQuickScore(answer.student_id, 0)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive-50 text-destructive-700 hover:bg-destructive-100 transition-colors border border-destructive-100">
+                                      <ThumbsDown className="w-3.5 h-3.5" /> 零分
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
           </div>
-        </div>
-
-        {/* Middle: Question & Answer */}
-        <div className="col-span-6 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
-          {/* Question Section */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-gray-900">题目</h3>
-              <span className="text-sm text-gray-500">
-                满分 {selectedQuestion?.max_score || 0} 分
-              </span>
-            </div>
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {selectedQuestion?.question_text}
-            </p>
-            {selectedQuestion?.question_analysis && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs font-medium text-blue-700 mb-1">参考答案/评分要点:</p>
-                <p className="text-xs text-blue-600 leading-relaxed">
-                  {selectedQuestion.question_analysis}
-                </p>
-              </div>
-            )}
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-text-muted">
+            <BarChart3 className="w-16 h-16 mb-4 text-muted" />
+            <p>请选择左侧题目进行评阅</p>
           </div>
-
-          {/* Answer Section */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            {selectedAnswer ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-gray-900">学员答案</h3>
-                  <span className="text-xs text-gray-500">
-                    提交于 {selectedAnswer.submitted_at ? new Date(selectedAnswer.submitted_at).toLocaleString() : '-'}
-                  </span>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {selectedAnswer.answer_text || '(未作答)'}
-                  </p>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                请从左侧选择学员查看答案
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right: Grading Panel */}
-        <div className="col-span-3 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
-          {selectedAnswer ? (
-            <>
-              {/* Student Info */}
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-3">学员信息</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">姓名</span>
-                    <span className="text-gray-900">{selectedAnswer.student_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">工号</span>
-                    <span className="text-gray-900">{selectedAnswer.employee_id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">部门</span>
-                    <span className="text-gray-900">{selectedAnswer.department}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scoring Section */}
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-3">评分</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={selectedQuestion?.max_score || 100}
-                      value={score}
-                      onChange={(e) => setScore(e.target.value)}
-                      placeholder="输入分数"
-                      className="flex-1"
-                    />
-                    <span className="text-sm text-gray-500">
-                      / {selectedQuestion?.max_score || 0}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {[0, 0.5, 0.75, 1].map((pct) => (
-                      <button
-                        key={pct}
-                        onClick={() => handleQuickScore(pct)}
-                        className="flex-1 py-1.5 text-xs font-medium rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-                      >
-                        {pct * 100}%
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Comments Section */}
-              <div className="p-4 flex-1 flex flex-col">
-                <h3 className="font-medium text-gray-900 mb-3">评语</h3>
-                <Textarea
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="输入评语（可选）"
-                  className="flex-1 resize-none"
-                  rows={4}
-                />
-                <p className="text-xs text-gray-400 mt-1 text-right">
-                  {comments.length} 字
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="p-4 border-t border-gray-200 space-y-2">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={!score || submitGrading.isPending}
-                  className="w-full"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {submitGrading.isPending ? '提交中...' : '提交评分'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleNextStudent}
-                  className="w-full"
-                >
-                  下一位学员
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              请选择学员进行评分
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

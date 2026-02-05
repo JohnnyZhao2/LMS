@@ -17,13 +17,12 @@ export const useCompleteLearning = () => {
       apiClient.post(`/tasks/${taskId}/complete-knowledge/`, {
         knowledge_id: knowledgeId,
       }),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task-detail', variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task-detail'] });
       queryClient.invalidateQueries({
-        queryKey: ['student-learning-task-detail', variables.taskId],
+        queryKey: ['student-learning-task-detail'],
       });
     },
   });
 };
-

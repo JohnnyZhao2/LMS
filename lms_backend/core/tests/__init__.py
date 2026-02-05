@@ -1,10 +1,10 @@
 """
 Tests for custom throttle classes.
 """
-from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from django.test import TestCase, override_settings
 from rest_framework import status
+from rest_framework.test import APIClient
 
 User = get_user_model()
 

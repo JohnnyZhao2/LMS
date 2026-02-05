@@ -40,20 +40,20 @@ export class ErrorBoundary extends Component<Props, State> {
             }
 
             return (
-                <Card className="flex flex-col items-center justify-center p-6 text-center h-full min-h-[200px] bg-red-50 border-red-100">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4 text-red-600">
+                <Card className="flex flex-col items-center justify-center p-6 text-center h-full min-h-[200px] bg-destructive-50 border-destructive-100">
+                    <div className="w-12 h-12 rounded-full bg-destructive-100 flex items-center justify-center mb-4 text-destructive-600">
                         <AlertCircle className="w-6 h-6" />
                     </div>
-                    <h3 className="text-lg font-semibold text-red-900 mb-2">
+                    <h3 className="text-lg font-semibold text-destructive-900 mb-2">
                         Something went wrong
                     </h3>
-                    <p className="text-sm text-red-600 mb-6 max-w-[250px]">
+                    <p className="text-sm text-destructive-600 mb-6 max-w-[250px]">
                         {this.state.error?.message || "An unexpected error occurred while rendering this component."}
                     </p>
                     <Button
                         onClick={this.handleReset}
                         variant="outline"
-                        className="border-red-200 text-red-700 hover:bg-red-100 hover:text-red-900"
+                        className="border-destructive-200 text-destructive-700 hover:bg-destructive-100 hover:text-destructive-900"
                     >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Try Again

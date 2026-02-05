@@ -4,27 +4,28 @@
 import type { RoleCode } from '@/types/api';
 
 export interface RoleColorConfig {
-  bg: string;
-  color: string;
-  iconBg?: string;
+  bgClass: string;
+  textClass: string;
+  iconBgClass?: string;
+  borderClass?: string;
 }
 
 /**
  * 角色颜色映射（用于标签显示）
  */
 export const ROLE_COLORS: Record<string, RoleColorConfig> = {
-  ADMIN: { bg: '#FEE2E2', color: '#DC2626', iconBg: '#DC2626' },
-  MENTOR: { bg: '#FEF3C7', color: '#F59E0B', iconBg: '#F59E0B' },
-  DEPT_MANAGER: { bg: '#EDE9FE', color: '#7C3AED', iconBg: '#7C3AED' },
-  TEAM_MANAGER: { bg: '#DBEAFE', color: '#3B82F6', iconBg: '#0EA5E9' },
-  STUDENT: { bg: '#DBEAFE', color: '#3B82F6', iconBg: '#3B82F6' },
+  ADMIN: { bgClass: 'bg-destructive-100', textClass: 'text-destructive', iconBgClass: 'bg-destructive', borderClass: 'border-destructive' },
+  MENTOR: { bgClass: 'bg-warning-100', textClass: 'text-warning', iconBgClass: 'bg-warning', borderClass: 'border-warning' },
+  DEPT_MANAGER: { bgClass: 'bg-primary-100', textClass: 'text-primary-600', iconBgClass: 'bg-primary-600', borderClass: 'border-primary-600' },
+  TEAM_MANAGER: { bgClass: 'bg-primary-100', textClass: 'text-primary', iconBgClass: 'bg-primary-500', borderClass: 'border-primary' },
+  STUDENT: { bgClass: 'bg-primary-100', textClass: 'text-primary', iconBgClass: 'bg-primary', borderClass: 'border-primary' },
 };
 
 /**
  * 获取角色颜色配置
  */
 export const getRoleColor = (code: string): RoleColorConfig => {
-  return ROLE_COLORS[code] || { bg: '#DBEAFE', color: '#3B82F6' };
+  return ROLE_COLORS[code] || { bgClass: 'bg-primary-100', textClass: 'text-primary', iconBgClass: 'bg-primary', borderClass: 'border-primary' };
 };
 
 /**

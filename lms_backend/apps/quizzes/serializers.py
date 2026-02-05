@@ -6,9 +6,13 @@ Properties:
 - Property 16: 试卷所有权编辑控制
 """
 from rest_framework import serializers
+
 from apps.questions.models import Question
 from apps.questions.serializers import QuestionCreateSerializer
+
 from .models import Quiz, QuizQuestion
+
+
 class QuizQuestionSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz-question relationship.
@@ -34,12 +38,13 @@ class QuizListSerializer(serializers.ModelSerializer):
     total_score = serializers.ReadOnlyField()
     has_subjective_questions = serializers.ReadOnlyField()
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
+    question_type_counts = serializers.DictField(child=serializers.IntegerField(), read_only=True)
     class Meta:
         model = Quiz
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'description', 'question_count', 'total_score',
-            'has_subjective_questions',
+            'has_subjective_questions', 'question_type_counts',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
@@ -183,18 +188,44 @@ class QuizCreateSerializer(serializers.ModelSerializer):
 class QuizUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
-    Extends basic metadata updates with question list synchronization so
-    that the frontend can submit the完整题目顺序。
+    支持在一个请求中完成：
+    - 更新试卷基本信息（title, description, quiz_type, duration, pass_score）
+    - 同步题目顺序（existing_question_ids）
+    - 添加新题目（add_question_ids, new_questions）
+    - 移除题目（remove_question_ids）
     """
     existing_question_ids = serializers.ListField(
         child=serializers.IntegerField(),
         required=False,
         allow_empty=True,
-        help_text='新的题目 ID 顺序列表'
+        help_text='新的题目 ID 顺序列表（会覆盖现有顺序）'
     )
+    add_question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text='要添加的已有题目ID列表'
+    )
+    new_questions = AddNewQuestionSerializer(
+        many=True,
+        required=False,
+        default=list,
+        help_text='要新建的题目列表'
+    )
+    remove_question_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list,
+        help_text='要移除的题目ID列表'
+    )
+
     class Meta:
         model = Quiz
-        fields = ['title', 'description', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids']
+        fields = [
+            'title', 'description', 'quiz_type', 'duration', 'pass_score',
+            'existing_question_ids', 'add_question_ids', 'new_questions', 'remove_question_ids'
+        ]
+
     def validate(self, attrs):
         """Validate quiz_type specific fields."""
         quiz_type = attrs.get('quiz_type', self.instance.quiz_type if self.instance else 'PRACTICE')
@@ -206,9 +237,25 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
             if not pass_score:
                 raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
         return attrs
+
     def validate_existing_question_ids(self, value):
         """Validate provided question ids."""
         if value is None:
+            return value
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=value,
+                is_deleted=False
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
+
+    def validate_add_question_ids(self, value):
+        """Validate question ids to add."""
+        if not value:
             return value
         existing_ids = set(
             Question.objects.filter(

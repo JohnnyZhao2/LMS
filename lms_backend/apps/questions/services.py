@@ -1,39 +1,84 @@
 """
 题目应用服务
 编排业务逻辑。
+
+使用方式（构造器注入）:
+    service = QuestionService(request)
+    question = service.get_by_id(pk=123)
 """
 import uuid
-from typing import List
+
 from django.db import transaction
-from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
-from .models import Question
+
 from apps.knowledge.models import Tag
-from .selectors import apply_question_filters, get_question_by_id, question_base_queryset
+from core.base_service import BaseService
+from core.decorators import log_content_action
+from core.exceptions import BusinessError, ErrorCodes
+
+from .models import Question
+from .selectors import (
+    apply_question_filters,
+    get_question_by_id,
+    question_base_queryset,
+)
 
 
 class QuestionService(BaseService):
     """题目应用服务"""
 
-    def get_by_id(self, pk: int, user=None) -> Question:
+    # 创建新版本时需要复制的内容字段
+    # 添加新的内容字段时，只需在此列表中添加即可
+    VERSION_COPY_FIELDS = [
+        'content', 'question_type', 'options', 'answer',
+        'explanation', 'score',
+    ]
+
+    def get_by_id(self, pk: int) -> Question:
         """
         获取题目
         Args:
             pk: 主键
-            user: 当前用户（用于权限检查）
         Returns:
             题目对象
         Raises:
             BusinessError: 如果不存在或无权限
         """
         question = get_question_by_id(pk)
-        self.validate_not_none(
-            question,
-            f'题目 {pk} 不存在'
-        )
+        self.validate_not_none(question, f'题目 {pk} 不存在')
         # 权限检查：非管理员只能访问已发布的题目
-        self.check_published_resource_access(question, user, '题目')
+        self.check_published_resource_access(question, resource_name='题目')
         return question
+
+    def get_queryset(
+        self,
+        filters: dict = None,
+        search: str = None,
+        ordering: str = '-created_at'
+    ):
+        """
+        获取题目 QuerySet（用于分页）
+        Args:
+            filters: 过滤条件
+            search: 搜索关键词
+            ordering: 排序字段
+        Returns:
+            QuerySet
+        """
+        # 非管理员默认只显示当前版本的题目
+        if self.user and self.get_current_role() != 'ADMIN':
+            if not filters:
+                filters = {}
+            if 'is_current' not in filters:
+                filters['is_current'] = True
+
+        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
+        queryset = apply_question_filters(queryset, filters, search)
+
+        # 排序
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
 
     def get_list(
         self,
@@ -41,37 +86,27 @@ class QuestionService(BaseService):
         search: str = None,
         ordering: str = '-created_at',
         page: int = 1,
-        page_size: int = 10,
-        user=None
+        page_size: int = 10
     ) -> dict:
         """
-        获取题目列表
+        获取题目列表（已废弃，请使用 get_queryset）
         Args:
             filters: 过滤条件
             search: 搜索关键词
             ordering: 排序字段
             page: 页码
             page_size: 每页数量
-            user: 当前用户（用于权限检查）
         Returns:
             包含题目列表和分页信息的字典
         """
-        # 非管理员默认只显示当前版本的题目
-        if user and not user.is_admin:
-            if not filters:
-                filters = {}
-            if 'is_current' not in filters:
-                filters['is_current'] = True
-        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
-        queryset = apply_question_filters(queryset, filters, search)
-        # 排序
-        if ordering:
-            queryset = queryset.order_by(ordering)
+        queryset = self.get_queryset(filters, search, ordering)
+
         # 分页处理
         total_count = queryset.count()
         start = (page - 1) * page_size
         end = start + page_size
         questions = queryset[start:end]
+
         return {
             'count': total_count,
             'results': list(questions),
@@ -80,23 +115,22 @@ class QuestionService(BaseService):
             'total_pages': (total_count + page_size - 1) // page_size
         }
 
-    def check_edit_permission(self, question: Question, user) -> bool:
+    def check_edit_permission(self, question: Question) -> bool:
         """
         检查用户是否有编辑/删除权限
         Property 15: 题目所有权编辑控制
         Args:
             question: 题目对象
-            user: 当前用户
         Returns:
             True 如果有权限
         Raises:
             BusinessError: 如果权限不足
         """
         # 管理员可以编辑/删除任何题目
-        if user.is_admin or (hasattr(user, 'current_role') and user.current_role == 'ADMIN'):
+        if self.get_current_role() == 'ADMIN':
             return True
         # 其他人只能编辑/删除自己创建的题目
-        if question.created_by_id != user.id:
+        if question.created_by_id != self.user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有题目创建者或管理员可以操作此题目'
@@ -104,12 +138,12 @@ class QuestionService(BaseService):
         return True
 
     @transaction.atomic
-    def create(self, data: dict, user) -> Question:
+    @log_content_action('question', 'create', '创建题目：{result.question_type}')
+    def create(self, data: dict) -> Question:
         """
         创建题目
         Args:
             data: 题目数据
-            user: 创建用户
         Returns:
             创建的题目对象
         Raises:
@@ -118,8 +152,8 @@ class QuestionService(BaseService):
         # 1. 业务验证
         self._validate_question_data(data)
         # 2. 准备数据
-        data['created_by'] = user
-        data['updated_by'] = user
+        data['created_by'] = self.user
+        data['updated_by'] = self.user
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_version_data(data)
@@ -133,27 +167,28 @@ class QuestionService(BaseService):
         # 4. 设置条线类型
         if line_type_id:
             self._set_line_type(question, line_type_id)
+
         return question
 
     @transaction.atomic
-    def update(self, pk: int, data: dict, user) -> Question:
+    @log_content_action('question', 'update', '更新题目：{result.question_type}（版本 {result.version_number}）')
+    def update(self, pk: int, data: dict) -> Question:
         """
         更新题目
         Args:
             pk: 主键
             data: 更新数据
-            user: 更新用户
         Returns:
             更新后的题目对象
         Raises:
             BusinessError: 如果验证失败或无法更新
         """
-        question = self.get_by_id(pk, user)
+        question = self.get_by_id(pk)
         # 检查编辑权限
-        self.check_edit_permission(question, user)
+        self.check_edit_permission(question)
         # 当前版本需要创建新版本
         if question.is_current:
-            return self._create_new_version(question, data, user)
+            return self._create_new_version(question, data)
         # 非当前版本直接更新
         # 合并现有数据以进行验证
         merged_data = {
@@ -165,7 +200,7 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
         # 更新题目
-        data['updated_by'] = user
+        data['updated_by'] = self.user
         if data:
             for key, value in data.items():
                 setattr(question, key, value)
@@ -176,95 +211,30 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    def delete(self, pk: int, user) -> None:
+    @log_content_action('question', 'delete', '删除题目：{result.question_type}')
+    def delete(self, pk: int) -> Question:
         """
         删除题目
         Args:
             pk: 主键
-            user: 操作用户
+        Returns:
+            删除前的题目对象
         Raises:
             BusinessError: 如果被引用无法删除
         """
         question = get_question_by_id(pk)
-        self.validate_not_none(
-            question,
-            f'题目 {pk} 不存在'
-        )
+        self.validate_not_none(question, f'题目 {pk} 不存在')
         # 检查编辑权限
-        self.check_edit_permission(question, user)
+        self.check_edit_permission(question)
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该题目已被试卷引用，无法删除'
             )
+
         # 软删除
         question.soft_delete()
-
-    @transaction.atomic
-    def publish(self, pk: int, user) -> Question:
-        """
-        发布题目
-        Args:
-            pk: 主键
-            user: 发布用户
-        Returns:
-            发布后的题目对象
-        Raises:
-            BusinessError: 如果无法发布
-        """
-        question = self.get_by_id(pk, user)
-        # 检查是否已经是当前版本
-        if question.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='题目已经是当前版本'
-            )
-        # 验证题目内容
-        if not question.content.strip():
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='题目内容不能为空'
-            )
-        # 设置为当前版本
-        question.is_current = True
-        question.updated_by = user
-        question.save(update_fields=['is_current', 'updated_by'])
-        # 取消其他版本的 is_current 标志
-        Question.objects.filter(
-            resource_uuid=question.resource_uuid
-        ).exclude(pk=pk).update(is_current=False)
-        return question
-
-    @transaction.atomic
-    def unpublish(self, pk: int, user) -> Question:
-        """
-        取消发布题目
-        Args:
-            pk: 主键
-            user: 操作用户
-        Returns:
-            取消发布后的题目对象
-        Raises:
-            BusinessError: 如果无法取消发布
-        """
-        question = self.get_by_id(pk, user)
-        # 检查是否是当前版本
-        if not question.is_current:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='题目不是当前版本'
-            )
-        # 检查是否被引用
-        if self._is_referenced_by_quiz(pk):
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_REFERENCED,
-                message='该题目已被试卷引用，无法取消发布'
-            )
-        # 取消当前版本标志
-        question.is_current = False
-        question.updated_by = user
-        question.save(update_fields=['is_current', 'updated_by'])
         return question
 
     def _validate_question_data(self, data: dict) -> None:
@@ -272,6 +242,7 @@ class QuestionService(BaseService):
         question_type = data.get('question_type')
         options = data.get('options', [])
         answer = data.get('answer')
+        
         # 选择题验证
         if question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
             if not options:
@@ -361,8 +332,7 @@ class QuestionService(BaseService):
     def _create_new_version(
         self,
         source: Question,
-        data: dict,
-        user
+        data: dict
     ) -> Question:
         """基于已发布版本创建新版本"""
         # 计算新版本号
@@ -375,20 +345,17 @@ class QuestionService(BaseService):
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
         # 提取条线类型数据
         line_type_id = data.pop('line_type_id', None)
-        # 准备新版本数据
+        # 准备新版本数据：自动复制所有内容字段
         new_question_data = {
             'resource_uuid': source.resource_uuid,
             'version_number': new_version_number,
-            'content': data.get('content', source.content),
-            'question_type': data.get('question_type', source.question_type),
-            'options': data.get('options', source.options),
-            'answer': data.get('answer', source.answer),
-            'explanation': data.get('explanation', source.explanation),
-            'score': data.get('score', source.score),
             'is_current': True,
-            'created_by': user,
-            'updated_by': user,
+            'created_by': self.user,
+            'updated_by': self.user,
         }
+        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
+        for field in self.VERSION_COPY_FIELDS:
+            new_question_data[field] = data.get(field, getattr(source, field, None))
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型
         if line_type_id:
@@ -399,6 +366,7 @@ class QuestionService(BaseService):
         Question.objects.filter(
             resource_uuid=source.resource_uuid
         ).exclude(pk=new_question.pk).update(is_current=False)
+
         return new_question
 
     def _is_referenced_by_quiz(self, question_id: int) -> bool:

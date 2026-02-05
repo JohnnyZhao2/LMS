@@ -1,10 +1,19 @@
 """
 User services for LMS.
 """
-from typing import Optional, List
-from core.exceptions import BusinessError, ErrorCodes
+from typing import List, Optional
+
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.db.models import Q
+
+from apps.activity_logs.services import ActivityLogService
 from core.base_service import BaseService
-from .models import User, Role, UserRole
+from core.decorators import log_user_action
+from core.exceptions import BusinessError, ErrorCodes
+
+from .models import Role, User, UserRole
+from .selectors import get_user_by_id
 
 
 class UserManagementService(BaseService):
@@ -13,12 +22,11 @@ class UserManagementService(BaseService):
     Provides methods for user CRUD operations, activation/deactivation,
     role assignment, and mentor assignment.
     """
-    def _get_user(self, user_id: int) -> Optional[User]:
-        return User.objects.select_related(
-            'department',
-            'mentor'
-        ).prefetch_related('roles').filter(pk=user_id).first()
 
+    def _get_user(self, user_id: int) -> Optional[User]:
+        return get_user_by_id(user_id)
+
+    @log_user_action('deactivate', '管理员 {self.user.employee_id} 停用用户 {result.employee_id}')
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -43,6 +51,7 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
+    @log_user_action('activate', '管理员 {self.user.employee_id} 启用用户 {result.employee_id}')
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
@@ -61,6 +70,139 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
+    def _validate_user_can_be_deleted(self, user: User) -> None:
+        """校验用户是否允许被彻底删除。"""
+        if user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='不能删除超级用户账号'
+            )
+
+        # 仅允许删除离职用户（当前实现：停用用户）
+        if user.is_active:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='仅可删除离职（已停用）用户，请先停用该账号'
+            )
+
+    def _purge_user_related_data(self, user: User) -> None:
+        """
+        清理用户的全部关联数据。
+        注意：这里使用硬删除，不保留向后兼容。
+        """
+        from apps.knowledge.models import Knowledge, ResourceLineType
+        from apps.questions.models import Question
+        from apps.quizzes.models import Quiz, QuizQuestion
+        from apps.spot_checks.models import SpotCheck
+        from apps.submissions.models import Answer, Submission
+        from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+
+        created_task_ids = list(
+            Task.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_knowledge_ids = list(
+            Knowledge.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_quiz_ids = list(
+            Quiz.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_question_ids = list(
+            Question.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+
+        # 1) 先清理直接挂在该用户上的业务数据（PROTECT 关系）
+        SpotCheck.objects.filter(
+            Q(student_id=user.id) | Q(checker_id=user.id)
+        ).delete()
+        TaskAssignment.objects.filter(assignee_id=user.id).delete()
+        Submission.objects.filter(user_id=user.id).delete()
+
+        # 2) 再清理该用户“创建”的资源依赖关系（避免 PROTECT 阻塞）
+        if created_quiz_ids:
+            Submission.objects.filter(quiz_id__in=created_quiz_ids).delete()
+            TaskQuiz.objects.filter(quiz_id__in=created_quiz_ids).delete()
+
+        if created_question_ids:
+            Answer.objects.filter(question_id__in=created_question_ids).delete()
+            QuizQuestion.objects.filter(question_id__in=created_question_ids).delete()
+
+        if created_knowledge_ids:
+            TaskKnowledge.objects.filter(knowledge_id__in=created_knowledge_ids).delete()
+
+        # 3) 清理知识/题目的条线关联（Generic 关系无法自动级联）
+        if created_knowledge_ids:
+            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
+            ResourceLineType.objects.filter(
+                content_type=knowledge_content_type,
+                object_id__in=created_knowledge_ids
+            ).delete()
+
+        if created_question_ids:
+            question_content_type = ContentType.objects.get_for_model(Question)
+            ResourceLineType.objects.filter(
+                content_type=question_content_type,
+                object_id__in=created_question_ids
+            ).delete()
+
+        # 4) 删除该用户创建的资源（硬删除）
+        if created_task_ids:
+            Task.objects.filter(id__in=created_task_ids).delete()
+        if created_quiz_ids:
+            Quiz.objects.filter(id__in=created_quiz_ids).delete()
+        if created_knowledge_ids:
+            Knowledge.objects.filter(id__in=created_knowledge_ids).delete()
+        if created_question_ids:
+            Question.objects.filter(id__in=created_question_ids).delete()
+
+    def delete_user(self, user_id: int) -> None:
+        """
+        彻底删除用户及全部关联数据。
+        仅允许删除离职（已停用）用户。
+        """
+        user = self._get_user(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
+        self._validate_user_can_be_deleted(user)
+
+        with transaction.atomic():
+            self._purge_user_related_data(user)
+            user.delete()
+
+    def _validate_exclusive_roles(self, user: User, role_codes: List[str]) -> None:
+        """
+        验证专有角色的唯一性约束。
+        - 每个部门只能有一个室经理 (DEPT_MANAGER)
+        - 全局只能有一个团队经理 (TEAM_MANAGER)
+        """
+        # 验证团队经理唯一性（全局只能有一个）
+        if 'TEAM_MANAGER' in role_codes:
+            existing_team_manager = User.objects.filter(
+                roles__code='TEAM_MANAGER',
+                is_active=True
+            ).exclude(pk=user.pk).first()
+            if existing_team_manager:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
+                )
+
+        # 验证室经理唯一性（每个部门只能有一个）
+        if 'DEPT_MANAGER' in role_codes:
+            if not user.department:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='用户未分配部门，无法设置为室经理'
+                )
+            existing_dept_manager = User.objects.filter(
+                roles__code='DEPT_MANAGER',
+                department=user.department,
+                is_active=True
+            ).exclude(pk=user.pk).first()
+            if existing_dept_manager:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'部门 {user.department.name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
+                )
+
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
@@ -72,12 +214,18 @@ class UserManagementService(BaseService):
         Returns:
             The updated user
         Raises:
-            BusinessError: If user not found
+            BusinessError: If user not found or role constraints violated
         Properties:
         - Property 9: 学员角色不可移除
+        - 每个部门只能有一个室经理
+        - 全局只能有一个团队经理
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+
+        # 验证专有角色的唯一性约束
+        self._validate_exclusive_roles(user, role_codes)
+
         # Get student role (must always be preserved)
         Role.objects.get_or_create(
             code='STUDENT',
@@ -95,13 +243,17 @@ class UserManagementService(BaseService):
         roles_to_remove = current_role_codes - roles_to_assign
         if 'STUDENT' in roles_to_remove:
             roles_to_remove.remove('STUDENT')  # Never remove STUDENT
+        # Add new roles
+        roles_to_add = roles_to_assign - current_role_codes
+
+        if not roles_to_add and not roles_to_remove:
+            return user
+
         if roles_to_remove:
             UserRole.objects.filter(
                 user_id=user.id,
                 role__code__in=list(roles_to_remove)
             ).delete()
-        # Add new roles
-        roles_to_add = roles_to_assign - current_role_codes
         for role_code in roles_to_add:
             role = Role.objects.filter(code=role_code).first()
             if not role:
@@ -119,6 +271,32 @@ class UserManagementService(BaseService):
                 )
         # Refresh user from database
         user.refresh_from_db()
+
+        # 记录用户日志（只记录实际变更）
+        try:
+            role_name_map = dict(Role.ROLE_CHOICES)
+            added_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
+            removed_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+            if roles_to_add and roles_to_remove:
+                description = (
+                    f'管理员 {assigned_by.employee_id} 调整用户 {user.employee_id} 角色：'
+                    f'新增 {added_names}；移除 {removed_names}'
+                )
+            elif roles_to_add:
+                description = f'管理员 {assigned_by.employee_id} 为用户 {user.employee_id} 新增角色：{added_names}'
+            else:
+                description = f'管理员 {assigned_by.employee_id} 移除用户 {user.employee_id} 角色：{removed_names}'
+
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=assigned_by,
+                action='role_assigned',
+                description=description,
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         return user
 
     def assign_mentor(self, user_id: int, mentor_id: Optional[int]) -> User:
@@ -162,4 +340,23 @@ class UserManagementService(BaseService):
             # Assign new mentor (automatically replaces old one due to FK)
             user.mentor_id = mentor_id
             user.save(update_fields=['mentor'])
+
+        # 记录用户日志
+        try:
+            if mentor_id is None:
+                description = f'管理员 {self.user.employee_id} 移除了用户 {user.employee_id} 的导师'
+            else:
+                mentor = self._get_user(mentor_id)
+                description = f'管理员 {self.user.employee_id} 为学员 {user.employee_id} 分配了导师 {mentor.employee_id}'
+
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=self.user,
+                action='mentor_assigned',
+                description=description,
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         return user

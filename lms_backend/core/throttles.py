@@ -1,7 +1,7 @@
 """
 Custom throttle classes for API rate limiting.
 """
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 
 class AuthThrottle(AnonRateThrottle):

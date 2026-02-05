@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { type ColumnDef } from '@tanstack/react-table';
+import { Clock, Plus, Search, Star, User } from 'lucide-react';
+import dayjs from '@/lib/dayjs';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { PageHeader } from '@/components/ui/page-header';
+import { SimplePagination } from '@/components/ui/simple-pagination';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Plus, Search, User, Clock, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useSpotChecks } from '../api/get-spot-checks';
+import { AvatarCircle } from '@/components/common/avatar-circle';
 import { ROUTES } from '@/config/routes';
-import { PageHeader, SimplePagination } from '@/components/ui';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/ui/data-table/data-table';
-import { type ColumnDef } from '@tanstack/react-table';
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { SpotCheck } from '@/types/api';
-import dayjs from '@/lib/dayjs';
+import { useSpotChecks } from '../api/get-spot-checks';
 
 /**
  * 星级评分组件
@@ -22,7 +27,7 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
       {Array.from({ length: max }).map((_, i) => (
         <Star
           key={i}
-          className={`w-3.5 h-3.5 ${i < value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+          className={`w-3.5 h-3.5 ${i < value ? 'fill-warning-400 text-warning-400' : 'text-text-muted'}`}
         />
       ))}
     </div>
@@ -34,8 +39,12 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  */
 export const SpotCheckList: React.FC = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useSpotChecks({ page });
-  const navigate = useNavigate();
+  const currentRole = useCurrentRole();
+  const { data, isLoading } = useSpotChecks({ page, role: currentRole });
+  const { roleNavigate } = useRoleNavigate();
+  useEffect(() => {
+    setPage(1);
+  }, [currentRole]);
 
   const columns: ColumnDef<SpotCheck>[] = [
     {
@@ -45,12 +54,10 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-[#3B82F6]"
-            >
-              {record.student_name?.charAt(0) || <User className="w-4 h-4" />}
-            </div>
-            <span className="font-semibold text-[#111827]">{record.student_name}</span>
+            <AvatarCircle size="md" text={record.student_name?.charAt(0)}>
+              {!record.student_name && <User className="w-4 h-4" />}
+            </AvatarCircle>
+            <span className="font-semibold text-foreground">{record.student_name}</span>
           </div>
         );
       },
@@ -75,11 +82,11 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         const scoreNum = Number(record.score);
         const stars = Math.round(scoreNum / 20);
-        const scoreColor = scoreNum >= 80 ? '#10B981' : scoreNum >= 60 ? '#F59E0B' : '#DC2626';
+        const scoreClassName = scoreNum >= 80 ? 'text-secondary' : scoreNum >= 60 ? 'text-warning' : 'text-destructive';
         return (
           <div className="flex items-center gap-2">
             <StarRating value={stars} />
-            <span className="font-semibold" style={{ color: scoreColor }}>
+            <span className={cn('font-semibold', scoreClassName)}>
               {record.score}
             </span>
           </div>
@@ -93,12 +100,10 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs bg-[#D1FAE5] text-[#10B981]"
-            >
+            <AvatarCircle size="sm" variant="secondary">
               <User className="w-3 h-3" />
-            </div>
-            <span className="text-[#111827]">{record.checker_name}</span>
+            </AvatarCircle>
+            <span className="text-foreground">{record.checker_name}</span>
           </div>
         );
       },
@@ -110,7 +115,7 @@ export const SpotCheckList: React.FC = () => {
       cell: ({ row }) => {
         const record = row.original;
         return (
-          <div className="flex items-center gap-2 text-[#6B7280]">
+          <div className="flex items-center gap-2 text-text-muted">
             <Clock className="w-3 h-3" />
             <span>{dayjs(record.checked_at).format('YYYY-MM-DD HH:mm')}</span>
           </div>
@@ -123,12 +128,11 @@ export const SpotCheckList: React.FC = () => {
     <div className="animate-fadeIn">
       <PageHeader
         title="抽查中心"
-        subtitle="对学员进行知识抽查，记录和追踪抽查结果"
         icon={<Search className="w-5 h-5" />}
         extra={
           <Button
-            onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
-            className="h-14 px-8 rounded-md bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold shadow-none hover:scale-105 transition-all duration-200"
+            onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
+            className="h-14 px-8 rounded-md bg-primary hover:bg-primary-600 text-white font-semibold hover:scale-105 transition-all duration-200"
           >
             <Plus className="w-5 h-5 mr-2" />
             发起抽查
@@ -136,7 +140,7 @@ export const SpotCheckList: React.FC = () => {
         }
       />
 
-      <Card className="shadow-none">
+      <Card>
         <CardContent className="p-6">
           <Spinner spinning={isLoading}>
             {data?.results && data.results.length > 0 ? (
@@ -154,17 +158,18 @@ export const SpotCheckList: React.FC = () => {
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-[#6B7280]">
-                <Search className="w-12 h-12 text-[#9CA3AF] mb-4" />
-                <span className="text-base mb-4">暂无抽查记录</span>
-                <Button 
-                  onClick={() => navigate(`${ROUTES.SPOT_CHECKS}/create`)}
-                  className="bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-none"
+              <EmptyState
+                icon={Search}
+                description="暂无抽查记录"
+              >
+                <Button
+                  onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
+                  className="bg-primary text-white hover:bg-primary-600 mt-4"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   发起第一次抽查
                 </Button>
-              </div>
+              </EmptyState>
             )}
           </Spinner>
         </CardContent>

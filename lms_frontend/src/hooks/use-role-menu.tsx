@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   LayoutGrid,
   BookOpen,
@@ -10,7 +11,6 @@ import {
   BarChart3,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
-import { ROUTES } from '@/config/routes';
 
 interface MenuItem {
   key: string;
@@ -20,23 +20,28 @@ interface MenuItem {
 
 /**
  * 根据角色获取菜单项
- * 
+ *
  * 角色权限：
- * - 学员：概览、知识库、任务、个人中心
- * - 导师：概览、试卷中心、任务、抽查
- * - 室经理：概览、试卷中心、任务、抽查
- * - 管理员：概览、知识库管理、试卷中心、任务、用户管理
+ * - 学员：概览、知识中心、任务中心、个人中心
+ * - 导师：概览、试卷中心、任务中心、抽查中心
+ * - 室经理：概览、试卷中心、任务中心、抽查中心
+ * - 管理员：概览、知识管理、试卷管理、任务管理、用户管理
  * - 团队经理：概览、数据看板
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
+  const { role: urlRole } = useParams<{ role: string }>();
+
   return useMemo(() => {
     if (!currentRole) {
       return [];
     }
 
+    // 使用 URL 中的角色作为路径前缀
+    const rolePrefix = urlRole ? `/${urlRole.toLowerCase()}` : `/${currentRole.toLowerCase()}`;
+
     const baseMenu: MenuItem[] = [
       {
-        key: ROUTES.DASHBOARD,
+        key: `${rolePrefix}/dashboard`,
         icon: <LayoutGrid className="w-4 h-4" />,
         label: '概览',
       },
@@ -47,17 +52,17 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: ROUTES.KNOWLEDGE,
+            key: `${rolePrefix}/knowledge`,
             icon: <BookOpen className="w-4 h-4" />,
-            label: '知识库',
+            label: '知识中心',
           },
           {
-            key: ROUTES.TASKS,
+            key: `${rolePrefix}/tasks`,
             icon: <FileText className="w-4 h-4" />,
-            label: '任务',
+            label: '任务中心',
           },
           {
-            key: ROUTES.PERSONAL,
+            key: `${rolePrefix}/personal`,
             icon: <User className="w-4 h-4" />,
             label: '个人中心',
           },
@@ -68,19 +73,19 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: ROUTES.QUIZ_CENTER,
+            key: `${rolePrefix}/quiz-center`,
             icon: <HelpCircle className="w-4 h-4" />,
             label: '试卷中心',
           },
           {
-            key: ROUTES.TASKS,
+            key: `${rolePrefix}/tasks`,
             icon: <FileText className="w-4 h-4" />,
-            label: '任务',
+            label: '任务中心',
           },
           {
-            key: ROUTES.SPOT_CHECKS,
+            key: `${rolePrefix}/spot-checks`,
             icon: <FileSearch className="w-4 h-4" />,
-            label: '抽查',
+            label: '抽查中心',
           },
         ];
 
@@ -88,22 +93,22 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: ROUTES.ADMIN_KNOWLEDGE,
+            key: `${rolePrefix}/knowledge`,
             icon: <BookOpen className="w-4 h-4" />,
-            label: '知识库',
+            label: '知识管理',
           },
           {
-            key: ROUTES.QUIZ_CENTER,
+            key: `${rolePrefix}/quiz-center`,
             icon: <HelpCircle className="w-4 h-4" />,
-            label: '试卷中心',
+            label: '试卷管理',
           },
           {
-            key: ROUTES.TASKS,
+            key: `${rolePrefix}/tasks`,
             icon: <FileText className="w-4 h-4" />,
-            label: '任务',
+            label: '任务管理',
           },
           {
-            key: ROUTES.USERS,
+            key: `${rolePrefix}/users`,
             icon: <Users className="w-4 h-4" />,
             label: '用户管理',
           },
@@ -113,7 +118,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         return [
           ...baseMenu,
           {
-            key: ROUTES.ANALYTICS,
+            key: `${rolePrefix}/analytics`,
             icon: <BarChart3 className="w-4 h-4" />,
             label: '数据看板',
           },
@@ -122,5 +127,5 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       default:
         return baseMenu;
     }
-  }, [currentRole]);
+  }, [currentRole, urlRole]);
 };

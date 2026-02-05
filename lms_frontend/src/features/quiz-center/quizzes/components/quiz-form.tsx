@@ -1,17 +1,17 @@
-"use client"
-
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { getQuestionTypeLabel } from '@/features/quiz-center/questions/constants';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { Question, QuestionCreateRequest, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { apiClient } from '@/lib/api-client';
@@ -27,6 +27,7 @@ export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const isEdit = !!id;
 
   const [title, setTitle] = useState('');
@@ -299,7 +300,7 @@ export const QuizForm: React.FC = () => {
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data });
         toast.success('试卷更新成功');
-        navigate(ROUTES.QUIZ_CENTER);
+        roleNavigate('quiz-center');
       } else {
         await createQuiz.mutateAsync(data);
         setSuccessModalOpen(true);
@@ -377,19 +378,19 @@ export const QuizForm: React.FC = () => {
         />
       </div>
 
-      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) navigate(ROUTES.QUIZ_CENTER); }}>
+      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate('quiz-center'); }}>
         <DialogContent className="max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-bold">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <div className="w-2 h-2 rounded-full bg-secondary-500 animate-pulse"></div>
               试卷创建成功
             </DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-4">
-            <p className="text-sm text-gray-600 leading-relaxed">
-              恭喜！试卷 <span className="font-bold text-gray-900">「{title}」</span> 已成功保存至系统库。
+            <p className="text-sm text-text-muted leading-relaxed">
+              恭喜！试卷 <span className="font-bold text-foreground">「{title}」</span> 已成功保存至系统库。
             </p>
-            <Button variant="outline" onClick={() => navigate(ROUTES.QUIZ_CENTER)}>返回列表</Button>
+            <Button variant="outline" onClick={() => roleNavigate('quiz-center')}>返回列表</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,13 +1,20 @@
-import React from 'react';
-import { Card } from './card';
-import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Card } from './card';
 
 interface StatCardProps {
     title: string;
     value: string | number;
     icon: LucideIcon;
-    color: string;
+    /** Subject color class (used for decorative elements) */
+    accentClassName: string;
+    /** Icon color class (default: text-white) */
+    iconClassName?: string;
+    /** Card size variant */
+    size?: 'sm' | 'lg';
+    /** Optional subtitle text */
+    subtitle?: string;
     gradient?: string;
     delay?: string;
     className?: string;
@@ -18,57 +25,112 @@ interface StatCardProps {
 }
 
 /**
- * 统计项卡片组件 - 极致美学版
+ * Modern "Architectural" StatCard - The "Outfit" Edition
+ * Feature: 
+ * 1. Numbers now use 'Outfit' font (modern, geometric).
+ * 2. Icon lines carry a subtle tint of the accent color.
  */
 export const StatCard: React.FC<StatCardProps> = ({
     title,
     value,
     icon: Icon,
-    color,
+    accentClassName,
+    iconClassName, // Optional override
+    size = 'lg',
+    subtitle,
     delay = '',
     className = '',
     trend,
-}) => (
-    <Card
-        className={cn(
-            "p-8 relative overflow-hidden group transition-all duration-200 hover:scale-[1.02]",
-            delay,
-            className
-        )}
-        style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
-        {/* Flat Design 背景装饰 */}
-        <div
-            className="absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-5 pointer-events-none"
-            style={{ background: color }}
-        />
+}) => {
+    const isLarge = size === 'lg';
 
-        <div className="flex items-center gap-6 relative z-10">
-            <div
-                className="w-16 h-16 rounded-md flex items-center justify-center text-white transition-transform duration-200 group-hover:scale-110"
-                style={{ background: color }}
-            >
-                <Icon className="h-8 w-8" />
-            </div>
+    // Heuristic: Try to convert 'bg-blue-500' to 'text-blue-500' 
+    const inferredTextColor = accentClassName.replace('bg-', 'text-');
 
-            <div className="flex flex-col">
-                <p className="text-xs font-bold text-[#6B7280] uppercase tracking-wider mb-1 leading-none">
-                    {title}
-                </p>
-                <div className="flex items-baseline gap-2">
-                    <h3 className="text-4xl font-bold text-[#111827] tracking-tight leading-none">
-                        {value}
-                    </h3>
-                    {trend && (
-                        <span className={cn(
-                            "text-[10px] font-bold px-2 py-0.5 rounded-md select-none border-0 shadow-none",
-                            trend.isUp ? "text-[#10B981] bg-[#D1FAE5]" : "text-[#DC2626] bg-[#FEE2E2]"
-                        )}>
-                            {trend.isUp ? '↑' : '↓'} {trend.value}
-                        </span>
-                    )}
+    // Use provided iconClassName OR inferred color OR fallback to text-muted-foreground if all else fails
+    // But for the specific design request of "tinted lines", inferredTextColor is the primary strategy unless overridden.
+    const finalIconColor = iconClassName || inferredTextColor;
+
+    return (
+        <Card
+            className={cn(
+                "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]",
+                "hover:border-primary/20",
+                isLarge ? "h-36" : "h-28",
+                delay,
+                className
+            )}
+        >
+            <div className="flex h-full relative z-10">
+                {/* Content Zone */}
+                <div className="flex-1 flex flex-col justify-between py-5 px-6 relative z-10">
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                        {/* Glowing LED Indicator */}
+                        <div className={cn(
+                            "w-1 h-3 rounded-full transition-all duration-500 ease-out group-hover:h-5",
+                            accentClassName,
+                            "shadow-[0_0_12px_rgba(0,0,0,0.3)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                        )}
+                        />
+                        <p className="font-semibold text-muted-foreground/80 uppercase tracking-widest leading-none text-[10px] truncate group-hover:text-foreground transition-colors duration-300">
+                            {title}
+                        </p>
+                    </div>
+
+                    {/* Value Area */}
+                    <div className="flex items-end gap-3 mt-auto transform transition-transform duration-500 group-hover:translate-x-0.5">
+                        <h3 className={cn(
+                            "font-bold text-foreground tabular-nums leading-none tracking-tight",
+                            isLarge ? "text-4xl" : "text-3xl"
+                        )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                            {value}
+                        </h3>
+
+                        <div className="flex flex-col justify-end mb-1">
+                            {/* Trend/Subtitle */}
+                            {trend ? (
+                                <div className={cn(
+                                    "flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded w-fit leading-none select-none transition-colors",
+                                    trend.isUp
+                                        ? "text-emerald-600 bg-emerald-500/10"
+                                        : "text-rose-600 bg-rose-500/10"
+                                )}>
+                                    <span className="mr-0.5">{trend.isUp ? '↑' : '↓'}</span>
+                                    {trend.value}
+                                </div>
+                            ) : subtitle && (
+                                <span className="text-xs font-medium text-muted-foreground/60 lowercase mb-0.5 whitespace-nowrap">
+                                    {subtitle}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Visual Zone */}
+                <div className={cn(
+                    "relative h-full flex items-center justify-center overflow-hidden w-32 shrink-0"
+                )}>
+                    {/* The Icon: Watermark Style - Tinted Lines */}
+                    <div className={cn(
+                        "absolute -right-6 -bottom-6 w-32 h-32 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-bottom-right",
+                        "group-hover:scale-110 group-hover:-rotate-6 group-hover:-translate-y-2",
+                    )}>
+                        <Icon
+                            className={cn(
+                                "w-full h-full",
+                                // Use the final calculated color
+                                finalIconColor,
+                                "opacity-[0.12] group-hover:opacity-[0.2]",
+                                "dark:opacity-[0.15] dark:group-hover:opacity-[0.25]"
+                            )}
+                            strokeWidth={0.5}
+                        />
+                    </div>
+
                 </div>
             </div>
-        </div>
-    </Card>
-);
+        </Card>
+    );
+};

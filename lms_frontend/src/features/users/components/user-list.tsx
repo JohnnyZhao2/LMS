@@ -15,48 +15,37 @@ import {
   ShieldCheck,
   RefreshCw,
   Building2,
+  Trash2,
 } from "lucide-react"
+import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
-import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
+import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
-import {
-  DataTable,
-  CellWithAvatar,
-  CellTags,
-  CellIconText,
-  CellSmallAvatar,
-  CellStatus,
-} from "@/components/ui/data-table"
+import { AvatarCircle } from '@/components/common/avatar-circle';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ContentPanel } from "@/components/ui"
-import {
-  ConfirmDialog,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  PageHeader,
-} from "@/components/ui"
+import { ContentPanel } from '@/components/ui/content-panel';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PageHeader } from '@/components/ui/page-header';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
+  const [searchParams] = useSearchParams()
+  const filterParam = searchParams.get('filter')
+  const needsAttentionFilter = filterParam === 'needs_attention' ? 'needs_attention' : undefined
+  const userIdParam = searchParams.get('user_id')
+  const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
+
   // 视图模式和筛选状态
   const [viewMode, setViewMode] = React.useState<ViewMode>('department')
   const [selectedHierarchyId, setSelectedHierarchyId] = React.useState<number | 'all'>('all')
@@ -79,6 +68,10 @@ export const UserList: React.FC = () => {
     open: boolean
     password?: string
   }>({ open: false })
+  const [deleteUserDialog, setDeleteUserDialog] = React.useState<{
+    open: boolean
+    user?: UserListType
+  }>({ open: false })
 
   // API Hooks
   const { data: departments = [] } = useDepartments()
@@ -86,15 +79,26 @@ export const UserList: React.FC = () => {
   const departmentFilter = viewMode === 'department' && selectedHierarchyId !== 'all'
     ? selectedHierarchyId as number
     : undefined
-  const { data, isLoading, refetch } = useUsers({ search, departmentId: departmentFilter })
+  const { data, isLoading, refetch } = useUsers({
+    search,
+    departmentId: departmentFilter,
+    filter: needsAttentionFilter,
+  })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
+  const deleteUser = useDeleteUser()
   const resetPassword = useResetPassword()
 
   // 筛选变化时重置页码
   React.useEffect(() => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }))
   }, [search, viewMode, selectedHierarchyId])
+
+  React.useEffect(() => {
+    if (!userIdFromParam || Number.isNaN(userIdFromParam)) return
+    setEditingUserId(userIdFromParam)
+    setFormModalOpen(true)
+  }, [userIdFromParam])
 
   // 根据视图模式过滤用户列表
   const filteredUsers = React.useMemo(() => {
@@ -129,6 +133,30 @@ export const UserList: React.FC = () => {
       const result = await resetPassword.mutateAsync(resetPasswordDialog.userId)
       setResetPasswordDialog({ open: false })
       setTempPasswordDialog({ open: true, password: result.temporary_password })
+    } catch (error) {
+      showApiError(error)
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    const targetUser = deleteUserDialog.user
+    if (!targetUser) return
+
+    if (targetUser.is_active) {
+      toast.error("仅可删除已停用（离职）用户")
+      return
+    }
+
+    try {
+      await deleteUser.mutateAsync(targetUser.id)
+      toast.success("用户及关联数据已彻底删除")
+
+      if (editingUserId === targetUser.id) {
+        setFormModalOpen(false)
+        setEditingUserId(undefined)
+      }
+      setDeleteUserDialog({ open: false })
+      refetch()
     } catch (error) {
       showApiError(error)
     }
@@ -178,7 +206,7 @@ export const UserList: React.FC = () => {
       size: 140,
       cell: ({ row }) => {
         const mentor = row.original.mentor
-        if (!mentor) return <span className="text-[#9CA3AF] italic text-xs">未分配</span>
+        if (!mentor) return <span className="text-text-muted italic text-xs">未分配</span>
         return <CellSmallAvatar name={mentor.username} />
       },
     },
@@ -198,12 +226,12 @@ export const UserList: React.FC = () => {
         <div className="flex items-center gap-1.5 min-w-[60px]" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-[#E5E7EB]">
-              <DropdownMenuLabel className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider px-3 py-2">
+            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border">
+              <DropdownMenuLabel className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-3 py-2">
                 账号控制台
               </DropdownMenuLabel>
 
@@ -229,8 +257,8 @@ export const UserList: React.FC = () => {
                 className={cn(
                   "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
                   row.original.is_active
-                    ? "text-[#DC2626] focus:bg-[#FEE2E2]"
-                    : "text-[#10B981] focus:bg-[#D1FAE5]"
+                    ? "text-destructive focus:bg-destructive-100"
+                    : "text-secondary focus:bg-secondary-100"
                 )}
                 onClick={() => handleToggleActive(row.original)}
               >
@@ -239,6 +267,19 @@ export const UserList: React.FC = () => {
                 ) : (
                   <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
                 )}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-destructive focus:bg-destructive-100"
+                onClick={() => {
+                  if (row.original.is_active) {
+                    toast.error("请先停用账号，再执行彻底删除")
+                    return
+                  }
+                  setDeleteUserDialog({ open: true, user: row.original })
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> 彻底删除
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -251,13 +292,12 @@ export const UserList: React.FC = () => {
     <div className="space-y-10 pb-20">
       <PageHeader
         title="用户中心"
-        subtitle="组织架构与权限管理"
         icon={<UsersIcon />}
         extra={
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
+              className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm"
               onClick={() => refetch()}
             >
               <RefreshCw className="h-4 w-4" />
@@ -268,9 +308,9 @@ export const UserList: React.FC = () => {
                 setEditingUserId(undefined)
                 setFormModalOpen(true)
               }}
-              className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
+              className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
             >
-              <Plus className="mr-2 h-5 w-5" />
+              <Plus className="mr-2 h-4 w-4" />
               快速录入
             </Button>
           </div>
@@ -294,12 +334,12 @@ export const UserList: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
             <div className="relative flex-1 max-w-lg group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
               <Input
                 placeholder="检索姓名、工号、部位..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 bg-white border-2 border-[#F3F4F6] rounded-md focus:border-[#3B82F6] text-base font-medium shadow-none transition-all"
+                className="pl-14 h-14 bg-background border-2 border-border rounded-md focus:border-primary text-base font-medium  transition-all"
               />
             </div>
           </div>
@@ -317,7 +357,7 @@ export const UserList: React.FC = () => {
                 onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
                 onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
               }}
-              rowClassName="group cursor-pointer hover:bg-[#F9FAFB] transition-colors"
+              rowClassName="group cursor-pointer hover:bg-muted transition-colors"
               onRowClick={(row) => {
                 setEditingUserId(row.id)
                 setFormModalOpen(true)
@@ -347,13 +387,13 @@ export const UserList: React.FC = () => {
         title="重置密码？"
         description={
           <>
-            系统将生成一个<span className="text-blue-600 font-semibold">临时密码</span>。<br />
+            系统将生成一个<span className="text-primary-600 font-semibold">临时密码</span>。<br />
             用户下次登录时必须修改。
           </>
         }
         icon={<Lock className="h-10 w-10" />}
-        iconBgColor="bg-blue-100"
-        iconColor="text-blue-600"
+        iconBgColor="bg-primary-100"
+        iconColor="text-primary-600"
         confirmText="确认重置"
         cancelText="取消"
         confirmVariant="destructive"
@@ -361,19 +401,39 @@ export const UserList: React.FC = () => {
         isConfirming={resetPassword.isPending}
       />
 
+      <ConfirmDialog
+        open={deleteUserDialog.open}
+        onOpenChange={(open) =>
+          setDeleteUserDialog({
+            open,
+            user: open ? deleteUserDialog.user : undefined,
+          })
+        }
+        title="彻底删除该离职用户？"
+        description={`将永久删除用户「${deleteUserDialog.user?.username ?? ''}」及其所有关联数据（任务、答题、抽查、题库与知识资源）。此操作不可撤销。`}
+        icon={<Trash2 className="h-10 w-10" />}
+        iconBgColor="bg-destructive-100"
+        iconColor="text-destructive"
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleDeleteUser}
+        isConfirming={deleteUser.isPending}
+      />
+
       {/* Temp Password Dialog */}
       <Dialog
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-lg max-w-md p-8 border border-gray-200">
+        <DialogContent className="rounded-lg max-w-md p-8 border border-border">
           <DialogHeader>
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+            <AvatarCircle size="lg" variant="secondary" className="mb-6 mx-auto">
               <ShieldCheck className="h-8 w-8" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-gray-900 text-center">重置成功</DialogTitle>
-            <DialogDescription className="text-gray-500 text-center text-sm">
-              请务必将此密码<span className="text-gray-900 font-semibold">安全地</span>转交给用户
+            </AvatarCircle>
+            <DialogTitle className="text-xl font-bold text-foreground text-center">重置成功</DialogTitle>
+            <DialogDescription className="text-text-muted text-center text-sm">
+              请务必将此密码<span className="text-foreground font-semibold">安全地</span>转交给用户
             </DialogDescription>
           </DialogHeader>
 
@@ -381,19 +441,19 @@ export const UserList: React.FC = () => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="bg-gray-50 rounded-lg p-6 text-center hover:bg-gray-100 transition-colors">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">临时密码</span>
-              <code className="text-2xl font-bold text-blue-600 tracking-widest font-mono">
+            <div className="bg-muted rounded-lg p-6 text-center hover:bg-muted transition-colors">
+              <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 block">临时密码</span>
+              <code className="text-2xl font-bold text-primary-600 tracking-widest font-mono">
                 {tempPasswordDialog.password}
               </code>
-              <div className="mt-3 text-xs font-medium text-gray-400">点击复制</div>
+              <div className="mt-3 text-xs font-medium text-text-muted">点击复制</div>
             </div>
           </div>
 
           <DialogFooter className="mt-6">
             <Button
               onClick={() => setTempPasswordDialog({ open: false })}
-              className="w-full bg-[#3B82F6] text-white rounded-lg h-11 font-semibold hover:bg-[#2563EB] shadow-none"
+              className="w-full bg-primary text-white rounded-lg h-11 font-semibold hover:bg-primary-600 "
             >
               完成并关闭
             </Button>

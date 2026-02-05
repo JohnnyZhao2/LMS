@@ -1,10 +1,10 @@
-"use client"
-
 import React, { useState } from 'react';
 import { Inbox, Activity, Search } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
-import { Skeleton, SegmentedControl } from '@/components/ui';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import type { TaskStatus } from '@/types/api';
 
@@ -19,7 +19,7 @@ const statusOptions = [
  * 学员任务列表组件 - Flat Design 版本
  * 
  * 设计规范：
- * - 无阴影 (shadow-none)
+ * - 无阴影 
  * - 无渐变 (no gradient)
  * - 实心背景色
  * - hover:scale 交互反馈
@@ -40,35 +40,25 @@ export const StudentTaskList: React.FC = () => {
     return (
         <div className="space-y-10">
             {/* 顶部标题栏 - Flat Design */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="space-y-4">
-                    <h2 className="text-4xl sm:text-5xl font-bold text-[#111827] tracking-tight flex items-center gap-4">
-                        <div className="w-14 h-14 bg-[#3B82F6] rounded-md flex items-center justify-center text-white">
-                            <Activity className="w-8 h-8" />
-                        </div>
-                        任务治理中心
-                    </h2>
-                    <p className="text-lg font-semibold text-[#6B7280] uppercase tracking-widest flex items-center gap-3">
-                        <span className="w-8 h-[3px] bg-[#3B82F6] rounded-full" />
-                        战略学习任务
-                    </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* 顶部标题栏 - Refactored to use PageHeader */}
+            <PageHeader
+                title="任务治理中心"
+                icon={<Activity />}
+                extra={
                     <div className="relative group min-w-[320px]">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280] group-focus-within:text-[#3B82F6] transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-primary transition-colors" />
                         <Input
-                            className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
-                            placeholder="搜索任务标题或编号..."
+                            className="pl-12 h-12 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm font-medium"
+                            placeholder="搜索任务..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             {/* 分段筛选器 - Flat Design */}
-            <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b-2 border-[#F3F4F6]">
+            <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b-2 border-border">
                 <div className="flex items-center gap-4">
                     <SegmentedControl
                         value={statusFilter}
@@ -80,8 +70,8 @@ export const StudentTaskList: React.FC = () => {
                     />
                 </div>
 
-                <span className="text-xs font-bold text-[#6B7280] uppercase tracking-widest">
-                    共找到 <span className="text-[#3B82F6] text-base ml-1">{filteredTasks.length}</span> 个任务
+                <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
+                    共找到 <span className="text-primary text-base ml-1">{filteredTasks.length}</span> 个任务
                 </span>
             </div>
 
@@ -100,12 +90,12 @@ export const StudentTaskList: React.FC = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-32 bg-[#F3F4F6] rounded-lg">
-                        <div className="w-24 h-24 bg-[#E5E7EB] rounded-md flex items-center justify-center mb-6">
-                            <Inbox className="w-10 h-10 text-[#9CA3AF]" />
+                    <div className="flex flex-col items-center justify-center py-32 bg-muted rounded-lg">
+                        <div className="w-24 h-24 bg-muted rounded-md flex items-center justify-center mb-6">
+                            <Inbox className="w-10 h-10 text-text-muted" />
                         </div>
-                        <h3 className="text-2xl font-bold text-[#111827] mb-2">任务清单净空</h3>
-                        <p className="text-[#6B7280] font-semibold uppercase tracking-widest text-sm">所有任务已同步完成</p>
+                        <h3 className="text-2xl font-bold text-foreground mb-2">任务清单净空</h3>
+                        <p className="text-text-muted font-semibold uppercase tracking-widest text-sm">所有任务已同步完成</p>
                     </div>
                 )}
             </div>
@@ -114,4 +104,3 @@ export const StudentTaskList: React.FC = () => {
 };
 
 export default StudentTaskList;
-

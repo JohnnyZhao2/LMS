@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useState } from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
@@ -11,15 +9,9 @@ import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-cent
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
-import {
-    Button,
-    ConfirmDialog,
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -27,7 +19,8 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { DataTable, CellWithIcon, CellTags } from '@/components/ui/data-table';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
@@ -75,8 +68,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     icon={<FileText className="w-5 h-5" />}
                     title={row.original.content}
                     subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
-                    iconBg="#F0FDF4"
-                    iconColor="#16A34A"
+                    iconBgClass="bg-secondary-50"
+                    iconColorClass="text-secondary-600"
                 />
             )
         },
@@ -90,8 +83,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         tags={[{
                             key: row.original.question_type,
                             label: getQuestionTypeLabel(row.original.question_type as QuestionType),
-                            bg: typeStyle.bg,
-                            color: typeStyle.color,
+                            bgClass: typeStyle.bg,
+                            textClass: typeStyle.color,
                         }]}
                     />
                 );
@@ -101,7 +94,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             id: 'line_type',
             header: '所属条线',
             cell: ({ row }) => (
-                <span className="text-sm font-medium text-gray-600">
+                <span className="text-sm font-medium text-text-muted">
                     {row.original.line_type?.name || '—'}
                 </span>
             )
@@ -111,10 +104,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             header: '更新时间',
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#111827]">
+                    <span className="text-sm font-bold text-foreground">
                         {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
                     </span>
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                         {dayjs(row.original.updated_at).format('HH:mm:ss')}
                     </span>
                 </div>
@@ -129,20 +122,20 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md shadow-none">
-                                    <MoreHorizontal className="w-4 h-4 text-gray-500" strokeWidth={2} />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
+                                    <MoreHorizontal className="w-4 h-4 text-text-muted" strokeWidth={2} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-gray-200 shadow-none bg-white">
+                            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border  bg-background">
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-gray-100 transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-muted transition-colors text-xs"
                                     onClick={() => setPreviewQuestion(record)}
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
                                 </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-gray-200 mx-2" />
+                                <DropdownMenuSeparator className="bg-muted mx-2" />
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 cursor-pointer transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold text-destructive-600 focus:bg-destructive-50 cursor-pointer transition-colors text-xs"
                                     onClick={() => setDeleteId(record.id)}
                                 >
                                     <Trash2 className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 彻底删除
@@ -172,18 +165,18 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                         setPage(1);
                     },
                 }}
-                rowClassName="hover:bg-[#F3F4F6] transition-colors group cursor-pointer"
+                rowClassName="hover:bg-muted transition-colors group cursor-pointer"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
 
             {/* 预览对话框 (Keep this as Dialog since it's a detail view, not a confirmation) */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
-                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-xl">
-                    <DialogHeader className="px-6 py-4 bg-gray-50/80 border-b border-gray-100">
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-                            <FileText className="w-5 h-5 text-emerald-500" />
+                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none  bg-background rounded-xl">
+                    <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+                            <FileText className="w-5 h-5 text-secondary-500" />
                             题目详情预览
-                            <span className="ml-2 text-xs font-medium text-gray-400"></span>
+                            <span className="ml-2 text-xs font-medium text-text-muted"></span>
                         </DialogTitle>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto">
@@ -199,7 +192,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                             showActions={false}
                         />
                     </div>
-                    <DialogFooter className="px-6 py-4 bg-gray-50/50 border-t border-gray-100">
+                    <DialogFooter className="px-6 py-4 bg-muted/50 border-t border-border">
                         <Button onClick={() => setPreviewQuestion(null)} className="font-bold">
                             关闭预览
                         </Button>
@@ -214,8 +207,8 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 title="彻底从系统中清除此题目?"
                 description="此操作将永久删除该题目记录。如果已有试卷正在引用此题目,可能会导致作业显示异常。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
-                iconBgColor="bg-[#FEE2E2]"
-                iconColor="text-[#DC2626]"
+                iconBgColor="bg-destructive-100"
+                iconColor="text-destructive"
                 confirmText="确认删除"
                 cancelText="取消"
                 confirmVariant="destructive"

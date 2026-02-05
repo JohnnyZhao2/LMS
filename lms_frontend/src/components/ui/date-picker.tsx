@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { zhCN } from "date-fns/locale"
+import { zhCN } from "date-fns/locale/zh-CN"
 import { CalendarIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 
@@ -35,7 +35,7 @@ function DatePicker({
           disabled={disabled}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !date && "text-gray-400",
+            !date && "text-text-muted",
             className
           )}
         >
@@ -78,7 +78,7 @@ function DateRangePicker({
           disabled={disabled}
           className={cn(
             "w-full justify-start text-left font-normal",
-            !dateRange?.from && "text-gray-400",
+            !dateRange?.from && "text-text-muted",
             className
           )}
         >

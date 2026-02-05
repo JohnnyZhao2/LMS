@@ -35,9 +35,11 @@ INSTALLED_APPS = [
     'apps.questions',
     'apps.quizzes',
     'apps.tasks',
+    'apps.grading',
     'apps.submissions',
     'apps.spot_checks',
     'apps.dashboard',
+    'apps.activity_logs',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -77,9 +79,10 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'zh-hans'
 TIME_ZONE = 'Asia/Shanghai'
 USE_I18N = True
-# 设置为 False 以便数据库直接存储本地时间（Asia/Shanghai）
-# 注意：这会失去时区支持，但数据库中的时间会直接显示为本地时间
-USE_TZ = False
+# 启用时区支持，数据库存储 UTC 时间
+# API 返回带时区的 ISO 8601 格式（如 2026-01-27T13:30:00+08:00）
+# 前端使用 dayjs 解析时会自动转换为本地时间
+USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'

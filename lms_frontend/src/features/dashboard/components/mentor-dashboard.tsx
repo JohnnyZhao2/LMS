@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   CheckCircle,
+  FileCheck,
   FileSearch,
   Plus,
   Send,
@@ -9,11 +10,23 @@ import {
   Layout,
   GraduationCap
 } from 'lucide-react';
-import { useMentorDashboard } from '../api/mentor-dashboard';
-
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { StatCard, PageHeader, Skeleton, ActionCard } from '@/components/ui';
+import { StatCard } from '@/components/ui/stat-card';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ActionCard } from '@/components/ui/action-card';
+import { Card } from '@/components/ui/card';
+
+import { useMentorDashboard } from '../api/mentor-dashboard';
+import { StudentsNeedingAttention } from './students-needing-attention';
+import {
+  OverdueWarningCard,
+  PendingGradingCard,
+  ScoreDistributionCard,
+  SpotCheckStatsCard,
+  StudentRadarCard,
+} from './mentor-dashboard-widgets';
 
 
 /**
@@ -23,9 +36,25 @@ import { StatCard, PageHeader, Skeleton, ActionCard } from '@/components/ui';
 export const MentorDashboard: React.FC = () => {
   const { data, isLoading } = useMentorDashboard();
 
-  const { user, availableRoles, currentRole } = useAuth();
+  const { availableRoles, currentRole } = useAuth();
 
   const roleName = availableRoles.find((r) => r.code === currentRole)?.name || '导师';
+  const overdueWarning = data?.overdue_warning ?? {
+    overdue_count: 0,
+    due_soon_count: 0,
+    due_soon_hours: 12,
+    items: [],
+  };
+  const pendingGradingCount = data?.pending_grading?.count ?? 0;
+  const spotCheckStats = data?.spot_check_stats ?? { count: 0, avg_score: null };
+  const scoreDistribution = data?.score_distribution ?? {
+    excellent: 0,
+    good: 0,
+    pass: 0,
+    fail: 0,
+    total: 0,
+  };
+  const students = data?.students ?? [];
 
   if (isLoading) {
     return (
@@ -41,10 +70,9 @@ export const MentorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-8 pb-10">
       <PageHeader
         title={`${roleName}工作台`}
-        subtitle={`欢迎回来，${user?.username || '老师'}。今天各项教学工作正有序进行。`}
         icon={<GraduationCap />}
       />
 
@@ -52,61 +80,97 @@ export const MentorDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="学员数量"
-          value={data?.mentees_count || 0}
+          value={data?.summary?.total_students ?? 0}
           icon={Users}
-          color="var(--color-primary-500)"
+          accentClassName="bg-primary"
           gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
           delay="stagger-delay-1"
         />
         <StatCard
           title="任务完成率"
-          value={data?.completion_rate || '0%'}
+          value={`${data?.summary?.overall_completion_rate ?? 0}%`}
           icon={CheckCircle}
-          color="var(--color-success-500)"
+          accentClassName="bg-secondary"
           gradient="linear-gradient(135deg, var(--color-success-500) 0%, var(--color-success-300) 100%)"
           delay="stagger-delay-2"
         />
         <StatCard
           title="平均分"
-          value={data?.average_score || '0'}
+          value={data?.summary?.overall_avg_score ?? 0}
           icon={Trophy}
-          color="var(--color-purple-500)"
-          gradient="linear-gradient(135deg, var(--color-purple-500) 0%, var(--color-purple-300) 100%)"
+          accentClassName="bg-primary-500"
+          gradient="linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-300) 100%)"
           delay="stagger-delay-3"
         />
       </div>
 
-      {/* 快捷操作 */}
-      <div className="space-y-6 reveal-item stagger-delay-2">
-        <h3 className="text-lg font-black text-gray-900 pl-2 flex items-center gap-2">
-          <Layout className="w-5 h-5 text-primary-500" />
-          快速开始
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <ActionCard
-            title="发起抽查"
-            description="对学员进行知识抽查"
-            icon={FileSearch}
-            route={ROUTES.SPOT_CHECKS}
-            iconColor="text-[#DC2626]"
-            iconBg="bg-[#FEE2E2]"
-          />
-          <ActionCard
-            title="发布任务"
-            description="创建学习/练习/考试任务"
-            icon={Send}
-            route={`${ROUTES.TASKS}/create`}
-            iconColor="text-[#3B82F6]"
-            iconBg="bg-[#DBEAFE]"
-          />
-          <ActionCard
-            title="新建试卷"
-            description="创建新的考试或练习试卷"
-            icon={Plus}
-            route={ROUTES.QUIZ_CENTER}
-            iconColor="text-[#10B981]"
-            iconBg="bg-[#D1FAE5]"
-          />
+      {/* 主内容区域 */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* 左侧 - 需要关注的学员 */}
+        <div className="lg:col-span-5">
+          <StudentsNeedingAttention limit={5} className="h-full" />
+        </div>
+
+        {/* 右侧 - 快捷操作 */}
+        <div className="lg:col-span-7 reveal-item stagger-delay-2">
+          <Card className="p-6 border border-border h-full">
+            <div className="flex items-center gap-2 mb-5">
+              <Layout className="w-4 h-4 text-primary-500" />
+              <h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80">
+                快速开始
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <ActionCard
+                title="发起抽查"
+                description="对学员进行知识抽查"
+                icon={FileSearch}
+                route={`${ROUTES.SPOT_CHECKS}/create`}
+                actionColor="rose"
+                delay="stagger-delay-1"
+              />
+              <ActionCard
+                title="发布任务"
+                description="创建学习/练习/考试任务"
+                icon={Send}
+                route={`${ROUTES.TASKS}/create`}
+                actionColor="indigo"
+                delay="stagger-delay-2"
+              />
+              <ActionCard
+                title="新建试卷"
+                description="创建新的考试或练习试卷"
+                icon={Plus}
+                route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
+                actionColor="emerald"
+                delay="stagger-delay-3"
+              />
+              <ActionCard
+                title="阅卷中心"
+                description="批阅学员试卷答案"
+                icon={FileCheck}
+                route={ROUTES.GRADING_CENTER}
+                actionColor="amber"
+                delay="stagger-delay-4"
+              />
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* 新增卡片 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <OverdueWarningCard data={overdueWarning} />
+        <PendingGradingCard count={pendingGradingCount} />
+        <SpotCheckStatsCard stats={spotCheckStats} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-7">
+          <StudentRadarCard students={students} />
+        </div>
+        <div className="lg:col-span-5">
+          <ScoreDistributionCard distribution={scoreDistribution} />
         </div>
       </div>
     </div>

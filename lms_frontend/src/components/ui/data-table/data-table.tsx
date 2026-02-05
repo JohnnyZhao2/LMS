@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   flexRender,
@@ -69,6 +67,7 @@ export function DataTable<TData, TValue>({
     }
   }, [rowSelection, onRowSelectionChange])
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -99,7 +98,7 @@ export function DataTable<TData, TValue>({
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
       <div className="flex-1 overflow-auto">
-        <div className="rounded-lg bg-white shadow-none border-0">
+        <div className="rounded-lg bg-background  border-0">
           <Table className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -155,7 +154,7 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => onRowClick?.(row.original)}
-                    className={onRowClick ? `cursor-pointer hover:bg-[#F9FAFB] ${rowClassName || ''}` : rowClassName}
+                    className={onRowClick ? `cursor-pointer hover:bg-muted ${rowClassName || ''}` : rowClassName}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -178,7 +177,7 @@ export function DataTable<TData, TValue>({
                 <TableRow>
                   <TableCell
                     colSpan={columns.length}
-                    className="h-24 text-center text-[#6B7280]"
+                    className="h-24 text-center text-text-muted"
                   >
                     暂无数据
                   </TableCell>
@@ -189,7 +188,7 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
       {pagination && (
-        <div className="pt-6 mt-4 border-t border-gray-100 bg-white sticky bottom-0 z-10">
+        <div className="pt-6 mt-4 border-t border-border bg-background sticky bottom-0 z-10">
           <Pagination
             current={pagination.pageIndex + 1}
             total={pagination.totalCount ?? (pagination.pageCount * pagination.pageSize)}

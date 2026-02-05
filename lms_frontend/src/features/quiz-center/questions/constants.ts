@@ -18,10 +18,10 @@ export const QUESTION_TYPE_FILTER_OPTIONS = [
  * 题目类型配置（用于显示标签）
  */
 export const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string; bg: string }> = {
-  SINGLE_CHOICE: { label: '单选', color: 'text-blue-600', bg: 'bg-blue-50' },
-  MULTIPLE_CHOICE: { label: '多选', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  TRUE_FALSE: { label: '判断', color: 'text-amber-600', bg: 'bg-amber-50' },
-  SHORT_ANSWER: { label: '简答', color: 'text-blue-600', bg: 'bg-blue-50' },
+  SINGLE_CHOICE: { label: '单选', color: 'text-primary-600', bg: 'bg-primary-50' },
+  MULTIPLE_CHOICE: { label: '多选', color: 'text-secondary-600', bg: 'bg-secondary-50' },
+  TRUE_FALSE: { label: '判断', color: 'text-warning-600', bg: 'bg-warning-50' },
+  SHORT_ANSWER: { label: '简答', color: 'text-primary-600', bg: 'bg-primary-50' },
 };
 
 /**

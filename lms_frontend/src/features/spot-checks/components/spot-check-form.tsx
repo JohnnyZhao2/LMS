@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -18,21 +17,21 @@ import { DatePicker } from '@/components/ui/date-picker';
 
 import { useCreateSpotCheck } from '../api/create-spot-check';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
 
 /**
  * 抽查录入表单组件 - ShadCN UI 版本
  */
 export const SpotCheckForm: React.FC = () => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
   const createSpotCheck = useCreateSpotCheck();
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
   // Form state
   const [studentId, setStudentId] = useState<string>('');
   const [content, setContent] = useState('');
-  const [score, setScore] = useState<number>(5);
+  const [score, setScore] = useState<number>(80);
   const [comment, setComment] = useState('');
   const [checkedAt, setCheckedAt] = useState<Date | undefined>(new Date());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -41,7 +40,7 @@ export const SpotCheckForm: React.FC = () => {
     const newErrors: Record<string, string> = {};
     if (!studentId) newErrors.student = '请选择学员';
     if (!content.trim()) newErrors.content = '请输入抽查内容';
-    if (!score || score < 1 || score > 10) newErrors.score = '请输入1-10分的评分';
+    if (score < 0 || score > 100) newErrors.score = '请输入0-100分的评分';
     if (!checkedAt) newErrors.checkedAt = '请选择抽查时间';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -62,7 +61,7 @@ export const SpotCheckForm: React.FC = () => {
         checked_at: checkedAt!.toISOString(),
       });
       toast.success('抽查记录创建成功');
-      navigate(ROUTES.SPOT_CHECKS);
+      roleNavigate('spot-checks');
     } catch (error) {
       showApiError(error, '创建失败');
     }
@@ -70,7 +69,7 @@ export const SpotCheckForm: React.FC = () => {
 
   return (
     <div className="animate-fadeIn">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">发起抽查</h2>
+      <h2 className="text-2xl font-bold text-foreground mb-6">发起抽查</h2>
       
       <Card className="max-w-2xl">
         <CardHeader>
@@ -91,37 +90,37 @@ export const SpotCheckForm: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-            {errors.student && <p className="text-sm text-red-500">{errors.student}</p>}
+            {errors.student && <p className="text-sm text-destructive-500">{errors.student}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>抽查内容/主题</Label>
             <textarea
-              className="w-full p-3 border border-gray-200 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               rows={3}
               placeholder="请输入抽查内容或主题"
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />
-            {errors.content && <p className="text-sm text-red-500">{errors.content}</p>}
+            {errors.content && <p className="text-sm text-destructive-500">{errors.content}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label>评分（1-10分）</Label>
+            <Label>评分（0-100分）</Label>
             <Input
               type="number"
-              min={1}
-              max={10}
+              min={0}
+              max={100}
               value={score}
               onChange={(e) => setScore(Number(e.target.value))}
             />
-            {errors.score && <p className="text-sm text-red-500">{errors.score}</p>}
+            {errors.score && <p className="text-sm text-destructive-500">{errors.score}</p>}
           </div>
 
           <div className="space-y-2">
             <Label>评语（可选）</Label>
             <textarea
-              className="w-full p-3 border border-gray-200 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               rows={3}
               placeholder="请输入评语（可选）"
               value={comment}
@@ -136,7 +135,7 @@ export const SpotCheckForm: React.FC = () => {
               onDateChange={setCheckedAt}
               placeholder="选择抽查时间"
             />
-            {errors.checkedAt && <p className="text-sm text-red-500">{errors.checkedAt}</p>}
+            {errors.checkedAt && <p className="text-sm text-destructive-500">{errors.checkedAt}</p>}
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -147,7 +146,7 @@ export const SpotCheckForm: React.FC = () => {
               {createSpotCheck.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               提交
             </Button>
-            <Button variant="outline" onClick={() => navigate(ROUTES.SPOT_CHECKS)}>
+            <Button variant="outline" onClick={() => roleNavigate('spot-checks')}>
               取消
             </Button>
           </div>

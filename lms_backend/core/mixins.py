@@ -4,7 +4,11 @@ Properties: 37, 38, 39
 """
 from django.db import models
 from django.utils import timezone
+
+from apps.users.permissions import get_current_role as get_user_current_role
 from core.exceptions import BusinessError, ErrorCodes
+
+
 class TimestampMixin(models.Model):
     """
     Mixin that adds created_at and updated_at fields.
@@ -108,22 +112,7 @@ class DataScopeMixin:
         Get the current active role of the user.
         Returns the role code string or None if not authenticated.
         """
-        user = self.request.user
-        if not user or not user.is_authenticated:
-            return None
-        # Check current_role if set (from JWT token)
-        if hasattr(user, 'current_role') and user.current_role:
-            return user.current_role
-        # Determine role from user's roles with priority
-        if user.is_admin:
-            return 'ADMIN'
-        if user.is_dept_manager:
-            return 'DEPT_MANAGER'
-        if user.is_mentor:
-            return 'MENTOR'
-        if user.is_team_manager:
-            return 'TEAM_MANAGER'
-        return 'STUDENT'
+        return get_user_current_role(self.request.user, self.request)
     def filter_queryset_by_scope(self, queryset):
         """
         Filter the queryset based on the user's data access scope.
@@ -205,6 +194,7 @@ class TaskDataScopeMixin(DataScopeMixin):
         # plus tasks assigned to users in their scope
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
             from django.db.models import Q
+
             # Tasks created by this user
             created_filter = Q(created_by=user)
             # Tasks assigned to users in their scope
@@ -244,8 +234,9 @@ class BusinessErrorHandlerMixin:
         Returns:
             Response: 包含错误信息的 HTTP 响应，状态码根据错误类型自动映射
         """
-        from rest_framework.response import Response
         from rest_framework import status
+        from rest_framework.response import Response
+
         # 根据错误码映射到相应的 HTTP 状态码
         status_code = self._get_status_code_for_error(error.code)
         response_data = {
@@ -263,6 +254,7 @@ class BusinessErrorHandlerMixin:
             int: HTTP 状态码
         """
         from rest_framework import status
+
         # 错误码到状态码的映射
         error_code_mapping = {
             ErrorCodes.RESOURCE_NOT_FOUND: status.HTTP_404_NOT_FOUND,

@@ -5,6 +5,7 @@ Endpoints:
 - POST /api/users/ - Create new user (admin only)
 - GET /api/users/{id}/ - Get user details (admin only)
 - PATCH /api/users/{id}/ - Update user info (admin only)
+- DELETE /api/users/{id}/ - Hard delete resigned user and related data (admin only)
 - POST /api/users/{id}/deactivate/ - Deactivate user (admin only)
 - POST /api/users/{id}/activate/ - Activate user (admin only)
 - POST /api/users/{id}/assign-roles/ - Assign roles to user (admin only)
@@ -16,19 +17,21 @@ Endpoints:
 - GET /api/users/departments/ - Get all departments list (admin only)
 """
 from django.urls import path
+
 from apps.users.views import (
-    UserListCreateView,
-    UserDetailView,
-    UserDeactivateView,
-    UserActivateView,
-    UserAssignRolesView,
-    UserAssignMentorView,
-    MenteesListView,
     DepartmentMembersListView,
+    DepartmentsListView,
+    MenteesListView,
     MentorsListView,
     RolesListView,
-    DepartmentsListView,
+    UserActivateView,
+    UserAssignMentorView,
+    UserAssignRolesView,
+    UserDeactivateView,
+    UserDetailView,
+    UserListCreateView,
 )
+
 urlpatterns = [
     path('', UserListCreateView.as_view(), name='user-list-create'),
     path('<int:pk>/', UserDetailView.as_view(), name='user-detail'),

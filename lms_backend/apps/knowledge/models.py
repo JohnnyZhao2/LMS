@@ -6,13 +6,18 @@ Implements:
 - Knowledge: 知识文档
 """
 import uuid
+
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.core.exceptions import ValidationError
-from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
+from django.utils.html import strip_tags
+
+from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+
+
 class Tag(TimestampMixin, models.Model):
     """
     统一标签模型
@@ -111,7 +116,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     知识文档模型
     知识类型:
     - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
-    - OTHER: 其他类型知识 - 使用 Markdown/富文本自由正文
+    - OTHER: 其他类型知识 - 使用富文本自由正文
     标签关系:
     - line_type: 通过ResourceLineType关联（多态关系，单选）
     - system_tags: 系统标签（多对多，多选）
@@ -205,6 +210,14 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     )
     # 阅读统计
     view_count = models.PositiveIntegerField(default=0, verbose_name='阅读次数')
+    # 原始文档链接
+    source_url = models.URLField(
+        verbose_name='原始文档链接',
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='在线文档链接（腾讯文档/飞书等）'
+    )
     class Meta:
         db_table = 'lms_knowledge'
         verbose_name = '知识文档'
@@ -270,6 +283,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
             int: 更新后的阅读次数
         """
         from django.db.models import F
+
         # 使用原子操作更新计数
         Knowledge.objects.filter(pk=self.pk).update(view_count=F('view_count') + 1)
         # 刷新对象以获取最新值
@@ -279,13 +293,11 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def content_preview(self):
         """
         生成内容预览（用于列表显示）
-        优先使用 summary 字段，如果没有则自动提取：
+        从文章内容中自动提取并清洗 HTML 标签：
         - 应急类知识：从结构化字段中提取关键信息
         - 其他类型知识：从 content 字段中提取前150个字符
+        注意：不使用 summary 字段，summary 仅用于知识详情页
         """
-        # 优先使用手动填写的概要
-        if self.summary and self.summary.strip():
-            return self.summary.strip()
         if self.knowledge_type == 'EMERGENCY':
             # 应急类知识：优先显示故障场景，如果没有则显示解决方案
             preview_text = self.fault_scenario.strip() or self.solution.strip()
@@ -294,9 +306,13 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         else:
             # 其他类型知识：从 content 字段提取
             preview_text = self.content.strip()
-        # 限制长度并去除换行
+
+        # 清洗 HTML 标签
         if preview_text:
-            preview_text = preview_text.replace('\n', ' ').replace('\r', ' ')
+            preview_text = strip_tags(preview_text)
+            # 去除多余的空白字符和换行
+            preview_text = ' '.join(preview_text.split())
+            # 限制长度
             if len(preview_text) > 150:
                 return preview_text[:150] + '...'
             return preview_text
@@ -304,10 +320,10 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     @property
     def table_of_contents(self):
         """
-        从 Markdown 内容中提取目录结构（用于卡片预览显示）
+        从 HTML 内容中提取目录结构（用于卡片预览显示）
         返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
         对于应急类知识：返回结构化字段的标题
-        对于其他类型知识：从 Markdown 内容中解析标题
+        对于其他类型知识：从 HTML 内容中解析 h1/h2/h3 标签
         """
         import re
         if self.knowledge_type == 'EMERGENCY':
@@ -325,18 +341,17 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 if value and value.strip():
                     toc.append({'level': 1, 'text': label})
             return toc
-        # 其他类型知识：从 Markdown 解析标题
+        # 其他类型知识：从 HTML 解析标题
         if not self.content:
             return []
         toc = []
-        lines = self.content.split('\n')
-        for line in lines:
-            # 匹配 Markdown 标题 (# ## ### 等)
-            match = re.match(r'^(#{1,6})\s+(.+)$', line.strip())
-            if match:
-                level = len(match.group(1))
-                text = match.group(2).strip()
-                # 只提取前3级标题，限制数量
-                if level <= 3 and len(toc) < 10:
-                    toc.append({'level': level, 'text': text})
+        # 匹配 HTML 标题标签 <h1>~<h3>
+        pattern = r'<h([1-3])[^>]*>(.*?)</h\1>'
+        matches = re.findall(pattern, self.content, re.IGNORECASE | re.DOTALL)
+        for level_str, text in matches:
+            level = int(level_str)
+            # 清除 HTML 标签，只保留纯文本
+            clean_text = strip_tags(text).strip()
+            if clean_text and len(toc) < 10:
+                toc.append({'level': level, 'text': clean_text})
         return toc

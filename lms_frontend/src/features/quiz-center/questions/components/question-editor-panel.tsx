@@ -1,19 +1,11 @@
-"use client"
-
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-import {
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-} from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { QUESTION_TYPE_LABELS } from '@/features/quiz-center/questions/constants';
 import type { QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
 
@@ -106,11 +98,11 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
             }}
             disabled={readOnly}
           />
-          <p className="text-[10px] text-gray-400 mt-1 italic">* 点击选项前的图标即可直接设置该项为正确答案</p>
+          <p className="text-[10px] text-text-muted mt-1 italic">* 点击选项前的图标即可直接设置该项为正确答案</p>
         </div>
       ) : (
-        <div className="space-y-2 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-          <Label className="text-emerald-700">标准正确答案</Label>
+        <div className="space-y-2 p-3 bg-secondary-50/50 rounded-xl border border-secondary-100">
+          <Label className="text-secondary-700">标准正确答案</Label>
           <AnswerInput
             questionType={questionForm.question_type as QuestionType}
             options={questionForm.options || []}
@@ -156,7 +148,7 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
       {showActions && (
         <div className="flex gap-2 pt-4">
           <Button variant="outline" className="flex-1" onClick={onCancel}>放弃编辑</Button>
-          <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={onSave}>
+          <Button className="flex-1 bg-secondary-600 hover:bg-secondary-700" onClick={onSave}>
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : '完成并同步'}
           </Button>
         </div>

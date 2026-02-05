@@ -6,16 +6,23 @@ Implements:
 - Role switching
 - Inactive user login rejection
 """
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from django.contrib.auth import authenticate
 from django.db.models import QuerySet
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-from core.exceptions import BusinessError, ErrorCodes
-from core.base_service import BaseService
-from apps.users.models import User, Role
+
+from apps.activity_logs.services import ActivityLogService
+from apps.users.models import Role, User
 from apps.users.serializers import UserInfoSerializer
+from core.base_service import BaseService
+from core.decorators import log_user_action
+from core.exceptions import BusinessError, ErrorCodes
 
 
 class AuthenticationService(BaseService):
@@ -54,21 +61,58 @@ class AuthenticationService(BaseService):
         # returns None for both invalid credentials AND inactive users
         user_obj = self._get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
+            # 记录登录失败日志
+            try:
+                ActivityLogService.log_user_action(
+                    user=user_obj,
+                    action='login_failed',
+                    description=f'用户 {employee_id} 尝试登录，但账号已被停用',
+                    status='failed'
+                )
+            except Exception:
+                pass  # 日志记录失败不影响主流程
+
             raise BusinessError(
                 code=ErrorCodes.AUTH_USER_INACTIVE,
                 message='用户账号已被停用'
             )
+
         # Authenticate user using employee_id as username
         user = authenticate(username=employee_id, password=password)
         if user is None:
+            # 记录登录失败日志（如果用户存在）
+            if user_obj:
+                try:
+                    ActivityLogService.log_user_action(
+                        user=user_obj,
+                        action='login_failed',
+                        description=f'用户 {employee_id} 登录失败：密码错误',
+                        status='failed'
+                    )
+                except Exception:
+                    pass
+
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
                 message='工号或密码错误'
             )
+
         # Update last_login timestamp
         from django.utils import timezone
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
+
+        # 记录登录成功日志
+        try:
+            ActivityLogService.log_user_action(
+                user=user,
+                action='login',
+                description=f'用户 {employee_id} 登录成功',
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         # Generate JWT tokens
         tokens = self._generate_tokens(user)
         # Get available roles (Property 2)
@@ -102,6 +146,18 @@ class AuthenticationService(BaseService):
                 # Token might already be blacklisted or invalid
                 # These are expected errors during logout, so we silently ignore them
                 pass
+
+        # 记录登出日志
+        try:
+            ActivityLogService.log_user_action(
+                user=user,
+                action='logout',
+                description=f'用户 {user.employee_id} 登出系统',
+                status='success'
+            )
+        except Exception:
+            pass  # 日志记录失败不影响主流程
+
         return True
 
     def refresh_token(self, refresh_token: str) -> Dict[str, str]:
@@ -140,6 +196,7 @@ class AuthenticationService(BaseService):
                 message='无效的刷新令牌'
             )
 
+    @log_user_action('switch_role', '切换角色为 {role_code}')
     def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
         """
         Switch user's current active role.

@@ -11,6 +11,8 @@ import {
   Loader2,
   ListOrdered,
   X,
+  Upload,
+  ExternalLink,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -20,13 +22,15 @@ import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/ui/empty-state';
 
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
+import { useParseDocument } from '../api/parse-document';
 import { EMERGENCY_TABS, parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
-import { ROUTES } from '@/config/routes';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
 
 const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ default: m.RichTextEditor })));
@@ -39,6 +43,7 @@ const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ defa
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { roleNavigate, getRolePath } = useRoleNavigate();
   const isEdit = !!id;
 
   // API Hooks
@@ -47,6 +52,7 @@ export const KnowledgeForm: React.FC = () => {
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const createTag = useCreateTag();
+  const parseDocument = useParseDocument();
 
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
 
@@ -56,6 +62,7 @@ export const KnowledgeForm: React.FC = () => {
   const [lineTypeId, setLineTypeId] = useState<number | undefined>();
   const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
   const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
+  const [sourceUrl, setSourceUrl] = useState('');
 
   const { data: systemTags = [] } = useSystemTags();
   const { data: operationTags = [] } = useOperationTags();
@@ -86,6 +93,7 @@ export const KnowledgeForm: React.FC = () => {
       setSolution(knowledgeDetail.solution || '');
       setVerificationPlan(knowledgeDetail.verification_plan || '');
       setRecoveryPlan(knowledgeDetail.recovery_plan || '');
+      setSourceUrl(knowledgeDetail.source_url || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, knowledgeDetail]);
@@ -101,10 +109,27 @@ export const KnowledgeForm: React.FC = () => {
   }, [isEdit, lineTypeTags, lineTypeId]);
 
   const handleClose = useCallback(() => {
-    navigate(ROUTES.ADMIN_KNOWLEDGE);
-  }, [navigate]);
+    roleNavigate('knowledge');
+  }, [roleNavigate]);
 
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    try {
+      const result = await parseDocument.mutateAsync(file);
+      if (!title.trim()) {
+        setTitle(result.suggested_title);
+      }
+      setContent(result.content);
+      toast.success('文档解析成功');
+    } catch (error) {
+      showApiError(error, '文档解析失败');
+    }
+
+    // 清空 input 以便重复上传同一文件
+    e.target.value = '';
+  }, [parseDocument, title]);
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -139,6 +164,7 @@ export const KnowledgeForm: React.FC = () => {
       system_tag_ids: systemTagIds,
       operation_tag_ids: operationTagIds,
       summary,
+      source_url: sourceUrl || undefined,
     };
 
     if (knowledgeType === 'EMERGENCY') {
@@ -160,7 +186,7 @@ export const KnowledgeForm: React.FC = () => {
     return requestData;
   }, [
     title, knowledgeType, lineTypeId, systemTagIds, operationTagIds,
-    content, summary, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
+    content, summary, sourceUrl, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
   ]);
 
   const handleSave = useCallback(async () => {
@@ -177,17 +203,17 @@ export const KnowledgeForm: React.FC = () => {
         const result = await updateKnowledge.mutateAsync({ id: currentId, data: requestData });
         toast.success('保存成功');
         if (result?.id && result.id !== currentId) {
-          navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
+          navigate(getRolePath(`knowledge/${result.id}/edit`), { replace: true });
         }
       } else {
         const result = await createKnowledge.mutateAsync(requestData as KnowledgeCreateRequest);
         toast.success('创建成功');
-        navigate(`${ROUTES.ADMIN_KNOWLEDGE}/${result.id}/edit`, { replace: true });
+        navigate(getRolePath(`knowledge/${result.id}/edit`), { replace: true });
       }
     } catch (error) {
       showApiError(error, isEdit ? '保存失败' : '创建失败');
     }
-  }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate]);
+  }, [validateForm, buildRequestData, isEdit, id, updateKnowledge, createKnowledge, navigate, getRolePath]);
 
   const isSubmitting = createKnowledge.isPending || updateKnowledge.isPending;
 
@@ -213,26 +239,26 @@ export const KnowledgeForm: React.FC = () => {
 
   if (isEdit && detailLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gray-100 z-[1000]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="fixed inset-0 flex items-center justify-center bg-muted z-[1000]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height)-1px)] -m-6 bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height)-1px)] -m-6 bg-muted overflow-hidden">
       {/* 顶部导航栏 - Unified Style */}
-      <div className="flex items-center h-16 px-6 bg-white border-b border-gray-200 shrink-0 gap-4">
+      <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
         <div className="flex items-center gap-4 shrink-0">
           <Button
             variant="ghost"
             onClick={handleClose}
-            className="flex items-center gap-2.5 px-3 h-10 text-gray-600 hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
+            className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
           >
             <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             <span className="text-sm font-semibold">返回列表</span>
           </Button>
-          <div className="w-px h-5 bg-gray-200" />
+          <div className="w-px h-5 bg-muted" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -241,17 +267,37 @@ export const KnowledgeForm: React.FC = () => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入知识标题..."
             className={cn(
-              "text-lg font-semibold h-10 border border-gray-200 bg-white rounded-lg px-4 shadow-sm",
-              "hover:border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
+              "text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4 hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
               "transition-all duration-200",
-              errors.title && "border-red-300 placeholder:text-red-300 focus:border-red-500 focus:ring-red-100"
+              errors.title && "border-destructive-300 placeholder:text-destructive-300 focus:border-destructive-500 focus:ring-destructive-100"
             )}
           />
         </div>
 
+        {/* 原始文档链接 */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Input
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="原始文档链接..."
+            className="w-48 h-10 text-sm"
+          />
+          {sourceUrl && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={() => window.open(sourceUrl, '_blank')}
+              title="打开原始文档"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+
         <div className="flex items-center gap-3 shrink-0">
           {isEdit && knowledgeDetail && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 mr-2">
+            <div className="flex items-center gap-2 text-xs text-text-muted mr-2">
               <span>{knowledgeDetail.updated_by_name || knowledgeDetail.created_by_name}</span>
               <span>·</span>
               <span>{new Date(knowledgeDetail.updated_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -259,8 +305,8 @@ export const KnowledgeForm: React.FC = () => {
           )}
           <Badge
             className={`flex items-center gap-1.5 px-3 py-1 font-semibold rounded-full text-[10px] uppercase border ${statusInfo.isDraft
-              ? 'bg-amber-50 text-amber-600 border-amber-200'
-              : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              ? 'bg-warning-50 text-warning-600 border-warning-200'
+              : 'bg-secondary-50 text-secondary-600 border-secondary-200'
               }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -287,7 +333,7 @@ export const KnowledgeForm: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* 左侧目录 */}
         <div className={cn(
-          "flex flex-col border-r border-gray-200 bg-white transition-all duration-300",
+          "flex flex-col border-r border-border bg-background transition-all duration-300",
           outlineCollapsed ? "w-14" : "w-64"
         )}>
           {outlineCollapsed ? (
@@ -303,7 +349,7 @@ export const KnowledgeForm: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 text-sm font-semibold text-gray-900 shrink-0">
+              <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
                 <div className="flex items-center gap-2">
                   <ListOrdered className="w-5 h-5 text-primary-500" />
                   内容大纲
@@ -311,7 +357,7 @@ export const KnowledgeForm: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-gray-400 hover:text-primary-500"
+                  className="h-8 w-8 text-text-muted hover:text-primary-500"
                   onClick={() => setOutlineCollapsed(true)}
                 >
                   <PanelLeftClose className="w-4 h-4" />
@@ -328,7 +374,7 @@ export const KnowledgeForm: React.FC = () => {
                           key={outlineKey}
                           className={cn(
                             "group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all",
-                            item.level === 1 ? 'font-semibold text-gray-900 bg-gray-50' : 'text-gray-500 hover:bg-gray-50',
+                            item.level === 1 ? 'font-semibold text-foreground bg-muted' : 'text-text-muted hover:bg-muted',
                             knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id && 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
                           )}
                           style={{ paddingLeft: `${paddingLeft}px` }}
@@ -349,12 +395,13 @@ export const KnowledgeForm: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-60 px-6 text-center text-gray-400">
-                    <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center mb-4">
-                      <FileText className="w-8 h-8 opacity-20" />
-                    </div>
-                    <p className="text-xs font-semibold text-gray-500">暂无大纲数据</p>
-                    <p className="text-[10px] mt-2 opacity-60">添加标题后将自动在此生成目录</p>
+                  <div className="h-60">
+                    <EmptyState
+                      icon={FileText}
+                      description="暂无大纲数据"
+                      subDescription="添加标题后将自动在此生成目录"
+                      iconSize="md"
+                    />
                   </div>
                 )}
               </div>
@@ -363,7 +410,32 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 中间编辑区 */}
-        <div className="flex-1 flex flex-col bg-white min-w-0">
+        <div className="flex-1 flex flex-col bg-background min-w-0">
+          {/* 文档上传区域 - 仅在非应急类型时显示 */}
+          {knowledgeType === 'OTHER' && (
+            <div className="px-8 py-4 border-b border-border">
+              <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg cursor-pointer hover:bg-primary-100 transition-colors">
+                <Upload className="w-4 h-4" />
+                <span className="text-sm font-medium">上传文档解析</span>
+                <input
+                  type="file"
+                  accept=".docx,.pptx,.pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={parseDocument.isPending}
+                />
+              </label>
+              <span className="ml-3 text-xs text-text-muted">
+                支持 .docx, .pptx, .pdf 格式
+              </span>
+              {parseDocument.isPending && (
+                <span className="ml-3 text-xs text-primary-600">
+                  <Loader2 className="w-3 h-3 inline animate-spin mr-1" />
+                  解析中...
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto">
             <div className="w-full h-full">
               {knowledgeType === 'EMERGENCY' ? (
@@ -374,12 +446,12 @@ export const KnowledgeForm: React.FC = () => {
                     return (
                       <div key={tab.key} className="flex flex-col h-full animate-in fade-in duration-300">
                         {/* Tab Header */}
-                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-gray-50">
+                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-border">
                           <div className="flex items-center gap-3">
                             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-50 text-primary-600 text-xs font-bold ring-1 ring-primary-100">
                               {index + 1}
                             </span>
-                            <h2 className="text-base font-bold text-gray-900 tracking-tight">{tab.label}</h2>
+                            <h2 className="text-base font-bold text-foreground tracking-tight">{tab.label}</h2>
                           </div>
                         </div>
 
@@ -402,7 +474,7 @@ export const KnowledgeForm: React.FC = () => {
                                 else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
                               }}
                               placeholder={`在此输入${tab.label}详情...`}
-                              className="border-none shadow-none ring-0 w-full h-full"
+                              className="border-none  ring-0 w-full h-full"
                               contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
                             />
                           </Suspense>
@@ -419,14 +491,14 @@ export const KnowledgeForm: React.FC = () => {
                         value={content}
                         onChange={setContent}
                         placeholder="请输入知识正文..."
-                        className="border-none shadow-none ring-0 h-full min-h-[calc(100vh-160px)]"
+                        className="border-none  ring-0 h-full min-h-[calc(100vh-160px)]"
                         contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
                       />
                     </Suspense>
                   </div>
                   {errors.content && (
-                    <div className="m-6 p-4 bg-red-50 border border-red-100 rounded-lg text-xs font-semibold text-red-600 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <div className="m-6 p-4 bg-destructive-50 border border-destructive-100 rounded-lg text-xs font-semibold text-destructive-600 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-destructive-500 animate-pulse" />
                       {errors.content}
                     </div>
                   )}
@@ -437,9 +509,9 @@ export const KnowledgeForm: React.FC = () => {
         </div>
 
         {/* 右侧配置 */}
-        <div className="w-[380px] flex flex-col bg-white border-l border-gray-200 shrink-0 overflow-y-auto">
-          <div className="flex items-center h-16 px-8 bg-white border-b border-gray-100 shrink-0">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-3">
+        <div className="w-[380px] flex flex-col bg-background border-l border-border shrink-0 overflow-y-auto">
+          <div className="flex items-center h-16 px-8 bg-background border-b border-border shrink-0">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-3">
               <Settings className="w-5 h-5 text-primary-500" />
               页面配置
             </h2>
@@ -447,13 +519,13 @@ export const KnowledgeForm: React.FC = () => {
 
           <div className="p-6 space-y-6">
             {/* 基础定义 */}
-            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
+              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 基础配置
               </h3>
               <div className="space-y-2.5">
-                <Label className="text-xs font-semibold text-gray-700 ml-1">知识分类</Label>
+                <Label className="text-xs font-semibold text-foreground ml-1">知识分类</Label>
                 <SegmentedControl
                   options={[
                     { label: '标准类', value: 'OTHER' },
@@ -469,9 +541,9 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 内容摘要 */}
-            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
+              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-secondary-500" />
                 内容摘要
               </h3>
               <div className="space-y-4">
@@ -485,14 +557,14 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 分类归属 */}
-            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
+              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 分类归属
               </h3>
               <div className="space-y-4">
                 <div className="space-y-2.5">
-                  <Label className="text-xs font-semibold text-gray-700 ml-1">所属条线</Label>
+                  <Label className="text-xs font-semibold text-foreground ml-1">所属条线</Label>
                   <SearchableSelect
                     items={lineTypeTags}
                     value={lineTypeId}
@@ -511,22 +583,22 @@ export const KnowledgeForm: React.FC = () => {
             </section>
 
             {/* 精细标签 */}
-            <section className="p-6 bg-gray-50 rounded-2xl border border-gray-100 space-y-5">
-              <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
+              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-warning-500" />
                 精细标签
               </h3>
               <div className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between ml-1">
-                    <Label className="text-xs font-semibold text-gray-700">系统标签</Label>
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
+                    <Label className="text-xs font-semibold text-foreground">系统标签</Label>
+                    <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {systemTagIds.map(id => {
                       const tag = systemTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-blue-50 text-blue-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setSystemTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>
@@ -549,14 +621,14 @@ export const KnowledgeForm: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between ml-1">
-                    <Label className="text-xs font-semibold text-gray-700">操作标签</Label>
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
+                    <Label className="text-xs font-semibold text-foreground">操作标签</Label>
+                    <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {operationTagIds.map(id => {
                       const tag = operationTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none shadow-sm bg-emerald-50 text-emerald-600 hover:bg-red-50 hover:text-red-500 transition-all group">
+                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-secondary-50 text-secondary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setOperationTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>
@@ -579,16 +651,16 @@ export const KnowledgeForm: React.FC = () => {
               </div>
             </section>
 
-            <div className="pt-8 border-t border-gray-100">
-              <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+            <div className="pt-8 border-t border-border">
+              <div className="flex items-center justify-between text-[10px] font-bold text-text-muted uppercase tracking-widest px-1">
                 <span>当前版本</span>
                 <span className="text-primary-500">PUBLISHED</span>
               </div>
-              <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 flex gap-3">
+              <div className="mt-4 p-4 bg-muted rounded-xl border border-dashed border-border flex gap-3">
                 <div className="w-5 h-5 flex-shrink-0 bg-primary-100 rounded-md flex items-center justify-center">
                   <Settings className="w-3 h-3 text-primary-600" />
                 </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed font-medium">
+                <p className="text-[10px] text-text-muted leading-relaxed font-medium">
                   {statusInfo.description}
                 </p>
               </div>

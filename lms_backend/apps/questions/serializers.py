@@ -2,8 +2,12 @@
 Serializers for question management.
 """
 from rest_framework import serializers
+
 from apps.knowledge.serializers import TagSimpleSerializer
+
 from .models import Question
+
+
 class QuestionListSerializer(serializers.ModelSerializer):
     """
     Serializer for question list view.

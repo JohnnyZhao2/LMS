@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type { KnowledgeListItem, KnowledgeDetail, KnowledgeType, PaginatedResponse } from '@/types/api';
 
 interface GetKnowledgeListParams {
@@ -14,10 +15,21 @@ interface GetKnowledgeListParams {
 }
 
 export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
+  const currentRole = useCurrentRole();
   const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search, page = 1, pageSize = 20 } = params;
 
   return useQuery({
-    queryKey: ['knowledge-list', knowledge_type, line_type_id, system_tag_id, operation_tag_id, search, page, pageSize],
+    queryKey: [
+      'knowledge-list',
+      currentRole ?? 'UNKNOWN',
+      knowledge_type,
+      line_type_id,
+      system_tag_id,
+      operation_tag_id,
+      search,
+      page,
+      pageSize,
+    ],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
@@ -30,13 +42,15 @@ export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
     },
+    enabled: currentRole !== null,
   });
 };
 
 export const useKnowledgeDetail = (id: number) => {
+  const currentRole = useCurrentRole();
   return useQuery({
-    queryKey: ['knowledge-detail', id],
+    queryKey: ['knowledge-detail', currentRole ?? 'UNKNOWN', id],
     queryFn: () => apiClient.get<KnowledgeDetail>(`/knowledge/${id}/`),
-    enabled: !!id,
+    enabled: !!id && currentRole !== null,
   });
 };

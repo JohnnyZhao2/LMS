@@ -8,6 +8,7 @@ import {
   Loader2,
   ShieldCheck,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * 状态徽章类型
@@ -27,52 +28,16 @@ export type StatusType =
  * 状态徽章样式配置
  * 基于 design.json statusBadges 规范
  */
-const statusStyles: Record<StatusType, { bg: string; color: string; border: string }> = {
-  success: {
-    bg: 'var(--color-success-50)',
-    color: 'var(--color-success-500)',
-    border: '1px solid var(--color-success-500)',
-  },
-  warning: {
-    bg: 'var(--color-warning-50)',
-    color: '#8B7000',
-    border: 'none',
-  },
-  error: {
-    bg: 'var(--color-error-50)',
-    color: 'var(--color-error-500)',
-    border: '1px solid var(--color-error-500)',
-  },
-  info: {
-    bg: 'var(--color-primary-50)',
-    color: 'var(--color-primary-500)',
-    border: '1px solid var(--color-primary-500)',
-  },
-  pending: {
-    bg: 'var(--color-warning-50)',
-    color: '#8B7000',
-    border: 'none',
-  },
-  open: {
-    bg: '#FFF4ED',
-    color: 'var(--color-orange-500)',
-    border: '1px solid var(--color-orange-500)',
-  },
-  closed: {
-    bg: 'var(--color-error-50)',
-    color: 'var(--color-error-500)',
-    border: '1px solid var(--color-error-500)',
-  },
-  processing: {
-    bg: 'var(--color-primary-50)',
-    color: 'var(--color-primary-500)',
-    border: '1px solid var(--color-primary-500)',
-  },
-  default: {
-    bg: 'var(--color-gray-100)',
-    color: 'var(--color-gray-700)',
-    border: 'none',
-  },
+const statusStyles: Record<StatusType, string> = {
+  success: 'bg-secondary-50 text-secondary border border-secondary',
+  warning: 'bg-warning-50 text-warning-800',
+  error: 'bg-destructive-50 text-destructive border border-destructive',
+  info: 'bg-primary-50 text-primary border border-primary',
+  pending: 'bg-warning-50 text-warning-800',
+  open: 'bg-warning-50 text-warning-500 border border-warning-500',
+  closed: 'bg-destructive-50 text-destructive border border-destructive',
+  processing: 'bg-primary-50 text-primary border border-primary',
+  default: 'bg-muted text-foreground',
 };
 
 /**
@@ -117,7 +82,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   className = '',
   style,
 }) => {
-  const styles = statusStyles[status] || statusStyles.default;
+  const statusClassName = statusStyles[status] || statusStyles.default;
   const icon = statusIcons[status];
 
   const sizeStyles = {
@@ -139,7 +104,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   return (
     <span
-      className={className}
+      className={cn(
+        statusClassName,
+        className
+      )}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -149,9 +117,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         fontWeight: 600,
         lineHeight: 1,
         borderRadius: 'var(--radius-md)',
-        background: styles.bg,
-        color: styles.color,
-        border: styles.border,
         whiteSpace: 'nowrap',
         ...style,
       }}
@@ -165,4 +130,3 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 };
 
 export default StatusBadge;
-

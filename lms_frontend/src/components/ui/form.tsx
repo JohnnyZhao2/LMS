@@ -1,5 +1,4 @@
-"use client"
-
+/* eslint-disable react-refresh/only-export-components */
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -109,7 +108,7 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={cn(error && "text-red-600", className)}
+      className={cn(error && "text-destructive-600", className)}
       htmlFor={formItemId}
       {...props}
     />
@@ -156,7 +155,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-xs font-normal text-gray-500", className)}
+      className={cn("text-xs font-normal text-text-muted", className)}
       {...props}
     />
   )
@@ -186,7 +185,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-xs font-medium text-red-600", className)}
+      className={cn("text-xs font-medium text-destructive-600", className)}
       {...props}
     >
       {body}

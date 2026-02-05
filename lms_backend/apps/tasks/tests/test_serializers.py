@@ -1,10 +1,11 @@
 import pytest
+
 from apps.tasks.serializers import TaskDetailSerializer
 from apps.tasks.tests.factories import (
-    TaskFactory,
-    TaskAssignmentFactory,
-    TaskKnowledgeFactory,
     KnowledgeLearningProgressFactory,
+    TaskAssignmentFactory,
+    TaskFactory,
+    TaskKnowledgeFactory,
 )
 
 

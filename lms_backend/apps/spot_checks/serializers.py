@@ -2,10 +2,14 @@
 Serializers for spot check management.
 Properties: 35, 36
 """
-from rest_framework import serializers
 from django.utils import timezone
+from rest_framework import serializers
+
 from apps.users.models import User
+
 from .models import SpotCheck
+
+
 class SpotCheckListSerializer(serializers.ModelSerializer):
     """
     Serializer for spot check list view.

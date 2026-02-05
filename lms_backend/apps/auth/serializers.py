@@ -2,6 +2,7 @@
 Serializers for authentication.
 """
 from rest_framework import serializers
+
 from apps.users.serializers import RoleSerializer, UserInfoSerializer
 
 

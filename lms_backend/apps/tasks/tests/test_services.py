@@ -1,11 +1,13 @@
 import pytest
-from apps.tasks.services import TaskService
+
+from apps.tasks.models import Task
+from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import (
-    TaskFactory,
-    TaskAssignmentFactory,
-    TaskKnowledgeFactory,
     KnowledgeLearningProgressFactory,
     SubmissionFactory,
+    TaskAssignmentFactory,
+    TaskFactory,
+    TaskKnowledgeFactory,
     UserFactory,
 )
 from core.exceptions import BusinessError, ErrorCodes
@@ -133,6 +135,7 @@ def test_update_task_allows_assignee_addition_with_progress():
 
     new_user = UserFactory()
     service = TaskService()
+    service._user = task.created_by
 
     # Should succeed - adding new assignee
     result = service.update_task(
@@ -157,6 +160,7 @@ def test_update_task_allows_basic_fields_with_progress():
     )
 
     service = TaskService()
+    service._user = task.created_by
 
     # Should succeed - editing basic fields
     result = service.update_task(
@@ -168,3 +172,105 @@ def test_update_task_allows_basic_fields_with_progress():
 
     assert result.title == "New Title"
     assert result.description == "New Description"
+
+
+@pytest.mark.django_db
+def test_get_task_queryset_for_mentor_filters_by_created_role(monkeypatch):
+    """MENTOR 角色下只能看到自己以 MENTOR 角色创建的任务"""
+    user = UserFactory()
+    mentor_task = TaskFactory(created_by=user, created_role='MENTOR')
+    TaskFactory(created_by=user, created_role='ADMIN')
+    TaskFactory(created_role='MENTOR')
+
+    service = TaskService()
+    service._user = user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'MENTOR')
+
+    task_ids = set(service.get_task_queryset_for_user().values_list('id', flat=True))
+    assert mentor_task.id in task_ids
+    assert len(task_ids) == 1
+
+
+@pytest.mark.django_db
+def test_check_task_read_permission_denies_cross_role_task(monkeypatch):
+    """同一用户跨角色访问自己创建的任务应被拒绝"""
+    user = UserFactory()
+    admin_task = TaskFactory(created_by=user, created_role='ADMIN')
+    service = TaskService()
+    service._user = user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'MENTOR')
+
+    with pytest.raises(BusinessError) as exc:
+        service.check_task_read_permission(admin_task)
+
+    assert exc.value.code == ErrorCodes.PERMISSION_DENIED
+
+
+@pytest.mark.django_db
+def test_admin_creator_side_filter_management(monkeypatch):
+    """ADMIN 可按 creator_side=management 过滤管理端任务"""
+    admin_user = UserFactory()
+    management_task = TaskFactory(created_role='ADMIN')
+    TaskFactory(created_role='MENTOR')
+    non_management_task = TaskFactory(created_role='STUDENT')
+
+    service = TaskService()
+    service._user = admin_user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
+
+    queryset = service.get_task_queryset_for_user()
+    filtered = service.filter_task_queryset_by_creator_side(queryset, 'management')
+    filtered_ids = set(filtered.values_list('id', flat=True))
+
+    assert management_task.id in filtered_ids
+    assert non_management_task.id not in filtered_ids
+
+
+@pytest.mark.django_db
+def test_admin_creator_side_filter_non_management(monkeypatch):
+    """ADMIN 可按 creator_side=non_management 过滤非管理端任务"""
+    admin_user = UserFactory()
+    management_task = TaskFactory(created_role='ADMIN')
+    non_management_task = TaskFactory(created_role='STUDENT')
+
+    service = TaskService()
+    service._user = admin_user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
+
+    queryset = service.get_task_queryset_for_user()
+    filtered = service.filter_task_queryset_by_creator_side(queryset, 'non_management')
+    filtered_ids = set(filtered.values_list('id', flat=True))
+
+    assert management_task.id not in filtered_ids
+    assert non_management_task.id in filtered_ids
+
+
+@pytest.mark.django_db
+def test_admin_creator_side_filter_non_management_includes_mentor(monkeypatch):
+    """非管理端应包含 MENTOR 角色创建的任务"""
+    admin_user = UserFactory()
+    mentor_task = TaskFactory(created_role='MENTOR')
+
+    service = TaskService()
+    service._user = admin_user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
+
+    queryset = service.get_task_queryset_for_user()
+    filtered = service.filter_task_queryset_by_creator_side(queryset, 'non_management')
+    filtered_ids = set(filtered.values_list('id', flat=True))
+
+    assert mentor_task.id in filtered_ids
+
+
+@pytest.mark.django_db
+def test_admin_creator_side_filter_invalid_value_raises(monkeypatch):
+    """ADMIN 传非法 creator_side 参数时抛 INVALID_INPUT"""
+    admin_user = UserFactory()
+    service = TaskService()
+    service._user = admin_user
+    monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
+
+    with pytest.raises(BusinessError) as exc:
+        service.filter_task_queryset_by_creator_side(Task.objects.all(), 'invalid')
+
+    assert exc.value.code == ErrorCodes.INVALID_INPUT

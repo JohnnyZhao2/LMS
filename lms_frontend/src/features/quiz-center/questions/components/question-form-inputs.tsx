@@ -90,20 +90,20 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
       {value.map((opt, index) => (
         <div
           key={index}
-          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-green-200 bg-green-50/50' : 'border-gray-100 bg-gray-50/50'
+          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-secondary-200 bg-secondary-50/50' : 'border-border bg-muted/50'
             }`}
         >
           {/* 选择控件 */}
           <div className="flex-shrink-0 flex items-center justify-center w-8">
             {questionType === 'SINGLE_CHOICE' ? (
               <RadioGroup value={isSelected(opt.key) ? opt.key : ''} onValueChange={() => handleToggleAnswer(opt.key)}>
-                <RadioGroupItem value={opt.key} className="border-gray-300" disabled={disabled} />
+                <RadioGroupItem value={opt.key} className="border-border" disabled={disabled} />
               </RadioGroup>
             ) : (
               <Checkbox
                 checked={isSelected(opt.key)}
                 onCheckedChange={() => handleToggleAnswer(opt.key)}
-                className="border-gray-300"
+                className="border-border"
                 disabled={disabled}
               />
             )}
@@ -113,14 +113,14 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
             value={opt.key}
             onChange={(e) => handleChange(index, 'key', e.target.value)}
             placeholder="选项"
-            className="w-12 h-8 text-center font-bold bg-white"
+            className="w-12 h-8 text-center font-bold bg-background"
             readOnly={disabled}
           />
           <Input
             value={opt.value}
             onChange={(e) => handleChange(index, 'value', e.target.value)}
             placeholder="输入选项内容..."
-            className="flex-1 h-8 bg-white border-transparent focus:border-gray-200"
+            className="flex-1 h-8 bg-background border-transparent focus:border-border"
             readOnly={disabled}
           />
           {!disabled && (
@@ -129,7 +129,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => handleRemove(index)}
-              className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-text-muted hover:text-destructive-500 hover:bg-destructive-50"
             >
               <X className="w-4 h-4" />
             </Button>

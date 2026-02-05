@@ -22,6 +22,7 @@ interface UpdateUserRequest {
   username?: string;
   employee_id?: string;
   department_id?: number | null;
+  role_codes?: RoleCode[];
 }
 
 export const useCreateUser = () => {
@@ -57,6 +58,15 @@ export const useDeactivateUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/deactivate/`),
+    onSuccess: () => invalidateUserQueries(queryClient, true),
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete<void>(`/users/${id}/`),
     onSuccess: () => invalidateUserQueries(queryClient, true),
   });
 };

@@ -4,9 +4,12 @@ Implements:
 - SpotCheck: 抽查记录模型
 Properties: 35, 36
 """
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
+
 from core.mixins import TimestampMixin
+
+
 class SpotCheck(TimestampMixin, models.Model):
     """
     抽查记录模型

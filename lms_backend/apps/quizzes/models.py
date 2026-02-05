@@ -5,9 +5,18 @@ Implements:
 - QuizQuestion: 试卷题目关联模型
 """
 import uuid
+
 from django.db import models
 from django.db.models import Q
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
+
+from core.mixins import (
+    CreatorMixin,
+    SoftDeleteMixin,
+    TimestampMixin,
+    VersionedResourceMixin,
+)
+
+
 class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     试卷模型
@@ -137,6 +146,22 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         return self.quiz_questions.filter(
             question__question_type='SHORT_ANSWER'
         ).count()
+    @property
+    def question_type_counts(self):
+        """
+        获取题目类型统计
+        Returns:
+            dict: {type: count, ...}
+        """
+        from django.db.models import Count
+        counts = self.quiz_questions.values('question__question_type').annotate(
+            count=Count('id')
+        )
+        return {
+            item['question__question_type']: item['count'] 
+            for item in counts
+        }
+
     def get_ordered_questions(self):
         """
         获取按顺序排列的题目列表

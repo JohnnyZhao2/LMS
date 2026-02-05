@@ -1,9 +1,11 @@
-"use client"
-
 import React from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
-import { Badge, Button, Input, Tooltip } from '@/components/ui';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { AvatarCircle } from '@/components/common/avatar-circle';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { cn } from '@/lib/utils';
 import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';
@@ -28,11 +30,11 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
   onUpgradeQuestion,
 }) => {
   return (
-    <div className="flex-1 flex flex-col bg-gray-50 min-w-0">
-      <div className="flex items-center gap-2 px-6 py-4 text-sm font-semibold text-gray-900 bg-white border-b border-gray-200">
+    <div className="flex-1 flex flex-col bg-muted min-w-0">
+      <div className="flex items-center gap-2 px-6 py-4 text-sm font-semibold text-foreground bg-background border-b border-border">
         <FileText className="w-4 h-4 text-primary-500" />
         试卷内容结构
-        <Badge variant="secondary" className="ml-2 bg-gray-100">{selectedQuestions.length} 道题目</Badge>
+        <Badge variant="secondary" className="ml-2 bg-muted">{selectedQuestions.length} 道题目</Badge>
         {selectedQuestions.length > 0 && onSortQuestions && (
           <Button
             variant="ghost"
@@ -48,15 +50,15 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
 
       <div className="flex-1 overflow-y-auto p-6">
         {selectedQuestions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <LayoutGrid className="w-16 h-16 mb-4 text-gray-300" />
+          <div className="flex flex-col items-center justify-center h-full text-text-muted">
+            <LayoutGrid className="w-16 h-16 mb-4 text-text-muted" />
             <span className="text-base">从左侧题库点击添加到试卷</span>
           </div>
         ) : (
           <div className="relative w-full max-w-[560px] mx-auto pl-12">
             {selectedQuestions.length > 1 && (
               <div
-                className="absolute left-[17px] top-[18px] w-0.5 bg-gray-200"
+                className="absolute left-[17px] top-[18px] w-0.5 bg-muted"
                 style={{ height: `calc(100% - 36px)` }}
               />
             )}
@@ -64,19 +66,16 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
               {selectedQuestions.map((item, idx) => (
                 <div key={item.id} className="relative flex gap-4 animate-fadeInUp">
                   <div className="absolute -left-12 top-0 flex flex-col items-center">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md"
-                      style={{ background: 'var(--color-primary-500)' }}
-                    >
-                      <span className="text-sm font-bold">{idx + 1}</span>
-                    </div>
+                    <AvatarCircle size="md" text={String(idx + 1)} />
                   </div>
-                  <div className={cn(
-                    "flex-1 flex flex-col gap-2 p-4 bg-white border rounded-xl transition-all hover:shadow-md",
-                    item.is_current === false ? "border-amber-300 bg-amber-50/30" : "border-gray-200 hover:border-primary-300"
-                  )}>
+                  <div
+                    className={cn(
+                      "flex-1 flex flex-col gap-2 p-4 bg-background border rounded-xl transition-all",
+                      item.is_current === false ? "border-warning-300 bg-warning-50/30" : "border-border hover:border-primary-300"
+                    )}
+                  >
                     {item.is_current === false && (
-                      <div className="flex items-center gap-2 text-xs text-amber-600 mb-1">
+                      <div className="flex items-center gap-2 text-xs text-warning-600 mb-1">
                         <AlertCircle className="w-3.5 h-3.5" />
                         <span>题目有新版本</span>
                         {onUpgradeQuestion && (
@@ -84,7 +83,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-5 px-2 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                              className="h-5 px-2 text-xs text-warning-700 hover:text-warning-800 hover:bg-warning-100"
                               onClick={() => onUpgradeQuestion(idx, item.resource_uuid)}
                             >
                               <RefreshCw className="w-3 h-3 mr-1" />
@@ -109,9 +108,9 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                             onChange={(e) => onScoreChange(item.id, e.target.value)}
                             className="w-16 h-6 text-xs text-center"
                           />
-                          <span className="text-xs text-gray-400">分</span>
+                          <span className="text-xs text-text-muted">分</span>
                         </div>
-                        <div className="text-sm text-gray-800 line-clamp-3">{item.content}</div>
+                        <div className="text-sm text-foreground line-clamp-3">{item.content}</div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Button variant="ghost" size="icon" className="h-8 w-8" disabled={idx === 0} onClick={() => onMoveQuestion(idx, 'up')}>
@@ -127,7 +126,7 @@ export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
                           variant="ghost"
                           size="icon"
                           title="从试卷移除"
-                          className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                          className="h-8 w-8 text-text-muted hover:text-destructive-500 hover:bg-destructive-50"
                           onClick={() => onRemoveQuestion(idx)}
                         >
                           <X className="w-4 h-4" />

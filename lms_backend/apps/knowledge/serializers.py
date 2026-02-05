@@ -2,7 +2,10 @@
 Serializers for knowledge management.
 """
 from rest_framework import serializers
+
 from .models import Knowledge, Tag
+
+
 class TagSerializer(serializers.ModelSerializer):
     """
     标签序列化器
@@ -40,7 +43,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'title', 'knowledge_type', 'knowledge_type_display',
             'is_current',
             'line_type', 'system_tags', 'operation_tags',
-            'view_count', 'summary', 'content_preview', 'table_of_contents',
+            'view_count', 'summary', 'content_preview', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 class KnowledgeDetailSerializer(serializers.ModelSerializer):
@@ -70,7 +73,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             # 概要
             'summary',
             # 元数据
-            'view_count', 'table_of_contents',
+            'view_count', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]
@@ -105,6 +108,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             'content',
             # 知识概要
             'summary',
+            # 原始文档链接
+            'source_url',
         ]
     def validate(self, attrs):
         """
@@ -164,6 +169,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
             'content',
             # 知识概要
             'summary',
+            # 原始文档链接
+            'source_url',
         ]
     def validate(self, attrs):
         """

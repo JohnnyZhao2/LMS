@@ -53,7 +53,7 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           />
         </div>
         {showInfo && (
-          <span className="ml-2 text-sm text-gray-600">{Math.round(percentage)}%</span>
+          <span className="ml-2 text-sm text-text-muted">{Math.round(percentage)}%</span>
         )}
       </div>
     );

@@ -1,13 +1,19 @@
-import factory
-from factory.django import DjangoModelFactory
-from django.utils import timezone
 from datetime import timedelta
 
-from apps.users.models import User, Department
-from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, KnowledgeLearningProgress
+import factory
+from django.utils import timezone
+from factory.django import DjangoModelFactory
+
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
+from apps.tasks.models import (
+    KnowledgeLearningProgress,
+    Task,
+    TaskAssignment,
+    TaskKnowledge,
+)
+from apps.users.models import Department, User
 
 
 class DepartmentFactory(DjangoModelFactory):
@@ -36,6 +42,7 @@ class TaskFactory(DjangoModelFactory):
     description = 'Test task description'
     deadline = factory.LazyFunction(lambda: timezone.now() + timedelta(days=7))
     created_by = factory.SubFactory(UserFactory)
+    created_role = 'MENTOR'
 
 
 class TaskAssignmentFactory(DjangoModelFactory):

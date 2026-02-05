@@ -12,7 +12,10 @@ Implements:
 """
 from django.db import models
 from django.utils import timezone
-from core.mixins import TimestampMixin, SoftDeleteMixin, CreatorMixin
+
+from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+
+
 class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     """
     任务主模型
@@ -30,6 +33,19 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         blank=True,
         default='',
         verbose_name='任务描述'
+    )
+    created_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('ADMIN', '管理员'),
+            ('MENTOR', '导师'),
+            ('DEPT_MANAGER', '室经理'),
+            ('TEAM_MANAGER', '团队经理'),
+            ('STUDENT', '学员'),
+        ],
+        default='ADMIN',
+        db_index=True,
+        verbose_name='创建时角色'
     )
     # 时间设置
     deadline = models.DateTimeField(
@@ -107,17 +123,7 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def has_knowledge(self):
         """任务是否包含知识文档"""
         return self.knowledge_count > 0
-    @property
-    def pass_rate(self):
-        """
-        获取完成率（百分比）
-        计算公式：已完成数/总分配数
-        """
-        total = self.assignments.count()
-        if total == 0:
-            return None
-        completed = self.assignments.filter(status='COMPLETED').count()
-        return round(completed / total * 100, 1)
+
 
     @property
     def is_effectively_closed(self) -> bool:

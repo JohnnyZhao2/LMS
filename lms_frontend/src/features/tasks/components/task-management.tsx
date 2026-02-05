@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
     Plus,
@@ -12,32 +12,29 @@ import {
     Pencil,
     RefreshCw,
     BarChart3,
+    FileCheck,
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
-import {
-    Button,
-    Input,
-    Tooltip,
-    Skeleton,
-    SegmentedControl,
-} from "@/components/ui"
-import { ConfirmDialog } from "@/components/ui"
-import {
-    DataTable,
-    CellWithIcon,
-    CellTags,
-    CellStatus,
-} from "@/components/ui/data-table"
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SegmentedControl } from '@/components/ui/segmented-control';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
-import { PageHeader, StatCard, ContentPanel } from "@/components/ui"
+import { PageHeader } from '@/components/ui/page-header';
+import { StatCard } from '@/components/ui/stat-card';
+import { ContentPanel } from '@/components/ui/content-panel';
 
 /**
  * 辅助组件: 趋势图标
@@ -50,17 +47,32 @@ const TrendingUp = ({ className }: { className?: string }) => (
 )
 
 export const TaskManagement: React.FC = () => {
-    const navigate = useNavigate()
+    const { roleNavigate } = useRoleNavigate()
     const { user, currentRole } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
+    const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
+    const isAdmin = currentRole === 'ADMIN'
 
-    const { data: tasksData, isLoading, refetch } = useTaskList({ page, pageSize })
+    const { data: tasksData, isLoading, refetch } = useTaskList({
+        page,
+        pageSize,
+        isClosed: statusFilter === 'all' ? undefined : statusFilter === 'closed',
+        creatorSide: isAdmin ? creatorSideFilter : 'all',
+    })
     const deleteTask = useDeleteTask()
+
+    React.useEffect(() => {
+        setPage(1)
+    }, [creatorSideFilter])
+
+    React.useEffect(() => {
+        setPage(1)
+    }, [statusFilter])
 
     // 统计逻辑
     const stats = React.useMemo(() => {
@@ -106,8 +118,8 @@ export const TaskManagement: React.FC = () => {
                 const kCount = row.original.knowledge_count || 0
                 const qCount = row.original.quiz_count || 0
                 const tags = []
-                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bg: '#D1FAE5', color: '#10B981' })
-                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bg: '#DBEAFE', color: '#3B82F6' })
+                if (kCount > 0) tags.push({ key: 'k', label: `${kCount} 知识`, bgClass: 'bg-secondary-100', textClass: 'text-secondary' })
+                if (qCount > 0) tags.push({ key: 'q', label: `${qCount} 测验`, bgClass: 'bg-primary-100', textClass: 'text-primary' })
                 return <CellTags tags={tags} />
             }
         },
@@ -121,36 +133,20 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="w-32 group/progress">
                         <div className="flex items-center justify-between mb-1.5 px-0.5">
-                            <span className="text-[10px] font-bold text-[#111827]">
-                                {percent}% <span className="text-[#9CA3AF] font-medium ml-1">({completed}/{total})</span>
+                            <span className="text-[10px] font-bold text-foreground">
+                                {percent}% <span className="text-text-muted font-medium ml-1">({completed}/{total})</span>
                             </span>
-                            <TrendingUp className="w-3 h-3 text-[#10B981] opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                            <TrendingUp className="w-3 h-3 text-secondary opacity-0 group-hover/progress:opacity-100 transition-opacity" />
                         </div>
-                        <div className="h-1.5 w-full bg-[#F3F4F6] rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-[#3B82F6] rounded-full transition-all duration-1000 ease-out"
-                                style={{
-                                    width: `${percent}%`
-                                }}
+                                className="h-full bg-primary rounded-full"
+                                style={{ width: `${percent}%` }}
                             />
                         </div>
                     </div>
                 )
             }
-        },
-        {
-            header: "及格率",
-            id: "pass_rate",
-            cell: ({ row }) => (
-                <div className="text-center font-bold min-w-[80px]">
-                    <span className={cn(
-                        "text-sm",
-                        (row.original.pass_rate || 0) >= 80 ? "text-[#10B981]" : "text-[#111827]"
-                    )}>
-                        {row.original.pass_rate ? `${row.original.pass_rate.toFixed(0)}%` : '-'}
-                    </span>
-                </div>
-            )
         },
         {
             header: "截止日期",
@@ -162,12 +158,12 @@ export const TaskManagement: React.FC = () => {
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
-                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-[#DC2626]" : "text-[#9CA3AF]")} />
-                            <span className={cn("text-xs font-bold", isUrgent ? "text-[#DC2626]" : "text-[#111827]")}>
+                            <Clock className={cn("h-3.5 w-3.5", isUrgent ? "text-destructive" : "text-text-muted")} />
+                            <span className={cn("text-xs font-bold", isUrgent ? "text-destructive" : "text-foreground")}>
                                 {date.format("MM-DD")}
                             </span>
                         </div>
-                        <span className="text-[10px] text-[#9CA3AF] font-medium">{date.format("HH:mm")}</span>
+                        <span className="text-[10px] text-text-muted font-medium">{date.format("HH:mm")}</span>
                     </div>
                 )
             }
@@ -177,25 +173,14 @@ export const TaskManagement: React.FC = () => {
             id: "updated_at",
             cell: ({ row }) => (
                 <div className="flex flex-col min-w-[100px]">
-                    <span className="text-sm font-bold text-[#111827]">
+                    <span className="text-sm font-bold text-foreground">
                         {dayjs(row.original.updated_at).format("YYYY.MM.DD")}
                     </span>
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">
+                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                         {dayjs(row.original.updated_at).format("HH:mm:ss")}
                     </span>
                 </div>
             )
-        },
-        {
-            header: "状态",
-            id: "status",
-            cell: ({ row }) => (
-                <CellStatus
-                    isActive={!row.original.is_closed}
-                    activeText="进行中"
-                    inactiveText="已结束"
-                />
-            ),
         },
         {
             header: "操作",
@@ -209,23 +194,35 @@ export const TaskManagement: React.FC = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
-                                onClick={() => navigate(`/tasks/${row.original.id}`)}
+                                className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
+                                onClick={() => roleNavigate(`/tasks/${row.original.id}`)}
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
                         </Tooltip>
                         {canPreview && (
-                            <Tooltip title="进度监控">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-md hover:bg-[#D1FAE5] hover:text-[#10B981] text-[#9CA3AF] shadow-none"
-                                    onClick={() => navigate(`/tasks/${row.original.id}/preview`)}
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                </Button>
-                            </Tooltip>
+                            <>
+                                <Tooltip title="进度监控">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-md hover:bg-secondary-100 hover:text-secondary text-text-muted  soft-press"
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview`)}
+                                    >
+                                        <BarChart3 className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                                <Tooltip title="阅卷中心">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted  soft-press"
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=grading`)}
+                                    >
+                                        <FileCheck className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                            </>
                         )}
                         {canEdit && (
                             <>
@@ -233,9 +230,9 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#DBEAFE] hover:text-[#3B82F6] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
                                         disabled={row.original.is_closed}
-                                        onClick={() => navigate(`/tasks/${row.original.id}/edit`)}
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
                                         <Pencil className="h-4 w-4" />
                                     </Button>
@@ -244,7 +241,7 @@ export const TaskManagement: React.FC = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-[#FEE2E2] hover:text-[#DC2626] text-[#9CA3AF] shadow-none"
+                                        className="h-9 w-9 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted  soft-press"
                                         onClick={() => setDeleteId(row.original.id)}
                                     >
                                         <Trash2 className="h-4 w-4" />
@@ -259,31 +256,32 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <div className="space-y-10 animate-fadeIn overflow-x-hidden pb-10">
-            <PageHeader
-                title="任务中心"
-                subtitle="管理与监督"
-                icon={<FileText />}
-                extra={
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            className="h-14 py-3 px-6 rounded-md border-4 border-[#E5E7EB] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] flex items-center gap-2 shadow-none"
-                            onClick={() => refetch()}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            刷新
-                        </Button>
-                        <Button
-                            onClick={() => navigate(`${ROUTES.TASKS}/create`)}
-                            className="h-14 px-8 rounded-md bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] hover:scale-105 transition-all duration-200 shadow-none"
-                        >
-                            <Plus className="mr-2 h-5 w-5" />
-                            发布新任务
-                        </Button>
-                    </div>
-                }
-            />
+        <div className="space-y-10 pb-10">
+            <div>
+                <PageHeader
+                    title="任务中心"
+                    icon={<FileText />}
+                    extra={
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm soft-press"
+                                onClick={() => refetch()}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                刷新
+                            </Button>
+                            <Button
+                                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
+                                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 shadow-sm soft-press"
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                发布新任务
+                            </Button>
+                        </div>
+                    }
+                />
+            </div>
 
             {/* 统计网格 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -291,44 +289,52 @@ export const TaskManagement: React.FC = () => {
                     title="活跃任务"
                     value={stats.active}
                     icon={Timer}
-                    color="#3B82F6"
-                    gradient=""
-                    delay="stagger-delay-1"
+                    accentClassName="bg-primary"
                 />
                 <StatCard
                     title="总任务数"
                     value={stats.total}
                     icon={FileText}
-                    color="#F59E0B"
-                    gradient=""
-                    delay="stagger-delay-2"
+                    accentClassName="bg-warning"
                 />
                 <StatCard
                     title="平均及格率"
                     value={typeof stats.total === 'number' && stats.total > 0 ? '82%' : '-'}
                     icon={Layout}
-                    color="#10B981"
-                    gradient=""
-                    delay="stagger-delay-3"
+                    accentClassName="bg-secondary"
                 />
             </div>
 
             {/* 列表主体 */}
-            <div className="reveal-item stagger-delay-2">
+            <div>
                 <ContentPanel className="overflow-hidden">
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9CA3AF] group-focus-within:text-[#3B82F6] transition-colors" />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
                             <Input
                                 placeholder="搜索任务标题或编号..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-14 h-14 bg-[#F3F4F6] border-0 rounded-md focus:bg-white focus:border-2 focus:border-[#3B82F6] text-base font-medium shadow-none"
+                                className="pl-14 h-14 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-base font-medium "
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                            {isAdmin && (
+                                <SegmentedControl
+                                    value={creatorSideFilter}
+                                    onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}
+                                    options={[
+                                        { label: '全部来源', value: 'all' },
+                                        { label: '管理端', value: 'management' },
+                                        { label: '非管理端', value: 'non_management' },
+                                    ]}
+                                    variant="premium"
+                                    activeColor="white"
+                                    className="w-full md:w-auto"
+                                />
+                            )}
                             <SegmentedControl
                                 value={statusFilter}
                                 onChange={(val: string) => setStatusFilter(val)}
@@ -353,29 +359,28 @@ export const TaskManagement: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <DataTable
-                                columns={columns}
-                                data={tasksData?.results?.filter((t: TaskListItem) => {
-                                    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                    const matchesStatus = statusFilter === 'all' ||
-                                        (statusFilter === 'open' && !t.is_closed) ||
-                                        (statusFilter === 'closed' && t.is_closed);
-                                    return matchesSearch && matchesStatus;
-                                }) || []}
-                                pagination={{
-                                    pageIndex: page - 1,
-                                    pageSize: pageSize,
-                                    pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
-                                    totalCount: tasksData?.count || 0,
-                                    onPageChange: (p: number) => setPage(p + 1),
-                                    onPageSizeChange: (size: number) => {
-                                        setPageSize(size);
-                                        setPage(1);
-                                    },
-                                }}
-                                rowClassName="hover:bg-[#F3F4F6] transition-colors cursor-pointer group"
-                                onRowClick={(row: TaskListItem) => navigate(`/tasks/${row.id}`)}
-                            />
+                            <div>
+                                <DataTable
+                                    columns={columns}
+                                    data={tasksData?.results?.filter((t: TaskListItem) => {
+                                        const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
+                                        return matchesSearch;
+                                    }) || []}
+                                    pagination={{
+                                        pageIndex: page - 1,
+                                        pageSize: pageSize,
+                                        pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
+                                        totalCount: tasksData?.count || 0,
+                                        onPageChange: (p: number) => setPage(p + 1),
+                                        onPageSizeChange: (size: number) => {
+                                            setPageSize(size);
+                                            setPage(1);
+                                        },
+                                    }}
+                                    rowClassName="hover:bg-muted transition-colors cursor-pointer group"
+                                    onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
+                                />
+                            </div>
                         )}
                     </div>
                 </ContentPanel>
@@ -388,8 +393,8 @@ export const TaskManagement: React.FC = () => {
                 title="确认删除此任务？"
                 description="此操作将永久删除该任务及其所有关联数据，包括学员提交的作业。该操作不可撤销。"
                 icon={<Trash2 className="h-10 w-10" />}
-                iconBgColor="bg-[#FEE2E2]"
-                iconColor="text-[#DC2626]"
+                iconBgColor="bg-destructive-100"
+                iconColor="text-destructive"
                 confirmText="确认删除"
                 cancelText="取消"
                 confirmVariant="destructive"

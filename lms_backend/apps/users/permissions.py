@@ -8,21 +8,36 @@ Properties:
 - Property 40: 无权限请求拒绝
 - Property 41: 团队经理只读访问
 """
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from django.db.models import Q
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-def get_current_role(user):
+def get_current_role(user, request=None):
     """
     Get the current active role of a user.
     Args:
         user: The user object
+        request: The HTTP request object (optional)
     Returns:
         Role code string or None
     """
     if not user or not user.is_authenticated:
         return None
+
+    # Priority 1: Read from X-Current-Role header if request is provided
+    if request:
+        header_role = request.META.get('HTTP_X_CURRENT_ROLE')
+        if header_role:
+            # Validate that the header role is in user's available roles
+            user_roles = set(user.role_codes) if hasattr(user, 'role_codes') else set()
+            if header_role in user_roles:
+                return header_role
+
+    # Priority 2: Use current_role attribute set by authentication
     if hasattr(user, 'current_role') and user.current_role:
         return user.current_role
+
+    # Priority 3: Fall back to role flags
     if user.is_admin:
         return 'ADMIN'
     if user.is_dept_manager:
@@ -51,7 +66,7 @@ class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return get_current_role(request.user) == 'ADMIN'
+        return get_current_role(request.user, request) == 'ADMIN'
 
 
 class IsMentor(BasePermission):
@@ -64,7 +79,7 @@ class IsMentor(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return get_current_role(request.user) == 'MENTOR'
+        return get_current_role(request.user, request) == 'MENTOR'
 
 
 class IsDeptManager(BasePermission):
@@ -77,7 +92,7 @@ class IsDeptManager(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return get_current_role(request.user) == 'DEPT_MANAGER'
+        return get_current_role(request.user, request) == 'DEPT_MANAGER'
 
 
 
@@ -92,7 +107,7 @@ class IsTeamManagerReadOnly(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         if current_role == 'TEAM_MANAGER':
             return request.method in SAFE_METHODS
         return False
@@ -105,7 +120,7 @@ class IsAdminOrMentorOrDeptManager(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return get_current_role(request.user) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
+        return get_current_role(request.user, request) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
 
 
 
@@ -128,7 +143,7 @@ class IsOwnerOrAdmin(BasePermission):
         """Check if user is the owner or an admin."""
         if not request.user or not request.user.is_authenticated:
             return False
-        if get_current_role(request.user) == 'ADMIN':
+        if get_current_role(request.user, request) == 'ADMIN':
             return True
         owner_fields = ['created_by', 'creator', 'user', 'owner']
         for field in owner_fields:
@@ -151,7 +166,7 @@ class CanAccessMenteeData(BasePermission):
         """Check if user is authenticated and has appropriate role."""
         if not request.user or not request.user.is_authenticated:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         return current_role in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
     def has_object_permission(self, request, view, obj):
         """
@@ -160,7 +175,7 @@ class CanAccessMenteeData(BasePermission):
         """
         if not request.user or not request.user.is_authenticated:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         # Admin can access all data
         if current_role == 'ADMIN':
             return True
@@ -207,7 +222,7 @@ class CanCreateTaskForStudents(BasePermission):
         """Check if user is authenticated and has task creation role."""
         if not request.user or not request.user.is_authenticated:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         return current_role in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
     def validate_assignees(self, request, student_ids):
         """
@@ -217,7 +232,7 @@ class CanCreateTaskForStudents(BasePermission):
         from apps.users.models import User
         if not student_ids:
             return True, []
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         # Admin can assign to anyone
         if current_role == 'ADMIN':
             return True, []
@@ -257,7 +272,7 @@ class CanCreateSpotCheck(BasePermission):
         """Check if user is authenticated and has spot check creation role."""
         if not request.user or not request.user.is_authenticated:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         return current_role in ['MENTOR', 'DEPT_MANAGER']
     def validate_student(self, request, student_id):
         """
@@ -267,7 +282,7 @@ class CanCreateSpotCheck(BasePermission):
         from apps.users.models import User
         if not student_id:
             return False
-        current_role = get_current_role(request.user)
+        current_role = get_current_role(request.user, request)
         try:
             student = User.objects.get(pk=student_id, is_active=True)
         except User.DoesNotExist:
@@ -285,48 +300,81 @@ class CanCreateSpotCheck(BasePermission):
 
 
 # Utility functions for data scope filtering
-def get_accessible_students(user, current_role=None):
+def get_accessible_students(user, current_role=None, request=None):
     """
     Get queryset of students accessible to the given user based on their role.
     Args:
         user: The requesting user
         current_role: The current active role (optional, will be determined from user if not provided)
+        request: The HTTP request object (optional, for reading role from header)
     Returns:
-        QuerySet of User objects that the user can access
+        QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
+    Note:
+    - 管理员/导师/室经理默认仅统计纯学员
+    - 团队经理统计团队学习成员池（具备 STUDENT，仅排除超级管理员与室经理）
     """
     from apps.users.models import User
     if not current_role:
-        current_role = get_current_role(user)
+        current_role = get_current_role(user, request)
+
+    # 非学员角色：这些角色的用户不参与默认学员统计/任务分配
+    NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
+
+    # 先收集非学员用户 ID，再从 STUDENT 池中排除，避免 M2M join 导致的误包含
+    non_student_user_ids = User.objects.filter(
+        roles__code__in=NON_STUDENT_ROLES
+    ).values_list('id', flat=True)
+
+    # 基础查询：只返回纯学员（active + STUDENT 且不带任何非学员角色）
+    base_qs = User.objects.filter(
+        is_active=True,
+        roles__code='STUDENT'
+    ).exclude(
+        id__in=non_student_user_ids
+    ).distinct()
+
     # Admin can access all students (Property 39)
     if current_role == 'ADMIN':
-        return User.objects.filter(is_active=True)
+        return base_qs
+    # Team manager can access team learning member pool (read-only, Property 41)
+    # 口径说明：
+    # - 团队经理看板按“学习成员池”统计：active + STUDENT
+    # - 仅排除：超级管理员(is_superuser=1) 与室经理(DEPT_MANAGER)
+    if current_role == 'TEAM_MANAGER':
+        excluded_ids = User.objects.filter(
+            Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER')
+        ).values_list('id', flat=True)
+        return User.objects.filter(
+            is_active=True,
+            roles__code='STUDENT'
+        ).exclude(
+            id__in=excluded_ids
+        ).distinct()
     # Mentor can only access their mentees (Property 37)
     if current_role == 'MENTOR':
-        return User.objects.filter(mentor=user, is_active=True)
+        return base_qs.filter(mentor=user)
     # Department manager can only access department members (Property 38)
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
-            return User.objects.filter(
-                department_id=user.department_id,
-                is_active=True
-            ).exclude(pk=user.pk)
+            return base_qs.filter(department_id=user.department_id).exclude(pk=user.pk)
         return User.objects.none()
     # Default: no access
     return User.objects.none()
-def get_accessible_student_ids(user, current_role=None):
+def get_accessible_student_ids(user, current_role=None, request=None):
     """
     Get set of student IDs accessible to the given user.
     This is a convenience function for validation purposes.
     Args:
         user: The requesting user
         current_role: The current active role (optional)
+        request: The HTTP request object (optional, for reading role from header)
     Returns:
         Set of user IDs that the user can access
     Properties: 37, 38, 39
     """
-    return set(get_accessible_students(user, current_role).values_list('id', flat=True))
-def filter_queryset_by_data_scope(queryset, user, student_field='user'):
+    return set(get_accessible_students(user, current_role, request).values_list('id', flat=True))
+def filter_queryset_by_data_scope(queryset, user, student_field='user', request=None):
     """
     Filter a queryset based on the user's data access scope.
     Args:
@@ -334,11 +382,12 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user'):
         user: The requesting user
         student_field: The field name that references the student User.
                        If None, assumes the queryset is directly on User model.
+        request: The HTTP request object (optional, for reading role from header)
     Returns:
         Filtered queryset
     Properties: 37, 38, 39
     """
-    current_role = get_current_role(user)
+    current_role = get_current_role(user, request)
     # Admin can access all data (Property 39)
     if current_role == 'ADMIN':
         return queryset
@@ -362,4 +411,3 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user'):
         return queryset.none()
     # Default: no access
     return queryset.none()
-

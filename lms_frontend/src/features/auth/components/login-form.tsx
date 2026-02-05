@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-// No icons needed for this minimalist version
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +16,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
-import { ROUTES } from '@/config/routes';
 import { ApiError } from '@/lib/api-client';
+import { tokenStorage } from '@/lib/token-storage';
 
 // Zod 验证 schema
 const loginSchema = z.object({
@@ -51,7 +49,9 @@ export const LoginForm: React.FC = () => {
     try {
       await login(values);
       toast.success('登录成功');
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      const currentRole = tokenStorage.getCurrentRole();
+      const rolePath = currentRole ? `/${currentRole.toLowerCase()}/dashboard` : '/dashboard';
+      navigate(rolePath, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status !== 401 && error.status !== 403) {
@@ -76,79 +76,88 @@ export const LoginForm: React.FC = () => {
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus {
-          -webkit-text-fill-color: #1A1A1A;
+          -webkit-text-fill-color: var(--color-foreground);
           -webkit-box-shadow: 0 0 0px 1000px transparent inset;
           transition: background-color 5000s ease-in-out 0s;
         }
       ` }} />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-14">
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-14"
+        >
           <div className="space-y-12">
-            <FormField
-              control={form.control}
-              name="employee_id"
-              render={({ field }) => (
-                <FormItem className="space-y-4">
-                  <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
-                    <span className="w-1 h-1 bg-[#B33535]/30" />
-                    工号
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        placeholder="请输入工号"
-                        className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-500 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
-                        {...field}
-                      />
-                      {/* 动态焦点底线 */}
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        whileFocus={{ scaleX: 1 }}
-                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left transition-transform duration-500"
-                        style={{ scaleX: form.watch('employee_id') ? 1 : 0 }} // 如果有值也保持亮起
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FormField
+                control={form.control}
+                name="employee_id"
+                render={({ field }) => (
+                  <FormItem className="space-y-4 group">
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
+                      <span className="w-1 h-1 bg-primary/30" />
+                      工号
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="请输入工号"
+                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
+                          {...field}
+                        />
+                        {/* 墨水跟随效果 - 底线 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                        
+                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem className="space-y-4">
-                  <FormLabel className="flex items-center gap-3 text-[11px] font-black text-[#1A1A1A]/40 tracking-[0.3em]">
-                    <span className="w-1 h-1 bg-[#B33535]/30" />
-                    密码
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type="password"
-                        placeholder="请输入密码"
-                        className="h-10 bg-transparent border-[#1A1A1A]/5 rounded-none focus-visible:ring-0 focus-visible:border-transparent transition-all duration-500 placeholder:text-[#1A1A1A]/10 text-[#1A1A1A] font-bold text-sm px-0 border-t-0 border-l-0 border-r-0 border-b-2"
-                        {...field}
-                      />
-                      <motion.div
-                        initial={{ scaleX: 0 }}
-                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#B33535] origin-left transition-transform duration-500"
-                        style={{ scaleX: form.watch('password') ? 1 : 0 }}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage className="text-[10px] font-bold text-[#B33535] mt-2 tracking-widest" />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="space-y-4 group">
+                    <FormLabel className="flex items-center gap-3 text-[11px] font-black text-foreground/40 tracking-[0.3em]">
+                      <span className="w-1 h-1 bg-primary/30" />
+                      密码
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          type="password"
+                          placeholder="请输入密码"
+                          className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
+                          {...field}
+                        />
+                        {/* 墨水跟随效果 - 底线 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
+                        
+                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[10px] font-bold text-destructive mt-2 tracking-widest" />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
 
           <div className="space-y-8">
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-[#B33535] hover:bg-[#962D2D] text-white rounded-none font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] shadow-[0_20px_40px_-12px_rgba(179,53,53,0.25)] border-none"
+              className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
             >
               {loading ? "正在验证身份..." : "登录"}
             </Button>
@@ -156,17 +165,17 @@ export const LoginForm: React.FC = () => {
             <div className="flex justify-between items-center py-2 px-1">
               <button
                 type="button"
-                className="text-[11px] font-bold text-[#1A1A1A]/20 hover:text-[#B33535] transition-colors tracking-widest"
+                className="text-[11px] font-bold text-foreground/20 hover:text-primary transition-colors tracking-widest"
               >
                 无法访问账号?
               </button>
               <div className="flex items-center gap-3">
                 <div className="flex gap-1.5">
-                  <div className="w-1 h-1 bg-[#B33535]/10 rounded-full" />
-                  <div className="w-1 h-1 bg-[#B33535]/20 rounded-full" />
-                  <div className="w-1 h-1 bg-[#B33535]/30 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/10 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/20 rounded-full" />
+                  <div className="w-1 h-1 bg-primary/30 rounded-full" />
                 </div>
-                <span className="text-[10px] font-bold text-[#1A1A1A]/20 tracking-widest">安全链接已建立</span>
+                <span className="text-[10px] font-bold text-foreground/20 tracking-widest">安全链接已建立</span>
               </div>
             </div>
           </div>

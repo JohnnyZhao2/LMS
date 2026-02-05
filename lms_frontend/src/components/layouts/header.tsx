@@ -1,23 +1,12 @@
-"use client"
-
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { LogOut, User, ChevronDown, Bell } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import {
-  LayoutGrid,
-  BookOpen,
-  FileText,
-  Users,
-  HelpCircle,
-  FileSearch,
-  BarChart3,
-  Sparkles,
-} from "lucide-react"
+import { LogOut, ChevronDown } from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
+import { useCurrentRole } from "@/hooks/use-current-role"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/config/routes"
+import { showApiError } from "@/utils/error-handler"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +16,86 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 import type { RoleCode } from "@/types/api"
+
+// Minimal 线条图标 - 统一 1.5px 描边
+const IconDashboard = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="2.5" y="2.5" width="6" height="6" rx="1" />
+    <rect x="11.5" y="2.5" width="6" height="6" rx="1" />
+    <rect x="2.5" y="11.5" width="6" height="6" rx="1" />
+    <rect x="11.5" y="11.5" width="6" height="6" rx="1" />
+  </svg>
+)
+
+const IconKnowledge = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M3 16V4.5A1.5 1.5 0 0 1 4.5 3H16v14H4.5A1.5 1.5 0 0 1 3 15.5V16z" />
+    <path d="M3 15.5A1.5 1.5 0 0 1 4.5 14H16" />
+  </svg>
+)
+
+const IconTask = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="3" y="3" width="14" height="14" rx="2" />
+    <path d="M7 10l2 2 4-4" />
+  </svg>
+)
+
+const IconUsers = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="7" cy="6" r="2.5" />
+    <path d="M2 17v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1" />
+    <circle cx="14" cy="6" r="2" />
+    <path d="M18 17v-.5a3 3 0 0 0-3-3" />
+  </svg>
+)
+
+const IconQuiz = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="10" cy="10" r="7" />
+    <path d="M8 8a2 2 0 1 1 2.5 1.94c-.39.12-.5.44-.5.81V12" />
+    <circle cx="10" cy="14" r="0.5" fill="currentColor" />
+  </svg>
+)
+
+const IconSpotCheck = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M12 2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-5-5z" />
+    <path d="M12 2v5h5" />
+    <circle cx="9" cy="12" r="2.5" />
+    <path d="M11 14l2 2" />
+  </svg>
+)
+
+const IconAnalytics = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M3 3v14h14" />
+    <path d="M6 13l3-3 3 3 4-5" />
+  </svg>
+)
+
+const IconPersonal = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="10" cy="6" r="3" />
+    <path d="M4 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" />
+  </svg>
+)
+
+const IconBell = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M10 2a5 5 0 0 0-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 0 0-5-5z" />
+    <path d="M8 14.5a2 2 0 0 0 4 0" />
+  </svg>
+)
+
+const IconLogo = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M8 12l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
 
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   STUDENT: "学",
@@ -45,33 +113,42 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   TEAM_MANAGER: "团队经理",
 }
 
-const ROLE_COLORS: Record<RoleCode, string> = {
-  STUDENT: "var(--color-primary-500)",
-  MENTOR: "var(--color-success-500)",
-  DEPT_MANAGER: "var(--color-purple-500)",
-  TEAM_MANAGER: "var(--color-orange-500)",
-  ADMIN: "var(--color-error-500)",
+// 角色颜色 - 每个角色固定颜色，不随主题变化
+const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
+  STUDENT: "bg-sky-500",         // 天蓝
+  MENTOR: "bg-emerald-500",      // 翠绿
+  DEPT_MANAGER: "bg-violet-500", // 紫色
+  TEAM_MANAGER: "bg-amber-500",  // 琥珀色
+  ADMIN: "bg-rose-500",          // 玫红
 }
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
 
-const MENU_ICONS: Record<string, React.ReactNode> = {
-  [ROUTES.DASHBOARD]: <LayoutGrid className="h-4 w-4" />,
-  [ROUTES.KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
-  [ROUTES.ADMIN_KNOWLEDGE]: <BookOpen className="h-4 w-4" />,
-  [ROUTES.TASKS]: <FileText className="h-4 w-4" />,
-  [ROUTES.USERS]: <Users className="h-4 w-4" />,
-  [ROUTES.QUIZ_CENTER]: <HelpCircle className="h-4 w-4" />,
-  [ROUTES.SPOT_CHECKS]: <FileSearch className="h-4 w-4" />,
-  [ROUTES.ANALYTICS]: <BarChart3 className="h-4 w-4" />,
-  [ROUTES.PERSONAL]: <User className="h-4 w-4" />,
+// 图标映射
+const getMenuIcon = (path: string): React.ReactNode => {
+  const pathParts = path.split('/').filter(Boolean)
+  const actualPath = pathParts.length > 1 ? pathParts.slice(1).join('/') : pathParts[0]
+
+  const iconMap: Record<string, React.ReactNode> = {
+    'dashboard': <IconDashboard className="w-4 h-4" />,
+    'knowledge': <IconKnowledge className="w-4 h-4" />,
+    'tasks': <IconTask className="w-4 h-4" />,
+    'users': <IconUsers className="w-4 h-4" />,
+    'quiz-center': <IconQuiz className="w-4 h-4" />,
+    'spot-checks': <IconSpotCheck className="w-4 h-4" />,
+    'analytics': <IconAnalytics className="w-4 h-4" />,
+    'personal': <IconPersonal className="w-4 h-4" />,
+  }
+
+  return iconMap[actualPath] || <IconDashboard className="w-4 h-4" />
 }
 
 /**
  * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
-  const { user, currentRole, availableRoles, logout, switchRole, setIsSwitching, isLoading } = useAuth()
+  const { user, availableRoles, logout, isLoading, switchRole, setIsSwitching, isSwitching } = useAuth()
+  const currentRole = useCurrentRole()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -81,28 +158,52 @@ export const Header: React.FC = () => {
     navigate(ROUTES.LOGIN)
   }
 
+  // 获取当前路径（不含角色前缀）
+  const getPathWithoutRole = () => {
+    const pathParts = location.pathname.split('/').filter(Boolean)
+    if (pathParts.length <= 1) return 'dashboard'
+    // 跳过角色前缀
+    return pathParts.slice(1).join('/')
+  }
+
   const handleRoleChange = async (roleCode: RoleCode) => {
-    if (roleCode !== currentRole) {
-      try {
-        // 开始切换
-        setIsSwitching(true)
-
-        // 调用后台切换 API
-        await switchRole(roleCode)
-
-        // 跳转到首页（强制触发重新加载）
-        navigate(ROUTES.DASHBOARD)
-
-        // 稍微延迟一点点关闭遮罩，让跳转后的页面有一定的渲染时间，避免生硬地闪现
-        setTimeout(() => {
-          setIsSwitching(false)
-        }, 800)
-      } catch (error) {
-        console.error("切换角色失败:", error)
-        setIsSwitching(false)
-      }
+    if (roleCode === currentRole) {
+      return
+    }
+    try {
+      await switchRole(roleCode)
+      // 直接更新 URL，保持当前路径、查询参数和锚点
+      const currentPath = getPathWithoutRole()
+      const suffix = `${location.search}${location.hash}`
+      navigate(`/${roleCode.toLowerCase()}/${currentPath}${suffix}`)
+    } catch (error) {
+      showApiError(error, "角色切换失败")
+      setIsSwitching(false)
     }
   }
+
+  const prevPathRef = React.useRef(location.pathname)
+
+  React.useEffect(() => {
+    const prevPath = prevPathRef.current
+    prevPathRef.current = location.pathname
+
+    if (!isSwitching) {
+      return
+    }
+
+    if (prevPath === location.pathname) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSwitching(false)
+    }, 400)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [location.pathname, isSwitching, setIsSwitching])
 
   const handleNavClick = (path: string) => {
     navigate(path)
@@ -125,123 +226,117 @@ export const Header: React.FC = () => {
       value: role.code,
     }))
 
+  // 获取带角色前缀的 dashboard 路径
+  const getDashboardPath = () => {
+    if (currentRole) {
+      return `/${currentRole.toLowerCase()}/dashboard`
+    }
+    return ROUTES.DASHBOARD
+  }
+
   const selectedNavKey = getSelectedNavKey()
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-16 px-8 bg-white border-b-2 border-gray-200"
-      style={{ fontFamily: "'Outfit', sans-serif" }}
-    >
-      {/* 左侧：Logo + 品牌名 + 导航菜单 */}
+    <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-6 bg-background border-b border-border">
+      {/* 左侧：Logo + 导航菜单 */}
       <div className="flex items-center gap-10">
         {/* Logo */}
         <div
-          className="flex items-center gap-3 cursor-pointer group"
-          onClick={() => navigate(ROUTES.DASHBOARD)}
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => navigate(getDashboardPath())}
         >
-          <div
-            className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-          >
-            <Sparkles className="text-white w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <IconLogo className="text-white w-5 h-5" />
           </div>
-
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight leading-none text-gray-900">
-              SyncLearn
-            </span>
-            <span className="text-[10px] font-bold text-blue-600 tracking-wider uppercase mt-0.5">
-              Platform
-            </span>
-          </div>
+          <span className="text-[15px] font-semibold text-foreground">
+            学习平台
+          </span>
         </div>
 
         {/* 导航菜单 */}
-        <nav className="hidden lg:flex items-center gap-1 h-10 relative">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {menuItems.length > 0 ? (
-              menuItems.map((item) => {
-                const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
-                if (!menuItem.key) return null
+        <nav className="hidden lg:flex items-center gap-1">
+          {menuItems.length > 0 ? (
+            menuItems.map((item) => {
+              const menuItem = item as { key?: string; icon?: React.ReactNode; label?: React.ReactNode }
+              if (!menuItem.key) return null
 
-                const isActive = selectedNavKey === menuItem.key
-                const icon = MENU_ICONS[menuItem.key]
+              const isActive = selectedNavKey === menuItem.key
+              const icon = getMenuIcon(menuItem.key)
 
-                return (
-                  <motion.button
-                    key={menuItem.key}
-                    layout
-                    onClick={() => handleNavClick(menuItem.key!)}
-                    className={cn(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors duration-200 group",
-                      isActive
-                        ? "text-blue-600"
-                        : "text-gray-600 hover:text-gray-900"
-                    )}
-                  >
-                    {/* 活跃状态背景动画 */}
-                    {isActive && (
-                      <motion.div
-                        layoutId="active-nav-bg"
-                        className="absolute inset-0 bg-blue-50 rounded-md -z-10"
-                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                      />
-                    )}
-
-                    <span className={cn(
-                      "transition-transform duration-200 group-hover:scale-110 shrink-0",
-                      isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"
-                    )}>
-                      {icon}
-                    </span>
-                    <span className="relative z-10">{menuItem.label}</span>
-                  </motion.button>
-                )
-              })
-            ) : isLoading ? (
-              // 只有在真的没有数据且还在加载时才显示 Skeleton
-              Array.from({ length: 4 }).map((_, i) => (
-                <motion.div
-                  key={`skeleton-${i}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 px-4 py-2"
+              return (
+                <button
+                  key={menuItem.key}
+                  onClick={() => handleNavClick(menuItem.key!)}
+                  className={cn(
+                    "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    isActive
+                      ? "text-primary"
+                      : "text-text-muted hover:text-foreground"
+                  )}
                 >
-                  <Skeleton className="h-4 w-4 rounded-sm" />
-                  <Skeleton className="h-4 w-12 rounded-sm" />
-                </motion.div>
-              ))
-            ) : null}
-          </AnimatePresence>
+                  {isActive && (
+                    <div className="absolute inset-0 bg-primary/10 rounded-md -z-10" />
+                  )}
+                  <span className={cn(
+                    "shrink-0",
+                    isActive ? "text-primary" : "text-text-muted"
+                  )}>
+                    {icon}
+                  </span>
+                  <span>{menuItem.label}</span>
+                </button>
+              )
+            })
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                className="flex items-center gap-1.5 px-3 py-1.5"
+              >
+                <Skeleton className="h-4 w-4 rounded" />
+                <Skeleton className="h-4 w-10 rounded" />
+              </div>
+            ))
+          ) : null}
         </nav>
       </div>
 
-      {/* 右侧：通知 + 角色切换器 + 用户信息 */}
-      <div className="flex items-center gap-6">
-        {/* 通知图标 */}
-        <button className="p-2.5 bg-gray-100 rounded-md text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200">
-          <Bell className="w-5 h-5" />
+      {/* 右侧：主题切换 + 通知 + 角色切换器 + 用户信息 */}
+      <div className="flex items-center gap-1">
+        {/* 主题切换 */}
+        <ThemeSwitcher />
+
+        {/* 通知 */}
+        <button className="relative w-8 h-8 flex items-center justify-center rounded-md text-text-muted hover:text-foreground hover:bg-muted transition-colors">
+          <IconBell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
         </button>
 
         {/* 角色切换器 */}
         {availableRoles.length > 1 && currentRole && (
           <div
-            className="hidden md:flex items-center bg-gray-100 p-1 rounded-md gap-1"
+            key={location.pathname}
+            className="hidden md:flex items-center bg-muted p-0.5 rounded-md gap-0.5 ml-2"
           >
-            {roleOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleRoleChange(option.value)}
-                className={cn(
-                  "px-3.5 py-1.5 text-xs font-bold rounded-md transition-all duration-200",
-                  currentRole === option.value
-                    ? "bg-white text-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+            {roleOptions.map((option) => {
+              const pathRole = location.pathname.split('/')[1]?.toUpperCase() as RoleCode
+              const isActive = pathRole === option.value || currentRole === option.value
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => handleRoleChange(option.value)}
+                  className={cn(
+                    "w-8 h-8 flex items-center justify-center text-xs font-medium rounded transition-colors",
+                    isActive
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-text-muted hover:text-foreground"
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -249,64 +344,52 @@ export const Header: React.FC = () => {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-3 p-1 rounded-md hover:bg-gray-100 transition-all duration-200 group"
-              >
-                <div className="relative">
-                  <Avatar className="h-9 w-9 border-2 border-gray-200 transition-transform duration-200 group-hover:scale-105">
-                    <AvatarFallback
-                      className="text-white font-bold text-sm"
-                      style={{
-                        background: ROLE_COLORS[currentRole!] || '#3B82F6',
-                      }}
-                    >
-                      {user.username.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div
-                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white"
-                    style={{ background: ROLE_COLORS[currentRole!] || '#3B82F6' }}
-                  />
-                </div>
-
-                <div className="hidden sm:flex flex-col items-start pr-2">
-                  <span className="text-sm font-bold text-gray-900 leading-tight">
+              <button className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted transition-colors ml-2">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback
+                    className={cn(
+                      "text-white text-xs font-medium",
+                      ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
+                    )}
+                  >
+                    {user.username.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:flex flex-col items-start">
+                  <span className="text-sm font-medium text-foreground leading-tight">
                     {user.username}
                   </span>
-                  <span className="text-[10px] font-bold text-gray-500 leading-tight uppercase tracking-wider">
+                  <span className="text-[10px] text-text-muted leading-tight">
                     {ROLE_FULL_LABELS[currentRole!]}
                   </span>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 p-2 rounded-lg border-2 border-gray-200">
-              <div className="px-3 py-3 border-b-2 border-gray-200 mb-1">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">当前角色</p>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: ROLE_COLORS[currentRole!] }}
-                  />
-                  <span className="text-sm font-bold text-gray-900">{ROLE_FULL_LABELS[currentRole!]}</span>
+            <DropdownMenuContent align="end" className="w-48 p-1">
+              <div className="px-2 py-2 border-b border-border mb-1">
+                <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">当前角色</p>
+                <div className="flex items-center gap-1.5">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", ROLE_COLOR_CLASSES[currentRole!] || "bg-primary")} />
+                  <span className="text-sm font-medium text-foreground">{ROLE_FULL_LABELS[currentRole!]}</span>
                 </div>
               </div>
 
               <DropdownMenuItem
-                onClick={() => navigate(ROUTES.PERSONAL)}
-                className="rounded-md py-2.5 focus:bg-blue-50 focus:text-blue-600 cursor-pointer"
+                onClick={() => navigate(`/${currentRole!.toLowerCase()}/personal`)}
+                className="rounded-md py-2 text-sm cursor-pointer"
               >
-                <User className="mr-3 h-4 w-4" />
+                <IconPersonal className="mr-2 w-4 h-4" />
                 个人设置
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-gray-200" />
+              <DropdownMenuSeparator />
 
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="rounded-md py-2.5 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                className="rounded-md py-2 text-sm text-destructive focus:text-destructive cursor-pointer"
               >
-                <LogOut className="mr-3 h-4 w-4" />
+                <LogOut className="mr-2 h-4 w-4" />
                 退出登录
               </DropdownMenuItem>
             </DropdownMenuContent>

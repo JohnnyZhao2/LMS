@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
  * Material You 空状态组件
  * 用于显示空列表、无数据等状态
  */
-interface EmptyStateProps {
+export interface EmptyStateProps {
   /** 图标 */
   icon?: LucideIcon | React.ReactNode;
   /** 主标题 */
@@ -49,7 +49,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {Icon && (
         <div className={cn(
           'mb-4 transform hover:scale-110 transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]',
-          'text-[#9CA3AF]'
+          'text-text-muted'
         )}>
           {React.isValidElement(Icon) ? (
             React.cloneElement(Icon as React.ReactElement<{ className?: string }>, {
@@ -62,15 +62,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </div>
       )}
       {title && (
-        <h3 className="text-2xl font-medium text-md-on-surface-container mb-2">
+        <h3 className="text-2xl font-medium text-foreground mb-2">
           {title}
         </h3>
       )}
-      <p className="text-md-on-surface-variant font-normal">
+      <p className="text-text-muted font-normal">
         {description}
       </p>
       {subDescription && (
-        <p className="text-sm text-md-on-surface-variant/60 mt-1 font-normal">
+        <p className="text-sm text-text-muted opacity-60 mt-1 font-normal">
           {subDescription}
         </p>
       )}

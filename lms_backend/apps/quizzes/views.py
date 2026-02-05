@@ -2,32 +2,35 @@
 试卷视图
 只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 """
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
-from core.exceptions import BusinessError
-from core.pagination import StandardResultsSetPagination
-from core.mixins import BusinessErrorHandlerMixin
+from rest_framework.response import Response
+
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
-from .services import QuizService
+from core.base_view import BaseAPIView
+from core.exceptions import BusinessError
+from core.mixins import BusinessErrorHandlerMixin
+from core.pagination import StandardResultsSetPagination
+
 from .serializers import (
-    QuizListSerializer,
-    QuizDetailSerializer,
-    QuizCreateSerializer,
-    QuizUpdateSerializer,
     AddQuestionsSerializer,
+    QuizCreateSerializer,
+    QuizDetailSerializer,
+    QuizListSerializer,
+    QuizUpdateSerializer,
     RemoveQuestionsSerializer,
 )
-class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
+from .services import QuizService
+
+
+class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
     """
     试卷列表和创建
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = QuizService()
+    service_class = QuizService
+
     @extend_schema(
         summary='获取试卷列表',
         description='获取所有试卷，支持搜索和筛选',
@@ -52,6 +55,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
         if request.query_params.get('quiz_type'):
             filters['quiz_type'] = request.query_params.get('quiz_type')
         search = request.query_params.get('search')
+        
         # 2. 调用 Service
         try:
             quiz_list = self.service.get_list(
@@ -61,15 +65,18 @@ class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
             )
         except BusinessError as e:
             return self.handle_business_error(e)
+        
         # 3. 分页
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(quiz_list, request)
         if page is not None:
             serializer = QuizListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
+        
         # 4. 序列化输出
         serializer = QuizListSerializer(quiz_list, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='创建试卷',
         description='创建新试卷（导师/室经理/管理员）',
@@ -91,24 +98,28 @@ class QuizListCreateView(BusinessErrorHandlerMixin, APIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
+        
         # 2. 提取数据
         validated_data = serializer.validated_data
         existing_question_ids = validated_data.pop('existing_question_ids', [])
         new_questions_data = validated_data.pop('new_questions', [])
-        # 3. 调用 Service
+        
+        # 3. 调用 Service（不再传user参数）
         try:
             quiz = self.service.create(
                 data=validated_data,
-                user=request.user,
                 existing_question_ids=existing_question_ids,
                 new_questions_data=new_questions_data
             )
         except BusinessError as e:
             return self.handle_business_error(e)
+        
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_201_CREATED)
-class QuizDetailView(BusinessErrorHandlerMixin, APIView):
+
+
+class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
     """
     试卷详情、更新、删除
     Properties:
@@ -116,9 +127,8 @@ class QuizDetailView(BusinessErrorHandlerMixin, APIView):
     - Property 16: 试卷所有权编辑控制
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = QuizService()
+    service_class = QuizService
+
     @extend_schema(
         summary='获取试卷详情',
         description='获取指定试卷的详细信息，包含题目列表',
@@ -136,9 +146,16 @@ class QuizDetailView(BusinessErrorHandlerMixin, APIView):
             return self.handle_business_error(e)
         serializer = QuizDetailSerializer(quiz)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='更新试卷',
-        description='更新试卷信息（仅创建者或管理员）',
+        description='''更新试卷信息（仅创建者或管理员）。
+        支持在一个请求中完成：
+        - 更新试卷基本信息（title, description, quiz_type, duration, pass_score）
+        - 同步题目顺序（existing_question_ids）
+        - 添加新题目（add_question_ids, new_questions）
+        - 移除题目（remove_question_ids）
+        ''',
         request=QuizUpdateSerializer,
         responses={
             200: QuizDetailSerializer,
@@ -156,22 +173,31 @@ class QuizDetailView(BusinessErrorHandlerMixin, APIView):
         # 1. 反序列化输入
         serializer = QuizUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+
         # 2. 提取数据
         validated_data = serializer.validated_data
         question_ids = validated_data.pop('existing_question_ids', None)
-        # 3. 调用 Service
+        add_question_ids = validated_data.pop('add_question_ids', [])
+        new_questions_data = validated_data.pop('new_questions', [])
+        remove_question_ids = validated_data.pop('remove_question_ids', [])
+
+        # 3. 调用 Service（不再传user参数）
         try:
             quiz = self.service.update(
                 pk=pk,
                 data=validated_data,
-                user=request.user,
-                question_ids=question_ids
+                question_ids=question_ids,
+                add_question_ids=add_question_ids,
+                new_questions_data=new_questions_data,
+                remove_question_ids=remove_question_ids
             )
         except BusinessError as e:
             return self.handle_business_error(e)
+
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary='删除试卷',
         description='删除试卷（仅创建者或管理员，被任务引用时禁止删除）',
@@ -190,18 +216,19 @@ class QuizDetailView(BusinessErrorHandlerMixin, APIView):
         Property 16: 试卷所有权编辑控制
         """
         try:
-            self.service.delete(pk, request.user)
+            self.service.delete(pk)
         except BusinessError as e:
             return self.handle_business_error(e)
         return Response(status=status.HTTP_204_NO_CONTENT)
-class QuizAddQuestionsView(BusinessErrorHandlerMixin, APIView):
+
+
+class QuizAddQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
     """
     向试卷添加题目
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = QuizService()
+    service_class = QuizService
+
     @extend_schema(
         summary='向试卷添加题目',
         description='向试卷添加已有题目或新建题目（仅创建者或管理员）',
@@ -221,31 +248,34 @@ class QuizAddQuestionsView(BusinessErrorHandlerMixin, APIView):
         # 1. 反序列化输入
         serializer = AddQuestionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
         # 2. 提取数据
         validated_data = serializer.validated_data
         existing_question_ids = validated_data.get('existing_question_ids', [])
         new_questions_data = validated_data.get('new_questions', [])
-        # 3. 调用 Service
+        
+        # 3. 调用 Service（不再传user参数）
         try:
             quiz = self.service.add_questions(
                 pk=pk,
-                user=request.user,
                 existing_question_ids=existing_question_ids,
                 new_questions_data=new_questions_data
             )
         except BusinessError as e:
             return self.handle_business_error(e)
+        
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)
-class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, APIView):
+
+
+class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
     """
     从试卷移除题目
     """
     permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.service = QuizService()
+    service_class = QuizService
+
     @extend_schema(
         summary='从试卷移除题目',
         description='从试卷移除指定题目（仅创建者或管理员）',
@@ -263,17 +293,19 @@ class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, APIView):
         # 1. 反序列化输入
         serializer = RemoveQuestionsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
         # 2. 提取数据
         question_ids = serializer.validated_data['question_ids']
-        # 3. 调用 Service
+        
+        # 3. 调用 Service（不再传user参数）
         try:
             quiz = self.service.remove_questions(
                 pk=pk,
-                user=request.user,
                 question_ids=question_ids
             )
         except BusinessError as e:
             return self.handle_business_error(e)
+        
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
         return Response(output.data, status=status.HTTP_200_OK)

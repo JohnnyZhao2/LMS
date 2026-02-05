@@ -3,6 +3,8 @@ Custom authentication helpers for user role awareness.
 """
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
 class RoleAwareJWTAuthentication(JWTAuthentication):
     """
     Extends JWT authentication to attach the current_role claim to the user.

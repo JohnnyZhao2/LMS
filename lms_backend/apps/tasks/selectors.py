@@ -3,7 +3,14 @@ Task selectors.
 集中管理任务相关查询，统一预加载与过滤逻辑。
 """
 from django.db.models import QuerySet
-from .models import Task, TaskAssignment, TaskKnowledge, TaskQuiz, KnowledgeLearningProgress
+
+from .models import (
+    KnowledgeLearningProgress,
+    Task,
+    TaskAssignment,
+    TaskKnowledge,
+    TaskQuiz,
+)
 
 
 def task_detail_queryset(include_deleted: bool = False) -> QuerySet:

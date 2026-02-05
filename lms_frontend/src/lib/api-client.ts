@@ -1,5 +1,6 @@
 import { config } from '@/config';
 import { tokenStorage } from './token-storage';
+import { roleState } from './role-state';
 import { ROUTES } from '@/config/routes';
 
 /**
@@ -89,6 +90,14 @@ class ApiClient {
     }
   }
 
+  private buildBody(data?: unknown): BodyInit | undefined {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      return data;
+    }
+
+    return data ? JSON.stringify(data) : undefined;
+  }
+
   /**
    * 发送请求
    */
@@ -99,10 +108,14 @@ class ApiClient {
     const { skipAuth = false, ...fetchOptions } = options;
     const url = `${this.baseURL}${endpoint}`;
 
+    const isFormData =
+      typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
+
     // 准备请求头
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // 合并现有 headers
     if (fetchOptions.headers) {
@@ -110,11 +123,20 @@ class ApiClient {
       Object.assign(headers, existingHeaders);
     }
 
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
     // 添加认证头
     if (!skipAuth) {
       const accessToken = tokenStorage.getAccessToken();
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      // 添加当前角色 header
+      const currentRole = roleState.get();
+      if (currentRole) {
+        headers['X-Current-Role'] = currentRole;
       }
     }
 
@@ -193,10 +215,11 @@ class ApiClient {
    * POST 请求
    */
   post<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -204,10 +227,11 @@ class ApiClient {
    * PUT 请求
    */
   put<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 
@@ -215,10 +239,11 @@ class ApiClient {
    * PATCH 请求
    */
   patch<T>(endpoint: string, data?: unknown, options?: ApiRequestOptions): Promise<T> {
+    const body = this.buildBody(data);
     return this.request<T>(endpoint, {
       ...options,
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body,
     });
   }
 

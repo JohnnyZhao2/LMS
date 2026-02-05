@@ -9,9 +9,13 @@ Properties:
 业务逻辑已提取到 services.py，Serializer 仅负责验证和委托。
 """
 from rest_framework import serializers
+
 from apps.tasks.models import TaskAssignment, TaskQuiz
-from .models import Submission, Answer
+
+from .models import Answer, Submission
 from .services import SubmissionService
+
+
 class AnswerSerializer(serializers.ModelSerializer):
     """Serializer for Answer model."""
     question_content = serializers.CharField(source='question.content', read_only=True)
@@ -84,12 +88,66 @@ class SaveAnswerSerializer(serializers.Serializer):
         return attrs
     def save(self):
         """Save the answer - 委托给 SubmissionService"""
-        service = SubmissionService()
+        request = self.context.get('request')
+        service = SubmissionService(request)
         submission = self.context.get('submission')
         return service.save_answer(
             submission=submission,
             question_id=self.validated_data['question_id'],
             user_answer=self.validated_data['user_answer']
+        )
+
+
+class AnswerItemSerializer(serializers.Serializer):
+    """单个答案项的序列化器"""
+    question_id = serializers.IntegerField(help_text='题目ID')
+    user_answer = serializers.JSONField(help_text='用户答案', allow_null=True)
+
+
+class SaveAnswersSerializer(serializers.Serializer):
+    """
+    批量保存答案的序列化器。
+    支持一次保存多道题的答案，减少 API 调用次数。
+    """
+    answers = AnswerItemSerializer(many=True, help_text='答案列表')
+
+    def validate_answers(self, value):
+        """验证答案列表"""
+        if not value:
+            raise serializers.ValidationError('答案列表不能为空')
+        # 检查是否有重复的 question_id
+        question_ids = [item['question_id'] for item in value]
+        if len(question_ids) != len(set(question_ids)):
+            raise serializers.ValidationError('答案列表中存在重复的题目ID')
+        return value
+
+    def validate(self, attrs):
+        """验证所有答案"""
+        submission = self.context.get('submission')
+        answers_data = attrs['answers']
+        # 获取提交中所有题目的 ID
+        valid_question_ids = set(
+            Answer.objects.filter(submission=submission).values_list('question_id', flat=True)
+        )
+        # 验证每个答案的题目是否在提交中
+        invalid_ids = []
+        for item in answers_data:
+            if item['question_id'] not in valid_question_ids:
+                invalid_ids.append(item['question_id'])
+        if invalid_ids:
+            raise serializers.ValidationError({
+                'answers': f'以下题目不在此答卷中: {invalid_ids}'
+            })
+        return attrs
+
+    def save(self):
+        """批量保存答案 - 委托给 SubmissionService"""
+        request = self.context.get('request')
+        service = SubmissionService(request)
+        submission = self.context.get('submission')
+        return service.save_answers(
+            submission=submission,
+            answers_data=self.validated_data['answers']
         )
 class PracticeResultSerializer(serializers.ModelSerializer):
     """
@@ -123,7 +181,7 @@ class StartQuizSerializer(serializers.Serializer):
         assignment_id = attrs['assignment_id']
         quiz_id = attrs['quiz_id']
         # 使用 SubmissionService 验证
-        service = SubmissionService()
+        service = SubmissionService(request)
         try:
             assignment, task_quiz, quiz = service.validate_assignment_for_quiz(
                 assignment_id, quiz_id, user
@@ -139,7 +197,7 @@ class StartQuizSerializer(serializers.Serializer):
                 raise serializers.ValidationError(str(e))
         else:
             # 练习模式：也检查进行中的提交，复用已有记录
-            in_progress = service.repository.get_in_progress(
+            in_progress = service.get_in_progress(
                 task_assignment_id=assignment.id,
                 quiz_id=quiz_id
             )
@@ -152,7 +210,8 @@ class StartQuizSerializer(serializers.Serializer):
         return attrs
     def create(self, validated_data):
         """Create or return existing submission - 委托给 SubmissionService"""
-        service = SubmissionService()
+        request = self.context.get('request')
+        service = SubmissionService(request)
         in_progress = validated_data.get('in_progress_submission')
         # 无论练习还是考试，有进行中的提交就直接返回
         if in_progress:

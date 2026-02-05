@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import type { KnowledgeType } from '@/types/api';
 
 /**
@@ -29,10 +30,19 @@ interface GetKnowledgeStatsParams {
  * @param params - 筛选参数
  */
 export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
+  const currentRole = useCurrentRole();
   const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search } = params;
 
   return useQuery({
-    queryKey: ['knowledge-stats', knowledge_type, line_type_id, system_tag_id, operation_tag_id, search],
+    queryKey: [
+      'knowledge-stats',
+      currentRole ?? 'UNKNOWN',
+      knowledge_type,
+      line_type_id,
+      system_tag_id,
+      operation_tag_id,
+      search,
+    ],
     queryFn: () => {
       const queryParams = {
         ...(knowledge_type && { knowledge_type }),
@@ -44,5 +54,6 @@ export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<KnowledgeStats>(`/knowledge/stats${queryString}`);
     },
+    enabled: currentRole !== null,
   });
 };

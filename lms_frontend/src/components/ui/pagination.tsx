@@ -98,7 +98,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     <div className={cn('flex items-center justify-between gap-4', className)}>
       {/* Total info */}
       {showTotal && (
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-text-muted">
           {showTotal(total, [startItem, endItem])}
         </span>
       )}
@@ -122,7 +122,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               key={`ellipsis-${index}`}
               className="flex h-8 w-8 items-center justify-center"
             >
-              <MoreHorizontal className="h-4 w-4 text-gray-400" />
+              <MoreHorizontal className="h-4 w-4 text-text-muted" />
             </span>
           ) : (
             <Button
@@ -131,7 +131,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               size="sm"
               className={cn(
                 'h-8 w-8 p-0',
-                current === page && 'bg-primary-500 text-white hover:bg-primary-600'
+                current === page && 'bg-primary text-white hover:bg-primary-hover'
               )}
               onClick={() => handlePageChange(page)}
               disabled={disabled}
@@ -159,7 +159,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             onValueChange={handlePageSizeChange}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 w-[110px] ml-2 font-bold text-xs shadow-none border-gray-100">
+            <SelectTrigger className="h-8 w-[110px] ml-2 font-bold text-xs  border-border">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
