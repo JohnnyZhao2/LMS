@@ -15,10 +15,11 @@ import {
   ShieldCheck,
   RefreshCw,
   Building2,
+  Trash2,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
-import { useActivateUser, useDeactivateUser, useResetPassword } from "../api/manage-users"
+import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
@@ -67,6 +68,10 @@ export const UserList: React.FC = () => {
     open: boolean
     password?: string
   }>({ open: false })
+  const [deleteUserDialog, setDeleteUserDialog] = React.useState<{
+    open: boolean
+    user?: UserListType
+  }>({ open: false })
 
   // API Hooks
   const { data: departments = [] } = useDepartments()
@@ -81,6 +86,7 @@ export const UserList: React.FC = () => {
   })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
+  const deleteUser = useDeleteUser()
   const resetPassword = useResetPassword()
 
   // 筛选变化时重置页码
@@ -127,6 +133,30 @@ export const UserList: React.FC = () => {
       const result = await resetPassword.mutateAsync(resetPasswordDialog.userId)
       setResetPasswordDialog({ open: false })
       setTempPasswordDialog({ open: true, password: result.temporary_password })
+    } catch (error) {
+      showApiError(error)
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    const targetUser = deleteUserDialog.user
+    if (!targetUser) return
+
+    if (targetUser.is_active) {
+      toast.error("仅可删除已停用（离职）用户")
+      return
+    }
+
+    try {
+      await deleteUser.mutateAsync(targetUser.id)
+      toast.success("用户及关联数据已彻底删除")
+
+      if (editingUserId === targetUser.id) {
+        setFormModalOpen(false)
+        setEditingUserId(undefined)
+      }
+      setDeleteUserDialog({ open: false })
+      refetch()
     } catch (error) {
       showApiError(error)
     }
@@ -237,6 +267,19 @@ export const UserList: React.FC = () => {
                 ) : (
                   <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
                 )}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-destructive focus:bg-destructive-100"
+                onClick={() => {
+                  if (row.original.is_active) {
+                    toast.error("请先停用账号，再执行彻底删除")
+                    return
+                  }
+                  setDeleteUserDialog({ open: true, user: row.original })
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> 彻底删除
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -356,6 +399,26 @@ export const UserList: React.FC = () => {
         confirmVariant="destructive"
         onConfirm={handleResetPassword}
         isConfirming={resetPassword.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleteUserDialog.open}
+        onOpenChange={(open) =>
+          setDeleteUserDialog({
+            open,
+            user: open ? deleteUserDialog.user : undefined,
+          })
+        }
+        title="彻底删除该离职用户？"
+        description={`将永久删除用户「${deleteUserDialog.user?.username ?? ''}」及其所有关联数据（任务、答题、抽查、题库与知识资源）。此操作不可撤销。`}
+        icon={<Trash2 className="h-10 w-10" />}
+        iconBgColor="bg-destructive-100"
+        iconColor="text-destructive"
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleDeleteUser}
+        isConfirming={deleteUser.isPending}
       />
 
       {/* Temp Password Dialog */}

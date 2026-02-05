@@ -42,6 +42,7 @@ class TaskFactory(DjangoModelFactory):
     description = 'Test task description'
     deadline = factory.LazyFunction(lambda: timezone.now() + timedelta(days=7))
     created_by = factory.SubFactory(UserFactory)
+    created_role = 'MENTOR'
 
 
 class TaskAssignmentFactory(DjangoModelFactory):

@@ -3,6 +3,10 @@ User services for LMS.
 """
 from typing import List, Optional
 
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+from django.db.models import Q
+
 from apps.activity_logs.services import ActivityLogService
 from core.base_service import BaseService
 from core.decorators import log_user_action
@@ -65,6 +69,103 @@ class UserManagementService(BaseService):
         user.is_active = True
         user.save(update_fields=['is_active'])
         return user
+
+    def _validate_user_can_be_deleted(self, user: User) -> None:
+        """校验用户是否允许被彻底删除。"""
+        if user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='不能删除超级用户账号'
+            )
+
+        # 仅允许删除离职用户（当前实现：停用用户）
+        if user.is_active:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='仅可删除离职（已停用）用户，请先停用该账号'
+            )
+
+    def _purge_user_related_data(self, user: User) -> None:
+        """
+        清理用户的全部关联数据。
+        注意：这里使用硬删除，不保留向后兼容。
+        """
+        from apps.knowledge.models import Knowledge, ResourceLineType
+        from apps.questions.models import Question
+        from apps.quizzes.models import Quiz, QuizQuestion
+        from apps.spot_checks.models import SpotCheck
+        from apps.submissions.models import Answer, Submission
+        from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+
+        created_task_ids = list(
+            Task.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_knowledge_ids = list(
+            Knowledge.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_quiz_ids = list(
+            Quiz.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+        created_question_ids = list(
+            Question.objects.filter(created_by_id=user.id).values_list('id', flat=True)
+        )
+
+        # 1) 先清理直接挂在该用户上的业务数据（PROTECT 关系）
+        SpotCheck.objects.filter(
+            Q(student_id=user.id) | Q(checker_id=user.id)
+        ).delete()
+        TaskAssignment.objects.filter(assignee_id=user.id).delete()
+        Submission.objects.filter(user_id=user.id).delete()
+
+        # 2) 再清理该用户“创建”的资源依赖关系（避免 PROTECT 阻塞）
+        if created_quiz_ids:
+            Submission.objects.filter(quiz_id__in=created_quiz_ids).delete()
+            TaskQuiz.objects.filter(quiz_id__in=created_quiz_ids).delete()
+
+        if created_question_ids:
+            Answer.objects.filter(question_id__in=created_question_ids).delete()
+            QuizQuestion.objects.filter(question_id__in=created_question_ids).delete()
+
+        if created_knowledge_ids:
+            TaskKnowledge.objects.filter(knowledge_id__in=created_knowledge_ids).delete()
+
+        # 3) 清理知识/题目的条线关联（Generic 关系无法自动级联）
+        if created_knowledge_ids:
+            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
+            ResourceLineType.objects.filter(
+                content_type=knowledge_content_type,
+                object_id__in=created_knowledge_ids
+            ).delete()
+
+        if created_question_ids:
+            question_content_type = ContentType.objects.get_for_model(Question)
+            ResourceLineType.objects.filter(
+                content_type=question_content_type,
+                object_id__in=created_question_ids
+            ).delete()
+
+        # 4) 删除该用户创建的资源（硬删除）
+        if created_task_ids:
+            Task.objects.filter(id__in=created_task_ids).delete()
+        if created_quiz_ids:
+            Quiz.objects.filter(id__in=created_quiz_ids).delete()
+        if created_knowledge_ids:
+            Knowledge.objects.filter(id__in=created_knowledge_ids).delete()
+        if created_question_ids:
+            Question.objects.filter(id__in=created_question_ids).delete()
+
+    def delete_user(self, user_id: int) -> None:
+        """
+        彻底删除用户及全部关联数据。
+        仅允许删除离职（已停用）用户。
+        """
+        user = self._get_user(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
+        self._validate_user_can_be_deleted(user)
+
+        with transaction.atomic():
+            self._purge_user_related_data(user)
+            user.delete()
 
     def _validate_exclusive_roles(self, user: User, role_codes: List[str]) -> None:
         """

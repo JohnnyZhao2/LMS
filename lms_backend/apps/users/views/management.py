@@ -39,6 +39,7 @@ from apps.users.serializers import (
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.responses import no_content_response
 
 
 class UserListCreateView(APIView):
@@ -117,7 +118,7 @@ class UserListCreateView(APIView):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 class UserDetailView(APIView):
     """
-    User detail, update endpoint.
+    User detail, update, delete endpoint.
     """
     permission_classes = [IsAuthenticated]
     def get_object(self, pk):
@@ -176,6 +177,28 @@ class UserDetailView(APIView):
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary='删除用户',
+        description='彻底删除离职（已停用）用户及其全部关联数据',
+        responses={
+            204: OpenApiResponse(description='删除成功'),
+            400: OpenApiResponse(description='参数错误或用户状态不允许删除'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='用户不存在'),
+        },
+        tags=['用户管理']
+    )
+    def delete(self, request, pk):
+        if get_current_role(request.user, request) != 'ADMIN':
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以删除用户'
+            )
+
+        service = UserManagementService(request)
+        service.delete_user(pk)
+        return no_content_response()
 class UserDeactivateView(BaseAPIView):
     """
     User deactivation endpoint.

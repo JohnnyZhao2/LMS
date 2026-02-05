@@ -5,6 +5,7 @@ Endpoints:
 - POST /api/users/ - Create new user (admin only)
 - GET /api/users/{id}/ - Get user details (admin only)
 - PATCH /api/users/{id}/ - Update user info (admin only)
+- DELETE /api/users/{id}/ - Hard delete resigned user and related data (admin only)
 - POST /api/users/{id}/deactivate/ - Deactivate user (admin only)
 - POST /api/users/{id}/activate/ - Activate user (admin only)
 - POST /api/users/{id}/assign-roles/ - Assign roles to user (admin only)

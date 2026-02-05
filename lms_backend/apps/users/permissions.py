@@ -8,6 +8,7 @@ Properties:
 - Property 40: 无权限请求拒绝
 - Property 41: 团队经理只读访问
 """
+from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
@@ -309,26 +310,47 @@ def get_accessible_students(user, current_role=None, request=None):
     Returns:
         QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
-    Note: 排除专有角色用户（室经理、团队经理），这些用户不参与任务分配
+    Note:
+    - 管理员/导师/室经理默认仅统计纯学员
+    - 团队经理统计团队学习成员池（具备 STUDENT，仅排除超级管理员与室经理）
     """
     from apps.users.models import User
     if not current_role:
         current_role = get_current_role(user, request)
 
-    # 专有角色：这些角色的用户不参与任务分配
-    STAFF_ONLY_ROLES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+    # 非学员角色：这些角色的用户不参与默认学员统计/任务分配
+    NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
 
-    # 基础查询：只返回有 STUDENT 角色的活跃用户，排除专有角色用户
+    # 先收集非学员用户 ID，再从 STUDENT 池中排除，避免 M2M join 导致的误包含
+    non_student_user_ids = User.objects.filter(
+        roles__code__in=NON_STUDENT_ROLES
+    ).values_list('id', flat=True)
+
+    # 基础查询：只返回纯学员（active + STUDENT 且不带任何非学员角色）
     base_qs = User.objects.filter(
         is_active=True,
         roles__code='STUDENT'
     ).exclude(
-        roles__code__in=STAFF_ONLY_ROLES
+        id__in=non_student_user_ids
     ).distinct()
 
     # Admin can access all students (Property 39)
     if current_role == 'ADMIN':
         return base_qs
+    # Team manager can access team learning member pool (read-only, Property 41)
+    # 口径说明：
+    # - 团队经理看板按“学习成员池”统计：active + STUDENT
+    # - 仅排除：超级管理员(is_superuser=1) 与室经理(DEPT_MANAGER)
+    if current_role == 'TEAM_MANAGER':
+        excluded_ids = User.objects.filter(
+            Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER')
+        ).values_list('id', flat=True)
+        return User.objects.filter(
+            is_active=True,
+            roles__code='STUDENT'
+        ).exclude(
+            id__in=excluded_ids
+        ).distinct()
     # Mentor can only access their mentees (Property 37)
     if current_role == 'MENTOR':
         return base_qs.filter(mentor=user)
@@ -389,4 +411,3 @@ def filter_queryset_by_data_scope(queryset, user, student_field='user', request=
         return queryset.none()
     # Default: no access
     return queryset.none()
-

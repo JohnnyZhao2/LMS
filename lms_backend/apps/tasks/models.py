@@ -34,6 +34,19 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         default='',
         verbose_name='任务描述'
     )
+    created_role = models.CharField(
+        max_length=20,
+        choices=[
+            ('ADMIN', '管理员'),
+            ('MENTOR', '导师'),
+            ('DEPT_MANAGER', '室经理'),
+            ('TEAM_MANAGER', '团队经理'),
+            ('STUDENT', '学员'),
+        ],
+        default='ADMIN',
+        db_index=True,
+        verbose_name='创建时角色'
+    )
     # 时间设置
     deadline = models.DateTimeField(
         verbose_name='截止时间'

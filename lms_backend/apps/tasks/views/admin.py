@@ -129,6 +129,11 @@ class TaskListView(BaseAPIView):
         ''',
         parameters=[
             OpenApiParameter(name='is_closed', type=bool, description='是否已结束'),
+            OpenApiParameter(
+                name='creator_side',
+                type=str,
+                description='任务来源筛选（仅管理员有效）：all / management(ADMIN角色创建) / non_management(非ADMIN角色创建)'
+            ),
         ],
         responses={200: TaskListSerializer(many=True)},
         tags=['任务管理']
@@ -136,6 +141,9 @@ class TaskListView(BaseAPIView):
     def get(self, request):
         # Use TaskService to get queryset based on user role
         queryset = self.service.get_task_queryset_for_user()
+
+        creator_side = request.query_params.get('creator_side')
+        queryset = self.service.filter_task_queryset_by_creator_side(queryset, creator_side)
         
         is_closed = request.query_params.get('is_closed')
         if is_closed is not None:

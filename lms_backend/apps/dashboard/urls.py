@@ -5,12 +5,14 @@ Implements URL routing for:
 - Task participants progress
 - Mentor/Department manager dashboard
 - Students needing attention
+- Team manager dashboard
 """
 from django.urls import path
 
 from .views import (
     MentorDashboardView,
     StudentDashboardView,
+    TeamManagerDashboardView,
 )
 from .views.mentor import StudentsNeedingAttentionView
 from .views.student import TaskParticipantsView
@@ -24,4 +26,6 @@ urlpatterns = [
     path('mentor/', MentorDashboardView.as_view(), name='mentor-dashboard'),
     # Students needing attention
     path('mentor/students-needing-attention/', StudentsNeedingAttentionView.as_view(), name='students-needing-attention'),
+    # Team manager dashboard
+    path('team-manager/', TeamManagerDashboardView.as_view(), name='team-manager-dashboard'),
 ]

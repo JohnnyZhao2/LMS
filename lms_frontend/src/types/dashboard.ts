@@ -195,3 +195,65 @@ export interface MentorDashboardStudent {
   spot_check_avg_score_month: number | null;
   radar_metrics: MentorDashboardRadarMetrics;
 }
+
+/**
+ * 团队经理仪表盘
+ */
+export interface TeamManagerDashboard {
+  summary: TeamManagerDashboardSummary;
+  department_comparison: TeamManagerDepartmentComparison;
+  department_student_view: TeamManagerDepartmentStudentViewItem[];
+}
+
+export interface TeamManagerDashboardSummary {
+  total_students: number;
+  total_mentors: number;
+  total_knowledge: number;
+}
+
+export interface TeamManagerDepartmentMetrics {
+  department_id: number | null;
+  department_name: string;
+  student_count: number;
+  mentor_count: number;
+  avg_completion_rate: number;
+  avg_score: number | null;
+  weekly_active_users: number;
+  weekly_active_rate: number;
+}
+
+export interface TeamManagerDepartmentGap {
+  student_count: number;
+  mentor_count: number;
+  completion_rate: number;
+  avg_score: number | null;
+  weekly_active_rate: number;
+}
+
+export interface TeamManagerDepartmentComparison {
+  left_department: TeamManagerDepartmentMetrics;
+  right_department: TeamManagerDepartmentMetrics;
+  gap: TeamManagerDepartmentGap;
+}
+
+export interface TeamManagerDepartmentStudent {
+  student_id: number;
+  student_name: string;
+  mentor_name: string | null;
+  completion_rate: number;
+  avg_score: number | null;
+  is_at_risk: boolean;
+}
+
+export interface TeamManagerDepartmentStudentViewItem {
+  department_id: number;
+  department_name: string;
+  mentor_count: number;
+  student_count: number;
+  avg_completion_rate: number;
+  avg_score: number | null;
+  weekly_active_users: number;
+  weekly_active_rate: number;
+  at_risk_students: number;
+  students: TeamManagerDepartmentStudent[];
+}

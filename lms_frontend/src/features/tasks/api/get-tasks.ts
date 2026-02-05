@@ -14,6 +14,7 @@ interface GetTasksParams {
   pageSize?: number;
   status?: TaskStatus;
   isClosed?: boolean;
+  creatorSide?: 'all' | 'management' | 'non_management';
 }
 
 interface UseTasksOptions {
@@ -56,15 +57,16 @@ export const useTaskList = (
   options: UseTasksOptions = {}
 ) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, isClosed } = params;
+  const { page = 1, pageSize = 20, isClosed, creatorSide = 'all' } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, isClosed],
+    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, isClosed, creatorSide],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(typeof isClosed === 'boolean' && { is_closed: isClosed ? 'true' : 'false' }),
+        ...(creatorSide !== 'all' && { creator_side: creatorSide }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<TaskListItem>>(

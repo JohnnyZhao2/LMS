@@ -51,13 +51,28 @@ export const TaskManagement: React.FC = () => {
     const { user, currentRole } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
+    const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
+    const isAdmin = currentRole === 'ADMIN'
 
-    const { data: tasksData, isLoading, refetch } = useTaskList({ page, pageSize })
+    const { data: tasksData, isLoading, refetch } = useTaskList({
+        page,
+        pageSize,
+        isClosed: statusFilter === 'all' ? undefined : statusFilter === 'closed',
+        creatorSide: isAdmin ? creatorSideFilter : 'all',
+    })
     const deleteTask = useDeleteTask()
+
+    React.useEffect(() => {
+        setPage(1)
+    }, [creatorSideFilter])
+
+    React.useEffect(() => {
+        setPage(1)
+    }, [statusFilter])
 
     // 统计逻辑
     const stats = React.useMemo(() => {
@@ -305,7 +320,21 @@ export const TaskManagement: React.FC = () => {
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-4">
+                            {isAdmin && (
+                                <SegmentedControl
+                                    value={creatorSideFilter}
+                                    onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}
+                                    options={[
+                                        { label: '全部来源', value: 'all' },
+                                        { label: '管理端', value: 'management' },
+                                        { label: '非管理端', value: 'non_management' },
+                                    ]}
+                                    variant="premium"
+                                    activeColor="white"
+                                    className="w-full md:w-auto"
+                                />
+                            )}
                             <SegmentedControl
                                 value={statusFilter}
                                 onChange={(val: string) => setStatusFilter(val)}
@@ -335,10 +364,7 @@ export const TaskManagement: React.FC = () => {
                                     columns={columns}
                                     data={tasksData?.results?.filter((t: TaskListItem) => {
                                         const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                        const matchesStatus = statusFilter === 'all' ||
-                                            (statusFilter === 'open' && !t.is_closed) ||
-                                            (statusFilter === 'closed' && t.is_closed);
-                                        return matchesSearch && matchesStatus;
+                                        return matchesSearch;
                                     }) || []}
                                     pagination={{
                                         pageIndex: page - 1,

@@ -5,7 +5,7 @@ Provides business logic for:
 - Task assignment management
 - Permission checks for task operations
 """
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import QuerySet
@@ -42,6 +42,8 @@ class TaskService(BaseService):
     - Permission checks for task operations
     """
 
+    MANAGEMENT_SIDE_ROLES = ['ADMIN']
+
     def get_task_queryset_for_user(self) -> QuerySet:
         """
         Get task queryset based on user's role.
@@ -53,11 +55,39 @@ class TaskService(BaseService):
         if current_role == 'ADMIN':
             return qs
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            return qs.filter(created_by=self.user)
+            return qs.filter(
+                created_by=self.user,
+                created_role=current_role,
+            )
         assigned_task_ids = TaskAssignment.objects.filter(
             assignee=self.user
         ).values_list('task_id', flat=True)
         return qs.filter(id__in=assigned_task_ids)
+
+    def filter_task_queryset_by_creator_side(
+        self,
+        queryset: QuerySet,
+        creator_side: Optional[str]
+    ) -> QuerySet:
+        """
+        Filter task queryset by creator side.
+        Only ADMIN can use this filter.
+        """
+        if not creator_side or creator_side == 'all':
+            return queryset
+
+        if self.get_current_role() != 'ADMIN':
+            return queryset
+
+        if creator_side == 'management':
+            return queryset.filter(created_role__in=self.MANAGEMENT_SIDE_ROLES)
+        if creator_side == 'non_management':
+            return queryset.exclude(created_role__in=self.MANAGEMENT_SIDE_ROLES)
+
+        raise BusinessError(
+            code=ErrorCodes.INVALID_INPUT,
+            message='creator_side 参数无效，仅支持 all、management、non_management'
+        )
 
     def get_task_by_id(self, pk: int, include_deleted: bool = False) -> Task:
         """
@@ -88,7 +118,7 @@ class TaskService(BaseService):
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by != self.user:
+            if task.created_by != self.user or task.created_role != current_role:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='无权访问此任务'
@@ -132,7 +162,7 @@ class TaskService(BaseService):
         if current_role == 'ADMIN':
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by != self.user:
+            if task.created_by != self.user or task.created_role != current_role:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
                     message='无权操作此任务'
@@ -182,11 +212,13 @@ class TaskService(BaseService):
         knowledge_ids = knowledge_ids or []
         quiz_ids = quiz_ids or []
         assignee_ids = assignee_ids or []
+        created_role = self.get_current_role() or 'ADMIN'
         # Create task
         task = Task.objects.create(
             title=title,
             description=description,
             deadline=deadline,
+            created_role=created_role,
             created_by=self.user,
             updated_by=self.user
         )
