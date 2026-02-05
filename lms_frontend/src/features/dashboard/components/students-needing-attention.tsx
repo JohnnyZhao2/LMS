@@ -42,6 +42,8 @@ const levelConfig: Record<AlertLevel, { bgClass: string; textClass: string; dotC
   },
 };
 
+const cardTitleClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';
+
 export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> = ({
   limit = 5,
   className,
@@ -75,8 +77,8 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
     return (
       <Card className={cn('p-6 border border-border', className)}>
         <div className="flex items-center gap-2 mb-5">
-          <AlertTriangle className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-base font-semibold text-foreground">需要关注的学员</h3>
+          <AlertTriangle className="w-4 h-4 text-muted-foreground" />
+          <h3 className={cardTitleClass}>需要关注的学员</h3>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Users className="w-12 h-12 mb-3 opacity-50" />
@@ -91,18 +93,16 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
     <Card className={cn('p-6 border border-border', className)}>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-destructive" />
-          <h3 className="text-base font-semibold text-foreground">
-            需要关注的学员
-          </h3>
-          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-destructive text-white">
+          <AlertTriangle className="w-4 h-4 text-destructive" />
+          <h3 className={cn(cardTitleClass, 'text-destructive')}>需要关注的学员</h3>
+          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-destructive text-white">
             {totalCount}
           </span>
         </div>
         {totalCount > limit && canNavigateToUserList && (
           <button
             onClick={() => navigate(`${userListPath}?filter=needs_attention`)}
-            className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors cursor-pointer"
+            className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors cursor-pointer"
           >
             查看全部
             <ChevronRight className="w-4 h-4" />
@@ -153,11 +153,11 @@ const StudentAlertCard: React.FC<StudentAlertCardProps> = ({ student }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className={cn('w-2 h-2 rounded-full', levelStyle.dotClass)} />
-            <span className="font-semibold text-foreground truncate">
+            <span className="text-sm font-semibold text-foreground truncate">
               {student.student_name}
             </span>
             {student.employee_id && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[10px] text-muted-foreground">
                 ({student.employee_id})
               </span>
             )}
@@ -198,7 +198,7 @@ const AlertBadge: React.FC<AlertBadgeProps> = ({ alert }) => {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium',
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium',
         levelStyle.textClass,
         'bg-background/80'
       )}

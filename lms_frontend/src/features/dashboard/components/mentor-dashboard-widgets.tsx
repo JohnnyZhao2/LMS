@@ -8,7 +8,6 @@ import {
   Target,
   Users
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useCurrentRole } from '@/hooks/use-current-role';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import type {
   MentorDashboardOverdueWarning,
@@ -57,35 +57,40 @@ const formatHours = (hours: number) => {
   return `${absHours.toFixed(1)}小时`;
 };
 
+const cardTitleClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';
+const cardTitleNoteClass = 'ml-2 text-[9px] font-medium text-text-muted/80 normal-case tracking-normal';
+const cardMetaClass = 'text-[10px] text-text-muted';
+
 export const OverdueWarningCard: React.FC<OverdueWarningCardProps> = ({ data }) => {
-  const navigate = useNavigate();
   const currentRole = useCurrentRole();
+  const { roleNavigate } = useRoleNavigate();
   const canNavigate = Boolean(currentRole && ['MENTOR', 'DEPT_MANAGER', 'ADMIN'].includes(currentRole));
-  const rolePath = currentRole ? `/${currentRole.toLowerCase()}` : '';
 
   return (
     <Card className="p-6 border border-border">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-destructive" />
+          <AlertTriangle className="w-4 h-4 text-destructive" />
           <div>
-            <h3 className="text-base font-semibold text-foreground">逾期预警</h3>
-            <p className="text-xs text-text-muted">
-              近 {data.due_soon_hours} 小时内即将逾期
-            </p>
+            <h3 className={cn(cardTitleClass, 'text-destructive')}>
+              逾期预警
+              <span className={cardTitleNoteClass}>
+                · 近 {data.due_soon_hours} 小时内即将逾期
+              </span>
+            </h3>
           </div>
           <div className="hidden md:flex items-center gap-2 ml-2">
-            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-destructive text-white">
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-destructive text-white">
               {data.overdue_count} 逾期
             </span>
-            <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-warning text-warning-900">
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-warning text-warning-900">
               {data.due_soon_count} 即将
             </span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="text-xs text-text-muted">逾期</span>
-          <span className="text-lg font-black text-foreground tabular-nums">{data.overdue_count}</span>
+          <span className={cardMetaClass}>逾期</span>
+          <span className="text-2xl font-black text-foreground tabular-nums">{data.overdue_count}</span>
         </div>
       </div>
 
@@ -109,8 +114,8 @@ export const OverdueWarningCard: React.FC<OverdueWarningCardProps> = ({ data }) 
                 key={item.assignment_id}
                 onClick={() => {
                   if (!canNavigate) return;
-                  navigate(
-                    `${rolePath}/tasks/${item.task_id}/preview?tab=progress&student_id=${item.student_id}`
+                  roleNavigate(
+                    `/tasks/${item.task_id}/preview?tab=progress&student_id=${item.student_id}`
                   );
                 }}
                 className={cn(
@@ -123,20 +128,20 @@ export const OverdueWarningCard: React.FC<OverdueWarningCardProps> = ({ data }) 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Clock className={cn('w-4 h-4', style.iconClass)} />
-                      <span className="font-semibold text-foreground truncate">{item.student_name}</span>
+                      <span className="text-sm font-semibold text-foreground truncate">{item.student_name}</span>
                       {item.employee_id && (
-                        <span className="text-xs text-text-muted">({item.employee_id})</span>
+                        <span className="text-[10px] text-text-muted">({item.employee_id})</span>
                       )}
                     </div>
-                    <p className="text-xs text-text-muted mt-1 truncate">
+                    <p className="text-[10px] text-text-muted mt-1 truncate">
                       {item.task_title}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full', style.badgeClass)}>
+                    <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', style.badgeClass)}>
                       {style.label}
                     </span>
-                    <span className="text-xs text-text-muted">{timeText}</span>
+                    <span className={cardMetaClass}>{timeText}</span>
                   </div>
                 </div>
               </div>
@@ -153,18 +158,18 @@ interface PendingGradingCardProps {
 }
 
 export const PendingGradingCard: React.FC<PendingGradingCardProps> = ({ count }) => {
-  const navigate = useNavigate();
+  const { roleNavigate } = useRoleNavigate();
 
   return (
     <Card className="p-6 border border-border flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-warning-50 flex items-center justify-center">
-            <FileCheck className="w-5 h-5 text-warning-600" />
-          </div>
+          <FileCheck className="w-4 h-4 text-warning-600" />
           <div>
-            <h3 className="text-base font-semibold text-foreground">待批阅卷</h3>
-            <p className="text-xs text-text-muted">仅统计含主观题的提交</p>
+            <h3 className={cardTitleClass}>
+              待批阅卷
+              <span className={cardTitleNoteClass}>· 仅统计含主观题的提交</span>
+            </h3>
           </div>
         </div>
         <span className="text-2xl font-black text-foreground tabular-nums">{count}</span>
@@ -173,7 +178,7 @@ export const PendingGradingCard: React.FC<PendingGradingCardProps> = ({ count })
         size="sm"
         variant="secondary"
         className="w-full"
-        onClick={() => navigate(ROUTES.GRADING_CENTER)}
+        onClick={() => roleNavigate(ROUTES.GRADING_CENTER)}
       >
         进入阅卷中心
       </Button>
@@ -189,21 +194,21 @@ export const SpotCheckStatsCard: React.FC<SpotCheckStatsCardProps> = ({ stats })
   return (
     <Card className="p-6 border border-border">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-          <Target className="w-5 h-5 text-primary-600" />
-        </div>
+        <Target className="w-4 h-4 text-primary-600" />
         <div>
-          <h3 className="text-base font-semibold text-foreground">抽查统计</h3>
-          <p className="text-xs text-text-muted">本月名下学员抽查</p>
+          <h3 className={cardTitleClass}>
+            抽查统计
+            <span className={cardTitleNoteClass}>· 本月名下学员抽查</span>
+          </h3>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="p-3 rounded-lg bg-muted">
-          <p className="text-xs text-text-muted">抽查次数</p>
+          <p className={cardMetaClass}>抽查次数</p>
           <p className="text-xl font-black text-foreground tabular-nums">{stats.count}</p>
         </div>
         <div className="p-3 rounded-lg bg-muted">
-          <p className="text-xs text-text-muted">平均分</p>
+          <p className={cardMetaClass}>平均分</p>
           <p className="text-xl font-black text-foreground tabular-nums">
             {stats.avg_score ?? '--'}
           </p>
@@ -244,8 +249,8 @@ export const StudentRadarCard: React.FC<StudentRadarCardProps> = ({ students }) 
     return (
       <Card className="p-6 border border-border h-full">
         <div className="flex items-center gap-3 mb-5">
-          <Target className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold text-foreground">学员进度雷达</h3>
+          <Target className="w-4 h-4 text-primary" />
+          <h3 className={cardTitleClass}>学员进度雷达</h3>
         </div>
         <div className="flex flex-col items-center justify-center py-10 text-text-muted">
           <Users className="w-12 h-12 mb-3 opacity-50" />
@@ -292,8 +297,8 @@ export const StudentRadarCard: React.FC<StudentRadarCardProps> = ({ students }) 
     <Card className="p-6 border border-border h-full">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold text-foreground">学员进度雷达</h3>
+          <Target className="w-4 h-4 text-primary" />
+          <h3 className={cardTitleClass}>学员进度雷达</h3>
         </div>
         <div className="min-w-[160px]">
           <Select value={selectedId?.toString() ?? ''} onValueChange={(value) => setSelectedId(Number(value))}>
@@ -369,7 +374,7 @@ export const StudentRadarCard: React.FC<StudentRadarCardProps> = ({ students }) 
             <CheckCircle className="w-4 h-4 text-secondary" />
             {selectedStudent.username}
             {selectedStudent.department_name && (
-              <span className="text-xs text-text-muted">
+              <span className="text-[10px] text-text-muted">
                 · {selectedStudent.department_name}
               </span>
             )}
@@ -377,14 +382,14 @@ export const StudentRadarCard: React.FC<StudentRadarCardProps> = ({ students }) 
           <div className="space-y-3">
             {radarMetrics.map((metric, index) => (
               <div key={metric.key} className="flex items-center justify-between gap-3">
-                <span className="text-xs text-text-muted">{metric.label}</span>
+                <span className="text-[10px] text-text-muted">{metric.label}</span>
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className="h-full bg-primary"
                     style={{ width: `${values[index]}%` }}
                   />
                 </div>
-                <span className="text-xs font-semibold text-foreground tabular-nums w-10 text-right">
+                <span className="text-[10px] font-semibold text-foreground tabular-nums w-10 text-right">
                   {values[index].toFixed(0)}
                 </span>
               </div>
@@ -422,24 +427,24 @@ export const ScoreDistributionCard: React.FC<ScoreDistributionCardProps> = ({ di
     <Card className="p-6 border border-border h-full flex flex-col">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold text-foreground">成绩分布</h3>
+          <BarChart3 className="w-4 h-4 text-primary" />
+          <h3 className={cardTitleClass}>成绩分布</h3>
         </div>
-        <span className="text-xs text-text-muted">总计 {totalCount}</span>
+        <span className={cardMetaClass}>总计 {totalCount}</span>
       </div>
       <div className="flex flex-col gap-4 flex-1">
         <div className="space-y-3">
           {summaryItems.map((item) => {
             return (
               <div key={item.key} className="flex items-center gap-3">
-                <span className="w-10 text-xs text-text-muted text-right">{item.label}</span>
+                <span className="w-10 text-[10px] text-text-muted text-right">{item.label}</span>
                 <div className="flex-1 h-7 bg-muted rounded-md overflow-hidden">
                   <div
                     className={cn('h-full rounded-md', item.barClass)}
                     style={{ width: `${(item.count / maxCount) * 100}%`, minWidth: item.count > 0 ? '28px' : '0' }}
                   />
                 </div>
-                <span className="w-8 text-right text-xs font-semibold text-foreground tabular-nums">
+                <span className="w-8 text-right text-[10px] font-semibold text-foreground tabular-nums">
                   {item.count}
                 </span>
               </div>
@@ -454,9 +459,9 @@ export const ScoreDistributionCard: React.FC<ScoreDistributionCardProps> = ({ di
             >
               <div className="flex items-center gap-2">
                 <span className={cn('h-2 w-2 rounded-full', item.barClass)} />
-                <span className="text-xs text-text-muted">{item.summaryLabel}占比</span>
+                <span className="text-[10px] text-text-muted">{item.summaryLabel}占比</span>
               </div>
-              <span className="text-sm font-semibold text-foreground tabular-nums">
+              <span className="text-xs font-semibold text-foreground tabular-nums">
                 {item.percent}%
               </span>
             </div>
