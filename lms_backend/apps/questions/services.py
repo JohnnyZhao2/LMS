@@ -80,41 +80,6 @@ class QuestionService(BaseService):
 
         return queryset
 
-    def get_list(
-        self,
-        filters: dict = None,
-        search: str = None,
-        ordering: str = '-created_at',
-        page: int = 1,
-        page_size: int = 10
-    ) -> dict:
-        """
-        获取题目列表（已废弃，请使用 get_queryset）
-        Args:
-            filters: 过滤条件
-            search: 搜索关键词
-            ordering: 排序字段
-            page: 页码
-            page_size: 每页数量
-        Returns:
-            包含题目列表和分页信息的字典
-        """
-        queryset = self.get_queryset(filters, search, ordering)
-
-        # 分页处理
-        total_count = queryset.count()
-        start = (page - 1) * page_size
-        end = start + page_size
-        questions = queryset[start:end]
-
-        return {
-            'count': total_count,
-            'results': list(questions),
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
-        }
-
     def check_edit_permission(self, question: Question) -> bool:
         """
         检查用户是否有编辑/删除权限

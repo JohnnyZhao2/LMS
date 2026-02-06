@@ -169,13 +169,6 @@ LOG_ACTIONS = [
         'default_enabled': True,
     },
     {
-        'key': 'operation.task_management.close_task',
-        'category': 'operation',
-        'group': '任务管理',
-        'label': '关闭任务',
-        'default_enabled': True,
-    },
-    {
         'key': 'operation.spot_check.create',
         'category': 'operation',
         'group': '抽查记录',
@@ -221,4 +214,3 @@ LOG_ACTIONS = [
 
 
 LOG_ACTION_INDEX = {item['key']: item for item in LOG_ACTIONS}
-

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Clock, Plus, Search, Star, User } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
@@ -38,13 +38,18 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  * 抽查记录列表组件 - ShadCN UI 版本
  */
 export const SpotCheckList: React.FC = () => {
-  const [page, setPage] = useState(1);
+  const [pageByRole, setPageByRole] = useState<Record<string, number>>({});
   const currentRole = useCurrentRole();
+  const roleKey = currentRole ?? 'UNKNOWN';
+  const page = pageByRole[roleKey] ?? 1;
+  const setPage = (nextPage: number) => {
+    setPageByRole((prev) => ({
+      ...prev,
+      [roleKey]: nextPage,
+    }));
+  };
   const { data, isLoading } = useSpotChecks({ page, role: currentRole });
   const { roleNavigate } = useRoleNavigate();
-  useEffect(() => {
-    setPage(1);
-  }, [currentRole]);
 
   const columns: ColumnDef<SpotCheck>[] = [
     {

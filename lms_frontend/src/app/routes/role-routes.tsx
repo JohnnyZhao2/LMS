@@ -16,7 +16,7 @@ const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-
 // Tasks
 const TaskList = lazy(() => import('@/features/tasks/components/task-list').then(m => ({ default: m.TaskList })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
-const TaskForm = lazy(() => import('@/features/tasks/components/task-form').then(m => ({ default: m.TaskForm })));
+const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
 const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview').then(m => ({ default: m.TaskPreviewPage })));
 
 // Knowledge

@@ -2,7 +2,6 @@
 Task management views for admin/mentor/dept_manager.
 Implements:
 - Task CRUD
-- Task close
 - Assignable user list
 """
 from django.db.models import Q
@@ -233,34 +232,3 @@ class TaskDetailView(BaseAPIView):
         self.service.delete_task(task)
         return no_content_response()
 
-
-class TaskCloseView(BaseAPIView):
-    """Force close task endpoint."""
-    permission_classes = [IsAuthenticated]
-    serializer_class = TaskDetailSerializer
-    service_class = TaskService
-
-    @extend_schema(
-        summary='强制结束任务',
-        description='强制结束任务。只有管理员可以执行此操作。',
-        responses={
-            200: TaskDetailSerializer,
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='任务不存在'),
-        },
-        tags=['任务管理']
-    )
-    def post(self, request, pk):
-        # 使用 service 获取 role
-        current_role = self.service.get_current_role()
-        if current_role != 'ADMIN':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以强制结束任务'
-            )
-            
-        task = self.service.get_task_by_id(pk)
-        # close_task 不再需要 updated_by 参数
-        task = self.service.close_task(task)
-        serializer = TaskDetailSerializer(task)
-        return success_response(serializer.data)

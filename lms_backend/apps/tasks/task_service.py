@@ -9,7 +9,6 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from django.db import transaction
 from django.db.models import QuerySet
-from django.utils import timezone
 
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
@@ -38,7 +37,6 @@ class TaskService(BaseService):
     Handles:
     - Task creation with knowledge/quiz associations
     - Task updates and deletions
-    - Task closing logic
     - Permission checks for task operations
     """
 
@@ -454,32 +452,6 @@ class TaskService(BaseService):
     def delete_task(self, task: Task) -> None:
         """Soft delete a task."""
         task.soft_delete()
-
-    @log_operation('task_management', 'close_task', '关闭任务《{task.title}》')
-    def close_task(self, task: Task) -> Task:
-        """
-        Force close a task.
-        Args:
-            task: Task to close
-        Returns:
-            Closed Task instance
-        Raises:
-            BusinessError: If task is already closed
-        """
-        if task.is_closed:
-            raise BusinessError(
-                code=ErrorCodes.INVALID_OPERATION,
-                message='任务已经结束'
-            )
-        task.is_closed = True
-        task.closed_at = timezone.now()
-        task.updated_by = self.user
-        task.save(update_fields=['is_closed', 'closed_at', 'updated_by'])
-        task.assignments.filter(
-            status='IN_PROGRESS'
-        ).update(status='OVERDUE')
-        task.refresh_from_db()
-        return task
 
     @staticmethod
     def _validate_published_resources(

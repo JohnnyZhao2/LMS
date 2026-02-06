@@ -10,7 +10,6 @@ from .views import (
     StudentExecutionsView,
     StudentTaskDetailView,
     TaskAnalyticsView,
-    TaskCloseView,
     TaskCreateView,
     TaskDetailView,
     TaskListView,
@@ -22,8 +21,6 @@ urlpatterns = [
     path('<int:pk>/', TaskDetailView.as_view(), name='task-detail'),
     # Task creation (unified)
     path('create/', TaskCreateView.as_view(), name='task-create'),
-    # Task management
-    path('<int:pk>/close/', TaskCloseView.as_view(), name='task-close'),
     # Assignable students
     path('assignable-users/', AssignableUserListView.as_view(), name='assignable-user-list'),
     # Student task execution

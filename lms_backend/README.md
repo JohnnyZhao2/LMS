@@ -192,7 +192,6 @@ curl -X POST http://127.0.0.1:8000/api/auth/refresh/ \
 | GET | /{id}/ | 任务详情 |
 | PUT | /{id}/ | 更新任务 |
 | DELETE | /{id}/ | 删除任务 |
-| POST | /{id}/close/ | 强制结束任务 |
 | GET | /my-tasks/ | 我的任务 |
 | GET | /assignable-users/ | 可分配学员列表 |
 

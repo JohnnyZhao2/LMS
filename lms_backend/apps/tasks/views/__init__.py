@@ -7,7 +7,6 @@ Split into:
 """
 from .admin import (
     AssignableUserListView,
-    TaskCloseView,
     TaskCreateView,
     TaskDetailView,
     TaskListView,
@@ -28,7 +27,6 @@ __all__ = [
     'TaskCreateView',
     'TaskListView',
     'TaskDetailView',
-    'TaskCloseView',
     # Student views
     'StudentAssignmentListView',
     'StudentTaskDetailView',

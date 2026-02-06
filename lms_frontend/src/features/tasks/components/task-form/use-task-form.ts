@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -24,6 +24,23 @@ const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
   return data.results;
 };
 
+type Updater<T> = T | ((prev: T) => T);
+
+const applyUpdater = <T,>(updater: Updater<T>, current: T): T => {
+  if (typeof updater === 'function') {
+    return (updater as (prev: T) => T)(current);
+  }
+  return updater;
+};
+
+const buildStableUid = (seed: string, fallback: number): number => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) % 2147483647;
+  }
+  return hash || fallback;
+};
+
 export const useTaskForm = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -34,14 +51,13 @@ export const useTaskForm = () => {
   const paramQuizId = Number(searchParams.get('quiz_id'));
 
   // Form state
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState<Date | undefined>();
-  const [selectedResources, setSelectedResources] = useState<SelectedResource[]>([]);
+  const [titleDraft, setTitleDraft] = useState<string | null>(null);
+  const [descriptionDraft, setDescriptionDraft] = useState<string | null>(null);
+  const [deadlineDraft, setDeadlineDraft] = useState<Date | undefined | null>(null);
+  const [selectedResourcesDraft, setSelectedResourcesDraft] = useState<SelectedResource[] | null>(null);
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
-  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
-  const [originalAssigneeIds, setOriginalAssigneeIds] = useState<number[]>([]);
+  const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<number[] | null>(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalSearch, setUserModalSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,19 +88,13 @@ export const useTaskForm = () => {
   const resourcesDisabled = isEdit && hasProgress;
   const canRemoveAssignee = !(isEdit && hasProgress);
 
-  // Initialization logic
-  const isInitialized = useRef(false);
-
-  useEffect(() => {
-    if (isInitialized.current) return;
-
+  const initialTitle = isEdit && task ? task.title : '';
+  const initialDescription = isEdit && task ? (task.description || '') : '';
+  const initialDeadline = isEdit && task?.deadline ? new Date(task.deadline) : undefined;
+  const initialSelectedResources = useMemo<SelectedResource[]>(() => {
     if (isEdit && task) {
-      setTitle(task.title);
-      setDescription(task.description || '');
-      setDeadline(task.deadline ? new Date(task.deadline) : undefined);
-
       const knowledgeResources: SelectedResource[] = (task.knowledge_items || []).map((item, idx) => ({
-        uid: Date.now() + Math.random() + idx,
+        uid: buildStableUid(`DOCUMENT:${item.resource_uuid}:${idx}`, item.knowledge + idx),
         id: item.knowledge,
         resource_uuid: item.resource_uuid,
         is_current: item.is_current,
@@ -94,7 +104,7 @@ export const useTaskForm = () => {
       }));
 
       const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
-        uid: Date.now() + Math.random() + idx + 1000,
+        uid: buildStableUid(`QUIZ:${item.resource_uuid}:${idx}`, item.quiz + idx + 1000),
         id: item.quiz,
         resource_uuid: item.resource_uuid,
         is_current: item.is_current,
@@ -103,24 +113,50 @@ export const useTaskForm = () => {
         category: `${(item as { question_count?: number }).question_count || 0} 个题目`,
       }));
 
-      setSelectedResources([...knowledgeResources, ...quizResources]);
-      const assigneeIds = task.assignments?.map(item => item.assignee) || [];
-      setSelectedUserIds(assigneeIds);
-      setOriginalAssigneeIds(assigneeIds);
-      isInitialized.current = true;
-    } else if (!isEdit && quizDetail && paramQuizId) {
-      setSelectedResources([{
-        uid: Date.now(),
+      return [...knowledgeResources, ...quizResources];
+    }
+
+    if (!isEdit && quizDetail && paramQuizId) {
+      return [{
+        uid: buildStableUid(`QUIZ:${quizDetail.resource_uuid}:prefill`, quizDetail.id),
         id: quizDetail.id,
         resource_uuid: quizDetail.resource_uuid,
         is_current: quizDetail.is_current,
         title: quizDetail.title,
         resourceType: 'QUIZ',
         category: `${quizDetail.question_count || 0} 个题目`,
-      }]);
-      isInitialized.current = true;
+      }];
     }
+
+    return [];
   }, [isEdit, task, quizDetail, paramQuizId]);
+  const initialSelectedUserIds = useMemo<number[]>(
+    () => (isEdit && task ? (task.assignments?.map((item) => item.assignee) || []) : []),
+    [isEdit, task]
+  );
+  const originalAssigneeIds = initialSelectedUserIds;
+
+  const title = titleDraft ?? initialTitle;
+  const description = descriptionDraft ?? initialDescription;
+  const deadline = deadlineDraft === null ? initialDeadline : deadlineDraft;
+  const selectedResources = selectedResourcesDraft ?? initialSelectedResources;
+  const selectedUserIds = selectedUserIdsDraft ?? initialSelectedUserIds;
+
+  const setTitle = (nextTitle: string) => {
+    setTitleDraft(nextTitle);
+  };
+  const setDescription = (nextDescription: string) => {
+    setDescriptionDraft(nextDescription);
+  };
+  const setDeadline = (nextDeadline: Date | undefined) => {
+    setDeadlineDraft(nextDeadline);
+  };
+  const setSelectedResources = (updater: Updater<SelectedResource[]>) => {
+    setSelectedResourcesDraft((prev) => applyUpdater(updater, prev ?? initialSelectedResources));
+  };
+  const setSelectedUserIds = (updater: Updater<number[]>) => {
+    setSelectedUserIdsDraft((prev) => applyUpdater(updater, prev ?? initialSelectedUserIds));
+  };
 
   // Computed values for resources
   const filteredResources = useMemo(() => {
@@ -165,7 +201,16 @@ export const useTaskForm = () => {
   // Handlers
   const addResource = (res: ResourceItem) => {
     if (resourcesDisabled) return;
-    setSelectedResources(prev => [...prev, { ...res, uid: prev.length + Date.now() }]);
+    setSelectedResources((prev) => [
+      ...prev,
+      {
+        ...res,
+        uid: buildStableUid(
+          `${res.resourceType}:${res.resource_uuid}:${prev.length}`,
+          res.id + prev.length
+        ),
+      },
+    ]);
   };
 
   const moveResource = (idx: number, direction: 'up' | 'down') => {

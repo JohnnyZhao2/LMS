@@ -134,17 +134,8 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         if self.is_closed:
             return True
         return timezone.now() > self.deadline
-    def close(self):
-        """
-        强制结束任务
-        """
-        self.is_closed = True
-        self.closed_at = timezone.now()
-        self.save(update_fields=['is_closed', 'closed_at'])
-        # 将未完成的分配记录标记为已逾期
-        self.assignments.filter(
-            status='IN_PROGRESS'
-        ).update(status='OVERDUE')
+
+
 class TaskAssignment(TimestampMixin, models.Model):
     """
     任务分配记录模型

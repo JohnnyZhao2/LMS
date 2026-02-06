@@ -5,30 +5,19 @@ import {
   Pencil,
   Trash2,
   MoreHorizontal,
-  StopCircle,
   Activity,
 } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ActionDropdown } from '@/components/common/action-dropdown';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { CategoryBadge } from '@/components/common/category-badge';
 import { StatusDot } from '@/components/common/status-dot';
 
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
-import { useCloseTask } from '../api/close-task';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
@@ -58,23 +47,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const { roleNavigate } = useRoleNavigate();
   const { user, currentRole } = useAuth();
   const deleteTask = useDeleteTask();
-  const closeTask = useCloseTask();
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
-  const [closeModalOpen, setCloseModalOpen] = React.useState(false);
-
-  const handleClose = () => {
-    if (!targetTaskId) return;
-
-    closeTask.mutate(targetTaskId, {
-      onSuccess: () => {
-        toast.success("Task closed successfully");
-        setCloseModalOpen(false);
-      },
-      onError: (error: unknown) => {
-        showApiError(error);
-      }
-    });
-  };
 
   const handleDelete = () => {
     if (!targetTaskId) return;
@@ -174,11 +147,6 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                     label: '编辑任务',
                     onClick: () => roleNavigate(`tasks/${targetTaskId}/edit`),
                   },
-                  ...(!managerClosed ? [{
-                    icon: StopCircle,
-                    label: '终止任务',
-                    onClick: () => setCloseModalOpen(true),
-                  }] : []),
                   {
                     icon: Trash2,
                     label: '彻底删除',
@@ -281,25 +249,6 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
           </div>
         )}
       </div>
-
-      {/* 终止对话框 - Flat Design */}
-      <Dialog open={closeModalOpen} onOpenChange={setCloseModalOpen}>
-        <DialogContent className="rounded-lg max-w-md p-8 border-2 border-border">
-          <DialogHeader>
-            <div className="w-16 h-16 bg-warning-100 text-warning rounded-md flex items-center justify-center mb-6 mx-auto">
-              <StopCircle className="w-8 h-8" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-foreground mb-2 text-center">终止当前任务？</DialogTitle>
-            <DialogDescription className="text-text-muted font-medium text-center leading-relaxed">
-              终止后，所有未完成的学员记录将同步标记为"已逾期"。此操作不可撤回。
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-8 gap-4 sm:flex-row">
-            <Button variant="secondary" className="flex-1 h-12" onClick={() => setCloseModalOpen(false)}>放弃</Button>
-            <Button className="flex-1 h-12 bg-warning hover:bg-warning-hover text-white hover:scale-105" onClick={handleClose}>确认终止</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* 删除对话框 */}
       <ConfirmDialog

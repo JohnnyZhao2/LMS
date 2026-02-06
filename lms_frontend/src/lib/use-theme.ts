@@ -44,7 +44,7 @@ export function useTheme() {
   // 初始化时设置 data-theme 属性
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-  }, []);
+  }, [theme]);
 
   // 监听系统主题变化
   useEffect(() => {

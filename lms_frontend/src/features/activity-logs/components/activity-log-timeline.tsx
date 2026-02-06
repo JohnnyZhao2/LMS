@@ -2,6 +2,11 @@ import React, { useMemo } from 'react';
 import { Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+type TimelineIconProps = {
+  size?: number;
+  strokeWidth?: number;
+};
+
 export type ActivityLogStatus = 'success' | 'failed' | 'partial';
 
 export interface ActivityLogTimelineItem {
@@ -156,8 +161,11 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
                       current.bg,
                       isError && "animate-[pulse_2s_infinite]"
                     )}>
-                      {item.icon ? (
-                        React.cloneElement(item.icon as React.ReactElement<any>, { size: 15, strokeWidth: 2.5 })
+                      {React.isValidElement(item.icon) ? (
+                        React.cloneElement(item.icon as React.ReactElement<TimelineIconProps>, {
+                          size: 15,
+                          strokeWidth: 2.5,
+                        })
                       ) : (
                         <Activity size={15} strokeWidth={2.5} />
                       )}
