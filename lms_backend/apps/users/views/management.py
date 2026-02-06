@@ -111,7 +111,7 @@ class UserListCreateView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以创建用户'
             )
-        serializer = UserCreateSerializer(data=request.data)
+        serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)

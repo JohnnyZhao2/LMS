@@ -59,6 +59,16 @@ interface FormErrors {
   department_id?: string;
 }
 
+const MANAGER_MUTEX_ROLE_CODES: RoleCode[] = ['DEPT_MANAGER', 'TEAM_MANAGER'];
+
+const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean): boolean => {
+  const managerCount = roleCodes.filter((code) => MANAGER_MUTEX_ROLE_CODES.includes(code)).length;
+
+  if (managerCount > 1) return false;
+  if (isSuperuserAccount) return roleCodes.length === 1 && roleCodes[0] === 'ADMIN';
+  return true;
+};
+
 /**
  * 用户表单组件
  */
@@ -92,6 +102,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   const [mentorTouched, setMentorTouched] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
 
   useEffect(() => {
     if (open) {
@@ -188,12 +199,41 @@ export const UserForm: React.FC<UserFormProps> = ({
   const getAvatarText = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
 
   const toggleRole = (code: RoleCode) => {
-    setFormData(prev => ({
-      ...prev,
-      role_codes: prev.role_codes.includes(code)
-        ? prev.role_codes.filter(c => c !== code)
-        : [...prev.role_codes, code],
-    }));
+    setFormData((prev) => {
+      const active = prev.role_codes.includes(code);
+      const nextRoleCodes = active
+        ? prev.role_codes.filter((c) => c !== code)
+        : [...prev.role_codes, code];
+
+      if (!isRoleSelectionValid(nextRoleCodes, isSuperuserAccount)) return prev;
+
+      return {
+        ...prev,
+        role_codes: nextRoleCodes,
+      };
+    });
+  };
+
+  const isRoleToggleDisabled = (roleCode: RoleCode, active: boolean): boolean => {
+    const nextRoleCodes = active
+      ? formData.role_codes.filter((code) => code !== roleCode)
+      : [...formData.role_codes, roleCode];
+    return !isRoleSelectionValid(nextRoleCodes, isSuperuserAccount);
+  };
+
+  const getRoleDisabledReason = (roleCode: RoleCode, active: boolean, disabled: boolean): string | null => {
+    if (!disabled) return null;
+    if (isSuperuserAccount) {
+      if (active && roleCode === 'ADMIN') return '超级管理员必须保留管理员角色';
+      return '超级管理员只能使用管理员角色';
+    }
+    if (
+      (roleCode === 'DEPT_MANAGER' && formData.role_codes.includes('TEAM_MANAGER')) ||
+      (roleCode === 'TEAM_MANAGER' && formData.role_codes.includes('DEPT_MANAGER'))
+    ) {
+      return '室经理与团队经理互斥';
+    }
+    return '当前组合不允许';
   };
 
   const isLoading = createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending;
@@ -361,22 +401,17 @@ export const UserForm: React.FC<UserFormProps> = ({
               <div className="w-1 h-5 rounded-full bg-warning" />
               <h3 className="text-base font-bold text-foreground tracking-tight">系统权限</h3>
             </div>
+            <p className="text-xs font-medium text-text-muted">
+              仅导师（或空角色）默认保留学员角色；含管理员/室经理/团队经理时会自动移除学员角色。室经理与团队经理互斥；超级管理员仅保留管理员角色。
+            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Default Role */}
-              <div className="flex items-center gap-4 p-5 rounded-lg bg-muted opacity-60">
-                <div className="w-12 h-12 rounded-lg bg-background text-text-muted flex items-center justify-center shrink-0">
-                  <User className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-base font-bold text-text-muted">普通学员</span>
-                  <span className="text-xs text-text-muted font-semibold uppercase mt-0.5 tracking-wider">Default</span>
-                </div>
-              </div>
-
               {/* Selectable Roles */}
               {roles.filter(r => r.code !== 'STUDENT').map(role => {
-                const active = formData.role_codes.includes(role.code as RoleCode);
+                const roleCode = role.code as RoleCode;
+                const active = formData.role_codes.includes(roleCode);
+                const disabled = isRoleToggleDisabled(roleCode, active);
+                const disabledReason = getRoleDisabledReason(roleCode, active, disabled);
                 const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
                 const roleIcons: Record<string, React.ReactNode> = {
                   ADMIN: <Shield className="w-6 h-6" />,
@@ -388,9 +423,11 @@ export const UserForm: React.FC<UserFormProps> = ({
                 return (
                   <div
                     key={role.code}
-                    onClick={() => toggleRole(role.code as RoleCode)}
+                    onClick={() => !disabled && toggleRole(roleCode)}
+                    aria-disabled={disabled}
                     className={cn(
-                      "group cursor-pointer relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
+                      "group relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
+                      disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                       active
                         ? cn("bg-background border-2", colorConfig.borderClass)
                         : "bg-muted border-2 border-transparent hover:bg-background hover:scale-[1.02]"
@@ -415,6 +452,11 @@ export const UserForm: React.FC<UserFormProps> = ({
                         {role.name}
                       </div>
                       {active && <div className="text-[10px] font-semibold uppercase text-text-muted tracking-wider">Enabled</div>}
+                      {!active && disabledReason && (
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                          {disabledReason}
+                        </div>
+                      )}
                     </div>
 
                     {active && (
