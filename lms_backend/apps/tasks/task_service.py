@@ -173,19 +173,6 @@ class TaskService(BaseService):
             message='只有管理员和导师可以操作任务'
         )
 
-    @staticmethod
-    def is_task_closed(task: Task) -> bool:
-        """
-        Check if a task is closed (manually closed or past deadline).
-        Args:
-            task: The task to check
-        Returns:
-            True if task is closed
-        """
-        if task.is_closed:
-            return True
-        return timezone.now() > task.deadline
-
     @transaction.atomic
     @log_operation('task_management', 'create_and_assign', '创建任务《{title}》并分配给 {assignee_count} 名学员')
     def create_task(

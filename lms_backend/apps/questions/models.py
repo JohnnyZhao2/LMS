@@ -3,8 +3,6 @@ Question models for LMS.
 Implements:
 - Question: 题目模型
 """
-import uuid
-
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -163,59 +161,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         elif self.question_type == 'SHORT_ANSWER':
             if not isinstance(self.answer, str):
                 raise ValidationError({'answer': '简答题答案必须是字符串'})
-    def is_referenced_by_quiz(self):
-        """
-        检查题目是否被未删除的试卷引用
-        Property 13: 被引用题目删除保护
-        Note: 只检查未被软删除的试卷，已删除的试卷不阻止题目删除
-        """
-        # 延迟导入避免循环依赖
-        try:
-            from apps.quizzes.models import QuizQuestion
-
-            # 只检查未被软删除的试卷的引用
-            return QuizQuestion.objects.filter(
-                question=self,
-                quiz__is_deleted=False  # 排除已软删除的试卷
-            ).exists()
-        except ImportError:
-            # quizzes app 尚未实现
-            return False
-    def delete(self, *args, **kwargs):
-        """
-        重写删除方法，实现删除保护
-        Property 13: 被引用题目删除保护
-        """
-        if self.is_referenced_by_quiz():
-            raise ValidationError('该题目已被试卷引用，无法删除')
-        super().delete(*args, **kwargs)
-    def clone_new_version(self):
-        """
-        创建当前题目的新版本，保持历史版本只读。
-        版本隔离机制：
-        - 新版本创建后，QuizQuestion 引用保持不变，不会自动更新
-        - 这确保了已发布试卷的稳定性和可预测性
-        - 已发布任务的快照不受影响（TaskQuiz.snapshot 是独立存储的）
-        """
-        new_question = Question.objects.create(
-            content=self.content,
-            question_type=self.question_type,
-            options=self.options,
-            answer=self.answer,
-            explanation=self.explanation,
-            score=self.score,
-            created_by=self.created_by,
-            updated_by=self.updated_by,
-            resource_uuid=self.resource_uuid,
-            version_number=self.next_version_number(self.resource_uuid),
-            is_current=True
-        )
-        if self.line_type:
-            new_question.set_line_type(self.line_type)
-        Question.objects.filter(
-            resource_uuid=self.resource_uuid
-        ).exclude(pk=new_question.pk).update(is_current=False)
-        return new_question
     @property
     def is_objective(self):
         """

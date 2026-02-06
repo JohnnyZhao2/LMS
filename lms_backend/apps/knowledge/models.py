@@ -5,8 +5,6 @@ Implements:
 - ResourceLineType: 资源条线类型关系表（通用多态关系）
 - Knowledge: 知识文档
 """
-import uuid
-
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -15,7 +13,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.html import strip_tags
 
-from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin, VersionedResourceMixin
 
 
 class Tag(TimestampMixin, models.Model):
@@ -111,7 +109,7 @@ class ResourceLineType(TimestampMixin, models.Model):
         ]
     def __str__(self):
         return f"{self.content_object} - {self.line_type.name}"
-class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
+class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     知识文档模型
     知识类型:
@@ -131,21 +129,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         max_length=20,
         choices=KNOWLEDGE_TYPE_CHOICES,
         verbose_name='知识类型'
-    )
-    resource_uuid = models.UUIDField(
-        default=uuid.uuid4,
-        editable=False,
-        db_index=True,
-        verbose_name='资源标识'
-    )
-    version_number = models.PositiveIntegerField(
-        default=1,
-        verbose_name='版本号',
-        help_text='同一资源的累积版本序号'
-    )
-    is_current = models.BooleanField(
-        default=True,
-        verbose_name='是否当前最新发布版本'
     )
     # 条线类型通过ResourceLineType关联（多态关系）
     # 使用property提供便捷访问
@@ -258,22 +241,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
                 raise ValidationError({
                     'content': '其他类型知识必须填写正文内容'
                 })
-    @classmethod
-    def next_version_number(cls, resource_uuid):
-        """
-        获取指定资源的下一个版本号。
-        """
-        if not resource_uuid:
-            return 1
-        aggregate = cls.objects.filter(
-            resource_uuid=resource_uuid,
-            is_deleted=False
-        ).aggregate(
-            max_version=models.Max('version_number')
-        )
-        max_version = aggregate['max_version'] or 0
-        return max_version + 1
-
     def increment_view_count(self):
         """
         增加知识文档的阅读次数
