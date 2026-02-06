@@ -1,0 +1,178 @@
+import pytest
+from rest_framework.test import APIClient
+
+from apps.users.models import Department, Role, User, UserRole
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def roles():
+    role_pairs = [
+        ('STUDENT', '学员'),
+        ('MENTOR', '导师'),
+        ('DEPT_MANAGER', '室经理'),
+        ('TEAM_MANAGER', '团队经理'),
+        ('ADMIN', '管理员'),
+    ]
+    result = {}
+    for code, name in role_pairs:
+        role, _ = Role.objects.get_or_create(code=code, defaults={'name': name})
+        result[code] = role
+    return result
+
+
+@pytest.fixture
+def department():
+    return Department.objects.create(name='测试部门', code='DEPT1')
+
+
+@pytest.fixture
+def admin_user(department, roles):
+    user = User.objects.create_user(
+        employee_id='ADMIN200',
+        username='管理员B',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=user, role=roles['ADMIN'])
+    return user
+
+
+@pytest.fixture
+def normal_user(department, roles):
+    user = User.objects.create_user(
+        employee_id='USER200',
+        username='普通用户B',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=user, role=roles['MENTOR'])
+    return user
+
+
+@pytest.fixture
+def super_admin_user(department, roles):
+    user = User.objects.create_user(
+        employee_id='SUPER200',
+        username='超级管理员B',
+        password='password123',
+        department=department,
+        is_staff=True,
+        is_superuser=True,
+    )
+    UserRole.objects.get_or_create(user=user, role=roles['ADMIN'])
+    return user
+
+
+@pytest.mark.django_db
+def test_assign_dept_manager_and_team_manager_together_rejected(api_client, admin_user, normal_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{normal_user.id}/assign-roles/',
+        {'role_codes': ['DEPT_MANAGER', 'TEAM_MANAGER']},
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '互斥' in response.data['message']
+
+
+@pytest.mark.django_db
+def test_assign_admin_role_for_non_superuser_allowed(api_client, admin_user, normal_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{normal_user.id}/assign-roles/',
+        {'role_codes': ['ADMIN']},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    role_codes = {item['code'] for item in response.data['roles']}
+    assert role_codes == {'ADMIN'}
+
+
+@pytest.mark.django_db
+def test_assign_admin_and_mentor_for_non_superuser_removes_student(api_client, admin_user, normal_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{normal_user.id}/assign-roles/',
+        {'role_codes': ['ADMIN', 'MENTOR']},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    role_codes = {item['code'] for item in response.data['roles']}
+    assert role_codes == {'ADMIN', 'MENTOR'}
+
+
+@pytest.mark.django_db
+def test_assign_roles_for_superuser_only_allows_admin(api_client, admin_user, super_admin_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{super_admin_user.id}/assign-roles/',
+        {'role_codes': ['MENTOR']},
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '超级管理员账号只能保留管理员角色' in response.data['message']
+
+
+@pytest.mark.django_db
+def test_assign_admin_role_for_superuser_keeps_admin_only(api_client, admin_user, super_admin_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{super_admin_user.id}/assign-roles/',
+        {'role_codes': ['ADMIN']},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    role_codes = {item['code'] for item in response.data['roles']}
+    assert role_codes == {'ADMIN'}
+
+
+@pytest.mark.django_db
+def test_assign_team_manager_role_keeps_only_team_manager(api_client, admin_user, normal_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{normal_user.id}/assign-roles/',
+        {'role_codes': ['TEAM_MANAGER']},
+        format='json',
+    )
+
+    assert response.status_code == 200
+
+    role_codes = {item['code'] for item in response.data['roles']}
+    assert role_codes == {'TEAM_MANAGER'}
+
+    normal_user.refresh_from_db()
+    db_role_codes = set(normal_user.roles.values_list('code', flat=True))
+    assert db_role_codes == {'TEAM_MANAGER'}
+
+
+@pytest.mark.django_db
+def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, admin_user, normal_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        f'/api/users/{normal_user.id}/assign-roles/',
+        {'role_codes': ['MENTOR']},
+        format='json',
+    )
+
+    assert response.status_code == 200
+    role_codes = {item['code'] for item in response.data['roles']}
+    assert role_codes == {'MENTOR', 'STUDENT'}

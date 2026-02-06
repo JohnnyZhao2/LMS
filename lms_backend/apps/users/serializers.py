@@ -4,7 +4,10 @@ Serializers for user management.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from core.exceptions import BusinessError
+
 from .models import Department, Role, User
+from .role_constraints import validate_role_assignment_constraints
 
 
 def validate_mentor(mentor_id):
@@ -153,7 +156,7 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         ]),
         required=False,
         default=list,
-        help_text='要分配的角色代码列表（不包含学员角色，学员角色自动保留）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
     )
 
     class Meta:
@@ -181,35 +184,14 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         """验证角色和部门的约束。"""
         role_codes = attrs.get('role_codes', [])
         department_id = attrs.get('department_id')
-
-        # 验证团队经理唯一性（全局只能有一个）
-        if 'TEAM_MANAGER' in role_codes:
-            existing_team_manager = User.objects.filter(
-                roles__code='TEAM_MANAGER',
-                is_active=True
-            ).first()
-            if existing_team_manager:
-                raise serializers.ValidationError({
-                    'role_codes': f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
-                })
-
-        # 验证室经理唯一性（每个部门只能有一个）
-        if 'DEPT_MANAGER' in role_codes:
-            if not department_id:
-                raise serializers.ValidationError({
-                    'role_codes': '用户未分配部门，无法设置为室经理'
-                })
-            existing_dept_manager = User.objects.filter(
-                roles__code='DEPT_MANAGER',
+        try:
+            validate_role_assignment_constraints(
+                role_codes=role_codes,
                 department_id=department_id,
-                is_active=True
-            ).first()
-            if existing_dept_manager:
-                dept = Department.objects.filter(id=department_id).first()
-                dept_name = dept.name if dept else department_id
-                raise serializers.ValidationError({
-                    'role_codes': f'部门 {dept_name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
-                })
+                is_superuser=False,
+            )
+        except BusinessError as exc:
+            raise serializers.ValidationError({'role_codes': exc.message})
 
         return attrs
 
@@ -254,17 +236,21 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
                 except User.DoesNotExist:
                     pass
 
-            # 分配角色（学员角色自动保留）
-            if role_codes:
-                # 获取学员角色
-                student_role = Role.objects.filter(code='STUDENT').first()
-                # 获取要分配的角色
-                roles_to_assign = list(Role.objects.filter(code__in=role_codes))
-                # 确保学员角色存在
-                if student_role and student_role not in roles_to_assign:
-                    roles_to_assign.append(student_role)
-                # 设置角色
-                user.roles.set(roles_to_assign)
+            # 分配角色（统一走 service，保证约束与日志一致）
+            from .services import UserManagementService
+
+            request = self.context.get('request')
+            assigned_by = (
+                request.user
+                if request and getattr(request, 'user', None) and request.user.is_authenticated
+                else user
+            )
+            service = UserManagementService()
+            service.assign_roles(
+                user_id=user.id,
+                role_codes=role_codes,
+                assigned_by=assigned_by,
+            )
 
         return user
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
@@ -289,7 +275,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=False,
-        help_text='要分配的角色代码列表（不包含学员角色，学员角色自动保留）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
     )
 
     class Meta:
@@ -312,48 +298,28 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
         role_codes = attrs.get('role_codes')
         department_id = attrs.get('department_id')
 
-        # 确定最终的角色和部门
-        final_has_dept_manager = (
-            'DEPT_MANAGER' in role_codes if role_codes is not None
-            else (self.instance.has_role('DEPT_MANAGER') if self.instance else False)
-        )
-        final_has_team_manager = (
-            'TEAM_MANAGER' in role_codes if role_codes is not None
-            else (self.instance.has_role('TEAM_MANAGER') if self.instance else False)
+        # 确定最终的角色和部门（role_codes 省略时沿用现有非 STUDENT 角色）
+        final_role_codes = (
+            role_codes
+            if role_codes is not None
+            else list(
+                self.instance.roles.exclude(code='STUDENT').values_list('code', flat=True)
+            )
         )
         final_department_id = (
             department_id if department_id is not None
             else getattr(self.instance, 'department_id', None)
         )
-
-        # 验证团队经理唯一性（全局只能有一个）
-        if final_has_team_manager:
-            existing_team_manager = User.objects.filter(
-                roles__code='TEAM_MANAGER',
-                is_active=True
-            ).exclude(pk=self.instance.pk if self.instance else None).first()
-            if existing_team_manager:
-                raise serializers.ValidationError({
-                    'role_codes': f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
-                })
-
-        # 验证室经理唯一性（每个部门只能有一个）
-        if final_has_dept_manager:
-            if not final_department_id:
-                raise serializers.ValidationError({
-                    'role_codes': '用户未分配部门，无法设置为室经理'
-                })
-            existing_dept_manager = User.objects.filter(
-                roles__code='DEPT_MANAGER',
+        try:
+            validate_role_assignment_constraints(
+                role_codes=final_role_codes,
                 department_id=final_department_id,
-                is_active=True
-            ).exclude(pk=self.instance.pk if self.instance else None).first()
-            if existing_dept_manager:
-                dept = Department.objects.filter(id=final_department_id).first()
-                dept_name = dept.name if dept else final_department_id
-                raise serializers.ValidationError({
-                    'role_codes': f'部门 {dept_name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
-                })
+                is_superuser=self.instance.is_superuser if self.instance else False,
+                exclude_user_id=self.instance.pk if self.instance else None,
+                validate_dedicated_roles=role_codes is not None,
+            )
+        except BusinessError as exc:
+            raise serializers.ValidationError({'role_codes': exc.message})
 
         return attrs
 
@@ -406,7 +372,7 @@ class AssignRolesSerializer(serializers.Serializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=True,
-        help_text='要分配的角色代码列表（不包含学员角色，学员角色自动保留）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
     )
 class AssignMentorSerializer(serializers.Serializer):
     """

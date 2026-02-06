@@ -13,6 +13,7 @@ from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Role, User, UserRole
+from .role_constraints import validate_role_assignment_constraints
 from .selectors import get_user_by_id
 
 
@@ -167,46 +168,12 @@ class UserManagementService(BaseService):
             self._purge_user_related_data(user)
             user.delete()
 
-    def _validate_exclusive_roles(self, user: User, role_codes: List[str]) -> None:
-        """
-        验证专有角色的唯一性约束。
-        - 每个部门只能有一个室经理 (DEPT_MANAGER)
-        - 全局只能有一个团队经理 (TEAM_MANAGER)
-        """
-        # 验证团队经理唯一性（全局只能有一个）
-        if 'TEAM_MANAGER' in role_codes:
-            existing_team_manager = User.objects.filter(
-                roles__code='TEAM_MANAGER',
-                is_active=True
-            ).exclude(pk=user.pk).first()
-            if existing_team_manager:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'团队经理角色已被分配给 {existing_team_manager.employee_id}，全局只能有一个团队经理'
-                )
-
-        # 验证室经理唯一性（每个部门只能有一个）
-        if 'DEPT_MANAGER' in role_codes:
-            if not user.department:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='用户未分配部门，无法设置为室经理'
-                )
-            existing_dept_manager = User.objects.filter(
-                roles__code='DEPT_MANAGER',
-                department=user.department,
-                is_active=True
-            ).exclude(pk=user.pk).first()
-            if existing_dept_manager:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message=f'部门 {user.department.name} 已有室经理 {existing_dept_manager.employee_id}，每个部门只能有一个室经理'
-                )
-
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
-        The STUDENT role is always preserved and cannot be removed.
+        For non-superusers, STUDENT role is preserved only when user has
+        no leadership role (ADMIN/DEPT_MANAGER/TEAM_MANAGER).
+        Superuser accounts can only keep ADMIN role.
         Args:
             user_id: The user ID to assign roles to
             role_codes: List of role codes to assign (excluding STUDENT)
@@ -223,26 +190,40 @@ class UserManagementService(BaseService):
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
 
-        # 验证专有角色的唯一性约束
-        self._validate_exclusive_roles(user, role_codes)
-
-        # Get student role (must always be preserved)
-        Role.objects.get_or_create(
-            code='STUDENT',
-            defaults={
-                'name': '学员',
-                'description': '系统默认角色'
-            }
+        # 统一验证角色约束（专有角色组合、超级管理员限制、唯一性）
+        validate_role_assignment_constraints(
+            role_codes=role_codes,
+            department_id=user.department_id,
+            is_superuser=user.is_superuser,
+            exclude_user_id=user.id,
         )
-        # Get all roles to assign (including STUDENT)
+
+        leadership_roles = {'ADMIN', 'DEPT_MANAGER', 'TEAM_MANAGER'}
+        should_keep_student = (
+            not user.is_superuser
+            and leadership_roles.isdisjoint(set(role_codes))
+        )
+
+        if should_keep_student:
+            # 普通用户必须保留 STUDENT
+            Role.objects.get_or_create(
+                code='STUDENT',
+                defaults={
+                    'name': '学员',
+                    'description': '系统默认角色'
+                }
+            )
+
+        # Get all roles to assign
         roles_to_assign = set(role_codes)
-        roles_to_assign.add('STUDENT')  # Always include STUDENT
+        if should_keep_student:
+            roles_to_assign.add('STUDENT')
         # Get current roles
         current_role_codes = set(user.roles.values_list('code', flat=True))
         # Remove roles that are not in the new list (except STUDENT)
         roles_to_remove = current_role_codes - roles_to_assign
-        if 'STUDENT' in roles_to_remove:
-            roles_to_remove.remove('STUDENT')  # Never remove STUDENT
+        if should_keep_student and 'STUDENT' in roles_to_remove:
+            roles_to_remove.remove('STUDENT')  # 普通用户永不移除 STUDENT
         # Add new roles
         roles_to_add = roles_to_assign - current_role_codes
 

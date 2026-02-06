@@ -209,7 +209,7 @@ def assign_default_student_role(sender, instance, created, **kwargs):
     新用户创建后自动分配学员角色
     - Property 5: 新用户默认学员角色
     """
-    if created:
+    if created and not instance.is_superuser:
         # 获取或创建学员角色
         student_role, _ = Role.objects.get_or_create(
             code='STUDENT',
