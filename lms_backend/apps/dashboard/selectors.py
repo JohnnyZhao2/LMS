@@ -24,7 +24,7 @@ def get_pending_tasks(user_id: int, limit: int = 10) -> QuerySet:
         assignee_id=user_id,
         status='IN_PROGRESS',
         task__is_deleted=False,
-        task__is_closed=False
+        task__deadline__gt=timezone.now(),
     ).select_related(
         'task', 'task__created_by'
     ).prefetch_related(
@@ -222,7 +222,6 @@ def get_urgent_tasks_count(user_id: int, hours: int = 48) -> int:
         assignee_id=user_id,
         status='IN_PROGRESS',
         task__is_deleted=False,
-        task__is_closed=False,
         task__deadline__lte=deadline_threshold,
         task__deadline__gt=timezone.now()
     ).count()
@@ -356,7 +355,6 @@ def get_students_needing_attention(
     overdue_assignments = TaskAssignment.objects.filter(
         assignee_id__in=student_ids,
         task__is_deleted=False,
-        task__is_closed=False,
         task__deadline__lt=now
     ).exclude(
         status='COMPLETED'
@@ -493,7 +491,6 @@ def get_overdue_warning(
     base_qs = TaskAssignment.objects.filter(
         assignee_id__in=student_ids,
         task__is_deleted=False,
-        task__is_closed=False,
     ).select_related('task', 'assignee', 'assignee__department')
 
     overdue_qs = base_qs.filter(

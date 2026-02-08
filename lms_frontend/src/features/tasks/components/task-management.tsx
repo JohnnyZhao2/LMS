@@ -61,7 +61,7 @@ export const TaskManagement: React.FC = () => {
     const { data: tasksData, isLoading, refetch } = useTaskList({
         page,
         pageSize,
-        isClosed: statusFilter === 'all' ? undefined : statusFilter === 'closed',
+        taskStatus: statusFilter as 'open' | 'closed' | 'all',
         creatorSide: isAdmin ? creatorSideFilter : 'all',
     })
     const deleteTask = useDeleteTask()
@@ -77,10 +77,11 @@ export const TaskManagement: React.FC = () => {
     // 统计逻辑
     const stats = React.useMemo(() => {
         const allTasks = tasksData?.results || []
+        const now = dayjs()
         return {
             total: tasksData?.count || 0,
-            active: allTasks.filter((t: TaskListItem) => !t.is_closed).length,
-            completed: allTasks.filter((t: TaskListItem) => t.is_closed).length
+            active: allTasks.filter((t: TaskListItem) => dayjs(t.deadline).isAfter(now)).length,
+            completed: allTasks.filter((t: TaskListItem) => !dayjs(t.deadline).isAfter(now)).length
         }
     }, [tasksData])
 
@@ -154,7 +155,7 @@ export const TaskManagement: React.FC = () => {
             cell: ({ row }) => {
                 const now = dayjs()
                 const date = dayjs(row.original.deadline)
-                const isUrgent = !row.original.is_closed && date.isAfter(now) && date.diff(now, 'hour') <= 48
+                const isUrgent = date.isAfter(now) && date.diff(now, 'hour') <= 48
                 return (
                     <div className="flex flex-col min-w-[100px]">
                         <div className="flex items-center gap-1.5">
@@ -188,6 +189,7 @@ export const TaskManagement: React.FC = () => {
             cell: ({ row }) => {
                 const canEdit = currentRole === 'ADMIN' || row.original.created_by === user?.id;
                 const canPreview = currentRole === 'ADMIN' || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
+                const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
                     <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="查看详情">
@@ -231,7 +233,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
-                                        disabled={row.original.is_closed}
+                                        disabled={isClosedByDeadline}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
                                         <Pencil className="h-4 w-4" />

@@ -6,15 +6,15 @@ Implements:
 """
 from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.knowledge.models import Knowledge, ResourceLineType, Tag
 from apps.knowledge.serializers import TagSerializer
 from apps.users.permissions import get_current_role
 from core.exceptions import BusinessError, ErrorCodes
+from core.query_params import parse_bool_query_param, parse_int_query_param
+from core.responses import created_response, list_response
 
 
 class TagListView(APIView):
@@ -43,10 +43,24 @@ class TagListView(APIView):
     )
     def get(self, request):
         tag_type = request.query_params.get('tag_type', '').strip()
-        line_type_id = request.query_params.get('line_type_id')
+        line_type_id = parse_int_query_param(
+            request=request,
+            name='line_type_id',
+            minimum=1,
+        )
         search = request.query_params.get('search', '').strip()
-        limit = int(request.query_params.get('limit', 50))
-        active_only = request.query_params.get('active_only', 'true').lower() == 'true'
+        limit = parse_int_query_param(
+            request=request,
+            name='limit',
+            default=50,
+            minimum=1,
+            maximum=200,
+        )
+        active_only = parse_bool_query_param(
+            request=request,
+            name='active_only',
+            default=True,
+        )
         # 级联筛选
         if line_type_id and tag_type in ['SYSTEM', 'OPERATION']:
             knowledge_ids = ResourceLineType.objects.filter(
@@ -76,7 +90,7 @@ class TagListView(APIView):
             queryset = queryset.filter(name__icontains=search)
         queryset = queryset.order_by('sort_order', 'name')[:limit]
         serializer = TagSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 class TagCreateView(APIView):
     """创建标签端点（仅管理员）"""
     permission_classes = [IsAuthenticated]
@@ -100,4 +114,4 @@ class TagCreateView(APIView):
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(serializer.data)

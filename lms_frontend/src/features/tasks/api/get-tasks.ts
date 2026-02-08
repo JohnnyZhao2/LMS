@@ -13,7 +13,7 @@ interface GetTasksParams {
   page?: number;
   pageSize?: number;
   status?: TaskStatus;
-  isClosed?: boolean;
+  taskStatus?: 'open' | 'closed' | 'all';
   creatorSide?: 'all' | 'management' | 'non_management';
 }
 
@@ -57,15 +57,15 @@ export const useTaskList = (
   options: UseTasksOptions = {}
 ) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, isClosed, creatorSide = 'all' } = params;
+  const { page = 1, pageSize = 20, taskStatus = 'all', creatorSide = 'all' } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, isClosed, creatorSide],
+    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, taskStatus, creatorSide],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
-        ...(typeof isClosed === 'boolean' && { is_closed: isClosed ? 'true' : 'false' }),
+        ...(taskStatus !== 'all' && { status: taskStatus }),
         ...(creatorSide !== 'all' && { creator_side: creatorSide }),
       };
       const queryString = buildQueryString(queryParams);

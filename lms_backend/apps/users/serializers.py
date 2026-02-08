@@ -240,12 +240,10 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
             from .services import UserManagementService
 
             request = self.context.get('request')
-            assigned_by = (
-                request.user
-                if request and getattr(request, 'user', None) and request.user.is_authenticated
-                else user
-            )
-            service = UserManagementService()
+            if not request or not getattr(request, 'user', None) or not request.user.is_authenticated:
+                raise serializers.ValidationError({'role_codes': '缺少请求上下文，无法分配角色'})
+            assigned_by = request.user
+            service = UserManagementService(request)
             service.assign_roles(
                 user_id=user.id,
                 role_codes=role_codes,
@@ -352,7 +350,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
                     raise serializers.ValidationError({
                         'role_codes': '缺少请求上下文，无法记录角色分配人'
                     })
-                service = UserManagementService()
+                service = UserManagementService(request)
                 instance = service.assign_roles(
                     user_id=instance.id,
                     role_codes=role_codes,

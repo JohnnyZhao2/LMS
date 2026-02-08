@@ -5,12 +5,11 @@ Implements unified interfaces and common functionality:
 - Save answer during quiz
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.base_view import BaseAPIView
+from core.responses import created_response, success_response
 
 from ..serializers import (
     SaveAnswerSerializer,
@@ -54,8 +53,8 @@ class StartQuizView(APIView):
         response_serializer = SubmissionDetailSerializer(submission)
         # Return 200 if returning existing submission (exam in progress), 201 if new
         if serializer.validated_data.get('in_progress_submission'):
-            return Response(response_serializer.data, status=status.HTTP_200_OK)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            return success_response(response_serializer.data)
+        return created_response(response_serializer.data)
 class SubmitView(BaseAPIView):
     """
     统一的提交答卷接口，根据 quiz_type 自动判断行为。
@@ -82,7 +81,7 @@ class SubmitView(BaseAPIView):
         is_practice = submission.quiz.quiz_type == 'PRACTICE'
         submission = self.service.submit(submission, is_practice=is_practice)
         response_serializer = SubmissionDetailSerializer(submission)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 class SaveAnswerView(BaseAPIView):
     """
     Save an answer during practice/exam.
@@ -111,11 +110,13 @@ class SaveAnswerView(BaseAPIView):
         )
         serializer.is_valid(raise_exception=True)
         answer = serializer.save()
-        return Response({
-            'message': '保存成功',
-            'question_id': answer.question_id,
-            'user_answer': answer.user_answer
-        }, status=status.HTTP_200_OK)
+        return success_response(
+            data={
+                'question_id': answer.question_id,
+                'user_answer': answer.user_answer
+            },
+            message='保存成功'
+        )
 
 
 class SaveAnswersView(BaseAPIView):
@@ -148,14 +149,16 @@ class SaveAnswersView(BaseAPIView):
         )
         serializer.is_valid(raise_exception=True)
         updated_answers = serializer.save()
-        return Response({
-            'message': '保存成功',
-            'saved_count': len(updated_answers),
-            'answers': [
-                {
-                    'question_id': answer.question_id,
-                    'user_answer': answer.user_answer
-                }
-                for answer in updated_answers
-            ]
-        }, status=status.HTTP_200_OK)
+        return success_response(
+            data={
+                'saved_count': len(updated_answers),
+                'answers': [
+                    {
+                        'question_id': answer.question_id,
+                        'user_answer': answer.user_answer
+                    }
+                    for answer in updated_answers
+                ]
+            },
+            message='保存成功'
+        )

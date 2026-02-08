@@ -23,18 +23,19 @@ class BaseService:
     - self.user: 当前用户
     - self.get_current_role(): 获取当前角色
     
-    也支持无参构造（向后兼容），此时需要在方法中传入 user/request。
     """
     
-    def __init__(self, request=None):
+    def __init__(self, request):
         """
         初始化服务
         
         Args:
-            request: HTTP 请求对象（可选，推荐传入）
+            request: HTTP 请求对象（必传）
         """
+        if request is None:
+            raise ValueError('request 不能为空')
         self._request = request
-        self._user = request.user if request and hasattr(request, 'user') else None
+        self._user = request.user if hasattr(request, 'user') else None
     
     @property
     def request(self):
@@ -91,9 +92,7 @@ class BaseService:
     def check_published_resource_access(
         self,
         resource,
-        user=None,
         resource_name: str = '资源',
-        request=None
     ) -> None:
         """
         检查资源的访问权限
@@ -101,15 +100,12 @@ class BaseService:
         
         Args:
             resource: 资源对象（必须有 is_current 属性）
-            user: 当前用户（可选，优先使用 self.user）
             resource_name: 资源名称（用于错误消息）
-            request: HTTP 请求对象（可选，优先使用 self.request）
         Raises:
             BusinessError: 如果权限不足
         """
-        # 优先使用 self 属性，向后兼容传参方式
-        effective_user = user or self.user
-        effective_request = request or self.request
+        effective_user = self.user
+        effective_request = self.request
         
         if effective_user and _get_current_role(effective_user, effective_request) != 'ADMIN':
             if not hasattr(resource, 'is_current'):
@@ -119,4 +115,3 @@ class BaseService:
                     code=ErrorCodes.PERMISSION_DENIED,
                     message=f'无权访问该{resource_name}'
                 )
-

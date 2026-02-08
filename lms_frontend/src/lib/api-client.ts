@@ -1,6 +1,5 @@
 import { config } from '@/config';
 import { tokenStorage } from './token-storage';
-import { roleState } from './role-state';
 import { ROUTES } from '@/config/routes';
 
 /**
@@ -82,8 +81,14 @@ class ApiClient {
         throw new Error('Failed to refresh token');
       }
 
-      const data = await response.json();
-      tokenStorage.setTokens(data.access_token, data.refresh_token);
+      const responseData = (await response.json()) as ApiResponse<{
+        access_token: string;
+        refresh_token: string;
+      }>;
+      tokenStorage.setTokens(
+        responseData.data.access_token,
+        responseData.data.refresh_token,
+      );
     } catch (error) {
       tokenStorage.clearTokens();
       throw error;
@@ -134,7 +139,7 @@ class ApiClient {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
       // 添加当前角色 header
-      const currentRole = roleState.get();
+      const currentRole = tokenStorage.getCurrentRole();
       if (currentRole) {
         headers['X-Current-Role'] = currentRole;
       }

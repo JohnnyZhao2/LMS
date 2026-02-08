@@ -8,9 +8,7 @@ Implements:
 - Reference data (mentors, departments, roles)
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.models import User
@@ -39,7 +37,8 @@ from apps.users.serializers import (
 from apps.users.services import UserManagementService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
-from core.responses import no_content_response
+from core.query_params import parse_bool_query_param, parse_int_query_param
+from core.responses import created_response, list_response, no_content_response, success_response
 
 
 class UserListCreateView(APIView):
@@ -69,16 +68,21 @@ class UserListCreateView(APIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员可以查看用户列表'
             )
-        is_active = request.query_params.get('is_active')
-        is_active_bool = None
-        if is_active is not None:
-            is_active_bool = is_active.lower() == 'true'
+        is_active_bool = parse_bool_query_param(
+            request=request,
+            name='is_active',
+            default=None,
+        )
         filter_code = request.query_params.get('filter')
-        department_id = request.query_params.get('department_id')
+        department_id = parse_int_query_param(
+            request=request,
+            name='department_id',
+            minimum=1,
+        )
         search = request.query_params.get('search')
         if filter_code == 'needs_attention':
             student_ids = list(
-                get_accessible_students(request.user, current_role, request).values_list('id', flat=True)
+                get_accessible_students(request.user, request).values_list('id', flat=True)
             )
             queryset = list_users_needing_attention(
                 student_ids=student_ids,
@@ -93,7 +97,7 @@ class UserListCreateView(APIView):
                 search=search,
             )
         serializer = UserListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
     @extend_schema(
         summary='创建用户',
         description='创建新用户，自动分配学员角色',
@@ -115,7 +119,7 @@ class UserListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(response_serializer.data)
 class UserDetailView(APIView):
     """
     User detail, update, delete endpoint.
@@ -147,7 +151,7 @@ class UserDetailView(APIView):
             )
         user = self.get_object(pk)
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
     @extend_schema(
         summary='更新用户信息',
         description='更新用户的基础信息和组织归属',
@@ -176,7 +180,7 @@ class UserDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 
     @extend_schema(
         summary='删除用户',
@@ -224,7 +228,7 @@ class UserDeactivateView(BaseAPIView):
             )
         user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 class UserActivateView(BaseAPIView):
     """
     User activation endpoint.
@@ -250,7 +254,7 @@ class UserActivateView(BaseAPIView):
             )
         user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 class UserAssignRolesView(BaseAPIView):
     """
     Role assignment endpoint.
@@ -283,7 +287,7 @@ class UserAssignRolesView(BaseAPIView):
             assigned_by=request.user
         )
         response_serializer = UserDetailSerializer(user)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 class UserAssignMentorView(BaseAPIView):
     """
     Mentor assignment endpoint.
@@ -315,7 +319,7 @@ class UserAssignMentorView(BaseAPIView):
             mentor_id=serializer.validated_data.get('mentor_id')
         )
         response_serializer = UserDetailSerializer(user)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 class MenteesListView(APIView):
     """List mentees for the current mentor."""
     permission_classes = [IsAuthenticated]
@@ -336,7 +340,7 @@ class MenteesListView(APIView):
             )
         mentees = request.user.get_mentees()
         serializer = MenteeListSerializer(mentees, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 class DepartmentMembersListView(APIView):
     """List department members for the current department manager."""
     permission_classes = [IsAuthenticated]
@@ -357,7 +361,7 @@ class DepartmentMembersListView(APIView):
             )
         members = request.user.get_department_members()
         serializer = DepartmentMemberListSerializer(members, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 class MentorsListView(APIView):
     """List all mentors (users with MENTOR role)."""
     permission_classes = [IsAuthenticated]
@@ -378,7 +382,7 @@ class MentorsListView(APIView):
             )
         mentors = list_mentors()
         serializer = MentorSerializer(mentors, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
 
 class DepartmentsListView(APIView):
@@ -401,7 +405,7 @@ class DepartmentsListView(APIView):
             )
         departments = list_departments()
         serializer = DepartmentSerializer(departments, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
 
 class RolesListView(APIView):
@@ -424,4 +428,4 @@ class RolesListView(APIView):
             )
         roles = list_roles(exclude_student=True)
         serializer = RoleSerializer(roles, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)

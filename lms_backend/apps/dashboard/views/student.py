@@ -6,7 +6,6 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
@@ -17,6 +16,8 @@ from apps.dashboard.serializers import (
 from apps.dashboard.services import StudentDashboardService
 from apps.knowledge.serializers import KnowledgeListSerializer
 from core.base_view import BaseAPIView
+from core.query_params import parse_int_query_param
+from core.responses import list_response, success_response
 
 
 class StudentDashboardView(BaseAPIView):
@@ -39,8 +40,20 @@ class StudentDashboardView(BaseAPIView):
     )
     def get(self, request):
         user = request.user
-        task_limit = int(request.query_params.get('task_limit', 10))
-        knowledge_limit = int(request.query_params.get('knowledge_limit', 6))
+        task_limit = parse_int_query_param(
+            request=request,
+            name='task_limit',
+            default=10,
+            minimum=1,
+            maximum=100,
+        )
+        knowledge_limit = parse_int_query_param(
+            request=request,
+            name='knowledge_limit',
+            default=6,
+            minimum=1,
+            maximum=100,
+        )
 
         data = self.service.get_dashboard_data(
             user=user,
@@ -48,7 +61,7 @@ class StudentDashboardView(BaseAPIView):
             knowledge_limit=knowledge_limit
         )
 
-        return Response({
+        return success_response({
             'stats': StudentStatsSerializer(data['stats']).data,
             'tasks': StudentTaskSerializer(data['tasks'], many=True).data,
             'latest_knowledge': KnowledgeListSerializer(data['latest_knowledge'], many=True).data,
@@ -72,4 +85,4 @@ class TaskParticipantsView(BaseAPIView):
     def get(self, request, task_id: int):
         user = request.user
         participants = self.service.get_task_participants(user, task_id)
-        return Response(PeerRankingSerializer(participants, many=True).data)
+        return list_response(PeerRankingSerializer(participants, many=True).data)

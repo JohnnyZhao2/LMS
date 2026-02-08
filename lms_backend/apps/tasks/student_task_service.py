@@ -136,7 +136,8 @@ class StudentTaskService(BaseService):
         progress.refresh_from_db()
         return progress
 
-    def get_student_knowledge_items(self, assignment: TaskAssignment) -> List[dict]:
+    @staticmethod
+    def get_student_knowledge_items(assignment: TaskAssignment) -> List[dict]:
         """获取学员任务的知识条目与进度"""
         task_knowledge_items = task_knowledge_queryset(assignment.task.id)
         progress_map = {
@@ -160,7 +161,8 @@ class StudentTaskService(BaseService):
             })
         return sorted(result, key=lambda x: x['order'])
 
-    def get_student_quiz_items(self, assignment: TaskAssignment) -> List[dict]:
+    @staticmethod
+    def get_student_quiz_items(assignment: TaskAssignment) -> List[dict]:
         """获取学员任务的试卷条目与提交状态"""
         task_quiz_items = task_quiz_queryset(assignment.task.id)
         submissions = Submission.objects.filter(

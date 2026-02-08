@@ -68,8 +68,6 @@ export interface TaskDetail {
   start_time?: string;
   duration?: number;
   pass_score?: string;
-  is_closed: boolean;
-  closed_at?: string;
   knowledge_items: TaskKnowledge[];
   quizzes: TaskQuiz[];
   assignments: TaskAssignment[];
@@ -259,8 +257,6 @@ export interface TaskListItem {
   start_time?: string;
   duration?: number;
   pass_score?: string;
-  is_closed: boolean;
-  closed_at?: string;
   knowledge_count: number;
   quiz_count: number;
   exam_count: number;

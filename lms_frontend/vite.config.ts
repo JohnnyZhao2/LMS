@@ -21,6 +21,35 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return
+          }
+          if (id.includes('@tiptap') || id.includes('prosemirror')) {
+            return 'vendor-editor'
+          }
+          if (id.includes('@radix-ui')) {
+            return 'vendor-radix'
+          }
+          if (id.includes('@tanstack')) {
+            return 'vendor-tanstack'
+          }
+          if (
+            id.includes('react') ||
+            id.includes('scheduler') ||
+            id.includes('react-dom') ||
+            id.includes('react-router')
+          ) {
+            return 'vendor-react'
+          }
+          return 'vendor-misc'
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {

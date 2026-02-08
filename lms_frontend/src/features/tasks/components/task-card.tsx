@@ -93,13 +93,13 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
     };
   }, [hasQuiz, hasKnowledge]);
 
-  const managerClosed = managerTask?.is_closed ?? false;
   const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
 
   const title = isStudentView ? studentTask!.task_title : managerTask!.title;
   const description = isStudentView ? studentTask!.task_description : managerTask!.description;
   const progress = studentTask?.progress;
   const now = dayjs();
+  const managerClosed = managerTask ? !dayjs(managerTask.deadline).isAfter(now) : false;
   const deadline = dayjs(task.deadline);
   const isUrgent = !managerClosed && deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
 

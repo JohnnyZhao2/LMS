@@ -175,7 +175,7 @@ export const TaskDetail: React.FC = () => {
   const canStartExam = isStudent
     ? (studentStatus === 'IN_PROGRESS')
     : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
-  const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && !task.is_closed;
+  const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && dayjs(task.deadline).isAfter(dayjs());
 
   const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
   const hasKnowledge = knowledgeList.length > 0;

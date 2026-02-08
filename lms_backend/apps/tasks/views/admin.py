@@ -5,6 +5,7 @@ Implements:
 - Assignable user list
 """
 from django.db.models import Q
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -19,12 +20,12 @@ from apps.tasks.task_service import TaskService
 from apps.users.permissions import (
     IsAdminOrMentorOrDeptManager,
     get_accessible_students,
-    get_current_role,
 )
 from apps.users.serializers import UserListSerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
+from core.query_params import parse_int_query_param
 from core.responses import (
     created_response,
     list_response,
@@ -54,19 +55,19 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        current_role = get_current_role(request.user, request)
-        queryset = get_accessible_students(request.user, current_role, request).filter(
+        queryset = get_accessible_students(request.user, request).filter(
             roles__code='STUDENT'
         ).select_related(
             'department', 'mentor'
         ).prefetch_related('roles').distinct()
-        
-        department_id = request.query_params.get('department_id')
-        if department_id:
-            try:
-                queryset = queryset.filter(department_id=int(department_id))
-            except (TypeError, ValueError):
-                pass
+
+        department_id = parse_int_query_param(
+            request=request,
+            name='department_id',
+            minimum=1,
+        )
+        if department_id is not None:
+            queryset = queryset.filter(department_id=department_id)
         
         search = request.query_params.get('search')
         if search:
@@ -127,7 +128,11 @@ class TaskListView(BaseAPIView):
         - 学员：分配给自己的任务
         ''',
         parameters=[
-            OpenApiParameter(name='is_closed', type=bool, description='是否已结束'),
+            OpenApiParameter(
+                name='status',
+                type=str,
+                description='任务状态筛选：open(未截止) / closed(已截止) / all(全部)'
+            ),
             OpenApiParameter(
                 name='creator_side',
                 type=str,
@@ -143,11 +148,18 @@ class TaskListView(BaseAPIView):
 
         creator_side = request.query_params.get('creator_side')
         queryset = self.service.filter_task_queryset_by_creator_side(queryset, creator_side)
-        
-        is_closed = request.query_params.get('is_closed')
-        if is_closed is not None:
-            is_closed_bool = is_closed.lower() in ('true', '1', 'yes')
-            queryset = queryset.filter(is_closed=is_closed_bool)
+
+        status = (request.query_params.get('status') or 'all').strip().lower()
+        now = timezone.now()
+        if status == 'open':
+            queryset = queryset.filter(deadline__gt=now)
+        elif status == 'closed':
+            queryset = queryset.filter(deadline__lte=now)
+        elif status != 'all':
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='参数 status 仅支持 open、closed、all'
+            )
             
         queryset = queryset.select_related('created_by', 'updated_by').order_by('-created_at')
         
@@ -185,11 +197,11 @@ class TaskDetailView(BaseAPIView):
 
     @extend_schema(
         summary='更新任务',
-        description='更新任务信息。已关闭的任务无法修改。',
+        description='更新任务信息。已截止的任务无法修改。',
         request=TaskUpdateSerializer,
         responses={
             200: TaskDetailSerializer,
-            400: OpenApiResponse(description='参数错误或任务已关闭'),
+            400: OpenApiResponse(description='参数错误或任务已截止'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='任务不存在'),
         },
@@ -198,11 +210,11 @@ class TaskDetailView(BaseAPIView):
     def patch(self, request, pk):
         task = self.service.get_task_by_id(pk)
         self.service.check_task_edit_permission(task)
-        
-        if task.is_closed:
+
+        if task.deadline <= timezone.now():
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
-                message='任务已关闭，无法修改'
+                message='任务已截止，无法修改'
             )
             
         serializer = TaskUpdateSerializer(
@@ -231,4 +243,3 @@ class TaskDetailView(BaseAPIView):
         self.service.check_task_edit_permission(task)
         self.service.delete_task(task)
         return no_content_response()
-

@@ -4,6 +4,13 @@ from rest_framework.test import APIClient
 from apps.users.models import Department, Role, User, UserRole
 
 
+def unwrap_response_data(response):
+    payload = response.data
+    if isinstance(payload, dict) and 'code' in payload and 'data' in payload:
+        return payload['data']
+    return payload
+
+
 @pytest.fixture
 def api_client():
     return APIClient()
@@ -94,7 +101,8 @@ def test_assign_admin_role_for_non_superuser_allowed(api_client, admin_user, nor
     )
 
     assert response.status_code == 200
-    role_codes = {item['code'] for item in response.data['roles']}
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'ADMIN'}
 
 
@@ -109,7 +117,8 @@ def test_assign_admin_and_mentor_for_non_superuser_removes_student(api_client, a
     )
 
     assert response.status_code == 200
-    role_codes = {item['code'] for item in response.data['roles']}
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'ADMIN', 'MENTOR'}
 
 
@@ -139,7 +148,8 @@ def test_assign_admin_role_for_superuser_keeps_admin_only(api_client, admin_user
     )
 
     assert response.status_code == 200
-    role_codes = {item['code'] for item in response.data['roles']}
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'ADMIN'}
 
 
@@ -155,7 +165,8 @@ def test_assign_team_manager_role_keeps_only_team_manager(api_client, admin_user
 
     assert response.status_code == 200
 
-    role_codes = {item['code'] for item in response.data['roles']}
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'TEAM_MANAGER'}
 
     normal_user.refresh_from_db()
@@ -174,5 +185,6 @@ def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, admin_us
     )
 
     assert response.status_code == 200
-    role_codes = {item['code'] for item in response.data['roles']}
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'MENTOR', 'STUDENT'}

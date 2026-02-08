@@ -11,9 +11,7 @@ import secrets
 import string
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
 
 from apps.activity_logs.services import ActivityLogService
 from apps.auth.serializers import (
@@ -33,6 +31,7 @@ from apps.users.permissions import get_current_role
 from apps.users.serializers import UserInfoSerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response
 from core.throttles import AuthThrottle
 
 
@@ -60,7 +59,7 @@ class LoginView(BaseAPIView):
             employee_id=serializer.validated_data['employee_id'],
             password=serializer.validated_data['password']
         )
-        return Response(result, status=status.HTTP_200_OK)
+        return success_response(result)
 class LogoutView(BaseAPIView):
     """
     User logout endpoint.
@@ -82,10 +81,7 @@ class LogoutView(BaseAPIView):
         serializer.is_valid(raise_exception=True)
         refresh_token = serializer.validated_data.get('refresh_token')
         self.service.logout(request.user, refresh_token)
-        return Response(
-            {'message': '登出成功'},
-            status=status.HTTP_200_OK
-        )
+        return success_response(message='登出成功')
 class RefreshTokenView(BaseAPIView):
     """
     Token refresh endpoint.
@@ -110,7 +106,7 @@ class RefreshTokenView(BaseAPIView):
         result = self.service.refresh_token(
             refresh_token=serializer.validated_data['refresh_token']
         )
-        return Response(result, status=status.HTTP_200_OK)
+        return success_response(result)
 class SwitchRoleView(BaseAPIView):
     """
     Role switching endpoint.
@@ -134,7 +130,7 @@ class SwitchRoleView(BaseAPIView):
             user=request.user,
             role_code=serializer.validated_data['role_code']
         )
-        return Response(result, status=status.HTTP_200_OK)
+        return success_response(result)
 class MeView(BaseAPIView):
     """
     获取当前登录用户信息。
@@ -161,11 +157,11 @@ class MeView(BaseAPIView):
             current_role = self.service._get_default_role(available_roles)
         # Use serializer to build user info
         user_info = UserInfoSerializer(user).data
-        return Response({
+        return success_response({
             'user': user_info,
             'available_roles': available_roles,
             'current_role': current_role,
-        }, status=status.HTTP_200_OK)
+        })
 class ResetPasswordView(BaseAPIView):
     """
     Admin password reset endpoint.
@@ -216,10 +212,10 @@ class ResetPasswordView(BaseAPIView):
         except Exception:
             pass  # 日志记录失败不影响主流程
 
-        return Response({
-            'temporary_password': temp_password,
-            'message': '密码已重置，请通知用户使用临时密码登录并修改密码'
-        }, status=status.HTTP_200_OK)
+        return success_response(
+            data={'temporary_password': temp_password},
+            message='密码已重置，请通知用户使用临时密码登录并修改密码'
+        )
     def _generate_temporary_password(self, length=12):
         """Generate a random temporary password."""
         alphabet = string.ascii_letters + string.digits

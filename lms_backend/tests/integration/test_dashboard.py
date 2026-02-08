@@ -17,6 +17,13 @@ from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.users.models import Department, Role, User, UserRole
 
 
+def unwrap_response_data(response):
+    payload = response.data
+    if isinstance(payload, dict) and 'code' in payload and 'data' in payload:
+        return payload['data']
+    return payload
+
+
 @pytest.fixture
 def api_client():
     return APIClient()
@@ -176,18 +183,21 @@ class TestStudentDashboardAPI:
         """测试学员获取仪表盘数据成功"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        assert 'stats' in response.data
-        assert 'tasks' in response.data
-        assert 'latest_knowledge' in response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert 'stats' in data
+        assert 'tasks' in data
+        assert 'latest_knowledge' in data
 
     def test_get_dashboard_stats_fields(self, api_client, student, task_assignment):
         """测试仪表盘统计字段完整性"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/')
+        data = unwrap_response_data(response)
 
-        stats = response.data['stats']
+        stats = data['stats']
         assert 'in_progress_count' in stats
         assert 'urgent_count' in stats
         assert 'completion_rate' in stats
@@ -205,6 +215,22 @@ class TestStudentDashboardAPI:
 
         assert response.status_code == 200
 
+    def test_get_dashboard_with_invalid_limit_returns_validation_error(self, api_client, student):
+        """测试 task_limit 非整数时返回统一校验错误"""
+        api_client.force_authenticate(user=student)
+        response = api_client.get('/api/dashboard/student/?task_limit=abc')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'VALIDATION_ERROR'
+
+    def test_get_dashboard_with_negative_limit_returns_validation_error(self, api_client, student):
+        """测试 knowledge_limit 非法边界时返回统一校验错误"""
+        api_client.force_authenticate(user=student)
+        response = api_client.get('/api/dashboard/student/?knowledge_limit=-1')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'VALIDATION_ERROR'
+
 
 # ============================================
 # 任务参与者进度 API 测试
@@ -218,17 +244,19 @@ class TestTaskParticipantsAPI:
         """测试获取任务参与者进度成功"""
         api_client.force_authenticate(user=student)
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        assert isinstance(response.data, list)
+        assert isinstance(data, list)
 
     def test_get_participants_includes_current_user(self, api_client, student, task, task_assignment, task_assignment2):
         """测试参与者列表包含当前用户标记"""
         api_client.force_authenticate(user=student)
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
+        data = unwrap_response_data(response)
 
         # 检查是否有 is_me 字段
-        has_is_me = any(p.get('is_me', False) for p in response.data)
+        has_is_me = any(p.get('is_me', False) for p in data)
         assert has_is_me
 
     def test_get_participants_unauthenticated(self, api_client, task):
@@ -240,9 +268,10 @@ class TestTaskParticipantsAPI:
         """测试访问不存在的任务"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/task/99999/participants/')
+        data = unwrap_response_data(response)
         # 应该返回空列表而不是 404
         assert response.status_code == 200
-        assert response.data == []
+        assert data == []
 
 
 # ============================================
@@ -257,10 +286,11 @@ class TestMentorDashboardAPI:
         """测试导师获取仪表盘数据"""
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/mentor/')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        assert 'summary' in response.data
-        assert 'students' in response.data
+        assert 'summary' in data
+        assert 'students' in data
 
     def test_get_dashboard_as_admin(self, api_client, admin):
         """测试管理员获取仪表盘数据"""
@@ -285,12 +315,21 @@ class TestMentorDashboardAPI:
         """测试仪表盘摘要字段完整性"""
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/mentor/')
+        data = unwrap_response_data(response)
 
-        summary = response.data['summary']
+        summary = data['summary']
         assert 'total_students' in summary
         assert 'weekly_active_users' in summary
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
+
+    def test_students_needing_attention_with_invalid_limit_returns_validation_error(self, api_client, mentor):
+        """测试 limit 非整数时返回统一校验错误"""
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get('/api/dashboard/mentor/students-needing-attention/?limit=NaN')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'VALIDATION_ERROR'
 
 
 @pytest.mark.django_db
@@ -301,15 +340,16 @@ class TestTeamManagerDashboardAPI:
         """测试团队经理获取仪表盘数据"""
         api_client.force_authenticate(user=team_manager)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        assert 'summary' in response.data
-        assert 'department_comparison' in response.data
-        assert 'department_student_view' in response.data
+        assert 'summary' in data
+        assert 'department_comparison' in data
+        assert 'department_student_view' in data
         # 团队经理口径：包含全部 STUDENT 角色成员，仅排除超级管理员与室经理
-        assert response.data['summary']['total_students'] == 3
-        assert response.data['summary']['total_mentors'] == 1
-        assert response.data['summary']['total_knowledge'] == 1
+        assert data['summary']['total_students'] == 3
+        assert data['summary']['total_mentors'] == 1
+        assert data['summary']['total_knowledge'] == 1
 
     def test_get_dashboard_as_mentor_forbidden(self, api_client, mentor):
         """测试非团队经理角色无法访问团队经理仪表盘"""
@@ -341,9 +381,10 @@ class TestTeamManagerDashboardAPI:
 
         api_client.force_authenticate(user=team_manager)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        department_comparison = response.data['department_comparison']
+        department_comparison = data['department_comparison']
         avg_scores = [
             department_comparison['left_department']['avg_score'],
             department_comparison['right_department']['avg_score'],
@@ -377,9 +418,10 @@ class TestTeamManagerDashboardAPI:
 
         api_client.force_authenticate(user=team_manager)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
-        department_comparison = response.data['department_comparison']
+        department_comparison = data['department_comparison']
         completion_rates = [
             department_comparison['left_department']['avg_completion_rate'],
             department_comparison['right_department']['avg_completion_rate'],
@@ -419,11 +461,12 @@ class TestTeamManagerDashboardAPI:
 
         api_client.force_authenticate(user=team_manager)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
 
         assert response.status_code == 200
         all_student_names = {
             student['student_name']
-            for item in response.data['department_student_view']
+            for item in data['department_student_view']
             for student in item['students']
         }
 

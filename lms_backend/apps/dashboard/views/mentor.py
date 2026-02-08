@@ -6,11 +6,12 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.dashboard.services import MentorDashboardService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.query_params import parse_int_query_param
+from core.responses import success_response
 
 
 class MentorDashboardView(BaseAPIView):
@@ -39,7 +40,7 @@ class MentorDashboardView(BaseAPIView):
             )
         # 调用 Service 获取仪表盘数据
         data = self.service.get_dashboard_data()
-        return Response(data)
+        return success_response(data)
 
 
 class StudentsNeedingAttentionView(BaseAPIView):
@@ -66,6 +67,12 @@ class StudentsNeedingAttentionView(BaseAPIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有导师、室经理或管理员可以访问此接口'
             )
-        limit = int(request.query_params.get('limit', 10))
+        limit = parse_int_query_param(
+            request=request,
+            name='limit',
+            default=10,
+            minimum=1,
+            maximum=100,
+        )
         data = self.service.get_students_needing_attention(limit=limit)
-        return Response(data)
+        return success_response(data)

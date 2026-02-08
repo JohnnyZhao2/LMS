@@ -22,7 +22,9 @@ def test_refresh_token_contract_fields():
         format='json',
     )
     assert login_response.status_code == 200
-    refresh_token = login_response.data['refresh_token']
+    assert login_response.data['code'] == 'SUCCESS'
+    assert 'data' in login_response.data
+    refresh_token = login_response.data['data']['refresh_token']
 
     refresh_response = client.post(
         '/api/auth/refresh/',
@@ -30,5 +32,6 @@ def test_refresh_token_contract_fields():
         format='json',
     )
     assert refresh_response.status_code == 200
-    assert 'access_token' in refresh_response.data
-    assert 'refresh_token' in refresh_response.data
+    assert refresh_response.data['code'] == 'SUCCESS'
+    assert 'access_token' in refresh_response.data['data']
+    assert 'refresh_token' in refresh_response.data['data']

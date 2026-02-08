@@ -3,15 +3,15 @@
 只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError
 from core.mixins import BusinessErrorHandlerMixin
 from core.pagination import StandardResultsSetPagination
+from core.query_params import parse_int_query_param
+from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import (
     AddQuestionsSerializer,
@@ -50,8 +50,13 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         """
         # 1. 获取查询参数
         filters = {}
-        if request.query_params.get('created_by'):
-            filters['created_by_id'] = int(request.query_params.get('created_by'))
+        created_by_id = parse_int_query_param(
+            request=request,
+            name='created_by',
+            minimum=1,
+        )
+        if created_by_id is not None:
+            filters['created_by_id'] = created_by_id
         if request.query_params.get('quiz_type'):
             filters['quiz_type'] = request.query_params.get('quiz_type')
         search = request.query_params.get('search')
@@ -75,7 +80,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         
         # 4. 序列化输出
         serializer = QuizListSerializer(quiz_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
     @extend_schema(
         summary='创建试卷',
@@ -116,7 +121,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
-        return Response(output.data, status=status.HTTP_201_CREATED)
+        return created_response(output.data)
 
 
 class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
@@ -145,7 +150,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         except BusinessError as e:
             return self.handle_business_error(e)
         serializer = QuizDetailSerializer(quiz)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
     @extend_schema(
         summary='更新试卷',
@@ -196,7 +201,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
 
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
-        return Response(output.data, status=status.HTTP_200_OK)
+        return success_response(output.data)
 
     @extend_schema(
         summary='删除试卷',
@@ -219,7 +224,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
             self.service.delete(pk)
         except BusinessError as e:
             return self.handle_business_error(e)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return no_content_response()
 
 
 class QuizAddQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
@@ -266,7 +271,7 @@ class QuizAddQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
-        return Response(output.data, status=status.HTTP_200_OK)
+        return success_response(output.data)
 
 
 class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
@@ -308,4 +313,4 @@ class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
         
         # 4. 序列化输出
         output = QuizDetailSerializer(quiz)
-        return Response(output.data, status=status.HTTP_200_OK)
+        return success_response(output.data)

@@ -35,7 +35,7 @@ DATETIME_FIELDS = {
     'lms_quiz_question': ['created_at', 'updated_at'],
     
     # 任务相关
-    'lms_task': ['created_at', 'updated_at', 'deleted_at', 'deadline', 'closed_at'],
+    'lms_task': ['created_at', 'updated_at', 'deleted_at', 'deadline'],
     'lms_task_assignment': ['created_at', 'updated_at', 'completed_at'],
     'lms_task_knowledge': ['created_at', 'updated_at'],
     'lms_task_quiz': ['created_at', 'updated_at'],

@@ -6,13 +6,13 @@ Properties:
 - Property 15: 题目所有权编辑控制
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
+from core.query_params import parse_int_query_param
+from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import (
     QuestionCreateSerializer,
@@ -54,10 +54,21 @@ class QuestionListCreateView(BaseAPIView):
         filters = {}
         if request.query_params.get('question_type'):
             filters['question_type'] = request.query_params.get('question_type')
-        if request.query_params.get('created_by'):
-            filters['created_by_id'] = int(request.query_params.get('created_by'))
-        if request.query_params.get('line_type_id'):
-            filters['line_type_id'] = int(request.query_params.get('line_type_id'))
+        created_by_id = parse_int_query_param(
+            request=request,
+            name='created_by',
+            minimum=1,
+        )
+        if created_by_id is not None:
+            filters['created_by_id'] = created_by_id
+
+        line_type_id = parse_int_query_param(
+            request=request,
+            name='line_type_id',
+            minimum=1,
+        )
+        if line_type_id is not None:
+            filters['line_type_id'] = line_type_id
 
         search = request.query_params.get('search')
 
@@ -77,7 +88,7 @@ class QuestionListCreateView(BaseAPIView):
 
         # 如果不分页，直接返回
         serializer = QuestionListSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
     @extend_schema(
         summary='创建题目',
@@ -103,7 +114,7 @@ class QuestionListCreateView(BaseAPIView):
         # 使用Service创建题目（不再传user参数）
         question = self.service.create(data=serializer.validated_data)
         response_serializer = QuestionDetailSerializer(question)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(response_serializer.data)
 
 
 class QuestionDetailView(BaseAPIView):
@@ -129,7 +140,7 @@ class QuestionDetailView(BaseAPIView):
         """Get question detail."""
         question = self.service.get_by_id(pk)
         serializer = QuestionDetailSerializer(question)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
     @extend_schema(
         summary='更新题目',
@@ -163,7 +174,7 @@ class QuestionDetailView(BaseAPIView):
             data=serializer.validated_data
         )
         response_serializer = QuestionDetailSerializer(updated_question)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 
     @extend_schema(
         summary='删除题目',
@@ -184,4 +195,4 @@ class QuestionDetailView(BaseAPIView):
         """
         # 使用Service删除题目（权限检查和引用检查在Service中完成，不再传user/request参数）
         self.service.delete(pk=pk)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return no_content_response()

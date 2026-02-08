@@ -6,12 +6,19 @@ Properties: 35, 36
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError
+from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
+from core.query_params import parse_int_query_param
+from core.responses import (
+    created_response,
+    error_response,
+    list_response,
+    no_content_response,
+    success_response,
+)
 
 from .serializers import (
     SpotCheckCreateSerializer,
@@ -20,6 +27,23 @@ from .serializers import (
     SpotCheckUpdateSerializer,
 )
 from .services import SpotCheckService
+
+
+def _handle_business_error(error: BusinessError):
+    """统一业务异常响应映射。"""
+    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
+        status_code = status.HTTP_404_NOT_FOUND
+    elif error.code == ErrorCodes.PERMISSION_DENIED:
+        status_code = status.HTTP_403_FORBIDDEN
+    else:
+        status_code = status.HTTP_400_BAD_REQUEST
+
+    return error_response(
+        code=error.code,
+        message=error.message,
+        details=error.details,
+        status_code=status_code,
+    )
 
 
 class SpotCheckListCreateView(BaseAPIView):
@@ -59,18 +83,11 @@ class SpotCheckListCreateView(BaseAPIView):
         获取抽查记录列表
         Property 36: 抽查记录时间排序
         """
-        # 获取查询参数
-        student_id = request.query_params.get('student_id')
-        if student_id:
-            try:
-                student_id = int(student_id)
-            except (ValueError, TypeError):
-                return Response(
-                    {'code': 'VALIDATION_ERROR', 'message': '无效的学员ID'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        else:
-            student_id = None
+        student_id = parse_int_query_param(
+            request=request,
+            name='student_id',
+            minimum=1,
+        )
 
         # 调用 Service（直接用 self.service，不用传 user/request）
         try:
@@ -79,10 +96,7 @@ class SpotCheckListCreateView(BaseAPIView):
                 ordering='-checked_at'
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return _handle_business_error(e)
 
         # 分页处理
         paginator = self.pagination_class()
@@ -93,7 +107,7 @@ class SpotCheckListCreateView(BaseAPIView):
 
         # 序列化输出（如果不分页）
         serializer = SpotCheckListSerializer(spot_checks, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
 
     @extend_schema(
         summary='创建抽查记录',
@@ -119,15 +133,11 @@ class SpotCheckListCreateView(BaseAPIView):
         try:
             spot_check = self.service.create(data=serializer.validated_data)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST if e.code == 'VALIDATION_ERROR'
-                else status.HTTP_403_FORBIDDEN
-            )
+            return _handle_business_error(e)
         
         # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(response_serializer.data)
 
 
 class SpotCheckDetailView(BaseAPIView):
@@ -152,13 +162,9 @@ class SpotCheckDetailView(BaseAPIView):
         try:
             spot_check = self.service.get_by_id(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND'
-                else status.HTTP_403_FORBIDDEN
-            )
+            return _handle_business_error(e)
         serializer = SpotCheckDetailSerializer(spot_check)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
     @extend_schema(
         summary='更新抽查记录',
@@ -185,16 +191,11 @@ class SpotCheckDetailView(BaseAPIView):
         try:
             spot_check = self.service.update(pk=pk, data=serializer.validated_data)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST if e.code == 'VALIDATION_ERROR'
-                else status.HTTP_403_FORBIDDEN if e.code == 'PERMISSION_DENIED'
-                else status.HTTP_404_NOT_FOUND
-            )
+            return _handle_business_error(e)
         
         # 序列化输出
         response_serializer = SpotCheckDetailSerializer(spot_check)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
 
     @extend_schema(
         summary='删除抽查记录',
@@ -214,9 +215,5 @@ class SpotCheckDetailView(BaseAPIView):
         try:
             self.service.delete(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND if e.code == 'RESOURCE_NOT_FOUND'
-                else status.HTTP_403_FORBIDDEN
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return _handle_business_error(e)
+        return no_content_response()

@@ -2,7 +2,6 @@ import { Navigate, useParams, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { roleState } from '@/lib/role-state';
 import { tokenStorage } from '@/lib/token-storage';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
@@ -23,7 +22,6 @@ export const RoleRouteWrapper: React.FC = () => {
   // 同步角色到全局状态（供 API 请求使用）
   useEffect(() => {
     if (isValidRole && isAuthenticated) {
-      roleState.set(roleCode);
       // 同时更新 localStorage 作为默认值
       tokenStorage.setCurrentRole(roleCode);
     }

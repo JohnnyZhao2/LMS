@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import pytest
 
 from apps.tasks.models import Task
@@ -13,13 +14,17 @@ from apps.tasks.tests.factories import (
 from core.exceptions import BusinessError, ErrorCodes
 
 
+def _build_request(user=None):
+    return SimpleNamespace(user=user, META={})
+
+
 @pytest.mark.django_db
 def test_has_student_progress_no_progress():
     """Test has_student_progress returns False when no progress exists"""
     task = TaskFactory()
     TaskAssignmentFactory(task=task)
 
-    service = TaskService()
+    service = TaskService(_build_request())
     result = service.has_student_progress(task)
 
     assert result is False
@@ -37,7 +42,7 @@ def test_has_student_progress_with_knowledge_progress():
         is_completed=True
     )
 
-    service = TaskService()
+    service = TaskService(_build_request())
     result = service.has_student_progress(task)
 
     assert result is True
@@ -50,7 +55,7 @@ def test_has_student_progress_with_quiz_submission():
     assignment = TaskAssignmentFactory(task=task)
     SubmissionFactory(task_assignment=assignment)
 
-    service = TaskService()
+    service = TaskService(_build_request())
     result = service.has_student_progress(task)
 
     assert result is True
@@ -68,7 +73,7 @@ def test_update_task_blocks_resource_edit_with_progress():
         is_completed=True
     )
 
-    service = TaskService()
+    service = TaskService(_build_request())
 
     with pytest.raises(BusinessError) as exc:
         service.update_task(task, updated_by=task.created_by, knowledge_ids=[999])
@@ -89,7 +94,7 @@ def test_update_task_blocks_quiz_edit_with_progress():
         is_completed=True
     )
 
-    service = TaskService()
+    service = TaskService(_build_request())
 
     with pytest.raises(BusinessError) as exc:
         service.update_task(task, updated_by=task.created_by, quiz_ids=[999])
@@ -111,7 +116,7 @@ def test_update_task_blocks_assignee_removal_with_progress():
         is_completed=True
     )
 
-    service = TaskService()
+    service = TaskService(_build_request())
 
     # Try to remove assignment2
     with pytest.raises(BusinessError) as exc:
@@ -134,7 +139,7 @@ def test_update_task_allows_assignee_addition_with_progress():
     )
 
     new_user = UserFactory()
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = task.created_by
 
     # Should succeed - adding new assignee
@@ -159,7 +164,7 @@ def test_update_task_allows_basic_fields_with_progress():
         is_completed=True
     )
 
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = task.created_by
 
     # Should succeed - editing basic fields
@@ -182,7 +187,7 @@ def test_get_task_queryset_for_mentor_filters_by_created_role(monkeypatch):
     TaskFactory(created_by=user, created_role='ADMIN')
     TaskFactory(created_role='MENTOR')
 
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'MENTOR')
 
@@ -196,7 +201,7 @@ def test_check_task_read_permission_denies_cross_role_task(monkeypatch):
     """同一用户跨角色访问自己创建的任务应被拒绝"""
     user = UserFactory()
     admin_task = TaskFactory(created_by=user, created_role='ADMIN')
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'MENTOR')
 
@@ -214,7 +219,7 @@ def test_admin_creator_side_filter_management(monkeypatch):
     TaskFactory(created_role='MENTOR')
     non_management_task = TaskFactory(created_role='STUDENT')
 
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = admin_user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
 
@@ -233,7 +238,7 @@ def test_admin_creator_side_filter_non_management(monkeypatch):
     management_task = TaskFactory(created_role='ADMIN')
     non_management_task = TaskFactory(created_role='STUDENT')
 
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = admin_user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
 
@@ -251,7 +256,7 @@ def test_admin_creator_side_filter_non_management_includes_mentor(monkeypatch):
     admin_user = UserFactory()
     mentor_task = TaskFactory(created_role='MENTOR')
 
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = admin_user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
 
@@ -266,7 +271,7 @@ def test_admin_creator_side_filter_non_management_includes_mentor(monkeypatch):
 def test_admin_creator_side_filter_invalid_value_raises(monkeypatch):
     """ADMIN 传非法 creator_side 参数时抛 INVALID_INPUT"""
     admin_user = UserFactory()
-    service = TaskService()
+    service = TaskService(_build_request())
     service._user = admin_user
     monkeypatch.setattr(service, 'get_current_role', lambda: 'ADMIN')
 

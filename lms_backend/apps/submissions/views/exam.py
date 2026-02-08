@@ -6,12 +6,11 @@ Properties:
 - Property 32: 纯客观题直接完成
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response
 
 from ..serializers import SubmissionDetailSerializer
 from ..services import SubmissionService
@@ -46,4 +45,4 @@ class ExamResultView(BaseAPIView):
                 message='考试尚未提交'
             )
         response_serializer = SubmissionDetailSerializer(submission)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)

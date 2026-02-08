@@ -4,13 +4,20 @@ Implements:
 - Task analytics API
 - Student executions API
 """
-from django.db.models import Max, Prefetch, Sum
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.submissions.models import Submission
-from apps.tasks.models import KnowledgeLearningProgress
+from apps.tasks.selectors import (
+    analytics_assignment_queryset,
+    task_exam_highest_scores,
+    task_exam_submissions_queryset,
+    task_knowledge_completion_counts,
+    task_knowledge_queryset,
+    task_quiz_completion_counts,
+    task_quiz_queryset,
+    task_submission_score_totals,
+)
 from apps.tasks.serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
 from apps.tasks.task_service import TaskService
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
@@ -42,19 +49,7 @@ class TaskAnalyticsView(BaseAPIView):
 
     def _compute_analytics(self, task):
         """计算任务分析数据"""
-        # 预加载关联数据避免 N+1 查询
-        submissions_prefetch = Prefetch(
-            'submissions',
-            queryset=Submission.objects.select_related('quiz').filter(
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            )
-        )
-        assignments = task.assignments.select_related(
-            'assignee', 'assignee__department'
-        ).prefetch_related(
-            'knowledge_progress',
-            submissions_prefetch
-        )
+        assignments = analytics_assignment_queryset(task_id=task.id)
         total_count = assignments.count()
         completed_count = assignments.filter(status='COMPLETED').count()
 
@@ -75,25 +70,17 @@ class TaskAnalyticsView(BaseAPIView):
         has_quiz = task.task_quizzes.exists()
         accuracy_percentage = None
         if has_quiz:
-            submissions = Submission.objects.filter(
-                task_assignment__task=task,
-                status__in=['SUBMITTED', 'GRADED']
-            )
-            if submissions.exists():
-                total_score = submissions.aggregate(
-                    total=Sum('total_score')
-                )['total'] or 0
-                obtained_score = submissions.aggregate(
-                    total=Sum('obtained_score')
-                )['total'] or 0
-                if total_score > 0:
-                    accuracy_percentage = round(float(obtained_score) / float(total_score) * 100, 1)
+            score_totals = task_submission_score_totals(task.id)
+            total_score = score_totals['total_score']
+            obtained_score = score_totals['obtained_score']
+            if score_totals['submission_count'] > 0 and total_score > 0:
+                accuracy_percentage = round(float(obtained_score) / float(total_score) * 100, 1)
 
         # 计算异常人数
-        abnormal_count = self._count_abnormal(task, assignments)
+        abnormal_count = self._count_abnormal(assignments)
 
         # 计算节点进度
-        node_progress = self._compute_node_progress(task, total_count)
+        node_progress = self._compute_node_progress(task.id, total_count)
 
         # 计算时间分布
         time_distribution = self._compute_time_distribution(completed_assignments)
@@ -102,8 +89,8 @@ class TaskAnalyticsView(BaseAPIView):
         score_distribution = None
         pass_rate = None
         if has_quiz:
-            score_distribution = self._compute_score_distribution(task)
-            pass_rate = self._compute_pass_rate(task)
+            score_distribution = self._compute_score_distribution(task.id)
+            pass_rate = self._compute_pass_rate(task.id)
 
         return {
             'completion': {
@@ -123,7 +110,7 @@ class TaskAnalyticsView(BaseAPIView):
             'pass_rate': pass_rate,
         }
 
-    def _count_abnormal(self, task, assignments):
+    def _count_abnormal(self, assignments):
         """
         计算异常人数
         异常规则：
@@ -156,16 +143,15 @@ class TaskAnalyticsView(BaseAPIView):
 
         return len(abnormal_ids)
 
-    def _compute_node_progress(self, task, total_count):
+    def _compute_node_progress(self, task_id, total_count):
         """计算各节点完成进度"""
         nodes = []
+        knowledge_counts = task_knowledge_completion_counts(task_id)
+        quiz_counts = task_quiz_completion_counts(task_id)
 
         # 知识节点
-        for tk in task.task_knowledge.select_related('knowledge').order_by('order'):
-            completed = KnowledgeLearningProgress.objects.filter(
-                task_knowledge=tk,
-                is_completed=True
-            ).count()
+        for tk in task_knowledge_queryset(task_id):
+            completed = knowledge_counts.get(tk.id, 0)
             nodes.append({
                 'node_id': tk.id,
                 'node_name': tk.knowledge.title,
@@ -176,12 +162,8 @@ class TaskAnalyticsView(BaseAPIView):
             })
 
         # 试卷节点
-        for tq in task.task_quizzes.select_related('quiz').order_by('order'):
-            completed = Submission.objects.filter(
-                task_assignment__task=task,
-                quiz=tq.quiz,
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            ).values('task_assignment').distinct().count()
+        for tq in task_quiz_queryset(task_id):
+            completed = quiz_counts.get(tq.quiz_id, 0)
             nodes.append({
                 'node_id': tq.id,
                 'node_name': tq.quiz.title,
@@ -214,7 +196,7 @@ class TaskAnalyticsView(BaseAPIView):
 
         return [{'range': k, 'count': v} for k, v in distribution.items()]
 
-    def _compute_score_distribution(self, task):
+    def _compute_score_distribution(self, task_id):
         """计算分数分布（仅考试，按实际分数统计）"""
         ranges = [
             ('0-60', 0, 60),
@@ -225,24 +207,8 @@ class TaskAnalyticsView(BaseAPIView):
         ]
         distribution = {r[0]: 0 for r in ranges}
 
-        # 获取每个学员在考试中的最高分提交（只统计 EXAM）
-        highest_scores = Submission.objects.filter(
-            task_assignment__task=task,
-            quiz__quiz_type='EXAM',  # 只统计考试
-            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-            obtained_score__isnull=False
-        ).values('task_assignment_id').annotate(
-            max_obtained=Max('obtained_score')
-        )
-        
-        # 构建一个字典：task_assignment_id -> max_obtained_score
-        assignment_max_scores = {
-            item['task_assignment_id']: item['max_obtained'] 
-            for item in highest_scores
-        }
-        
         # 获取达到最高分的那些提交记录，并按实际分数统计
-        for assignment_id, max_score in assignment_max_scores.items():
+        for max_score in task_exam_highest_scores(task_id):
             score = float(max_score)  # 直接使用实际分数，不计算百分比
             for label, min_val, max_val in ranges:
                 if min_val <= score < max_val:
@@ -251,20 +217,15 @@ class TaskAnalyticsView(BaseAPIView):
 
         return [{'range': k, 'count': v} for k, v in distribution.items()]
 
-    def _compute_pass_rate(self, task):
+    def _compute_pass_rate(self, task_id):
         """计算通过率（仅考试任务）"""
         # 1. 首先检查任务是否包含考试类型的试卷
-        has_exam = task.task_quizzes.filter(quiz__quiz_type='EXAM').exists()
+        has_exam = task_quiz_queryset(task_id).filter(quiz__quiz_type='EXAM').exists()
         if not has_exam:
             return None
 
         # 2. 获取所有已完成的考试提交
-        exam_submissions = Submission.objects.filter(
-            task_assignment__task=task,
-            quiz__quiz_type='EXAM',
-            status__in=['SUBMITTED', 'GRADING', 'GRADED'],
-            obtained_score__isnull=False
-        ).select_related('quiz')
+        exam_submissions = task_exam_submissions_queryset(task_id)
 
         # 3. 如果有考试但没人提交，返回 0.0
         if not exam_submissions.exists():
@@ -305,21 +266,8 @@ class StudentExecutionsView(BaseAPIView):
 
     def _get_student_executions(self, task):
         """获取学员执行情况列表"""
-        # 预加载关联数据避免 N+1 查询
-        submissions_prefetch = Prefetch(
-            'submissions',
-            queryset=Submission.objects.select_related('quiz').filter(
-                status__in=['SUBMITTED', 'GRADING', 'GRADED']
-            )
-        )
-        assignments = task.assignments.select_related(
-            'assignee', 'assignee__department', 'task'
-        ).prefetch_related(
-            'knowledge_progress',
-            submissions_prefetch
-        ).order_by('-created_at')
-
-        total_nodes = task.task_knowledge.count() + task.task_quizzes.count()
+        assignments = analytics_assignment_queryset(task_id=task.id, order_desc=True)
+        total_nodes = task_knowledge_queryset(task.id).count() + task_quiz_queryset(task.id).count()
         results = []
         now = timezone.now()
 

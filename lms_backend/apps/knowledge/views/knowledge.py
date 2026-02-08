@@ -10,10 +10,8 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.knowledge.models import Knowledge, ResourceLineType
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
@@ -26,11 +24,74 @@ from apps.tasks.models import TaskAssignment, TaskKnowledge
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
+from core.query_params import parse_int_query_param
+from core.responses import (
+    created_response,
+    error_response,
+    list_response,
+    no_content_response,
+    success_response,
+)
 
 
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()
+
+
+def _build_knowledge_filters(request):
+    """构建并校验知识筛选参数。"""
+    filters = {}
+
+    knowledge_type = request.query_params.get('knowledge_type')
+    if knowledge_type:
+        filters['knowledge_type'] = knowledge_type
+
+    line_type_id = parse_int_query_param(
+        request=request,
+        name='line_type_id',
+        minimum=1,
+    )
+    if line_type_id is not None:
+        filters['line_type_id'] = line_type_id
+
+    system_tag_id = parse_int_query_param(
+        request=request,
+        name='system_tag_id',
+        minimum=1,
+    )
+    if system_tag_id is not None:
+        filters['system_tag_id'] = system_tag_id
+
+    operation_tag_id = parse_int_query_param(
+        request=request,
+        name='operation_tag_id',
+        minimum=1,
+    )
+    if operation_tag_id is not None:
+        filters['operation_tag_id'] = operation_tag_id
+
+    search = request.query_params.get('search')
+    return filters, search
+
+
+def _handle_business_error(error: BusinessError):
+    """统一业务异常响应映射。"""
+    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
+        status_code = status.HTTP_404_NOT_FOUND
+    elif error.code == ErrorCodes.PERMISSION_DENIED:
+        status_code = status.HTTP_403_FORBIDDEN
+    else:
+        status_code = status.HTTP_400_BAD_REQUEST
+
+    return error_response(
+        code=error.code,
+        message=error.message,
+        details=error.details,
+        status_code=status_code,
+    )
+
+
 class KnowledgeListCreateView(BaseAPIView):
     """
     Knowledge list and create endpoint.
@@ -40,14 +101,7 @@ class KnowledgeListCreateView(BaseAPIView):
 
     def _get_knowledge_list(self, request):
         """共享的知识列表获取逻辑"""
-        filters = {
-            'knowledge_type': request.query_params.get('knowledge_type'),
-            'line_type_id': request.query_params.get('line_type_id'),
-            'system_tag_id': request.query_params.get('system_tag_id'),
-            'operation_tag_id': request.query_params.get('operation_tag_id'),
-        }
-        filters = {k: v for k, v in filters.items() if v}
-        search = request.query_params.get('search')
+        filters, search = _build_knowledge_filters(request)
 
         knowledge_list = self.service.get_all_with_filters(
             filters=filters,
@@ -61,7 +115,7 @@ class KnowledgeListCreateView(BaseAPIView):
             return paginator.get_paginated_response(serializer.data)
 
         serializer = KnowledgeListSerializer(knowledge_list, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return list_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
         description='''获取知识文档列表，支持条线类型、知识类型和系统标签筛选。
@@ -112,13 +166,10 @@ class KnowledgeListCreateView(BaseAPIView):
                 data=serializer.validated_data
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return _handle_business_error(e)
         # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return created_response(response_serializer.data)
 class KnowledgeDetailView(BaseAPIView):
     """
     Knowledge detail, update, delete endpoint.
@@ -140,13 +191,10 @@ class KnowledgeDetailView(BaseAPIView):
         try:
             knowledge = self.service.get_by_id(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND if e.code == ErrorCodes.RESOURCE_NOT_FOUND else status.HTTP_403_FORBIDDEN
-            )
+            return _handle_business_error(e)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
     @extend_schema(
         summary='更新知识文档',
         description='更新知识文档内容（仅管理员）',
@@ -179,13 +227,10 @@ class KnowledgeDetailView(BaseAPIView):
                 data=serializer.validated_data
             )
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return _handle_business_error(e)
         # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)
     @extend_schema(
         summary='删除知识文档',
         description='删除知识文档（仅管理员，被任务引用时禁止删除）',
@@ -208,11 +253,8 @@ class KnowledgeDetailView(BaseAPIView):
         try:
             self.service.delete(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message, 'details': e.details},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            return _handle_business_error(e)
+        return no_content_response()
 class KnowledgeStatsView(BaseAPIView):
     """知识统计端点"""
     permission_classes = [IsAuthenticated]
@@ -231,15 +273,7 @@ class KnowledgeStatsView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
-        # 1. 获取查询参数
-        filters = {
-            'knowledge_type': request.query_params.get('knowledge_type'),
-            'line_type_id': request.query_params.get('line_type_id'),
-            'system_tag_id': request.query_params.get('system_tag_id'),
-            'operation_tag_id': request.query_params.get('operation_tag_id'),
-        }
-        filters = {k: v for k, v in filters.items() if v}
-        search = request.query_params.get('search')
+        filters, search = _build_knowledge_filters(request)
         # 2. 调用 Service 获取知识列表（只返回当前版本）
         knowledge_list = self.service.get_all_with_filters(
             filters=filters,
@@ -257,7 +291,7 @@ class KnowledgeStatsView(BaseAPIView):
         }
         # 4. 序列化输出
         serializer = KnowledgeStatsSerializer(stats)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
 
 class StudentTaskKnowledgeDetailView(BaseAPIView):
@@ -280,9 +314,10 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
             id=task_knowledge_id
         ).first()
         if not task_knowledge:
-            return Response(
-                {'code': ErrorCodes.RESOURCE_NOT_FOUND, 'message': '任务知识不存在'},
-                status=status.HTTP_404_NOT_FOUND
+            return error_response(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message='任务知识不存在',
+                status_code=status.HTTP_404_NOT_FOUND,
             )
         if self.service.get_current_role() != 'ADMIN':
             has_assignment = TaskAssignment.objects.filter(
@@ -290,13 +325,14 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
                 assignee=request.user
             ).exists()
             if not has_assignment:
-                return Response(
-                    {'code': ErrorCodes.PERMISSION_DENIED, 'message': '无权访问该知识文档'},
-                    status=status.HTTP_403_FORBIDDEN
+                return error_response(
+                    code=ErrorCodes.PERMISSION_DENIED,
+                    message='无权访问该知识文档',
+                    status_code=status.HTTP_403_FORBIDDEN,
                 )
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 class KnowledgeIncrementViewCountView(BaseAPIView):
     """Increment knowledge view count endpoint."""
     permission_classes = [IsAuthenticated]
@@ -314,18 +350,12 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
     def post(self, request, pk):
         # 1. 权限检查（先获取知识文档）
         try:
-            knowledge = self.service.get_by_id(pk)
+            self.service.get_by_id(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND if e.code == ErrorCodes.RESOURCE_NOT_FOUND else status.HTTP_403_FORBIDDEN
-            )
+            return _handle_business_error(e)
         # 2. 调用 Service
         try:
             view_count = self.service.increment_view_count(pk)
         except BusinessError as e:
-            return Response(
-                {'code': e.code, 'message': e.message},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        return Response({'view_count': view_count}, status=status.HTTP_200_OK)
+            return _handle_business_error(e)
+        return success_response({'view_count': view_count})

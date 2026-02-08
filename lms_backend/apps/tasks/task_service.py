@@ -130,7 +130,8 @@ class TaskService(BaseService):
             )
         return True
 
-    def has_student_progress(self, task: Task) -> bool:
+    @staticmethod
+    def has_student_progress(task: Task) -> bool:
         """
         检查任务是否有学员学习进度
         Args:

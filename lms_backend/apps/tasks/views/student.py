@@ -6,11 +6,8 @@ Implements:
 - Complete knowledge learning
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
-from apps.tasks.models import KnowledgeLearningProgress, TaskAssignment, TaskKnowledge
 from apps.tasks.serializers import (
     CompleteKnowledgeLearningSerializer,
     KnowledgeLearningProgressSerializer,
@@ -19,7 +16,8 @@ from apps.tasks.serializers import (
 )
 from apps.tasks.student_task_service import StudentTaskService
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
+from core.query_params import parse_int_query_param
+from core.responses import success_response
 
 
 class StudentAssignmentListView(BaseAPIView):
@@ -51,8 +49,19 @@ class StudentAssignmentListView(BaseAPIView):
         )
         
         # Pagination
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
+        page = parse_int_query_param(
+            request=request,
+            name='page',
+            default=1,
+            minimum=1,
+        )
+        page_size = parse_int_query_param(
+            request=request,
+            name='page_size',
+            default=20,
+            minimum=1,
+            maximum=100,
+        )
         start = (page - 1) * page_size
         end = start + page_size
         
@@ -60,7 +69,7 @@ class StudentAssignmentListView(BaseAPIView):
         task_list = queryset[start:end]
         serializer = StudentAssignmentListSerializer(task_list, many=True)
         
-        return Response({
+        return success_response({
             'results': serializer.data,
             'count': total_count,
             'page': page,
@@ -97,7 +106,7 @@ class StudentTaskDetailView(BaseAPIView):
         self.service.ensure_knowledge_progress(assignment)
         
         serializer = StudentTaskDetailSerializer(assignment)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
 
 class CompleteKnowledgeLearningView(BaseAPIView):
@@ -138,4 +147,4 @@ class CompleteKnowledgeLearningView(BaseAPIView):
         response_data['task_status'] = assignment.status
         response_data['task_completed'] = assignment.status == 'COMPLETED'
         
-        return Response(response_data, status=status.HTTP_200_OK)
+        return success_response(response_data)

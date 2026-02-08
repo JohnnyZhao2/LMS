@@ -24,8 +24,8 @@ from .student_task_service import StudentTaskService, extract_knowledge_summary
 from .task_service import TaskService
 
 
-def validate_assignee_scope(user, assignee_ids: list[int], request=None) -> None:
-    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request=request))
+def validate_assignee_scope(user, assignee_ids: list[int], request) -> None:
+    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request))
     if not invalid_ids:
         return
     current_role = get_current_role(user, request)
@@ -108,13 +108,11 @@ class TaskListSerializer(serializers.ModelSerializer):
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
 
-    is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
-
     class Meta:
         model = Task
         fields = [
             'id', 'title', 'description',
-            'deadline', 'is_closed', 'closed_at',
+            'deadline',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
             'assignee_count', 'completed_count',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
@@ -127,19 +125,17 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
-    is_closed = serializers.BooleanField(source='is_effectively_closed', read_only=True)
     has_progress = serializers.SerializerMethodField()
 
     def get_has_progress(self, obj):
         """Check if task has student learning progress"""
-        service = TaskService()
-        return service.has_student_progress(obj)
+        return TaskService.has_student_progress(obj)
 
     class Meta:
         model = Task
         fields = [
             'id', 'title', 'description',
-            'deadline', 'is_closed', 'closed_at',
+            'deadline',
             'knowledge_items', 'quizzes', 'assignments',
             'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
             'has_progress',
@@ -294,14 +290,12 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         assignee_ids = attrs.get('assignee_ids')
         if assignee_ids is not None:
             request = self.context.get('request')
-            if request and request.user:
-                validate_assignee_scope(request.user, assignee_ids)
+            if not request or not request.user:
+                raise serializers.ValidationError('无法获取当前用户信息')
+            validate_assignee_scope(request.user, assignee_ids, request)
         return attrs
     def update(self, instance, validated_data):
         """更新任务信息 - 委托给 TaskService"""
-        # 检查任务是否已关闭
-        if instance.is_closed:
-            raise serializers.ValidationError('任务已关闭，无法修改')
         # 提取关联资源字段
         knowledge_ids = validated_data.pop('knowledge_ids', None)
         quiz_ids = validated_data.pop('quiz_ids', None)
@@ -387,12 +381,10 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         """获取详细进度数据"""
         return obj.get_progress_data()
     def get_knowledge_items(self, obj):
-        service = StudentTaskService()
-        return service.get_student_knowledge_items(obj)
+        return StudentTaskService.get_student_knowledge_items(obj)
 
     def get_quiz_items(self, obj):
-        service = StudentTaskService()
-        return service.get_student_quiz_items(obj)
+        return StudentTaskService.get_student_quiz_items(obj)
 class CompleteKnowledgeLearningSerializer(serializers.Serializer):
     """Serializer for completing knowledge learning."""
     knowledge_id = serializers.IntegerField(

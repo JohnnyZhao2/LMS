@@ -155,7 +155,7 @@ class MentorDashboardService(BaseService):
             包含摘要、学员、快捷链接、当前角色的字典
         """
         current_role = self.get_current_role()
-        students = get_accessible_students(self.user, current_role, self.request)
+        students = get_accessible_students(self.user, self.request)
         student_ids = list(students.values_list('id', flat=True))
         monthly_active_ids = get_monthly_active_user_ids(student_ids)
         spot_check_map = get_monthly_spot_check_stats_by_student(student_ids)
@@ -289,8 +289,7 @@ class MentorDashboardService(BaseService):
         Returns:
             包含预警学员列表和统计的字典
         """
-        current_role = self.get_current_role()
-        students = get_accessible_students(self.user, current_role, self.request)
+        students = get_accessible_students(self.user, self.request)
         student_ids = list(students.values_list('id', flat=True))
 
         all_alerts = get_students_needing_attention(student_ids)
@@ -315,8 +314,7 @@ class TeamManagerDashboardService(BaseService):
         """
         获取团队经理的完整仪表盘数据
         """
-        current_role = self.get_current_role()
-        students = get_accessible_students(self.user, current_role, self.request)
+        students = get_accessible_students(self.user, self.request)
         student_ids = list(students.values_list('id', flat=True))
         mentors = User.objects.filter(
             is_active=True,

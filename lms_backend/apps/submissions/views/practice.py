@@ -5,12 +5,11 @@ Properties:
 - Property 30: 客观题自动评分
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.responses import success_response
 
 from ..serializers import PracticeResultSerializer
 from ..services import SubmissionService
@@ -42,4 +41,4 @@ class PracticeResultView(BaseAPIView):
                 message='答卷尚未提交'
             )
         response_serializer = PracticeResultSerializer(submission)
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+        return success_response(response_serializer.data)

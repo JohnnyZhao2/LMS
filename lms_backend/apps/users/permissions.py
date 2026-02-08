@@ -12,50 +12,43 @@ from django.db.models import Q
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-def get_current_role(user, request=None):
+def get_current_role(user, request):
     """
     Get the current active role of a user.
     Args:
         user: The user object
-        request: The HTTP request object (optional)
+        request: The HTTP request object
     Returns:
         Role code string or None
     """
     if not user or not user.is_authenticated:
         return None
 
-    # Priority 1: Read from X-Current-Role header if request is provided
-    if request:
-        header_role = request.META.get('HTTP_X_CURRENT_ROLE')
-        if header_role:
-            # Validate that the header role is in user's available roles
-            user_roles = set(user.role_codes) if hasattr(user, 'role_codes') else set()
-            if header_role in user_roles:
-                return header_role
+    # Priority 1: Read from X-Current-Role header
+    header_role = request.META.get('HTTP_X_CURRENT_ROLE')
+    if header_role:
+        # Validate that the header role is in user's available roles
+        user_roles = set(user.role_codes) if hasattr(user, 'role_codes') else set()
+        if header_role in user_roles:
+            return header_role
 
     # Priority 2: Use current_role attribute set by authentication
     if hasattr(user, 'current_role') and user.current_role:
         return user.current_role
 
-    # Priority 3: Fall back to role flags
-    if user.is_admin:
+    # Priority 3: Derive from role codes
+    role_codes = set(user.role_codes) if hasattr(user, 'role_codes') else set()
+    if 'ADMIN' in role_codes:
         return 'ADMIN'
-    if user.is_dept_manager:
+    if 'DEPT_MANAGER' in role_codes:
         return 'DEPT_MANAGER'
-    if user.is_mentor:
+    if 'MENTOR' in role_codes:
         return 'MENTOR'
-    if user.is_team_manager:
+    if 'TEAM_MANAGER' in role_codes:
         return 'TEAM_MANAGER'
     return 'STUDENT'
 
 
-class IsAuthenticated(BasePermission):
-    """
-    Base permission class that checks if user is authenticated.
-    """
-    message = '请先登录'
-    def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated)
 class IsAdmin(BasePermission):
     """
     Permission class for admin users.
@@ -300,13 +293,12 @@ class CanCreateSpotCheck(BasePermission):
 
 
 # Utility functions for data scope filtering
-def get_accessible_students(user, current_role=None, request=None):
+def get_accessible_students(user, request):
     """
     Get queryset of students accessible to the given user based on their role.
     Args:
         user: The requesting user
-        current_role: The current active role (optional, will be determined from user if not provided)
-        request: The HTTP request object (optional, for reading role from header)
+        request: The HTTP request object
     Returns:
         QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
@@ -315,8 +307,7 @@ def get_accessible_students(user, current_role=None, request=None):
     - 团队经理统计团队学习成员池（具备 STUDENT，仅排除超级管理员与室经理）
     """
     from apps.users.models import User
-    if not current_role:
-        current_role = get_current_role(user, request)
+    current_role = get_current_role(user, request)
 
     # 非学员角色：这些角色的用户不参与默认学员统计/任务分配
     NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
@@ -361,28 +352,27 @@ def get_accessible_students(user, current_role=None, request=None):
         return User.objects.none()
     # Default: no access
     return User.objects.none()
-def get_accessible_student_ids(user, current_role=None, request=None):
+def get_accessible_student_ids(user, request):
     """
     Get set of student IDs accessible to the given user.
     This is a convenience function for validation purposes.
     Args:
         user: The requesting user
-        current_role: The current active role (optional)
-        request: The HTTP request object (optional, for reading role from header)
+        request: The HTTP request object
     Returns:
         Set of user IDs that the user can access
     Properties: 37, 38, 39
     """
-    return set(get_accessible_students(user, current_role, request).values_list('id', flat=True))
-def filter_queryset_by_data_scope(queryset, user, student_field='user', request=None):
+    return set(get_accessible_students(user, request).values_list('id', flat=True))
+def filter_queryset_by_data_scope(queryset, user, request, student_field='user'):
     """
     Filter a queryset based on the user's data access scope.
     Args:
         queryset: The queryset to filter
         user: The requesting user
+        request: The HTTP request object
         student_field: The field name that references the student User.
                        If None, assumes the queryset is directly on User model.
-        request: The HTTP request object (optional, for reading role from header)
     Returns:
         Filtered queryset
     Properties: 37, 38, 39

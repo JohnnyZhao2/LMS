@@ -60,16 +60,6 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
         related_name='task_updated',
         verbose_name='最后更新者'
     )
-    # 任务状态（任务级别，非分配级别）
-    is_closed = models.BooleanField(
-        default=False,
-        verbose_name='是否已结束'
-    )
-    closed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='结束时间'
-    )
     # 关联知识文档（多对多）
     knowledge_items = models.ManyToManyField(
         'knowledge.Knowledge',
@@ -123,18 +113,6 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def has_knowledge(self):
         """任务是否包含知识文档"""
         return self.knowledge_count > 0
-
-
-    @property
-    def is_effectively_closed(self) -> bool:
-        """
-        任务是否已结束：手动关闭或截止时间已过
-        统一的关闭状态判断逻辑，供 serializers 和 services 使用
-        """
-        if self.is_closed:
-            return True
-        return timezone.now() > self.deadline
-
 
 class TaskAssignment(TimestampMixin, models.Model):
     """
