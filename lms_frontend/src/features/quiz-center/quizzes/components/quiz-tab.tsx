@@ -80,7 +80,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
               }]}
             />
             {isExam && row.original.duration && (
-              <span className="text-[10px] font-medium text-text-muted whitespace-nowrap" style={{ fontFamily: "'Outfit', sans-serif" }}>
+              <span className="text-[10px] font-medium text-text-muted whitespace-nowrap">
                 {row.original.duration}min / {row.original.pass_score}分
               </span>
             )}
@@ -101,13 +101,13 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             <div className="flex items-center gap-2 shrink-0">
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-muted border border-border">
                 <span className="text-[10px] text-text-muted font-medium">题量</span>
-                <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="text-sm font-bold text-foreground">
                   {row.original.question_count}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary-50/50 border border-primary-100/50">
                 <span className="text-[10px] text-primary-500 font-medium">总分</span>
-                <span className="text-sm font-bold text-primary-700" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                <span className="text-sm font-bold text-primary-700">
                   {row.original.total_score}
                 </span>
               </div>
@@ -155,10 +155,10 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       size: 100,
       cell: ({ row }) => (
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm font-bold text-foreground" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-sm font-bold text-foreground">
             {dayjs(row.original.updated_at).format('YYYY.MM.DD')}
           </span>
-          <span className="text-[11px] font-medium text-text-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
+          <span className="text-[11px] font-medium text-text-muted">
             {dayjs(row.original.updated_at).format('HH:mm')}
           </span>
         </div>

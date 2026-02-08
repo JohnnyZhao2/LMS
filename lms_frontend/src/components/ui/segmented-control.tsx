@@ -38,7 +38,6 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
       {label && (
         <span
           className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1"
-          style={{ fontFamily: "'Outfit', sans-serif" }}
         >
           {label}
         </span>
@@ -57,7 +56,6 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
                 ? activeStyles[activeColor]
                 : 'text-text-muted hover:text-foreground hover:bg-muted'
             )}
-            style={{ fontFamily: "'Outfit', sans-serif" }}
           >
             {opt.label}
           </button>

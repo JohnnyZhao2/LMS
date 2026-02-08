@@ -168,8 +168,6 @@ export const ActivityLogsPanel: React.FC = () => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
-        {/* Subtle Noise Texture - The DNA of the design system */}
-        <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-150" />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">
           {/* Dashboard-style Slim Header */}
@@ -179,7 +177,7 @@ export const ActivityLogsPanel: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-primary" />
                 <div>
-                  <h2 className="text-sm font-bold text-foreground uppercase tracking-[0.15em]" style={{ fontFamily: "'Outfit', sans-serif" }}>审计流水线</h2>
+                  <h2 className="text-sm font-bold text-foreground uppercase tracking-[0.15em]">审计流水线</h2>
                 </div>
               </div>
 

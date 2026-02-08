@@ -144,7 +144,7 @@ export const StudentDashboard: React.FC = () => {
                           index === 1 ? "text-slate-400" :
                             index === 2 ? "text-orange-400" :
                               "text-slate-200 dark:text-slate-800"
-                      )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      )}>
                         {String(index + 1).padStart(2, '0')}
                       </div>
 
@@ -159,7 +159,7 @@ export const StudentDashboard: React.FC = () => {
                           <span className={cn(
                             "text-[10px] font-black transition-colors",
                             p.is_me ? "text-primary/70" : "text-slate-300 dark:text-slate-700"
-                          )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          )}>
                             {Math.round(p.progress)}%
                           </span>
                         </div>

@@ -47,7 +47,6 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
       className={cn(
         "group relative flex flex-col h-full bg-background rounded-lg p-6 transition duration-200 cursor-pointer hover:scale-[1.02] border-0"
       )}
-      style={{ fontFamily: "'Outfit', sans-serif" }}
       onClick={() => onView(item.id)}
     >
       {/* 状态排布 */}

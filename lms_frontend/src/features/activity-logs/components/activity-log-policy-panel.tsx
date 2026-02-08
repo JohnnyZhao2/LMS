@@ -78,10 +78,10 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                       {categoryIcons[category]}
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-black text-foreground uppercase tracking-[0.15em] transition-all" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      <span className="text-sm font-black text-foreground uppercase tracking-[0.15em] transition-all">
                         {categoryLabels[category]}
                       </span>
-                      <span className="text-[10px] font-bold text-muted-foreground/30 tabular-nums" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      <span className="text-[10px] font-bold text-muted-foreground/30 tabular-nums">
                         ({Object.values(groupedPolicies[category]).flat().length})
                       </span>
                     </div>
@@ -97,7 +97,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                       >
                         {/* Group Title - Clean & Soft */}
                         <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50/30">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                             {group}
                           </span>
                         </div>

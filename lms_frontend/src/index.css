@@ -1,10 +1,9 @@
 /* ============================================
-   Google Fonts - 三种主题字体
-   Light: Poppins + Open Sans (现代专业)
-   Scholar: Noto Serif SC + Noto Sans SC (中式书院)
-   Dark: Orbitron + Exo 2 (赛博朋克)
+   主题字体 - 使用系统字体栈（内网部署）
+   Light: 系统无衬线 (现代专业)
+   Scholar: 宋体 + 系统无衬线 (中式书院)
+   Dark: 系统无衬线 (赛博朋克)
    ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Orbitron:wght@400;500;600;700&family=Exo+2:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
@@ -153,7 +152,7 @@
 /* ============================================
    🌞 主题定义 - Light (Flat Design 扁平风格)
    风格：现代、专业、干净、无阴影
-   字体：Poppins (标题) + Open Sans (正文)
+   字体：系统无衬线字体
    ============================================ */
 :root,
 [data-theme="light"] {
@@ -161,8 +160,8 @@
     --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
     /* 字体 */
-    --theme-font-sans: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    --theme-font-heading: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    --theme-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --theme-font-heading: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
 
     /* 圆角 - 扁平风格使用较小圆角 */
     --theme-radius-sm: 4px;
@@ -259,13 +258,13 @@
    设计理念：夸张极简主义 (Exaggerated Minimalism)
    - 大量留白、高对比度、单一强调色
    - 传统与现代融合，简洁大气
-   字体：Noto Serif SC (标题) + Noto Sans SC (正文)
+   字体：宋体 (标题) + 系统无衬线 (正文)
    主色：招商银行红 (#C41230) + 金色点缀 (#CA8A04)
    ============================================ */
 [data-theme="scholar"] {
     /* 字体 - 中式书院风格 */
-    --theme-font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
-    --theme-font-heading: 'Noto Serif SC', Georgia, serif;
+    --theme-font-sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
+    --theme-font-heading: "Songti SC", "STSong", "SimSun", Georgia, serif;
 
     /* 圆角 - 极致方正 (Login Page DNA) */
     --theme-radius-sm: 2px;
@@ -361,12 +360,12 @@
 /* ============================================
    🌙 主题定义 - Dark (Cyberpunk 赛博朋克风格)
    风格：科幻、霓虹、未来感、发光效果
-   字体：Orbitron (标题) + Exo 2 (正文)
+   字体：系统等宽 (标题) + 系统无衬线 (正文)
    ============================================ */
 [data-theme="dark"] {
     /* 字体 - 赛博朋克风格 */
-    --theme-font-sans: 'Exo 2', -apple-system, BlinkMacSystemFont, sans-serif;
-    --theme-font-heading: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+    --theme-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --theme-font-heading: "SF Mono", "Cascadia Code", "Consolas", "PingFang SC", "Microsoft YaHei", monospace;
 
     /* 圆角 - 赛博朋克使用锐利边角 */
     --theme-radius-sm: 2px;
@@ -488,8 +487,8 @@
     --theme-radius-xl: 8px;
 
     /* 强制重写字体 */
-    --theme-font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
-    --theme-font-heading: 'Noto Serif SC', Georgia, serif;
+    --theme-font-sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
+    --theme-font-heading: "Songti SC", "STSong", "SimSun", Georgia, serif;
 }
 
 .auth-page-scope .theme-button {

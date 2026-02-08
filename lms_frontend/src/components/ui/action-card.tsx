@@ -72,9 +72,6 @@ export const ActionCard: React.FC<ActionCardProps> = ({
         className
       )}
     >
-      {/* Subtle Noise Texture - stronger grain for solid card background */}
-      <div className="absolute inset-0 opacity-[0.6] mix-blend-multiply pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] brightness-100 contrast-200 dark:mix-blend-soft-light dark:opacity-[0.4]" />
-
       <div className="flex h-full relative z-10">
         {/* Content Zone (Left) */}
         <div className="flex-1 flex flex-col justify-between py-5 px-6 relative z-10 min-w-0">
@@ -96,8 +93,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
 
           {/* Main Title (The Hero) */}
           <div className="flex items-center gap-2 mt-auto transform transition-transform duration-500 group-hover:translate-x-0.5">
-            <h3 className="font-bold text-foreground text-xl md:text-2xl leading-none tracking-tight truncate pr-2"
-              style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <h3 className="font-bold text-foreground text-xl md:text-2xl leading-none tracking-tight truncate pr-2">
               {title}
             </h3>
 

@@ -83,7 +83,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                         <h3 className={cn(
                             "font-bold text-foreground tabular-nums leading-none tracking-tight",
                             isLarge ? "text-4xl" : "text-3xl"
-                        )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        )}>
                             {value}
                         </h3>
 

@@ -98,11 +98,11 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
         >
           {/* Subtle Condensed Date Header */}
           <div className="flex items-center gap-2 px-2 py-1">
-            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
               {getDateLabel(group.dateKey)}
             </span>
             <div className="h-px flex-1 bg-border/20" />
-            <span className="text-[9px] font-bold text-muted-foreground/30 tabular-nums uppercase tracking-tighter" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="text-[9px] font-bold text-muted-foreground/30 tabular-nums uppercase tracking-tighter">
               Batch: {group.items.length}
             </span>
           </div>
@@ -184,7 +184,7 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
                         {item.title}
                       </div>
                       {item.meta && (
-                        <div className="shrink-0 text-[8px] font-black text-slate-500/40 dark:text-slate-400/40 uppercase tracking-[0.15em] bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded leading-none" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        <div className="shrink-0 text-[8px] font-black text-slate-500/40 dark:text-slate-400/40 uppercase tracking-[0.15em] bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded leading-none">
                           {item.meta}
                         </div>
                       )}
@@ -202,12 +202,12 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
                         "px-2.5 py-1 rounded text-[8px] font-black uppercase tracking-[0.2em] border transition-all duration-300 cursor-default",
                         isError ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20",
                         "group-hover/item:bg-background group-hover/item:border-current/40 shadow-sm"
-                      )} style={{ fontFamily: "'Outfit', sans-serif" }}>
+                      )}>
                         {item.status}
                       </div>
                     )}
 
-                    <div className="text-[10px] font-bold text-muted-foreground/20 tabular-nums text-right min-w-[40px] tracking-tighter" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <div className="text-[10px] font-bold text-muted-foreground/20 tabular-nums text-right min-w-[40px] tracking-tighter">
                       {getTimeLabel(item.createdAt)}
                     </div>
                   </div>

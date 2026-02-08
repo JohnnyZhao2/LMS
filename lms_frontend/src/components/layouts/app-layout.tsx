@@ -27,7 +27,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [currentRole])
 
   return (
-    <div className={cn("min-h-screen relative isolate bg-muted flex flex-col", themeClass)} style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className={cn("min-h-screen relative isolate bg-muted flex flex-col", themeClass)}>
       {/* 动态背景层 - 万卷书海 (The Ancient Scroll) - 以“竹简古籍”为核心意蕴的设计 */}
       {(() => {
         // 角色配色与标签配置 - 每个角色固定颜色，与 header.tsx 保持一致
@@ -100,7 +100,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   color: config.color,
                   writingMode: 'vertical-rl',
                   textOrientation: 'upright',
-                  fontFamily: '"Noto Serif SC", serif'
                 }}
               >
                 {config.label}

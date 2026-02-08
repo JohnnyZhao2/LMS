@@ -136,7 +136,7 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted">
         <div className="flex items-center justify-between p-4 px-6 bg-background border-b-2 border-border">
           <div className="flex items-center gap-4">
             <Skeleton className="w-9 h-9 rounded-md" />
@@ -163,14 +163,14 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (!knowledge) {
     return (
-      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted" style={{ fontFamily: "'Outfit', sans-serif" }}>
+      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted">
         <div className="flex items-center justify-center h-full text-text-muted font-semibold">知识文档不存在</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted overflow-hidden" style={{ fontFamily: "'Outfit', sans-serif" }}>
+    <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted overflow-hidden">
       {/* 顶部栏 */}
       <div className="flex items-center justify-between h-16 px-6 bg-background border-b border-border shrink-0">
         <div className="flex items-center gap-4">

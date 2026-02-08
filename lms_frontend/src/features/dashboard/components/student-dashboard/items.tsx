@@ -86,7 +86,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase" style={{ fontFamily: "'Outfit', sans-serif" }}>
+            <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">
               {Math.round(progress)}%
             </span>
           </div>
