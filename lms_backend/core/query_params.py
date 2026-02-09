@@ -10,15 +10,22 @@ def parse_int_query_param(
     request,
     name: str,
     default: Optional[int] = None,
+    required: bool = False,
     minimum: Optional[int] = None,
     maximum: Optional[int] = None,
 ) -> Optional[int]:
     """
     Parse integer query parameter with unified validation errors.
+    - required=True 时，参数缺失会返回 VALIDATION_ERROR
     """
     raw_value = request.query_params.get(name)
 
     if raw_value is None or raw_value == '':
+        if required:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'缺少参数 {name}',
+            )
         return default
 
     try:

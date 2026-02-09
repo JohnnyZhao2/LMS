@@ -13,6 +13,7 @@ interface AuthContextValue extends AuthState {
   login: (data: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
+  setCurrentRole: (roleCode: RoleCode) => void;
   refreshUser: () => Promise<void>;
   setIsSwitching: (isSwitching: boolean) => void;
 }
@@ -154,6 +155,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   /**
+   * 本地同步当前角色（不触发后端切换，仅用于路由角色上下文）
+   */
+  const setCurrentRole = useCallback((roleCode: RoleCode) => {
+    setState((prev) => {
+      if (!prev.isAuthenticated) {
+        return prev;
+      }
+      const hasRole = prev.availableRoles.some((role) => role.code === roleCode);
+      if (!hasRole) {
+        return prev;
+      }
+      tokenStorage.setCurrentRole(roleCode);
+      return {
+        ...prev,
+        currentRole: roleCode,
+      };
+    });
+  }, []);
+
+  /**
    * 设置切换状态
    */
   const setIsSwitching = useCallback((isSwitching: boolean) => {
@@ -170,6 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     switchRole,
+    setCurrentRole,
     refreshUser,
     setIsSwitching,
   };

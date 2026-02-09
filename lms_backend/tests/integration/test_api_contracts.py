@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.activity_logs.models import ContentLog, OperationLog, UserLog
 from apps.knowledge.models import Knowledge, ResourceLineType, Tag
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
@@ -667,3 +668,167 @@ class TestSubmissionApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['id'] == submitted_exam_submission.id
+
+    def test_practice_result_rejects_in_progress_submission(self, api_client, student_user, in_progress_submission):
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get(f'/api/submissions/{in_progress_submission.id}/result/')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'INVALID_OPERATION'
+        assert '尚未提交' in response.data['message']
+
+
+@pytest.mark.django_db
+class TestTaskAnalyticsApiContracts:
+    def _create_mentor_task(self, mentor_user, student_user):
+        task = Task.objects.create(
+            title='任务分析契约测试',
+            description='用于任务分析接口契约测试',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_role='MENTOR',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        TaskAssignment.objects.create(
+            task=task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+        return task
+
+    def test_task_analytics_response_is_wrapped(self, api_client, mentor_user, student_user):
+        task = self._create_mentor_task(mentor_user, student_user)
+        mentor = User.objects.get(pk=mentor_user.pk)
+        mentor.current_role = 'MENTOR'
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get(
+            f'/api/tasks/{task.id}/analytics/',
+            HTTP_X_CURRENT_ROLE='MENTOR',
+        )
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert 'completion' in response.data['data']
+        assert 'accuracy' in response.data['data']
+        assert 'time_distribution' in response.data['data']
+
+    def test_student_executions_response_is_wrapped(self, api_client, mentor_user, student_user):
+        task = self._create_mentor_task(mentor_user, student_user)
+        mentor = User.objects.get(pk=mentor_user.pk)
+        mentor.current_role = 'MENTOR'
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get(
+            f'/api/tasks/{task.id}/student-executions/',
+            HTTP_X_CURRENT_ROLE='MENTOR',
+        )
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert isinstance(response.data['data'], list)
+
+
+@pytest.mark.django_db
+class TestGradingApiContracts:
+    def _create_mentor_task(self, mentor_user, student_user):
+        task = Task.objects.create(
+            title='阅卷契约测试任务',
+            description='用于阅卷接口契约测试',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_role='MENTOR',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        TaskAssignment.objects.create(
+            task=task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+        return task
+
+    def test_grading_questions_rejects_missing_quiz_id(self, api_client, mentor_user, student_user):
+        task = self._create_mentor_task(mentor_user, student_user)
+        mentor = User.objects.get(pk=mentor_user.pk)
+        mentor.current_role = 'MENTOR'
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get(
+            f'/api/grading/tasks/{task.id}/questions/',
+            HTTP_X_CURRENT_ROLE='MENTOR',
+        )
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert 'quiz_id' in response.data['message']
+
+    def test_grading_answers_rejects_invalid_question_id(self, api_client, mentor_user, student_user):
+        task = self._create_mentor_task(mentor_user, student_user)
+        mentor = User.objects.get(pk=mentor_user.pk)
+        mentor.current_role = 'MENTOR'
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get(
+            f'/api/grading/tasks/{task.id}/answers/?quiz_id=1&question_id=bad',
+            HTTP_X_CURRENT_ROLE='MENTOR',
+        )
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert 'question_id' in response.data['message']
+
+
+@pytest.mark.django_db
+class TestActivityLogApiContracts:
+    def test_user_log_list_response_is_wrapped(self, api_client, mentor_user, student_user):
+        log = UserLog.objects.create(
+            user=student_user,
+            operator=mentor_user,
+            action='login',
+            description='测试登录',
+            status='success',
+        )
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/logs/user/?page=1&page_size=10')
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert 'results' in response.data['data']
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert log.id in result_ids
+
+    def test_content_log_list_response_is_wrapped(self, api_client, mentor_user):
+        log = ContentLog.objects.create(
+            content_type='knowledge',
+            content_id='K-1',
+            content_title='知识A',
+            operator=mentor_user,
+            action='create',
+            description='创建知识',
+            status='success',
+        )
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/logs/content/?page=1&page_size=10')
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert log.id in result_ids
+
+    def test_operation_log_list_response_is_wrapped(self, api_client, mentor_user):
+        log = OperationLog.objects.create(
+            operator=mentor_user,
+            operation_type='grading',
+            action='manual_grade',
+            description='批阅试卷',
+            status='success',
+            duration=120,
+        )
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/logs/operation/?page=1&page_size=10')
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert log.id in result_ids

@@ -2,7 +2,6 @@ import { Navigate, useParams, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { tokenStorage } from '@/lib/token-storage';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
 
@@ -14,7 +13,7 @@ const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANA
  */
 export const RoleRouteWrapper: React.FC = () => {
   const { role } = useParams<{ role: string }>();
-  const { isAuthenticated, isLoading, availableRoles } = useAuth();
+  const { isAuthenticated, isLoading, availableRoles, currentRole, setCurrentRole } = useAuth();
 
   const roleCode = role?.toUpperCase() as RoleCode;
   const isValidRole = VALID_ROLES.includes(roleCode);
@@ -22,10 +21,9 @@ export const RoleRouteWrapper: React.FC = () => {
   // 同步角色到全局状态（供 API 请求使用）
   useEffect(() => {
     if (isValidRole && isAuthenticated) {
-      // 同时更新 localStorage 作为默认值
-      tokenStorage.setCurrentRole(roleCode);
+      setCurrentRole(roleCode);
     }
-  }, [roleCode, isValidRole, isAuthenticated]);
+  }, [roleCode, isValidRole, isAuthenticated, setCurrentRole]);
 
   if (isLoading) {
     return (
@@ -41,7 +39,7 @@ export const RoleRouteWrapper: React.FC = () => {
 
   // 无效角色，重定向到默认角色
   if (!isValidRole) {
-    const defaultRole = tokenStorage.getCurrentRole() || availableRoles[0]?.code || 'STUDENT';
+    const defaultRole = currentRole || availableRoles[0]?.code || 'STUDENT';
     return <Navigate to={`/${defaultRole.toLowerCase()}/dashboard`} replace />;
   }
 

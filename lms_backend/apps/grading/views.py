@@ -20,6 +20,7 @@ from apps.tasks.task_service import TaskService
 from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
+from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
 
 
@@ -31,21 +32,6 @@ class GradingBaseView(BaseAPIView):
         task = self.service.get_task_by_id(task_id)
         self.service.check_task_read_permission(task)
         return task
-
-    def _get_int_query_param(self, request, name):
-        value = request.query_params.get(name)
-        if value is None:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'缺少 {name} 参数'
-            )
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message=f'{name} 参数必须为整数'
-            )
 
     def _validate_quiz_in_task(self, task, quiz_id):
         if not task.task_quizzes.filter(quiz_id=quiz_id).exists():
@@ -70,7 +56,7 @@ class GradingQuestionsView(GradingBaseView):
     def get(self, request, task_id):
         task = self._get_task(task_id)
 
-        quiz_id = self._get_int_query_param(request, 'quiz_id')
+        quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
 
         questions = self._get_grading_questions(task, quiz_id)
@@ -117,8 +103,8 @@ class GradingAnswersView(GradingBaseView):
     def get(self, request, task_id):
         task = self._get_task(task_id)
 
-        question_id = self._get_int_query_param(request, 'question_id')
-        quiz_id = self._get_int_query_param(request, 'quiz_id')
+        question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
+        quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
 
         answers = self._get_grading_answers(task, question_id, quiz_id)
