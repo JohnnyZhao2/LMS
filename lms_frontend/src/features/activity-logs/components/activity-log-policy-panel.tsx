@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { SlidersHorizontal, ShieldCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/features/auth/stores/auth-context';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy } from '../types';
 

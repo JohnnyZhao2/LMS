@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
-import { tokenStorage } from '@/lib/token-storage';
 
 // Zod 验证 schema
 const loginSchema = z.object({
@@ -47,10 +46,9 @@ export const LoginForm: React.FC = () => {
   const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
     try {
-      await login(values);
+      const currentRole = await login(values);
       toast.success('登录成功');
-      const currentRole = tokenStorage.getCurrentRole();
-      const rolePath = currentRole ? `/${currentRole.toLowerCase()}/dashboard` : '/dashboard';
+      const rolePath = `/${currentRole.toLowerCase()}/dashboard`;
       navigate(rolePath, { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {

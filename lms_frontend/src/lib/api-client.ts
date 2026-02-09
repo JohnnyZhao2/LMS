@@ -90,7 +90,7 @@ class ApiClient {
         responseData.data.refresh_token,
       );
     } catch (error) {
-      tokenStorage.clearTokens();
+      tokenStorage.clearAll();
       throw error;
     }
   }
@@ -166,7 +166,7 @@ class ApiClient {
         });
       } catch (error) {
         // 刷新失败，跳转到登录页
-        tokenStorage.clearTokens();
+        tokenStorage.clearAll();
         window.location.href = ROUTES.LOGIN;
         throw error;
       }

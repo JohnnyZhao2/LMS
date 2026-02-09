@@ -6,10 +6,13 @@ Implements:
 - Role switching
 - Inactive user login rejection
 """
+import secrets
+import string
 from typing import Any, Dict, List, Optional
 
 from django.contrib.auth import authenticate
 from django.db.models import QuerySet
+from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
@@ -17,18 +20,20 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.activity_logs.services import ActivityLogService
-from apps.users.models import Role, User
-from apps.users.serializers import UserInfoSerializer
 from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
+from apps.activity_logs.services import ActivityLogService
+from apps.users.models import Role, User
+from apps.users.serializers import UserInfoSerializer
 
 
 class AuthenticationService(BaseService):
     """
     Authentication service handling login, logout, and role switching.
     """
+    TEMP_PASSWORD_LENGTH = 12
+
     def _user_queryset(self) -> QuerySet[User]:
         return User.objects.select_related(
             'department',
@@ -40,6 +45,75 @@ class AuthenticationService(BaseService):
 
     def _get_user_by_id(self, user_id: int) -> Optional[User]:
         return self._user_queryset().filter(pk=user_id).first()
+
+    def _log_user_action_safely(
+        self,
+        *,
+        user: User,
+        action: str,
+        description: str,
+        operator: Optional[User] = None,
+        status: str = 'success',
+    ) -> None:
+        try:
+            ActivityLogService.log_user_action(
+                user=user,
+                operator=operator,
+                action=action,
+                description=description,
+                status=status,
+            )
+        except Exception:
+            # 日志异常不影响主流程
+            pass
+
+    def _validate_active_user(self, user: Optional[User]) -> User:
+        user_obj = self.validate_not_none(user, '用户不存在')
+        if not user_obj.is_active:
+            raise BusinessError(
+                code=ErrorCodes.AUTH_USER_INACTIVE,
+                message='用户账号已被停用',
+            )
+        return user_obj
+
+    def _resolve_current_role(
+        self,
+        available_roles: List[Dict[str, str]],
+        requested_role: Optional[str] = None,
+    ) -> str:
+        role_codes = {role['code'] for role in available_roles}
+        if requested_role and requested_role in role_codes:
+            return requested_role
+        return self._get_default_role(available_roles)
+
+    def _build_user_payload(
+        self,
+        user: User,
+        requested_role: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        available_roles = self._get_user_roles(user)
+        current_role = self._resolve_current_role(
+            available_roles=available_roles,
+            requested_role=requested_role,
+        )
+        return {
+            'user': UserInfoSerializer(user).data,
+            'available_roles': available_roles,
+            'current_role': current_role,
+        }
+
+    def _build_auth_payload(
+        self,
+        user: User,
+        requested_role: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        user_payload = self._build_user_payload(user, requested_role=requested_role)
+        tokens = self._generate_tokens(user, current_role=user_payload['current_role'])
+        return {
+            'access_token': tokens['access'],
+            'refresh_token': tokens['refresh'],
+            **user_payload,
+        }
 
     def login(self, employee_id: str, password: str) -> Dict[str, Any]:
         """
@@ -61,73 +135,43 @@ class AuthenticationService(BaseService):
         # returns None for both invalid credentials AND inactive users
         user_obj = self._get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
-            # 记录登录失败日志
-            try:
-                ActivityLogService.log_user_action(
-                    user=user_obj,
-                    action='login_failed',
-                    description=f'用户 {employee_id} 尝试登录，但账号已被停用',
-                    status='failed'
-                )
-            except Exception:
-                pass  # 日志记录失败不影响主流程
-
+            self._log_user_action_safely(
+                user=user_obj,
+                action='login_failed',
+                description=f'用户 {employee_id} 尝试登录，但账号已被停用',
+                status='failed',
+            )
             raise BusinessError(
                 code=ErrorCodes.AUTH_USER_INACTIVE,
-                message='用户账号已被停用'
+                message='用户账号已被停用',
             )
 
         # Authenticate user using employee_id as username
         user = authenticate(username=employee_id, password=password)
         if user is None:
-            # 记录登录失败日志（如果用户存在）
             if user_obj:
-                try:
-                    ActivityLogService.log_user_action(
-                        user=user_obj,
-                        action='login_failed',
-                        description=f'用户 {employee_id} 登录失败：密码错误',
-                        status='failed'
-                    )
-                except Exception:
-                    pass
-
+                self._log_user_action_safely(
+                    user=user_obj,
+                    action='login_failed',
+                    description=f'用户 {employee_id} 登录失败：密码错误',
+                    status='failed',
+                )
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
-                message='工号或密码错误'
+                message='工号或密码错误',
             )
 
-        # Update last_login timestamp
-        from django.utils import timezone
-        user.last_login = timezone.now()
-        user.save(update_fields=['last_login'])
+        authenticated_user = self._validate_active_user(self._get_user_by_id(user.id))
+        authenticated_user.last_login = timezone.now()
+        authenticated_user.save(update_fields=['last_login'])
 
-        # 记录登录成功日志
-        try:
-            ActivityLogService.log_user_action(
-                user=user,
-                action='login',
-                description=f'用户 {employee_id} 登录成功',
-                status='success'
-            )
-        except Exception:
-            pass  # 日志记录失败不影响主流程
-
-        # Generate JWT tokens
-        tokens = self._generate_tokens(user)
-        # Get available roles (Property 2)
-        available_roles = self._get_user_roles(user)
-        # Determine default/current role (highest privilege role)
-        current_role = self._get_default_role(available_roles)
-        # Use serializer to build user info
-        user_info = UserInfoSerializer(user).data
-        return {
-            'access_token': tokens['access'],
-            'refresh_token': tokens['refresh'],
-            'user': user_info,
-            'available_roles': available_roles,
-            'current_role': current_role,
-        }
+        self._log_user_action_safely(
+            user=authenticated_user,
+            action='login',
+            description=f'用户 {employee_id} 登录成功',
+            status='success',
+        )
+        return self._build_auth_payload(authenticated_user)
 
     def logout(self, user: User, refresh_token: Optional[str] = None) -> bool:
         """
@@ -147,16 +191,12 @@ class AuthenticationService(BaseService):
                 # These are expected errors during logout, so we silently ignore them
                 pass
 
-        # 记录登出日志
-        try:
-            ActivityLogService.log_user_action(
-                user=user,
-                action='logout',
-                description=f'用户 {user.employee_id} 登出系统',
-                status='success'
-            )
-        except Exception:
-            pass  # 日志记录失败不影响主流程
+        self._log_user_action_safely(
+            user=user,
+            action='logout',
+            description=f'用户 {user.employee_id} 登出系统',
+            status='success',
+        )
 
         return True
 
@@ -171,29 +211,30 @@ class AuthenticationService(BaseService):
             BusinessError: If refresh token is invalid
         """
         try:
-            token = RefreshToken(refresh_token)
-            user_id = token['user_id'] if 'user_id' in token else None
+            incoming_token = RefreshToken(refresh_token)
+            user_id = incoming_token.get('user_id')
             if not user_id:
                 raise BusinessError(
                     code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
-                    message='无效的刷新令牌'
+                    message='无效的刷新令牌',
                 )
-            user = self._get_user_by_id(user_id)
-            if not user or not user.is_active:
-                raise BusinessError(
-                    code=ErrorCodes.AUTH_USER_INACTIVE,
-                    message='用户账号已被停用'
-                )
+
+            user = self._validate_active_user(self._get_user_by_id(user_id))
+            requested_role = incoming_token.get('current_role')
+            tokens = self._build_auth_payload(user, requested_role=requested_role)
+
+            # 轮换 refresh token：生成新 token 后立刻失效旧 token
+            incoming_token.blacklist()
             return {
-                'access_token': str(token.access_token),
-                'refresh_token': str(token),
+                'access_token': tokens['access_token'],
+                'refresh_token': tokens['refresh_token'],
             }
         except BusinessError:
             raise
-        except Exception:
+        except (TokenError, InvalidToken, ValueError, TypeError):
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_CREDENTIALS,
-                message='无效的刷新令牌'
+                message='无效的刷新令牌',
             )
 
     @log_user_action('switch_role', '切换角色为 {role_code}')
@@ -210,30 +251,49 @@ class AuthenticationService(BaseService):
         Properties:
         - Property 4: 角色切换权限生效
         """
-        # Verify user has the requested role
-        if not user.is_active:
-            raise BusinessError(
-                code=ErrorCodes.AUTH_USER_INACTIVE,
-                message='用户账号已被停用'
-            )
-        if not user.has_role(role_code):
+        active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        if not active_user.has_role(role_code):
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_ROLE,
-                message=f'用户没有 {role_code} 角色权限'
+                message=f'用户没有 {role_code} 角色权限',
             )
-        # Generate new tokens with role claim
-        tokens = self._generate_tokens(user, current_role=role_code)
-        # Get available roles
-        available_roles = self._get_user_roles(user)
-        # Use serializer to build user info
-        user_info = UserInfoSerializer(user).data
-        return {
-            'access_token': tokens['access'],
-            'refresh_token': tokens['refresh'],
-            'user': user_info,
-            'available_roles': available_roles,
-            'current_role': role_code,
-        }
+        return self._build_auth_payload(active_user, requested_role=role_code)
+
+    def get_me(self, user: User, requested_role: Optional[str] = None) -> Dict[str, Any]:
+        active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        return self._build_user_payload(active_user, requested_role=requested_role)
+
+    def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
+        if self.get_current_role() != 'ADMIN':
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以重置用户密码',
+            )
+
+        target_user = self.validate_not_none(
+            self._get_user_by_id(target_user_id),
+            '用户不存在',
+        )
+        temporary_password = self.generate_temporary_password()
+        target_user.set_password(temporary_password)
+        target_user.save(update_fields=['password'])
+        self.blacklist_all_tokens(target_user)
+
+        self._log_user_action_safely(
+            user=target_user,
+            operator=operator,
+            action='password_change',
+            description=(
+                f'管理员 {operator.employee_id} 重置了用户 '
+                f'{target_user.employee_id} 的密码'
+            ),
+            status='success',
+        )
+        return {'temporary_password': temporary_password}
+
+    def generate_temporary_password(self, length: int = TEMP_PASSWORD_LENGTH) -> str:
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
 
     def _generate_tokens(self, user: User, current_role: Optional[str] = None) -> Dict[str, str]:
         """
@@ -269,10 +329,7 @@ class AuthenticationService(BaseService):
         Returns:
             List of role dicts with code and name
         """
-        return [
-            {'code': role.code, 'name': role.name}
-            for role in user.roles.all()
-        ]
+        return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
 
     def _get_default_role(self, roles: List[Dict[str, str]]) -> str:
         """

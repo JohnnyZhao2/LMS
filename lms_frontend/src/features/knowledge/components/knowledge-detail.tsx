@@ -54,7 +54,7 @@ export const KnowledgeDetail: React.FC = () => {
   const { currentRole } = useAuth();
   const effectiveRole = role?.toUpperCase() || currentRole;
   const isStudent = effectiveRole === 'STUDENT';
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'DEPT_MANAGER';
 
   const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);

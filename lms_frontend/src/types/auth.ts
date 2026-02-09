@@ -15,12 +15,18 @@ export interface LoginRequest {
 /**
  * 登录响应
  */
-export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
+export interface AuthSessionPayload {
   user: UserInfo;
   available_roles: Role[];
   current_role: RoleCode;
+}
+
+/**
+ * 登录响应
+ */
+export interface LoginResponse extends AuthSessionPayload {
+  access_token: string;
+  refresh_token: string;
 }
 
 /**
@@ -48,13 +54,15 @@ export interface SwitchRoleRequest {
 /**
  * 切换角色响应
  */
-export interface SwitchRoleResponse {
+export interface SwitchRoleResponse extends AuthSessionPayload {
   access_token: string;
   refresh_token: string;
-  user: UserInfo;
-  available_roles: Role[];
-  current_role: RoleCode;
 }
+
+/**
+ * 获取当前用户信息响应
+ */
+export type MeResponse = AuthSessionPayload;
 
 /**
  * 登出请求

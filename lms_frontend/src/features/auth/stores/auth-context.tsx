@@ -2,15 +2,23 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { tokenStorage } from '@/lib/token-storage';
+import type { AuthSessionPayload, LoginRequest, Role, RoleCode, UserInfo } from '@/types/api';
 import { loginApi } from '../api/login';
 import { logoutApi } from '../api/logout';
 import { switchRoleApi } from '../api/switch-role';
 import { meApi } from '../api/get-me';
-import type { AuthState } from '../types';
-import type { LoginRequest, RoleCode } from '@/types/api';
+
+export interface AuthState {
+  user: UserInfo | null;
+  currentRole: RoleCode | null;
+  availableRoles: Role[];
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isSwitching: boolean;
+}
 
 interface AuthContextValue extends AuthState {
-  login: (data: LoginRequest) => Promise<void>;
+  login: (data: LoginRequest) => Promise<RoleCode>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   setCurrentRole: (roleCode: RoleCode) => void;
@@ -19,6 +27,15 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const buildLoggedOutState = (): AuthState => ({
+  user: null,
+  currentRole: null,
+  availableRoles: [],
+  isAuthenticated: false,
+  isLoading: false,
+  isSwitching: false,
+});
 
 /**
  * 认证 Provider
@@ -32,79 +49,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const isAuthenticated = hasTokens && !!user;
 
-    return {
-      user,
-      currentRole,
-      availableRoles,
-      isAuthenticated,
-      isLoading: hasTokens && !isAuthenticated, // 如果有 token 但没用户信息，才需要进入初始加载态
-      isSwitching: false,
-    };
+    return { user, currentRole, availableRoles, isAuthenticated, isLoading: hasTokens && !isAuthenticated, isSwitching: false };
   });
+
+  const resetAuthState = useCallback(() => {
+    tokenStorage.clearAll();
+    setState(buildLoggedOutState());
+  }, []);
+
+  const applyAuthSession = useCallback(
+    (session: AuthSessionPayload, options?: { isSwitching?: boolean }) => {
+      tokenStorage.setAuthSession(session);
+
+      setState((prev) => ({
+        ...prev,
+        user: session.user,
+        currentRole: session.current_role,
+        availableRoles: session.available_roles,
+        isAuthenticated: true,
+        isLoading: false,
+        isSwitching: options?.isSwitching ?? prev.isSwitching,
+      }));
+    },
+    [],
+  );
 
   /**
    * 从服务器获取最新用户信息并更新本地存储
    */
   const refreshUser = useCallback(async () => {
     if (!tokenStorage.hasTokens()) {
-      setState({
-        user: null,
-        currentRole: null,
-        availableRoles: [],
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      setState(buildLoggedOutState());
       return;
     }
 
     try {
-      // 调用 API 获取最新用户信息
       const response = await meApi.getMe();
-
-      // 更新本地存储
-      tokenStorage.setUserInfo(response.user);
-      tokenStorage.setCurrentRole(response.current_role);
-      tokenStorage.setAvailableRoles(response.available_roles);
-
-      setState({
-        user: response.user,
-        currentRole: response.current_role,
-        availableRoles: response.available_roles,
-        isAuthenticated: true,
-        isLoading: false,
-      });
+      applyAuthSession(response, { isSwitching: false });
     } catch {
-      // API 调用失败（如 token 过期），清除本地存储
-      tokenStorage.clearAll();
-      setState({
-        user: null,
-        currentRole: null,
-        availableRoles: [],
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      resetAuthState();
     }
-  }, []);
+  }, [applyAuthSession, resetAuthState]);
 
   /**
    * 登录
    */
   const login = useCallback(async (data: LoginRequest) => {
     const response = await loginApi.login(data);
-    // 存储 token 和用户信息
     tokenStorage.setTokens(response.access_token, response.refresh_token);
-    tokenStorage.setUserInfo(response.user);
-    tokenStorage.setCurrentRole(response.current_role);
-    tokenStorage.setAvailableRoles(response.available_roles);
-
-    setState({
-      user: response.user,
-      currentRole: response.current_role,
-      availableRoles: response.available_roles,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  }, []);
+    applyAuthSession(response, { isSwitching: false });
+    return response.current_role;
+  }, [applyAuthSession]);
 
   /**
    * 登出
@@ -118,15 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 忽略登出错误
       }
     }
-    tokenStorage.clearAll();
-    setState({
-      user: null,
-      currentRole: null,
-      availableRoles: [],
-      isAuthenticated: false,
-      isLoading: false,
-    });
-  }, []);
+    resetAuthState();
+  }, [resetAuthState]);
 
   /**
    * 切换角色
@@ -135,24 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, isSwitching: true }));
     try {
       const response = await switchRoleApi.switchRole({ role_code: roleCode });
-      // 更新存储
       tokenStorage.setTokens(response.access_token, response.refresh_token);
-      tokenStorage.setUserInfo(response.user);
-      tokenStorage.setCurrentRole(response.current_role);
-      tokenStorage.setAvailableRoles(response.available_roles);
-
-      setState((prev) => ({
-        ...prev,
-        user: response.user,
-        currentRole: response.current_role,
-        availableRoles: response.available_roles,
-        isSwitching: true, // 切换完成后保持 true，由 Header 处理导航后通过 setIsSwitching(false) 关闭
-      }));
+      applyAuthSession(response, { isSwitching: true }); // 由 Header 导航后再 setIsSwitching(false)
     } catch (error) {
       setState((prev) => ({ ...prev, isSwitching: false }));
       throw error;
     }
-  }, []);
+  }, [applyAuthSession]);
 
   /**
    * 本地同步当前角色（不触发后端切换，仅用于路由角色上下文）

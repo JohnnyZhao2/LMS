@@ -3,6 +3,7 @@ Serializers for authentication.
 """
 from rest_framework import serializers
 
+from apps.users.models import Role
 from apps.users.serializers import RoleSerializer, UserInfoSerializer
 
 
@@ -59,13 +60,7 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
     Serializer for role switch request.
     """
     role_code = serializers.ChoiceField(
-        choices=[
-            ('STUDENT', '学员'),
-            ('MENTOR', '导师'),
-            ('DEPT_MANAGER', '室经理'),
-            ('ADMIN', '管理员'),
-            ('TEAM_MANAGER', '团队经理'),
-        ],
+        choices=Role.ROLE_CHOICES,
         required=True,
         help_text='要切换到的角色代码'
     )
@@ -77,6 +72,15 @@ class SwitchRoleResponseSerializer(serializers.Serializer):
     """
     access_token = serializers.CharField(help_text='新的访问令牌')
     refresh_token = serializers.CharField(help_text='新的刷新令牌')
+    user = UserInfoSerializer(help_text='用户信息')
+    available_roles = RoleSerializer(many=True, help_text='可用角色列表')
+    current_role = serializers.CharField(help_text='当前生效角色')
+
+
+class MeResponseSerializer(serializers.Serializer):
+    """
+    Serializer for current user info response.
+    """
     user = UserInfoSerializer(help_text='用户信息')
     available_roles = RoleSerializer(many=True, help_text='可用角色列表')
     current_role = serializers.CharField(help_text='当前生效角色')

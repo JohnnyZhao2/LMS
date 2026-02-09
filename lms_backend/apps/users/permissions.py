@@ -303,8 +303,9 @@ def get_accessible_students(user, request):
         QuerySet of User objects that the user can access (only users with STUDENT role)
     Properties: 37, 38, 39
     Note:
-    - 管理员/导师/室经理默认仅统计纯学员
-    - 团队经理统计团队学习成员池（具备 STUDENT，仅排除超级管理员与室经理）
+    - 管理员默认仅统计纯学员
+    - 室经理统计本部门学员（包含导师，排除超级管理员、室经理和团队经理）
+    - 团队经理统计团队学习成员池（具备 STUDENT，排除超级管理员、室经理和团队经理）
     """
     from apps.users.models import User
     current_role = get_current_role(user, request)
@@ -330,11 +331,12 @@ def get_accessible_students(user, request):
         return base_qs
     # Team manager can access team learning member pool (read-only, Property 41)
     # 口径说明：
-    # - 团队经理看板按“学习成员池”统计：active + STUDENT
-    # - 仅排除：超级管理员(is_superuser=1) 与室经理(DEPT_MANAGER)
+    # - 团队经理看板按"学习成员池"统计：active + STUDENT
+    # - 排除：超级管理员(is_superuser=1)、室经理(DEPT_MANAGER)、团队经理(TEAM_MANAGER)
+    # - 包含：导师（导师同时拥有学员角色）
     if current_role == 'TEAM_MANAGER':
         excluded_ids = User.objects.filter(
-            Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER')
+            Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER') | Q(roles__code='TEAM_MANAGER')
         ).values_list('id', flat=True)
         return User.objects.filter(
             is_active=True,
@@ -346,9 +348,22 @@ def get_accessible_students(user, request):
     if current_role == 'MENTOR':
         return base_qs.filter(mentor=user)
     # Department manager can only access department members (Property 38)
+    # 口径说明：
+    # - 室经理看本部门学员：active + STUDENT + 同部门
+    # - 排除：超级管理员、室经理、团队经理、自己
+    # - 包含：导师（导师同时拥有学员角色）
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
-            return base_qs.filter(department_id=user.department_id).exclude(pk=user.pk)
+            excluded_ids = User.objects.filter(
+                Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER') | Q(roles__code='TEAM_MANAGER')
+            ).values_list('id', flat=True)
+            return User.objects.filter(
+                is_active=True,
+                roles__code='STUDENT',
+                department_id=user.department_id,
+            ).exclude(
+                id__in=excluded_ids
+            ).exclude(pk=user.pk).distinct()
         return User.objects.none()
     # Default: no access
     return User.objects.none()

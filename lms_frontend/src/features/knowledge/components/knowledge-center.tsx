@@ -39,7 +39,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     // 优先使用 URL 中的角色参数
     const effectiveRole = role?.toUpperCase() || currentRole;
-    const isAdminView = isAdmin || effectiveRole === 'ADMIN';
+    const isAdminView = isAdmin || effectiveRole === 'ADMIN' || effectiveRole === 'DEPT_MANAGER';
 
     const {
         search,

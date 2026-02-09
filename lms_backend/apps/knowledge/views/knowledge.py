@@ -138,7 +138,7 @@ class KnowledgeListCreateView(BaseAPIView):
         return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
-        description='创建新的知识文档（仅管理员）',
+        description='创建新的知识文档（管理员或室经理）',
         request=KnowledgeCreateSerializer,
         responses={
             201: KnowledgeDetailSerializer,
@@ -149,10 +149,10 @@ class KnowledgeListCreateView(BaseAPIView):
     )
     def post(self, request):
         # 1. 权限检查
-        if self.service.get_current_role() != 'ADMIN':
+        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以创建知识文档'
+                message='只有管理员或室经理可以创建知识文档'
             )
         # 2. 反序列化输入
         serializer = KnowledgeCreateSerializer(
@@ -197,7 +197,7 @@ class KnowledgeDetailView(BaseAPIView):
         return success_response(serializer.data)
     @extend_schema(
         summary='更新知识文档',
-        description='更新知识文档内容（仅管理员）',
+        description='更新知识文档内容（管理员或室经理）',
         request=KnowledgeUpdateSerializer,
         responses={
             200: KnowledgeDetailSerializer,
@@ -209,10 +209,10 @@ class KnowledgeDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         # 1. 权限检查
-        if self.service.get_current_role() != 'ADMIN':
+        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以更新知识文档'
+                message='只有管理员或室经理可以更新知识文档'
             )
         # 2. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
@@ -233,7 +233,7 @@ class KnowledgeDetailView(BaseAPIView):
         return success_response(response_serializer.data)
     @extend_schema(
         summary='删除知识文档',
-        description='删除知识文档（仅管理员，被任务引用时禁止删除）',
+        description='删除知识文档（管理员或室经理，被任务引用时禁止删除）',
         responses={
             204: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='知识文档被任务引用，无法删除'),
@@ -244,10 +244,10 @@ class KnowledgeDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         # 1. 权限检查
-        if self.service.get_current_role() != 'ADMIN':
+        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以删除知识文档'
+                message='只有管理员或室经理可以删除知识文档'
             )
         # 2. 调用 Service
         try:

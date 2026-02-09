@@ -7,17 +7,17 @@ Implements:
 - Password reset / change
 - Current user info
 """
-import secrets
-import string
-
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from apps.activity_logs.services import ActivityLogService
+from core.base_view import BaseAPIView
+from core.responses import success_response
+from core.throttles import AuthThrottle
 from apps.auth.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
+    MeResponseSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
     ResetPasswordRequestSerializer,
@@ -26,13 +26,6 @@ from apps.auth.serializers import (
     SwitchRoleResponseSerializer,
 )
 from apps.auth.services import AuthenticationService
-from apps.users.models import User
-from apps.users.permissions import get_current_role
-from apps.users.serializers import UserInfoSerializer
-from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
-from core.responses import success_response
-from core.throttles import AuthThrottle
 
 
 class LoginView(BaseAPIView):
@@ -42,6 +35,7 @@ class LoginView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='用户登录',
         description='验证用户凭证并返回JWT令牌和用户信息',
@@ -55,11 +49,14 @@ class LoginView(BaseAPIView):
     def post(self, request):
         serializer = LoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         result = self.service.login(
             employee_id=serializer.validated_data['employee_id'],
             password=serializer.validated_data['password']
         )
         return success_response(result)
+
+
 class LogoutView(BaseAPIView):
     """
     User logout endpoint.
@@ -67,6 +64,7 @@ class LogoutView(BaseAPIView):
     """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='用户登出',
         description='登出当前用户，使刷新令牌失效',
@@ -79,9 +77,12 @@ class LogoutView(BaseAPIView):
     def post(self, request):
         serializer = LogoutRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         refresh_token = serializer.validated_data.get('refresh_token')
         self.service.logout(request.user, refresh_token)
         return success_response(message='登出成功')
+
+
 class RefreshTokenView(BaseAPIView):
     """
     Token refresh endpoint.
@@ -90,6 +91,7 @@ class RefreshTokenView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthThrottle]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='刷新令牌',
         description='使用刷新令牌获取新的访问令牌',
@@ -103,16 +105,20 @@ class RefreshTokenView(BaseAPIView):
     def post(self, request):
         serializer = RefreshTokenRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         result = self.service.refresh_token(
             refresh_token=serializer.validated_data['refresh_token']
         )
         return success_response(result)
+
+
 class SwitchRoleView(BaseAPIView):
     """
     Role switching endpoint.
     """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='切换角色',
         description='切换当前用户的生效角色，返回新的令牌',
@@ -126,11 +132,14 @@ class SwitchRoleView(BaseAPIView):
     def post(self, request):
         serializer = SwitchRoleRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         result = self.service.switch_role(
             user=request.user,
             role_code=serializer.validated_data['role_code']
         )
         return success_response(result)
+
+
 class MeView(BaseAPIView):
     """
     获取当前登录用户信息。
@@ -138,36 +147,31 @@ class MeView(BaseAPIView):
     """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='获取当前用户信息',
         description='获取当前登录用户的最新信息和角色列表',
         responses={
-            200: LoginResponseSerializer,
+            200: MeResponseSerializer,
             401: OpenApiResponse(description='未登录'),
         },
         tags=['认证']
     )
     def get(self, request):
-        user = request.user
-        available_roles = self.service._get_user_roles(user)
-        # 获取当前角色（从 JWT token 中）
-        current_role = getattr(request.user, 'current_role', None)
-        role_codes = {role['code'] for role in available_roles}
-        if not current_role or current_role not in role_codes:
-            current_role = self.service._get_default_role(available_roles)
-        # Use serializer to build user info
-        user_info = UserInfoSerializer(user).data
-        return success_response({
-            'user': user_info,
-            'available_roles': available_roles,
-            'current_role': current_role,
-        })
+        result = self.service.get_me(
+            user=request.user,
+            requested_role=getattr(request.user, 'current_role', None),
+        )
+        return success_response(result)
+
+
 class ResetPasswordView(BaseAPIView):
     """
     Admin password reset endpoint.
     """
     permission_classes = [IsAuthenticated]
     service_class = AuthenticationService
+
     @extend_schema(
         summary='重置用户密码',
         description='管理员重置指定用户的密码，生成临时密码',
@@ -180,43 +184,15 @@ class ResetPasswordView(BaseAPIView):
         tags=['认证']
     )
     def post(self, request):
-        if get_current_role(request.user, request) != 'ADMIN':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以重置用户密码'
-            )
         serializer = ResetPasswordRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user_id = serializer.validated_data['user_id']
-        try:
-            target_user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            raise BusinessError(
-                code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='用户不存在'
-            )
-        temp_password = self._generate_temporary_password()
-        target_user.set_password(temp_password)
-        target_user.save()
-        self.service.blacklist_all_tokens(target_user)
 
-        # 记录密码重置日志
-        try:
-            ActivityLogService.log_user_action(
-                user=target_user,
-                operator=request.user,
-                action='password_change',
-                description=f'管理员 {request.user.employee_id} 重置了用户 {target_user.employee_id} 的密码',
-                status='success'
-            )
-        except Exception:
-            pass  # 日志记录失败不影响主流程
+        result = self.service.reset_password(
+            operator=request.user,
+            target_user_id=serializer.validated_data['user_id'],
+        )
 
         return success_response(
-            data={'temporary_password': temp_password},
+            data=result,
             message='密码已重置，请通知用户使用临时密码登录并修改密码'
         )
-    def _generate_temporary_password(self, length=12):
-        """Generate a random temporary password."""
-        alphabet = string.ascii_letters + string.digits
-        return ''.join(secrets.choice(alphabet) for _ in range(length))

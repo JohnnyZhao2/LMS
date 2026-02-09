@@ -1,4 +1,4 @@
-import type { UserInfo, RoleCode, Role } from '@/types/api';
+import type { AuthSessionPayload, Role, RoleCode, UserInfo } from '@/types/api';
 
 /**
  * Token 存储工具
@@ -8,6 +8,21 @@ const REFRESH_TOKEN_KEY = 'lms_refresh_token';
 const USER_INFO_KEY = 'lms_user_info';
 const CURRENT_ROLE_KEY = 'lms_current_role';
 const AVAILABLE_ROLES_KEY = 'lms_available_roles';
+const ROLE_CODES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER'];
+
+const parseStorageJson = <T>(key: string, fallback: T): T => {
+  const rawValue = localStorage.getItem(key);
+  if (!rawValue) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(rawValue) as T;
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
 
 export const tokenStorage = {
   /**
@@ -51,8 +66,7 @@ export const tokenStorage = {
    * 获取用户信息
    */
   getUserInfo(): UserInfo | null {
-    const info = localStorage.getItem(USER_INFO_KEY);
-    return info ? JSON.parse(info) : null;
+    return parseStorageJson<UserInfo | null>(USER_INFO_KEY, null);
   },
 
   /**
@@ -66,7 +80,17 @@ export const tokenStorage = {
    * 获取当前角色
    */
   getCurrentRole(): RoleCode | null {
-    return localStorage.getItem(CURRENT_ROLE_KEY) as RoleCode | null;
+    const role = localStorage.getItem(CURRENT_ROLE_KEY);
+    if (!role) {
+      return null;
+    }
+
+    if (ROLE_CODES.includes(role as RoleCode)) {
+      return role as RoleCode;
+    }
+
+    localStorage.removeItem(CURRENT_ROLE_KEY);
+    return null;
   },
 
   /**
@@ -80,8 +104,7 @@ export const tokenStorage = {
    * 获取可用角色列表
    */
   getAvailableRoles(): Role[] {
-    const roles = localStorage.getItem(AVAILABLE_ROLES_KEY);
-    return roles ? JSON.parse(roles) : [];
+    return parseStorageJson<Role[]>(AVAILABLE_ROLES_KEY, []);
   },
 
   /**
@@ -89,6 +112,15 @@ export const tokenStorage = {
    */
   setAvailableRoles(roles: Role[]): void {
     localStorage.setItem(AVAILABLE_ROLES_KEY, JSON.stringify(roles));
+  },
+
+  /**
+   * 设置当前认证会话数据（不含 token）
+   */
+  setAuthSession(session: AuthSessionPayload): void {
+    this.setUserInfo(session.user);
+    this.setCurrentRole(session.current_role);
+    this.setAvailableRoles(session.available_roles);
   },
 
   /**
@@ -102,4 +134,3 @@ export const tokenStorage = {
     localStorage.removeItem(AVAILABLE_ROLES_KEY);
   },
 };
-

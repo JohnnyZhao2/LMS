@@ -117,7 +117,7 @@ export const roleRoutes = [
     key="knowledge-create"
     path="knowledge/create"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
+      <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_MANAGER']}>
         <KnowledgeForm />
       </ProtectedRoute>
     }
@@ -126,7 +126,7 @@ export const roleRoutes = [
     key="knowledge-edit"
     path="knowledge/:id/edit"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
+      <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_MANAGER']}>
         <KnowledgeForm />
       </ProtectedRoute>
     }

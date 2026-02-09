@@ -346,8 +346,8 @@ class TestTeamManagerDashboardAPI:
         assert 'summary' in data
         assert 'department_comparison' in data
         assert 'department_student_view' in data
-        # 团队经理口径：包含全部 STUDENT 角色成员，仅排除超级管理员与室经理
-        assert data['summary']['total_students'] == 3
+        # 团队经理口径：包含 STUDENT 角色成员，排除超级管理员、室经理和团队经理
+        assert data['summary']['total_students'] == 2
         assert data['summary']['total_mentors'] == 1
         assert data['summary']['total_knowledge'] == 1
 
@@ -402,10 +402,9 @@ class TestTeamManagerDashboardAPI:
         """
         完成率口径：先算每个成员完成率，再求平均。
         场景：
-        - 团队经理成员无任务 => 0%
         - 导师成员无任务 => 0%
         - 学员成员 2 个任务完成 1 个 => 50%
-        - 团队均值应为 (0 + 0 + 50) / 3 = 16.7%
+        - 团队均值应为 (0 + 50) / 2 = 25.0%
         """
         TaskAssignment.objects.create(task=task, assignee=student, status='IN_PROGRESS')
         task_completed = Task.objects.create(
@@ -426,10 +425,10 @@ class TestTeamManagerDashboardAPI:
             department_comparison['left_department']['avg_completion_rate'],
             department_comparison['right_department']['avg_completion_rate'],
         ]
-        assert 16.7 in completion_rates
+        assert 25.0 in completion_rates
 
-    def test_dashboard_excludes_superadmin_and_dept_manager_only(self, api_client, team_manager, department):
-        """团队经理看板只排除超级管理员与室经理，普通 ADMIN 角色应纳入"""
+    def test_dashboard_excludes_superadmin_dept_manager_and_team_manager(self, api_client, team_manager, department):
+        """团队经理看板排除超级管理员、室经理和团队经理"""
         admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
         dept_manager_role, _ = Role.objects.get_or_create(code='DEPT_MANAGER', defaults={'name': '室经理'})
 
@@ -470,8 +469,9 @@ class TestTeamManagerDashboardAPI:
             for student in item['students']
         }
 
-        # 团队经理自身 + 普通 ADMIN 角色账号应纳入
-        assert '测试团队经理' in all_student_names
+        # 团队经理自身应排除
+        assert '测试团队经理' not in all_student_names
+        # 普通 ADMIN 角色账号应纳入
         assert '管理员账号' in all_student_names
         # 室经理与超级管理员应排除
         assert '室经理账号' not in all_student_names

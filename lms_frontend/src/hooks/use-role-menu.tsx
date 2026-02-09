@@ -24,9 +24,9 @@ interface MenuItem {
  * 角色权限：
  * - 学员：概览、知识中心、任务中心、个人中心
  * - 导师：概览、试卷中心、任务中心、抽查中心
- * - 室经理：概览、试卷中心、任务中心、抽查中心
+ * - 室经理：概览、知识管理、试卷中心、任务中心、抽查中心
  * - 管理员：概览、知识管理、试卷管理、任务管理、用户管理
- * - 团队经理：概览、数据看板
+ * - 团队经理：概览、知识中心、数据看板
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
   const { role: urlRole } = useParams<{ role: string }>();
@@ -69,9 +69,33 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         ];
 
       case 'MENTOR':
+        return [
+          ...baseMenu,
+          {
+            key: `${rolePrefix}/quiz-center`,
+            icon: <HelpCircle className="w-4 h-4" />,
+            label: '试卷中心',
+          },
+          {
+            key: `${rolePrefix}/tasks`,
+            icon: <FileText className="w-4 h-4" />,
+            label: '任务中心',
+          },
+          {
+            key: `${rolePrefix}/spot-checks`,
+            icon: <FileSearch className="w-4 h-4" />,
+            label: '抽查中心',
+          },
+        ];
+
       case 'DEPT_MANAGER':
         return [
           ...baseMenu,
+          {
+            key: `${rolePrefix}/knowledge`,
+            icon: <BookOpen className="w-4 h-4" />,
+            label: '知识管理',
+          },
           {
             key: `${rolePrefix}/quiz-center`,
             icon: <HelpCircle className="w-4 h-4" />,
@@ -117,6 +141,11 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       case 'TEAM_MANAGER':
         return [
           ...baseMenu,
+          {
+            key: `${rolePrefix}/knowledge`,
+            icon: <BookOpen className="w-4 h-4" />,
+            label: '知识中心',
+          },
           {
             key: `${rolePrefix}/analytics`,
             icon: <BarChart3 className="w-4 h-4" />,

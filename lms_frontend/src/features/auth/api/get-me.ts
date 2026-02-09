@@ -1,14 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import type { UserInfo, Role, RoleCode } from '@/types/api';
-
-/**
- * 获取当前用户信息的响应
- */
-export interface MeResponse {
-  user: UserInfo;
-  available_roles: Role[];
-  current_role: RoleCode;
-}
+import type { MeResponse } from '@/types/api';
 
 /**
  * 获取当前用户信息 API
