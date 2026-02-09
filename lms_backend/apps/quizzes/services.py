@@ -11,7 +11,6 @@ from typing import List, Optional
 
 from django.db import transaction
 from django.db.models import Max
-from django.utils import timezone
 
 from apps.knowledge.models import Tag
 from apps.questions.models import Question
@@ -278,106 +277,6 @@ class QuizService(BaseService):
 
         # 软删除
         quiz.soft_delete()
-        return quiz
-
-    @transaction.atomic
-    @log_content_action(
-        'quiz',
-        'update',
-        '向试卷《{result.title}》添加题目',
-        action_key='content.quiz.add_questions'
-    )
-    def add_questions(
-        self,
-        pk: int,
-        existing_question_ids: List[int] = None,
-        new_questions_data: List[dict] = None
-    ) -> Quiz:
-        """
-        向试卷添加题目
-        Args:
-            pk: 试卷 ID
-            existing_question_ids: 已有题目 ID 列表
-            new_questions_data: 新建题目数据列表
-        Returns:
-            更新后的试卷对象
-        Raises:
-            BusinessError: 如果验证失败或无权限
-        """
-        quiz = self.get_by_id(pk)
-        # 检查权限
-        self.validate_permission(
-            self.check_edit_permission(quiz),
-            '只有试卷创建者或管理员可以编辑此试卷'
-        )
-        # 已发布的试卷需要创建新版本
-        if quiz.is_current:
-            quiz = self._create_new_version(quiz, {})
-        
-        existing_question_ids = existing_question_ids or []
-        new_questions_data = new_questions_data or []
-        # 获取当前试卷中已有的题目 ID
-        existing_quiz_question_ids = set(get_question_ids(quiz.id))
-        # 添加已有题目
-        for question_id in existing_question_ids:
-            if question_id not in existing_quiz_question_ids:
-                # 验证题目存在
-                question = Question.objects.filter(pk=question_id).first()
-                if not question:
-                    raise BusinessError(
-                        code=ErrorCodes.RESOURCE_NOT_FOUND,
-                        message=f'题目 {question_id} 不存在'
-                    )
-                self._add_question(
-                    quiz_id=quiz.id,
-                    question_id=question_id
-                )
-        # 创建并添加新题目
-        for question_data in new_questions_data:
-            self._create_and_add_question(quiz, question_data)
-        
-        quiz.updated_by = self.user
-        quiz.save(update_fields=['updated_by'])
-        return quiz
-
-    @transaction.atomic
-    @log_content_action(
-        'quiz',
-        'update',
-        '从试卷《{result.title}》移除题目',
-        action_key='content.quiz.remove_questions'
-    )
-    def remove_questions(
-        self,
-        pk: int,
-        question_ids: List[int]
-    ) -> Quiz:
-        """
-        从试卷移除题目
-        Args:
-            pk: 试卷 ID
-            question_ids: 要移除的题目 ID 列表
-        Returns:
-            更新后的试卷对象
-        Raises:
-            BusinessError: 如果验证失败或无权限
-        """
-        quiz = self.get_by_id(pk)
-        # 检查权限
-        self.validate_permission(
-            self.check_edit_permission(quiz),
-            '只有试卷创建者或管理员可以编辑此试卷'
-        )
-        # 已发布的试卷需要创建新版本
-        if quiz.is_current:
-            quiz = self._create_new_version(quiz, {})
-        # 移除题目
-        self._remove_questions(
-            quiz_id=quiz.id,
-            question_ids=question_ids
-        )
-        quiz.updated_by = self.user
-        quiz.save(update_fields=['updated_by'])
         return quiz
 
     def _create_and_add_question(

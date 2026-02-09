@@ -29,7 +29,6 @@ export const QuizCenter: React.FC = () => {
   const stats = React.useMemo(() => ({
     totalQuizzes: quizzesData?.count || 0,
     totalQuestions: questionsData?.count || 0,
-    activeQuizzes: quizzesData?.count || 0,
   }), [quizzesData, questionsData]);
 
   const handleAdd = () => {

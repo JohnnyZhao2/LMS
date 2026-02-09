@@ -14,12 +14,10 @@ from core.query_params import parse_int_query_param
 from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import (
-    AddQuestionsSerializer,
     QuizCreateSerializer,
     QuizDetailSerializer,
     QuizListSerializer,
     QuizUpdateSerializer,
-    RemoveQuestionsSerializer,
 )
 from .services import QuizService
 
@@ -225,92 +223,3 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         except BusinessError as e:
             return self.handle_business_error(e)
         return no_content_response()
-
-
-class QuizAddQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
-    """
-    向试卷添加题目
-    """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    service_class = QuizService
-
-    @extend_schema(
-        summary='向试卷添加题目',
-        description='向试卷添加已有题目或新建题目（仅创建者或管理员）',
-        request=AddQuestionsSerializer,
-        responses={
-            200: QuizDetailSerializer,
-            400: OpenApiResponse(description='参数错误'),
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='试卷不存在'),
-        },
-        tags=['试卷管理']
-    )
-    def post(self, request, pk):
-        """
-        向试卷添加题目
-        """
-        # 1. 反序列化输入
-        serializer = AddQuestionsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        # 2. 提取数据
-        validated_data = serializer.validated_data
-        existing_question_ids = validated_data.get('existing_question_ids', [])
-        new_questions_data = validated_data.get('new_questions', [])
-        
-        # 3. 调用 Service（不再传user参数）
-        try:
-            quiz = self.service.add_questions(
-                pk=pk,
-                existing_question_ids=existing_question_ids,
-                new_questions_data=new_questions_data
-            )
-        except BusinessError as e:
-            return self.handle_business_error(e)
-        
-        # 4. 序列化输出
-        output = QuizDetailSerializer(quiz)
-        return success_response(output.data)
-
-
-class QuizRemoveQuestionsView(BusinessErrorHandlerMixin, BaseAPIView):
-    """
-    从试卷移除题目
-    """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
-    service_class = QuizService
-
-    @extend_schema(
-        summary='从试卷移除题目',
-        description='从试卷移除指定题目（仅创建者或管理员）',
-        request=RemoveQuestionsSerializer,
-        responses={
-            200: QuizDetailSerializer,
-            400: OpenApiResponse(description='参数错误'),
-            403: OpenApiResponse(description='无权限'),
-            404: OpenApiResponse(description='试卷不存在'),
-        },
-        tags=['试卷管理']
-    )
-    def post(self, request, pk):
-        """从试卷移除题目"""
-        # 1. 反序列化输入
-        serializer = RemoveQuestionsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        # 2. 提取数据
-        question_ids = serializer.validated_data['question_ids']
-        
-        # 3. 调用 Service（不再传user参数）
-        try:
-            quiz = self.service.remove_questions(
-                pk=pk,
-                question_ids=question_ids
-            )
-        except BusinessError as e:
-            return self.handle_business_error(e)
-        
-        # 4. 序列化输出
-        output = QuizDetailSerializer(quiz)
-        return success_response(output.data)

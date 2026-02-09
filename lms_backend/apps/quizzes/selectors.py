@@ -32,10 +32,3 @@ def get_question_ids(quiz_id: int) -> List[int]:
         .order_by('order')
         .values_list('question_id', flat=True)
     )
-
-
-def question_exists(quiz_id: int, question_id: int) -> bool:
-    return QuizQuestion.objects.filter(
-        quiz_id=quiz_id,
-        question_id=question_id
-    ).exists()

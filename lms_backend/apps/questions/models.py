@@ -4,7 +4,6 @@ Implements:
 - Question: 题目模型
 """
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -127,40 +126,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         # 截取题目内容前 50 个字符
         content_preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
         return f"[{self.get_question_type_display()}] {content_preview}"
-    def clean(self):
-        """
-        验证题目数据:
-        - 选择题必须有选项
-        - 判断题答案必须是 TRUE 或 FALSE
-        - 选择题答案必须在选项范围内
-        """
-        super().clean()
-        # 选择题验证
-        if self.question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
-            if not self.options:
-                raise ValidationError({'options': '选择题必须设置选项'})
-            # 获取所有选项的 key
-            option_keys = [opt.get('key') for opt in self.options if isinstance(opt, dict)]
-            # 验证答案在选项范围内
-            if self.question_type == 'SINGLE_CHOICE':
-                if not isinstance(self.answer, str):
-                    raise ValidationError({'answer': '单选题答案必须是字符串'})
-                if self.answer not in option_keys:
-                    raise ValidationError({'answer': '单选题答案必须是有效的选项'})
-            else:  # MULTIPLE_CHOICE
-                if not isinstance(self.answer, list):
-                    raise ValidationError({'answer': '多选题答案必须是列表'})
-                for ans in self.answer:
-                    if ans not in option_keys:
-                        raise ValidationError({'answer': f'多选题答案 {ans} 不是有效的选项'})
-        # 判断题验证
-        elif self.question_type == 'TRUE_FALSE':
-            if self.answer not in ['TRUE', 'FALSE']:
-                raise ValidationError({'answer': '判断题答案必须是 TRUE 或 FALSE'})
-        # 简答题验证
-        elif self.question_type == 'SHORT_ANSWER':
-            if not isinstance(self.answer, str):
-                raise ValidationError({'answer': '简答题答案必须是字符串'})
     @property
     def is_objective(self):
         """

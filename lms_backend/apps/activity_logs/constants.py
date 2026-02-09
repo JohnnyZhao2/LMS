@@ -132,20 +132,6 @@ LOG_ACTIONS = [
         'label': '删除试卷',
         'default_enabled': True,
     },
-    {
-        'key': 'content.quiz.add_questions',
-        'category': 'content',
-        'group': '试卷',
-        'label': '试卷添加题目',
-        'default_enabled': True,
-    },
-    {
-        'key': 'content.quiz.remove_questions',
-        'category': 'content',
-        'group': '试卷',
-        'label': '试卷移除题目',
-        'default_enabled': True,
-    },
     # ==================== 操作日志 ====================
     {
         'key': 'operation.task_management.create_and_assign',

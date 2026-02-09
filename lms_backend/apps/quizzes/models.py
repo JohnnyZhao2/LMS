@@ -4,7 +4,6 @@ Implements:
 - Quiz: 试卷模型
 - QuizQuestion: 试卷题目关联模型
 """
-import uuid
 
 from django.db import models
 from django.db.models import Q

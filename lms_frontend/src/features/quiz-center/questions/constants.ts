@@ -4,17 +4,6 @@
 import type { QuestionType } from '@/types/api';
 
 /**
- * 题目类型筛选选项
- */
-export const QUESTION_TYPE_FILTER_OPTIONS = [
-  { label: '全部', value: 'ALL' },
-  { label: '单选题', value: 'SINGLE_CHOICE' },
-  { label: '多选题', value: 'MULTIPLE_CHOICE' },
-  { label: '判断题', value: 'TRUE_FALSE' },
-  { label: '简答题', value: 'SHORT_ANSWER' },
-];
-
-/**
  * 题目类型配置（用于显示标签）
  */
 export const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string; bg: string }> = {
