@@ -48,7 +48,6 @@ interface KnowledgeListViewItem {
   summary?: string;
   knowledgeType: string;
   knowledgeTypeDisplay?: string;
-  version?: number;
   isCompleted?: boolean;
   completedAt?: string | null;
 }
@@ -106,7 +105,6 @@ export const TaskDetail: React.FC = () => {
       summary: item.summary,
       knowledgeType: item.knowledge_type,
       knowledgeTypeDisplay: item.knowledge_type_display,
-      version: item.version_number,
       isCompleted: false,
     }));
   }, [isStudent, learningDetail, task]);

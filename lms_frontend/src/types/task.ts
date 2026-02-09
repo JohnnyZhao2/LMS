@@ -32,7 +32,6 @@ export interface TaskKnowledge {
   summary?: string;
   order: number;
   resource_uuid: string;
-  version_number: number;
   is_current: boolean;
 }
 
@@ -49,7 +48,6 @@ export interface TaskQuiz {
   objective_question_count: number;
   order: number;
   resource_uuid: string;
-  version_number: number;
   is_current: boolean;
   quiz_type: QuizType;
   quiz_type_display: string;
@@ -65,9 +63,6 @@ export interface TaskDetail {
   title: string;
   description?: string;
   deadline: string;
-  start_time?: string;
-  duration?: number;
-  pass_score?: string;
   knowledge_items: TaskKnowledge[];
   quizzes: TaskQuiz[];
   assignments: TaskAssignment[];
@@ -156,57 +151,8 @@ export interface StudentLearningTaskDetail {
 }
 
 /**
- * 创建学习任务请求
- */
-export interface LearningTaskCreateRequest {
-  title: string;
-  description?: string;
-  deadline: string;
-  knowledge_ids: number[];
-  assignee_ids: number[];
-}
-
-/**
- * 创建练习任务请求
- */
-export interface PracticeTaskCreateRequest {
-  title: string;
-  description?: string;
-  deadline: string;
-  quiz_ids: number[];
-  knowledge_ids?: number[];
-  assignee_ids: number[];
-}
-
-/**
- * 创建考试任务请求
- */
-export interface ExamTaskCreateRequest {
-  title: string;
-  description?: string;
-  deadline: string;
-  start_time: string;
-  duration: number;
-  pass_score: number | string;
-  quiz_id: number;
-  assignee_ids: number[];
-}
-
-/**
  * 学员待办任务
  */
-export interface StudentPendingTask {
-  id: number;
-  task_id: number;
-  task_title: string;
-  deadline: string;
-  created_by_name: string;
-  status: TaskStatus;
-  status_display: string;
-  progress: LearningTaskProgress;
-  created_at: string;
-}
-
 /**
  * 学员任务中心列表项
  */
@@ -254,9 +200,6 @@ export interface TaskListItem {
   title: string;
   description?: string;
   deadline: string;
-  start_time?: string;
-  duration?: number;
-  pass_score?: string;
   knowledge_count: number;
   quiz_count: number;
   exam_count: number;
@@ -264,8 +207,6 @@ export interface TaskListItem {
   assignee_count: number;
   /** 已完成的学员数量 */
   completed_count: number;
-  /** 及格率（百分比，如 85.5 表示 85.5%） */
-  pass_rate?: number | null;
   created_by?: number;
   created_by_name: string;
   updated_by?: number;

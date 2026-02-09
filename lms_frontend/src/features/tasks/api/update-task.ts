@@ -10,12 +10,8 @@ export interface TaskUpdateRequest {
   title?: string;
   description?: string;
   deadline?: string;
-  start_time?: string;
-  duration?: number;
-  pass_score?: number;
   knowledge_ids?: number[];
   quiz_ids?: number[];
-  quiz_id?: number;
   assignee_ids?: number[];
 }
 

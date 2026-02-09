@@ -235,15 +235,6 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   <span className="text-base font-black text-foreground">{managerTask?.completed_count ?? 0}</span>
                   <span className="text-[10px] font-bold text-text-muted uppercase">完成</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-base font-black text-foreground">
-                    {managerTask?.pass_rate !== null && managerTask?.pass_rate !== undefined
-                      ? `${managerTask.pass_rate}%`
-                      : '-'
-                    }
-                  </span>
-                  <span className="text-[10px] font-bold text-text-muted uppercase">及格率</span>
-                </div>
               </div>
             </div>
           </div>

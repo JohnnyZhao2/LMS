@@ -348,7 +348,6 @@ export const useTaskForm = () => {
   const isLoading = knowledgeQuery.isLoading || quizQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
   const canSubmit = title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0;
-  const isAllSelected = modalFilteredUsers.length > 0 && modalFilteredUsers.every(u => selectedUserIds.includes(u.id));
 
   return {
     // State
@@ -383,7 +382,6 @@ export const useTaskForm = () => {
     isLoading,
     isSubmitting,
     canSubmit,
-    isAllSelected,
     resourcesDisabled,
     canRemoveAssignee,
 
