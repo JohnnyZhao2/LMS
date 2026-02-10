@@ -13,7 +13,6 @@ from core.responses import created_response, success_response
 
 from ..serializers import (
     SaveAnswerSerializer,
-    SaveAnswersSerializer,
     StartQuizSerializer,
     SubmissionDetailSerializer,
 )
@@ -114,51 +113,6 @@ class SaveAnswerView(BaseAPIView):
             data={
                 'question_id': answer.question_id,
                 'user_answer': answer.user_answer
-            },
-            message='保存成功'
-        )
-
-
-class SaveAnswersView(BaseAPIView):
-    """
-    批量保存答案。
-    支持一次保存多道题的答案，减少 API 调用次数。
-    """
-    permission_classes = [IsAuthenticated]
-    service_class = SubmissionService
-
-    @extend_schema(
-        summary='批量保存答案',
-        description='''
-        批量保存多个题目的答案。
-        可以在答题过程中调用此接口一次性保存多道题的答案，减少网络请求次数。
-        ''',
-        request=SaveAnswersSerializer,
-        responses={
-            200: OpenApiResponse(description='保存成功'),
-            400: OpenApiResponse(description='参数错误'),
-            404: OpenApiResponse(description='答题记录不存在'),
-        },
-        tags=['练习答题', '考试答题']
-    )
-    def post(self, request, pk):
-        submission = self.service.get_submission_by_id(pk, user=request.user)
-        serializer = SaveAnswersSerializer(
-            data=request.data,
-            context={'request': request, 'submission': submission}
-        )
-        serializer.is_valid(raise_exception=True)
-        updated_answers = serializer.save()
-        return success_response(
-            data={
-                'saved_count': len(updated_answers),
-                'answers': [
-                    {
-                        'question_id': answer.question_id,
-                        'user_answer': answer.user_answer
-                    }
-                    for answer in updated_answers
-                ]
             },
             message='保存成功'
         )

@@ -294,7 +294,7 @@ export const QuizPlayer: React.FC = () => {
                 </div>
                 {currentQuestion && (
                   <span className="text-text-muted">
-                    分值：{currentQuestion.question_score ?? currentQuestion.score ?? '--'} 分
+                    分值：{currentQuestion.question_score ?? '--'} 分
                   </span>
                 )}
               </div>

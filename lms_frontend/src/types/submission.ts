@@ -16,7 +16,6 @@ export interface Answer {
   question_type_display?: string;
   question_options?: Record<string, string> | Array<{ key?: string; value?: string }>;
   question_score?: string;
-  score?: string;
   user_answer?: Record<string, unknown>;
   correct_answer?: Record<string, unknown>;
   is_correct?: boolean;

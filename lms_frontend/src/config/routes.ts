@@ -14,7 +14,5 @@ export const ROUTES = {
   ACTIVITY_LOG_SETTINGS: '/activity-logs/settings',
   ANALYTICS: '/analytics',
   QUIZ: '/quiz',
-  REVIEW_PRACTICE: '/review/practice',
-  REVIEW_EXAM: '/review/exam',
   GRADING_CENTER: '/grading-center',
 } as const;

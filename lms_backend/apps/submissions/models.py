@@ -130,22 +130,6 @@ class Submission(TimestampMixin, models.Model):
         """是否包含主观题"""
         return self.quiz.has_subjective_questions
     @property
-    def objective_score(self):
-        """获取客观题得分"""
-        return self.answers.filter(
-            question__question_type__in=['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE']
-        ).aggregate(
-            total=models.Sum('obtained_score')
-        )['total'] or Decimal('0')
-    @property
-    def subjective_score(self):
-        """获取主观题得分"""
-        return self.answers.filter(
-            question__question_type='SHORT_ANSWER'
-        ).aggregate(
-            total=models.Sum('obtained_score')
-        )['total'] or Decimal('0')
-    @property
     def ungraded_subjective_count(self):
         """获取未评分的主观题数量"""
         return self.answers.filter(

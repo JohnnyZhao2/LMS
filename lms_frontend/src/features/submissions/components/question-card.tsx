@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { OptionItem } from '@/components/common/option-item';
 import type { Answer } from '@/types/api';
 
-type OptionItem = { key: string; label: string };
+type NormalizedOption = { key: string; label: string };
 
 const hasValueProp = (data: unknown): data is { value?: unknown } =>
   typeof data === 'object' && data !== null && 'value' in data;
@@ -32,9 +32,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   showResult = false,
 
 }) => {
-  const questionScore = (answer.question_score as string | number | undefined) ?? answer.score;
+  const questionScore = answer.question_score;
 
-  const normalizeOptions = (): OptionItem[] => {
+  const normalizeOptions = (): NormalizedOption[] => {
     if (!answer.question_options) {
       return [];
     }
