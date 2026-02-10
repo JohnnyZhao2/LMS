@@ -4,7 +4,7 @@ Implements:
 - Login / Logout
 - Token refresh
 - Role switching
-- Password reset / change
+- Password reset
 - Current user info
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema

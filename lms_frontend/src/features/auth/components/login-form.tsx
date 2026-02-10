@@ -151,32 +151,13 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-8">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
-            >
-              {loading ? "正在验证身份..." : "登录"}
-            </Button>
-
-            <div className="flex justify-between items-center py-2 px-1">
-              <button
-                type="button"
-                className="text-[11px] font-bold text-foreground/20 hover:text-primary transition-colors tracking-widest"
-              >
-                无法访问账号?
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <div className="w-1 h-1 bg-primary/10 rounded-full" />
-                  <div className="w-1 h-1 bg-primary/20 rounded-full" />
-                  <div className="w-1 h-1 bg-primary/30 rounded-full" />
-                </div>
-                <span className="text-[10px] font-bold text-foreground/20 tracking-widest">安全链接已建立</span>
-              </div>
-            </div>
-          </div>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
+          >
+            {loading ? "正在验证身份..." : "登录"}
+          </Button>
         </form>
       </Form>
     </div>

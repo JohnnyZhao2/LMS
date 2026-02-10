@@ -48,14 +48,6 @@ export const tokenStorage = {
   },
 
   /**
-   * 清除令牌
-   */
-  clearTokens(): void {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  },
-
-  /**
    * 检查是否已登录
    */
   hasTokens(): boolean {

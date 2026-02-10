@@ -30,21 +30,6 @@ export interface LoginResponse extends AuthSessionPayload {
 }
 
 /**
- * 刷新令牌请求
- */
-export interface RefreshTokenRequest {
-  refresh_token: string;
-}
-
-/**
- * 刷新令牌响应
- */
-export interface RefreshTokenResponse {
-  access_token: string;
-  refresh_token: string;
-}
-
-/**
  * 切换角色请求
  */
 export interface SwitchRoleRequest {
@@ -69,13 +54,4 @@ export type MeResponse = AuthSessionPayload;
  */
 export interface LogoutRequest {
   refresh_token?: string;
-}
-
-/**
- * 修改密码请求
- */
-export interface ChangePasswordRequest {
-  old_password: string;
-  new_password: string;
-  confirm_password: string;
 }
