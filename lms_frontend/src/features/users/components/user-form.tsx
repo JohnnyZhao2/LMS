@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   User,
@@ -35,6 +34,7 @@ import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-
 import { showApiError } from '@/utils/error-handler';
 import { ROLE_COLORS } from '@/lib/role-config';
 import type { RoleCode } from '@/types/api';
+import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
 
 interface UserFormProps {
   open: boolean;
@@ -70,74 +70,79 @@ const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean
 };
 
 /**
- * 用户表单组件
+ * 用户表单组件 — 外层壳，负责数据获取与 Dialog 控制
  */
-export const UserForm: React.FC<UserFormProps> = ({
-  open,
-  userId,
-  onClose,
-  onSuccess,
-}) => {
-  const isEdit = !!userId;
-  const createUser = useCreateUser();
-  const updateUser = useUpdateUser();
-  const assignRoles = useAssignRoles();
-  const assignMentor = useAssignMentor();
+export const UserForm: React.FC<UserFormProps> = ({ open, userId, onClose, onSuccess }) => {
   const { data: userDetail } = useUserDetail(userId || 0);
   const { data: mentors = [] } = useMentors();
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
+  const isEdit = !!userId;
 
-  const [formData, setFormData] = useState<FormData>({
-    username: '',
-    employee_id: '',
-    password: '',
-    department_id: undefined,
-    role_codes: [],
-    mentor_id: null,
+  return (
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-border h-[85vh] flex flex-col bg-background">
+        {open && (
+          <UserFormContent
+            key={`${userId ?? 'new'}-${userDetail?.id ?? 0}`}
+            isEdit={isEdit}
+            userId={userId}
+            userDetail={userDetail}
+            mentors={mentors}
+            departments={departments}
+            roles={roles}
+            onClose={onClose}
+            onSuccess={onSuccess}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+/** 内部表单组件 — 通过 key 重挂载来重置状态，无需 useEffect */
+const UserFormContent: React.FC<{
+  isEdit: boolean;
+  userId?: number;
+  userDetail?: UserDetail;
+  mentors: Mentor[];
+  departments: Department[];
+  roles: Role[];
+  onClose: () => void;
+  onSuccess?: () => void;
+}> = ({ isEdit, userId, userDetail, mentors = [], departments = [], roles = [], onClose, onSuccess }) => {
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+  const assignRoles = useAssignRoles();
+  const assignMentor = useAssignMentor();
+
+  // 直接从 props 初始化，组件通过 key 重挂载时自动重置
+  const [initialRoleCodes] = useState<RoleCode[]>(() =>
+    isEdit && userDetail
+      ? userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode)
+      : [],
+  );
+  const [initialMentorId] = useState<number | null>(() =>
+    isEdit && userDetail ? (userDetail.mentor?.id || null) : null,
+  );
+
+  const [formData, setFormData] = useState<FormData>(() => {
+    if (isEdit && userDetail) {
+      return {
+        username: userDetail.username,
+        employee_id: userDetail.employee_id,
+        password: '',
+        department_id: userDetail.department?.id,
+        role_codes: initialRoleCodes,
+        mentor_id: initialMentorId,
+      };
+    }
+    return { username: '', employee_id: '', password: '', department_id: undefined, role_codes: [], mentor_id: null };
   });
 
-  const [initialRoleCodes, setInitialRoleCodes] = useState<RoleCode[]>([]);
-  const [initialMentorId, setInitialMentorId] = useState<number | null>(null);
   const [mentorTouched, setMentorTouched] = useState(false);
-
   const [errors, setErrors] = useState<FormErrors>({});
   const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
-
-  useEffect(() => {
-    if (open) {
-      if (isEdit && userDetail) {
-        const roleCodes = userDetail.roles
-          .filter((r) => r.code !== 'STUDENT')
-          .map((r) => r.code as RoleCode);
-        const mentorId = userDetail.mentor?.id || null;
-        setFormData({
-          username: userDetail.username,
-          employee_id: userDetail.employee_id,
-          password: '',
-          department_id: userDetail.department?.id,
-          role_codes: roleCodes,
-          mentor_id: mentorId,
-        });
-        setInitialRoleCodes(roleCodes);
-        setInitialMentorId(mentorId);
-        setMentorTouched(false);
-      } else {
-        setFormData({
-          username: '',
-          employee_id: '',
-          password: '',
-          department_id: undefined,
-          role_codes: [],
-          mentor_id: null,
-        });
-        setInitialRoleCodes([]);
-        setInitialMentorId(null);
-        setMentorTouched(false);
-      }
-      setErrors({});
-    }
-  }, [open, isEdit, userDetail]);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -239,255 +244,230 @@ export const UserForm: React.FC<UserFormProps> = ({
   const isLoading = createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-border h-[85vh] flex flex-col bg-background">
-
-        {/* Header */}
-        <DialogHeader className="px-8 py-6 shrink-0 border-b border-border">
-          <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-4 tracking-tight">
-            <div className={cn(
-              "w-14 h-14 rounded-lg flex items-center justify-center text-white",
-              isEdit ? "bg-destructive" : "bg-secondary"
-            )}>
-              {isEdit ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
-            </div>
-            {isEdit ? '编辑成员档案' : '邀请新成员'}
-            {isEdit && (
-              <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-secondary-100 text-secondary">
-                Active
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-background">
-
-          {/* 1. Basic Info */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">基础信息</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">真实姓名</label>
-                <Input
-                  value={formData.username}
-                  onChange={e => setFormData({ ...formData, username: e.target.value })}
-                  placeholder="请输入姓名"
-                />
-                {errors.username && <p className="text-xs font-medium text-destructive">{errors.username}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">员工工号</label>
-                <Input
-                  value={formData.employee_id}
-                  onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                  className="font-mono"
-                  placeholder="E.g. EMP001"
-                />
-                {errors.employee_id && <p className="text-xs font-medium text-destructive">{errors.employee_id}</p>}
-              </div>
-
-              {!isEdit && (
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">初始密码</label>
-                  <Input
-                    type="password"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    className="tracking-widest"
-                    placeholder="••••••••"
-                  />
-                  {errors.password && <p className="text-xs font-medium text-destructive">{errors.password}</p>}
-                </div>
-              )}
-            </div>
+    <>
+      <DialogHeader className="px-8 py-6 shrink-0 border-b border-border">
+        <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-4 tracking-tight">
+          <div className={cn(
+            "w-14 h-14 rounded-lg flex items-center justify-center text-white",
+            isEdit ? "bg-destructive" : "bg-secondary"
+          )}>
+            {isEdit ? <Pencil className="w-6 h-6" /> : <Plus className="w-7 h-7" />}
           </div>
+          {isEdit ? '编辑成员档案' : '邀请新成员'}
+          {isEdit && (
+            <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-secondary-100 text-secondary">
+              Active
+            </span>
+          )}
+        </DialogTitle>
+      </DialogHeader>
 
-          <div className="h-px w-full bg-muted" />
-
-          {/* 2. Organization */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-secondary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">组织归属</h3>
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 bg-background">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-5 rounded-full bg-primary" />
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">基础信息</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">真实姓名</label>
+              <Input
+                value={formData.username}
+                onChange={e => setFormData({ ...formData, username: e.target.value })}
+                placeholder="请输入姓名"
+              />
+              {errors.username && <p className="text-xs font-medium text-destructive">{errors.username}</p>}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">选择部门</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {departments.map(dept => {
-                    const active = formData.department_id === dept.id;
-                    return (
-                      <div
-                        key={dept.id}
-                        onClick={() => setFormData({ ...formData, department_id: dept.id })}
-                        className={cn(
-                          "cursor-pointer group flex items-center justify-center gap-2 px-4 h-14 rounded-md transition-all duration-200",
-                          active
-                            ? "bg-secondary text-white"
-                            : "bg-muted border-0 text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Building2 className="w-4 h-4" />
-                        <span className="text-sm font-semibold whitespace-nowrap">
-                          {dept.name}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-                {errors.department_id && <p className="text-xs font-medium text-destructive">{errors.department_id}</p>}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">员工工号</label>
+              <Input
+                value={formData.employee_id}
+                onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
+                className="font-mono"
+                placeholder="E.g. EMP001"
+              />
+              {errors.employee_id && <p className="text-xs font-medium text-destructive">{errors.employee_id}</p>}
+            </div>
+            {!isEdit && (
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">初始密码</label>
+                <Input
+                  type="password"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  className="tracking-widest"
+                  placeholder="••••••••"
+                />
+                {errors.password && <p className="text-xs font-medium text-destructive">{errors.password}</p>}
               </div>
+            )}
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">分配导师 (可选)</label>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={formData.mentor_id?.toString() || ''}
-                    onValueChange={(v) => {
+        <div className="h-px w-full bg-muted" />
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-5 rounded-full bg-secondary" />
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">组织归属</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">选择部门</label>
+              <div className="grid grid-cols-2 gap-3">
+                {departments.map(dept => {
+                  const active = formData.department_id === dept.id;
+                  return (
+                    <div
+                      key={dept.id}
+                      onClick={() => setFormData({ ...formData, department_id: dept.id })}
+                      className={cn(
+                        "cursor-pointer group flex items-center justify-center gap-2 px-4 h-14 rounded-md transition-all duration-200",
+                        active
+                          ? "bg-secondary text-white"
+                          : "bg-muted border-0 text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <Building2 className="w-4 h-4" />
+                      <span className="text-sm font-semibold whitespace-nowrap">{dept.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {errors.department_id && <p className="text-xs font-medium text-destructive">{errors.department_id}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wide">分配导师 (可选)</label>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={formData.mentor_id?.toString() || ''}
+                  onValueChange={(v) => {
+                    setMentorTouched(true);
+                    setFormData({ ...formData, mentor_id: v ? Number(v) : null });
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="选择带教导师..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 z-[9999]" sideOffset={8}>
+                    {mentors.filter(m => !userId || m.id !== userId).map(m => (
+                      <SelectItem key={m.id} value={m.id.toString()}>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8 rounded-full">
+                            <AvatarFallback className="bg-primary text-white text-xs font-bold">
+                              {getAvatarText(m.username)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-foreground">{m.username}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.mentor_id && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 text-text-muted hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
                       setMentorTouched(true);
-                      setFormData({ ...formData, mentor_id: v ? Number(v) : null });
+                      setFormData({ ...formData, mentor_id: null });
                     }}
                   >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="选择带教导师..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 z-[9999]" sideOffset={8}>
-                      {mentors.filter(m => !userId || m.id !== userId).map(m => (
-                        <SelectItem key={m.id} value={m.id.toString()}>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8 rounded-full">
-                              <AvatarFallback className="bg-primary text-white text-xs font-bold">
-                                {getAvatarText(m.username)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-foreground">{m.username}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formData.mentor_id && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 shrink-0 text-text-muted hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        setMentorTouched(true);
-                        setFormData({ ...formData, mentor_id: null });
-                      }}
-                    >
-                      <span className="sr-only">清除导师</span>
-                      ×
-                    </Button>
-                  )}
-                </div>
+                    <span className="sr-only">清除导师</span>
+                    ×
+                  </Button>
+                )}
               </div>
-            </div>
-          </div>
-
-          <div className="h-px w-full bg-muted" />
-
-          {/* 3. Roles */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-5 rounded-full bg-warning" />
-              <h3 className="text-base font-bold text-foreground tracking-tight">系统权限</h3>
-            </div>
-            <p className="text-xs font-medium text-text-muted">
-              仅导师（或空角色）默认保留学员角色；含管理员/室经理/团队经理时会自动移除学员角色。室经理与团队经理互斥；超级管理员仅保留管理员角色。
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Selectable Roles */}
-              {roles.filter(r => r.code !== 'STUDENT').map(role => {
-                const roleCode = role.code as RoleCode;
-                const active = formData.role_codes.includes(roleCode);
-                const disabled = isRoleToggleDisabled(roleCode, active);
-                const disabledReason = getRoleDisabledReason(roleCode, active, disabled);
-                const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
-                const roleIcons: Record<string, React.ReactNode> = {
-                  ADMIN: <Shield className="w-6 h-6" />,
-                  DEPT_MANAGER: <Building2 className="w-6 h-6" />,
-                  MENTOR: <Briefcase className="w-6 h-6" />,
-                  TEAM_MANAGER: <Users className="w-6 h-6" />,
-                };
-
-                return (
-                  <div
-                    key={role.code}
-                    onClick={() => !disabled && toggleRole(roleCode)}
-                    aria-disabled={disabled}
-                    className={cn(
-                      "group relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
-                      disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-                      active
-                        ? cn("bg-background border-2", colorConfig.borderClass)
-                        : "bg-muted border-2 border-transparent hover:bg-background hover:scale-[1.02]"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
-                      active
-                        ? cn("text-white", colorConfig.iconBgClass)
-                        : "bg-background text-text-muted group-hover:text-foreground"
-                    )}
-                    >
-                      {roleIcons[role.code] || <User className="w-6 h-6" />}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className={cn(
-                        "text-base font-bold transition-colors",
-                        active ? colorConfig.textClass : undefined
-                      )}
-                      >
-                        {role.name}
-                      </div>
-                      {active && <div className="text-[10px] font-semibold uppercase text-text-muted tracking-wider">Enabled</div>}
-                      {!active && disabledReason && (
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                          {disabledReason}
-                        </div>
-                      )}
-                    </div>
-
-                    {active && (
-                      <div className="absolute top-4 right-4 w-3 h-3 rounded-full bg-secondary" />
-                    )}
-                  </div>
-                )
-              })}
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <DialogFooter className="px-8 py-6 border-t border-border bg-background shrink-0 sm:justify-end gap-4">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="h-14 px-8 rounded-md font-semibold text-text-muted hover:bg-muted hover:text-foreground transition-all duration-200"
-          >
-            取消
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full sm:w-auto h-14 px-10 rounded-md bg-primary text-white font-semibold text-base hover:bg-primary-600 hover:scale-105 transition-all duration-200"
-          >
-            {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即邀请"}
-          </Button>
-        </DialogFooter>
+        <div className="h-px w-full bg-muted" />
 
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-5 rounded-full bg-warning" />
+            <h3 className="text-base font-bold text-foreground tracking-tight">系统权限</h3>
+          </div>
+          <p className="text-xs font-medium text-text-muted">
+            仅导师（或空角色）默认保留学员角色；含管理员/室经理/团队经理时会自动移除学员角色。室经理与团队经理互斥；超级管理员仅保留管理员角色。
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {roles.filter(r => r.code !== 'STUDENT').map(role => {
+              const roleCode = role.code as RoleCode;
+              const active = formData.role_codes.includes(roleCode);
+              const disabled = isRoleToggleDisabled(roleCode, active);
+              const disabledReason = getRoleDisabledReason(roleCode, active, disabled);
+              const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
+              const roleIcons: Record<string, React.ReactNode> = {
+                ADMIN: <Shield className="w-6 h-6" />,
+                DEPT_MANAGER: <Building2 className="w-6 h-6" />,
+                MENTOR: <Briefcase className="w-6 h-6" />,
+                TEAM_MANAGER: <Users className="w-6 h-6" />,
+              };
+              return (
+                <div
+                  key={role.code}
+                  onClick={() => !disabled && toggleRole(roleCode)}
+                  aria-disabled={disabled}
+                  className={cn(
+                    "group relative flex items-center gap-4 p-5 rounded-lg transition-all duration-200",
+                    disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                    active
+                      ? cn("bg-background border-2", colorConfig.borderClass)
+                      : "bg-muted border-2 border-transparent hover:bg-background hover:scale-[1.02]"
+                  )}
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 shrink-0",
+                    active
+                      ? cn("text-white", colorConfig.iconBgClass)
+                      : "bg-background text-text-muted group-hover:text-foreground"
+                  )}>
+                    {roleIcons[role.code] || <User className="w-6 h-6" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className={cn(
+                      "text-base font-bold transition-colors",
+                      active ? colorConfig.textClass : undefined
+                    )}>
+                      {role.name}
+                    </div>
+                    {active && <div className="text-[10px] font-semibold uppercase text-text-muted tracking-wider">Enabled</div>}
+                    {!active && disabledReason && (
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                        {disabledReason}
+                      </div>
+                    )}
+                  </div>
+                  {active && (
+                    <div className="absolute top-4 right-4 w-3 h-3 rounded-full bg-secondary" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter className="px-8 py-6 border-t border-border bg-background shrink-0 sm:justify-end gap-4">
+        <Button
+          variant="ghost"
+          onClick={onClose}
+          className="h-14 px-8 rounded-md font-semibold text-text-muted hover:bg-muted hover:text-foreground transition-all duration-200"
+        >
+          取消
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className="w-full sm:w-auto h-14 px-10 rounded-md bg-primary text-white font-semibold text-base hover:bg-primary-600 hover:scale-105 transition-all duration-200"
+        >
+          {isLoading ? "提交中..." : isEdit ? "保存更改" : "立即邀请"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 };

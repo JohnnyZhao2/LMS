@@ -52,7 +52,7 @@ export interface StudentExecutionsResponse {
   count: number;
 }
 
-export type GradingQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+type GradingQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
 
 export interface GradingQuestion {
   question_id: number;
@@ -64,14 +64,14 @@ export interface GradingQuestion {
   pass_rate: number | null;
 }
 
-export interface GradingOptionStudent {
+interface GradingOptionStudent {
   student_id: number;
   student_name: string;
   employee_id: string;
   department: string;
 }
 
-export interface GradingOption {
+interface GradingOption {
   option_key: string;
   option_text: string;
   selected_count: number;

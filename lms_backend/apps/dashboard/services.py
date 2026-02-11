@@ -29,8 +29,6 @@ from .selectors import (
     get_monthly_tasks_count,
     get_overdue_warning,
     get_pending_grading_count,
-    get_peer_ranking,
-    get_pending_tasks,
     get_score_distribution,
     get_student_all_tasks,
     get_student_assignments,
@@ -100,43 +98,6 @@ class StudentDashboardService(BaseService):
             'overdue_count': task_stats['overdue_tasks']
         }
 
-    def get_pending_tasks(self, user: User, limit: int = 10) -> QuerySet:
-        """
-        获取学员的待办任务
-        Args:
-            user: 学员用户
-            limit: 最大返回数量
-        Returns:
-            待办任务 QuerySet
-        """
-        return get_pending_tasks(user_id=user.id, limit=limit)
-
-    def get_latest_knowledge(self, limit: int = 6) -> QuerySet:
-        """
-        获取最新发布的知识文档
-        Args:
-            limit: 最大返回数量
-        Returns:
-            知识文档 QuerySet
-        """
-        return get_latest_knowledge(limit=limit)
-
-    def get_task_summary(self, user: User) -> Dict[str, int]:
-        """
-        获取学员任务摘要统计
-        Args:
-            user: 学员用户
-        Returns:
-            包含待办、已完成、逾期、总数量的字典
-        """
-        assignments = get_student_assignments(user_id=user.id)
-        stats = calculate_task_stats(assignments)
-        return {
-            'pending': stats['in_progress_tasks'],
-            'completed': stats['completed_tasks'],
-            'overdue': stats['overdue_tasks'],
-            'total': stats['total_tasks']
-        }
 
 
 class MentorDashboardService(BaseService):
@@ -145,16 +106,11 @@ class MentorDashboardService(BaseService):
     处理：
     - 可访问学员的摘要统计
     - 单个学员统计
-    - 快捷链接生成
     """
     def get_dashboard_data(self) -> Dict[str, Any]:
         """
         获取导师/室经理的完整仪表盘数据
-
-        Returns:
-            包含摘要、学员、快捷链接、当前角色的字典
         """
-        current_role = self.get_current_role()
         students = get_accessible_students(self.user, self.request)
         student_ids = list(students.values_list('id', flat=True))
         monthly_active_ids = get_monthly_active_user_ids(student_ids)
@@ -165,7 +121,6 @@ class MentorDashboardService(BaseService):
             monthly_active_ids=monthly_active_ids,
             spot_check_map=spot_check_map
         )
-        quick_links = self._generate_quick_links()
         overdue_warning = get_overdue_warning(student_ids, due_soon_hours=12, limit=3)
         pending_grading_count = get_pending_grading_count(student_ids)
         spot_check_stats = get_monthly_spot_check_stats(student_ids)
@@ -173,8 +128,6 @@ class MentorDashboardService(BaseService):
         return {
             'summary': summary,
             'students': student_stats,
-            'quick_links': quick_links,
-            'current_role': current_role,
             'overdue_warning': overdue_warning,
             'pending_grading': {
                 'count': pending_grading_count
@@ -267,19 +220,6 @@ class MentorDashboardService(BaseService):
                 }
             })
         return student_stats
-
-    @staticmethod
-    def _generate_quick_links() -> Dict[str, str]:
-        """生成快捷访问链接"""
-        return {
-            'create_learning_task': '/tasks/learning/create',
-            'create_practice_task': '/tasks/practice/create',
-            'create_exam_task': '/tasks/exam/create',
-            'quiz_center': '/quiz-center',
-            'spot_checks': '/spot-checks',
-            'question_bank': '/questions',
-            'quiz_management': '/quizzes'
-        }
 
     def get_students_needing_attention(self, limit: int = 10) -> Dict[str, Any]:
         """

@@ -19,21 +19,6 @@ from apps.tasks.models import TaskAssignment
 from apps.users.models import User
 
 
-def get_pending_tasks(user_id: int, limit: int = 10) -> QuerySet:
-    return TaskAssignment.objects.filter(
-        assignee_id=user_id,
-        status='IN_PROGRESS',
-        task__is_deleted=False,
-        task__deadline__gt=timezone.now(),
-    ).select_related(
-        'task', 'task__created_by'
-    ).prefetch_related(
-        'task__task_knowledge',
-        'task__task_quizzes',
-        'knowledge_progress'
-    ).order_by('task__deadline')[:limit]
-
-
 def get_latest_knowledge(limit: int = 6) -> QuerySet:
     return Knowledge.objects.filter(
         is_deleted=False,
@@ -284,51 +269,6 @@ def calculate_assignment_progress(
         'quiz_total': total_q,
         'quiz_completed': completed_q
     }
-
-
-def get_peer_ranking(user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
-    """
-    获取同组学员的完成率排名
-    基于同一导师下的学员进行排名
-    """
-    user = User.objects.filter(id=user_id).select_related('mentor').first()
-    if not user or not user.mentor:
-        return []
-
-    # 获取同导师下的所有学员
-    peers = User.objects.filter(
-        mentor=user.mentor,
-        is_active=True
-    ).exclude(
-        role__in=['ADMIN', 'DEPT_MANAGER', 'TEAM_MANAGER', 'MENTOR']
-    )
-
-    peer_stats = []
-    for peer in peers:
-        assignments = get_student_assignments(user_id=peer.id)
-        stats = calculate_task_stats(assignments)
-        peer_stats.append({
-            'id': peer.id,
-            'name': peer.username,
-            'progress': stats['completion_rate'],
-            'is_me': peer.id == user_id
-        })
-
-    # 按完成率排序
-    peer_stats.sort(key=lambda x: x['progress'], reverse=True)
-
-    # 添加排名
-    for i, peer in enumerate(peer_stats):
-        peer['rank'] = i + 1
-
-    # 找到当前用户的位置，返回其周围的学员
-    my_index = next((i for i, p in enumerate(peer_stats) if p['is_me']), 0)
-    start = max(0, my_index - 2)
-    end = min(len(peer_stats), start + limit)
-    if end - start < limit:
-        start = max(0, end - limit)
-
-    return peer_stats[start:end]
 
 
 def get_students_needing_attention(

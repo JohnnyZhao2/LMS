@@ -9,7 +9,7 @@ import type { Department, Mentor } from '@/types/api';
 
 export type ViewMode = 'department' | 'mentorship';
 
-export interface HierarchyItem {
+interface HierarchyItem {
     id: number | 'all';
     name: string;
     subtitle?: string;

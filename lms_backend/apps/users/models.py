@@ -131,18 +131,6 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     def is_admin(self) -> bool:
         """是否为管理员"""
         return self.has_role('ADMIN')
-    @property
-    def is_mentor(self) -> bool:
-        """是否为导师"""
-        return self.has_role('MENTOR')
-    @property
-    def is_dept_manager(self) -> bool:
-        """是否为室经理"""
-        return self.has_role('DEPT_MANAGER')
-    @property
-    def is_team_manager(self) -> bool:
-        """是否为团队经理"""
-        return self.has_role('TEAM_MANAGER')
     @cached_property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""
@@ -185,12 +173,6 @@ class UserRole(TimestampMixin, models.Model):
         ordering = ['user', 'role']
     def __str__(self):
         return f"{self.user.username} - {self.role.name}"
-    def clean(self):
-        """
-        验证:
-        - 学员角色不可移除（在删除时检查）
-        """
-        super().clean()
     def delete(self, *args, **kwargs):
         """
         重写删除方法，防止普通用户删除学员角色。

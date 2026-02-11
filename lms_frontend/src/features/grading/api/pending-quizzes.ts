@@ -20,20 +20,9 @@ export interface PendingTask {
   quizzes: PendingQuiz[];
 }
 
-interface PendingQuizzesParams {
-  quiz_type?: 'EXAM' | 'PRACTICE';
-}
-
-export const usePendingQuizzes = (params?: PendingQuizzesParams) => {
+export const usePendingQuizzes = () => {
   return useQuery({
-    queryKey: ['grading', 'pending', params],
-    queryFn: async () => {
-      const searchParams = new URLSearchParams();
-      if (params?.quiz_type) {
-        searchParams.set('quiz_type', params.quiz_type);
-      }
-      const url = `/grading/pending/${searchParams.toString() ? `?${searchParams}` : ''}`;
-      return apiClient.get<PendingTask[]>(url);
-    },
+    queryKey: ['grading', 'pending'],
+    queryFn: () => apiClient.get<PendingTask[]>('/grading/pending/'),
   });
 };

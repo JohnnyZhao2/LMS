@@ -71,30 +71,6 @@ export const useUserDetail = (id: number) => {
 };
 
 /**
- * 获取名下学员（导师使用）
- */
-export const useMentees = () => {
-  const currentRole = useCurrentRole();
-  return useQuery({
-    queryKey: ['mentees', currentRole ?? 'UNKNOWN'],
-    queryFn: () => apiClient.get<UserList[]>('/users/mentees/'),
-    enabled: currentRole !== null,
-  });
-};
-
-/**
- * 获取本室成员（室经理使用）
- */
-export const useDepartmentMembers = () => {
-  const currentRole = useCurrentRole();
-  return useQuery({
-    queryKey: ['department-members', currentRole ?? 'UNKNOWN'],
-    queryFn: () => apiClient.get<UserList[]>('/users/department-members/'),
-    enabled: currentRole !== null,
-  });
-};
-
-/**
  * 获取导师列表（管理员使用）
  * 用于指定导师时选择可用的导师
  */

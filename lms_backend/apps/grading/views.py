@@ -1,4 +1,3 @@
-from django.db.models import Count, Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
@@ -8,7 +7,6 @@ from apps.grading.selectors import (
     get_latest_quiz_answers,
 )
 from apps.grading.serializers import (
-    BatchGradingSubmitSerializer,
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
     GradingSubmitSerializer,
@@ -265,117 +263,6 @@ class GradingSubmitView(GradingBaseView):
             )
 
         answer.grade(grader=grader, score=score, comment=comments)
-
-
-class GradingBatchSubmitView(GradingBaseView):
-    """批量评分提交接口"""
-
-    @extend_schema(
-        summary='批量提交评分',
-        description='批量为学员的简答题答案提交评分，减少 API 调用次数',
-        request=BatchGradingSubmitSerializer,
-        responses={
-            200: OpenApiResponse(description='评分成功'),
-            400: OpenApiResponse(description='参数错误'),
-            404: OpenApiResponse(description='任务或答案不存在'),
-        },
-        tags=['阅卷中心']
-    )
-    def post(self, request, task_id):
-        task = self._get_task(task_id)
-
-        serializer = BatchGradingSubmitSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        data = serializer.validated_data
-        quiz_id = data['quiz_id']
-        self._validate_quiz_in_task(task, quiz_id)
-
-        # 批量处理评分
-        results = self._batch_submit_grading(
-            task=task,
-            quiz_id=quiz_id,
-            gradings=data['gradings']
-        )
-
-        return success_response({
-            'message': '批量评分完成',
-            'success_count': results['success_count'],
-            'failed_count': results['failed_count'],
-            'failures': results['failures']
-        })
-
-    def _batch_submit_grading(self, task, quiz_id, gradings):
-        """批量提交评分"""
-        from django.db import transaction
-
-        grader = self.request.user
-        success_count = 0
-        failed_count = 0
-        failures = []
-
-        # 预先获取所有需要的答案
-        question_ids = list(set(g['question_id'] for g in gradings))
-        student_ids = list(set(g['student_id'] for g in gradings))
-
-        # 构建答案映射
-        answers_map = {}
-        for question_id in question_ids:
-            answers = get_latest_answers(task, question_id, quiz_id).filter(
-                submission__task_assignment__assignee_id__in=student_ids,
-                submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
-            ).select_related('question', 'submission__task_assignment')
-            for answer in answers:
-                key = (question_id, answer.submission.task_assignment.assignee_id)
-                # 保留最新的答案
-                if key not in answers_map:
-                    answers_map[key] = answer
-
-        # 在事务中批量评分
-        with transaction.atomic():
-            for grading in gradings:
-                question_id = grading['question_id']
-                student_id = grading['student_id']
-                score = grading['score']
-                comments = grading.get('comments', '')
-
-                key = (question_id, student_id)
-                answer = answers_map.get(key)
-
-                if not answer:
-                    failed_count += 1
-                    failures.append({
-                        'question_id': question_id,
-                        'student_id': student_id,
-                        'error': '未找到对应的答案记录'
-                    })
-                    continue
-
-                if score < 0 or score > float(answer.question.score):
-                    failed_count += 1
-                    failures.append({
-                        'question_id': question_id,
-                        'student_id': student_id,
-                        'error': f'分数必须在 0 到 {answer.question.score} 之间'
-                    })
-                    continue
-
-                try:
-                    answer.grade(grader=grader, score=score, comment=comments)
-                    success_count += 1
-                except Exception as e:
-                    failed_count += 1
-                    failures.append({
-                        'question_id': question_id,
-                        'student_id': student_id,
-                        'error': str(e)
-                    })
-
-        return {
-            'success_count': success_count,
-            'failed_count': failed_count,
-            'failures': failures
-        }
 
 
 class PendingQuizzesView(GradingBaseView):

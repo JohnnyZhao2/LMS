@@ -1,4 +1,3 @@
 """
-Dashboard models - placeholder for task 11
+Dashboard models - placeholder
 """
-from django.db import models

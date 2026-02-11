@@ -7,14 +7,13 @@ import type { LatestKnowledge } from './knowledge';
 /**
  * 学员预警类型
  */
-export type AlertType = 'overdue' | 'failed_exam' | 'slow_progress' | 'score_decline';
 export type AlertLevel = 'high' | 'medium' | 'low';
 
 /**
  * 学员预警信息
  */
 export interface StudentAlert {
-  type: AlertType;
+  type: 'overdue' | 'failed_exam' | 'slow_progress' | 'score_decline';
   level: AlertLevel;
   message: string;
   count?: number;
@@ -110,10 +109,8 @@ export interface StudentDashboard {
 export interface MentorDashboard {
   summary: MentorDashboardSummary;
   students: MentorDashboardStudent[];
-  quick_links: Record<string, string>;
-  current_role: string;
   overdue_warning: MentorDashboardOverdueWarning;
-  pending_grading: MentorDashboardPendingGrading;
+  pending_grading: { count: number };
   spot_check_stats: MentorDashboardSpotCheckStats;
   score_distribution: MentorDashboardScoreDistribution;
 }
@@ -148,10 +145,6 @@ export interface MentorDashboardOverdueWarning {
   due_soon_count: number;
   due_soon_hours: number;
   items: MentorDashboardOverdueWarningItem[];
-}
-
-export interface MentorDashboardPendingGrading {
-  count: number;
 }
 
 export interface MentorDashboardSpotCheckStats {
