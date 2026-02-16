@@ -1,9 +1,8 @@
 import pytest
-from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from apps.knowledge.models import Knowledge, ResourceLineType, Tag
+from apps.knowledge.models import Knowledge, Tag
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.spot_checks.models import SpotCheck
@@ -81,6 +80,7 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         content='knowledge content',
         created_by=inactive_user,
         updated_by=inactive_user,
+        line_tag=line_tag,
     )
     question = Question.objects.create(
         content='测试题目',
@@ -89,6 +89,7 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         answer='A',
         created_by=inactive_user,
         updated_by=inactive_user,
+        line_tag=line_tag,
     )
     quiz = Quiz.objects.create(
         title='离职用户试卷',
@@ -97,17 +98,6 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         updated_by=inactive_user,
     )
     QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
-
-    ResourceLineType.objects.create(
-        content_type=ContentType.objects.get_for_model(Knowledge),
-        object_id=knowledge.id,
-        line_type=line_tag,
-    )
-    ResourceLineType.objects.create(
-        content_type=ContentType.objects.get_for_model(Question),
-        object_id=question.id,
-        line_type=line_tag,
-    )
 
     shared_task = Task.objects.create(
         title='共享任务',
@@ -186,8 +176,6 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
     assert not TaskKnowledge.objects.filter(task=shared_task).exists()
     assert not TaskQuiz.objects.filter(task=shared_task).exists()
     assert not QuizQuestion.objects.filter(quiz_id=quiz.id).exists()
-    assert not ResourceLineType.objects.filter(object_id__in=[knowledge.id, question.id]).exists()
-
     assert Task.objects.filter(id=shared_task.id).exists()
     assert TaskAssignment.objects.filter(id=shared_assignment.id).exists()
 

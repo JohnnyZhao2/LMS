@@ -83,7 +83,7 @@ export const KnowledgeForm: React.FC = () => {
     if (isEdit && knowledgeDetail) {
       if (title === '') setTitle(knowledgeDetail.title || '');
       setKnowledgeType(knowledgeDetail.knowledge_type);
-      setLineTypeId(knowledgeDetail.line_type?.id);
+      setLineTypeId(knowledgeDetail.line_tag?.id);
       setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
       setOperationTagIds(knowledgeDetail.operation_tags?.map((t) => t.id) || []);
       setContent(knowledgeDetail.content || '');
@@ -160,7 +160,7 @@ export const KnowledgeForm: React.FC = () => {
     const requestData: KnowledgeCreateRequest | KnowledgeUpdateRequest = {
       title,
       knowledge_type: knowledgeType,
-      line_type_id: lineTypeId!,
+      line_tag_id: lineTypeId!,
       system_tag_ids: systemTagIds,
       operation_tag_ids: operationTagIds,
       summary,

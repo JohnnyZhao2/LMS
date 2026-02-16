@@ -19,7 +19,7 @@ export interface KnowledgeStats {
  */
 interface GetKnowledgeStatsParams {
   knowledge_type?: KnowledgeType;
-  line_type_id?: number;
+  line_tag_id?: number;
   system_tag_id?: number;
   operation_tag_id?: number;
   search?: string;
@@ -31,14 +31,14 @@ interface GetKnowledgeStatsParams {
  */
 export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search } = params;
+  const { knowledge_type, line_tag_id, system_tag_id, operation_tag_id, search } = params;
 
   return useQuery({
     queryKey: [
       'knowledge-stats',
       currentRole ?? 'UNKNOWN',
       knowledge_type,
-      line_type_id,
+      line_tag_id,
       system_tag_id,
       operation_tag_id,
       search,
@@ -46,7 +46,7 @@ export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
     queryFn: () => {
       const queryParams = {
         ...(knowledge_type && { knowledge_type }),
-        ...(line_type_id && { line_type_id: String(line_type_id) }),
+        ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
         ...(system_tag_id && { system_tag_id: String(system_tag_id) }),
         ...(operation_tag_id && { operation_tag_id: String(operation_tag_id) }),
         ...(search && { search }),

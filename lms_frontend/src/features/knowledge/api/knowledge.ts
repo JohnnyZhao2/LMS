@@ -6,7 +6,7 @@ import type { KnowledgeListItem, KnowledgeDetail, KnowledgeType, PaginatedRespon
 
 interface GetKnowledgeListParams {
   knowledge_type?: KnowledgeType;
-  line_type_id?: number;
+  line_tag_id?: number;
   system_tag_id?: number;
   operation_tag_id?: number;
   search?: string;
@@ -16,14 +16,14 @@ interface GetKnowledgeListParams {
 
 export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
   const currentRole = useCurrentRole();
-  const { knowledge_type, line_type_id, system_tag_id, operation_tag_id, search, page = 1, pageSize = 20 } = params;
+  const { knowledge_type, line_tag_id, system_tag_id, operation_tag_id, search, page = 1, pageSize = 20 } = params;
 
   return useQuery({
     queryKey: [
       'knowledge-list',
       currentRole ?? 'UNKNOWN',
       knowledge_type,
-      line_type_id,
+      line_tag_id,
       system_tag_id,
       operation_tag_id,
       search,
@@ -34,7 +34,7 @@ export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(knowledge_type && { knowledge_type }),
-        ...(line_type_id && { line_type_id: String(line_type_id) }),
+        ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
         ...(system_tag_id && { system_tag_id: String(system_tag_id) }),
         ...(operation_tag_id && { operation_tag_id: String(operation_tag_id) }),
         ...(search && { search }),

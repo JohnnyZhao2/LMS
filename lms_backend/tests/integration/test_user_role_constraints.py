@@ -151,6 +151,28 @@ def test_create_user_with_mentor_role_keeps_student(api_client, admin_user, depa
 
 
 @pytest.mark.django_db
+def test_create_user_allows_duplicate_username(api_client, admin_user, department):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        '/api/users/',
+        {
+            'employee_id': 'NEW_DUP_NAME_001',
+            'username': admin_user.username,
+            'password': 'password123',
+            'department_id': department.id,
+            'role_codes': ['MENTOR'],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    data = unwrap_response_data(response)
+    assert data['username'] == admin_user.username
+    assert data['employee_id'] == 'NEW_DUP_NAME_001'
+
+
+@pytest.mark.django_db
 def test_assign_admin_and_mentor_for_non_superuser_removes_student(api_client, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 

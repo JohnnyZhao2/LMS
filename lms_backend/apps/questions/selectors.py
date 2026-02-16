@@ -4,16 +4,13 @@ Question selectors.
 """
 from typing import Optional
 
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import QuerySet
-
-from apps.knowledge.models import ResourceLineType
 
 from .models import Question
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Question.objects.select_related('created_by', 'updated_by')
+    qs = Question.objects.select_related('created_by', 'updated_by', 'line_tag')
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs
@@ -35,14 +32,8 @@ def apply_question_filters(
             qs = qs.filter(created_by_id=filters['created_by_id'])
         if filters.get('is_current') is not None:
             qs = qs.filter(is_current=filters['is_current'])
-        if filters.get('line_type_id'):
-            question_content_type = ContentType.objects.get_for_model(Question)
-            qs = qs.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=question_content_type,
-                    line_type_id=filters['line_type_id']
-                ).values_list('object_id', flat=True)
-            )
+        if filters.get('line_tag_id') is not None:
+            qs = qs.filter(line_tag_id=filters['line_tag_id'])
     if search:
         qs = qs.filter(content__icontains=search)
     return qs

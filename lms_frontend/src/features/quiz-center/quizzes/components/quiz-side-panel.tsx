@@ -56,7 +56,7 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
 }) => {
   const noopSetQuestionForm: React.Dispatch<React.SetStateAction<Partial<QuestionCreateRequest>>> = () => undefined;
   const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
-    line_type_id: previewQuestion.line_type?.id,
+    line_tag_id: previewQuestion.line_tag?.id,
     question_type: previewQuestion.question_type,
     content: previewQuestion.content,
     options: previewQuestion.options || [],

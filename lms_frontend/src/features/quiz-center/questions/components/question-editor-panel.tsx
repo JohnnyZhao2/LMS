@@ -40,10 +40,10 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
         <Label>题目类别与题型</Label>
         <div className="grid grid-cols-2 gap-2">
           <Select
-            value={questionForm.line_type_id?.toString()}
+            value={questionForm.line_tag_id?.toString()}
             onValueChange={val => {
               if (readOnly) return;
-              setQuestionForm(prev => ({ ...prev, line_type_id: Number(val) }));
+              setQuestionForm(prev => ({ ...prev, line_tag_id: Number(val) }));
             }}
           >
             <SelectTrigger disabled={readOnly}><SelectValue placeholder="选择所属条线" /></SelectTrigger>

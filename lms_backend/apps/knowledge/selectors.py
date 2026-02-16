@@ -4,16 +4,16 @@ Knowledge selectors.
 """
 from typing import Optional
 
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q, QuerySet
 
-from .models import Knowledge, ResourceLineType
+from .models import Knowledge
 
 
 def knowledge_base_queryset(include_deleted: bool = False) -> QuerySet:
     qs = Knowledge.objects.select_related(
         'created_by',
-        'updated_by'
+        'updated_by',
+        'line_tag',
     ).prefetch_related(
         'system_tags',
         'operation_tags'
@@ -36,14 +36,8 @@ def get_knowledge_queryset(
     if filters:
         if filters.get('knowledge_type'):
             qs = qs.filter(knowledge_type=filters['knowledge_type'])
-        if filters.get('line_type_id'):
-            content_type = ContentType.objects.get_for_model(Knowledge)
-            qs = qs.filter(
-                id__in=ResourceLineType.objects.filter(
-                    content_type=content_type,
-                    line_type_id=filters['line_type_id']
-                ).values_list('object_id', flat=True)
-            )
+        if filters.get('line_tag_id') is not None:
+            qs = qs.filter(line_tag_id=filters['line_tag_id'])
         if filters.get('system_tag_id'):
             qs = qs.filter(system_tags__id=filters['system_tag_id'])
         if filters.get('operation_tag_id'):

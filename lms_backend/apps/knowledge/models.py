@@ -2,11 +2,8 @@
 Knowledge models for LMS.
 Implements:
 - Tag: 统一标签模型（条线类型/系统标签/操作标签）
-- ResourceLineType: 资源条线类型关系表（通用多态关系）
 - Knowledge: 知识文档
 """
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -74,41 +71,6 @@ class Tag(TimestampMixin, models.Model):
                 raise ValidationError({
                     'parent': '父标签必须是条线类型'
                 })
-class ResourceLineType(TimestampMixin, models.Model):
-    """
-    资源条线类型关系表（通用多态关系）
-    用于统一管理所有资源（知识、题目等）与条线类型的关系。
-    使用Django ContentType实现多态关系，支持未来扩展。
-    Attributes:
-        content_type: 资源类型（Knowledge, Question等）
-        object_id: 资源ID
-        content_object: 通用外键，指向具体资源
-        line_type: 条线类型Tag
-    """
-    content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
-        verbose_name='资源类型'
-    )
-    object_id = models.PositiveIntegerField(verbose_name='资源ID')
-    content_object = GenericForeignKey('content_type', 'object_id')
-    line_type = models.ForeignKey(
-        Tag,
-        on_delete=models.PROTECT,
-        related_name='resource_line_types',
-        verbose_name='条线类型',
-        limit_choices_to={'tag_type': 'LINE', 'is_active': True}
-    )
-    class Meta:
-        db_table = 'lms_resource_line_type'
-        verbose_name = '资源条线类型'
-        verbose_name_plural = '资源条线类型'
-        unique_together = [['content_type', 'object_id', 'line_type']]
-        indexes = [
-            models.Index(fields=['content_type', 'object_id']),
-        ]
-    def __str__(self):
-        return f"{self.content_object} - {self.line_type.name}"
 class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     知识文档模型
@@ -116,7 +78,7 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
     - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
     - OTHER: 其他类型知识 - 使用富文本自由正文
     标签关系:
-    - line_type: 通过ResourceLineType关联（多态关系，单选）
+    - line_tag: 条线类型（单选）
     - system_tags: 系统标签（多对多，多选）
     - operation_tags: 操作标签（多对多，多选）
     """
@@ -130,32 +92,15 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         choices=KNOWLEDGE_TYPE_CHOICES,
         verbose_name='知识类型'
     )
-    # 条线类型通过ResourceLineType关联（多态关系）
-    # 使用property提供便捷访问
-    @property
-    def line_type(self):
-        """获取条线类型（单选）"""
-        relation = ResourceLineType.objects.filter(
-            content_type=ContentType.objects.get_for_model(self),
-            object_id=self.id
-        ).first()
-        return relation.line_type if relation else None
-    def set_line_type(self, line_type):
-        """设置条线类型"""
-        if line_type and line_type.tag_type != 'LINE':
-            raise ValidationError('只能设置条线类型标签')
-        # 删除旧的关系
-        ResourceLineType.objects.filter(
-            content_type=ContentType.objects.get_for_model(self),
-            object_id=self.id
-        ).delete()
-        # 创建新关系
-        if line_type:
-            ResourceLineType.objects.create(
-                content_type=ContentType.objects.get_for_model(self),
-                object_id=self.id,
-                line_type=line_type
-            )
+    line_tag = models.ForeignKey(
+        Tag,
+        on_delete=models.PROTECT,
+        related_name='knowledge_by_line',
+        null=True,
+        blank=True,
+        verbose_name='条线类型',
+        limit_choices_to={'tag_type': 'LINE', 'is_active': True}
+    )
     # 系统标签（二级分类）- 多对多，多选
     system_tags = models.ManyToManyField(
         Tag,

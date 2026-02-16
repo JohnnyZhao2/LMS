@@ -3,7 +3,6 @@ Question models for LMS.
 Implements:
 - Question: 题目模型
 """
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 
@@ -13,6 +12,7 @@ from core.mixins import (
     TimestampMixin,
     VersionedResourceMixin,
 )
+from apps.knowledge.models import Tag
 
 
 class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
@@ -76,36 +76,15 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         related_name='question_updated',
         verbose_name='最后更新者'
     )
-    # 条线类型通过ResourceLineType关联（多态关系）
-    # 使用property提供便捷访问
-    @property
-    def line_type(self):
-        """获取条线类型（单选）"""
-        from apps.knowledge.models import ResourceLineType
-        relation = ResourceLineType.objects.filter(
-            content_type=ContentType.objects.get_for_model(self),
-            object_id=self.id
-        ).first()
-        return relation.line_type if relation else None
-    def set_line_type(self, line_type):
-        """设置条线类型"""
-        from django.core.exceptions import ValidationError
-
-        from apps.knowledge.models import ResourceLineType
-        if line_type and line_type.tag_type != 'LINE':
-            raise ValidationError('只能设置条线类型标签')
-        # 删除旧的关系
-        ResourceLineType.objects.filter(
-            content_type=ContentType.objects.get_for_model(self),
-            object_id=self.id
-        ).delete()
-        # 创建新关系
-        if line_type:
-            ResourceLineType.objects.create(
-                content_type=ContentType.objects.get_for_model(self),
-                object_id=self.id,
-                line_type=line_type
-            )
+    line_tag = models.ForeignKey(
+        Tag,
+        on_delete=models.PROTECT,
+        related_name='question_by_line',
+        null=True,
+        blank=True,
+        verbose_name='条线类型',
+        limit_choices_to={'tag_type': 'LINE', 'is_active': True}
+    )
     class Meta:
         db_table = 'lms_question'
         verbose_name = '题目'

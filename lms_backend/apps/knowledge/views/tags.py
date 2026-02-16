@@ -4,12 +4,11 @@ Implements:
 - Tag CRUD
 - Tag listing with cascade filtering
 """
-from django.contrib.contenttypes.models import ContentType
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.knowledge.models import Knowledge, ResourceLineType, Tag
+from apps.knowledge.models import Knowledge, Tag
 from apps.knowledge.serializers import TagSerializer
 from apps.users.permissions import get_current_role
 from core.exceptions import BusinessError, ErrorCodes
@@ -28,12 +27,12 @@ class TagListView(APIView):
         summary='获取标签列表',
         description='''获取标签列表，支持按类型筛选和搜索。
 级联筛选：
-- 当 tag_type=SYSTEM 且提供 line_type_id 时，返回该条线下知识使用的系统标签
-- 当 tag_type=OPERATION 且提供 line_type_id 时，返回该条线下知识使用的操作标签
+- 当 tag_type=SYSTEM 且提供 line_tag_id 时，返回该条线下知识使用的系统标签
+- 当 tag_type=OPERATION 且提供 line_tag_id 时，返回该条线下知识使用的操作标签
 ''',
         parameters=[
             OpenApiParameter(name='tag_type', type=str, description='标签类型（LINE/SYSTEM/OPERATION）'),
-            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID（用于级联筛选系统/操作标签）'),
+            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID（用于级联筛选系统/操作标签）'),
             OpenApiParameter(name='search', type=str, description='搜索关键词'),
             OpenApiParameter(name='limit', type=int, description='返回数量限制（默认50）'),
             OpenApiParameter(name='active_only', type=bool, description='只返回启用的标签（默认true）'),
@@ -43,9 +42,9 @@ class TagListView(APIView):
     )
     def get(self, request):
         tag_type = request.query_params.get('tag_type', '').strip()
-        line_type_id = parse_int_query_param(
+        line_tag_id = parse_int_query_param(
             request=request,
-            name='line_type_id',
+            name='line_tag_id',
             minimum=1,
         )
         search = request.query_params.get('search', '').strip()
@@ -62,14 +61,10 @@ class TagListView(APIView):
             default=True,
         )
         # 级联筛选
-        if line_type_id and tag_type in ['SYSTEM', 'OPERATION']:
-            knowledge_ids = ResourceLineType.objects.filter(
-                content_type=ContentType.objects.get_for_model(Knowledge),
-                line_type_id=line_type_id
-            ).values_list('object_id', flat=True)
+        if line_tag_id and tag_type in ['SYSTEM', 'OPERATION']:
             knowledge_qs = Knowledge.objects.filter(
                 is_deleted=False,
-                id__in=knowledge_ids
+                line_tag_id=line_tag_id,
             )
             if tag_type == 'SYSTEM':
                 tag_ids = knowledge_qs.filter(

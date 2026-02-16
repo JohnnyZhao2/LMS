@@ -123,15 +123,15 @@ class QuestionService(BaseService):
         # 处理版本号
         self._prepare_version_data(data)
         # 提取条线类型数据
-        line_type_id = data.pop('line_type_id', None)
+        line_tag_id = data.pop('line_tag_id', None)
         # 3. 创建题目
         question = Question.objects.create(**data)
         Question.objects.filter(
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
         # 4. 设置条线类型
-        if line_type_id:
-            self._set_line_type(question, line_type_id)
+        if line_tag_id is not None:
+            self._set_line_tag(question, line_tag_id)
 
         return question
 
@@ -163,7 +163,7 @@ class QuestionService(BaseService):
         }
         self._validate_question_data(merged_data)
         # 提取条线类型数据
-        line_type_id = data.pop('line_type_id', None)
+        line_tag_id = data.pop('line_tag_id', None)
         # 更新题目
         data['updated_by'] = self.user
         if data:
@@ -171,8 +171,8 @@ class QuestionService(BaseService):
                 setattr(question, key, value)
             question.save(update_fields=list(data.keys()))
         # 更新条线类型
-        if line_type_id is not None:
-            self._set_line_type(question, line_type_id)
+        if line_tag_id is not None:
+            self._set_line_tag(question, line_tag_id)
         return question
 
     @transaction.atomic
@@ -263,26 +263,27 @@ class QuestionService(BaseService):
                     message='简答题答案必须是字符串'
                 )
 
-    def _set_line_type(self, question: Question, line_type_id: int) -> None:
+    def _set_line_tag(self, question: Question, line_tag_id: int) -> None:
         """
         设置条线类型
         Args:
             question: 题目对象
-            line_type_id: 条线类型ID
+            line_tag_id: 条线标签ID
         Raises:
             BusinessError: 如果条线类型无效
         """
-        line_type = Tag.objects.filter(
-            id=line_type_id,
+        line_tag = Tag.objects.filter(
+            id=line_tag_id,
             tag_type='LINE',
             is_active=True
         ).first()
-        if not line_type:
+        if not line_tag:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的条线类型ID'
+                message='无效的条线标签ID'
             )
-        question.set_line_type(line_type)
+        question.line_tag = line_tag
+        question.save(update_fields=['line_tag'])
 
     def _prepare_version_data(self, data: dict) -> None:
         """
@@ -309,7 +310,7 @@ class QuestionService(BaseService):
         )
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
         # 提取条线类型数据
-        line_type_id = data.pop('line_type_id', None)
+        line_tag_id = data.pop('line_tag_id', None)
         # 准备新版本数据：自动复制所有内容字段
         new_question_data = {
             'resource_uuid': source.resource_uuid,
@@ -323,10 +324,11 @@ class QuestionService(BaseService):
             new_question_data[field] = data.get(field, getattr(source, field, None))
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型
-        if line_type_id:
-            self._set_line_type(new_question, line_type_id)
-        elif source.line_type:
-            new_question.set_line_type(source.line_type)
+        if line_tag_id is not None:
+            self._set_line_tag(new_question, line_tag_id)
+        elif source.line_tag:
+            new_question.line_tag = source.line_tag
+            new_question.save(update_fields=['line_tag'])
         # 取消其他版本的 is_current 标志
         Question.objects.filter(
             resource_uuid=source.resource_uuid

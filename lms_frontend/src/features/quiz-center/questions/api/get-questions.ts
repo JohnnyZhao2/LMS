@@ -26,7 +26,7 @@ export const useQuestions = (params: GetQuestionsParams = {}) => {
         ...buildPaginationParams(page, pageSize),
         ...(questionType && { question_type: questionType }),
         ...(search && { search }),
-        ...(lineTypeId && { line_type_id: String(lineTypeId) }),
+        ...(lineTypeId && { line_tag_id: String(lineTypeId) }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<Question>>(`/questions/${queryString}`);

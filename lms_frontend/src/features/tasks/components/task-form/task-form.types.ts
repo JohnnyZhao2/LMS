@@ -28,7 +28,7 @@ export const mapKnowledgeToResource = (item: KnowledgeListItem): ResourceItem =>
   resource_uuid: item.resource_uuid,
   is_current: item.is_current,
   title: item.title,
-  category: item.line_type?.name || '未分类',
+  category: item.line_tag?.name || '未分类',
   resourceType: 'DOCUMENT',
 });
 

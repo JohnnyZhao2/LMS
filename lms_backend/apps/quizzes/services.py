@@ -288,11 +288,11 @@ class QuizService(BaseService):
         创建题目并添加到试卷
         Args:
             quiz: 试卷对象
-            question_data: 题目数据字典（会被修改，line_type_id 会被弹出）
+            question_data: 题目数据字典（会被修改，line_tag_id 会被弹出）
         Returns:
             创建的题目对象
         """
-        line_type_id = question_data.pop('line_type_id', None)
+        line_tag_id = question_data.pop('line_tag_id', None)
         # 准备版本数据
         self._prepare_question_version_data(question_data)
         # 准备题目属性
@@ -307,8 +307,8 @@ class QuizService(BaseService):
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
         # 设置条线类型
-        if line_type_id:
-            self._set_question_line_type(question, line_type_id)
+        if line_tag_id is not None:
+            self._set_question_line_tag(question, line_tag_id)
         # 添加到试卷
         self._add_question(
             quiz_id=quiz.id,
@@ -336,26 +336,27 @@ class QuizService(BaseService):
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
 
-    def _set_question_line_type(self, question: Question, line_type_id: int) -> None:
+    def _set_question_line_tag(self, question: Question, line_tag_id: int) -> None:
         """
         设置题目的条线类型
         Args:
             question: 题目对象
-            line_type_id: 条线类型ID
+            line_tag_id: 条线标签ID
         Raises:
             BusinessError: 如果条线类型无效
         """
-        line_type = Tag.objects.filter(
-            id=line_type_id,
+        line_tag = Tag.objects.filter(
+            id=line_tag_id,
             tag_type='LINE',
             is_active=True
         ).first()
-        if not line_type:
+        if not line_tag:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的条线类型ID'
+                message='无效的条线标签ID'
             )
-        question.set_line_type(line_type)
+        question.line_tag = line_tag
+        question.save(update_fields=['line_tag'])
 
     def _validate_quiz_data(self, data: dict) -> None:
         """验证试卷数据"""

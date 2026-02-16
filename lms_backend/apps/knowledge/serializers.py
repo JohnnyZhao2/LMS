@@ -29,7 +29,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     Returns a summary of knowledge documents for list display.
     """
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
-    line_type = TagSimpleSerializer(read_only=True)
+    line_tag = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
@@ -42,7 +42,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title', 'knowledge_type', 'knowledge_type_display',
             'is_current',
-            'line_type', 'system_tags', 'operation_tags',
+            'line_tag', 'system_tags', 'operation_tags',
             'view_count', 'summary', 'content_preview', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
@@ -52,7 +52,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     Returns full knowledge document details.
     """
     knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
-    line_type = TagSimpleSerializer(read_only=True)
+    line_tag = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
@@ -64,7 +64,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title', 'knowledge_type', 'knowledge_type_display',
             'is_current',
-            'line_type', 'system_tags', 'operation_tags',
+            'line_tag', 'system_tags', 'operation_tags',
             # 应急类知识结构化字段
             'fault_scenario', 'trigger_process', 'solution',
             'verification_plan', 'recovery_plan',
@@ -82,7 +82,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
     Serializer for creating knowledge documents.
     """
     # 前端传入标签ID
-    line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     system_tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -99,7 +99,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title', 'knowledge_type',
-            'line_type_id',
+            'line_tag_id',
             'system_tag_ids', 'operation_tag_ids',
             # 应急类知识的结构化字段
             'fault_scenario', 'trigger_process', 'solution',
@@ -117,9 +117,9 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         """
         knowledge_type = attrs.get('knowledge_type')
         # 验证条线类型
-        if not attrs.get('line_type_id'):
+        if attrs.get('line_tag_id') is None:
             raise serializers.ValidationError({
-                'line_type_id': '必须提供条线类型ID'
+                'line_tag_id': '必须提供条线标签ID'
             })
         if knowledge_type == 'EMERGENCY':
             # 应急类知识：至少填写一个结构化字段
@@ -145,7 +145,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating knowledge documents.
     """
-    line_type_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     system_tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -160,7 +160,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title', 'knowledge_type',
-            'line_type_id',
+            'line_tag_id',
             'system_tag_ids', 'operation_tag_ids',
             # 应急类知识的结构化字段
             'fault_scenario', 'trigger_process', 'solution',

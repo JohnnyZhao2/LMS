@@ -216,7 +216,7 @@ export const QuizForm: React.FC = () => {
     try {
       const res = await apiClient.get<Question>(`/questions/${item.id}/`);
       setQuestionForm({
-        line_type_id: res.line_type?.id,
+        line_tag_id: res.line_tag?.id,
         question_type: res.question_type,
         content: res.content,
         options: res.options || [],
@@ -234,7 +234,7 @@ export const QuizForm: React.FC = () => {
 
   const handleCreateNew = () => {
     setQuestionForm({
-      line_type_id: Number(filterLineTypeId) || undefined,
+      line_tag_id: Number(filterLineTypeId) || undefined,
       question_type: 'SINGLE_CHOICE',
       content: '',
       options: [{ key: 'A', value: '' }, { key: 'B', value: '' }],
@@ -254,7 +254,7 @@ export const QuizForm: React.FC = () => {
   };
 
   const handleSaveQuestion = async () => {
-    if (!questionForm.line_type_id) return toast.error('请选择条线类型');
+    if (!questionForm.line_tag_id) return toast.error('请选择条线类型');
     if (!questionForm.content?.trim()) return toast.error('请输入内容');
     if (!questionForm.answer) return toast.error('请设置答案');
 

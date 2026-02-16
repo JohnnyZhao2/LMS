@@ -91,7 +91,7 @@ export interface KnowledgeListItem {
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
   is_current: boolean;
-  line_type?: SimpleTag | null;
+  line_tag?: SimpleTag | null;
   /** 知识概要 */
   summary?: string;
   content_preview?: string;
@@ -121,7 +121,7 @@ export interface KnowledgeDetail {
   knowledge_type: KnowledgeType;
   knowledge_type_display: string;
   is_current: boolean;
-  line_type?: SimpleTag | null;
+  line_tag?: SimpleTag | null;
   // 应急类知识结构化字段
   fault_scenario?: string;
   trigger_process?: string;
@@ -156,8 +156,8 @@ export interface KnowledgeCreateRequest {
   title: string;
   knowledge_type: KnowledgeType;
   // 条线类型（使用 ID 或名称）
-  line_type_id?: number;
-  line_type_name?: string;
+  line_tag_id?: number;
+  line_tag_name?: string;
   // 应急类知识结构化字段
   fault_scenario?: string;
   trigger_process?: string;
@@ -181,7 +181,7 @@ export interface KnowledgeCreateRequest {
 export interface KnowledgeUpdateRequest {
   title?: string;
   knowledge_type?: KnowledgeType;
-  line_type_id?: number;
+  line_tag_id?: number;
   fault_scenario?: string;
   trigger_process?: string;
   solution?: string;

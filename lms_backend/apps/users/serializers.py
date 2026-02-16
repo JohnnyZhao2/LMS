@@ -36,13 +36,7 @@ class UserValidationMixin:
         """Validate username (display name)."""
         if not value or not value.strip():
             raise serializers.ValidationError('姓名不能为空')
-        normalized = value.strip()
-        queryset = User.objects.filter(username=normalized)
-        if instance:
-            queryset = queryset.exclude(pk=instance.pk)
-        if queryset.exists():
-            raise serializers.ValidationError('该姓名已存在')
-        return normalized
+        return value.strip()
     
     def validate_employee_id_field(self, value, instance=None):
         """Validate employee_id is unique."""

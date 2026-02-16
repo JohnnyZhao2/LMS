@@ -39,7 +39,7 @@ class QuestionListCreateView(BaseAPIView):
             OpenApiParameter(name='tag', type=str, description='标签'),
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
-            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
@@ -62,13 +62,13 @@ class QuestionListCreateView(BaseAPIView):
         if created_by_id is not None:
             filters['created_by_id'] = created_by_id
 
-        line_type_id = parse_int_query_param(
+        line_tag_id = parse_int_query_param(
             request=request,
-            name='line_type_id',
+            name='line_tag_id',
             minimum=1,
         )
-        if line_type_id is not None:
-            filters['line_type_id'] = line_type_id
+        if line_tag_id is not None:
+            filters['line_tag_id'] = line_tag_id
 
         search = request.query_params.get('search')
 

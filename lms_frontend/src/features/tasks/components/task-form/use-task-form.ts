@@ -247,7 +247,7 @@ export const useTaskForm = () => {
           id: latestResource.id,
           is_current: latestResource.is_current,
           title: latestResource.title,
-          category: latestResource.line_type?.name || '未分类',
+          category: latestResource.line_tag?.name || '未分类',
         };
       }));
     } else {

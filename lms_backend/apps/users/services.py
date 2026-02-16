@@ -3,7 +3,6 @@ User services for LMS.
 """
 from typing import List, Optional
 
-from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import Q
 
@@ -91,7 +90,7 @@ class UserManagementService(BaseService):
         清理用户的全部关联数据。
         注意：这里使用硬删除，不保留向后兼容。
         """
-        from apps.knowledge.models import Knowledge, ResourceLineType
+        from apps.knowledge.models import Knowledge
         from apps.questions.models import Question
         from apps.quizzes.models import Quiz, QuizQuestion
         from apps.spot_checks.models import SpotCheck
@@ -130,22 +129,7 @@ class UserManagementService(BaseService):
         if created_knowledge_ids:
             TaskKnowledge.objects.filter(knowledge_id__in=created_knowledge_ids).delete()
 
-        # 3) 清理知识/题目的条线关联（Generic 关系无法自动级联）
-        if created_knowledge_ids:
-            knowledge_content_type = ContentType.objects.get_for_model(Knowledge)
-            ResourceLineType.objects.filter(
-                content_type=knowledge_content_type,
-                object_id__in=created_knowledge_ids
-            ).delete()
-
-        if created_question_ids:
-            question_content_type = ContentType.objects.get_for_model(Question)
-            ResourceLineType.objects.filter(
-                content_type=question_content_type,
-                object_id__in=created_question_ids
-            ).delete()
-
-        # 4) 删除该用户创建的资源（硬删除）
+        # 3) 删除该用户创建的资源（硬删除）
         if created_task_ids:
             Task.objects.filter(id__in=created_task_ids).delete()
         if created_quiz_ids:

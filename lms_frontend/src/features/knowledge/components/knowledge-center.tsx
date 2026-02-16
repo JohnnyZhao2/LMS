@@ -60,7 +60,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     const { data, isLoading, refetch } = useKnowledgeList({
         search: search || undefined,
-        line_type_id: selectedLineTypeId,
+        line_tag_id: selectedLineTypeId,
         system_tag_id: selectedSystemTagIds[0],
         page,
         pageSize,

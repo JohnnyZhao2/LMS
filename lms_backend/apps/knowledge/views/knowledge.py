@@ -47,13 +47,13 @@ def _build_knowledge_filters(request):
     if knowledge_type:
         filters['knowledge_type'] = knowledge_type
 
-    line_type_id = parse_int_query_param(
+    line_tag_id = parse_int_query_param(
         request=request,
-        name='line_type_id',
+        name='line_tag_id',
         minimum=1,
     )
-    if line_type_id is not None:
-        filters['line_type_id'] = line_type_id
+    if line_tag_id is not None:
+        filters['line_tag_id'] = line_tag_id
 
     system_tag_id = parse_int_query_param(
         request=request,
@@ -124,7 +124,7 @@ class KnowledgeListCreateView(BaseAPIView):
 ''',
         parameters=[
             OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
-            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
@@ -154,20 +154,20 @@ class KnowledgeListCreateView(BaseAPIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员或室经理可以创建知识文档'
             )
-        # 2. 反序列化输入
+        # 3. 反序列化输入
         serializer = KnowledgeCreateSerializer(
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        # 3. 调用 Service
+        # 4. 调用 Service
         try:
             knowledge = self.service.create(
                 data=serializer.validated_data
             )
         except BusinessError as e:
             return _handle_business_error(e)
-        # 4. 序列化输出
+        # 5. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return created_response(response_serializer.data)
 class KnowledgeDetailView(BaseAPIView):
@@ -214,13 +214,19 @@ class KnowledgeDetailView(BaseAPIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有管理员或室经理可以更新知识文档'
             )
-        # 2. 反序列化输入
+        # 2. 获取对象（用于序列化校验的 instance）
+        try:
+            knowledge = self.service.get_by_id(pk)
+        except BusinessError as e:
+            return _handle_business_error(e)
+        # 3. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
+            instance=knowledge,
             data=request.data, partial=True,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        # 3. 调用 Service
+        # 4. 调用 Service
         try:
             knowledge = self.service.update(
                 pk=pk,
@@ -264,7 +270,7 @@ class KnowledgeStatsView(BaseAPIView):
         description='获取知识文档的统计数据',
         parameters=[
             OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
-            OpenApiParameter(name='line_type_id', type=int, description='条线类型ID'),
+            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),

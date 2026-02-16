@@ -1,10 +1,9 @@
 import pytest
-from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.activity_logs.models import ContentLog, OperationLog, UserLog
-from apps.knowledge.models import Knowledge, ResourceLineType, Tag
+from apps.knowledge.models import Knowledge, Tag
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
 from apps.spot_checks.models import SpotCheck
@@ -93,11 +92,7 @@ def sample_question(mentor_user, line_tag):
         score=1,
         created_by=mentor_user,
         updated_by=mentor_user,
-    )
-    ResourceLineType.objects.create(
-        content_type=ContentType.objects.get_for_model(Question),
-        object_id=question.id,
-        line_type=line_tag,
+        line_tag=line_tag,
     )
     return question
 
@@ -126,7 +121,7 @@ def sample_exam_quiz(mentor_user):
 
 @pytest.fixture
 def sample_knowledge(mentor_user, line_tag):
-    knowledge = Knowledge.objects.create(
+    return Knowledge.objects.create(
         title='契约测试知识',
         knowledge_type='OTHER',
         content='契约测试正文内容',
@@ -134,13 +129,8 @@ def sample_knowledge(mentor_user, line_tag):
         created_by=mentor_user,
         updated_by=mentor_user,
         is_current=True,
+        line_tag=line_tag,
     )
-    ResourceLineType.objects.create(
-        content_type=ContentType.objects.get_for_model(Knowledge),
-        object_id=knowledge.id,
-        line_type=line_tag,
-    )
-    return knowledge
 
 
 @pytest.fixture
@@ -229,7 +219,7 @@ class TestQuestionApiContracts:
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/questions/?page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert 'data' in response.data
@@ -245,13 +235,13 @@ class TestQuestionApiContracts:
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'created_by' in response.data['message']
 
-    def test_question_list_rejects_invalid_line_type_id(self, api_client, mentor_user):
+    def test_question_list_rejects_invalid_line_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?line_type_id=0')
+        response = api_client.get('/api/questions/?line_tag_id=0')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'line_type_id' in response.data['message']
+        assert 'line_tag_id' in response.data['message']
 
 
 @pytest.mark.django_db
@@ -266,7 +256,7 @@ class TestAuthApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert 'data' in response.data
@@ -301,7 +291,7 @@ class TestAuthApiContracts:
             format='json',
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert 'access_token' in response.data['data']
@@ -311,7 +301,7 @@ class TestAuthApiContracts:
         api_client.force_authenticate(user=student_user)
         response = api_client.get('/api/auth/me/')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['user']['id'] == student_user.id
@@ -323,7 +313,7 @@ class TestQuizApiContracts:
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/quizzes/?page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert 'data' in response.data
@@ -346,7 +336,7 @@ class TestTagApiContracts:
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/knowledge/tags/?tag_type=LINE')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert isinstance(response.data['data'], list)
@@ -376,7 +366,7 @@ class TestKnowledgeApiContracts:
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/knowledge/?page=1&page_size=10')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert 'data' in response.data
@@ -384,19 +374,19 @@ class TestKnowledgeApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_knowledge.id in result_ids
 
-    def test_knowledge_list_rejects_invalid_line_type_id(self, api_client, mentor_user):
+    def test_knowledge_list_rejects_invalid_line_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/?line_type_id=bad')
+        response = api_client.get('/api/knowledge/?line_tag_id=bad')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'line_type_id' in response.data['message']
+        assert 'line_tag_id' in response.data['message']
 
     def test_knowledge_detail_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 200
+        assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['id'] == sample_knowledge.id
@@ -409,6 +399,105 @@ class TestKnowledgeApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['view_count'] >= 1
+
+    def test_knowledge_patch_only_system_tags_inherits_unprovided_tags(
+        self,
+        api_client,
+        admin_user,
+        sample_knowledge,
+        line_tag
+    ):
+        source_system_tag = Tag.objects.create(
+            name='契约测试系统标签源',
+            tag_type='SYSTEM',
+            parent=line_tag,
+            sort_order=1,
+            is_active=True,
+        )
+        target_system_tag = Tag.objects.create(
+            name='契约测试系统标签新',
+            tag_type='SYSTEM',
+            parent=line_tag,
+            sort_order=2,
+            is_active=True,
+        )
+        source_operation_tag = Tag.objects.create(
+            name='契约测试操作标签源',
+            tag_type='OPERATION',
+            sort_order=1,
+            is_active=True,
+        )
+        sample_knowledge.system_tags.set([source_system_tag.id])
+        sample_knowledge.operation_tags.set([source_operation_tag.id])
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/knowledge/{sample_knowledge.id}/',
+            {'system_tag_ids': [target_system_tag.id]},
+            format='json'
+        )
+
+        assert response.status_code == 200, response.data
+        data = response.data['data']
+        assert data['line_tag']['id'] == sample_knowledge.line_tag_id
+        assert {item['id'] for item in data['system_tags']} == {target_system_tag.id}
+        assert {item['id'] for item in data['operation_tags']} == {source_operation_tag.id}
+
+        sample_knowledge.refresh_from_db()
+        assert sample_knowledge.is_current is False
+        assert Knowledge.objects.filter(
+            resource_uuid=sample_knowledge.resource_uuid,
+            is_current=True
+        ).count() == 1
+
+    def test_knowledge_patch_only_operation_tags_inherits_unprovided_tags(
+        self,
+        api_client,
+        admin_user,
+        sample_knowledge,
+        line_tag
+    ):
+        source_system_tag = Tag.objects.create(
+            name='契约测试系统标签保留',
+            tag_type='SYSTEM',
+            parent=line_tag,
+            sort_order=1,
+            is_active=True,
+        )
+        source_operation_tag = Tag.objects.create(
+            name='契约测试操作标签源2',
+            tag_type='OPERATION',
+            sort_order=1,
+            is_active=True,
+        )
+        target_operation_tag = Tag.objects.create(
+            name='契约测试操作标签新2',
+            tag_type='OPERATION',
+            sort_order=2,
+            is_active=True,
+        )
+        sample_knowledge.system_tags.set([source_system_tag.id])
+        sample_knowledge.operation_tags.set([source_operation_tag.id])
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/knowledge/{sample_knowledge.id}/',
+            {'operation_tag_ids': [target_operation_tag.id]},
+            format='json'
+        )
+
+        assert response.status_code == 200, response.data
+        data = response.data['data']
+        assert data['line_tag']['id'] == sample_knowledge.line_tag_id
+        assert {item['id'] for item in data['system_tags']} == {source_system_tag.id}
+        assert {item['id'] for item in data['operation_tags']} == {target_operation_tag.id}
+
+        sample_knowledge.refresh_from_db()
+        assert sample_knowledge.is_current is False
+        assert Knowledge.objects.filter(
+            resource_uuid=sample_knowledge.resource_uuid,
+            is_current=True
+        ).count() == 1
 
 
 @pytest.mark.django_db
