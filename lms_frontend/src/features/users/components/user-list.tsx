@@ -360,6 +360,7 @@ export const UserList: React.FC = () => {
                 pageIndex: pagination.pageIndex,
                 pageSize: pagination.pageSize,
                 pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+                totalCount: filteredUsers.length,
                 onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
                 onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
               }}

@@ -91,6 +91,7 @@ export function DataTable<TData, TValue>({
   })
 
   const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
+  const resolvedTotalCount = pagination?.totalCount ?? data.length
 
   return (
     <div
@@ -191,7 +192,7 @@ export function DataTable<TData, TValue>({
         <div className="pt-6 mt-4 border-t border-border bg-background sticky bottom-0 z-10">
           <Pagination
             current={pagination.pageIndex + 1}
-            total={pagination.totalCount ?? (pagination.pageCount * pagination.pageSize)}
+            total={resolvedTotalCount}
             pageSize={pagination.pageSize}
             onChange={(page) => pagination.onPageChange(page - 1)}
             showSizeChanger
