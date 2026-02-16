@@ -450,10 +450,10 @@ const UserFormContent: React.FC<{
                           "absolute -right-3 -bottom-5 transition-all duration-700",
                           active ? cn("opacity-[0.2] scale-110", colorConfig.textClass) : "opacity-[0.3] scale-100 text-slate-200"
                         )}>
-                          {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={1} /> :
-                            role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={1} /> :
-                              role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={1} /> :
-                                <User className="w-24 h-24" strokeWidth={1} />}
+                          {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
+                            role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
+                              role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
+                                <User className="w-24 h-24" strokeWidth={0.5} />}
                         </div>
 
                         <div className="relative z-10 flex flex-col gap-1">
