@@ -107,7 +107,7 @@ export const StudentDashboard: React.FC = () => {
               {!selectedTask ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
                   <div className="p-4 rounded-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative group/icon">
-                    <TrendingUp className="w-8 h-8 opacity-20 group-hover/icon:scale-110 transition-transform duration-500" strokeWidth={1.5} />
+                    <TrendingUp className="w-8 h-8 opacity-20 group-hover/icon:scale-110 transition-transform duration-500" strokeWidth={0.5} />
                   </div>
                   <p className="text-[10px] font-black tracking-[0.25em] text-slate-400/40">选择任务查看同伴进度</p>
                 </div>
@@ -179,7 +179,7 @@ export const StudentDashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300/40 gap-3">
-                  <TrendingUp className="w-6 h-6 opacity-20" strokeWidth={1} />
+                  <TrendingUp className="w-6 h-6 opacity-20" strokeWidth={0.5} />
                   <p className="text-[10px] font-black tracking-widest">暂无参与者</p>
                 </div>
               )}
