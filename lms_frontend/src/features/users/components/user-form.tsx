@@ -39,6 +39,8 @@ import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/c
 interface UserFormProps {
   open: boolean;
   userId?: number;
+  initialDepartmentId?: number;
+  initialMentorId?: number;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -72,7 +74,14 @@ const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean
 /**
  * 用户表单组件 — 外层壳，负责数据获取与 Dialog 控制
  */
-export const UserForm: React.FC<UserFormProps> = ({ open, userId, onClose, onSuccess }) => {
+export const UserForm: React.FC<UserFormProps> = ({
+  open,
+  userId,
+  initialDepartmentId,
+  initialMentorId,
+  onClose,
+  onSuccess,
+}) => {
   const { data: userDetail } = useUserDetail(userId || 0);
   const { data: mentors = [] } = useMentors();
   const { data: departments = [] } = useDepartments();
@@ -84,13 +93,15 @@ export const UserForm: React.FC<UserFormProps> = ({ open, userId, onClose, onSuc
       <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-lg border border-border h-[85vh] flex flex-col bg-background">
         {open && (
           <UserFormContent
-            key={`${userId ?? 'new'}-${userDetail?.id ?? 0}`}
+            key={`${userId ?? 'new'}-${userDetail?.id ?? 0}-${initialDepartmentId ?? 'none'}-${initialMentorId ?? 'none'}`}
             isEdit={isEdit}
             userId={userId}
             userDetail={userDetail}
             mentors={mentors}
             departments={departments}
             roles={roles}
+            initialDepartmentId={initialDepartmentId}
+            initialMentorId={initialMentorId}
             onClose={onClose}
             onSuccess={onSuccess}
           />
@@ -108,9 +119,22 @@ const UserFormContent: React.FC<{
   mentors: Mentor[];
   departments: Department[];
   roles: Role[];
+  initialDepartmentId?: number;
+  initialMentorId?: number;
   onClose: () => void;
   onSuccess?: () => void;
-}> = ({ isEdit, userId, userDetail, mentors = [], departments = [], roles = [], onClose, onSuccess }) => {
+}> = ({
+  isEdit,
+  userId,
+  userDetail,
+  mentors = [],
+  departments = [],
+  roles = [],
+  initialDepartmentId,
+  initialMentorId,
+  onClose,
+  onSuccess,
+}) => {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const assignRoles = useAssignRoles();
@@ -122,7 +146,7 @@ const UserFormContent: React.FC<{
       ? userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode)
       : [],
   );
-  const [initialMentorId] = useState<number | null>(() =>
+  const [initialAssignedMentorId] = useState<number | null>(() =>
     isEdit && userDetail ? (userDetail.mentor?.id || null) : null,
   );
 
@@ -134,10 +158,17 @@ const UserFormContent: React.FC<{
         password: '',
         department_id: userDetail.department?.id,
         role_codes: initialRoleCodes,
-        mentor_id: initialMentorId,
+        mentor_id: initialAssignedMentorId,
       };
     }
-    return { username: '', employee_id: '', password: '', department_id: undefined, role_codes: [], mentor_id: null };
+    return {
+      username: '',
+      employee_id: '',
+      password: '',
+      department_id: initialDepartmentId,
+      role_codes: [],
+      mentor_id: initialMentorId ?? null,
+    };
   });
 
   const [mentorTouched, setMentorTouched] = useState(false);
@@ -176,7 +207,7 @@ const UserFormContent: React.FC<{
           },
         });
 
-        if (mentorTouched && formData.mentor_id !== initialMentorId) {
+        if (mentorTouched && formData.mentor_id !== initialAssignedMentorId) {
           await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
         }
         toast.success("账号信息已更新");

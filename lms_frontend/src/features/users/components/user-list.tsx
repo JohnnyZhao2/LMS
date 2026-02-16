@@ -76,6 +76,12 @@ export const UserList: React.FC = () => {
   // API Hooks
   const { data: departments = [] } = useDepartments()
   const { data: mentors = [] } = useMentors()
+  const createInitialDepartmentId = viewMode === 'department' && selectedHierarchyId !== 'all'
+    ? selectedHierarchyId as number
+    : undefined
+  const createInitialMentorId = viewMode === 'mentorship' && selectedHierarchyId !== 'all'
+    ? selectedHierarchyId as number
+    : undefined
   const departmentFilter = viewMode === 'department' && selectedHierarchyId !== 'all'
     ? selectedHierarchyId as number
     : undefined
@@ -371,6 +377,8 @@ export const UserList: React.FC = () => {
       <UserForm
         open={formModalOpen}
         userId={editingUserId}
+        initialDepartmentId={editingUserId ? undefined : createInitialDepartmentId}
+        initialMentorId={editingUserId ? undefined : createInitialMentorId}
         onClose={() => {
           setFormModalOpen(false)
           setEditingUserId(undefined)
