@@ -33,7 +33,7 @@ class Command(BaseCommand):
     def create_roles(self):
         """创建角色"""
         roles = [
-            {'code': 'STUDENT', 'name': '学员', 'description': '系统默认角色，所有用户都有'},
+            {'code': 'STUDENT', 'name': '学员', 'description': '系统默认学习角色（与管理角色互斥）'},
             {'code': 'MENTOR', 'name': '导师', 'description': '可以指导学员'},
             {'code': 'DEPT_MANAGER', 'name': '室经理', 'description': '管理本室成员'},
             {'code': 'TEAM_MANAGER', 'name': '团队经理', 'description': '管理整个团队'},

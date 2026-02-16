@@ -183,7 +183,7 @@ class UserManagementService(BaseService):
         Raises:
             BusinessError: If user not found or role constraints violated
         Properties:
-        - Property 9: 学员角色不可移除
+        - Property 9: 管理角色与学员角色互斥（ADMIN/DEPT_MANAGER/TEAM_MANAGER）
         - 每个部门只能有一个室经理
         - 全局只能有一个团队经理
         """

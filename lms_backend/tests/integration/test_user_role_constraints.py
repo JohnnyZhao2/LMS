@@ -107,6 +107,50 @@ def test_assign_admin_role_for_non_superuser_allowed(api_client, admin_user, nor
 
 
 @pytest.mark.django_db
+def test_create_user_with_admin_role_does_not_keep_student(api_client, admin_user, department):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        '/api/users/',
+        {
+            'employee_id': 'NEW_ADMIN_001',
+            'username': '新管理员用户',
+            'password': 'password123',
+            'department_id': department.id,
+            'role_codes': ['ADMIN'],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
+    assert role_codes == {'ADMIN'}
+
+
+@pytest.mark.django_db
+def test_create_user_with_mentor_role_keeps_student(api_client, admin_user, department):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        '/api/users/',
+        {
+            'employee_id': 'NEW_MENTOR_001',
+            'username': '新导师用户',
+            'password': 'password123',
+            'department_id': department.id,
+            'role_codes': ['MENTOR'],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 201
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
+    assert role_codes == {'MENTOR', 'STUDENT'}
+
+
+@pytest.mark.django_db
 def test_assign_admin_and_mentor_for_non_superuser_removes_student(api_client, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
