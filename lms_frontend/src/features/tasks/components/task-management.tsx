@@ -10,7 +10,6 @@ import {
     Timer,
     Layout,
     Pencil,
-    RefreshCw,
     BarChart3,
     FileCheck,
 } from "lucide-react"
@@ -265,14 +264,6 @@ export const TaskManagement: React.FC = () => {
                     icon={<FileText />}
                     extra={
                         <div className="flex items-center gap-3">
-                            <Button
-                                variant="outline"
-                                className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm soft-press"
-                                onClick={() => refetch()}
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                刷新
-                            </Button>
                             <Button
                                 onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                                 className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 shadow-sm soft-press"

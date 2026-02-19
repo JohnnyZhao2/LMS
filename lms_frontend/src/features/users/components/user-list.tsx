@@ -13,7 +13,6 @@ import {
   Ban,
   CheckCircle,
   ShieldCheck,
-  RefreshCw,
   Building2,
   Trash2,
 } from "lucide-react"
@@ -301,14 +300,6 @@ export const UserList: React.FC = () => {
         icon={<UsersIcon />}
         extra={
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm"
-              onClick={() => refetch()}
-            >
-              <RefreshCw className="h-4 w-4" />
-              刷新同步
-            </Button>
             <Button
               onClick={() => {
                 setEditingUserId(undefined)

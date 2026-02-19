@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Layout, FileText, CheckCircle, RefreshCw } from 'lucide-react';
+import { Plus, Search, Layout, FileText, CheckCircle } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,8 @@ export const QuizCenter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'quizzes' | 'questions'>('quizzes');
   const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
 
-  const { data: quizzesData, refetch: refetchQuizzes } = useQuizzes({ page: 1, pageSize: 1 });
-  const { data: questionsData, refetch: refetchQuestions } = useQuestions({ page: 1, pageSize: 1 });
+  const { data: quizzesData } = useQuizzes({ page: 1, pageSize: 1 });
+  const { data: questionsData } = useQuestions({ page: 1, pageSize: 1 });
 
   const stats = React.useMemo(() => ({
     totalQuizzes: quizzesData?.count || 0,
@@ -42,17 +42,6 @@ export const QuizCenter: React.FC = () => {
         icon={<Layout />}
         extra={
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              className="h-10 px-4 rounded-md border border-border font-medium text-text-muted hover:bg-muted flex items-center gap-2 shadow-sm"
-              onClick={() => {
-                refetchQuizzes();
-                refetchQuestions();
-              }}
-            >
-              <RefreshCw className="h-4 w-4" />
-              刷新
-            </Button>
             <Button
               onClick={handleAdd}
               className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"

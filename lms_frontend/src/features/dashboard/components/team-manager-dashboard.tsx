@@ -4,11 +4,9 @@ import {
   ArrowUpRight,
   BookOpen,
   Building2,
-  RefreshCw,
   UserRoundCheck,
   Users,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -261,29 +259,11 @@ export const TeamManagerDashboard: React.FC = () => {
   const {
     data,
     isLoading,
-    isFetching,
-    dataUpdatedAt,
-    refetch,
   } = useTeamManagerDashboard();
-
-  const handleRefresh = React.useCallback(() => {
-    void refetch();
-  }, [refetch]);
 
   const summary = data?.summary ?? EMPTY_SUMMARY;
   const comparison = data?.department_comparison ?? EMPTY_DEPARTMENT_COMPARISON;
   const hierarchyView = data?.department_student_view ?? EMPTY_HIERARCHY_VIEW;
-
-  const lastUpdatedLabel = dataUpdatedAt
-    ? new Date(dataUpdatedAt).toLocaleString('zh-CN', {
-      hour12: false,
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-    : '尚未同步';
 
   if (isLoading) {
     return (
@@ -305,22 +285,6 @@ export const TeamManagerDashboard: React.FC = () => {
       <PageHeader
         title="团队经理看板"
         icon={<UserRoundCheck />}
-        extra={(
-          <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-muted-foreground lg:inline">
-              上次同步：{lastUpdatedLabel}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-10 px-3"
-              onClick={handleRefresh}
-            >
-              <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
-              刷新
-            </Button>
-          </div>
-        )}
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
