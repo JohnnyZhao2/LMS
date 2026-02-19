@@ -79,7 +79,7 @@ export const TaskPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10 min-h-screen bg-muted/30">
+    <div className="space-y-6 animate-fadeIn pb-10 min-h-full bg-muted/30">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/60 px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">

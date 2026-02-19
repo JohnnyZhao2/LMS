@@ -82,7 +82,7 @@ export const GradingCenterPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-10 min-h-screen">
+    <div className="space-y-6 pb-10 min-h-full">
       {/* Header with Selectors */}
       <div className="flex flex-wrap items-center gap-4">
         <PageHeader

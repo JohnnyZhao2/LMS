@@ -128,7 +128,7 @@ export const TaskDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-muted/50">
+      <div className="flex flex-col min-h-full bg-muted/50">
         <div className="h-16 border-b bg-background flex items-center px-6">
           <Skeleton className="h-8 w-64" />
         </div>
@@ -221,7 +221,7 @@ export const TaskDetail: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted font-sans selection:bg-primary-100 selection:text-primary-700">
+    <div className="flex flex-col min-h-full bg-muted font-sans selection:bg-primary-100 selection:text-primary-700">
       <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
         <div className="flex items-center gap-4 min-w-0">
           <Button

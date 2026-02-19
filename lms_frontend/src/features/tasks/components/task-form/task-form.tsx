@@ -104,7 +104,7 @@ export const TaskForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-muted/50">
+    <div className="flex flex-col min-h-full bg-muted/50">
       {/* Header */}
       <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
         <div className="flex items-center gap-4 shrink-0">

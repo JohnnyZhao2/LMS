@@ -308,7 +308,6 @@ export const Header: React.FC = () => {
         {/* 角色切换器 */}
         {availableRoles.length > 1 && currentRole && (
           <div
-            key={location.pathname}
             className="hidden md:flex items-center bg-muted p-0.5 rounded-md gap-0.5 ml-2"
           >
             {roleOptions.map((option) => {
