@@ -15,6 +15,7 @@ export const useCreateKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
@@ -33,6 +34,7 @@ export const useUpdateKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-detail'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-detail'] });
@@ -53,6 +55,7 @@ export const useDeleteKnowledge = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-stats'] });
     },
   });

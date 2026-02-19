@@ -2,11 +2,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { UserList, RoleCode } from '@/types/api';
 
-const invalidateUserQueries = (queryClient: ReturnType<typeof useQueryClient>, includeMentors = false) => {
+const invalidateUserQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  includeMentors = false,
+  includeAssignableUsers = false,
+) => {
   queryClient.invalidateQueries({ queryKey: ['users'] });
   queryClient.invalidateQueries({ queryKey: ['user-detail'] });
   if (includeMentors) {
     queryClient.invalidateQueries({ queryKey: ['mentors'] });
+  }
+  if (includeAssignableUsers) {
+    queryClient.invalidateQueries({ queryKey: ['assignable-users'] });
   }
 };
 
@@ -30,7 +37,7 @@ export const useCreateUser = () => {
 
   return useMutation({
     mutationFn: (data: CreateUserRequest) => apiClient.post<UserList>('/users/', data),
-    onSuccess: () => invalidateUserQueries(queryClient),
+    onSuccess: () => invalidateUserQueries(queryClient, false, true),
   });
 };
 
@@ -40,7 +47,7 @@ export const useUpdateUser = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) =>
       apiClient.patch<UserList>(`/users/${id}/`, data),
-    onSuccess: () => invalidateUserQueries(queryClient),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };
 
@@ -49,7 +56,7 @@ export const useActivateUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/activate/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };
 
@@ -58,7 +65,7 @@ export const useDeactivateUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.post<UserList>(`/users/${id}/deactivate/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };
 
@@ -67,7 +74,7 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: (id: number) => apiClient.delete<void>(`/users/${id}/`),
-    onSuccess: () => invalidateUserQueries(queryClient, true),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };
 
@@ -89,7 +96,7 @@ export const useAssignRoles = () => {
   return useMutation({
     mutationFn: ({ id, roles }: { id: number; roles: RoleCode[] }) =>
       apiClient.post<UserList>(`/users/${id}/assign-roles/`, { role_codes: roles }),
-    onSuccess: () => invalidateUserQueries(queryClient, true),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };
 
@@ -99,6 +106,6 @@ export const useAssignMentor = () => {
   return useMutation({
     mutationFn: ({ id, mentorId }: { id: number; mentorId: number | null }) =>
       apiClient.post<UserList>(`/users/${id}/assign-mentor/`, { mentor_id: mentorId }),
-    onSuccess: () => invalidateUserQueries(queryClient),
+    onSuccess: () => invalidateUserQueries(queryClient, false, true),
   });
 };

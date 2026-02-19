@@ -84,6 +84,7 @@ export const useSubmitGrading = (taskId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grading-answers'] });
       queryClient.invalidateQueries({ queryKey: ['grading-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['grading', 'pending'] });
       queryClient.invalidateQueries({ queryKey: ['task-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['student-executions'] });
     },
