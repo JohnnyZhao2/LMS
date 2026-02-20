@@ -1,14 +1,25 @@
 """
 Django test settings for LMS project.
-Uses SQLite for isolated test runs.
 """
+import os
+
 from .base import *
+
 DEBUG = True
-# Use SQLite test database to avoid depending on local MySQL.
+
+# Use MySQL test database.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db_test.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('DB_NAME', 'lms_test'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '3306'),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', time_zone='+08:00'",
+        },
     }
 }
 # Faster password hashing for tests

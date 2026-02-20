@@ -40,8 +40,6 @@ import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
-  const filterParam = searchParams.get('filter')
-  const needsAttentionFilter = filterParam === 'needs_attention' ? 'needs_attention' : undefined
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -87,7 +85,6 @@ export const UserList: React.FC = () => {
   const { data, isLoading, refetch } = useUsers({
     search,
     departmentId: departmentFilter,
-    filter: needsAttentionFilter,
   })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()

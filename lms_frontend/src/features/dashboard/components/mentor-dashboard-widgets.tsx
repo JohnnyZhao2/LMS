@@ -1,9 +1,7 @@
 import * as React from 'react';
 import {
-  AlertTriangle,
   BarChart3,
   CheckCircle,
-  Clock,
   FileCheck,
   Target,
   Users
@@ -19,139 +17,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
-import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import type {
-  MentorDashboardOverdueWarning,
   MentorDashboardScoreDistribution,
   MentorDashboardSpotCheckStats,
   MentorDashboardStudent,
 } from '@/types/api';
 
-interface OverdueWarningCardProps {
-  data: MentorDashboardOverdueWarning;
-}
-
-const urgencyStyle = {
-  OVERDUE: {
-    label: '已逾期',
-    badgeClass: 'bg-destructive text-white',
-    borderClass: 'border-destructive/30',
-    iconClass: 'text-destructive',
-  },
-  DUE_SOON: {
-    label: '即将逾期',
-    badgeClass: 'bg-warning text-warning-900',
-    borderClass: 'border-warning/40',
-    iconClass: 'text-warning-600',
-  },
-} as const;
-
-const formatHours = (hours: number) => {
-  const absHours = Math.abs(hours);
-  if (absHours >= 24) {
-    const days = (absHours / 24).toFixed(1);
-    return `${days}天`;
-  }
-  return `${absHours.toFixed(1)}小时`;
-};
-
 const cardTitleClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';
 const cardTitleNoteClass = 'ml-2 text-[9px] font-medium text-text-muted/80 normal-case tracking-normal';
 const cardMetaClass = 'text-[10px] text-text-muted';
-
-export const OverdueWarningCard: React.FC<OverdueWarningCardProps> = ({ data }) => {
-  const currentRole = useCurrentRole();
-  const { roleNavigate } = useRoleNavigate();
-  const canNavigate = Boolean(currentRole && ['MENTOR', 'DEPT_MANAGER', 'ADMIN'].includes(currentRole));
-
-  return (
-    <Card className="p-6 border border-border">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-destructive" />
-          <div>
-            <h3 className={cn(cardTitleClass, 'text-destructive')}>
-              逾期预警
-              <span className={cardTitleNoteClass}>
-                · 近 {data.due_soon_hours} 小时内即将逾期
-              </span>
-            </h3>
-          </div>
-          <div className="hidden md:flex items-center gap-2 ml-2">
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-destructive text-white">
-              {data.overdue_count} 逾期
-            </span>
-            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-warning text-warning-900">
-              {data.due_soon_count} 即将
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className={cardMetaClass}>逾期</span>
-          <span className="text-2xl font-black text-foreground tabular-nums">{data.overdue_count}</span>
-        </div>
-      </div>
-
-      {data.items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-text-muted">
-          <Users className="w-10 h-10 mb-2 opacity-50" />
-          <p className="text-sm">暂无逾期任务</p>
-          <p className="text-xs mt-1">当前学习节奏良好</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {data.items.map((item) => {
-            const style = urgencyStyle[item.urgency];
-            const isOverdue = item.urgency === 'OVERDUE';
-            const timeText = isOverdue
-              ? `已逾期 ${formatHours(item.hours_to_deadline)}`
-              : `剩余 ${formatHours(item.hours_to_deadline)}`;
-
-            return (
-              <div
-                key={item.assignment_id}
-                onClick={() => {
-                  if (!canNavigate) return;
-                  roleNavigate(
-                    `/tasks/${item.task_id}/preview?tab=progress&student_id=${item.student_id}`
-                  );
-                }}
-                className={cn(
-                  'p-3 rounded-lg border transition-all duration-200',
-                  style.borderClass,
-                  canNavigate && 'cursor-pointer hover:shadow-sm hover:border-primary/30'
-                )}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Clock className={cn('w-4 h-4', style.iconClass)} />
-                      <span className="text-sm font-semibold text-foreground truncate">{item.student_name}</span>
-                      {item.employee_id && (
-                        <span className="text-[10px] text-text-muted">({item.employee_id})</span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-text-muted mt-1 truncate">
-                      {item.task_title}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', style.badgeClass)}>
-                      {style.label}
-                    </span>
-                    <span className={cardMetaClass}>{timeText}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-};
 
 interface PendingGradingCardProps {
   count: number;

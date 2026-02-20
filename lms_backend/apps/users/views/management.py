@@ -12,14 +12,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.users.models import User
-from apps.users.permissions import get_accessible_students, get_current_role
+from apps.users.permissions import get_current_role
 from apps.users.selectors import (
     get_user_by_id,
     list_departments,
     list_mentors,
     list_roles,
     list_users,
-    list_users_needing_attention,
 )
 from apps.users.serializers import (
     AssignMentorSerializer,
@@ -53,7 +52,6 @@ class UserListCreateView(APIView):
             OpenApiParameter(name='is_active', type=bool, description='按激活状态筛选'),
             OpenApiParameter(name='department_id', type=int, description='按部门筛选'),
             OpenApiParameter(name='search', type=str, description='搜索姓名或工号'),
-            OpenApiParameter(name='filter', type=str, description='筛选条件：needs_attention'),
         ],
         responses={
             200: UserListSerializer(many=True),
@@ -73,29 +71,17 @@ class UserListCreateView(APIView):
             name='is_active',
             default=None,
         )
-        filter_code = request.query_params.get('filter')
         department_id = parse_int_query_param(
             request=request,
             name='department_id',
             minimum=1,
         )
         search = request.query_params.get('search')
-        if filter_code == 'needs_attention':
-            student_ids = list(
-                get_accessible_students(request.user, request).values_list('id', flat=True)
-            )
-            queryset = list_users_needing_attention(
-                student_ids=student_ids,
-                is_active=is_active_bool,
-                department_id=department_id,
-                search=search,
-            )
-        else:
-            queryset = list_users(
-                is_active=is_active_bool,
-                department_id=department_id,
-                search=search,
-            )
+        queryset = list_users(
+            is_active=is_active_bool,
+            department_id=department_id,
+            search=search,
+        )
         serializer = UserListSerializer(queryset, many=True)
         return list_response(serializer.data)
     @extend_schema(

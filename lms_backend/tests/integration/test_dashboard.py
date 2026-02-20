@@ -291,6 +291,7 @@ class TestMentorDashboardAPI:
         assert response.status_code == 200
         assert 'summary' in data
         assert 'students' in data
+        assert 'overdue_warning' not in data
 
     def test_get_dashboard_as_admin(self, api_client, admin):
         """测试管理员获取仪表盘数据"""
@@ -322,23 +323,6 @@ class TestMentorDashboardAPI:
         assert 'weekly_active_users' in summary
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
-
-    def test_students_needing_attention_with_invalid_limit_returns_validation_error(self, api_client, mentor):
-        """测试 limit 非整数时返回统一校验错误"""
-        api_client.force_authenticate(user=mentor)
-        response = api_client.get('/api/dashboard/mentor/students-needing-attention/?limit=NaN')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-
-    def test_students_needing_attention_as_admin_forbidden(self, api_client, admin):
-        """测试管理员无法访问需要关注学员接口"""
-        api_client.force_authenticate(user=admin)
-        response = api_client.get('/api/dashboard/mentor/students-needing-attention/')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'PERMISSION_DENIED'
-
 
 @pytest.mark.django_db
 class TestTeamManagerDashboardAPI:

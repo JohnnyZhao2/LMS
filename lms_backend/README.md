@@ -35,28 +35,40 @@
 pip install -r requirements.txt
 ```
 
-### 2. 配置数据库
+### 2. 配置环境变量
 
-编辑 `config/settings/development.py`：
+每个环境使用独立文件，不共享公共 `.env`：
 
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'lms',
-        'USER': 'root',
-        'PASSWORD': 'your_password',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
-}
+```bash
+# 开发环境
+cat > .env.development <<'EOF'
+DJANGO_ENV=development
+DB_NAME=lms
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_HOST=localhost
+DB_PORT=3306
+SECRET_KEY=your-dev-secret-key
+EOF
+
+# 测试环境
+cat > .env.test <<'EOF'
+DJANGO_ENV=test
+DB_NAME=lms_test
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_HOST=localhost
+DB_PORT=3306
+SECRET_KEY=your-test-secret-key
+EOF
 ```
 
 ### 3. 初始化数据库
 
 ```bash
-# 创建数据库
+# 创建数据库（开发 + 测试）
 mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE DATABASE lms_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 运行迁移
 python manage.py migrate --settings=config.settings.development
@@ -346,7 +358,7 @@ pip install -r requirements.txt
 
 - **领域层测试** (`tests/test_domain_layer.py`)：验证 Domain 层的业务逻辑
 
-- **测试数据库**：测试使用 SQLite 内存数据库（配置在 `config/settings/test.py`）
+- **测试数据库**：测试使用 MySQL `lms_test`（配置在 `config/settings/test.py` + `.env.test`）
 
 ## 项目结构
 

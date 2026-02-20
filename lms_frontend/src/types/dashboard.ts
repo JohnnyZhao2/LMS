@@ -5,47 +5,6 @@
 import type { LatestKnowledge } from './knowledge';
 
 /**
- * 学员预警类型
- */
-export type AlertLevel = 'high' | 'medium' | 'low';
-
-/**
- * 学员预警信息
- */
-export interface StudentAlert {
-  type: 'overdue' | 'failed_exam' | 'slow_progress' | 'score_decline';
-  level: AlertLevel;
-  message: string;
-  count?: number;
-  tasks?: { task_id: number; task_title: string }[];
-  score?: number;
-  quiz_title?: string;
-  task_id?: number | null;
-  task_title?: string | null;
-}
-
-/**
- * 需要关注的学员
- */
-export interface StudentNeedingAttention {
-  student_id: number;
-  student_name: string;
-  employee_id: string;
-  department_name: string | null;
-  alerts: StudentAlert[];
-  alert_count: number;
-  highest_level: AlertLevel;
-}
-
-/**
- * 需要关注的学员响应
- */
-export interface StudentsNeedingAttentionResponse {
-  total_count: number;
-  students: StudentNeedingAttention[];
-}
-
-/**
  * 学员统计数据
  */
 export interface StudentStats {
@@ -109,7 +68,6 @@ export interface StudentDashboard {
 export interface MentorDashboard {
   summary: MentorDashboardSummary;
   students: MentorDashboardStudent[];
-  overdue_warning: MentorDashboardOverdueWarning;
   pending_grading: { count: number };
   spot_check_stats: MentorDashboardSpotCheckStats;
   score_distribution: MentorDashboardScoreDistribution;
@@ -125,26 +83,6 @@ export interface MentorDashboardSummary {
   overdue_tasks: number;
   overall_completion_rate: number;
   overall_avg_score: number | null;
-}
-
-export interface MentorDashboardOverdueWarningItem {
-  assignment_id: number;
-  task_id: number;
-  task_title: string;
-  student_id: number;
-  student_name: string;
-  employee_id: string;
-  department_name: string | null;
-  deadline: string;
-  urgency: 'OVERDUE' | 'DUE_SOON';
-  hours_to_deadline: number;
-}
-
-export interface MentorDashboardOverdueWarning {
-  overdue_count: number;
-  due_soon_count: number;
-  due_soon_hours: number;
-  items: MentorDashboardOverdueWarningItem[];
 }
 
 export interface MentorDashboardSpotCheckStats {

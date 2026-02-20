@@ -27,13 +27,11 @@ from .selectors import (
     get_monthly_spot_check_stats,
     get_monthly_spot_check_stats_by_student,
     get_monthly_tasks_count,
-    get_overdue_warning,
     get_pending_grading_count,
     get_score_distribution,
     get_student_all_tasks,
     get_student_assignments,
     get_student_exam_avg_score,
-    get_students_needing_attention,
     get_task_participants_progress,
     get_urgent_tasks_count,
     get_weekly_active_users_count,
@@ -121,14 +119,12 @@ class MentorDashboardService(BaseService):
             monthly_active_ids=monthly_active_ids,
             spot_check_map=spot_check_map
         )
-        overdue_warning = get_overdue_warning(student_ids, due_soon_hours=12, limit=3)
         pending_grading_count = get_pending_grading_count(student_ids)
         spot_check_stats = get_monthly_spot_check_stats(student_ids)
         score_distribution = get_score_distribution(student_ids)
         return {
             'summary': summary,
             'students': student_stats,
-            'overdue_warning': overdue_warning,
             'pending_grading': {
                 'count': pending_grading_count
             },
@@ -220,26 +216,6 @@ class MentorDashboardService(BaseService):
                 }
             })
         return student_stats
-
-    def get_students_needing_attention(self, limit: int = 10) -> Dict[str, Any]:
-        """
-        获取需要关注的学员列表
-        Args:
-            limit: 最大返回数量
-        Returns:
-            包含预警学员列表和统计的字典
-        """
-        students = get_accessible_students(self.user, self.request)
-        student_ids = list(students.values_list('id', flat=True))
-
-        all_alerts = get_students_needing_attention(student_ids)
-        total_count = len(all_alerts)
-
-        return {
-            'total_count': total_count,
-            'students': all_alerts[:limit]
-        }
-
 
 class TeamManagerDashboardService(BaseService):
     """

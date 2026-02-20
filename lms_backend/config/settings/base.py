@@ -9,8 +9,16 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Load environment variables
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+# Load only the current environment file: .env.<env>
+SETTINGS_MODULE = os.getenv('DJANGO_SETTINGS_MODULE', '')
+DEFAULT_DJANGO_ENV = 'development'
+if SETTINGS_MODULE.endswith('.test'):
+    DEFAULT_DJANGO_ENV = 'test'
+elif SETTINGS_MODULE.endswith('.production'):
+    DEFAULT_DJANGO_ENV = 'production'
+
+DJANGO_ENV = os.getenv('DJANGO_ENV', DEFAULT_DJANGO_ENV).strip().lower()
+load_dotenv(BASE_DIR / f'.env.{DJANGO_ENV}', override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-development')
