@@ -331,6 +331,14 @@ class TestMentorDashboardAPI:
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
 
+    def test_students_needing_attention_as_admin_forbidden(self, api_client, admin):
+        """测试管理员无法访问需要关注学员接口"""
+        api_client.force_authenticate(user=admin)
+        response = api_client.get('/api/dashboard/mentor/students-needing-attention/')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'PERMISSION_DENIED'
+
 
 @pytest.mark.django_db
 class TestTeamManagerDashboardAPI:

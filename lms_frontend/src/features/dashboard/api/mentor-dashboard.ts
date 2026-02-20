@@ -27,7 +27,7 @@ export const useStudentsNeedingAttention = (limit: number = 10) => {
     queryFn: () => apiClient.get<StudentsNeedingAttentionResponse>(
       `/dashboard/mentor/students-needing-attention/?limit=${limit}`
     ),
-    enabled: currentRole !== null && ['MENTOR', 'DEPT_MANAGER', 'ADMIN'].includes(currentRole),
+    enabled: currentRole !== null && ['MENTOR', 'DEPT_MANAGER'].includes(currentRole),
     staleTime: 0,
     refetchOnMount: 'always',
   });

@@ -48,11 +48,7 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
   limit = 5,
   className,
 }) => {
-  const navigate = useNavigate();
-  const currentRole = useCurrentRole();
   const { data, isLoading } = useStudentsNeedingAttention(limit);
-  const canNavigateToUserList = currentRole === 'ADMIN';
-  const userListPath = currentRole ? `/${currentRole.toLowerCase()}/users` : '/users';
 
   if (isLoading) {
     return (
@@ -99,15 +95,6 @@ export const StudentsNeedingAttention: React.FC<StudentsNeedingAttentionProps> =
             {totalCount}
           </span>
         </div>
-        {totalCount > limit && canNavigateToUserList && (
-          <button
-            onClick={() => navigate(`${userListPath}?filter=needs_attention`)}
-            className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            查看全部
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
       <div className="space-y-3">
@@ -127,7 +114,7 @@ const StudentAlertCard: React.FC<StudentAlertCardProps> = ({ student }) => {
   const navigate = useNavigate();
   const currentRole = useCurrentRole();
   const levelStyle = levelConfig[student.highest_level];
-  const canNavigateToTaskPreview = Boolean(currentRole && ['MENTOR', 'DEPT_MANAGER', 'ADMIN'].includes(currentRole));
+  const canNavigateToTaskPreview = Boolean(currentRole && ['MENTOR', 'DEPT_MANAGER'].includes(currentRole));
   const rolePath = currentRole ? `/${currentRole.toLowerCase()}` : '';
 
   const primaryTaskId =

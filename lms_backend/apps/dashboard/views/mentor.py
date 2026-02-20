@@ -62,10 +62,10 @@ class StudentsNeedingAttentionView(BaseAPIView):
     )
     def get(self, request):
         current_role = self.service.get_current_role()
-        if current_role not in ['MENTOR', 'DEPT_MANAGER', 'ADMIN']:
+        if current_role not in ['MENTOR', 'DEPT_MANAGER']:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有导师、室经理或管理员可以访问此接口'
+                message='只有导师或室经理可以访问此接口'
             )
         limit = parse_int_query_param(
             request=request,
