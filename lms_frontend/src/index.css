@@ -537,6 +537,19 @@
         scrollbar-gutter: stable;
     }
 
+    /*
+     * 修复 Radix/RemoveScroll 弹层打开时页面横向位移：
+     * 我们已使用 stable gutter，不需要额外的 scrollbar 补偿。
+     */
+    html[data-scroll-locked],
+    html.with-scroll-bars-hidden,
+    body[data-scroll-locked],
+    body.with-scroll-bars-hidden {
+        --removed-body-scroll-bar-size: 0px !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+
     /* Global Selection Color */
     ::selection {
         @apply bg-primary text-white;
