@@ -154,7 +154,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         summary='更新试卷',
         description='''更新试卷信息（仅创建者或管理员）。
         支持在一个请求中完成：
-        - 更新试卷基本信息（title, description, quiz_type, duration, pass_score）
+        - 更新试卷基本信息（title, quiz_type, duration, pass_score）
         - 同步题目顺序（existing_question_ids）
         - 添加新题目（add_question_ids, new_questions）
         - 移除题目（remove_question_ids）

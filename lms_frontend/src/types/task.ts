@@ -116,7 +116,6 @@ export interface LearningTaskQuizItem {
   quiz_title: string;
   quiz_type: string;
   quiz_type_display: string;
-  description?: string;
   question_count: number;
   total_score: number;
   duration?: number | null;

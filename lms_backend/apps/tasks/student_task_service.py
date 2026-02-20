@@ -186,7 +186,6 @@ class StudentTaskService(BaseService):
                 'quiz_title': quiz.title,
                 'quiz_type': quiz.quiz_type,
                 'quiz_type_display': quiz.get_quiz_type_display(),
-                'description': quiz.description,
                 'question_count': quiz.question_count,
                 'total_score': float(quiz.total_score) if quiz.total_score else 0,
                 'duration': quiz.duration,

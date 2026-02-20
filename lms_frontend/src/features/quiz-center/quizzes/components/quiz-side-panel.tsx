@@ -12,15 +12,11 @@ interface QuizSidePanelProps {
   editingQuestionId: number | null;
   previewQuestion?: Question | null;
   onBackToInfo: () => void;
-  title: string;
-  description: string;
   quizType: QuizType;
   duration?: number;
   passScore?: number;
   totalScore: number;
   typeStats: Record<string, number>;
-  setTitle: (value: string) => void;
-  setDescription: (value: string) => void;
   setQuizType: (value: QuizType) => void;
   setDuration: (value?: number) => void;
   setPassScore: (value?: number) => void;
@@ -36,15 +32,11 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
   editingQuestionId,
   previewQuestion,
   onBackToInfo,
-  title,
-  description,
   quizType,
   duration,
   passScore,
   totalScore,
   typeStats,
-  setTitle,
-  setDescription,
   setQuizType,
   setDuration,
   setPassScore,
@@ -88,15 +80,11 @@ export const QuizSidePanel: React.FC<QuizSidePanelProps> = ({
 
       {showInfoPanel && (
         <QuizInfoPanel
-          title={title}
-          description={description}
           quizType={quizType}
           duration={duration}
           passScore={passScore}
           totalScore={totalScore}
           typeStats={typeStats}
-          setTitle={setTitle}
-          setDescription={setDescription}
           setQuizType={setQuizType}
           setDuration={setDuration}
           setPassScore={setPassScore}

@@ -31,7 +31,6 @@ export const QuizForm: React.FC = () => {
   const isEdit = !!id;
 
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [quizType, setQuizType] = useState<QuizType>('PRACTICE');
   const [duration, setDuration] = useState<number | undefined>();
   const [passScore, setPassScore] = useState<number | undefined>();
@@ -74,7 +73,6 @@ export const QuizForm: React.FC = () => {
   useEffect(() => {
     if (isEdit && quizData && !initializedRef.current) {
       setTitle(quizData.title);
-      setDescription(quizData.description || '');
       setQuizType(quizData.quiz_type || 'PRACTICE');
       setDuration(quizData.duration ?? undefined);
       setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
@@ -291,7 +289,6 @@ export const QuizForm: React.FC = () => {
     try {
       const data: QuizCreateRequest = {
         title,
-        description,
         quiz_type: quizType,
         duration: quizType === 'EXAM' ? duration : undefined,
         pass_score: quizType === 'EXAM' ? passScore : undefined,
@@ -358,15 +355,11 @@ export const QuizForm: React.FC = () => {
             setPreviewQuestion(null);
             setEditingQuestionId(null);
           }}
-          title={title}
-          description={description}
           quizType={quizType}
           duration={duration}
           passScore={passScore}
           totalScore={totalScore}
           typeStats={typeStats}
-          setTitle={setTitle}
-          setDescription={setDescription}
           setQuizType={setQuizType}
           setDuration={setDuration}
           setPassScore={setPassScore}

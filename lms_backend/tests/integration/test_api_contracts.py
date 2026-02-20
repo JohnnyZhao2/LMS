@@ -101,7 +101,6 @@ def sample_question(mentor_user, line_tag):
 def sample_quiz(mentor_user):
     return Quiz.objects.create(
         title='契约测试试卷',
-        description='用于接口契约测试',
         quiz_type='PRACTICE',
         created_by=mentor_user,
         updated_by=mentor_user,
@@ -112,7 +111,6 @@ def sample_quiz(mentor_user):
 def sample_exam_quiz(mentor_user):
     return Quiz.objects.create(
         title='契约测试考试',
-        description='用于考试接口契约测试',
         quiz_type='EXAM',
         created_by=mentor_user,
         updated_by=mentor_user,

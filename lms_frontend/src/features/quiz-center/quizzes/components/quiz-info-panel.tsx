@@ -2,57 +2,32 @@ import React from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { QuizType } from '@/types/api';
 
 interface QuizInfoPanelProps {
-  title: string;
-  description: string;
   quizType: QuizType;
   duration?: number;
   passScore?: number;
   totalScore: number;
   typeStats: Record<string, number>;
-  setTitle: (value: string) => void;
-  setDescription: (value: string) => void;
   setQuizType: (value: QuizType) => void;
   setDuration: (value?: number) => void;
   setPassScore: (value?: number) => void;
 }
 
 export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
-  title,
-  description,
   quizType,
   duration,
   passScore,
   totalScore,
   typeStats,
-  setTitle,
-  setDescription,
   setQuizType,
   setDuration,
   setPassScore,
 }) => {
   return (
     <div className="p-5 space-y-4 bg-background rounded-lg mx-5 mt-5 border border-border">
-      <div className="space-y-2">
-        <Label>试卷标题</Label>
-        <Input placeholder="输入试卷标题..." value={title} onChange={e => setTitle(e.target.value)} />
-      </div>
-
-      <div className="space-y-2">
-        <Label>试卷描述</Label>
-        <Textarea
-          placeholder="说明试卷的考核重点..."
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          rows={3}
-          className="resize-none"
-        />
-      </div>
-
       <div className="space-y-2">
         <Label>试卷性质</Label>
         <div className="flex p-1 bg-muted rounded-lg gap-1">

@@ -28,7 +28,7 @@ class QuizService(BaseService):
     # 创建新版本时需要复制的内容字段
     # 添加新的内容字段时，只需在此列表中添加即可
     VERSION_COPY_FIELDS = [
-        'title', 'description', 'quiz_type',
+        'title', 'quiz_type',
         'duration', 'pass_score',
     ]
 

@@ -29,12 +29,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         max_length=200,
         verbose_name='试卷名称'
     )
-    # 试卷描述
-    description = models.TextField(
-        blank=True,
-        default='',
-        verbose_name='试卷描述'
-    )
     # 题目（通过 QuizQuestion 中间表关联）
     questions = models.ManyToManyField(
         'questions.Question',

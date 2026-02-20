@@ -33,7 +33,6 @@ export interface QuizListItem {
   resource_uuid: string;
   version_number: number;
   title: string;
-  description?: string;
   question_count: number;
   total_score: string;
   has_subjective_questions: boolean;
@@ -59,7 +58,6 @@ export interface QuizDetail {
   resource_uuid: string;
   version_number: number;
   title: string;
-  description?: string;
   questions: QuizQuestion[];
   question_count?: number;
   total_score: string;
@@ -84,7 +82,6 @@ export interface QuizDetail {
  */
 export interface QuizCreateRequest {
   title: string;
-  description?: string;
   quiz_type: QuizType;
   duration?: number;       // 考试类型必填
   pass_score?: number;     // 考试类型必填

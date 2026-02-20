@@ -43,7 +43,7 @@ class QuizListSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = [
             'id', 'resource_uuid', 'version_number',
-            'title', 'description', 'question_count', 'total_score',
+            'title', 'question_count', 'total_score',
             'has_subjective_questions', 'question_type_counts',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
@@ -69,7 +69,7 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = [
             'id', 'resource_uuid', 'version_number',
-            'title', 'description', 'question_count', 'total_score',
+            'title', 'question_count', 'total_score',
             'has_subjective_questions', 'objective_question_count',
             'subjective_question_count', 'questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
@@ -161,7 +161,7 @@ class QuizCreateSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Quiz
-        fields = ['title', 'description', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids', 'new_questions']
+        fields = ['title', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids', 'new_questions']
     def validate(self, attrs):
         """Validate quiz_type specific fields."""
         quiz_type = attrs.get('quiz_type', 'PRACTICE')
@@ -189,7 +189,7 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
     支持在一个请求中完成：
-    - 更新试卷基本信息（title, description, quiz_type, duration, pass_score）
+    - 更新试卷基本信息（title, quiz_type, duration, pass_score）
     - 同步题目顺序（existing_question_ids）
     - 添加新题目（add_question_ids, new_questions）
     - 移除题目（remove_question_ids）
@@ -222,7 +222,7 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Quiz
         fields = [
-            'title', 'description', 'quiz_type', 'duration', 'pass_score',
+            'title', 'quiz_type', 'duration', 'pass_score',
             'existing_question_ids', 'add_question_ids', 'new_questions', 'remove_question_ids'
         ]
 
