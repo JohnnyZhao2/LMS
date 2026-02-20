@@ -36,7 +36,7 @@ export const QuizForm: React.FC = () => {
   const [passScore, setPassScore] = useState<number | undefined>();
 
   const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestionItem[]>([]);
-  const [rightPanelMode, setRightPanelMode] = useState<'QUIZ_INFO' | 'EDIT_QUESTION' | 'PREVIEW_QUESTION'>('QUIZ_INFO');
+  const [rightPanelMode, setRightPanelMode] = useState<'EDIT_QUESTION' | 'PREVIEW_QUESTION' | null>(null);
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
 
   const [resourceSearch, setResourceSearch] = useState('');
@@ -125,16 +125,6 @@ export const QuizForm: React.FC = () => {
       results: questionsData.results.filter(q => !selectedUuids.has(q.resource_uuid))
     };
   }, [questionsData, selectedQuestions]);
-
-  const totalScore = useMemo(() => selectedQuestions.reduce((sum, q) => sum + Number(q.score || 0), 0), [selectedQuestions]);
-  const typeStats = useMemo(() => {
-    const stats: Record<string, number> = {};
-    selectedQuestions.forEach((q) => {
-      const label = getQuestionTypeLabel(q.question_type);
-      stats[label] = (stats[label] || 0) + 1;
-    });
-    return stats;
-  }, [selectedQuestions]);
 
   const handleAddQuestion = (q: Question) => {
     if (selectedQuestions.some(x => x.resource_uuid === q.resource_uuid)) return toast.warning('该题目已在试卷中');
@@ -275,7 +265,7 @@ export const QuizForm: React.FC = () => {
         }]);
         toast.success('创建并添加成功');
       }
-      setRightPanelMode('QUIZ_INFO');
+      setRightPanelMode(null);
     } catch (e) {
       showApiError(e);
     }
@@ -308,19 +298,20 @@ export const QuizForm: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 gap-4 sm:gap-6 bg-transparent">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}
         title={title}
+        quizType={quizType}
         onTitleChange={setTitle}
+        onQuizTypeChange={setQuizType}
         onBack={() => navigate(-1)}
-        onCancel={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}
         isSubmitting={createQuiz.isPending || updateQuiz.isPending}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden gap-4 sm:gap-6">
         <QuestionBankPanel
           resourceSearch={resourceSearch}
           onResourceSearchChange={setResourceSearch}
@@ -338,37 +329,51 @@ export const QuizForm: React.FC = () => {
 
         <QuizStructurePanel
           selectedQuestions={selectedQuestions}
+          quizType={quizType}
+          duration={duration}
+          passScore={passScore}
           onMoveQuestion={moveQuestion}
           onEditQuestion={handleEditQuestion}
           onRemoveQuestion={removeQuestion}
           onScoreChange={handleScoreChange}
+          onDurationChange={setDuration}
+          onPassScoreChange={setPassScore}
           onSortQuestions={handleSortQuestions}
           onUpgradeQuestion={handleUpgradeQuestion}
         />
 
-        <QuizSidePanel
-          mode={rightPanelMode}
-          editingQuestionId={editingQuestionId}
-          previewQuestion={previewQuestion}
-          onBackToInfo={() => {
-            setRightPanelMode('QUIZ_INFO');
-            setPreviewQuestion(null);
-            setEditingQuestionId(null);
-          }}
-          quizType={quizType}
-          duration={duration}
-          passScore={passScore}
-          totalScore={totalScore}
-          typeStats={typeStats}
-          setQuizType={setQuizType}
-          setDuration={setDuration}
-          setPassScore={setPassScore}
-          questionForm={questionForm}
-          setQuestionForm={setQuestionForm}
-          lineTypes={lineTypes}
-          onSaveQuestion={handleSaveQuestion}
-          isSavingQuestion={createQuestion.isPending || updateQuestion.isPending}
-        />
+        {/* Drawer Overlay for Side Panel */}
+        {rightPanelMode && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => {
+                setRightPanelMode(null);
+                setPreviewQuestion(null);
+                setEditingQuestionId(null);
+              }}
+            />
+            {/* Drawer */}
+            <div className="fixed right-0 top-0 bottom-0 z-50 flex h-full p-4 sm:p-6 shadow-2xl animate-in slide-in-from-right duration-300 ease-out">
+              <QuizSidePanel
+                mode={rightPanelMode}
+                editingQuestionId={editingQuestionId}
+                previewQuestion={previewQuestion}
+                onBackToInfo={() => {
+                  setRightPanelMode(null);
+                  setPreviewQuestion(null);
+                  setEditingQuestionId(null);
+                }}
+                questionForm={questionForm}
+                setQuestionForm={setQuestionForm}
+                lineTypes={lineTypes}
+                onSaveQuestion={handleSaveQuestion}
+                isSavingQuestion={createQuestion.isPending || updateQuestion.isPending}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate('quiz-center'); }}>

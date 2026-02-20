@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FileText, LayoutGrid, RefreshCw, SortAsc, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -8,33 +8,99 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { cn } from '@/lib/utils';
+import type { QuizType } from '@/types/api';
 import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';
 
 interface QuizStructurePanelProps {
   selectedQuestions: QuizQuestionItem[];
+  quizType: QuizType;
+  duration?: number;
+  passScore?: number;
   onMoveQuestion: (index: number, direction: 'up' | 'down') => void;
   onEditQuestion: (item: QuizQuestionItem) => void;
   onRemoveQuestion: (index: number) => void;
   onScoreChange: (id: number, score: string) => void;
+  onDurationChange: (value?: number) => void;
+  onPassScoreChange: (value?: number) => void;
   onSortQuestions?: () => void;
   onUpgradeQuestion?: (index: number, resourceUuid: string) => void;
 }
 
 export const QuizStructurePanel: React.FC<QuizStructurePanelProps> = ({
   selectedQuestions,
+  quizType,
+  duration,
+  passScore,
   onMoveQuestion,
   onEditQuestion,
   onRemoveQuestion,
   onScoreChange,
+  onDurationChange,
+  onPassScoreChange,
   onSortQuestions,
   onUpgradeQuestion,
 }) => {
+  const structureStats = useMemo(() => {
+    const stats = {
+      totalScore: 0,
+      singleChoice: 0,
+      multipleChoice: 0,
+      trueFalse: 0,
+      shortAnswer: 0,
+    };
+
+    selectedQuestions.forEach((item) => {
+      const parsedScore = Number(item.score);
+      stats.totalScore += Number.isFinite(parsedScore) ? parsedScore : 0;
+
+      if (item.question_type === 'SINGLE_CHOICE') stats.singleChoice += 1;
+      if (item.question_type === 'MULTIPLE_CHOICE') stats.multipleChoice += 1;
+      if (item.question_type === 'TRUE_FALSE') stats.trueFalse += 1;
+      if (item.question_type === 'SHORT_ANSWER') stats.shortAnswer += 1;
+    });
+
+    return stats;
+  }, [selectedQuestions]);
+
+  const totalScoreText = Number.isInteger(structureStats.totalScore)
+    ? String(structureStats.totalScore)
+    : structureStats.totalScore.toFixed(1).replace(/\.0$/, '');
+
   return (
-    <div className="flex-1 flex flex-col bg-muted min-w-0">
-      <div className="flex items-center gap-2 px-6 py-4 text-sm font-semibold text-foreground bg-background border-b border-border">
+    <div className="flex-1 flex flex-col bg-muted/40 rounded-xl shadow-sm border border-border min-w-0 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-6 py-4 text-sm font-semibold text-foreground bg-background border-b border-border">
         <FileText className="w-4 h-4 text-primary-500" />
-        试卷内容结构
-        <Badge variant="secondary" className="ml-2 bg-muted">{selectedQuestions.length} 道题目</Badge>
+        <span>试卷内容结构</span>
+        <Badge variant="secondary" className="bg-muted min-w-6 text-center tabular-nums">
+          {selectedQuestions.length}
+        </Badge>
+        <span className="text-xs font-medium text-text-muted">
+          总分 {totalScoreText}｜单 {structureStats.singleChoice} 多 {structureStats.multipleChoice} 判 {structureStats.trueFalse} 简 {structureStats.shortAnswer}
+        </span>
+        {quizType === 'EXAM' && (
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-text-muted">
+            <span className="text-destructive-600">时长</span>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={duration ?? ''}
+              onChange={(e) => onDurationChange(Number(e.target.value) || undefined)}
+              className="h-7 w-20 bg-background border-destructive-200 text-foreground"
+            />
+            <span>分钟</span>
+            <span className="text-destructive-600">分数线</span>
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              value={passScore ?? ''}
+              onChange={(e) => onPassScoreChange(Number(e.target.value) || undefined)}
+              className="h-7 w-20 bg-background border-destructive-200 text-foreground"
+            />
+            <span>分</span>
+          </div>
+        )}
         {selectedQuestions.length > 0 && onSortQuestions && (
           <Button
             variant="ghost"
