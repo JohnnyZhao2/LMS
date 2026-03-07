@@ -46,10 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentRole = tokenStorage.getCurrentRole();
     const availableRoles = tokenStorage.getAvailableRoles();
     const hasTokens = tokenStorage.hasTokens();
+    const shouldRefreshSession = hasTokens;
 
     const isAuthenticated = hasTokens && !!user;
 
-    return { user, currentRole, availableRoles, isAuthenticated, isLoading: hasTokens && !isAuthenticated, isSwitching: false };
+    return { user, currentRole, availableRoles, isAuthenticated, isLoading: shouldRefreshSession, isSwitching: false };
   });
 
   const resetAuthState = useCallback(() => {
@@ -141,6 +142,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const hasRole = prev.availableRoles.some((role) => role.code === roleCode);
       if (!hasRole) {
+        return prev;
+      }
+      if (prev.currentRole === roleCode) {
         return prev;
       }
       tokenStorage.setCurrentRole(roleCode);
