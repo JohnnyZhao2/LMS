@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye, FileEdit } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
@@ -38,30 +38,32 @@ const DEFAULT_QUESTION_FORM: Partial<QuestionCreateRequest> = {
 };
 
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSignal = 0 }) => {
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        pageSize: 10,
+        scopeKey: search,
+    });
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
-    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [handledCreateSignal, setHandledCreateSignal] = useState(0);
     const [questionForm, setQuestionForm] = useState<Partial<QuestionCreateRequest>>(DEFAULT_QUESTION_FORM);
+
+    const currentScopeKey = search;
+    const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
+    const pageSize = pagination.pageSize;
+    const isCreateDialogOpen = createSignal > handledCreateSignal;
 
     const { data, isLoading, refetch } = useQuestions({ page, pageSize, search: search || undefined });
     const { data: lineTypes } = useLineTypeTags();
     const createQuestion = useCreateQuestion();
     const deleteQuestion = useDeleteQuestion();
 
-    useEffect(() => {
-        setPage(1);
-    }, [search]);
-
-    useEffect(() => {
-        if (createSignal === 0) return;
-
+    const closeCreateDialog = () => {
+        setHandledCreateSignal((prev) => Math.max(prev, createSignal));
         setQuestionForm({
             ...DEFAULT_QUESTION_FORM,
         });
-        setCreateDialogOpen(true);
-    }, [createSignal]);
+    };
 
     const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
         line_tag_id: previewQuestion.line_tag?.id,
@@ -93,10 +95,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         try {
             await createQuestion.mutateAsync(questionForm as QuestionCreateRequest);
             toast.success('题目创建成功');
-            setCreateDialogOpen(false);
-            setQuestionForm({
-                ...DEFAULT_QUESTION_FORM,
-            });
+            closeCreateDialog();
         } catch (error) {
             showApiError(error);
         }
@@ -202,17 +201,33 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                     pageSize: pageSize,
                     pageCount: Math.ceil((data?.count || 0) / pageSize),
                     totalCount: data?.count || 0,
-                    onPageChange: (p: number) => setPage(p + 1),
+                    onPageChange: (p: number) =>
+                        setPagination((prev) => ({
+                            ...prev,
+                            page: p + 1,
+                            scopeKey: currentScopeKey,
+                        })),
                     onPageSizeChange: (size: number) => {
-                        setPageSize(size);
-                        setPage(1);
+                        setPagination((prev) => ({
+                            ...prev,
+                            pageSize: size,
+                            page: 1,
+                            scopeKey: currentScopeKey,
+                        }));
                     },
                 }}
                 rowClassName="hover:bg-muted transition-colors group cursor-pointer"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
 
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closeCreateDialog();
+                    }
+                }}
+            >
                 <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-background rounded-xl">
                     <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
                         <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
@@ -226,7 +241,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                             setQuestionForm={setQuestionForm}
                             lineTypes={lineTypes}
                             editingQuestionId={null}
-                            onCancel={() => setCreateDialogOpen(false)}
+                            onCancel={closeCreateDialog}
                             onSave={handleCreateQuestion}
                             isSaving={createQuestion.isPending}
                         />

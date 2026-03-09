@@ -14,7 +14,7 @@ const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANA
 export const RoleRouteWrapper: React.FC = () => {
   const { role } = useParams<{ role: string }>();
   const location = useLocation();
-  const { isAuthenticated, isLoading, availableRoles, currentRole, setCurrentRole } = useAuth();
+  const { isAuthenticated, isLoading, availableRoles, currentRole, switchRole, isSwitching } = useAuth();
 
   const roleCode = role?.toUpperCase() as RoleCode;
   const isValidRole = VALID_ROLES.includes(roleCode);
@@ -25,14 +25,22 @@ export const RoleRouteWrapper: React.FC = () => {
     return availableRoles[0]?.code ?? null;
   };
 
-  // 同步角色到全局状态（供 API 请求使用）
+  // URL 角色与 token 角色不一致时，走后端 switch-role 保持单一真相源
   useEffect(() => {
-    if (isValidRole && isAuthenticated && currentRole !== roleCode) {
-      setCurrentRole(roleCode);
+    if (!isAuthenticated || !isValidRole) {
+      return;
     }
-  }, [roleCode, isValidRole, isAuthenticated, currentRole, setCurrentRole]);
+    const hasRole = availableRoles.some((r) => r.code === roleCode);
+    if (!hasRole) {
+      return;
+    }
+    if (!currentRole || currentRole === roleCode) {
+      return;
+    }
+    void switchRole(roleCode);
+  }, [isAuthenticated, isValidRole, availableRoles, currentRole, roleCode, switchRole]);
 
-  if (isLoading) {
+  if (isLoading || isSwitching) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Spinner size="lg" />
@@ -67,6 +75,10 @@ export const RoleRouteWrapper: React.FC = () => {
     }
 
     return <Navigate to={fallbackPath} replace />;
+  }
+
+  if (currentRole && currentRole !== roleCode) {
+    return <Navigate to={`/${currentRole.toLowerCase()}/dashboard`} replace />;
   }
 
   return <Outlet />;

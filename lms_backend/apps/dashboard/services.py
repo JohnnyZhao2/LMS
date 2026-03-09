@@ -29,6 +29,7 @@ from .selectors import (
     get_monthly_tasks_count,
     get_pending_grading_count,
     get_score_distribution,
+    get_student_dashboard_metrics,
     get_student_all_tasks,
     get_student_assignments,
     get_student_exam_avg_score,
@@ -180,13 +181,24 @@ class MentorDashboardService(BaseService):
         spot_check_map: Dict[int, Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """计算每个学员的统计"""
+        student_ids = list(students.values_list('id', flat=True))
+        student_metrics_map = get_student_dashboard_metrics(student_ids)
         student_stats = []
         for student in students.select_related('department'):
-            assignments = get_student_assignments(user_id=student.id)
-            stats = calculate_task_stats(assignments)
-            avg_score = calculate_avg_score(user_id=student.id)
-            total_tasks = stats['total_tasks']
-            overdue_rate = (stats['overdue_tasks'] / total_tasks * 100) if total_tasks > 0 else 0.0
+            metrics = student_metrics_map.get(
+                student.id,
+                {
+                    'total_tasks': 0,
+                    'completed_tasks': 0,
+                    'in_progress_tasks': 0,
+                    'overdue_tasks': 0,
+                    'completion_rate': 0.0,
+                    'avg_score': None,
+                }
+            )
+            avg_score = metrics['avg_score']
+            total_tasks = metrics['total_tasks']
+            overdue_rate = (metrics['overdue_tasks'] / total_tasks * 100) if total_tasks > 0 else 0.0
             spot_check_info = spot_check_map.get(student.id, {'count': 0, 'avg_score': None})
             monthly_active = student.id in monthly_active_ids
             student_stats.append({
@@ -194,11 +206,11 @@ class MentorDashboardService(BaseService):
                 'employee_id': student.employee_id or '',
                 'username': student.username,
                 'department_name': student.department.name if student.department else None,
-                'total_tasks': stats['total_tasks'],
-                'completed_tasks': stats['completed_tasks'],
-                'in_progress_tasks': stats['in_progress_tasks'],
-                'overdue_tasks': stats['overdue_tasks'],
-                'completion_rate': stats['completion_rate'],
+                'total_tasks': metrics['total_tasks'],
+                'completed_tasks': metrics['completed_tasks'],
+                'in_progress_tasks': metrics['in_progress_tasks'],
+                'overdue_tasks': metrics['overdue_tasks'],
+                'completion_rate': metrics['completion_rate'],
                 'overdue_rate': round(overdue_rate, 1),
                 'avg_score': round(avg_score, 2) if avg_score is not None else None,
                 'exam_count': 0,
@@ -208,7 +220,7 @@ class MentorDashboardService(BaseService):
                 'spot_check_count_month': spot_check_info['count'],
                 'spot_check_avg_score_month': spot_check_info['avg_score'],
                 'radar_metrics': {
-                    'completion_rate': stats['completion_rate'],
+                    'completion_rate': metrics['completion_rate'],
                     'overdue_rate': round(overdue_rate, 1),
                     'avg_score': round(avg_score, 2) if avg_score is not None else 0,
                     'monthly_active': 100 if monthly_active else 0,

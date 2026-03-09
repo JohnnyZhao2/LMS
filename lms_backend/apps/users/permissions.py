@@ -18,19 +18,11 @@ def get_current_role(user, request):
     if not user or not user.is_authenticated:
         return None
 
-    # Priority 1: Read from X-Current-Role header
-    header_role = request.META.get('HTTP_X_CURRENT_ROLE')
-    if header_role:
-        # Validate that the header role is in user's available roles
-        user_roles = set(user.role_codes) if hasattr(user, 'role_codes') else set()
-        if header_role in user_roles:
-            return header_role
-
-    # Priority 2: Use current_role attribute set by authentication
+    # Priority 1: Use current_role attribute set by authentication (token claim)
     if hasattr(user, 'current_role') and user.current_role:
         return user.current_role
 
-    # Priority 3: Derive from role codes
+    # Priority 2: Derive from role codes
     role_codes = set(user.role_codes) if hasattr(user, 'role_codes') else set()
     if 'ADMIN' in role_codes:
         return 'ADMIN'

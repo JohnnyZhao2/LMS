@@ -21,7 +21,6 @@ interface AuthContextValue extends AuthState {
   login: (data: LoginRequest) => Promise<RoleCode>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
-  setCurrentRole: (roleCode: RoleCode) => void;
   refreshUser: () => Promise<void>;
   setIsSwitching: (isSwitching: boolean) => void;
 }
@@ -125,35 +124,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await switchRoleApi.switchRole({ role_code: roleCode });
       tokenStorage.setTokens(response.access_token, response.refresh_token);
-      applyAuthSession(response, { isSwitching: true }); // 由 Header 导航后再 setIsSwitching(false)
+      applyAuthSession(response, { isSwitching: false });
     } catch (error) {
       setState((prev) => ({ ...prev, isSwitching: false }));
       throw error;
     }
   }, [applyAuthSession]);
-
-  /**
-   * 本地同步当前角色（不触发后端切换，仅用于路由角色上下文）
-   */
-  const setCurrentRole = useCallback((roleCode: RoleCode) => {
-    setState((prev) => {
-      if (!prev.isAuthenticated) {
-        return prev;
-      }
-      const hasRole = prev.availableRoles.some((role) => role.code === roleCode);
-      if (!hasRole) {
-        return prev;
-      }
-      if (prev.currentRole === roleCode) {
-        return prev;
-      }
-      tokenStorage.setCurrentRole(roleCode);
-      return {
-        ...prev,
-        currentRole: roleCode,
-      };
-    });
-  }, []);
 
   /**
    * 设置切换状态
@@ -172,7 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     switchRole,
-    setCurrentRole,
     refreshUser,
     setIsSwitching,
   };

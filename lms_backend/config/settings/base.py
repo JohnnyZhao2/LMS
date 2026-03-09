@@ -12,12 +12,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Load only the current environment file: .env.<env>
 SETTINGS_MODULE = os.getenv('DJANGO_SETTINGS_MODULE', '')
 DEFAULT_DJANGO_ENV = 'development'
-if SETTINGS_MODULE.endswith('.test'):
-    DEFAULT_DJANGO_ENV = 'test'
-elif SETTINGS_MODULE.endswith('.production'):
+if SETTINGS_MODULE.endswith('.production'):
     DEFAULT_DJANGO_ENV = 'production'
 
 DJANGO_ENV = os.getenv('DJANGO_ENV', DEFAULT_DJANGO_ENV).strip().lower()
+if DJANGO_ENV not in {'development', 'production'}:
+    raise ValueError(
+        f'Unsupported DJANGO_ENV "{DJANGO_ENV}". Use "development" or "production".'
+    )
 load_dotenv(BASE_DIR / f'.env.{DJANGO_ENV}', override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!

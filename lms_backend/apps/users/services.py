@@ -4,7 +4,7 @@ User services for LMS.
 from typing import List, Optional
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 
 from apps.activity_logs.services import ActivityLogService
 from core.base_service import BaseService
@@ -13,7 +13,11 @@ from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Role, User, UserRole
 from .role_constraints import validate_role_assignment_constraints
-from .selectors import get_user_by_id
+from .selectors import (
+    get_user_by_id,
+    get_user_created_resource_ids,
+    purge_user_related_business_data,
+)
 
 
 class UserManagementService(BaseService):
@@ -85,59 +89,21 @@ class UserManagementService(BaseService):
                 message='仅可删除离职（已停用）用户，请先停用该账号'
             )
 
-    def _purge_user_related_data(self, user: User) -> None:
+    def _delete_user_safely(self, user: User) -> None:
         """
-        清理用户的全部关联数据。
-        注意：这里使用硬删除，不保留向后兼容。
+        删除用户主记录，并将未知 PROTECT 依赖转换为业务错误。
         """
-        from apps.knowledge.models import Knowledge
-        from apps.questions.models import Question
-        from apps.quizzes.models import Quiz, QuizQuestion
-        from apps.spot_checks.models import SpotCheck
-        from apps.submissions.models import Answer, Submission
-        from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
-
-        created_task_ids = list(
-            Task.objects.filter(created_by_id=user.id).values_list('id', flat=True)
-        )
-        created_knowledge_ids = list(
-            Knowledge.objects.filter(created_by_id=user.id).values_list('id', flat=True)
-        )
-        created_quiz_ids = list(
-            Quiz.objects.filter(created_by_id=user.id).values_list('id', flat=True)
-        )
-        created_question_ids = list(
-            Question.objects.filter(created_by_id=user.id).values_list('id', flat=True)
-        )
-
-        # 1) 先清理直接挂在该用户上的业务数据（PROTECT 关系）
-        SpotCheck.objects.filter(
-            Q(student_id=user.id) | Q(checker_id=user.id)
-        ).delete()
-        TaskAssignment.objects.filter(assignee_id=user.id).delete()
-        Submission.objects.filter(user_id=user.id).delete()
-
-        # 2) 再清理该用户“创建”的资源依赖关系（避免 PROTECT 阻塞）
-        if created_quiz_ids:
-            Submission.objects.filter(quiz_id__in=created_quiz_ids).delete()
-            TaskQuiz.objects.filter(quiz_id__in=created_quiz_ids).delete()
-
-        if created_question_ids:
-            Answer.objects.filter(question_id__in=created_question_ids).delete()
-            QuizQuestion.objects.filter(question_id__in=created_question_ids).delete()
-
-        if created_knowledge_ids:
-            TaskKnowledge.objects.filter(knowledge_id__in=created_knowledge_ids).delete()
-
-        # 3) 删除该用户创建的资源（硬删除）
-        if created_task_ids:
-            Task.objects.filter(id__in=created_task_ids).delete()
-        if created_quiz_ids:
-            Quiz.objects.filter(id__in=created_quiz_ids).delete()
-        if created_knowledge_ids:
-            Knowledge.objects.filter(id__in=created_knowledge_ids).delete()
-        if created_question_ids:
-            Question.objects.filter(id__in=created_question_ids).delete()
+        try:
+            user.delete()
+        except ProtectedError as error:
+            referenced_models = sorted({
+                obj._meta.verbose_name for obj in error.protected_objects
+            })
+            model_list = '、'.join(referenced_models) if referenced_models else '未知资源'
+            raise BusinessError(
+                code=ErrorCodes.USER_HAS_DATA,
+                message=f'用户仍被以下资源引用：{model_list}，请先清理后再删除'
+            )
 
     def delete_user(self, user_id: int) -> None:
         """
@@ -149,8 +115,12 @@ class UserManagementService(BaseService):
         self._validate_user_can_be_deleted(user)
 
         with transaction.atomic():
-            self._purge_user_related_data(user)
-            user.delete()
+            created_resource_ids = get_user_created_resource_ids(user.id)
+            purge_user_related_business_data(
+                user_id=user.id,
+                created_resource_ids=created_resource_ids,
+            )
+            self._delete_user_safely(user)
 
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """

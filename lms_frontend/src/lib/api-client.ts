@@ -138,11 +138,6 @@ class ApiClient {
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
-      // 添加当前角色 header
-      const currentRole = tokenStorage.getCurrentRole();
-      if (currentRole) {
-        headers['X-Current-Role'] = currentRole;
-      }
     }
 
     // 发送请求

@@ -1,4 +1,7 @@
 import pytest
+from unittest.mock import patch
+
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -190,3 +193,30 @@ def test_delete_active_user_requires_deactivation_first(api_client, admin_user, 
     assert response.data['code'] == 'INVALID_OPERATION'
     assert '请先停用' in response.data['message']
     assert User.objects.filter(id=active_user.id).exists()
+
+
+@pytest.mark.django_db
+def test_delete_user_returns_business_error_when_unknown_protected_dependency_exists(
+    api_client,
+    admin_user,
+    inactive_user,
+):
+    api_client.force_authenticate(user=admin_user)
+    protected_task = Task.objects.create(
+        title='受保护任务',
+        description='用于模拟未知依赖',
+        deadline=timezone.now() + timezone.timedelta(days=2),
+        created_by=admin_user,
+        updated_by=admin_user,
+    )
+
+    with patch.object(
+        User,
+        'delete',
+        side_effect=ProtectedError('protected dependency', [protected_task]),
+    ):
+        response = api_client.delete(f'/api/users/{inactive_user.id}/')
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'USER_HAS_DATA'
+    assert '任务' in response.data['message']

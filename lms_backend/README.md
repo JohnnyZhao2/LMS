@@ -51,24 +51,23 @@ DB_PORT=3306
 SECRET_KEY=your-dev-secret-key
 EOF
 
-# 测试环境
-cat > .env.test <<'EOF'
-DJANGO_ENV=test
-DB_NAME=lms_test
+# 生产环境（预留部署）
+cat > .env.production <<'EOF'
+DJANGO_ENV=production
+DB_NAME=lms
 DB_USER=root
 DB_PASSWORD=your_mysql_password
 DB_HOST=localhost
 DB_PORT=3306
-SECRET_KEY=your-test-secret-key
+SECRET_KEY=your-prod-secret-key
 EOF
 ```
 
 ### 3. 初始化数据库
 
 ```bash
-# 创建数据库（开发 + 测试）
+# 创建数据库（本地开发）
 mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p -e "CREATE DATABASE lms_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 运行迁移
 python manage.py migrate --settings=config.settings.development
@@ -358,7 +357,7 @@ pip install -r requirements.txt
 
 - **领域层测试** (`tests/test_domain_layer.py`)：验证 Domain 层的业务逻辑
 
-- **测试数据库**：测试使用 MySQL `lms_test`（配置在 `config/settings/test.py` + `.env.test`）
+- **测试数据库**：测试沿用 `config.settings.development`；Django 会基于 `DB_NAME` 自动创建测试库（默认 `test_<DB_NAME>`）
 
 ## 项目结构
 
@@ -443,8 +442,7 @@ lms_backend/
 │   ├── settings/            # 环境配置
 │   │   ├── base.py          # 基础配置
 │   │   ├── development.py   # 开发环境
-│   │   ├── production.py    # 生产环境
-│   │   └── test.py          # 测试环境
+│   │   └── production.py    # 生产环境
 │   ├── urls.py              # URL 路由
 │   ├── wsgi.py
 │   └── asgi.py

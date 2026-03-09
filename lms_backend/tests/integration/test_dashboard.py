@@ -324,6 +324,34 @@ class TestMentorDashboardAPI:
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
 
+    def test_dashboard_student_stats_query_count_is_bounded(self, api_client, mentor, department, task):
+        """测试导师看板的学员统计查询次数不会随学员数量线性爆炸"""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        for index in range(8):
+            student = User.objects.create_user(
+                employee_id=f'MENTOR_SCOPE_STU_{index:03d}',
+                username=f'导师范围学员{index}',
+                password='password123',
+                department=department,
+                mentor=mentor,
+            )
+            TaskAssignment.objects.create(
+                task=task,
+                assignee=student,
+                status='COMPLETED' if index % 2 == 0 else 'IN_PROGRESS',
+            )
+
+        api_client.force_authenticate(user=mentor)
+        with CaptureQueriesContext(connection) as context:
+            response = api_client.get('/api/dashboard/mentor/')
+            data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        assert len(data['students']) >= 8
+        assert len(context.captured_queries) < 25, f"查询次数过多: {len(context.captured_queries)}"
+
 @pytest.mark.django_db
 class TestTeamManagerDashboardAPI:
     """团队经理仪表盘 API 测试"""

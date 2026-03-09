@@ -1,7 +1,7 @@
 import pytest
 from rest_framework.test import APIClient
 
-from apps.users.models import User, Department
+from apps.users.models import Department, Role, User, UserRole
 
 
 @pytest.mark.django_db
@@ -73,3 +73,35 @@ def test_refresh_token_should_rotate_and_invalidate_old_token():
     )
     assert second_refresh_response.status_code == 400
     assert second_refresh_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
+
+
+@pytest.mark.django_db
+def test_header_role_cannot_override_token_current_role():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept 3', code='DEPT3')
+    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    mentor_role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+
+    user = User.objects.create_user(
+        employee_id='EMP003',
+        username='Role Mixed User',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.get_or_create(user=user, role=admin_role)
+    UserRole.objects.get_or_create(user=user, role=mentor_role)
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP003', 'password': 'password123'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    access_token = login_response.data['data']['access_token']
+
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    response = client.get('/api/users/mentees/', HTTP_X_CURRENT_ROLE='MENTOR')
+
+    assert response.status_code != 200
+    assert response.data['code'] == 'PERMISSION_DENIED'

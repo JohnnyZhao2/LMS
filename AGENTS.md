@@ -144,7 +144,7 @@ try {
 - **后端框架**：pytest + pytest-django + hypothesis + factory-boy
 - **测试位置**：`lms_backend/tests/`（`integration/` 和 `properties/` 子目录）
 - **测试命名**：`test_*.py`，测试类 `Test*`，测试方法 `test_*`
-- **测试数据库**：SQLite 内存数据库（`config.settings.test`）
+- **测试数据库**：沿用 `config.settings.development`，Django 自动创建测试库（默认 `test_<DB_NAME>`）
 - **前端测试**：暂无配置，如需添加请显式引入
 
 ## 代理特定说明

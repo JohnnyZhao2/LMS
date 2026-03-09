@@ -61,6 +61,89 @@ def calculate_task_stats(assignments: QuerySet) -> Dict[str, Any]:
     }
 
 
+def get_student_dashboard_metrics(
+    student_ids: List[int],
+    task_deleted: bool = False,
+) -> Dict[int, Dict[str, Any]]:
+    """
+    批量获取学员看板指标，避免按学员逐个查询导致 N+1。
+    返回每个学员的任务统计 + 平均分。
+    """
+    if not student_ids:
+        return {}
+
+    metrics_map: Dict[int, Dict[str, Any]] = {
+        student_id: {
+            'total_tasks': 0,
+            'completed_tasks': 0,
+            'in_progress_tasks': 0,
+            'overdue_tasks': 0,
+            'completion_rate': 0.0,
+            'avg_score': None,
+        }
+        for student_id in student_ids
+    }
+
+    assignment_qs = TaskAssignment.objects.filter(assignee_id__in=student_ids)
+    if not task_deleted:
+        assignment_qs = assignment_qs.filter(task__is_deleted=False)
+
+    assignment_rows = assignment_qs.values('assignee_id').annotate(
+        total_tasks=Count('id'),
+        completed_tasks=Sum(
+            Case(
+                When(status='COMPLETED', then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ),
+        in_progress_tasks=Sum(
+            Case(
+                When(status='IN_PROGRESS', then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ),
+        overdue_tasks=Sum(
+            Case(
+                When(status='OVERDUE', then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ),
+    )
+
+    for row in assignment_rows:
+        total_tasks = row['total_tasks'] or 0
+        completed_tasks = row['completed_tasks'] or 0
+        in_progress_tasks = row['in_progress_tasks'] or 0
+        overdue_tasks = row['overdue_tasks'] or 0
+        completion_rate = round((completed_tasks / total_tasks) * 100, 1) if total_tasks > 0 else 0.0
+
+        metrics_map[row['assignee_id']].update({
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'in_progress_tasks': in_progress_tasks,
+            'overdue_tasks': overdue_tasks,
+            'completion_rate': completion_rate,
+        })
+
+    score_qs = Submission.objects.filter(
+        user_id__in=student_ids,
+        status='GRADED',
+    )
+    if not task_deleted:
+        score_qs = score_qs.filter(task_assignment__task__is_deleted=False)
+
+    score_rows = score_qs.values('user_id').annotate(avg_score=Avg('obtained_score'))
+
+    for row in score_rows:
+        avg_score = float(row['avg_score']) if row['avg_score'] is not None else None
+        metrics_map[row['user_id']]['avg_score'] = avg_score
+
+    return metrics_map
+
+
 def calculate_average_completion_rate_by_students(
     student_ids: List[int],
     task_deleted: bool = False

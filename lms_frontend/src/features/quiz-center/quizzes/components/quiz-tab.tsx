@@ -1,5 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pencil, Trash2, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
@@ -24,17 +23,20 @@ interface QuizTabProps {
 }
 
 export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    scopeKey: `${search}::${quizType ?? 'ALL'}`,
+  });
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const currentScopeKey = `${search}::${quizType ?? 'ALL'}`;
+  const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
+  const pageSize = pagination.pageSize;
 
   const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
   const { roleNavigate } = useRoleNavigate();
-
-  useEffect(() => {
-    setPage(1);
-  }, [quizType, search]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -210,10 +212,19 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           pageSize: pageSize,
           pageCount: Math.ceil((data?.count || 0) / pageSize),
           totalCount: data?.count || 0,
-          onPageChange: (p: number) => setPage(p + 1),
+          onPageChange: (p: number) =>
+            setPagination((prev) => ({
+              ...prev,
+              page: p + 1,
+              scopeKey: currentScopeKey,
+            })),
           onPageSizeChange: (size: number) => {
-            setPageSize(size);
-            setPage(1);
+            setPagination((prev) => ({
+              ...prev,
+              pageSize: size,
+              page: 1,
+              scopeKey: currentScopeKey,
+            }));
           },
         }}
         rowClassName="hover:bg-muted transition-colors cursor-pointer group"
