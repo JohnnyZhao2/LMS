@@ -22,6 +22,7 @@ export const QuizCenter: React.FC = () => {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'quizzes' | 'questions'>('quizzes');
   const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
+  const [questionCreateSignal, setQuestionCreateSignal] = useState(0);
 
   const { data: quizzesData } = useQuizzes({ page: 1, pageSize: 1 });
   const { data: questionsData } = useQuestions({ page: 1, pageSize: 1 });
@@ -32,6 +33,11 @@ export const QuizCenter: React.FC = () => {
   }), [quizzesData, questionsData]);
 
   const handleAdd = () => {
+    if (activeTab === 'questions') {
+      setQuestionCreateSignal(prev => prev + 1);
+      return;
+    }
+
     roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/create`);
   };
 
@@ -47,7 +53,7 @@ export const QuizCenter: React.FC = () => {
               className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
             >
               <Plus className="mr-2 h-4 w-4" />
-              构建全新试卷
+              {activeTab === 'quizzes' ? '构建全新试卷' : '添加题目'}
             </Button>
           </div>
         }
@@ -138,7 +144,7 @@ export const QuizCenter: React.FC = () => {
           {activeTab === 'quizzes' ? (
             <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
           ) : (
-            <QuestionTab search={search} />
+            <QuestionTab search={search} createSignal={questionCreateSignal} />
           )}
         </ContentPanel>
       </div>

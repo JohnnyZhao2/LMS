@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Trash2, MoreHorizontal, FileText, Eye, FileEdit } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
-import { useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
+import { useCreateQuestion, useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { QuestionEditorPanel } from '@/features/quiz-center/questions/components/question-editor-panel';
 import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
@@ -25,17 +25,43 @@ import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
     search?: string;
+    createSignal?: number;
 }
 
-export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
+const DEFAULT_QUESTION_FORM: Partial<QuestionCreateRequest> = {
+    question_type: 'SINGLE_CHOICE',
+    content: '',
+    options: [{ key: 'A', value: '' }, { key: 'B', value: '' }],
+    answer: '',
+    explanation: '',
+    score: '1',
+};
+
+export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSignal = 0 }) => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [questionForm, setQuestionForm] = useState<Partial<QuestionCreateRequest>>(DEFAULT_QUESTION_FORM);
 
     const { data, isLoading, refetch } = useQuestions({ page, pageSize, search: search || undefined });
     const { data: lineTypes } = useLineTypeTags();
+    const createQuestion = useCreateQuestion();
     const deleteQuestion = useDeleteQuestion();
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    useEffect(() => {
+        if (createSignal === 0) return;
+
+        setQuestionForm({
+            ...DEFAULT_QUESTION_FORM,
+        });
+        setCreateDialogOpen(true);
+    }, [createSignal]);
 
     const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
         line_tag_id: previewQuestion.line_tag?.id,
@@ -54,6 +80,23 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
             toast.success('题目已从系统库清除');
             setDeleteId(null);
             refetch();
+        } catch (error) {
+            showApiError(error);
+        }
+    };
+
+    const handleCreateQuestion = async () => {
+        if (!questionForm.line_tag_id) return toast.error('请选择条线类型');
+        if (!questionForm.content?.trim()) return toast.error('请输入内容');
+        if (!questionForm.answer) return toast.error('请设置答案');
+
+        try {
+            await createQuestion.mutateAsync(questionForm as QuestionCreateRequest);
+            toast.success('题目创建成功');
+            setCreateDialogOpen(false);
+            setQuestionForm({
+                ...DEFAULT_QUESTION_FORM,
+            });
         } catch (error) {
             showApiError(error);
         }
@@ -168,6 +211,28 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '' }) => {
                 rowClassName="hover:bg-muted transition-colors group cursor-pointer"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
+
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-background rounded-xl">
+                    <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+                            <FileEdit className="w-5 h-5 text-secondary-500" />
+                            新建题目
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[70vh] overflow-y-auto">
+                        <QuestionEditorPanel
+                            questionForm={questionForm}
+                            setQuestionForm={setQuestionForm}
+                            lineTypes={lineTypes}
+                            editingQuestionId={null}
+                            onCancel={() => setCreateDialogOpen(false)}
+                            onSave={handleCreateQuestion}
+                            isSaving={createQuestion.isPending}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* 预览对话框 (Keep this as Dialog since it's a detail view, not a confirmation) */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
