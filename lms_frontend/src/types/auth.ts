@@ -19,6 +19,7 @@ export interface AuthSessionPayload {
   user: UserInfo;
   available_roles: Role[];
   current_role: RoleCode;
+  effective_permissions: string[];
 }
 
 /**

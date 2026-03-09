@@ -7,20 +7,20 @@ Implements:
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
+from apps.authorization.services import AuthorizationService
 from apps.tasks.selectors import (
     task_analytics_payload,
     task_student_executions,
 )
 from apps.tasks.serializers import StudentExecutionSerializer, TaskAnalyticsSerializer
 from apps.tasks.task_service import TaskService
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.responses import list_response, success_response
 
 
 class TaskAnalyticsView(BaseAPIView):
     """Task analytics endpoint for admin preview."""
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = TaskService
 
     @extend_schema(
@@ -33,6 +33,10 @@ class TaskAnalyticsView(BaseAPIView):
         tags=['任务分析']
     )
     def get(self, request, pk):
+        AuthorizationService(request).enforce(
+            'task.analytics.view',
+            error_message='无权查看任务分析',
+        )
         task = self.service.get_task_by_id(pk)
         self.service.check_task_read_permission(task)
 
@@ -43,7 +47,7 @@ class TaskAnalyticsView(BaseAPIView):
 
 class StudentExecutionsView(BaseAPIView):
     """Student executions endpoint for admin preview."""
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = TaskService
 
     @extend_schema(
@@ -56,6 +60,10 @@ class StudentExecutionsView(BaseAPIView):
         tags=['任务分析']
     )
     def get(self, request, pk):
+        AuthorizationService(request).enforce(
+            'task.analytics.view',
+            error_message='无权查看学员执行情况',
+        )
         task = self.service.get_task_by_id(pk)
         self.service.check_task_read_permission(task)
 

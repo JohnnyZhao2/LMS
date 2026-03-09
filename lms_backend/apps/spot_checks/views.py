@@ -7,7 +7,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
@@ -51,7 +51,7 @@ class SpotCheckListCreateView(BaseAPIView):
     抽查记录列表和创建端点
     Properties: 35, 36
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     service_class = SpotCheckService  # 声明 Service 类
 
@@ -83,6 +83,10 @@ class SpotCheckListCreateView(BaseAPIView):
         获取抽查记录列表
         Property 36: 抽查记录时间排序
         """
+        AuthorizationService(request).enforce(
+            'spot_check.view',
+            error_message='无权查看抽查记录',
+        )
         student_id = parse_int_query_param(
             request=request,
             name='student_id',
@@ -125,6 +129,10 @@ class SpotCheckListCreateView(BaseAPIView):
         创建抽查记录
         Property 35: 抽查学员范围限制
         """
+        AuthorizationService(request).enforce(
+            'spot_check.create',
+            error_message='无权创建抽查记录',
+        )
         # 反序列化输入
         serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -144,7 +152,7 @@ class SpotCheckDetailView(BaseAPIView):
     """
     抽查记录详情、更新、删除端点
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = SpotCheckService  # 声明 Service 类
 
     @extend_schema(
@@ -159,6 +167,10 @@ class SpotCheckDetailView(BaseAPIView):
     )
     def get(self, request, pk):
         """获取抽查记录详情"""
+        AuthorizationService(request).enforce(
+            'spot_check.view',
+            error_message='无权查看抽查记录详情',
+        )
         try:
             spot_check = self.service.get_by_id(pk)
         except BusinessError as e:
@@ -183,6 +195,10 @@ class SpotCheckDetailView(BaseAPIView):
         更新抽查记录
         只能更新自己创建的记录（管理员除外）
         """
+        AuthorizationService(request).enforce(
+            'spot_check.update',
+            error_message='无权更新抽查记录',
+        )
         # 反序列化输入
         serializer = SpotCheckUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -212,6 +228,10 @@ class SpotCheckDetailView(BaseAPIView):
         删除抽查记录
         只能删除自己创建的记录（管理员除外）
         """
+        AuthorizationService(request).enforce(
+            'spot_check.delete',
+            error_message='无权删除抽查记录',
+        )
         try:
             self.service.delete(pk)
         except BusinessError as e:

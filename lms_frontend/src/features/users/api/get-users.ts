@@ -33,13 +33,18 @@ interface GetUsersParams {
   search?: string;
 }
 
+interface UseUsersOptions {
+  enabled?: boolean;
+}
+
 /**
  * 获取用户列表
  * 后端返回简单数组，不支持分页
  */
-export const useUsers = (params: GetUsersParams = {}) => {
+export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions = {}) => {
   const currentRole = useCurrentRole();
   const { departmentId, isActive, search } = params;
+  const { enabled = true } = options;
 
   return useQuery({
     queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, isActive, search],
@@ -52,7 +57,7 @@ export const useUsers = (params: GetUsersParams = {}) => {
       const queryString = buildQueryString(queryParams);
       return apiClient.get<UserList[]>(`/users${queryString}`);
     },
-    enabled: currentRole !== null,
+    enabled: currentRole !== null && enabled,
   });
 };
 

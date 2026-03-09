@@ -7,13 +7,18 @@ import type { RoleCode } from '@/types/api';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: RoleCode[];
+  requiredPermissions?: string[];
 }
 
 /**
  * 路由守卫组件
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles,
+  requiredPermissions,
+}) => {
+  const { isAuthenticated, isLoading, hasAnyPermission } = useAuth();
   const { role: urlRole } = useParams<{ role: string }>();
 
   // 从 URL 获取当前角色
@@ -33,6 +38,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
   // 权限检查：如果当前角色不在允许的角色列表中，重定向到当前角色的 dashboard
   if (allowedRoles && currentRole && !allowedRoles.includes(currentRole)) {
+    const dashboardPath = urlRole ? `/${urlRole.toLowerCase()}/dashboard` : '/dashboard';
+    return <Navigate to={dashboardPath} replace />;
+  }
+
+  if (requiredPermissions && requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions)) {
     const dashboardPath = urlRole ? `/${urlRole.toLowerCase()}/dashboard` : '/dashboard';
     return <Navigate to={dashboardPath} replace />;
   }

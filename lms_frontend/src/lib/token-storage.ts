@@ -8,6 +8,7 @@ const REFRESH_TOKEN_KEY = 'lms_refresh_token';
 const USER_INFO_KEY = 'lms_user_info';
 const CURRENT_ROLE_KEY = 'lms_current_role';
 const AVAILABLE_ROLES_KEY = 'lms_available_roles';
+const EFFECTIVE_PERMISSIONS_KEY = 'lms_effective_permissions';
 const ROLE_CODES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER'];
 
 const parseStorageJson = <T>(key: string, fallback: T): T => {
@@ -113,6 +114,21 @@ export const tokenStorage = {
     this.setUserInfo(session.user);
     this.setCurrentRole(session.current_role);
     this.setAvailableRoles(session.available_roles);
+    this.setEffectivePermissions(session.effective_permissions);
+  },
+
+  /**
+   * 获取当前生效权限列表
+   */
+  getEffectivePermissions(): string[] {
+    return parseStorageJson<string[]>(EFFECTIVE_PERMISSIONS_KEY, []);
+  },
+
+  /**
+   * 设置当前生效权限列表
+   */
+  setEffectivePermissions(permissionCodes: string[]): void {
+    localStorage.setItem(EFFECTIVE_PERMISSIONS_KEY, JSON.stringify(permissionCodes));
   },
 
   /**
@@ -124,5 +140,6 @@ export const tokenStorage = {
     localStorage.removeItem(USER_INFO_KEY);
     localStorage.removeItem(CURRENT_ROLE_KEY);
     localStorage.removeItem(AVAILABLE_ROLES_KEY);
+    localStorage.removeItem(EFFECTIVE_PERMISSIONS_KEY);
   },
 };

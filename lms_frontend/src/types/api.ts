@@ -47,3 +47,6 @@ export * from './notification';
 
 // 导出任务分析相关类型
 export * from './task-analytics';
+
+// 导出授权相关类型
+export * from './authorization';

@@ -16,6 +16,7 @@ from apps.dashboard.serializers import (
 from apps.dashboard.services import StudentDashboardService
 from apps.knowledge.serializers import KnowledgeListSerializer
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
 
@@ -39,6 +40,12 @@ class StudentDashboardView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request):
+        current_role = self.service.get_current_role()
+        if current_role != 'STUDENT':
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有学员可以访问此仪表盘'
+            )
         user = request.user
         task_limit = parse_int_query_param(
             request=request,

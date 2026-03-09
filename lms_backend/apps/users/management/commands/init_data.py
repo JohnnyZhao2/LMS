@@ -6,6 +6,7 @@ Usage:
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from apps.authorization.services import AuthorizationService
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -16,6 +17,7 @@ class Command(BaseCommand):
             self.create_departments()
             self.create_roles()
             self.create_admin_user()
+            AuthorizationService.ensure_defaults()
         self.stdout.write(self.style.SUCCESS('✅ 初始化数据完成！'))
     def create_departments(self):
         """创建部门"""

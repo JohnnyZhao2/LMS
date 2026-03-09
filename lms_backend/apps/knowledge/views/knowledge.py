@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.authorization.services import AuthorizationService
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
@@ -37,6 +38,20 @@ from core.responses import (
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()
+
+
+def _enforce_knowledge_view_permission(request, error_message: str = '无权访问知识内容') -> None:
+    authorization_service = AuthorizationService(request)
+    if authorization_service.can('knowledge.view'):
+        return
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message,
+    )
+
+
+def _enforce_knowledge_action_permission(request, permission_code: str, error_message: str) -> None:
+    AuthorizationService(request).enforce(permission_code, error_message=error_message)
 
 
 def _build_knowledge_filters(request):
@@ -135,6 +150,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
+        _enforce_knowledge_view_permission(request, '无权查看知识列表')
         return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
@@ -148,12 +164,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request):
-        # 1. 权限检查
-        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员或室经理可以创建知识文档'
-            )
+        _enforce_knowledge_action_permission(request, 'knowledge.create', '无权创建知识文档')
         # 3. 反序列化输入
         serializer = KnowledgeCreateSerializer(
             data=request.data,
@@ -187,6 +198,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, pk):
+        _enforce_knowledge_view_permission(request, '无权查看知识详情')
         # 1. 调用 Service
         try:
             knowledge = self.service.get_by_id(pk)
@@ -208,12 +220,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def patch(self, request, pk):
-        # 1. 权限检查
-        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员或室经理可以更新知识文档'
-            )
+        _enforce_knowledge_action_permission(request, 'knowledge.update', '无权更新知识文档')
         # 2. 获取对象（用于序列化校验的 instance）
         try:
             knowledge = self.service.get_by_id(pk)
@@ -249,12 +256,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def delete(self, request, pk):
-        # 1. 权限检查
-        if self.service.get_current_role() not in ('ADMIN', 'DEPT_MANAGER'):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员或室经理可以删除知识文档'
-            )
+        _enforce_knowledge_action_permission(request, 'knowledge.delete', '无权删除知识文档')
         # 2. 调用 Service
         try:
             self.service.delete(pk)
@@ -279,6 +281,7 @@ class KnowledgeStatsView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
+        _enforce_knowledge_view_permission(request, '无权查看知识统计')
         filters, search = _build_knowledge_filters(request)
         # 2. 调用 Service 获取知识列表（只返回当前版本）
         knowledge_list = self.service.get_all_with_filters(
@@ -316,6 +319,7 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, task_knowledge_id):
+        _enforce_knowledge_view_permission(request, '无权查看任务知识详情')
         task_knowledge = TaskKnowledge.objects.select_related('task', 'knowledge').filter(
             id=task_knowledge_id
         ).first()
@@ -325,7 +329,7 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
                 message='任务知识不存在',
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        if self.service.get_current_role() != 'ADMIN':
+        if not AuthorizationService(request).can('knowledge.view'):
             has_assignment = TaskAssignment.objects.filter(
                 task_id=task_knowledge.task_id,
                 assignee=request.user
@@ -354,6 +358,7 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
+        _enforce_knowledge_view_permission(request, '无权记录知识阅读')
         # 1. 权限检查（先获取知识文档）
         try:
             self.service.get_by_id(pk)

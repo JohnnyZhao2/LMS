@@ -8,7 +8,7 @@ Properties:
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
@@ -27,7 +27,7 @@ class QuestionListCreateView(BaseAPIView):
     """
     Question list and create endpoint.
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     service_class = QuestionService
 
@@ -50,6 +50,11 @@ class QuestionListCreateView(BaseAPIView):
         """
         Get question list.
         """
+        AuthorizationService(request).enforce(
+            'question.view',
+            error_message='无权查看题目列表',
+        )
+
         # 构建过滤条件
         filters = {}
         if request.query_params.get('question_type'):
@@ -105,6 +110,10 @@ class QuestionListCreateView(BaseAPIView):
         """
         Create a new question.
         """
+        AuthorizationService(request).enforce(
+            'question.create',
+            error_message='无权创建题目',
+        )
         serializer = QuestionCreateSerializer(
             data=request.data,
             context={'request': request}
@@ -124,7 +133,7 @@ class QuestionDetailView(BaseAPIView):
     - Property 13: 被引用题目删除保护
     - Property 15: 题目所有权编辑控制
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = QuestionService
 
     @extend_schema(
@@ -138,6 +147,10 @@ class QuestionDetailView(BaseAPIView):
     )
     def get(self, request, pk):
         """Get question detail."""
+        AuthorizationService(request).enforce(
+            'question.view',
+            error_message='无权查看题目详情',
+        )
         question = self.service.get_by_id(pk)
         serializer = QuestionDetailSerializer(question)
         return success_response(serializer.data)
@@ -159,6 +172,10 @@ class QuestionDetailView(BaseAPIView):
         Update question.
         Property 15: 题目所有权编辑控制
         """
+        AuthorizationService(request).enforce(
+            'question.update',
+            error_message='无权更新题目',
+        )
         # 先获取题目对象用于验证
         question = self.service.get_by_id(pk)
         serializer = QuestionUpdateSerializer(
@@ -193,6 +210,10 @@ class QuestionDetailView(BaseAPIView):
         Property 13: 被引用题目删除保护
         Property 15: 题目所有权编辑控制
         """
+        AuthorizationService(request).enforce(
+            'question.delete',
+            error_message='无权删除题目',
+        )
         # 使用Service删除题目（权限检查和引用检查在Service中完成，不再传user/request参数）
         self.service.delete(pk=pk)
         return no_content_response()

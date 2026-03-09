@@ -10,6 +10,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.authorization.services import AuthorizationService
 from apps.tasks.serializers import (
     TaskCreateSerializer,
     TaskDetailSerializer,
@@ -18,7 +19,6 @@ from apps.tasks.serializers import (
 )
 from apps.tasks.task_service import TaskService
 from apps.users.permissions import (
-    IsAdminOrMentorOrDeptManager,
     get_accessible_students,
 )
 from apps.users.serializers import UserListSerializer
@@ -37,7 +37,7 @@ from core.responses import (
 
 class AssignableUserListView(APIView):
     """List students that the current user can assign tasks to."""
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary='获取可分配学员列表',
@@ -55,6 +55,10 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
+        AuthorizationService(request).enforce(
+            'task.assign',
+            error_message='无权查看可分配学员列表',
+        )
         queryset = get_accessible_students(request.user, request).filter(
             roles__code='STUDENT'
         ).select_related(
@@ -83,7 +87,7 @@ class AssignableUserListView(APIView):
 
 class TaskCreateView(APIView):
     """统一的任务创建 API"""
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary='创建任务',
@@ -103,6 +107,10 @@ class TaskCreateView(APIView):
         tags=['任务管理']
     )
     def post(self, request):
+        AuthorizationService(request).enforce(
+            'task.create',
+            error_message='无权创建任务',
+        )
         serializer = TaskCreateSerializer(
             data=request.data,
             context={'request': request}
@@ -143,6 +151,10 @@ class TaskListView(BaseAPIView):
         tags=['任务管理']
     )
     def get(self, request):
+        AuthorizationService(request).enforce(
+            'task.view',
+            error_message='无权查看任务列表',
+        )
         # Use TaskService to get queryset based on user role
         queryset = self.service.get_task_queryset_for_user()
 
@@ -209,7 +221,7 @@ class TaskDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task)
+        self.service.check_task_edit_permission(task, 'task.update', '无权更新任务')
 
         if task.deadline <= timezone.now():
             raise BusinessError(
@@ -240,6 +252,6 @@ class TaskDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         task = self.service.get_task_by_id(pk)
-        self.service.check_task_edit_permission(task)
+        self.service.check_task_edit_permission(task, 'task.delete', '无权删除任务')
         self.service.delete_task(task)
         return no_content_response()

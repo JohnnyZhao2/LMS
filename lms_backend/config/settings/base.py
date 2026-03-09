@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Local apps
     'apps.users',
+    'apps.authorization',
     'apps.auth',
     'apps.knowledge',
     'apps.questions',
@@ -172,6 +173,7 @@ SPECTACULAR_SETTINGS = {
         # 认证与用户
         {'name': '认证', 'description': '用户登录、登出、角色切换'},
         {'name': '用户管理', 'description': '用户 CRUD、角色分配、师徒关系'},
+        {'name': '授权管理', 'description': '角色权限模板与用户级权限覆盖'},
         # 内容管理
         {'name': '知识管理', 'description': '知识库管理、分类管理'},
         {'name': '题库管理', 'description': '题目管理、批量导入'},

@@ -24,6 +24,7 @@ from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
+from apps.authorization.services import AuthorizationService
 from apps.users.models import Role, User
 from apps.users.serializers import UserInfoSerializer
 
@@ -96,10 +97,16 @@ class AuthenticationService(BaseService):
             available_roles=available_roles,
             requested_role=requested_role,
         )
+        authorization_service = AuthorizationService(self.request)
+        effective_permissions = authorization_service.get_effective_permission_codes(
+            current_role=current_role,
+            user=user,
+        )
         return {
             'user': UserInfoSerializer(user).data,
             'available_roles': available_roles,
             'current_role': current_role,
+            'effective_permissions': effective_permissions,
         }
 
     def _build_auth_payload(
@@ -264,11 +271,10 @@ class AuthenticationService(BaseService):
         return self._build_user_payload(active_user, requested_role=requested_role)
 
     def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
-        if self.get_current_role() != 'ADMIN':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以重置用户密码',
-            )
+        AuthorizationService(self.request).enforce(
+            'user.reset_password',
+            error_message='只有管理员可以重置用户密码',
+        )
 
         target_user = self.validate_not_none(
             self._get_user_by_id(target_user_id),

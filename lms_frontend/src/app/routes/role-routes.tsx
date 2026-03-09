@@ -37,6 +37,7 @@ const UserList = lazy(() => import('@/features/users/components/user-list').then
 
 // Activity Logs
 const ActivityLogSettingsPage = lazy(() => import('@/features/activity-logs/pages/activity-log-settings').then(m => ({ default: m.ActivityLogSettingsPage })));
+const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 
 // Submissions
 const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
@@ -81,12 +82,20 @@ export const roleRoutes = [
   <Route key="dashboard-index" index element={<Dashboard />} />,
 
   // Tasks
-  <Route key="task-list" path="tasks" element={<TaskList />} />,
+  <Route
+    key="task-list"
+    path="tasks"
+    element={
+      <ProtectedRoute requiredPermissions={['task.view']}>
+        <TaskList />
+      </ProtectedRoute>
+    }
+  />,
   <Route
     key="task-create"
     path="tasks/create"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['task.create']}>
         <TaskForm />
       </ProtectedRoute>
     }
@@ -95,7 +104,7 @@ export const roleRoutes = [
     key="task-edit"
     path="tasks/:id/edit"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['task.update']}>
         <TaskForm />
       </ProtectedRoute>
     }
@@ -104,20 +113,36 @@ export const roleRoutes = [
     key="task-preview"
     path="tasks/:id/preview"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['task.update', 'task.analytics.view', 'grading.view', 'grading.score']}>
         <TaskPreviewPage />
       </ProtectedRoute>
     }
   />,
-  <Route key="task-detail" path="tasks/:id" element={<TaskDetail />} />,
+  <Route
+    key="task-detail"
+    path="tasks/:id"
+    element={
+      <ProtectedRoute requiredPermissions={['task.view']}>
+        <TaskDetail />
+      </ProtectedRoute>
+    }
+  />,
 
   // Knowledge
-  <Route key="knowledge-list" path="knowledge" element={<KnowledgeCenter />} />,
+  <Route
+    key="knowledge-list"
+    path="knowledge"
+    element={
+      <ProtectedRoute requiredPermissions={['knowledge.view']}>
+        <KnowledgeCenter />
+      </ProtectedRoute>
+    }
+  />,
   <Route
     key="knowledge-create"
     path="knowledge/create"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_MANAGER']}>
+      <ProtectedRoute requiredPermissions={['knowledge.create']}>
         <KnowledgeForm />
       </ProtectedRoute>
     }
@@ -126,19 +151,38 @@ export const roleRoutes = [
     key="knowledge-edit"
     path="knowledge/:id/edit"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN', 'DEPT_MANAGER']}>
+      <ProtectedRoute requiredPermissions={['knowledge.update']}>
         <KnowledgeForm />
       </ProtectedRoute>
     }
   />,
-  <Route key="knowledge-detail" path="knowledge/:id" element={<KnowledgeDetail />} />,
+  <Route
+    key="knowledge-detail"
+    path="knowledge/:id"
+    element={
+      <ProtectedRoute requiredPermissions={['knowledge.view']}>
+        <KnowledgeDetail />
+      </ProtectedRoute>
+    }
+  />,
 
   // Quiz Center
   <Route
     key="quiz-center"
     path="quiz-center"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute
+        requiredPermissions={[
+          'quiz.view',
+          'quiz.create',
+          'quiz.update',
+          'quiz.delete',
+          'question.view',
+          'question.create',
+          'question.update',
+          'question.delete',
+        ]}
+      >
         <QuizCenter />
       </ProtectedRoute>
     }
@@ -147,7 +191,7 @@ export const roleRoutes = [
     key="quiz-create"
     path="quiz-center/quizzes/create"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['quiz.create']}>
         <QuizForm />
       </ProtectedRoute>
     }
@@ -156,7 +200,7 @@ export const roleRoutes = [
     key="quiz-edit"
     path="quiz-center/quizzes/:id/edit"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['quiz.update']}>
         <QuizForm />
       </ProtectedRoute>
     }
@@ -167,7 +211,7 @@ export const roleRoutes = [
     key="spot-check-list"
     path="spot-checks"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['spot_check.view']}>
         <SpotCheckList />
       </ProtectedRoute>
     }
@@ -176,7 +220,7 @@ export const roleRoutes = [
     key="spot-check-create"
     path="spot-checks/create"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['spot_check.create']}>
         <SpotCheckForm />
       </ProtectedRoute>
     }
@@ -187,7 +231,7 @@ export const roleRoutes = [
     key="user-list"
     path="users"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
+      <ProtectedRoute requiredPermissions={['user.view']}>
         <UserList />
       </ProtectedRoute>
     }
@@ -198,23 +242,58 @@ export const roleRoutes = [
     key="activity-log-settings"
     path="activity-logs/settings"
     element={
-      <ProtectedRoute allowedRoles={['ADMIN']}>
+      <ProtectedRoute requiredPermissions={['activity_log.view', 'activity_log.policy.update']}>
         <ActivityLogSettingsPage />
       </ProtectedRoute>
     }
   />,
 
+  // Authorization Center
+  <Route
+    key="authorization-center"
+    path="authorization"
+    element={
+      <ProtectedRoute requiredPermissions={['authorization.role_template.view', 'authorization.role_template.update']}>
+        <AuthorizationCenterPage />
+      </ProtectedRoute>
+    }
+  />,
+
   // Submissions
-  <Route key="quiz" path="quiz/:id" element={<QuizPlayer />} />,
-  <Route key="review-practice" path="review/practice" element={<AnswerReview type="practice" />} />,
-  <Route key="review-exam" path="review/exam" element={<AnswerReview type="exam" />} />,
+  <Route
+    key="quiz"
+    path="quiz/:id"
+    element={
+      <ProtectedRoute requiredPermissions={['submission.answer']}>
+        <QuizPlayer />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="review-practice"
+    path="review/practice"
+    element={
+      <ProtectedRoute requiredPermissions={['submission.review']}>
+        <AnswerReview type="practice" />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="review-exam"
+    path="review/exam"
+    element={
+      <ProtectedRoute requiredPermissions={['submission.review']}>
+        <AnswerReview type="exam" />
+      </ProtectedRoute>
+    }
+  />,
 
   // Grading Center
   <Route
     key="grading-center"
     path="grading-center"
     element={
-      <ProtectedRoute allowedRoles={['MENTOR', 'DEPT_MANAGER', 'ADMIN']}>
+      <ProtectedRoute requiredPermissions={['grading.view', 'grading.score']}>
         <GradingCenterPage />
       </ProtectedRoute>
     }
@@ -225,7 +304,7 @@ export const roleRoutes = [
     key="personal"
     path="personal"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']}>
+      <ProtectedRoute allowedRoles={['STUDENT']} requiredPermissions={['profile.view', 'profile.update']}>
         <Personal />
       </ProtectedRoute>
     }
@@ -234,7 +313,7 @@ export const roleRoutes = [
     key="analytics"
     path="analytics"
     element={
-      <ProtectedRoute allowedRoles={['TEAM_MANAGER']}>
+      <ProtectedRoute allowedRoles={['TEAM_MANAGER']} requiredPermissions={['analytics.view']}>
         <Analytics />
       </ProtectedRoute>
     }

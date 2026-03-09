@@ -8,12 +8,32 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.authorization.services import AuthorizationService
 from apps.knowledge.models import Knowledge, Tag
 from apps.knowledge.serializers import TagSerializer
-from apps.users.permissions import get_current_role
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_bool_query_param, parse_int_query_param
 from core.responses import created_response, list_response
+
+
+def _enforce_knowledge_view_permission(request, error_message: str = '无权查看标签') -> None:
+    authorization_service = AuthorizationService(request)
+    if authorization_service.can('knowledge.view'):
+        return
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message,
+    )
+
+
+def _enforce_knowledge_write_permission(request, error_message: str) -> None:
+    authorization_service = AuthorizationService(request)
+    if authorization_service.can('knowledge.create') or authorization_service.can('knowledge.update'):
+        return
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message,
+    )
 
 
 class TagListView(APIView):
@@ -41,6 +61,7 @@ class TagListView(APIView):
         tags=['知识管理']
     )
     def get(self, request):
+        _enforce_knowledge_view_permission(request, '无权查看标签列表')
         tag_type = request.query_params.get('tag_type', '').strip()
         line_tag_id = parse_int_query_param(
             request=request,
@@ -101,11 +122,7 @@ class TagCreateView(APIView):
         tags=['知识管理']
     )
     def post(self, request):
-        if get_current_role(request.user, request) != 'ADMIN':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以创建标签'
-            )
+        _enforce_knowledge_write_permission(request, '无权创建标签')
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()

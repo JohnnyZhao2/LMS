@@ -6,6 +6,7 @@ from apps.grading.selectors import (
     get_latest_answers,
     get_latest_quiz_answers,
 )
+from apps.authorization.services import AuthorizationService
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -15,7 +16,6 @@ from apps.grading.serializers import (
 from apps.questions.models import Question
 from apps.tasks.models import Task
 from apps.tasks.task_service import TaskService
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
@@ -23,10 +23,14 @@ from core.responses import list_response, success_response
 
 
 class GradingBaseView(BaseAPIView):
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = TaskService
 
-    def _get_task(self, task_id):
+    def _get_task(self, task_id, permission_code: str, error_message: str):
+        AuthorizationService(self.request).enforce(
+            permission_code,
+            error_message=error_message,
+        )
         task = self.service.get_task_by_id(task_id)
         self.service.check_task_read_permission(task)
         return task
@@ -52,7 +56,7 @@ class GradingQuestionsView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id)
+        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
 
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
         self._validate_quiz_in_task(task, quiz_id)
@@ -99,7 +103,7 @@ class GradingAnswersView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request, task_id):
-        task = self._get_task(task_id)
+        task = self._get_task(task_id, 'grading.view', '无权访问阅卷中心')
 
         question_id = parse_int_query_param(request, name='question_id', required=True, minimum=1)
         quiz_id = parse_int_query_param(request, name='quiz_id', required=True, minimum=1)
@@ -225,7 +229,7 @@ class GradingSubmitView(GradingBaseView):
         tags=['阅卷中心']
     )
     def post(self, request, task_id):
-        task = self._get_task(task_id)
+        task = self._get_task(task_id, 'grading.score', '无权提交评分')
 
         serializer = GradingSubmitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -285,6 +289,10 @@ class PendingQuizzesView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request):
+        AuthorizationService(request).enforce(
+            'grading.view',
+            error_message='无权访问阅卷中心',
+        )
         user = request.user
         quiz_type = request.query_params.get('quiz_type')
 

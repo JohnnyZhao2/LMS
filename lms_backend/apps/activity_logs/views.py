@@ -5,9 +5,8 @@ Activity logs views.
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.responses import success_response
 
@@ -22,12 +21,20 @@ from .serializers import (
 from .services import ActivityLogService
 
 
+def enforce_activity_log_view_permission(request, error_message: str) -> None:
+    AuthorizationService(request).enforce('activity_log.view', error_message=error_message)
+
+
+def enforce_activity_log_policy_update_permission(request, error_message: str) -> None:
+    AuthorizationService(request).enforce('activity_log.policy.update', error_message=error_message)
+
+
 class UserLogListView(BaseAPIView):
     """
     用户日志列表
     记录用户登录、登出、密码修改等操作
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     @extend_schema(
@@ -42,6 +49,7 @@ class UserLogListView(BaseAPIView):
     )
     def get(self, request):
         """获取用户日志列表"""
+        enforce_activity_log_view_permission(request, '无权查看用户日志')
         queryset = UserLog.objects.select_related('user', 'operator').all()
 
         # 使用 DRF 分页器处理分页
@@ -61,7 +69,7 @@ class ContentLogListView(BaseAPIView):
     内容日志列表
     记录知识文档、试卷、题目等内容的创建、修改、删除
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     @extend_schema(
@@ -76,6 +84,7 @@ class ContentLogListView(BaseAPIView):
     )
     def get(self, request):
         """获取内容日志列表"""
+        enforce_activity_log_view_permission(request, '无权查看内容日志')
         queryset = ContentLog.objects.select_related('operator').all()
 
         # 使用 DRF 分页器处理分页
@@ -95,7 +104,7 @@ class OperationLogListView(BaseAPIView):
     操作日志列表
     记录任务管理、评分、抽查、数据导出等操作
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     @extend_schema(
@@ -110,6 +119,7 @@ class OperationLogListView(BaseAPIView):
     )
     def get(self, request):
         """获取操作日志列表"""
+        enforce_activity_log_view_permission(request, '无权查看操作日志')
         queryset = OperationLog.objects.select_related('operator').all()
 
         # 使用 DRF 分页器处理分页
@@ -126,25 +136,18 @@ class OperationLogListView(BaseAPIView):
 
 class ActivityLogPolicyView(BaseAPIView):
     """
-    活动日志策略管理（仅超级用户）
+    活动日志策略管理
     """
     permission_classes = [IsAuthenticated]
 
-    def _ensure_superuser(self, request):
-        if not request.user.is_superuser:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='仅超级用户可管理日志策略'
-            )
-
     @extend_schema(
         summary='获取日志策略列表',
-        description='获取动作级日志记录白名单（仅超级用户）',
+        description='获取动作级日志记录白名单',
         responses={200: ActivityLogPolicySerializer(many=True)},
         tags=['活动日志']
     )
     def get(self, request):
-        self._ensure_superuser(request)
+        enforce_activity_log_view_permission(request, '无权查看日志策略')
         ActivityLogService.sync_policies()
         queryset = ActivityLogPolicy.objects.all().order_by('category', 'group', 'label')
         serializer = ActivityLogPolicySerializer(queryset, many=True)
@@ -152,7 +155,7 @@ class ActivityLogPolicyView(BaseAPIView):
 
     @extend_schema(
         summary='更新日志策略',
-        description='更新动作级日志记录开关（仅超级用户）',
+        description='更新动作级日志记录开关',
         request=ActivityLogPolicyUpdateSerializer,
         responses={
             200: ActivityLogPolicySerializer,
@@ -161,7 +164,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def patch(self, request):
-        self._ensure_superuser(request)
+        enforce_activity_log_policy_update_permission(request, '无权更新日志策略')
         serializer = ActivityLogPolicyUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         key = serializer.validated_data['key']

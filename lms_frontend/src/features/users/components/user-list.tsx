@@ -15,14 +15,17 @@ import {
   ShieldCheck,
   Building2,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
+import { useCurrentRole } from "@/hooks/use-current-role"
+import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
@@ -40,6 +43,16 @@ import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
+  const currentRole = useCurrentRole()
+  const { hasPermission } = useAuth()
+  const canViewRoleTemplate =
+    hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update')
+  const canCreateUser = hasPermission('user.create')
+  const canUpdateUser = hasPermission('user.update')
+  const canDeactivateUser = hasPermission('user.deactivate')
+  const canActivateUser = hasPermission('user.activate')
+  const canDeleteUser = hasPermission('user.delete')
+  const canResetPassword = hasPermission('user.reset_password')
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -238,51 +251,59 @@ export const UserList: React.FC = () => {
               </DropdownMenuLabel>
 
               <DropdownMenuItem
+                disabled={!canUpdateUser}
                 className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                 onClick={() => {
+                  if (!canUpdateUser) return
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
                 }}
               >
                 <Pencil className="mr-2 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
-                onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
-              >
-                <Lock className="mr-2 h-4 w-4" /> 重置密码
-              </DropdownMenuItem>
+              {canResetPassword && (
+                <DropdownMenuItem
+                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
+                  onClick={() => setResetPasswordDialog({ open: true, userId: row.original.id })}
+                >
+                  <Lock className="mr-2 h-4 w-4" /> 重置密码
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuSeparator className="my-1" />
 
-              <DropdownMenuItem
-                className={cn(
-                  "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
-                  row.original.is_active
-                    ? "text-destructive focus:bg-destructive-100"
-                    : "text-secondary focus:bg-secondary-100"
-                )}
-                onClick={() => handleToggleActive(row.original)}
-              >
-                {row.original.is_active ? (
-                  <><Ban className="mr-2 h-4 w-4" /> 停用账号</>
-                ) : (
-                  <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
-                )}
-              </DropdownMenuItem>
+              {(row.original.is_active ? canDeactivateUser : canActivateUser) && (
+                <DropdownMenuItem
+                  className={cn(
+                    "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
+                    row.original.is_active
+                      ? "text-destructive focus:bg-destructive-100"
+                      : "text-secondary focus:bg-secondary-100"
+                  )}
+                  onClick={() => handleToggleActive(row.original)}
+                >
+                  {row.original.is_active ? (
+                    <><Ban className="mr-2 h-4 w-4" /> 停用账号</>
+                  ) : (
+                    <><CheckCircle className="mr-2 h-4 w-4" /> 启用账号</>
+                  )}
+                </DropdownMenuItem>
+              )}
 
-              <DropdownMenuItem
-                className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-destructive focus:bg-destructive-100"
-                onClick={() => {
-                  if (row.original.is_active) {
-                    toast.error("请先停用账号，再执行彻底删除")
-                    return
-                  }
-                  setDeleteUserDialog({ open: true, user: row.original })
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> 彻底删除
-              </DropdownMenuItem>
+              {canDeleteUser && (
+                <DropdownMenuItem
+                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer text-destructive focus:bg-destructive-100"
+                  onClick={() => {
+                    if (row.original.is_active) {
+                      toast.error("请先停用账号，再执行彻底删除")
+                      return
+                    }
+                    setDeleteUserDialog({ open: true, user: row.original })
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> 彻底删除
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -297,16 +318,26 @@ export const UserList: React.FC = () => {
         icon={<UsersIcon />}
         extra={
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => {
-                setEditingUserId(undefined)
-                setFormModalOpen(true)
-              }}
-              className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              快速录入
-            </Button>
+            {canViewRoleTemplate && currentRole && (
+              <Button asChild variant="outline" className="h-10 px-4 rounded-md font-semibold">
+                <Link to={`/${currentRole.toLowerCase()}/authorization`}>
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  角色模板配置
+                </Link>
+              </Button>
+            )}
+            {canCreateUser && (
+              <Button
+                onClick={() => {
+                  setEditingUserId(undefined)
+                  setFormModalOpen(true)
+                }}
+                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                快速录入
+              </Button>
+            )}
           </div>
         }
       />
@@ -354,6 +385,7 @@ export const UserList: React.FC = () => {
               }}
               rowClassName="group cursor-pointer hover:bg-muted transition-colors"
               onRowClick={(row) => {
+                if (!canUpdateUser) return
                 setEditingUserId(row.id)
                 setFormModalOpen(true)
               }}

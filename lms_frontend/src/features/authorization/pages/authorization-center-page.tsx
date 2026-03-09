@@ -1,0 +1,97 @@
+import { useEffect, useState } from 'react';
+import { Layers3 } from 'lucide-react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/ui/page-header';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { showApiError } from '@/utils/error-handler';
+import type { RoleCode } from '@/types/api';
+import {
+  usePermissionCatalog,
+  useReplaceRolePermissionTemplate,
+  useRolePermissionTemplate,
+} from '../api/authorization';
+import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
+
+export const AuthorizationCenterPage: React.FC = () => {
+  const { hasPermission, refreshUser } = useAuth();
+  const canViewRoleTemplate = hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update');
+  const canUpdateRoleTemplate = hasPermission('authorization.role_template.update');
+
+  const [selectedRole, setSelectedRole] = useState<RoleCode>('STUDENT');
+  const [selectedRolePermissionCodes, setSelectedRolePermissionCodes] = useState<string[]>([]);
+  const shouldLoadData = canViewRoleTemplate;
+
+  const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
+  const roleTemplateQuery = useRolePermissionTemplate(selectedRole, canViewRoleTemplate);
+
+  const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
+
+  useEffect(() => {
+    if (roleTemplateQuery.data?.permission_codes) {
+      setSelectedRolePermissionCodes(roleTemplateQuery.data.permission_codes);
+    }
+  }, [roleTemplateQuery.data]);
+
+  const handleToggleRolePermission = (permissionCode: string, checked: boolean) => {
+    setSelectedRolePermissionCodes((previousCodes) => {
+      const codeSet = new Set(previousCodes);
+      if (checked) {
+        codeSet.add(permissionCode);
+      } else {
+        codeSet.delete(permissionCode);
+      }
+      return Array.from(codeSet).sort();
+    });
+  };
+
+  const handleSaveRoleTemplate = async () => {
+    if (!canUpdateRoleTemplate) return;
+    try {
+      await replaceRoleTemplateMutation.mutateAsync({
+        roleCode: selectedRole,
+        permissionCodes: selectedRolePermissionCodes,
+      });
+      toast.success(`${selectedRole} 权限模板已更新`);
+      await refreshUser();
+    } catch (error) {
+      showApiError(error);
+    }
+  };
+
+  if (!canViewRoleTemplate) {
+    return (
+      <div className="space-y-6 pb-10">
+        <PageHeader title="角色模板配置" icon={<Layers3 />} />
+        <div className="rounded-2xl border border-border bg-muted p-8 text-sm text-text-muted">
+          当前账号没有角色模板配置权限，请联系管理员开通。
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-10">
+      <PageHeader title="角色模板配置" icon={<Layers3 />} />
+
+      <div className="rounded-2xl border border-border bg-gradient-to-r from-primary-50 via-background to-secondary-50 p-5">
+        <p className="text-sm font-medium text-foreground">模块化赋权视图</p>
+        <p className="mt-1 text-xs text-text-muted">
+          先按管理员菜单页面层级梳理模块，再配置角色模板。当前展示顺序：模块 {'>'} 页面层级 {'>'} 权限点。
+        </p>
+      </div>
+
+      <RolePermissionTemplatePanel
+        canViewRoleTemplate={canViewRoleTemplate}
+        canUpdateRoleTemplate={canUpdateRoleTemplate}
+        selectedRole={selectedRole}
+        onRoleChange={setSelectedRole}
+        permissionCatalog={permissionCatalog}
+        selectedCodes={selectedRolePermissionCodes}
+        onToggleCode={handleToggleRolePermission}
+        onSave={handleSaveRoleTemplate}
+        isLoadingTemplate={roleTemplateQuery.isLoading}
+        isSaving={replaceRoleTemplateMutation.isPending}
+      />
+    </div>
+  );
+};

@@ -12,6 +12,7 @@ export interface AuthState {
   user: UserInfo | null;
   currentRole: RoleCode | null;
   availableRoles: Role[];
+  effectivePermissions: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
   isSwitching: boolean;
@@ -23,6 +24,8 @@ interface AuthContextValue extends AuthState {
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
   setIsSwitching: (isSwitching: boolean) => void;
+  hasPermission: (permissionCode: string) => boolean;
+  hasAnyPermission: (permissionCodes: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -31,6 +34,7 @@ const buildLoggedOutState = (): AuthState => ({
   user: null,
   currentRole: null,
   availableRoles: [],
+  effectivePermissions: [],
   isAuthenticated: false,
   isLoading: false,
   isSwitching: false,
@@ -44,12 +48,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = tokenStorage.getUserInfo();
     const currentRole = tokenStorage.getCurrentRole();
     const availableRoles = tokenStorage.getAvailableRoles();
+    const effectivePermissions = tokenStorage.getEffectivePermissions();
     const hasTokens = tokenStorage.hasTokens();
     const shouldRefreshSession = hasTokens;
 
     const isAuthenticated = hasTokens && !!user;
 
-    return { user, currentRole, availableRoles, isAuthenticated, isLoading: shouldRefreshSession, isSwitching: false };
+    return {
+      user,
+      currentRole,
+      availableRoles,
+      effectivePermissions,
+      isAuthenticated,
+      isLoading: shouldRefreshSession,
+      isSwitching: false,
+    };
   });
 
   const resetAuthState = useCallback(() => {
@@ -66,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user: session.user,
         currentRole: session.current_role,
         availableRoles: session.available_roles,
+        effectivePermissions: session.effective_permissions,
         isAuthenticated: true,
         isLoading: false,
         isSwitching: options?.isSwitching ?? prev.isSwitching,
@@ -138,6 +152,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, isSwitching }));
   }, []);
 
+  const hasPermission = useCallback((permissionCode: string) => {
+    if (!permissionCode) {
+      return false;
+    }
+    return state.effectivePermissions.includes(permissionCode);
+  }, [state.effectivePermissions]);
+
+  const hasAnyPermission = useCallback((permissionCodes: string[]) => {
+    if (!permissionCodes.length) {
+      return false;
+    }
+    return permissionCodes.some((permissionCode) => state.effectivePermissions.includes(permissionCode));
+  }, [state.effectivePermissions]);
+
   // 初始化时检查 token
   useEffect(() => {
     refreshUser();
@@ -150,6 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     switchRole,
     refreshUser,
     setIsSwitching,
+    hasPermission,
+    hasAnyPermission,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

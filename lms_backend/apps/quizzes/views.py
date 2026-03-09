@@ -5,7 +5,7 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.users.permissions import IsAdminOrMentorOrDeptManager
+from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError
 from core.mixins import BusinessErrorHandlerMixin
@@ -26,7 +26,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
     """
     试卷列表和创建
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = QuizService
 
     @extend_schema(
@@ -46,6 +46,10 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         """
         获取试卷列表
         """
+        AuthorizationService(request).enforce(
+            'quiz.view',
+            error_message='无权查看试卷列表',
+        )
         # 1. 获取查询参数
         filters = {}
         created_by_id = parse_int_query_param(
@@ -95,6 +99,10 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         """
         创建试卷
         """
+        AuthorizationService(request).enforce(
+            'quiz.create',
+            error_message='无权创建试卷',
+        )
         # 1. 反序列化输入
         serializer = QuizCreateSerializer(
             data=request.data,
@@ -129,7 +137,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
     - Property 14: 被引用试卷删除保护
     - Property 16: 试卷所有权编辑控制
     """
-    permission_classes = [IsAuthenticated, IsAdminOrMentorOrDeptManager]
+    permission_classes = [IsAuthenticated]
     service_class = QuizService
 
     @extend_schema(
@@ -143,6 +151,10 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
     )
     def get(self, request, pk):
         """获取试卷详情"""
+        AuthorizationService(request).enforce(
+            'quiz.view',
+            error_message='无权查看试卷详情',
+        )
         try:
             quiz = self.service.get_by_id(pk)
         except BusinessError as e:
@@ -173,6 +185,10 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         更新试卷
         Property 16: 试卷所有权编辑控制
         """
+        AuthorizationService(request).enforce(
+            'quiz.update',
+            error_message='无权更新试卷',
+        )
         # 1. 反序列化输入
         serializer = QuizUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -218,6 +234,10 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         Property 14: 被引用试卷删除保护
         Property 16: 试卷所有权编辑控制
         """
+        AuthorizationService(request).enforce(
+            'quiz.delete',
+            error_message='无权删除试卷',
+        )
         try:
             self.service.delete(pk)
         except BusinessError as e:
