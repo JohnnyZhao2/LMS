@@ -286,11 +286,25 @@ DASHBOARD_PERMISSION_CODES = [
 
 SYSTEM_MANAGED_PERMISSION_CODES = sorted([
     *DASHBOARD_PERMISSION_CODES,
+    'analytics.view',
+    'profile.view',
+    'profile.update',
+    'submission.answer',
+    'submission.review',
     'activity_log.view',
     'activity_log.policy.update',
 ])
 
 ROLE_SYSTEM_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
+    'STUDENT': [
+        'profile.view',
+        'profile.update',
+        'submission.answer',
+        'submission.review',
+    ],
+    'TEAM_MANAGER': [
+        'analytics.view',
+    ],
     'ADMIN': [
         'activity_log.view',
         'activity_log.policy.update',
@@ -302,10 +316,6 @@ ROLE_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
     'STUDENT': [
         'knowledge.view',
         'task.view',
-        'submission.answer',
-        'submission.review',
-        'profile.view',
-        'profile.update',
     ],
     'MENTOR': [
         'quiz.view',
@@ -357,7 +367,6 @@ ROLE_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
     ],
     'TEAM_MANAGER': [
         'knowledge.view',
-        'analytics.view',
     ],
     'ADMIN': [
         'knowledge.view',

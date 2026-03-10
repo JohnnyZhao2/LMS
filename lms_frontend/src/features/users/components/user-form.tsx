@@ -37,6 +37,7 @@ import {
   useRolePermissionTemplates,
   useUserPermissionOverrides,
 } from '@/features/authorization/api/authorization';
+import { getModulePresentation } from '@/features/authorization/constants/permission-presentation';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles, useUsers } from '../api/get-users';
@@ -141,10 +142,7 @@ export const UserForm: React.FC<UserFormProps> = ({
     isError: isMentorsError,
   } = useMentors();
   const { data: departments = [] } = useDepartments();
-  const {
-    data: roles = [],
-    isError: isRolesError,
-  } = useRoles();
+  const { data: roles = [] } = useRoles();
   const isEdit = !!userId;
   const roleOptions = roles.length > 0 ? roles : DEFAULT_MANAGEABLE_ROLES;
 
@@ -162,7 +160,6 @@ export const UserForm: React.FC<UserFormProps> = ({
             isMentorsError={isMentorsError}
             departments={departments}
             roles={roleOptions}
-            isUsingFallbackRoles={isRolesError && roles.length === 0}
             initialDepartmentId={initialDepartmentId}
             initialMentorId={initialMentorId}
             onClose={onClose}
@@ -184,7 +181,6 @@ const UserFormContent: React.FC<{
   isMentorsError: boolean;
   departments: Department[];
   roles: Role[];
-  isUsingFallbackRoles: boolean;
   initialDepartmentId?: number;
   initialMentorId?: number;
   onClose: () => void;
@@ -198,7 +194,6 @@ const UserFormContent: React.FC<{
   isMentorsError,
   departments = [],
   roles = [],
-  isUsingFallbackRoles,
   initialDepartmentId,
   initialMentorId,
   onClose,
@@ -417,6 +412,9 @@ const UserFormContent: React.FC<{
       () => permissionCatalog.filter((permission) => permission.module === activePermissionModule),
       [permissionCatalog, activePermissionModule],
     );
+    const activeModuleLabel = activePermissionModule
+      ? getModulePresentation(activePermissionModule).label
+      : '未选择';
 
     const activeScopedOverrides = useMemo(
       () =>
@@ -822,24 +820,6 @@ const UserFormContent: React.FC<{
                     );
                   })}
                 </div>
-
-                <div className="flex gap-4 p-4 rounded-xl bg-white border border-slate-100/50 mt-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-                    <Shield className="w-4 h-4 text-slate-200" strokeWidth={2} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-700">权限分配说明</p>
-                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                      系统将根据分配的角色自动开启对应的导航视图与业务操作模块，无需手动配置。
-                    </p>
-                    {isUsingFallbackRoles && (
-                      <p className="mt-2 text-[11px] leading-relaxed text-warning-700">
-                        角色目录加载失败，当前先展示本地默认角色卡片。
-                      </p>
-                    )}
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>
@@ -859,343 +839,321 @@ const UserFormContent: React.FC<{
               </div>
 
               {!canViewOverride ? (
-                <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                  你没有“用户权限覆盖管理”权限，仅可查看角色信息。
+                <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
+                  您没有“用户权限自定义配置”权限，仅可查看上方默认角色包信息。
                 </div>
               ) : (
-                <div className="mt-4 space-y-4">
-                  <div className="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
-                    <div className="grid grid-cols-1 xl:grid-cols-[180px_1fr]">
-                      <aside className="border-b border-border bg-muted/40 p-3 xl:border-b-0 xl:border-r">
-                        <div className="flex items-center gap-2">
-                          <ListFilter className="h-4 w-4 text-primary" />
-                          <p className="text-xs font-bold text-foreground">模块菜单</p>
+                <div className="mt-8 grid grid-cols-1 xl:grid-cols-[200px_1fr] gap-8 items-start relative">
+                  {/* Left Sidebar Menu */}
+                  <aside className="space-y-2 sticky top-4">
+                    <div className="flex items-center gap-2 pb-2 pl-1 text-slate-400">
+                      <ListFilter className="h-4 w-4" />
+                      <p className="text-sm font-bold text-slate-800">模块菜单</p>
+                    </div>
+                    <div className="space-y-1">
+                      {permissionModules.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-xs text-slate-400">
+                          暂无模块数据
                         </div>
-                        <p className="mt-1 text-[10px] text-text-muted">选择模块后在右侧勾选权限</p>
-                        <div className="mt-3 space-y-1">
-                          {permissionModules.length === 0 ? (
-                            <div className="rounded-lg border border-dashed border-border bg-background px-3 py-4 text-xs text-text-muted">
-                              暂无模块数据
-                            </div>
-                          ) : (
-                            permissionModules.map((moduleName) => (
-                              <button
-                                key={moduleName}
-                                type="button"
-                                onClick={() => setSelectedPermissionModule(moduleName)}
-                                className={cn(
-                                  'w-full rounded-md border px-2.5 py-1.5 text-left text-xs font-semibold transition-all',
-                                  activePermissionModule === moduleName
-                                    ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20'
-                                    : 'border-border bg-background text-foreground hover:border-primary/30',
-                                )}
-                              >
-                                {moduleName}
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </aside>
-
-                      <div className="p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-bold text-foreground">模块权限赋权</p>
-                            <p className="text-[11px] text-text-muted">
-                              勾选即赋权，取消即撤销。已勾选权限若要调整作用对象或截止时间，先取消再重新勾选。
-                            </p>
-                          </div>
-                          <Badge variant="secondary" className="rounded-full text-xs">
-                            当前模块：{activePermissionModule || '未选择'}
-                          </Badge>
-                        </div>
-
-                        <div className="mt-3 rounded-xl border border-border bg-muted/20 p-3">
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold text-text-muted">用户角色</p>
-                            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedPermissionRole('ALL')}
-                                className={cn(
-                                  'rounded-xl border px-3 py-3 text-left transition-all',
-                                  normalizedSelectedPermissionRole === 'ALL'
-                                    ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20'
-                                    : 'border-border bg-background text-foreground hover:border-primary/30',
-                                )}
-                              >
-                                <p className="text-sm font-bold">全部激活角色</p>
-                                <p className={cn(
-                                  'mt-1 text-xs',
-                                  normalizedSelectedPermissionRole === 'ALL' ? 'text-white/80' : 'text-text-muted',
-                                )}
-                                >
-                                  默认包合并视图 + 用户自定义
-                                </p>
-                                <p className={cn(
-                                  'mt-3 text-[11px] font-semibold',
-                                  normalizedSelectedPermissionRole === 'ALL' ? 'text-white/90' : 'text-primary',
-                                )}
-                                >
-                                  {roleTemplatePermissionCodes.size} 个权限点
-                                </p>
-                              </button>
-                              {overrideRoleOptions.map((item) => (
-                                <button
-                                  key={item.code}
-                                  type="button"
-                                  onClick={() => setSelectedPermissionRole(item.code)}
-                                  className={cn(
-                                    'rounded-xl border px-3 py-3 text-left transition-all',
-                                    normalizedSelectedPermissionRole === item.code
-                                      ? 'border-primary bg-primary text-white shadow-sm shadow-primary/20'
-                                      : 'border-border bg-background text-foreground hover:border-primary/30',
-                                  )}
-                                >
-                                  <p className="text-sm font-bold">{item.label}</p>
-                                  <p className={cn(
-                                    'mt-1 text-xs',
-                                    normalizedSelectedPermissionRole === item.code ? 'text-white/80' : 'text-text-muted',
-                                  )}
-                                  >
-                                    角色默认包 + 用户自定义
-                                  </p>
-                                  <p className={cn(
-                                    'mt-3 text-[11px] font-semibold',
-                                    normalizedSelectedPermissionRole === item.code ? 'text-white/90' : 'text-primary',
-                                  )}
-                                  >
-                                    {getPermissionTemplateCount(item.code)} 个默认权限点
-                                  </p>
-                                </button>
-                              ))}
-                            </div>
-                            {!canViewRoleTemplate && (
-                              <p className="text-[11px] text-text-muted">
-                                当前账号没有角色模板查看权限，下面只能准确展示用户自定义覆盖。
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                            <div className="space-y-1.5">
-                              <p className="text-xs font-semibold text-text-muted">作用对象 Scope</p>
-                              <Select
-                                value={selectedPermissionScope}
-                                onValueChange={(value) => {
-                                  const nextScope = value as PermissionOverrideScope;
-                                  setSelectedPermissionScope(nextScope);
-                                  if (nextScope !== 'EXPLICIT_USERS') {
-                                    setSelectedScopeUserIds([]);
-                                    setScopeUserSearch('');
-                                  }
-                                }}
-                              >
-                                <SelectTrigger className="h-9 rounded-lg border-border bg-background text-xs">
-                                  <SelectValue placeholder="选择作用对象" />
-                                </SelectTrigger>
-                                <SelectContent className="rounded-lg border-border">
-                                  {PERMISSION_SCOPE_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value} className="py-2">
-                                      <div className="flex flex-col">
-                                        <span className="text-xs font-semibold text-foreground">{option.label}</span>
-                                        <span className="text-[10px] text-text-muted">{option.description}</span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <p className="text-xs font-semibold text-text-muted">权限截止时间</p>
-                              <div className="relative">
-                                <Clock3 className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
-                                <Input
-                                  type="datetime-local"
-                                  value={permissionExpiresAt}
-                                  onChange={(event) => setPermissionExpiresAt(event.target.value)}
-                                  className="h-9 rounded-lg border-border bg-background pl-8 text-xs"
-                                />
-                              </div>
-                              <div className="flex items-center justify-between text-xs text-text-muted">
-                                <span>留空表示永久有效</span>
-                                {permissionExpiresAt && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setPermissionExpiresAt('')}
-                                    className="font-semibold text-primary transition-colors hover:text-primary/80"
-                                  >
-                                    清空
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <Badge variant="outline" className="rounded-full normal-case tracking-normal">
-                              Scope: {PERMISSION_SCOPE_LABELS[selectedPermissionScope]}
-                            </Badge>
-                            <Badge variant="outline" className="rounded-full normal-case tracking-normal">
-                              {permissionExpiresAt
-                                ? `截止 ${formatOverrideExpiry(permissionExpiresAt)}`
-                                : '永久有效'}
-                            </Badge>
-                            {selectedPermissionScope === 'EXPLICIT_USERS' && (
-                              <Badge variant="outline" className="rounded-full normal-case tracking-normal">
-                                已选 {selectedScopeUserIds.length} 人
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {selectedPermissionScope === 'EXPLICIT_USERS' && (
-                          <div className="mt-4 rounded-xl border border-border bg-background p-4">
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-bold text-foreground">指定用户范围</p>
-                                <p className="text-xs text-text-muted">只有这些用户对象会命中当前新勾选的权限覆盖</p>
-                              </div>
-                              <Badge variant="secondary" className="rounded-full">
-                                {selectedScopeUserIds.length} 人
-                              </Badge>
-                            </div>
-
-                            <div className="mt-3">
-                              <Input
-                                value={scopeUserSearch}
-                                onChange={(event) => setScopeUserSearch(event.target.value)}
-                                placeholder="搜索姓名或工号"
-                                className="h-10 rounded-xl border-border bg-background"
-                              />
-                            </div>
-
-                            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-                              {filteredScopeUsers.length === 0 ? (
-                                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-3 py-6 text-center text-xs text-text-muted">
-                                  没有匹配的用户
-                                </div>
-                              ) : (
-                                filteredScopeUsers.map((scopeUser) => {
-                                  const selected = selectedScopeUserIds.includes(scopeUser.id);
-                                  return (
-                                    <label
-                                      key={scopeUser.id}
-                                      className={cn(
-                                        'flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition-colors',
-                                        selected
-                                          ? 'border-primary bg-primary/5'
-                                          : 'border-border bg-background hover:bg-muted/30',
-                                      )}
-                                    >
-                                      <Checkbox
-                                        checked={selected}
-                                        onCheckedChange={() => toggleScopeUser(scopeUser.id)}
-                                      />
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-sm font-semibold text-foreground">{scopeUser.username}</p>
-                                        <p className="truncate text-xs text-text-muted">
-                                          {scopeUser.employee_id} · {scopeUser.department?.name || '未分配部门'}
-                                        </p>
-                                      </div>
-                                    </label>
-                                  );
-                                })
+                      ) : (
+                        permissionModules.map((moduleName) => {
+                          const active = activePermissionModule === moduleName;
+                          const moduleLabel = getModulePresentation(moduleName).label;
+                          return (
+                            <button
+                              key={moduleName}
+                              type="button"
+                              onClick={() => setSelectedPermissionModule(moduleName)}
+                              className={cn(
+                                'w-full rounded-xl px-4 py-2.5 text-left text-sm font-bold transition-all duration-300',
+                                active
+                                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
                               )}
-                            </div>
-                          </div>
-                        )}
+                            >
+                              {moduleLabel}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </aside>
 
-                        <div className="mt-4 overflow-hidden rounded-xl border border-border">
-                          {activeModulePermissions.length === 0 ? (
-                            <div className="px-4 py-8 text-center text-sm text-text-muted">当前模块暂无可配置权限</div>
-                          ) : (
-                            <div className="divide-y divide-border">
-                              {activeModulePermissions.map((permission) => {
-                                const permissionState = getPermissionState(permission.code);
-                                const checked = permissionState.checked;
-                                const loading = isPermissionToggling(permission.code);
+                  {/* Main Content */}
+                  <div className="space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">模块权限赋权</h4>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          勾选即赋权，取消即撤销。若需调整作用对象或截止时间，请先取消再重新勾选。
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="rounded-full text-xs border-slate-200 text-slate-600 bg-slate-50 px-3 py-1 font-bold">
+                        当前模块：{activeModuleLabel}
+                      </Badge>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-100 bg-white p-5 space-y-8 shadow-sm">
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold text-slate-500">用户角色</p>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPermissionRole('ALL')}
+                            className={cn(
+                              'group relative p-4 rounded-xl border transition-all duration-300 text-left overflow-hidden',
+                              normalizedSelectedPermissionRole === 'ALL'
+                                ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
+                                : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
+                            )}
+                          >
+                            <p className={cn("text-sm font-bold transition-colors", normalizedSelectedPermissionRole === 'ALL' ? 'text-white' : 'text-slate-700')}>全部激活角色</p>
+                            <p className={cn(
+                              'mt-1 text-xs transition-colors',
+                              normalizedSelectedPermissionRole === 'ALL' ? 'text-white/80' : 'text-slate-400',
+                            )}>默认包合并视图 + 用户自定义</p>
+                            <p className={cn(
+                              'mt-4 text-[11px] font-bold transition-colors',
+                              normalizedSelectedPermissionRole === 'ALL' ? 'text-white/90' : 'text-primary',
+                            )}>{roleTemplatePermissionCodes.size} 个权限点</p>
+                          </button>
+                          {overrideRoleOptions.map((item) => (
+                            <button
+                              key={item.code}
+                              type="button"
+                              onClick={() => setSelectedPermissionRole(item.code)}
+                              className={cn(
+                                'group relative p-4 rounded-xl border transition-all duration-300 text-left overflow-hidden',
+                                normalizedSelectedPermissionRole === item.code
+                                  ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
+                                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
+                              )}
+                            >
+                              <p className={cn("text-sm font-bold transition-colors", normalizedSelectedPermissionRole === item.code ? 'text-white' : 'text-slate-700')}>{item.label}</p>
+                              <p className={cn(
+                                'mt-1 text-xs transition-colors',
+                                normalizedSelectedPermissionRole === item.code ? 'text-white/80' : 'text-slate-400',
+                              )}>单角色默认包 + 用户自定义</p>
+                              <p className={cn(
+                                'mt-4 text-[11px] font-bold transition-colors',
+                                normalizedSelectedPermissionRole === item.code ? 'text-white/90' : 'text-primary',
+                              )}>{getPermissionTemplateCount(item.code)} 个默认权限点</p>
+                            </button>
+                          ))}
+                        </div>
+                        {!canViewRoleTemplate && (
+                          <p className="text-[11px] text-slate-400 mt-2">
+                            当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="grid gap-6 lg:grid-cols-2 pt-2">
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-bold text-slate-500">作用对象 Scope</p>
+                          <Select
+                            value={selectedPermissionScope}
+                            onValueChange={(value) => {
+                              const nextScope = value as PermissionOverrideScope;
+                              setSelectedPermissionScope(nextScope);
+                              if (nextScope !== 'EXPLICIT_USERS') {
+                                setSelectedScopeUserIds([]);
+                                setScopeUserSearch('');
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-xs text-slate-700 font-medium transition-colors shadow-none">
+                              <SelectValue placeholder="选择作用对象" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-200 shadow-xl">
+                              {PERMISSION_SCOPE_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value} className="py-2.5 cursor-pointer">
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold text-slate-700">{option.label}</span>
+                                    <span className="text-[10px] text-slate-400 mt-0.5">{option.description}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-bold text-slate-500">权限截止时间</p>
+                          <div className="relative">
+                            <Clock3 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <Input
+                              type="datetime-local"
+                              value={permissionExpiresAt}
+                              onChange={(event) => setPermissionExpiresAt(event.target.value)}
+                              className="h-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 pl-10 text-xs text-slate-700 font-medium transition-colors shadow-none"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                            <span>留空表示永久有效</span>
+                            {permissionExpiresAt && (
+                              <button
+                                type="button"
+                                onClick={() => setPermissionExpiresAt('')}
+                                className="font-bold text-primary transition-colors hover:text-primary/80"
+                              >
+                                清空时间
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedPermissionScope === 'EXPLICIT_USERS' && (
+                        <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div>
+                              <p className="text-sm font-bold text-slate-800">指定用户范围</p>
+                              <p className="text-xs text-slate-500 mt-1">只有这些用户对象会命中当前新勾选的权限覆盖</p>
+                            </div>
+                            <Badge variant="outline" className="rounded-full bg-white border-slate-200 text-slate-600 font-bold px-3">
+                              已选 {selectedScopeUserIds.length} 人
+                            </Badge>
+                          </div>
+
+                          <Input
+                            value={scopeUserSearch}
+                            onChange={(event) => setScopeUserSearch(event.target.value)}
+                            placeholder="搜索姓名或工号"
+                            className="h-10 rounded-xl border-slate-200 bg-white mb-4 shadow-sm"
+                          />
+
+                          <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                            {filteredScopeUsers.length === 0 ? (
+                              <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-8 text-center text-xs text-slate-400">
+                                没有匹配的用户
+                              </div>
+                            ) : (
+                              filteredScopeUsers.map((scopeUser) => {
+                                const selected = selectedScopeUserIds.includes(scopeUser.id);
                                 return (
                                   <label
-                                    key={permission.code}
+                                    key={scopeUser.id}
                                     className={cn(
-                                      'flex cursor-pointer items-center justify-between gap-3 px-4 py-3 transition-colors',
-                                      checked ? 'bg-primary/5' : 'bg-background hover:bg-muted/40',
+                                      'flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
+                                      selected
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm',
                                     )}
                                   >
-                                    <div>
-                                      <p className="text-sm font-semibold text-foreground">{permission.name}</p>
-                                      <p className="text-xs text-text-muted">{permission.code}</p>
-                                      <div className="mt-2 flex flex-wrap gap-2">
-                                        {permissionState.fromTemplate && (
-                                          <Badge
-                                            variant="secondary"
-                                            className="rounded-full normal-case tracking-normal"
-                                          >
-                                            角色默认包
-                                          </Badge>
-                                        )}
-                                        {permissionState.allowOverrides.map((override) => (
-                                          <Badge
-                                            key={`allow-${override.id}`}
-                                            variant="outline"
-                                            className="rounded-full normal-case tracking-normal"
-                                          >
-                                            自定义赋权 · {getOverrideSummaryText(
-                                              override.scope_type,
-                                              override.scope_user_ids,
-                                              override.expires_at,
-                                            )}
-                                          </Badge>
-                                        ))}
-                                        {permissionState.denyOverrides.map((override) => (
-                                          <Badge
-                                            key={`deny-${override.id}`}
-                                            variant="warning"
-                                            className="rounded-full normal-case tracking-normal"
-                                          >
-                                            自定义禁用 · {getOverrideSummaryText(
-                                              override.scope_type,
-                                              override.scope_user_ids,
-                                              override.expires_at,
-                                            )}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                      {!checked && permissionState.denyOverrides.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                          <span className="text-[11px] font-medium text-warning-800">
-                                            已通过用户自定义从默认包中禁用
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {loading && <span className="text-xs text-text-muted">处理中...</span>}
-                                      <Checkbox
-                                        checked={checked}
-                                        disabled={loading || (
-                                          checked
-                                            ? !(permissionState.allowOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
-                                            : !(permissionState.denyOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
-                                        )}
-                                        onCheckedChange={(value) => handlePermissionToggle(permission.code, value === true)}
-                                      />
+                                    <Checkbox
+                                      checked={selected}
+                                      onCheckedChange={() => toggleScopeUser(scopeUser.id)}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-slate-700">{scopeUser.username}</p>
+                                      <p className="truncate text-xs text-slate-400 mt-0.5">
+                                        {scopeUser.employee_id} <span className="mx-1">·</span> {scopeUser.department?.name || '未分配部门'}
+                                      </p>
                                     </div>
                                   </label>
                                 );
-                              })}
-                            </div>
-                          )}
+                              })
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+                      {activeModulePermissions.length === 0 ? (
+                        <div className="px-4 py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
+                      ) : (
+                        <div className="divide-y divide-slate-50">
+                          {activeModulePermissions.map((permission) => {
+                            const permissionState = getPermissionState(permission.code);
+                            const checked = permissionState.checked;
+                            const loading = isPermissionToggling(permission.code);
+                            return (
+                              <label
+                                key={permission.code}
+                                className={cn(
+                                  'flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition-colors',
+                                  checked ? 'bg-primary/5 hover:bg-primary/10' : 'bg-transparent hover:bg-slate-50/80',
+                                )}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-bold text-slate-800">{permission.name}</p>
+                                  </div>
+                                  <p className="text-xs text-slate-400 mt-1">{permission.code}</p>
+
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {permissionState.fromTemplate && (
+                                      <Badge
+                                        variant="outline"
+                                        className="rounded-full bg-slate-100/80 border-transparent text-slate-600 font-medium px-2.5 py-0.5 text-[10px]"
+                                      >
+                                        角色默认包
+                                      </Badge>
+                                    )}
+                                    {permissionState.allowOverrides.map((override) => (
+                                      <Badge
+                                        key={`allow-${override.id}`}
+                                        variant="outline"
+                                        className="rounded-full bg-emerald-50 border-emerald-200 text-emerald-700 font-bold px-2.5 py-0.5 text-[10px]"
+                                      >
+                                        自定义赋权 · {getOverrideSummaryText(
+                                          override.scope_type,
+                                          override.scope_user_ids,
+                                          override.expires_at,
+                                        )}
+                                      </Badge>
+                                    ))}
+                                    {permissionState.denyOverrides.map((override) => (
+                                      <Badge
+                                        key={`deny-${override.id}`}
+                                        variant="warning"
+                                        className="rounded-full normal-case tracking-normal px-2.5 py-0.5 text-[10px]"
+                                      >
+                                        自定义禁用 · {getOverrideSummaryText(
+                                          override.scope_type,
+                                          override.scope_user_ids,
+                                          override.expires_at,
+                                        )}
+                                      </Badge>
+                                    ))}
+                                  </div>
+
+                                  {!checked && permissionState.denyOverrides.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <span className="text-[11px] font-bold text-warning-800">
+                                        已通过用户自定义从默认包中禁用
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  {loading && <span className="text-xs font-bold text-primary animate-pulse">处理中...</span>}
+                                  <Checkbox
+                                    checked={checked}
+                                    disabled={loading || (
+                                      checked
+                                        ? !(permissionState.allowOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
+                                        : !(permissionState.denyOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
+                                    )}
+                                    onCheckedChange={(value) => handlePermissionToggle(permission.code, value === true)}
+                                  />
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {isLoadingUserOverrides && (
-                    <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-3 text-xs text-text-muted">
-                      正在同步当前权限状态...
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                      <div className="bg-white border border-slate-100 shadow-xl px-6 py-4 rounded-full flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                        <span className="text-sm font-bold text-slate-700">正在同步当前权限状态...</span>
+                      </div>
                     </div>
                   )}
                 </div>

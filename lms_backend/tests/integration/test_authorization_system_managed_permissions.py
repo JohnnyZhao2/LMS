@@ -117,6 +117,24 @@ def test_mentor_effective_permissions_follow_default_menu():
 
 
 @pytest.mark.django_db
+def test_student_effective_permissions_follow_default_menu_and_system_rules():
+    client = APIClient()
+    _create_user_with_role(employee_id='EMP_AUTH_STUDENT', username='Student User', role_code='STUDENT')
+
+    payload = _login_and_get_payload(client, employee_id='EMP_AUTH_STUDENT')
+    permissions = set(payload['effective_permissions'])
+
+    assert 'knowledge.view' in permissions
+    assert 'task.view' in permissions
+    assert 'submission.answer' in permissions
+    assert 'submission.review' in permissions
+    assert 'profile.view' in permissions
+    assert 'profile.update' in permissions
+    assert 'analytics.view' not in permissions
+    assert 'activity_log.view' not in permissions
+
+
+@pytest.mark.django_db
 def test_team_manager_effective_permissions_follow_default_menu():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_TM', username='Team Manager User', role_code='TEAM_MANAGER')
@@ -146,6 +164,11 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'dashboard.mentor.view' not in permission_codes
     assert 'dashboard.team_manager.view' not in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
+    assert 'analytics.view' not in permission_codes
+    assert 'profile.view' not in permission_codes
+    assert 'profile.update' not in permission_codes
+    assert 'submission.answer' not in permission_codes
+    assert 'submission.review' not in permission_codes
     assert 'activity_log.view' not in permission_codes
     assert 'activity_log.policy.update' not in permission_codes
 
@@ -171,6 +194,25 @@ def test_system_managed_permissions_cannot_be_overridden_per_user():
     assert response.status_code == 400
     assert response.data['code'] == 'VALIDATION_ERROR'
     assert '系统保留权限' in response.data['message']
+
+
+@pytest.mark.django_db
+def test_submission_endpoints_require_student_current_role():
+    client = APIClient()
+    _create_user_with_role(employee_id='EMP_AUTH_SUB_MENTOR', username='Submission Mentor', role_code='MENTOR')
+    payload = _authenticate(client, employee_id='EMP_AUTH_SUB_MENTOR')
+
+    assert payload['current_role'] == 'MENTOR'
+
+    response = client.post(
+        '/api/submissions/start/',
+        {},
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'PERMISSION_DENIED'
+    assert '只有学员角色可以进行答题和查看结果' in response.data['message']
 
 
 @pytest.mark.django_db

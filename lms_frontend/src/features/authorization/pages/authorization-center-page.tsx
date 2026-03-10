@@ -73,13 +73,6 @@ export const AuthorizationCenterPage: React.FC = () => {
     <div className="space-y-6 pb-10">
       <PageHeader title="角色模板配置" icon={<Layers3 />} />
 
-      <div className="rounded-2xl border border-border bg-gradient-to-r from-primary-50 via-background to-secondary-50 p-5">
-        <p className="text-sm font-medium text-foreground">模块化赋权视图</p>
-        <p className="mt-1 text-xs text-text-muted">
-          先按管理员菜单页面层级梳理模块，再配置角色模板。当前展示顺序：模块 {'>'} 页面层级 {'>'} 权限点。
-        </p>
-      </div>
-
       <RolePermissionTemplatePanel
         canViewRoleTemplate={canViewRoleTemplate}
         canUpdateRoleTemplate={canUpdateRoleTemplate}

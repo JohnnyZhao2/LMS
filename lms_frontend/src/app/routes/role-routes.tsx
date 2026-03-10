@@ -264,7 +264,7 @@ export const roleRoutes = [
     key="quiz"
     path="quiz/:id"
     element={
-      <ProtectedRoute requiredPermissions={['submission.answer']}>
+      <ProtectedRoute allowedRoles={['STUDENT']}>
         <QuizPlayer />
       </ProtectedRoute>
     }
@@ -273,7 +273,7 @@ export const roleRoutes = [
     key="review-practice"
     path="review/practice"
     element={
-      <ProtectedRoute requiredPermissions={['submission.review']}>
+      <ProtectedRoute allowedRoles={['STUDENT']}>
         <AnswerReview type="practice" />
       </ProtectedRoute>
     }
@@ -282,7 +282,7 @@ export const roleRoutes = [
     key="review-exam"
     path="review/exam"
     element={
-      <ProtectedRoute requiredPermissions={['submission.review']}>
+      <ProtectedRoute allowedRoles={['STUDENT']}>
         <AnswerReview type="exam" />
       </ProtectedRoute>
     }
@@ -304,7 +304,7 @@ export const roleRoutes = [
     key="personal"
     path="personal"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']} requiredPermissions={['profile.view', 'profile.update']}>
+      <ProtectedRoute allowedRoles={['STUDENT']}>
         <Personal />
       </ProtectedRoute>
     }
@@ -313,7 +313,7 @@ export const roleRoutes = [
     key="analytics"
     path="analytics"
     element={
-      <ProtectedRoute allowedRoles={['TEAM_MANAGER']} requiredPermissions={['analytics.view']}>
+      <ProtectedRoute allowedRoles={['TEAM_MANAGER']}>
         <Analytics />
       </ProtectedRoute>
     }

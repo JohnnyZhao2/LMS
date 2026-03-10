@@ -13,6 +13,7 @@ from core.responses import success_response
 
 from ..serializers import PracticeResultSerializer
 from ..services import SubmissionService
+from .common import enforce_student_submission_role
 
 
 class PracticeResultView(BaseAPIView):
@@ -33,6 +34,7 @@ class PracticeResultView(BaseAPIView):
         tags=['练习答题']
     )
     def get(self, request, pk):
+        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         # Check submission is completed
         if submission.status == 'IN_PROGRESS':

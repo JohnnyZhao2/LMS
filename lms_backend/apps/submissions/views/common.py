@@ -8,7 +8,9 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from apps.users.permissions import get_current_role
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
 
 from ..serializers import (
@@ -17,6 +19,14 @@ from ..serializers import (
     SubmissionDetailSerializer,
 )
 from ..services import SubmissionService
+
+
+def enforce_student_submission_role(request) -> None:
+    if get_current_role(request.user, request) != 'STUDENT':
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message='只有学员角色可以进行答题和查看结果',
+        )
 
 
 class StartQuizView(APIView):
@@ -43,6 +53,7 @@ class StartQuizView(APIView):
         tags=['答题']
     )
     def post(self, request):
+        enforce_student_submission_role(request)
         serializer = StartQuizSerializer(
             data=request.data,
             context={'request': request}
@@ -75,6 +86,7 @@ class SubmitView(BaseAPIView):
         tags=['答题']
     )
     def post(self, request, pk):
+        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         # 根据 quiz_type 判断行为
         is_practice = submission.quiz.quiz_type == 'PRACTICE'
@@ -102,6 +114,7 @@ class SaveAnswerView(BaseAPIView):
         tags=['练习答题', '考试答题']
     )
     def post(self, request, pk):
+        enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
         serializer = SaveAnswerSerializer(
             data=request.data,

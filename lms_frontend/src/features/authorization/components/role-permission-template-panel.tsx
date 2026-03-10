@@ -60,10 +60,12 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
 
         permissions.forEach((permission) => {
           const presentation = getPermissionPresentation(permission);
-          if (!pageGroups[presentation.pageLabel]) {
-            pageGroups[presentation.pageLabel] = [];
+          const groupName = presentation.pageLabel.split(' / ')[0] || presentation.pageLabel;
+
+          if (!pageGroups[groupName]) {
+            pageGroups[groupName] = [];
           }
-          pageGroups[presentation.pageLabel].push({
+          pageGroups[groupName].push({
             permission,
             detail: presentation.detail,
           });
@@ -103,124 +105,166 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   }
 
   return (
-    <section className="space-y-5 rounded-2xl border border-border bg-background p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-foreground">
-            <Shield className="h-4 w-4 text-primary" />
-            <h2 className="text-lg font-semibold">角色权限模板</h2>
+    <div className="flex flex-col gap-6">
+      {/* 顶部控制栏：合并角色切换与保存按钮 */}
+      <section className="sticky top-0 z-10 flex flex-col gap-4 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full overflow-x-auto sm:w-auto">
+          <div className="flex w-full min-w-max rounded-lg bg-muted/50 p-1">
+            {ROLE_ORDER.map((roleCode) => (
+              <button
+                key={roleCode}
+                type="button"
+                onClick={() => onRoleChange(roleCode)}
+                className={cn(
+                  'flex-1 rounded-md px-5 py-2 text-sm font-medium transition-all sm:flex-none',
+                  selectedRole === roleCode
+                    ? 'bg-background text-primary shadow-sm'
+                    : 'text-text-muted hover:text-foreground',
+                )}
+              >
+                {ROLE_LABELS[roleCode]}
+              </button>
+            ))}
           </div>
-          <p className="text-xs text-text-muted">按“模块 / 页面层级 / 权限点”配置角色模板，避免只看权限码硬猜。</p>
         </div>
-        <Button
-          type="button"
-          onClick={onSave}
-          disabled={!canUpdateRoleTemplate || isLoadingTemplate || isSaving}
-          className="bg-primary text-white hover:bg-primary-hover"
-        >
-          {isSaving ? '保存中...' : '保存模板'}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-2 md:grid-cols-5">
-        {ROLE_ORDER.map((roleCode) => (
-          <button
-            key={roleCode}
+        <div className="flex items-center gap-3">
+          <div className="hidden text-xs text-text-muted md:block">
+            按模块与页面配置该角色的默认权限点
+          </div>
+          <Button
             type="button"
-            onClick={() => onRoleChange(roleCode)}
-            className={cn(
-              'rounded-md px-3 py-2 text-sm font-semibold transition-colors',
-              selectedRole === roleCode
-                ? 'bg-primary text-white'
-                : 'bg-background text-text-muted hover:text-foreground',
-            )}
+            onClick={onSave}
+            disabled={!canUpdateRoleTemplate || isLoadingTemplate || isSaving}
+            className="w-full bg-primary text-white shadow-sm hover:bg-primary-hover sm:w-auto"
           >
-            {ROLE_LABELS[roleCode]}
-          </button>
-        ))}
-      </div>
+            {isSaving ? '保存中...' : '保存模板'}
+          </Button>
+        </div>
+      </section>
 
       {isLoadingTemplate ? (
-        <div className="rounded-xl border border-border bg-muted px-4 py-6 text-sm text-text-muted">
-          正在加载当前角色权限模板...
+        <div className="rounded-xl border border-border bg-muted/30 px-6 py-12 text-center text-sm text-text-muted">
+          正在加载角色配置...
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <section className="grid gap-4 xl:grid-cols-2">
           {groupedPermissions.map(({ module, permissions, modulePresentation, selectedCount, pageGroups }) => {
-            const allSelected = selectedCount === permissions.length;
-
             return (
-              <div key={module} className="rounded-2xl border border-border bg-muted/50 p-4">
-                <div className="flex flex-col gap-4 border-b border-border pb-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-bold text-foreground">{modulePresentation.label}</h3>
-                      <p className="text-xs leading-relaxed text-text-muted">{modulePresentation.summary}</p>
+              <div
+                key={module}
+                className="flex flex-col rounded-xl border border-border bg-background overflow-hidden"
+              >
+                {/* 模块头部：去除了繁重的底色，使其更融合 */}
+                <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Shield className="h-4 w-4" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-background px-3 py-1 text-[11px] font-bold text-text-muted">
-                        {selectedCount}/{permissions.length} 已选
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        disabled={!canUpdateRoleTemplate}
-                        onClick={() => toggleModulePermissions(permissions, true)}
-                      >
-                        全选
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-3 text-xs"
-                        disabled={!canUpdateRoleTemplate || !selectedCount}
-                        onClick={() => toggleModulePermissions(permissions, false)}
-                      >
-                        清空
-                      </Button>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-foreground">{modulePresentation.label}</h3>
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                            selectedCount > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-text-muted',
+                          )}
+                        >
+                          {selectedCount}/{permissions.length} 已选
+                        </span>
+                      </div>
+                      <p className="mt-0.5 max-w-[280px] truncate text-xs text-text-muted">
+                        {modulePresentation.summary}
+                      </p>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-dashed border-border bg-background px-3 py-2 text-[11px] text-text-muted">
-                    当前模块状态：{allSelected ? '已全选' : selectedCount === 0 ? '未配置' : '部分配置'}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 border-border px-3 text-xs"
+                      disabled={!canUpdateRoleTemplate || selectedCount === permissions.length}
+                      onClick={() => toggleModulePermissions(permissions, true)}
+                    >
+                      全选
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 border-border px-3 text-xs"
+                      disabled={!canUpdateRoleTemplate || selectedCount === 0}
+                      onClick={() => toggleModulePermissions(permissions, false)}
+                    >
+                      清空
+                    </Button>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-4">
-                  {pageGroups.map(([pageLabel, items]) => (
-                    <div key={pageLabel} className="rounded-xl border border-border bg-background p-3">
-                      <div className="mb-3">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary">{pageLabel}</p>
+                {/* 模块内容区：去除冗余标题，紧密集约排列 */}
+                <div className="flex-1 p-4">
+                  <div className="space-y-6">
+                    {pageGroups.map(([groupName, items]) => (
+                      <div key={groupName} className="space-y-3">
+                        {pageGroups.length > 1 && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-3.5 w-1 rounded-full bg-primary/40" />
+                            <h4 className="text-[13px] font-bold tracking-wide text-foreground/80">
+                              {groupName}
+                            </h4>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                          {items.map(({ permission, detail }) => {
+                            const isSelected = selectedCodes.includes(permission.code);
+                            return (
+                              <label
+                                key={permission.code}
+                                className={cn(
+                                  'group flex cursor-pointer items-start gap-3.5 rounded-xl border p-3.5 transition-all',
+                                  isSelected
+                                    ? 'border-primary/30 bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10'
+                                    : 'border-border/60 bg-background hover:border-border hover:bg-muted/30 hover:shadow-sm',
+                                )}
+                              >
+                                <Checkbox
+                                  checked={isSelected}
+                                  disabled={!canUpdateRoleTemplate}
+                                  onCheckedChange={(checked) => onToggleCode(permission.code, checked === true)}
+                                  className={cn(
+                                    "mt-0.5",
+                                    !isSelected && "border-muted-foreground/40 group-hover:border-primary/50"
+                                  )}
+                                />
+                                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                  <span
+                                    className={cn(
+                                      'text-[13px] font-semibold leading-none tracking-tight transition-colors',
+                                      isSelected ? 'text-primary' : 'text-foreground group-hover:text-primary/90',
+                                    )}
+                                  >
+                                    {permission.name}
+                                  </span>
+                                  <span className="line-clamp-2 text-[12px] leading-snug text-muted-foreground">
+                                    {detail}
+                                  </span>
+                                  <span className="mt-0.5 text-[10px] font-mono leading-none text-muted-foreground/40">
+                                    {permission.code}
+                                  </span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        {items.map(({ permission, detail }) => (
-                          <label
-                            key={permission.code}
-                            className="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-muted/40 px-3 py-3 hover:border-border"
-                          >
-                            <Checkbox
-                              checked={selectedCodes.includes(permission.code)}
-                              disabled={!canUpdateRoleTemplate}
-                              onCheckedChange={(checked) => onToggleCode(permission.code, checked === true)}
-                            />
-                            <span className="space-y-1">
-                              <span className="block text-sm font-medium text-foreground">{permission.name}</span>
-                              <span className="block text-xs leading-relaxed text-text-muted">{detail}</span>
-                              <span className="block text-[11px] font-mono text-text-muted">{permission.code}</span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             );
           })}
-        </div>
+        </section>
       )}
-    </section>
+    </div>
   );
 };
