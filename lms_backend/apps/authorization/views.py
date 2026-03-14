@@ -11,6 +11,7 @@ from .serializers import (
     PermissionSerializer,
     RevokeUserPermissionOverrideSerializer,
     RolePermissionSerializer,
+    RolePermissionTemplateSerializer,
     UserPermissionOverrideCreateSerializer,
     UserPermissionOverrideSerializer,
 )
@@ -59,7 +60,7 @@ class RolePermissionView(BaseAPIView):
     @extend_schema(
         summary='获取角色权限模板',
         responses={
-            200: RolePermissionSerializer,
+            200: RolePermissionTemplateSerializer,
             403: OpenApiResponse(description='无权限'),
         },
         tags=['授权管理'],
@@ -73,6 +74,8 @@ class RolePermissionView(BaseAPIView):
             {
                 'role_code': role_code,
                 'permission_codes': permission_codes,
+                'default_scope_types': self.service.get_role_default_scope_types(role_code),
+                'scope_options': self.service.get_role_scope_options(role_code),
             }
         )
 
@@ -80,7 +83,7 @@ class RolePermissionView(BaseAPIView):
         summary='替换角色权限模板',
         request=RolePermissionSerializer,
         responses={
-            200: RolePermissionSerializer,
+            200: RolePermissionTemplateSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
         },
@@ -100,7 +103,14 @@ class RolePermissionView(BaseAPIView):
             role_code=role_code,
             permission_codes=serializer.validated_data['permission_codes'],
         )
-        return success_response({'role_code': role_code, 'permission_codes': permission_codes})
+        return success_response(
+            {
+                'role_code': role_code,
+                'permission_codes': permission_codes,
+                'default_scope_types': self.service.get_role_default_scope_types(role_code),
+                'scope_options': self.service.get_role_scope_options(role_code),
+            }
+        )
 
 
 class UserPermissionOverrideListCreateView(BaseAPIView):

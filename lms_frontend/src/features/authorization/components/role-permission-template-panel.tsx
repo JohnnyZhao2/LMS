@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Shield } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,12 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
       });
   }, [permissionCatalog, selectedCodes]);
 
+  const [selectedModuleKey, setSelectedModuleKey] = useState<string | null>(null);
+
+  const activeGroup = useMemo(() => {
+    return groupedPermissions.find((g) => g.module === selectedModuleKey) || groupedPermissions[0];
+  }, [groupedPermissions, selectedModuleKey]);
+
   const toggleModulePermissions = (permissions: PermissionCatalogItem[], checked: boolean) => {
     permissions.forEach((permission) => {
       const isChecked = selectedCodes.includes(permission.code);
@@ -146,125 +152,146 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
         <div className="rounded-xl border border-border bg-muted/30 px-6 py-12 text-center text-sm text-text-muted">
           正在加载角色配置...
         </div>
-      ) : (
-        <section className="grid gap-4 xl:grid-cols-2">
-          {groupedPermissions.map(({ module, permissions, modulePresentation, selectedCount, pageGroups }) => {
-            return (
-              <div
-                key={module}
-                className="flex flex-col rounded-xl border border-border bg-background overflow-hidden"
-              >
-                {/* 模块头部：去除了繁重的底色，使其更融合 */}
-                <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Shield className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-foreground">{modulePresentation.label}</h3>
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                            selectedCount > 0 ? 'bg-primary/10 text-primary' : 'bg-muted text-text-muted',
-                          )}
-                        >
-                          {selectedCount}/{permissions.length} 已选
-                        </span>
-                      </div>
-                      <p className="mt-0.5 max-w-[280px] truncate text-xs text-text-muted">
-                        {modulePresentation.summary}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 border-border px-3 text-xs"
-                      disabled={!canUpdateRoleTemplate || selectedCount === permissions.length}
-                      onClick={() => toggleModulePermissions(permissions, true)}
-                    >
-                      全选
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 border-border px-3 text-xs"
-                      disabled={!canUpdateRoleTemplate || selectedCount === 0}
-                      onClick={() => toggleModulePermissions(permissions, false)}
-                    >
-                      清空
-                    </Button>
-                  </div>
-                </div>
+      ) : activeGroup ? (
+        <section className="flex flex-col md:flex-row gap-6">
+          {/* 左侧模块菜单 */}
+          <div className="w-full md:w-56 lg:w-64 shrink-0 flex flex-col gap-1.5 p-3 bg-muted/30 rounded-2xl border border-border/60">
+            <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+              功能模块
+            </div>
+            {groupedPermissions.map((g) => {
+              const isActive = activeGroup.module === g.module;
+              return (
+                <button
+                  key={g.module}
+                  type="button"
+                  onClick={() => setSelectedModuleKey(g.module)}
+                  className={cn(
+                    "flex items-center justify-between px-3.5 py-3 rounded-xl text-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    isActive
+                      ? "bg-background text-primary shadow-sm font-semibold ring-1 ring-border"
+                      : "text-foreground hover:bg-muted/60"
+                  )}
+                >
+                  <span>{g.modulePresentation.label}</span>
+                  {g.selectedCount > 0 ? (
+                    <span className={cn(
+                      "text-[10px] px-2 py-0.5 rounded-full font-bold ml-2",
+                      isActive ? "bg-primary/10 text-primary" : "bg-muted-foreground/10 text-muted-foreground"
+                    )}>
+                      {g.selectedCount}/{g.permissions.length}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/40 ml-2 font-medium">0/{g.permissions.length}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-                {/* 模块内容区：去除冗余标题，紧密集约排列 */}
-                <div className="flex-1 p-4">
-                  <div className="space-y-6">
-                    {pageGroups.map(([groupName, items]) => (
-                      <div key={groupName} className="space-y-3">
-                        {pageGroups.length > 1 && (
-                          <div className="flex items-center gap-2">
-                            <div className="h-3.5 w-1 rounded-full bg-primary/40" />
-                            <h4 className="text-[13px] font-bold tracking-wide text-foreground/80">
-                              {groupName}
-                            </h4>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                          {items.map(({ permission, detail }) => {
-                            const isSelected = selectedCodes.includes(permission.code);
-                            return (
-                              <label
-                                key={permission.code}
-                                className={cn(
-                                  'group flex cursor-pointer items-start gap-3.5 rounded-xl border p-3.5 transition-all',
-                                  isSelected
-                                    ? 'border-primary/30 bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10'
-                                    : 'border-border/60 bg-background hover:border-border hover:bg-muted/30 hover:shadow-sm',
-                                )}
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  disabled={!canUpdateRoleTemplate}
-                                  onCheckedChange={(checked) => onToggleCode(permission.code, checked === true)}
-                                  className={cn(
-                                    "mt-0.5",
-                                    !isSelected && "border-muted-foreground/40 group-hover:border-primary/50"
-                                  )}
-                                />
-                                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                                  <span
-                                    className={cn(
-                                      'text-[13px] font-semibold leading-none tracking-tight transition-colors',
-                                      isSelected ? 'text-primary' : 'text-foreground group-hover:text-primary/90',
-                                    )}
-                                  >
-                                    {permission.name}
-                                  </span>
-                                  <span className="line-clamp-2 text-[12px] leading-snug text-muted-foreground">
-                                    {detail}
-                                  </span>
-                                  <span className="mt-0.5 text-[10px] font-mono leading-none text-muted-foreground/40">
-                                    {permission.code}
-                                  </span>
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          {/* 右侧选定模块权限明细 */}
+          <div className="flex-1 min-w-0 flex flex-col bg-background rounded-2xl border border-border overflow-hidden shadow-sm">
+            {/* 右侧头部 */}
+            <div className="flex flex-col gap-3 border-b border-border bg-muted/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    {activeGroup.modulePresentation.label}配置
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    {activeGroup.modulePresentation.summary}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-border px-4 text-xs font-semibold"
+                  disabled={!canUpdateRoleTemplate || activeGroup.selectedCount === activeGroup.permissions.length}
+                  onClick={() => toggleModulePermissions(activeGroup.permissions, true)}
+                >
+                  全选
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-border px-4 text-xs font-semibold"
+                  disabled={!canUpdateRoleTemplate || activeGroup.selectedCount === 0}
+                  onClick={() => toggleModulePermissions(activeGroup.permissions, false)}
+                >
+                  清空
+                </Button>
+              </div>
+            </div>
+
+            {/* 右侧权限列表 */}
+            <div className="flex-1 p-6">
+              <div className="flex flex-col gap-7">
+                {activeGroup.pageGroups.map(([groupName, items]) => (
+                  <div key={groupName} className="space-y-3.5">
+                    {activeGroup.pageGroups.length > 1 && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-4 w-1.5 rounded-full bg-primary/40" />
+                        <h4 className="text-[14px] font-bold tracking-wide text-foreground/90">
+                          {groupName}
+                        </h4>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {items.map(({ permission, detail }) => {
+                        const isSelected = selectedCodes.includes(permission.code);
+                        return (
+                          <label
+                            key={permission.code}
+                            className={cn(
+                              'group flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all duration-200',
+                              isSelected
+                                ? 'border-primary/30 bg-primary/5 ring-1 ring-primary/20 hover:bg-primary/10'
+                                : 'border-border/60 bg-background hover:border-border hover:bg-muted/30 hover:shadow-sm',
+                            )}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              disabled={!canUpdateRoleTemplate}
+                              onCheckedChange={(checked) => onToggleCode(permission.code, checked === true)}
+                              className={cn(
+                                "mt-0.5 shadow-none transition-colors",
+                                !isSelected && "border-muted-foreground/40 group-hover:border-primary/50"
+                              )}
+                            />
+                            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                              <span
+                                className={cn(
+                                  'text-[13px] font-semibold leading-none tracking-tight transition-colors',
+                                  isSelected ? 'text-primary' : 'text-foreground group-hover:text-primary/90',
+                                )}
+                              >
+                                {permission.name}
+                              </span>
+                              <span className="line-clamp-2 text-[12px] leading-relaxed text-muted-foreground/90">
+                                {detail}
+                              </span>
+                              <span className="mt-1 text-[10px] font-mono leading-none text-muted-foreground/40">
+                                {permission.code}
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 };

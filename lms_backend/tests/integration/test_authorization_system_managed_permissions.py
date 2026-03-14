@@ -247,6 +247,23 @@ def test_replace_role_permissions_preserves_role_dashboard_and_strips_system_man
 
 
 @pytest.mark.django_db
+def test_role_permission_template_response_includes_default_scope_types():
+    client = APIClient()
+    admin_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_ADMIN', username='Scope Admin', role_code='ADMIN')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.get('/api/authorization/roles/MENTOR/permissions/')
+
+    assert response.status_code == 200
+    payload = response.data['data']
+    assert payload['role_code'] == 'MENTOR'
+    assert payload['default_scope_types'] == ['SELF', 'MENTEES']
+    assert any(option['code'] == 'SELF' and option['inherited_by_default'] for option in payload['scope_options'])
+    assert any(option['code'] == 'MENTEES' and option['inherited_by_default'] for option in payload['scope_options'])
+    assert any(option['code'] == 'EXPLICIT_USERS' and not option['inherited_by_default'] for option in payload['scope_options'])
+
+
+@pytest.mark.django_db
 def test_dashboard_endpoints_are_guarded_by_current_role_not_permission_codes():
     client = APIClient()
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_M_DASH', username='Mentor Dash', role_code='MENTOR')

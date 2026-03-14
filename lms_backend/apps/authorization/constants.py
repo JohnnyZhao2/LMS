@@ -415,11 +415,27 @@ SCOPE_EXPLICIT_USERS = 'EXPLICIT_USERS'
 
 SCOPE_CHOICES = [
     (SCOPE_ALL, '全部对象'),
-    (SCOPE_SELF, '仅本人'),
+    (SCOPE_SELF, '本人数据'),
     (SCOPE_MENTEES, '仅名下学员'),
     (SCOPE_DEPARTMENT, '仅同部门'),
-    (SCOPE_EXPLICIT_USERS, '仅指定用户'),
+    (SCOPE_EXPLICIT_USERS, '指定用户'),
 ]
+
+SCOPE_DESCRIPTIONS = {
+    SCOPE_ALL: '对该角色下可访问的全部对象生效',
+    SCOPE_SELF: '对本人相关数据生效',
+    SCOPE_MENTEES: '对名下学员相关数据生效',
+    SCOPE_DEPARTMENT: '对同部门对象生效',
+    SCOPE_EXPLICIT_USERS: '仅对指定用户对象生效',
+}
+
+ROLE_DEFAULT_SCOPE_TYPES = {
+    'STUDENT': [SCOPE_SELF],
+    'MENTOR': [SCOPE_SELF, SCOPE_MENTEES],
+    'DEPT_MANAGER': [SCOPE_SELF, SCOPE_DEPARTMENT],
+    'TEAM_MANAGER': [SCOPE_ALL],
+    'ADMIN': [SCOPE_ALL],
+}
 
 
 EFFECT_ALLOW = 'ALLOW'

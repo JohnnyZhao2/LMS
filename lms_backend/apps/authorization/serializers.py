@@ -14,6 +14,13 @@ class PermissionSerializer(serializers.ModelSerializer):
         fields = ['code', 'name', 'module', 'description', 'is_active']
 
 
+class ScopeOptionSerializer(serializers.Serializer):
+    code = serializers.ChoiceField(choices=SCOPE_CHOICES)
+    label = serializers.CharField()
+    description = serializers.CharField()
+    inherited_by_default = serializers.BooleanField()
+
+
 class RolePermissionSerializer(serializers.Serializer):
     role_code = serializers.ChoiceField(choices=Role.ROLE_CHOICES)
     permission_codes = serializers.ListField(
@@ -21,6 +28,15 @@ class RolePermissionSerializer(serializers.Serializer):
         allow_empty=True,
         help_text='角色权限编码列表',
     )
+
+
+class RolePermissionTemplateSerializer(RolePermissionSerializer):
+    default_scope_types = serializers.ListField(
+        child=serializers.ChoiceField(choices=SCOPE_CHOICES),
+        allow_empty=False,
+        help_text='该角色默认继承的数据范围',
+    )
+    scope_options = ScopeOptionSerializer(many=True, help_text='当前角色可选的数据范围')
 
 
 class UserPermissionOverrideCreateSerializer(serializers.Serializer):

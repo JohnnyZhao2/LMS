@@ -14,9 +14,12 @@ from .constants import (
     EFFECT_ALLOW,
     EFFECT_DENY,
     PERMISSION_CATALOG,
+    ROLE_DEFAULT_SCOPE_TYPES,
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
+    SCOPE_CHOICES,
+    SCOPE_DESCRIPTIONS,
     SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
     SCOPE_MENTEES,
@@ -277,6 +280,21 @@ class AuthorizationService(BaseService):
 
     def get_role_permission_codes(self, role_code: str) -> List[str]:
         return sorted(self._get_role_permission_code_set(role_code))
+
+    def get_role_default_scope_types(self, role_code: str) -> List[str]:
+        return list(ROLE_DEFAULT_SCOPE_TYPES.get(role_code, [SCOPE_ALL]))
+
+    def get_role_scope_options(self, role_code: str) -> List[dict]:
+        default_scope_types = set(self.get_role_default_scope_types(role_code))
+        return [
+            {
+                'code': scope_code,
+                'label': scope_label,
+                'description': SCOPE_DESCRIPTIONS.get(scope_code, ''),
+                'inherited_by_default': scope_code in default_scope_types,
+            }
+            for scope_code, scope_label in SCOPE_CHOICES
+        ]
 
     @transaction.atomic
     def replace_role_permissions(self, role_code: str, permission_codes: Iterable[str]) -> List[str]:

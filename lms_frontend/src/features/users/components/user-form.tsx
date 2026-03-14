@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
   User,
@@ -8,12 +8,15 @@ import {
   Users,
   KeyRound,
   ListFilter,
-  Clock3,
+  Loader2,
+  Settings2,
 } from 'lucide-react';
 
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -26,6 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
@@ -75,24 +83,33 @@ interface FormErrors {
 }
 
 const MANAGER_MUTEX_ROLE_CODES: RoleCode[] = ['DEPT_MANAGER', 'TEAM_MANAGER'];
+const PERMISSION_SCOPE_ORDER: PermissionOverrideScope[] = ['SELF', 'MENTEES', 'DEPARTMENT', 'ALL', 'EXPLICIT_USERS'];
 const PERMISSION_SCOPE_OPTIONS: Array<{
   value: PermissionOverrideScope;
   label: string;
   description: string;
 }> = [
-    { value: 'ALL', label: '全部对象', description: '对该用户能操作的全部对象生效' },
-    { value: 'SELF', label: '仅本人', description: '只对其本人相关对象生效' },
-    { value: 'MENTEES', label: '仅名下学员', description: '只对其名下学员生效' },
-    { value: 'DEPARTMENT', label: '仅同部门', description: '只对同部门对象生效' },
-    { value: 'EXPLICIT_USERS', label: '指定用户', description: '只对指定用户对象生效' },
-  ];
+  { value: 'SELF', label: '本人数据', description: '对本人相关数据生效' },
+  { value: 'MENTEES', label: '名下学员', description: '对名下学员相关数据生效' },
+  { value: 'DEPARTMENT', label: '同部门', description: '对同部门对象生效' },
+  { value: 'ALL', label: '全部对象', description: '对该角色下可访问的全部对象生效' },
+  { value: 'EXPLICIT_USERS', label: '指定用户', description: '仅对指定用户对象生效' },
+];
 
 const PERMISSION_SCOPE_LABELS: Record<PermissionOverrideScope, string> = {
   ALL: '全部对象',
-  SELF: '仅本人',
-  MENTEES: '仅名下学员',
-  DEPARTMENT: '仅同部门',
+  SELF: '本人数据',
+  MENTEES: '名下学员',
+  DEPARTMENT: '同部门',
   EXPLICIT_USERS: '指定用户',
+};
+
+const DEFAULT_ROLE_SCOPE_TYPES: Record<RoleCode, PermissionOverrideScope[]> = {
+  STUDENT: ['SELF'],
+  MENTOR: ['SELF', 'MENTEES'],
+  DEPT_MANAGER: ['SELF', 'DEPARTMENT'],
+  TEAM_MANAGER: ['ALL'],
+  ADMIN: ['ALL'],
 };
 
 const DEFAULT_MANAGEABLE_ROLES: Role[] = [
@@ -110,18 +127,49 @@ const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean
   return true;
 };
 
-const formatOverrideExpiry = (value: string | null): string => {
-  if (!value) return '永久';
+const normalizeScopeTypes = (scopeTypes: PermissionOverrideScope[]): PermissionOverrideScope[] => {
+  const uniqueScopeTypes = Array.from(new Set(scopeTypes));
+  if (uniqueScopeTypes.includes('ALL')) {
+    return ['ALL'];
+  }
+  return PERMISSION_SCOPE_ORDER.filter((scopeType) => uniqueScopeTypes.includes(scopeType));
+};
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '永久';
 
-  return date.toLocaleString('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+
+const sameScopeUserIds = (left: number[], right: number[]): boolean => {
+  const normalizedLeft = [...new Set(left)].sort((a, b) => a - b);
+  const normalizedRight = [...new Set(right)].sort((a, b) => a - b);
+
+  if (normalizedLeft.length !== normalizedRight.length) {
+    return false;
+  }
+
+  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+};
+
+const formatScopeSummary = (scopeTypes: PermissionOverrideScope[], scopeUserIds: number[] = []): string => {
+  const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
+  if (normalizedScopeTypes.length === 0) {
+    return '未设置范围';
+  }
+
+  return normalizedScopeTypes.map((scopeType) => (
+    scopeType === 'EXPLICIT_USERS'
+      ? `指定用户 ${scopeUserIds.length} 人`
+      : PERMISSION_SCOPE_LABELS[scopeType]
+  )).join(' / ');
+};
+
+const sameScopeTypes = (left: PermissionOverrideScope[], right: PermissionOverrideScope[]): boolean => {
+  const normalizedLeft = normalizeScopeTypes(left);
+  const normalizedRight = normalizeScopeTypes(right);
+
+  if (normalizedLeft.length !== normalizedRight.length) {
+    return false;
+  }
+
+  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
 };
 
 /**
@@ -149,6 +197,12 @@ export const UserForm: React.FC<UserFormProps> = ({
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
       <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-xl border border-border flex flex-col bg-background">
+        <DialogTitle className="sr-only">
+          {isEdit ? '编辑用户档案' : '新建用户档案'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          配置用户基础信息、系统角色，以及基于角色的数据范围和权限开通情况。
+        </DialogDescription>
         {open && (
           <UserFormContent
             key={`${userId ?? 'new'}-${userDetail?.id ?? 0}-${initialDepartmentId ?? 'none'}-${initialMentorId ?? 'none'}`}
@@ -259,13 +313,13 @@ const UserFormContent: React.FC<{
     const createUserOverride = useCreateUserPermissionOverride();
     const revokeUserOverride = useRevokeUserPermissionOverride();
     const [selectedPermissionModule, setSelectedPermissionModule] = useState('');
-    const [selectedPermissionRole, setSelectedPermissionRole] = useState<'ALL' | RoleCode>('ALL');
-    const [selectedPermissionScope, setSelectedPermissionScope] = useState<PermissionOverrideScope>('ALL');
+    const [selectedPermissionRole, setSelectedPermissionRole] = useState<RoleCode>('STUDENT');
+    const [selectedPermissionScopes, setSelectedPermissionScopes] = useState<PermissionOverrideScope[]>(['SELF']);
     const [selectedScopeUserIds, setSelectedScopeUserIds] = useState<number[]>([]);
-    const [permissionExpiresAt, setPermissionExpiresAt] = useState('');
     const [scopeUserSearch, setScopeUserSearch] = useState('');
+    const [showScopeAdjustPanel, setShowScopeAdjustPanel] = useState(false);
     const [permissionToggleLoading, setPermissionToggleLoading] = useState<Record<string, boolean>>({});
-    const shouldLoadScopeUsers = shouldLoadUserOverrides && selectedPermissionScope === 'EXPLICIT_USERS';
+    const shouldLoadScopeUsers = shouldLoadUserOverrides && selectedPermissionScopes.includes('EXPLICIT_USERS');
     const { data: scopeUsers = [] } = useUsers({}, { enabled: shouldLoadScopeUsers });
 
     const validate = (): boolean => {
@@ -381,6 +435,53 @@ const UserFormContent: React.FC<{
       return templateMap;
     }, [previewRoleCodes, roleTemplateQueries]);
 
+    const roleTemplateDefaultScopeMap = useMemo(() => {
+      const scopeMap = new Map<RoleCode, PermissionOverrideScope[]>();
+      previewRoleCodes.forEach((roleCode, index) => {
+        scopeMap.set(
+          roleCode,
+          roleTemplateQueries[index]?.data?.default_scope_types ?? DEFAULT_ROLE_SCOPE_TYPES[roleCode] ?? ['SELF'],
+        );
+      });
+      return scopeMap;
+    }, [previewRoleCodes, roleTemplateQueries]);
+
+    const roleTemplateScopeOptionMap = useMemo(() => {
+      const scopeOptionMap = new Map<RoleCode, Array<{
+        value: PermissionOverrideScope;
+        label: string;
+        description: string;
+        inherited_by_default: boolean;
+      }>>();
+
+      previewRoleCodes.forEach((roleCode, index) => {
+        const scopeOptions = roleTemplateQueries[index]?.data?.scope_options;
+        if (scopeOptions?.length) {
+          scopeOptionMap.set(
+            roleCode,
+            scopeOptions.map((option) => ({
+              value: option.code,
+              label: option.label,
+              description: option.description,
+              inherited_by_default: option.inherited_by_default,
+            })),
+          );
+          return;
+        }
+
+        const inheritedScopeTypes = new Set(DEFAULT_ROLE_SCOPE_TYPES[roleCode] ?? ['SELF']);
+        scopeOptionMap.set(
+          roleCode,
+          PERMISSION_SCOPE_OPTIONS.map((option) => ({
+            ...option,
+            inherited_by_default: inheritedScopeTypes.has(option.value),
+          })),
+        );
+      });
+
+      return scopeOptionMap;
+    }, [previewRoleCodes, roleTemplateQueries]);
+
     const overrideRoleOptions = useMemo<Array<{ code: RoleCode; label: string }>>(
       () => previewRoleCodes.map((roleCode) => ({
         code: roleCode,
@@ -389,12 +490,50 @@ const UserFormContent: React.FC<{
       [previewRoleCodes, roleNameMap],
     );
 
-    const normalizedSelectedPermissionRole = useMemo<'ALL' | RoleCode>(() => {
-      if (selectedPermissionRole === 'ALL') {
-        return 'ALL';
+    const normalizedSelectedPermissionRole = useMemo<RoleCode>(() => {
+      if (previewRoleCodes.includes(selectedPermissionRole)) {
+        return selectedPermissionRole;
       }
-      return previewRoleCodes.includes(selectedPermissionRole) ? selectedPermissionRole : 'ALL';
+      return previewRoleCodes[0] ?? 'STUDENT';
     }, [selectedPermissionRole, previewRoleCodes]);
+
+    useEffect(() => {
+      if (!previewRoleCodes.includes(selectedPermissionRole)) {
+        setSelectedPermissionRole(previewRoleCodes[0] ?? 'STUDENT');
+      }
+    }, [previewRoleCodes, selectedPermissionRole]);
+
+    const selectedRoleDefaultScopeTypes = useMemo(
+      () => normalizeScopeTypes(
+        roleTemplateDefaultScopeMap.get(normalizedSelectedPermissionRole)
+          ?? DEFAULT_ROLE_SCOPE_TYPES[normalizedSelectedPermissionRole]
+          ?? ['SELF'],
+      ),
+      [normalizedSelectedPermissionRole, roleTemplateDefaultScopeMap],
+    );
+
+    const selectedRoleScopeOptions = useMemo(
+      () => roleTemplateScopeOptionMap.get(normalizedSelectedPermissionRole) ?? PERMISSION_SCOPE_OPTIONS.map((option) => ({
+        ...option,
+        inherited_by_default: selectedRoleDefaultScopeTypes.includes(option.value),
+      })),
+      [normalizedSelectedPermissionRole, roleTemplateScopeOptionMap, selectedRoleDefaultScopeTypes],
+    );
+
+    const isAllScopeActive = selectedPermissionScopes.includes('ALL');
+    const isDefaultScopeActive = sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes);
+
+    const selectedRoleDefaultScopeKey = selectedRoleDefaultScopeTypes.join('|');
+
+    useEffect(() => {
+      setSelectedPermissionScopes((prev) => (
+        sameScopeTypes(prev, selectedRoleDefaultScopeTypes) ? prev : selectedRoleDefaultScopeTypes
+      ));
+      setSelectedScopeUserIds((prev) => (prev.length === 0 ? prev : []));
+      setScopeUserSearch((prev) => (prev ? '' : prev));
+      setShowScopeAdjustPanel((prev) => (prev ? false : prev));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [normalizedSelectedPermissionRole, selectedRoleDefaultScopeKey]);
 
     const permissionModules = useMemo(
       () => Array.from(new Set(permissionCatalog.map((item) => item.module).filter(Boolean))),
@@ -412,18 +551,12 @@ const UserFormContent: React.FC<{
       () => permissionCatalog.filter((permission) => permission.module === activePermissionModule),
       [permissionCatalog, activePermissionModule],
     );
-    const activeModuleLabel = activePermissionModule
-      ? getModulePresentation(activePermissionModule).label
-      : '未选择';
 
     const activeScopedOverrides = useMemo(
       () =>
         userOverrides.filter((override) => {
           if (!override.is_active) {
             return false;
-          }
-          if (normalizedSelectedPermissionRole === 'ALL') {
-            return override.applies_to_role === null;
           }
           return override.applies_to_role === normalizedSelectedPermissionRole;
         }),
@@ -444,20 +577,8 @@ const UserFormContent: React.FC<{
       if (!canViewRoleTemplate) {
         return new Set<string>();
       }
-
-      if (normalizedSelectedPermissionRole === 'ALL') {
-        return new Set(
-          previewRoleCodes.flatMap((roleCode) => roleTemplatePermissionCodeMap.get(roleCode) ?? []),
-        );
-      }
-
       return new Set(roleTemplatePermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []);
-    }, [
-      canViewRoleTemplate,
-      normalizedSelectedPermissionRole,
-      previewRoleCodes,
-      roleTemplatePermissionCodeMap,
-    ]);
+    }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
 
     const filteredScopeUsers = useMemo(
       () => scopeUsers.filter((user) => {
@@ -474,29 +595,146 @@ const UserFormContent: React.FC<{
     const isPermissionToggling = (permissionCode: string) =>
       Boolean(permissionToggleLoading[`${normalizedSelectedPermissionRole}:${permissionCode}`]);
 
-    const getOverrideSummaryText = (scopeType: PermissionOverrideScope, scopeUserIds: number[], expiresAt: string | null) => {
-      const scopeLabel = scopeType === 'EXPLICIT_USERS'
-        ? `指定用户 ${scopeUserIds.length} 人`
-        : PERMISSION_SCOPE_LABELS[scopeType];
-      const expiresLabel = expiresAt ? `截止 ${formatOverrideExpiry(expiresAt)}` : '永久';
-
-      return `${scopeLabel} · ${expiresLabel}`;
-    };
-
     const getPermissionTemplateCount = (roleCode: RoleCode) =>
       (roleTemplatePermissionCodeMap.get(roleCode) ?? []).length;
+
+    const toggleSelectedPermissionScope = (scopeType: PermissionOverrideScope) => {
+      setSelectedPermissionScopes((prev) => {
+        if (scopeType === 'SELF') {
+          return prev;
+        }
+        const nextScopeTypes = prev.includes(scopeType)
+          ? prev.filter((item) => item !== scopeType)
+          : [...prev, scopeType];
+        const normalizedScopeTypes = normalizeScopeTypes(nextScopeTypes);
+
+        if (!normalizedScopeTypes.includes('EXPLICIT_USERS')) {
+          setSelectedScopeUserIds([]);
+          setScopeUserSearch('');
+        }
+
+        if (normalizedScopeTypes.length === 0) {
+          return selectedRoleDefaultScopeTypes;
+        }
+
+        return normalizedScopeTypes;
+      });
+    };
+
+    const applyDefaultScopePreset = () => {
+      setSelectedPermissionScopes(selectedRoleDefaultScopeTypes);
+      setSelectedScopeUserIds([]);
+      setScopeUserSearch('');
+    };
+
+    const applyAllScopePreset = () => {
+      setSelectedPermissionScopes(['ALL']);
+      setSelectedScopeUserIds([]);
+      setScopeUserSearch('');
+    };
+
+    const matchesSelectedScope = (scopeType: PermissionOverrideScope, scopeUserIds: number[]) => {
+      if (scopeType !== 'EXPLICIT_USERS') {
+        return selectedPermissionScopes.includes(scopeType);
+      }
+      return selectedPermissionScopes.includes('EXPLICIT_USERS') && sameScopeUserIds(scopeUserIds, selectedScopeUserIds);
+    };
 
     const getPermissionState = (permissionCode: string) => {
       const fromTemplate = roleTemplatePermissionCodes.has(permissionCode);
       const allowOverrides = activeScopeAllowOverrides.filter((override) => override.permission_code === permissionCode);
       const denyOverrides = activeScopeDenyOverrides.filter((override) => override.permission_code === permissionCode);
-      const checked = denyOverrides.length > 0 ? false : fromTemplate || allowOverrides.length > 0;
+      const selectedStandardScopeTypes: PermissionOverrideScope[] = normalizeScopeTypes(
+        selectedPermissionScopes.filter((scopeType) => scopeType !== 'EXPLICIT_USERS'),
+      );
+      const inheritedScopeTypes: PermissionOverrideScope[] = fromTemplate
+        ? selectedRoleDefaultScopeTypes.filter((scopeType) => scopeType !== 'EXPLICIT_USERS')
+        : [];
+
+      const isStandardScopeGranted = (scopeType: PermissionOverrideScope) => {
+        const hasDenyOverride = denyOverrides.some((override) => override.scope_type === scopeType);
+        if (hasDenyOverride) {
+          return false;
+        }
+        if (inheritedScopeTypes.includes(scopeType)) {
+          return true;
+        }
+        return allowOverrides.some((override) => override.scope_type === scopeType);
+      };
+
+      const hasExactExplicitAllow = allowOverrides.some(
+        (override) => override.scope_type === 'EXPLICIT_USERS' && sameScopeUserIds(override.scope_user_ids, selectedScopeUserIds),
+      );
+      const hasExactExplicitDeny = denyOverrides.some(
+        (override) => override.scope_type === 'EXPLICIT_USERS' && sameScopeUserIds(override.scope_user_ids, selectedScopeUserIds),
+      );
+
+      const selectedAllowOverrides = allowOverrides.filter((override) =>
+        matchesSelectedScope(override.scope_type, override.scope_user_ids),
+      );
+      const selectedDenyOverrides = denyOverrides.filter((override) =>
+        matchesSelectedScope(override.scope_type, override.scope_user_ids),
+      );
+
+      const effectiveStandardScopeTypes = normalizeScopeTypes(
+        PERMISSION_SCOPE_ORDER.filter(
+          (scopeType) => scopeType !== 'EXPLICIT_USERS' && isStandardScopeGranted(scopeType),
+        ),
+      );
+      const effectiveExplicitUserIds = Array.from(
+        new Set(
+          allowOverrides
+            .filter((override) => override.scope_type === 'EXPLICIT_USERS')
+            .flatMap((override) => override.scope_user_ids),
+        ),
+      ).sort((left, right) => left - right);
+
+      const addedScopeTypes = normalizeScopeTypes(
+        PERMISSION_SCOPE_ORDER.filter((scopeType) => (
+          scopeType !== 'EXPLICIT_USERS'
+          && allowOverrides.some((override) => override.scope_type === scopeType)
+          && !inheritedScopeTypes.includes(scopeType)
+        )),
+      );
+      const removedScopeTypes = normalizeScopeTypes(
+        PERMISSION_SCOPE_ORDER.filter((scopeType) => (
+          scopeType !== 'EXPLICIT_USERS'
+          && denyOverrides.some((override) => override.scope_type === scopeType)
+          && inheritedScopeTypes.includes(scopeType)
+        )),
+      );
+
+      const checked = selectedPermissionScopes.length > 0
+        && selectedStandardScopeTypes.every((scopeType) => isStandardScopeGranted(scopeType))
+        && (
+          !selectedPermissionScopes.includes('EXPLICIT_USERS')
+          || (selectedScopeUserIds.length > 0 && hasExactExplicitAllow && !hasExactExplicitDeny)
+        );
+
+      const missingSelectedAllowScopeTypes = selectedStandardScopeTypes.filter((scopeType) => (
+        !inheritedScopeTypes.includes(scopeType)
+        && !allowOverrides.some((override) => override.scope_type === scopeType)
+      ));
+      const inheritedSelectedScopeTypes = selectedStandardScopeTypes.filter((scopeType) =>
+        inheritedScopeTypes.includes(scopeType),
+      );
 
       return {
         checked,
         fromTemplate,
         allowOverrides,
         denyOverrides,
+        selectedAllowOverrides,
+        selectedDenyOverrides,
+        inheritedScopeTypes,
+        inheritedSelectedScopeTypes,
+        addedScopeTypes,
+        removedScopeTypes,
+        effectiveStandardScopeTypes,
+        effectiveExplicitUserIds,
+        hasExactExplicitAllow,
+        hasExactExplicitDeny,
+        missingSelectedAllowScopeTypes,
       };
     };
 
@@ -511,72 +749,90 @@ const UserFormContent: React.FC<{
     const handlePermissionToggle = async (permissionCode: string, nextChecked: boolean) => {
       if (!userId) return;
 
-      const scopeRole = normalizedSelectedPermissionRole === 'ALL' ? null : normalizedSelectedPermissionRole;
-      const key = `${normalizedSelectedPermissionRole}:${permissionCode}`;
+      if (selectedPermissionScopes.length === 0) {
+        toast.error('请至少选择一个作用对象范围');
+        return;
+      }
+      if (selectedPermissionScopes.includes('EXPLICIT_USERS') && selectedScopeUserIds.length === 0) {
+        toast.error('请选择至少一个指定用户');
+        return;
+      }
+
+      const scopeRole = normalizedSelectedPermissionRole;
+      const key = `${scopeRole}:${permissionCode}`;
       const {
         checked: currentChecked,
         fromTemplate,
-        allowOverrides,
-        denyOverrides,
+        selectedAllowOverrides,
+        selectedDenyOverrides,
+        inheritedSelectedScopeTypes,
+        hasExactExplicitAllow,
+        missingSelectedAllowScopeTypes,
       } = getPermissionState(permissionCode);
 
       if (currentChecked === nextChecked) return;
-      if (nextChecked && denyOverrides.length > 0 && !canRevokeOverride) return;
-      if (nextChecked && denyOverrides.length === 0 && !canCreateOverride) return;
-      if (!nextChecked && allowOverrides.length > 0 && !canRevokeOverride) return;
-      if (!nextChecked && allowOverrides.length === 0 && fromTemplate && !canCreateOverride) return;
-      if (!nextChecked && allowOverrides.length === 0 && !fromTemplate) return;
-      if (nextChecked && selectedPermissionScope === 'EXPLICIT_USERS' && selectedScopeUserIds.length === 0) {
-        toast.error('请选择至少一个指定用户');
-        return;
-      }
-      if (!nextChecked && fromTemplate && selectedPermissionScope === 'EXPLICIT_USERS' && selectedScopeUserIds.length === 0) {
-        toast.error('请选择至少一个指定用户');
-        return;
-      }
+
+      const needsCreateWhenEnable = missingSelectedAllowScopeTypes.length > 0
+        || (selectedPermissionScopes.includes('EXPLICIT_USERS') && selectedScopeUserIds.length > 0 && !hasExactExplicitAllow);
+      const needsCreateWhenDisable = fromTemplate && inheritedSelectedScopeTypes.length > 0;
+      const needsRevokeWhenEnable = selectedDenyOverrides.length > 0;
+      const needsRevokeWhenDisable = selectedAllowOverrides.length > 0;
+
+      if (nextChecked && needsRevokeWhenEnable && !canRevokeOverride) return;
+      if (nextChecked && needsCreateWhenEnable && !canCreateOverride) return;
+      if (!nextChecked && needsRevokeWhenDisable && !canRevokeOverride) return;
+      if (!nextChecked && needsCreateWhenDisable && !canCreateOverride) return;
 
       setPermissionToggleLoading((prev) => ({ ...prev, [key]: true }));
       try {
         if (nextChecked) {
-          if (denyOverrides.length > 0) {
-            for (const override of denyOverrides) {
-              await revokeUserOverride.mutateAsync({ userId, overrideId: override.id });
-            }
-          } else {
-            const expiresAtDate = permissionExpiresAt ? new Date(permissionExpiresAt) : null;
-            const expiresAtIso = expiresAtDate && !Number.isNaN(expiresAtDate.getTime())
-              ? expiresAtDate.toISOString()
-              : null;
-            const payload: CreateUserPermissionOverrideRequest = {
+          await Promise.all(
+            selectedDenyOverrides.map((override) =>
+              revokeUserOverride.mutateAsync({ userId, overrideId: override.id }),
+            ),
+          );
+
+          const payloads: CreateUserPermissionOverrideRequest[] = [
+            ...missingSelectedAllowScopeTypes.map((scopeType) => ({
+              permission_code: permissionCode,
+              effect: 'ALLOW' as const,
+              applies_to_role: scopeRole,
+              scope_type: scopeType,
+              scope_user_ids: [],
+            })),
+          ];
+
+          if (selectedPermissionScopes.includes('EXPLICIT_USERS') && selectedScopeUserIds.length > 0 && !hasExactExplicitAllow) {
+            payloads.push({
               permission_code: permissionCode,
               effect: 'ALLOW',
               applies_to_role: scopeRole,
-              scope_type: selectedPermissionScope,
-              scope_user_ids: selectedPermissionScope === 'EXPLICIT_USERS' ? selectedScopeUserIds : [],
-              expires_at: expiresAtIso,
-            };
-            await createUserOverride.mutateAsync({ userId, data: payload });
+              scope_type: 'EXPLICIT_USERS',
+              scope_user_ids: selectedScopeUserIds,
+            });
           }
+
+          await Promise.all(
+            payloads.map((payload) => createUserOverride.mutateAsync({ userId, data: payload })),
+          );
         } else {
-          if (allowOverrides.length > 0) {
-            for (const override of allowOverrides) {
-              await revokeUserOverride.mutateAsync({ userId, overrideId: override.id });
-            }
-          } else if (fromTemplate) {
-            const expiresAtDate = permissionExpiresAt ? new Date(permissionExpiresAt) : null;
-            const expiresAtIso = expiresAtDate && !Number.isNaN(expiresAtDate.getTime())
-              ? expiresAtDate.toISOString()
-              : null;
-            const payload: CreateUserPermissionOverrideRequest = {
-              permission_code: permissionCode,
-              effect: 'DENY',
-              applies_to_role: scopeRole,
-              scope_type: selectedPermissionScope,
-              scope_user_ids: selectedPermissionScope === 'EXPLICIT_USERS' ? selectedScopeUserIds : [],
-              expires_at: expiresAtIso,
-            };
-            await createUserOverride.mutateAsync({ userId, data: payload });
-          }
+          await Promise.all(
+            selectedAllowOverrides.map((override) =>
+              revokeUserOverride.mutateAsync({ userId, overrideId: override.id }),
+            ),
+          );
+
+          const payloads: CreateUserPermissionOverrideRequest[] = inheritedSelectedScopeTypes.map((scopeType) => ({
+            permission_code: permissionCode,
+            effect: 'DENY',
+            applies_to_role: scopeRole,
+            scope_type: scopeType,
+            scope_user_ids: [],
+          }));
+
+          await Promise.all(
+            payloads.map((payload) => createUserOverride.mutateAsync({ userId, data: payload })),
+          );
         }
         await refreshUser();
       } catch (error) {
@@ -832,9 +1088,6 @@ const UserFormContent: React.FC<{
                     <KeyRound className="w-4 h-4 text-slate-400" />
                     用户权限自定义
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    决策顺序：DENY 覆盖 {'>'} ALLOW 覆盖 {'>'} 角色模板
-                  </p>
                 </div>
               </div>
 
@@ -880,266 +1133,262 @@ const UserFormContent: React.FC<{
                   </aside>
 
                   {/* Main Content */}
-                  <div className="space-y-6">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-800">模块权限赋权</h4>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          勾选即赋权，取消即撤销。若需调整作用对象或截止时间，请先取消再重新勾选。
+                  <div className="space-y-4 relative">
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[220px_1fr] lg:items-end">
+                      <div className="space-y-1">
+                        <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">生效角色</label>
+                        <Select
+                          value={normalizedSelectedPermissionRole}
+                          onValueChange={(value) => setSelectedPermissionRole(value as RoleCode)}
+                        >
+                          <SelectTrigger className="h-8 rounded-md border-slate-200/70 bg-white text-xs font-bold text-slate-700 transition-all hover:border-primary/30">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="min-w-[220px] overflow-hidden rounded-xl border-slate-200 shadow-xl">
+                            {overrideRoleOptions.map((item) => (
+                              <SelectItem key={item.code} value={item.code} className="py-2.5 text-xs font-medium">
+                                {item.label} <span className="ml-1 text-slate-400">({getPermissionTemplateCount(item.code)})</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="pl-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">数据范围</label>
+                        <Popover open={showScopeAdjustPanel} onOpenChange={setShowScopeAdjustPanel}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex h-8 w-full items-center justify-between rounded-md border border-slate-200/70 bg-white px-3 text-xs text-slate-700 transition-all hover:border-primary/30"
+                            >
+                              <span className="font-bold line-clamp-1 text-left">
+                                {formatScopeSummary(selectedPermissionScopes, selectedScopeUserIds)}
+                              </span>
+                              <Settings2 className="ml-2 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-[360px] p-0 rounded-xl shadow-xl border-slate-200/70" sideOffset={8}>
+                            <div className="p-3 border-b border-slate-100 bg-slate-50/50 rounded-t-xl">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-xs font-bold text-slate-800">快速设置</h4>
+                                {isDefaultScopeActive ? (
+                                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-bold">默认继承中</Badge>
+                                ) : isAllScopeActive ? (
+                                   <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[10px] px-1.5 py-0 font-bold">全部对象生效中</Badge>
+                                ) : (
+                                   <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-1.5 py-0 font-bold">自定义组合</Badge>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={applyDefaultScopePreset}
+                                  className={cn("flex-1 h-8 rounded-lg text-[11px] font-bold transition-all", isDefaultScopeActive ? "bg-primary text-white shadow-md shadow-primary/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50")}
+                                >
+                                  恢复默认继承
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={applyAllScopePreset}
+                                  className={cn("flex-1 h-8 rounded-lg text-[11px] font-bold transition-all", isAllScopeActive ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50")}
+                                >
+                                  允许全部对象
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="p-3">
+                              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">组合范围叠加 (可多选)</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {selectedRoleScopeOptions.filter(opt => opt.value !== 'ALL').map(option => {
+                                  const isSelected = selectedPermissionScopes.includes(option.value);
+                                  const disabled = isAllScopeActive;
+                                  return (
+                                    <label
+                                      key={option.value}
+                                      className={cn(
+                                        "flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer",
+                                        disabled ? "opacity-50 cursor-not-allowed bg-slate-50/50 border-slate-100" :
+                                        isSelected ? "border-primary/40 bg-primary/5 shadow-sm" : "border-slate-100 bg-white hover:border-slate-200"
+                                      )}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        disabled={disabled}
+                                        onCheckedChange={() => !disabled && toggleSelectedPermissionScope(option.value)}
+                                        className="w-3.5 h-3.5 rounded-[4px]"
+                                      />
+                                      <div className="flex flex-col">
+                                        <span className={cn("text-[11px] font-bold", disabled ? "text-slate-400" : isSelected ? "text-primary" : "text-slate-700")}>
+                                          {option.label}
+                                        </span>
+                                      </div>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+
+                              <div className={cn(
+                                "transition-all duration-300 overflow-hidden",
+                                selectedPermissionScopes.includes('EXPLICIT_USERS') && !isAllScopeActive ? "mt-3 opacity-100" : "max-h-0 opacity-0"
+                              )}>
+                                <div className="space-y-2 pt-3 border-t border-slate-100">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-slate-600">已选指定用户 ({selectedScopeUserIds.length})</span>
+                                  </div>
+                                  <Input
+                                    value={scopeUserSearch}
+                                    onChange={(e) => setScopeUserSearch(e.target.value)}
+                                    placeholder="搜索姓名或工号..."
+                                    className="h-8 text-[11px] bg-slate-50 border-slate-200 shadow-none focus-visible:ring-1"
+                                  />
+                                  <div className="h-[140px] overflow-y-auto space-y-1 pr-1">
+                                    {filteredScopeUsers.length === 0 ? (
+                                      <div className="py-6 text-center text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">无匹配用户</div>
+                                    ) : (
+                                      filteredScopeUsers.map(u => {
+                                        const selected = selectedScopeUserIds.includes(u.id);
+                                        return (
+                                          <label key={u.id} className={cn(
+                                            "flex items-center gap-2.5 p-1.5 rounded-md hover:bg-slate-50 cursor-pointer transition-colors border border-transparent",
+                                            selected && "bg-primary/[0.03] border-primary/10"
+                                          )}>
+                                            <Checkbox
+                                              checked={selected}
+                                              onCheckedChange={() => toggleScopeUser(u.id)}
+                                              className="w-3.5 h-3.5 rounded-[4px]"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                              <Avatar className="w-5 h-5">
+                                                <AvatarFallback className="text-[9px] bg-slate-100 text-slate-600 font-bold">
+                                                  {getAvatarText(u.username)}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <span className={cn("text-[11px] font-medium", selected ? "text-primary font-bold" : "text-slate-700")}>{u.username}</span>
+                                            </div>
+                                          </label>
+                                        )
+                                      })
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    {!canViewRoleTemplate && (
+                      <div className="px-2">
+                        <p className="text-[11px] text-slate-400">
+                          当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
                         </p>
                       </div>
-                      <Badge variant="outline" className="rounded-full text-xs border-slate-200 text-slate-600 bg-slate-50 px-3 py-1 font-bold">
-                        当前模块：{activeModuleLabel}
-                      </Badge>
-                    </div>
+                    )}
 
-                    <div className="rounded-2xl border border-slate-100 bg-white p-5 space-y-8 shadow-sm">
-                      <div className="space-y-3">
-                        <p className="text-xs font-bold text-slate-500">用户角色</p>
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPermissionRole('ALL')}
-                            className={cn(
-                              'group relative p-4 rounded-xl border transition-all duration-300 text-left overflow-hidden',
-                              normalizedSelectedPermissionRole === 'ALL'
-                                ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                                : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
-                            )}
-                          >
-                            <p className={cn("text-sm font-bold transition-colors", normalizedSelectedPermissionRole === 'ALL' ? 'text-white' : 'text-slate-700')}>全部激活角色</p>
-                            <p className={cn(
-                              'mt-1 text-xs transition-colors',
-                              normalizedSelectedPermissionRole === 'ALL' ? 'text-white/80' : 'text-slate-400',
-                            )}>默认包合并视图 + 用户自定义</p>
-                            <p className={cn(
-                              'mt-4 text-[11px] font-bold transition-colors',
-                              normalizedSelectedPermissionRole === 'ALL' ? 'text-white/90' : 'text-primary',
-                            )}>{roleTemplatePermissionCodes.size} 个权限点</p>
-                          </button>
-                          {overrideRoleOptions.map((item) => (
-                            <button
-                              key={item.code}
-                              type="button"
-                              onClick={() => setSelectedPermissionRole(item.code)}
-                              className={cn(
-                                'group relative p-4 rounded-xl border transition-all duration-300 text-left overflow-hidden',
-                                normalizedSelectedPermissionRole === item.code
-                                  ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm'
-                              )}
-                            >
-                              <p className={cn("text-sm font-bold transition-colors", normalizedSelectedPermissionRole === item.code ? 'text-white' : 'text-slate-700')}>{item.label}</p>
-                              <p className={cn(
-                                'mt-1 text-xs transition-colors',
-                                normalizedSelectedPermissionRole === item.code ? 'text-white/80' : 'text-slate-400',
-                              )}>单角色默认包 + 用户自定义</p>
-                              <p className={cn(
-                                'mt-4 text-[11px] font-bold transition-colors',
-                                normalizedSelectedPermissionRole === item.code ? 'text-white/90' : 'text-primary',
-                              )}>{getPermissionTemplateCount(item.code)} 个默认权限点</p>
-                            </button>
-                          ))}
-                        </div>
-                        {!canViewRoleTemplate && (
-                          <p className="text-[11px] text-slate-400 mt-2">
-                            当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="grid gap-6 lg:grid-cols-2 pt-2">
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-slate-500">作用对象 Scope</p>
-                          <Select
-                            value={selectedPermissionScope}
-                            onValueChange={(value) => {
-                              const nextScope = value as PermissionOverrideScope;
-                              setSelectedPermissionScope(nextScope);
-                              if (nextScope !== 'EXPLICIT_USERS') {
-                                setSelectedScopeUserIds([]);
-                                setScopeUserSearch('');
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-xs text-slate-700 font-medium transition-colors shadow-none">
-                              <SelectValue placeholder="选择作用对象" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                              {PERMISSION_SCOPE_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value} className="py-2.5 cursor-pointer">
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-slate-700">{option.label}</span>
-                                    <span className="text-[10px] text-slate-400 mt-0.5">{option.description}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-slate-500">权限截止时间</p>
-                          <div className="relative">
-                            <Clock3 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <Input
-                              type="datetime-local"
-                              value={permissionExpiresAt}
-                              onChange={(event) => setPermissionExpiresAt(event.target.value)}
-                              className="h-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-slate-50 pl-10 text-xs text-slate-700 font-medium transition-colors shadow-none"
-                            />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                            <span>留空表示永久有效</span>
-                            {permissionExpiresAt && (
-                              <button
-                                type="button"
-                                onClick={() => setPermissionExpiresAt('')}
-                                className="font-bold text-primary transition-colors hover:text-primary/80"
-                              >
-                                清空时间
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {selectedPermissionScope === 'EXPLICIT_USERS' && (
-                        <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                          <div className="flex items-center justify-between gap-3 mb-4">
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">指定用户范围</p>
-                              <p className="text-xs text-slate-500 mt-1">只有这些用户对象会命中当前新勾选的权限覆盖</p>
-                            </div>
-                            <Badge variant="outline" className="rounded-full bg-white border-slate-200 text-slate-600 font-bold px-3">
-                              已选 {selectedScopeUserIds.length} 人
-                            </Badge>
-                          </div>
-
-                          <Input
-                            value={scopeUserSearch}
-                            onChange={(event) => setScopeUserSearch(event.target.value)}
-                            placeholder="搜索姓名或工号"
-                            className="h-10 rounded-xl border-slate-200 bg-white mb-4 shadow-sm"
-                          />
-
-                          <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                            {filteredScopeUsers.length === 0 ? (
-                              <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-8 text-center text-xs text-slate-400">
-                                没有匹配的用户
-                              </div>
-                            ) : (
-                              filteredScopeUsers.map((scopeUser) => {
-                                const selected = selectedScopeUserIds.includes(scopeUser.id);
-                                return (
-                                  <label
-                                    key={scopeUser.id}
-                                    className={cn(
-                                      'flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition-colors',
-                                      selected
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm',
-                                    )}
-                                  >
-                                    <Checkbox
-                                      checked={selected}
-                                      onCheckedChange={() => toggleScopeUser(scopeUser.id)}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-sm font-bold text-slate-700">{scopeUser.username}</p>
-                                      <p className="truncate text-xs text-slate-400 mt-0.5">
-                                        {scopeUser.employee_id} <span className="mx-1">·</span> {scopeUser.department?.name || '未分配部门'}
-                                      </p>
-                                    </div>
-                                  </label>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+                    <div className="pt-2">
                       {activeModulePermissions.length === 0 ? (
-                        <div className="px-4 py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
+                        <div className="py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
                       ) : (
-                        <div className="divide-y divide-slate-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
                           {activeModulePermissions.map((permission) => {
                             const permissionState = getPermissionState(permission.code);
                             const checked = permissionState.checked;
                             const loading = isPermissionToggling(permission.code);
+                            const needsCreateToEnable = permissionState.missingSelectedAllowScopeTypes.length > 0
+                              || (
+                                selectedPermissionScopes.includes('EXPLICIT_USERS')
+                                && selectedScopeUserIds.length > 0
+                                && !permissionState.hasExactExplicitAllow
+                              );
+                            const needsCreateToDisable = permissionState.fromTemplate
+                              && permissionState.inheritedSelectedScopeTypes.length > 0;
+                            const needsRevokeToEnable = permissionState.selectedDenyOverrides.length > 0;
+                            const needsRevokeToDisable = permissionState.selectedAllowOverrides.length > 0;
+                            const effectiveScopeTypes = permissionState.effectiveExplicitUserIds.length > 0
+                              ? [...permissionState.effectiveStandardScopeTypes, 'EXPLICIT_USERS' as PermissionOverrideScope]
+                              : permissionState.effectiveStandardScopeTypes;
+                            const addedScopeTypes = permissionState.effectiveExplicitUserIds.length > 0
+                              ? [...permissionState.addedScopeTypes, 'EXPLICIT_USERS' as PermissionOverrideScope]
+                              : permissionState.addedScopeTypes;
+                            const removedScopeTypes = permissionState.removedScopeTypes;
                             return (
                               <label
                                 key={permission.code}
                                 className={cn(
-                                  'flex cursor-pointer items-center justify-between gap-4 px-6 py-4 transition-colors',
-                                  checked ? 'bg-primary/5 hover:bg-primary/10' : 'bg-transparent hover:bg-slate-50/80',
+                                  'group relative flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition-all duration-300',
+                                  checked
+                                    ? 'border-primary/20 bg-primary/[0.03] shadow-[0_2px_10px_-4px_rgba(var(--primary),0.05)] hover:border-primary/30'
+                                    : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5',
                                 )}
                               >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-bold text-slate-800">{permission.name}</p>
+                                <div className="flex items-start justify-between gap-3 min-w-0">
+                                  <div className="flex-1 min-w-0 space-y-1">
+                                    <p className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">{permission.name}</p>
+                                    <p className="text-[10px] text-slate-400 font-mono line-clamp-1">{permission.code}</p>
                                   </div>
-                                  <p className="text-xs text-slate-400 mt-1">{permission.code}</p>
+                                  <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                                    {loading && <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />}
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={
+                                        loading
+                                        || (
+                                          checked
+                                            ? (
+                                              (needsRevokeToDisable && !canRevokeOverride)
+                                              || (needsCreateToDisable && !canCreateOverride)
+                                            )
+                                            : (
+                                              (needsRevokeToEnable && !canRevokeOverride)
+                                              || (needsCreateToEnable && !canCreateOverride)
+                                            )
+                                        )
+                                      }
+                                      onCheckedChange={(value) => handlePermissionToggle(permission.code, value === true)}
+                                      className={cn("transition-all duration-300 rounded", checked ? "scale-110" : "")}
+                                    />
+                                  </div>
+                                </div>
 
-                                  <div className="mt-3 flex flex-wrap gap-2">
+                                {(permissionState.fromTemplate || permissionState.allowOverrides.length > 0 || permissionState.denyOverrides.length > 0) && (
+                                  <div className="mt-auto space-y-2 border-t border-slate-100/60 pt-2">
+                                    {effectiveScopeTypes.length > 0 && (
+                                      <p className="text-[11px] font-medium leading-5 text-slate-500">
+                                        生效范围: {formatScopeSummary(effectiveScopeTypes, permissionState.effectiveExplicitUserIds)}
+                                      </p>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-1.5 shrink-0">
                                     {permissionState.fromTemplate && (
                                       <Badge
                                         variant="outline"
-                                        className="rounded-full bg-slate-100/80 border-transparent text-slate-600 font-medium px-2.5 py-0.5 text-[10px]"
+                                        className="rounded-md bg-slate-100/50 border-transparent text-slate-500 font-bold px-1.5 py-0 text-[10px]"
                                       >
-                                        角色默认包
+                                        角色默认
                                       </Badge>
                                     )}
-                                    {permissionState.allowOverrides.map((override) => (
+                                    {addedScopeTypes.length > 0 && (
                                       <Badge
-                                        key={`allow-${override.id}`}
                                         variant="outline"
-                                        className="rounded-full bg-emerald-50 border-emerald-200 text-emerald-700 font-bold px-2.5 py-0.5 text-[10px]"
+                                        className="rounded-md bg-emerald-50/50 border-emerald-200/50 text-emerald-600 font-bold px-1.5 py-0 text-[10px] normal-case tracking-normal shrink-0 max-w-[160px] truncate"
                                       >
-                                        自定义赋权 · {getOverrideSummaryText(
-                                          override.scope_type,
-                                          override.scope_user_ids,
-                                          override.expires_at,
-                                        )}
+                                        新增范围: {formatScopeSummary(addedScopeTypes, permissionState.effectiveExplicitUserIds)}
                                       </Badge>
-                                    ))}
-                                    {permissionState.denyOverrides.map((override) => (
-                                      <Badge
-                                        key={`deny-${override.id}`}
-                                        variant="warning"
-                                        className="rounded-full normal-case tracking-normal px-2.5 py-0.5 text-[10px]"
-                                      >
-                                        自定义禁用 · {getOverrideSummaryText(
-                                          override.scope_type,
-                                          override.scope_user_ids,
-                                          override.expires_at,
-                                        )}
-                                      </Badge>
-                                    ))}
-                                  </div>
-
-                                  {!checked && permissionState.denyOverrides.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                      <span className="text-[11px] font-bold text-warning-800">
-                                        已通过用户自定义从默认包中禁用
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                  {loading && <span className="text-xs font-bold text-primary animate-pulse">处理中...</span>}
-                                  <Checkbox
-                                    checked={checked}
-                                    disabled={loading || (
-                                      checked
-                                        ? !(permissionState.allowOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
-                                        : !(permissionState.denyOverrides.length > 0 ? canRevokeOverride : canCreateOverride)
                                     )}
-                                    onCheckedChange={(value) => handlePermissionToggle(permission.code, value === true)}
-                                  />
-                                </div>
+                                    {removedScopeTypes.length > 0 && (
+                                      <Badge
+                                        variant="warning"
+                                        className="rounded-md bg-red-50/50 border-red-200/50 text-red-600 font-bold px-1.5 py-0 text-[10px] normal-case tracking-normal shadow-none shrink-0 max-w-[160px] truncate"
+                                      >
+                                        已移除: {formatScopeSummary(removedScopeTypes)}
+                                      </Badge>
+                                    )}
+                                    </div>
+                                  </div>
+                                )}
                               </label>
                             );
                           })}
@@ -1149,7 +1398,7 @@ const UserFormContent: React.FC<{
                   </div>
 
                   {isLoadingUserOverrides && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-3xl">
                       <div className="bg-white border border-slate-100 shadow-xl px-6 py-4 rounded-full flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
                         <span className="text-sm font-bold text-slate-700">正在同步当前权限状态...</span>

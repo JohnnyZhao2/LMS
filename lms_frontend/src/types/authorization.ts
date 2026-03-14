@@ -11,10 +11,19 @@ export interface PermissionCatalogItem {
 export interface RolePermissionTemplate {
   role_code: RoleCode;
   permission_codes: string[];
+  default_scope_types: PermissionOverrideScope[];
+  scope_options: PermissionScopeOption[];
 }
 
 export type PermissionOverrideEffect = 'ALLOW' | 'DENY';
 export type PermissionOverrideScope = 'ALL' | 'SELF' | 'MENTEES' | 'DEPARTMENT' | 'EXPLICIT_USERS';
+
+export interface PermissionScopeOption {
+  code: PermissionOverrideScope;
+  label: string;
+  description: string;
+  inherited_by_default: boolean;
+}
 
 export interface UserPermissionOverride {
   id: number;
