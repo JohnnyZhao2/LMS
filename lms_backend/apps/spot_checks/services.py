@@ -187,26 +187,15 @@ class SpotCheckService(BaseService):
         student_id: Optional[int] = None,
         ordering: str = '-checked_at'
     ) -> QuerySet:
-        """根据用户角色获取相应范围的查询集"""
-        current_role = self.get_current_role()
+        """根据当前用户可查看学员范围获取查询集"""
         qs = self._base_queryset()
+        accessible_students = get_accessible_students(
+            self.user,
+            request=self.request,
+            permission_code='spot_check.view',
+        )
 
-        if current_role == 'ADMIN':
-            pass  # 管理员可以看所有
-        elif current_role == 'MENTOR':
-            qs = qs.filter(student__mentor_id=self.user.id)
-        elif current_role == 'DEPT_MANAGER':
-            if not self.user.department_id:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='您未分配部门，无法查看抽查记录'
-                )
-            qs = qs.filter(student__department_id=self.user.department_id)
-        else:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问抽查记录'
-            )
+        qs = qs.filter(student_id__in=accessible_students.values('id'))
 
         if student_id:
             qs = qs.filter(student_id=student_id)
@@ -216,7 +205,11 @@ class SpotCheckService(BaseService):
 
     def _validate_data_scope_access(self, spot_check: SpotCheck) -> None:
         """验证用户是否有权限访问该抽查记录"""
-        if not get_accessible_students(self.user, request=self.request).filter(pk=spot_check.student_id).exists():
+        if not get_accessible_students(
+            self.user,
+            request=self.request,
+            permission_code='spot_check.view',
+        ).filter(pk=spot_check.student_id).exists():
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='无权访问该抽查记录'
@@ -235,7 +228,11 @@ class SpotCheckService(BaseService):
         验证用户是否有权限为指定学员创建抽查记录
         Property 35: 抽查学员范围限制
         """
-        if not get_accessible_students(self.user, request=self.request).filter(pk=student.id).exists():
+        if not get_accessible_students(
+            self.user,
+            request=self.request,
+            permission_code='spot_check.create',
+        ).filter(pk=student.id).exists():
             current_role = self.get_current_role()
             
             if current_role == 'DEPT_MANAGER' and not self.user.department_id:

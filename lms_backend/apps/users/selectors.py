@@ -75,8 +75,6 @@ def list_users(
         qs = qs.order_by('employee_id')
 
     return qs
-
-
 def list_mentors() -> QuerySet:
     """
     List all active users with MENTOR role.

@@ -1,6 +1,8 @@
 import pytest
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
+from apps.authorization.models import Permission, UserPermissionOverride
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -19,6 +21,7 @@ def _create_user_with_role(*, employee_id: str, username: str, role_code: str) -
 
 
 def _login_and_get_payload(client: APIClient, *, employee_id: str) -> dict:
+    cache.clear()
     response = client.post(
         '/api/auth/login/',
         {'employee_id': employee_id, 'password': 'password123'},
@@ -257,10 +260,34 @@ def test_role_permission_template_response_includes_default_scope_types():
     assert response.status_code == 200
     payload = response.data['data']
     assert payload['role_code'] == 'MENTOR'
-    assert payload['default_scope_types'] == ['SELF', 'MENTEES']
-    assert any(option['code'] == 'SELF' and option['inherited_by_default'] for option in payload['scope_options'])
+    assert payload['default_scope_types'] == ['MENTEES']
     assert any(option['code'] == 'MENTEES' and option['inherited_by_default'] for option in payload['scope_options'])
     assert any(option['code'] == 'EXPLICIT_USERS' and not option['inherited_by_default'] for option in payload['scope_options'])
+    assert all(option['code'] != 'SELF' for option in payload['scope_options'])
+
+
+@pytest.mark.django_db
+def test_self_scoped_override_does_not_grant_global_page_access_without_target_user():
+    client = APIClient()
+    admin_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_ADMIN', username='Scope Fix Admin', role_code='ADMIN')
+    mentor_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_MENTOR', username='Scope Fix Mentor', role_code='MENTOR')
+    permission = Permission.objects.get(code='authorization.user_override.view')
+
+    UserPermissionOverride.objects.create(
+        user=mentor_user,
+        permission=permission,
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='SELF',
+        scope_user_ids=[],
+        granted_by=admin_user,
+    )
+
+    _authenticate(client, employee_id=mentor_user.employee_id)
+    response = client.get('/api/authorization/permissions/')
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'PERMISSION_DENIED'
 
 
 @pytest.mark.django_db

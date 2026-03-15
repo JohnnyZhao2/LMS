@@ -18,13 +18,13 @@ from .constants import (
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
-    SCOPE_CHOICES,
     SCOPE_DESCRIPTIONS,
     SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
     SCOPE_MENTEES,
     SCOPE_SELF,
     SYSTEM_MANAGED_PERMISSION_CODES,
+    VISIBLE_SCOPE_CHOICES,
 )
 from .models import Permission, RolePermission, UserPermissionOverride
 from .selectors import (
@@ -89,26 +89,23 @@ class AuthorizationService(BaseService):
         if not self.user:
             return False
 
-        target_user_id = target_user.id if target_user else None
+        if target_user is None:
+            return False
+
+        target_user_id = target_user.id
 
         if scope_type == SCOPE_SELF:
-            if target_user_id is None:
-                return True
             return target_user_id == self.user.id
 
         if scope_type == SCOPE_MENTEES:
-            if target_user is None:
-                return False
             return target_user.mentor_id == self.user.id
 
         if scope_type == SCOPE_DEPARTMENT:
-            if target_user is None or not self.user.department_id:
+            if not self.user.department_id:
                 return False
             return target_user.department_id == self.user.department_id
 
         if scope_type == SCOPE_EXPLICIT_USERS:
-            if target_user_id is None:
-                return False
             return target_user_id in set(override.scope_user_ids or [])
 
         return False
@@ -293,7 +290,7 @@ class AuthorizationService(BaseService):
                 'description': SCOPE_DESCRIPTIONS.get(scope_code, ''),
                 'inherited_by_default': scope_code in default_scope_types,
             }
-            for scope_code, scope_label in SCOPE_CHOICES
+            for scope_code, scope_label in VISIBLE_SCOPE_CHOICES
         ]
 
     @transaction.atomic
@@ -369,13 +366,38 @@ class AuthorizationService(BaseService):
                 message=f'权限 {permission.code} 属于系统保留权限，不支持手动覆盖',
             )
 
+        normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
+        if scope_type == SCOPE_EXPLICIT_USERS:
+            if not normalized_scope_user_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='指定用户范围必须至少选择一个用户',
+                )
+            valid_scope_user_ids = set(
+                User.objects.filter(
+                    id__in=normalized_scope_user_ids,
+                    is_active=True,
+                ).values_list('id', flat=True)
+            )
+            invalid_scope_user_ids = sorted(set(normalized_scope_user_ids) - valid_scope_user_ids)
+            if invalid_scope_user_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'指定用户不存在或已停用: {invalid_scope_user_ids}',
+                )
+        elif normalized_scope_user_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='仅当范围为指定用户时才允许传 scope_user_ids',
+            )
+
         override = UserPermissionOverride.objects.create(
             user=target_user,
             permission=permission,
             effect=effect,
             applies_to_role=applies_to_role or None,
             scope_type=scope_type,
-            scope_user_ids=scope_user_ids or [],
+            scope_user_ids=normalized_scope_user_ids,
             reason=reason,
             expires_at=expires_at,
             granted_by=self.user,

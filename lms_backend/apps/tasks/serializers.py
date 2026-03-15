@@ -10,7 +10,6 @@ from rest_framework import serializers
 
 from apps.users.permissions import (
     get_accessible_student_ids,
-    get_current_role,
 )
 
 from .models import (
@@ -25,20 +24,16 @@ from .task_service import TaskService
 
 
 def validate_assignee_scope(user, assignee_ids: list[int], request) -> None:
-    invalid_ids = list(set(assignee_ids) - get_accessible_student_ids(user, request))
+    accessible_ids = get_accessible_student_ids(
+        user,
+        request,
+        permission_code='task.assign',
+    )
+    invalid_ids = sorted(set(assignee_ids) - accessible_ids)
     if not invalid_ids:
         return
-    current_role = get_current_role(user, request)
-    if current_role == 'MENTOR':
-        raise serializers.ValidationError({
-            'assignee_ids': f'以下学员不在您的名下: {invalid_ids}'
-        })
-    elif current_role == 'DEPT_MANAGER':
-        raise serializers.ValidationError({
-            'assignee_ids': f'以下学员不在您的部门: {invalid_ids}'
-        })
     raise serializers.ValidationError({
-        'assignee_ids': f'无权为以下学员分配任务: {invalid_ids}'
+        'assignee_ids': f'以下学员不在当前可分配范围: {invalid_ids}'
     })
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):

@@ -59,7 +59,11 @@ class AssignableUserListView(APIView):
             'task.assign',
             error_message='无权查看可分配学员列表',
         )
-        queryset = get_accessible_students(request.user, request).filter(
+        queryset = get_accessible_students(
+            request.user,
+            request,
+            permission_code='task.assign',
+        ).filter(
             roles__code='STUDENT'
         ).select_related(
             'department', 'mentor'

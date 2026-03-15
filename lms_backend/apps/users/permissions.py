@@ -2,8 +2,20 @@
 Role-based permission classes for LMS API.
 Implements permission control based on user roles and organizational relationships.
 """
-from django.db.models import Q
+from typing import Dict, Iterable, Optional, Set, Tuple
+
+from django.db.models import Q, QuerySet
 from rest_framework.permissions import BasePermission
+
+NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
+LEARNING_POOL_EXCLUDED_ROLE_CODES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+SCOPE_ALL = 'ALL'
+SCOPE_SELF = 'SELF'
+SCOPE_MENTEES = 'MENTEES'
+SCOPE_DEPARTMENT = 'DEPARTMENT'
+SCOPE_EXPLICIT_USERS = 'EXPLICIT_USERS'
+EFFECT_ALLOW = 'ALLOW'
+EFFECT_DENY = 'DENY'
 
 
 def get_current_role(user, request):
@@ -47,82 +59,194 @@ class IsAdminOrMentorOrDeptManager(BasePermission):
         return get_current_role(request.user, request) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
 
 
-# Utility functions for data scope filtering
-def get_accessible_students(user, request):
+def _pure_student_queryset() -> QuerySet:
     """
-    Get queryset of students accessible to the given user based on their role.
-    Args:
-        user: The requesting user
-        request: The HTTP request object
-    Returns:
-        QuerySet of User objects that the user can access (only users with STUDENT role)
-    Properties: 37, 38, 39
-    Note:
-    - 管理员默认仅统计纯学员
-    - 室经理统计本部门学员（包含导师，排除超级管理员、室经理和团队经理）
-    - 团队经理统计团队学习成员池（具备 STUDENT，排除超级管理员、室经理和团队经理）
+    纯学员池：
+    - active + STUDENT
+    - 排除 ADMIN/MENTOR/DEPT_MANAGER/TEAM_MANAGER
     """
     from apps.users.models import User
-    current_role = get_current_role(user, request)
 
-    # 非学员角色：这些角色的用户不参与默认学员统计/任务分配
-    NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
-
-    # 先收集非学员用户 ID，再从 STUDENT 池中排除，避免 M2M join 导致的误包含
     non_student_user_ids = User.objects.filter(
         roles__code__in=NON_STUDENT_ROLES
     ).values_list('id', flat=True)
 
-    # 基础查询：只返回纯学员（active + STUDENT 且不带任何非学员角色）
-    base_qs = User.objects.filter(
+    return User.objects.filter(
         is_active=True,
-        roles__code='STUDENT'
+        roles__code='STUDENT',
     ).exclude(
-        id__in=non_student_user_ids
+        id__in=non_student_user_ids,
     ).distinct()
 
-    # Admin can access all students (Property 39)
+
+def _learning_member_queryset() -> QuerySet:
+    """
+    学习成员池：
+    - active + STUDENT
+    - 排除 superuser / 室经理 / 团队经理
+    - 可包含导师（导师仍保留 STUDENT 时）
+    """
+    from apps.users.models import User
+
+    excluded_ids = User.objects.filter(
+        Q(is_superuser=True) | Q(roles__code__in=LEARNING_POOL_EXCLUDED_ROLE_CODES)
+    ).values_list('id', flat=True)
+
+    return User.objects.filter(
+        is_active=True,
+        roles__code='STUDENT',
+    ).exclude(
+        id__in=excluded_ids,
+    ).distinct()
+
+
+def _get_role_default_accessible_students(user, request) -> QuerySet:
+    """
+    角色默认动态范围（无用户覆盖时的口径）。
+    """
+    from apps.users.models import User
+
+    current_role = get_current_role(user, request)
+
+    base_qs = _pure_student_queryset()
+
     if current_role == 'ADMIN':
         return base_qs
-    # Team manager can access team learning member pool (read-only, Property 41)
-    # 口径说明：
-    # - 团队经理看板按"学习成员池"统计：active + STUDENT
-    # - 排除：超级管理员(is_superuser=1)、室经理(DEPT_MANAGER)、团队经理(TEAM_MANAGER)
-    # - 包含：导师（导师同时拥有学员角色）
+
     if current_role == 'TEAM_MANAGER':
-        excluded_ids = User.objects.filter(
-            Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER') | Q(roles__code='TEAM_MANAGER')
-        ).values_list('id', flat=True)
-        return User.objects.filter(
-            is_active=True,
-            roles__code='STUDENT'
-        ).exclude(
-            id__in=excluded_ids
-        ).distinct()
-    # Mentor can only access their mentees (Property 37)
+        return _learning_member_queryset()
+
     if current_role == 'MENTOR':
         return base_qs.filter(mentor=user)
-    # Department manager can only access department members (Property 38)
-    # 口径说明：
-    # - 室经理看本部门学员：active + STUDENT + 同部门
-    # - 排除：超级管理员、室经理、团队经理、自己
-    # - 包含：导师（导师同时拥有学员角色）
+
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
-            excluded_ids = User.objects.filter(
-                Q(is_superuser=True) | Q(roles__code='DEPT_MANAGER') | Q(roles__code='TEAM_MANAGER')
-            ).values_list('id', flat=True)
-            return User.objects.filter(
-                is_active=True,
-                roles__code='STUDENT',
+            return _learning_member_queryset().filter(
                 department_id=user.department_id,
             ).exclude(
-                id__in=excluded_ids
-            ).exclude(pk=user.pk).distinct()
+                pk=user.pk,
+            ).distinct()
         return User.objects.none()
-    # Default: no access
+
     return User.objects.none()
-def get_accessible_student_ids(user, request):
+
+
+def _resolve_scope_student_ids(
+    *,
+    user,
+    current_role: Optional[str],
+    scope_type: str,
+    scope_user_ids: Iterable[int],
+) -> Set[int]:
+    """
+    将 scope 解析为可访问学员 ID 集合（用于 ALLOW/DENY 计算）。
+    """
+    ids = tuple(sorted({int(user_id) for user_id in scope_user_ids}))
+
+    if scope_type == SCOPE_ALL:
+        if current_role == 'ADMIN':
+            queryset = _pure_student_queryset()
+        else:
+            queryset = _learning_member_queryset()
+        return set(queryset.values_list('id', flat=True))
+
+    if scope_type == SCOPE_SELF:
+        return set(
+            _learning_member_queryset().filter(pk=user.pk).values_list('id', flat=True)
+        )
+
+    if scope_type == SCOPE_MENTEES:
+        return set(
+            _pure_student_queryset().filter(mentor=user).values_list('id', flat=True)
+        )
+
+    if scope_type == SCOPE_DEPARTMENT:
+        if not user.department_id:
+            return set()
+        return set(
+            _learning_member_queryset().filter(
+                department_id=user.department_id,
+            ).exclude(
+                pk=user.pk,
+            ).values_list('id', flat=True)
+        )
+
+    if scope_type == SCOPE_EXPLICIT_USERS:
+        if not ids:
+            return set()
+        return set(
+            _learning_member_queryset().filter(id__in=ids).values_list('id', flat=True)
+        )
+
+    return set()
+
+
+# Utility functions for data scope filtering
+def get_accessible_students_for_permission(user, request, permission_code: str) -> QuerySet:
+    """
+    基于“角色默认动态范围 + 用户覆盖规则(ALLOW/DENY)”计算学员范围。
+    """
+    from apps.authorization.selectors import list_active_user_overrides
+    from apps.users.models import User
+
+    if not user or not user.is_authenticated:
+        return User.objects.none()
+
+    current_role = get_current_role(user, request)
+    if not current_role:
+        return User.objects.none()
+
+    default_queryset = _get_role_default_accessible_students(user, request)
+    overrides = list_active_user_overrides(
+        user_id=user.id,
+        current_role=current_role,
+        permission_code=permission_code,
+    )
+    if not overrides:
+        return default_queryset
+
+    allow_ids = set(default_queryset.values_list('id', flat=True))
+    deny_ids: Set[int] = set()
+    scope_cache: Dict[Tuple[str, Tuple[int, ...]], Set[int]] = {}
+
+    for override in overrides:
+        normalized_scope_user_ids = tuple(
+            sorted({int(user_id) for user_id in (override.scope_user_ids or [])})
+        )
+        cache_key = (override.scope_type, normalized_scope_user_ids)
+        if cache_key not in scope_cache:
+            scope_cache[cache_key] = _resolve_scope_student_ids(
+                user=user,
+                current_role=current_role,
+                scope_type=override.scope_type,
+                scope_user_ids=normalized_scope_user_ids,
+            )
+
+        scope_ids = scope_cache[cache_key]
+        if override.effect == EFFECT_DENY:
+            deny_ids.update(scope_ids)
+        elif override.effect == EFFECT_ALLOW:
+            allow_ids.update(scope_ids)
+
+    final_ids = allow_ids - deny_ids
+    if not final_ids:
+        return User.objects.none()
+
+    return _learning_member_queryset().filter(id__in=final_ids).distinct()
+
+
+def get_accessible_students(user, request, permission_code: Optional[str] = None) -> QuerySet:
+    """
+    获取可访问学员集合：
+    - 未传 permission_code：返回角色默认动态范围
+    - 传入 permission_code：返回默认范围 + 用户覆盖后的最终范围
+    """
+    if permission_code:
+        return get_accessible_students_for_permission(user, request, permission_code)
+    return _get_role_default_accessible_students(user, request)
+
+
+def get_accessible_student_ids(user, request, permission_code: Optional[str] = None):
     """
     Get set of student IDs accessible to the given user.
     This is a convenience function for validation purposes.
@@ -133,4 +257,6 @@ def get_accessible_student_ids(user, request):
         Set of user IDs that the user can access
     Properties: 37, 38, 39
     """
-    return set(get_accessible_students(user, request).values_list('id', flat=True))
+    return set(
+        get_accessible_students(user, request, permission_code=permission_code).values_list('id', flat=True)
+    )

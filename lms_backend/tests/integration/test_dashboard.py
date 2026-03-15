@@ -10,6 +10,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.authorization.models import Permission, UserPermissionOverride
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
@@ -352,6 +353,54 @@ class TestMentorDashboardAPI:
         assert len(data['students']) >= 8
         assert len(context.captured_queries) < 25, f"查询次数过多: {len(context.captured_queries)}"
 
+    def test_dashboard_scope_follows_permission_overrides(self, api_client, mentor, student, student2, department):
+        """导师看板学员范围应遵循 task.analytics.view 的 ALLOW/DENY 覆盖"""
+        extra_student = User.objects.create_user(
+            employee_id='MENTOR_DASH_EXTRA_001',
+            username='导师额外学员',
+            password='password123',
+            department=department,
+        )
+        permission = Permission.objects.get(code='task.analytics.view')
+
+        api_client.force_authenticate(user=mentor)
+        response = api_client.get('/api/dashboard/mentor/')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        student_ids = {item['id'] for item in data['students']}
+        assert student.id in student_ids
+        assert student2.id in student_ids
+        assert extra_student.id not in student_ids
+
+        UserPermissionOverride.objects.create(
+            user=mentor,
+            permission=permission,
+            effect='ALLOW',
+            applies_to_role='MENTOR',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[extra_student.id],
+            granted_by=mentor,
+        )
+        UserPermissionOverride.objects.create(
+            user=mentor,
+            permission=permission,
+            effect='DENY',
+            applies_to_role='MENTOR',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[student.id],
+            granted_by=mentor,
+        )
+
+        response = api_client.get('/api/dashboard/mentor/')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        student_ids = {item['id'] for item in data['students']}
+        assert student.id not in student_ids
+        assert student2.id in student_ids
+        assert extra_student.id in student_ids
+
 @pytest.mark.django_db
 class TestTeamManagerDashboardAPI:
     """团队经理仪表盘 API 测试"""
@@ -496,6 +545,44 @@ class TestTeamManagerDashboardAPI:
         # 室经理与超级管理员应排除
         assert '室经理账号' not in all_student_names
         assert '超级管理员账号' not in all_student_names
+
+    def test_dashboard_scope_follows_permission_overrides(self, api_client, team_manager, student):
+        """团队经理看板学员范围应遵循 knowledge.view 的 ALLOW/DENY 覆盖"""
+        permission = Permission.objects.get(code='knowledge.view')
+
+        api_client.force_authenticate(user=team_manager)
+        response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        assert data['summary']['total_students'] >= 1
+        all_student_ids = {
+            student_item['student_id']
+            for item in data['department_student_view']
+            for student_item in item['students']
+        }
+        assert student.id in all_student_ids
+
+        UserPermissionOverride.objects.create(
+            user=team_manager,
+            permission=permission,
+            effect='DENY',
+            applies_to_role='TEAM_MANAGER',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[student.id],
+            granted_by=team_manager,
+        )
+
+        response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        all_student_ids = {
+            student_item['student_id']
+            for item in data['department_student_view']
+            for student_item in item['students']
+        }
+        assert student.id not in all_student_ids
 
 
 # ============================================

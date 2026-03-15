@@ -1,17 +1,16 @@
 import * as React from "react"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import { Check } from "lucide-react"
+import { Check, Minus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 /**
- * Checkbox 组件 - 平面设计系统
+ * Checkbox 组件 - 精致轻量设计
  * 
  * 特性：
- * - 无阴影设计
- * - 使用 border-2 定义形状
- * - 选中时蓝色背景
- * - 聚焦时蓝色环（ring）
+ * - 纤细边框，轻量视觉
+ * - 选中时主色背景 + 白色对勾
+ * - 支持 indeterminate 状态
  */
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
@@ -20,12 +19,13 @@ const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer h-5 w-5 shrink-0 rounded-sm",
-      "border-2 border-border bg-background",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+      "peer h-4 w-4 shrink-0 rounded-[4px]",
+      "border border-slate-300 bg-background",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-white",
-      "transition-all duration-200",
+      "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:text-white",
+      "transition-all duration-150",
       className
     )}
     {...props}
@@ -33,7 +33,11 @@ const Checkbox = React.forwardRef<
     <CheckboxPrimitive.Indicator
       className={cn("flex items-center justify-center text-current")}
     >
-      <Check className="h-4 w-4" strokeWidth={3} />
+      {props.checked === 'indeterminate' ? (
+        <Minus className="h-3 w-3" strokeWidth={2.5} />
+      ) : (
+        <Check className="h-3 w-3" strokeWidth={2.5} />
+      )}
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ))

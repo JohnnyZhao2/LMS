@@ -38,6 +38,9 @@ from .selectors import (
     get_weekly_active_users_count,
 )
 
+MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE = 'task.analytics.view'
+TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE = 'knowledge.view'
+
 
 class StudentDashboardService(BaseService):
     """
@@ -110,7 +113,11 @@ class MentorDashboardService(BaseService):
         """
         获取导师/室经理的完整仪表盘数据
         """
-        students = get_accessible_students(self.user, self.request)
+        students = get_accessible_students(
+            self.user,
+            self.request,
+            permission_code=MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
+        )
         student_ids = list(students.values_list('id', flat=True))
         monthly_active_ids = get_monthly_active_user_ids(student_ids)
         spot_check_map = get_monthly_spot_check_stats_by_student(student_ids)
@@ -242,7 +249,11 @@ class TeamManagerDashboardService(BaseService):
         """
         获取团队经理的完整仪表盘数据
         """
-        students = get_accessible_students(self.user, self.request)
+        students = get_accessible_students(
+            self.user,
+            self.request,
+            permission_code=TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE,
+        )
         student_ids = list(students.values_list('id', flat=True))
         mentors = User.objects.filter(
             is_active=True,
