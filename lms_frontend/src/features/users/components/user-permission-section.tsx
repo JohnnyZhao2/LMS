@@ -591,6 +591,43 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     }
   };
 
+  const handleFilterDoubleClick = (filterValue: string) => {
+    const ownerUserId = userId ?? userDetail?.id ?? null;
+    const targetUserIds = scopeUsers
+      .filter((scopeUser) => {
+        if (filterValue === 'mentees') {
+          return ownerUserId != null && scopeUser.mentor?.id === ownerUserId;
+        }
+        if (filterValue !== 'all') {
+          const deptId = Number(filterValue.replace('dept_', ''));
+          return scopeUser.department?.id === deptId;
+        }
+        return true;
+      })
+      .map((scopeUser) => scopeUser.id);
+
+    if (targetUserIds.length === 0) return;
+
+    setScopeUserFilter(filterValue);
+
+    setSelectedScopeUserIds((prev) => {
+      const nextUserIdSet = new Set(prev);
+      const shouldUnselectAll = targetUserIds.every((id) => nextUserIdSet.has(id));
+
+      if (shouldUnselectAll) {
+        targetUserIds.forEach((id) => nextUserIdSet.delete(id));
+      } else {
+        targetUserIds.forEach((id) => nextUserIdSet.add(id));
+      }
+
+      return Array.from(nextUserIdSet).sort((left, right) => left - right);
+    });
+
+    if (!selectedPermissionScopes.includes('EXPLICIT_USERS')) {
+      setSelectedPermissionScopes((prev) => normalizeScopeTypes([...prev, 'EXPLICIT_USERS']));
+    }
+  };
+
   const applyDefaultScopePreset = () => {
     applyScopePresetWithAutoSelection(selectedRoleDefaultScopeTypes);
     setScopeUserSearch('');
@@ -1032,6 +1069,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
                 scopeFilterOptions={scopeFilterOptions}
                 scopeUserFilter={scopeUserFilter}
                 onScopeFilterChange={handleScopeFilterChange}
+                onFilterDoubleClick={handleFilterDoubleClick}
                 showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
                 onReset={() => {
                   applyDefaultScopePreset();
