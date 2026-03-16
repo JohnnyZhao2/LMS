@@ -348,6 +348,14 @@ ROLE_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
     ],
 }
 
+CONFIG_PERMISSION_MODULE = 'config'
+CONFIG_PERMISSION_MANAGEABLE_ROLE = 'ADMIN'
+CONFIG_MODULE_PERMISSION_CODES = frozenset(
+    item['code']
+    for item in PERMISSION_CATALOG
+    if item.get('module') == CONFIG_PERMISSION_MODULE
+)
+
 
 SCOPE_ALL = 'ALL'
 SCOPE_SELF = 'SELF'

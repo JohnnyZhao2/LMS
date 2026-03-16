@@ -8,6 +8,9 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Role, User
 
 
+NON_STUDENT_ROLE_CODES = {'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'}
+
+
 def validate_role_assignment_constraints(
     *,
     role_codes: Iterable[str],
@@ -20,7 +23,7 @@ def validate_role_assignment_constraints(
     Validate role assignment constraints.
 
     Rules:
-    - DEPT_MANAGER and TEAM_MANAGER are mutually exclusive.
+    - Non-STUDENT business roles are single-select (at most one).
     - Superuser account is a dedicated role and cannot be assigned business roles.
     - TEAM_MANAGER is globally unique (active users only).
     - DEPT_MANAGER is unique per department (active users only).
@@ -44,10 +47,11 @@ def _normalize_role_codes(role_codes: Iterable[str]) -> Set[str]:
 
 
 def _validate_dedicated_role_composition(*, role_codes: Set[str], is_superuser: bool) -> None:
-    if 'DEPT_MANAGER' in role_codes and 'TEAM_MANAGER' in role_codes:
+    non_student_codes = NON_STUDENT_ROLE_CODES.intersection(role_codes)
+    if len(non_student_codes) > 1:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
-            message='室经理与团队经理角色互斥，不能同时分配'
+            message='学员以外系统角色最多只能选择一个'
         )
 
     if is_superuser and role_codes:

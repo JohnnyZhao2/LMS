@@ -13,6 +13,7 @@ interface UserPermissionCardProps {
   permission: PermissionCatalogEntry;
   permissionState: PermissionState;
   loading: boolean;
+  forcedDisabled?: boolean;
   canCreateOverride: boolean;
   canRevokeOverride: boolean;
   hasValidScopeSelection: boolean;
@@ -25,6 +26,7 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
   permission,
   permissionState,
   loading,
+  forcedDisabled = false,
   canCreateOverride,
   canRevokeOverride,
   hasValidScopeSelection,
@@ -59,6 +61,7 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
     <label
       className={cn(
         'group relative flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition-all duration-300',
+        forcedDisabled && 'cursor-not-allowed opacity-55 hover:translate-y-0 hover:shadow-none',
         checked
           ? 'border-primary/20 bg-primary/[0.03] shadow-[0_2px_10px_-4px_rgba(var(--primary),0.05)] hover:border-primary/30'
           : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5',
@@ -74,7 +77,8 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
           <Checkbox
             checked={checked}
             disabled={
-              loading
+              forcedDisabled
+              || loading
               || !hasValidScopeSelection
               || (
                 checked
@@ -93,6 +97,9 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
           />
         </div>
       </div>
+      {forcedDisabled && (
+        <p className="text-[11px] font-medium text-slate-400">仅管理员角色可配置此权限</p>
+      )}
     </label>
   );
 };

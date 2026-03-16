@@ -63,7 +63,7 @@ interface FormErrors {
   department_id?: string;
 }
 
-const MANAGER_MUTEX_ROLE_CODES: RoleCode[] = ['DEPT_MANAGER', 'TEAM_MANAGER'];
+const NON_STUDENT_ROLE_CODES: RoleCode[] = ['MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'];
 const DEFAULT_MANAGEABLE_ROLES: Role[] = [
   { code: 'MENTOR', name: '导师' },
   { code: 'DEPT_MANAGER', name: '室经理' },
@@ -72,11 +72,9 @@ const DEFAULT_MANAGEABLE_ROLES: Role[] = [
 ];
 
 const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean): boolean => {
-  const managerCount = roleCodes.filter((code) => MANAGER_MUTEX_ROLE_CODES.includes(code)).length;
-
-  if (managerCount > 1) return false;
   if (isSuperuserAccount) return roleCodes.length === 0;
-  return true;
+  const nonStudentCount = roleCodes.filter((code) => NON_STUDENT_ROLE_CODES.includes(code)).length;
+  return nonStudentCount <= 1;
 };
 
 /**
@@ -327,7 +325,7 @@ const UserFormContent: React.FC<{
         const active = prev.role_codes.includes(code);
         const nextRoleCodes = active
           ? prev.role_codes.filter((c) => c !== code)
-          : [...prev.role_codes, code];
+          : [code];
 
         if (!isRoleSelectionValid(nextRoleCodes, isSuperuserAccount)) return prev;
 
@@ -338,11 +336,8 @@ const UserFormContent: React.FC<{
       });
     };
 
-    const isRoleToggleDisabled = (roleCode: RoleCode, active: boolean): boolean => {
-      const nextRoleCodes = active
-        ? formData.role_codes.filter((code) => code !== roleCode)
-        : [...formData.role_codes, roleCode];
-      return !isRoleSelectionValid(nextRoleCodes, isSuperuserAccount);
+    const isRoleToggleDisabled = (): boolean => {
+      return isSuperuserAccount;
     };
 
     const isLoading = isSubmitting
@@ -536,13 +531,14 @@ const UserFormContent: React.FC<{
               <div className="flex items-center gap-2 pb-1 text-slate-400">
                 <Shield className="w-4 h-4" />
                 <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
+                <span className="text-xs text-slate-400">学员角色默认保留，扩展角色单选</span>
               </div>
 
               <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
                 {roles.filter(r => r.code !== 'STUDENT').map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
-                  const disabled = !canUpdateUserAuthorization || isRoleToggleDisabled(roleCode, active);
+                  const disabled = !canUpdateUserAuthorization || isRoleToggleDisabled();
                   const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
                   return (
@@ -595,7 +591,6 @@ const UserFormContent: React.FC<{
               ref={permissionSectionRef}
               userId={userId}
               userDetail={userDetail}
-              roles={roles}
               departments={departments}
               selectedRoleCodes={formData.role_codes}
               departmentId={formData.department_id}

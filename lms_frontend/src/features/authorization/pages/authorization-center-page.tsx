@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layers3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
@@ -10,6 +10,7 @@ import {
   useReplaceRolePermissionTemplate,
   useRolePermissionTemplate,
 } from '../api/authorization';
+import { isPermissionLockedForRole } from '../constants/permission-constraints';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
 export const AuthorizationCenterPage: React.FC = () => {
@@ -22,6 +23,13 @@ export const AuthorizationCenterPage: React.FC = () => {
   const shouldLoadData = canViewRoleTemplate;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
+  const permissionByCode = useMemo(() => {
+    const permissionMap = new Map<string, { module: string }>();
+    permissionCatalog.forEach((permission) => {
+      permissionMap.set(permission.code, { module: permission.module });
+    });
+    return permissionMap;
+  }, [permissionCatalog]);
   const roleTemplateQuery = useRolePermissionTemplate(selectedRole, canViewRoleTemplate);
 
   const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
@@ -33,6 +41,11 @@ export const AuthorizationCenterPage: React.FC = () => {
   }, [roleTemplateQuery.data]);
 
   const handleToggleRolePermission = (permissionCode: string, checked: boolean) => {
+    const permission = permissionByCode.get(permissionCode);
+    if (permission && isPermissionLockedForRole(selectedRole, permission)) {
+      return;
+    }
+
     setSelectedRolePermissionCodes((previousCodes) => {
       const codeSet = new Set(previousCodes);
       if (checked) {
@@ -78,6 +91,7 @@ export const AuthorizationCenterPage: React.FC = () => {
         canUpdateRoleTemplate={canUpdateRoleTemplate}
         selectedRole={selectedRole}
         onRoleChange={setSelectedRole}
+        isPermissionLockedForSelectedRole={(permission) => isPermissionLockedForRole(selectedRole, permission)}
         permissionCatalog={permissionCatalog}
         selectedCodes={selectedRolePermissionCodes}
         onToggleCode={handleToggleRolePermission}

@@ -329,7 +329,7 @@ def test_submission_endpoints_require_student_current_role():
 
 
 @pytest.mark.django_db
-def test_replace_role_permissions_preserves_role_dashboard_and_strips_system_managed_requests():
+def test_replace_role_permissions_strips_system_managed_requests():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_TEMPLATE', username='Template Super')
     _create_user_with_role(employee_id='EMP_AUTH_TEMPLATE_M', username='Template Mentor', role_code='MENTOR')
@@ -343,7 +343,6 @@ def test_replace_role_permissions_preserves_role_dashboard_and_strips_system_man
                 'task.view',
                 'task.create',
                 'quiz.view',
-                'activity_log.view',
                 'dashboard.admin.view',
             ],
         },
@@ -355,8 +354,31 @@ def test_replace_role_permissions_preserves_role_dashboard_and_strips_system_man
     assert 'task.view' in permission_codes
     assert 'task.create' in permission_codes
     assert 'quiz.view' in permission_codes
-    assert 'activity_log.view' in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
+
+
+@pytest.mark.django_db
+def test_replace_non_admin_role_permissions_rejects_config_module_requests():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_CFG_TEMPLATE', username='Cfg Template Super')
+    _create_user_with_role(employee_id='EMP_AUTH_CFG_TEMPLATE_M', username='Cfg Template Mentor', role_code='MENTOR')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.put(
+        '/api/authorization/roles/MENTOR/permissions/',
+        {
+            'role_code': 'MENTOR',
+            'permission_codes': [
+                'task.view',
+                'activity_log.view',
+            ],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '配置管理权限仅支持管理员角色' in response.data['message']
 
 
 @pytest.mark.django_db
@@ -398,6 +420,40 @@ def test_self_scoped_override_does_not_grant_global_page_access_without_target_u
 
     assert response.status_code == 400
     assert response.data['code'] == 'PERMISSION_DENIED'
+
+
+@pytest.mark.django_db
+def test_non_admin_role_cannot_create_config_permission_override():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_CFG_OVERRIDE_ADMIN', username='Cfg Override Super')
+    mentor_user = _create_user_with_role(
+        employee_id='EMP_AUTH_CFG_OVERRIDE_MENTOR',
+        username='Cfg Override Mentor',
+        role_code='MENTOR',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.post(
+        f'/api/authorization/users/{mentor_user.id}/overrides/',
+        {
+            'permission_code': 'activity_log.view',
+            'effect': 'ALLOW',
+            'applies_to_role': 'MENTOR',
+            'scope_type': 'ALL',
+            'reason': 'should reject non-admin role',
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '配置管理权限仅支持管理员角色' in response.data['message']
+    assert not UserPermissionOverride.objects.filter(
+        user=mentor_user,
+        permission__code='activity_log.view',
+        applies_to_role='MENTOR',
+        is_active=True,
+    ).exists()
 
 
 @pytest.mark.django_db

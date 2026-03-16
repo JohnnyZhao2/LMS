@@ -137,6 +137,7 @@ class UserManagementService(BaseService):
         Raises:
             BusinessError: If user not found or role constraints violated
         Properties:
+        - 非 STUDENT 系统角色单选（最多一个）
         - Property 9: 室经理/团队经理与学员角色互斥；ADMIN 可叠加学员角色
         - 每个部门只能有一个室经理
         - 全局只能有一个团队经理

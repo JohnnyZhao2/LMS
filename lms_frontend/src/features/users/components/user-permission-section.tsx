@@ -18,6 +18,7 @@ import {
   useRolePermissionTemplates,
   useUserPermissionOverrides,
 } from '@/features/authorization/api/authorization';
+import { isConfigModuleLockedForRole } from '@/features/authorization/constants/permission-constraints';
 import type {
   CreateUserPermissionOverrideRequest,
   PermissionOverrideEffect,
@@ -25,7 +26,7 @@ import type {
   UserPermissionOverride,
   RoleCode,
 } from '@/types/api';
-import type { Department, Role, UserList, UserList as UserDetail } from '@/types/common';
+import type { Department, UserList, UserList as UserDetail } from '@/types/common';
 
 import { useUsers } from '../api/get-users';
 import { UserPermissionCard } from './user-permission-card';
@@ -44,7 +45,6 @@ import type { PermissionState, ScopeFilterOption } from './user-permission-secti
 interface UserPermissionSectionProps {
   userId?: number;
   userDetail?: UserDetail;
-  roles: Role[];
   departments: Department[];
   selectedRoleCodes: RoleCode[];
   departmentId?: number;
@@ -99,10 +99,29 @@ UserPermissionOverride,
   scopeUserIds: override.scope_user_ids,
 });
 
+const createUncheckedPermissionState = (): PermissionState => ({
+  checked: false,
+  fromTemplate: false,
+  allowOverrides: [],
+  denyOverrides: [],
+  selectedAllowOverrides: [],
+  selectedDenyOverrides: [],
+  inheritedSelectedScopeTypes: [],
+  isSelfOnlySelection: false,
+  hasSelfAllow: false,
+  hasNonSelfAllow: false,
+  addedScopeTypes: [],
+  removedScopeTypes: [],
+  effectiveStandardScopeTypes: [],
+  effectiveExplicitUserIds: [],
+  hasExactExplicitAllow: false,
+  hasExactExplicitDeny: false,
+  missingSelectedAllowScopeTypes: [],
+});
+
 export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, UserPermissionSectionProps>(({
   userId,
   userDetail,
-  roles,
   departments,
   selectedRoleCodes,
   departmentId,
@@ -146,17 +165,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     {},
     { enabled: shouldLoadUserOverrides },
   );
-
-  const roleNameMap = useMemo(() => {
-    const nameMap = new Map<string, string>();
-    roles.forEach((role) => {
-      nameMap.set(role.code, role.name);
-    });
-    if (!nameMap.has('SUPER_ADMIN')) {
-      nameMap.set('SUPER_ADMIN', '超级管理员');
-    }
-    return nameMap;
-  }, [roles]);
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => {
     if (isSuperuserAccount) {
@@ -221,6 +229,19 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     });
     return nameMap;
   }, [permissionCatalog]);
+  const configPermissionCodeSet = useMemo(
+    () => new Set(permissionCatalog
+      .filter((permission) => permission.module === 'config')
+      .map((permission) => permission.code)),
+    [permissionCatalog],
+  );
+  const isPermissionLockedForSelectedRole = useCallback(
+    (permissionCode: string) => (
+      isConfigModuleLockedForRole(normalizedSelectedPermissionRole, 'config')
+      && configPermissionCodeSet.has(permissionCode)
+    ),
+    [configPermissionCodeSet, normalizedSelectedPermissionRole],
+  );
   const initialDraftOverrides = useMemo<UserPermissionOverride[]>(() => {
     if (!shouldLoadUserOverrides) {
       return [];
@@ -269,9 +290,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     }
     return new Set(roleTemplatePermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []);
   }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
-
-  const getPermissionTemplateCount = (roleCode: RoleCode) =>
-    (roleTemplatePermissionCodeMap.get(roleCode) ?? []).length;
 
   const getPresetMatchedScopeUserIds = useCallback((scopeTypes: PermissionOverrideScope[]): number[] => {
     const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
@@ -644,6 +662,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   };
 
   const getPermissionState = (permissionCode: string): PermissionState => {
+    if (isPermissionLockedForSelectedRole(permissionCode)) {
+      return createUncheckedPermissionState();
+    }
+
     const fromTemplate = roleTemplatePermissionCodes.has(permissionCode);
     const allowOverrides = activeScopeAllowOverrides.filter((override) => override.permission_code === permissionCode);
     const denyOverrides = activeScopeDenyOverrides.filter((override) => override.permission_code === permissionCode);
@@ -813,6 +835,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     if (!userId) return;
     if (!hasConfigurablePermissionRoles) {
       toast.error('请先分配管理角色，再配置用户权限');
+      return;
+    }
+    if (isPermissionLockedForSelectedRole(permissionCode)) {
+      toast.error('配置管理权限仅支持在管理员角色下配置');
       return;
     }
 
@@ -1036,7 +1062,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
       modulePermissionCounts[permission.module].enabled += 1;
     }
   });
-  const selectedRoleLabel = roleNameMap.get(normalizedSelectedPermissionRole) ?? normalizedSelectedPermissionRole;
+  const isActiveModuleLockedForRole = isConfigModuleLockedForRole(
+    normalizedSelectedPermissionRole,
+    activePermissionModule,
+  );
 
   return (
     <div className="mt-6 border-t border-slate-100 pt-6">
@@ -1047,20 +1076,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
         </div>
 
         {hasConfigurablePermissionRoles ? (
-          <div className="flex items-center gap-6 flex-1 justify-end max-w-2xl">
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">生效角色</span>
-              <div className="inline-flex h-9 min-w-[140px] items-center gap-2 rounded-xl border border-slate-200/70 bg-white px-3 text-xs font-bold text-slate-700">
-                <span>{selectedRoleLabel}</span>
-                {canViewRoleTemplate && (
-                  <span className="text-[11px] font-semibold text-slate-400">
-                    {getPermissionTemplateCount(normalizedSelectedPermissionRole)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-1 max-w-[320px]">
+          <div className="flex items-center gap-3 flex-1 justify-end max-w-[320px]">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
               <UserPermissionScopePopover
                 open={showScopeAdjustPanel}
@@ -1089,7 +1105,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
                 isScopeUsersLoading={isScopeUsersLoading}
                 dialogContentElement={dialogContentElement}
               />
-            </div>
           </div>
         ) : (
           <div className="flex-1 text-right text-xs font-semibold text-slate-400">
@@ -1125,18 +1140,25 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
             )}
 
             <div>
+              {isActiveModuleLockedForRole && (
+                <div className="mb-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-500">
+                  配置管理模块仅支持在管理员角色下配置，当前角色仅可查看。
+                </div>
+              )}
               {activeModulePermissions.length === 0 ? (
                 <div className="py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
                   {activeModulePermissions.map((permission) => {
                     const permissionState = getPermissionState(permission.code);
+                    const isPermissionLocked = isPermissionLockedForSelectedRole(permission.code);
                     return (
                       <UserPermissionCard
                         key={permission.code}
                         permission={permission}
                         permissionState={permissionState}
                         loading={false}
+                        forcedDisabled={isPermissionLocked}
                         canCreateOverride={canCreateOverride}
                         canRevokeOverride={canRevokeOverride}
                         hasValidScopeSelection={

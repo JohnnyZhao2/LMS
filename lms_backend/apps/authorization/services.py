@@ -12,6 +12,8 @@ from apps.users.models import Role, User
 from apps.users.permissions import SUPER_ADMIN_ROLE
 
 from .constants import (
+    CONFIG_MODULE_PERMISSION_CODES,
+    CONFIG_PERMISSION_MANAGEABLE_ROLE,
     EFFECT_ALLOW,
     EFFECT_DENY,
     PERMISSION_CATALOG,
@@ -45,6 +47,21 @@ class AuthorizationService(BaseService):
         return permission_code in SCOPE_AWARE_PERMISSION_CODES
 
     @staticmethod
+    def _can_manage_config_permissions(role_code: Optional[str]) -> bool:
+        return role_code == CONFIG_PERMISSION_MANAGEABLE_ROLE
+
+    @classmethod
+    def _is_config_permission_locked_for_role(
+        cls,
+        permission_code: str,
+        role_code: Optional[str],
+    ) -> bool:
+        return (
+            permission_code in CONFIG_MODULE_PERMISSION_CODES
+            and not cls._can_manage_config_permissions(role_code)
+        )
+
+    @staticmethod
     def _get_system_role_permission_code_set(role_code: str) -> Set[str]:
         return set(ROLE_SYSTEM_PERMISSION_DEFAULTS.get(role_code, []))
 
@@ -55,6 +72,8 @@ class AuthorizationService(BaseService):
         permission_codes: Iterable[str],
     ) -> Set[str]:
         normalized_codes = {code for code in permission_codes if code}
+        if not cls._can_manage_config_permissions(role_code):
+            normalized_codes -= set(CONFIG_MODULE_PERMISSION_CODES)
         normalized_codes -= set(SYSTEM_MANAGED_PERMISSION_CODES)
         normalized_codes |= cls._get_system_role_permission_code_set(role_code)
         return normalized_codes
@@ -124,6 +143,8 @@ class AuthorizationService(BaseService):
         target_user: Optional[User],
     ) -> Optional[str]:
         if permission_code in SYSTEM_MANAGED_PERMISSION_CODES:
+            return None
+        if self._is_config_permission_locked_for_role(permission_code, current_role):
             return None
 
         if not self.user:
@@ -320,12 +341,20 @@ class AuthorizationService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='超管为系统专有角色，不支持配置模板权限',
             )
+        requested_codes = [code for code in permission_codes if code]
+        if not self._can_manage_config_permissions(role_code):
+            forbidden_codes = sorted(set(requested_codes) & set(CONFIG_MODULE_PERMISSION_CODES))
+            if forbidden_codes:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'配置管理权限仅支持管理员角色，非法权限: {forbidden_codes}',
+                )
         role = self.validate_not_none(
             Role.objects.filter(code=role_code).first(),
             f'角色 {role_code} 不存在',
         )
 
-        normalized_codes = sorted(self._normalize_role_permission_codes(role_code, permission_codes))
+        normalized_codes = sorted(self._normalize_role_permission_codes(role_code, requested_codes))
         permission_objects = get_permissions_by_codes(normalized_codes)
         resolved_codes = {item.code for item in permission_objects}
         missing_codes = sorted(set(normalized_codes) - resolved_codes)
@@ -362,7 +391,15 @@ class AuthorizationService(BaseService):
             ).filter(
                 Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
             )
-        return list(queryset.order_by('-created_at', '-id'))
+        overrides = list(queryset.order_by('-created_at', '-id'))
+        return [
+            override
+            for override in overrides
+            if not self._is_config_permission_locked_for_role(
+                override.permission.code,
+                override.applies_to_role or None,
+            )
+        ]
 
     @transaction.atomic
     def create_user_permission_override(
@@ -396,6 +433,11 @@ class AuthorizationService(BaseService):
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='学员角色为固定工作台角色，不支持配置用户权限覆盖',
+            )
+        if self._is_config_permission_locked_for_role(permission.code, normalized_applies_to_role):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='配置管理权限仅支持管理员角色下配置',
             )
 
         normalized_scope_type = scope_type

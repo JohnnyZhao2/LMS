@@ -87,7 +87,7 @@ def super_admin_user(department, roles):
 
 
 @pytest.mark.django_db
-def test_assign_dept_manager_and_team_manager_together_rejected(api_client, admin_user, normal_user):
+def test_assign_multiple_non_student_roles_rejected(api_client, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -97,8 +97,7 @@ def test_assign_dept_manager_and_team_manager_together_rejected(api_client, admi
     )
 
     assert response.status_code == 400
-    assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '互斥' in response.data['message']
+    assert '最多只能选择一个' in str(response.data)
 
 
 @pytest.mark.django_db
@@ -162,6 +161,26 @@ def test_create_user_with_mentor_role_keeps_student(api_client, admin_user, depa
 
 
 @pytest.mark.django_db
+def test_create_user_with_multiple_non_student_roles_rejected(api_client, admin_user, department):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.post(
+        '/api/users/',
+        {
+            'employee_id': 'NEW_MULTI_ROLE_001',
+            'username': '多角色用户',
+            'password': 'password123',
+            'department_id': department.id,
+            'role_codes': ['ADMIN', 'MENTOR'],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert '最多只能选择一个' in str(response.data)
+
+
+@pytest.mark.django_db
 def test_create_user_allows_duplicate_username(api_client, admin_user, department):
     api_client.force_authenticate(user=admin_user)
 
@@ -184,7 +203,7 @@ def test_create_user_allows_duplicate_username(api_client, admin_user, departmen
 
 
 @pytest.mark.django_db
-def test_assign_admin_and_mentor_for_non_superuser_keeps_student(api_client, admin_user, normal_user):
+def test_assign_admin_and_mentor_for_non_superuser_rejected(api_client, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -193,10 +212,9 @@ def test_assign_admin_and_mentor_for_non_superuser_keeps_student(api_client, adm
         format='json',
     )
 
-    assert response.status_code == 200
-    data = unwrap_response_data(response)
-    role_codes = {item['code'] for item in data['roles']}
-    assert role_codes == {'ADMIN', 'MENTOR', 'STUDENT'}
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '最多只能选择一个' in response.data['message']
 
 
 @pytest.mark.django_db

@@ -27,6 +27,7 @@ interface RolePermissionTemplatePanelProps {
   canUpdateRoleTemplate: boolean;
   selectedRole: RoleCode;
   onRoleChange: (roleCode: RoleCode) => void;
+  isPermissionLockedForSelectedRole: (permission: PermissionCatalogItem) => boolean;
   permissionCatalog: PermissionCatalogItem[];
   selectedCodes: string[];
   onToggleCode: (permissionCode: string, checked: boolean) => void;
@@ -40,6 +41,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   canUpdateRoleTemplate,
   selectedRole,
   onRoleChange,
+  isPermissionLockedForSelectedRole,
   permissionCatalog,
   selectedCodes,
   onToggleCode,
@@ -110,8 +112,19 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     }));
   }, [activeGroup]);
 
+  const isActiveModuleLocked = useMemo(() => {
+    if (!activeGroup) {
+      return false;
+    }
+    return activeGroup.permissions.length > 0
+      && activeGroup.permissions.every((permission) => isPermissionLockedForSelectedRole(permission));
+  }, [activeGroup, isPermissionLockedForSelectedRole]);
+
   const toggleModulePermissions = (permissions: PermissionCatalogItem[], checked: boolean) => {
     permissions.forEach((permission) => {
+      if (isPermissionLockedForSelectedRole(permission)) {
+        return;
+      }
       const isChecked = selectedCodes.includes(permission.code);
       if (isChecked !== checked) {
         onToggleCode(permission.code, checked);
@@ -208,7 +221,11 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-                  disabled={!canUpdateRoleTemplate || activeGroup.selectedCount === activeGroup.permissions.length}
+                  disabled={
+                    !canUpdateRoleTemplate
+                    || isActiveModuleLocked
+                    || activeGroup.selectedCount === activeGroup.permissions.length
+                  }
                   onClick={() => toggleModulePermissions(activeGroup.permissions, true)}
                 >
                   <CheckCheck className="h-3 w-3" />
@@ -217,7 +234,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                 <button
                   type="button"
                   className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium text-text-muted transition-colors hover:bg-destructive-50 hover:text-destructive disabled:opacity-40"
-                  disabled={!canUpdateRoleTemplate || activeGroup.selectedCount === 0}
+                  disabled={!canUpdateRoleTemplate || isActiveModuleLocked || activeGroup.selectedCount === 0}
                   onClick={() => toggleModulePermissions(activeGroup.permissions, false)}
                 >
                   <XCircle className="h-3 w-3" />
@@ -225,6 +242,11 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                 </button>
               </div>
             </div>
+            {isActiveModuleLocked && (
+              <p className="rounded-md border border-border bg-muted px-3 py-2 text-[12px] text-text-muted">
+                配置管理模块仅支持在管理员角色下配置，当前角色已锁定为只读。
+              </p>
+            )}
 
             {/* 权限卡片网格 */}
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
@@ -234,7 +256,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
                   permission={permission}
                   detail={detail}
                   checked={selectedCodes.includes(permission.code)}
-                  disabled={!canUpdateRoleTemplate}
+                  disabled={!canUpdateRoleTemplate || isPermissionLockedForSelectedRole(permission)}
                   onToggle={(checked) => onToggleCode(permission.code, checked)}
                 />
               ))}
