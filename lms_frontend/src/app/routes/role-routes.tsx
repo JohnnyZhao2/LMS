@@ -35,8 +35,6 @@ const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-
 // Users
 const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
 
-// Activity Logs
-const ActivityLogSettingsPage = lazy(() => import('@/features/activity-logs/pages/activity-log-settings').then(m => ({ default: m.ActivityLogSettingsPage })));
 const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 
 // Submissions
@@ -233,17 +231,6 @@ export const roleRoutes = [
     element={
       <ProtectedRoute requiredPermissions={['user.view']}>
         <UserList />
-      </ProtectedRoute>
-    }
-  />,
-
-  // Activity Logs Settings
-  <Route
-    key="activity-log-settings"
-    path="activity-logs/settings"
-    element={
-      <ProtectedRoute requiredPermissions={['activity_log.view', 'activity_log.policy.update']}>
-        <ActivityLogSettingsPage />
       </ProtectedRoute>
     }
   />,

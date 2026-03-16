@@ -11,7 +11,6 @@ import {
   BarChart3,
   ClipboardCheck,
   ShieldCheck,
-  ScrollText,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -102,14 +101,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/authorization`,
         icon: <ShieldCheck className="w-4 h-4" />,
         label: '权限中心',
-      });
-    }
-
-    if (hasAnyPermission(['activity_log.view', 'activity_log.policy.update'])) {
-      menu.push({
-        key: `${rolePrefix}/activity-logs/settings`,
-        icon: <ScrollText className="w-4 h-4" />,
-        label: '日志中心',
       });
     }
 
