@@ -74,7 +74,7 @@ export const SpotCheckStatsCard: React.FC<SpotCheckStatsCardProps> = ({ stats })
         <div>
           <h3 className={cardTitleClass}>
             抽查统计
-            <span className={cardTitleNoteClass}>· 本月名下学员抽查</span>
+            <span className={cardTitleNoteClass}>· 本月学员抽查</span>
           </h3>
         </div>
       </div>

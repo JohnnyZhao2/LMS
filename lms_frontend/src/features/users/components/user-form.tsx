@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   User,
@@ -29,7 +29,10 @@ import { ROLE_COLORS } from '@/lib/role-config';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
-import { UserPermissionSection } from './user-permission-section';
+import {
+  UserPermissionSection,
+  type UserPermissionSectionHandle,
+} from './user-permission-section';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
@@ -87,6 +90,15 @@ export const UserForm: React.FC<UserFormProps> = ({
   onSuccess,
 }) => {
   const [dialogContentElement, setDialogContentElement] = useState<HTMLDivElement | null>(null);
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) return;
+    setDialogContentElement(null);
+    onClose();
+  }, [onClose]);
+  const handleDialogContentRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    setDialogContentElement((prev) => (prev === node ? prev : node));
+  }, []);
   const { data: userDetail } = useUserDetail(userId || 0);
   const {
     data: mentors = [],
@@ -99,10 +111,10 @@ export const UserForm: React.FC<UserFormProps> = ({
   const roleOptions = roles.length > 0 ? roles : DEFAULT_MANAGEABLE_ROLES;
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        ref={setDialogContentElement}
-        className="max-w-5xl p-0 overflow-hidden rounded-xl border border-border flex flex-col bg-background"
+        ref={handleDialogContentRef}
+        className="max-w-5xl p-0 gap-0 overflow-hidden rounded-xl border border-border flex flex-col bg-background"
       >
         <DialogTitle className="sr-only">
           {isEdit ? '编辑用户档案' : '新建用户档案'}
@@ -167,6 +179,7 @@ const UserFormContent: React.FC<{
     const updateUser = useUpdateUser();
     const assignRoles = useAssignRoles();
     const assignMentor = useAssignMentor();
+    const permissionSectionRef = useRef<UserPermissionSectionHandle | null>(null);
     // 直接从 props 初始化，组件通过 key 重挂载时自动重置
     const [initialRoleCodes] = useState<RoleCode[]>(() =>
       isEdit && userDetail
@@ -199,6 +212,7 @@ const UserFormContent: React.FC<{
     });
 
     const [mentorTouched, setMentorTouched] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<FormErrors>({});
     const isSuperuserAccount = Boolean(isEdit && userDetail?.is_superuser);
 
@@ -213,7 +227,9 @@ const UserFormContent: React.FC<{
     };
 
     const handleSubmit = async () => {
+      if (isSubmitting) return;
       if (!validate()) return;
+      setIsSubmitting(true);
       try {
         if (isEdit) {
           // 检查角色是否有变化
@@ -237,6 +253,7 @@ const UserFormContent: React.FC<{
           if (mentorTouched && formData.mentor_id !== initialAssignedMentorId) {
             await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
           }
+          await permissionSectionRef.current?.submitChanges();
           toast.success("账号信息已更新");
         } else {
           const newUser = await createUser.mutateAsync({
@@ -256,6 +273,8 @@ const UserFormContent: React.FC<{
         onSuccess?.();
       } catch (error) {
         showApiError(error);
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
@@ -284,7 +303,11 @@ const UserFormContent: React.FC<{
       return !isRoleSelectionValid(nextRoleCodes, isSuperuserAccount);
     };
 
-    const isLoading = createUser.isPending || updateUser.isPending || assignRoles.isPending || assignMentor.isPending;
+    const isLoading = isSubmitting
+      || createUser.isPending
+      || updateUser.isPending
+      || assignRoles.isPending
+      || assignMentor.isPending;
 
     return (
       <>
@@ -303,20 +326,20 @@ const UserFormContent: React.FC<{
           </div>
         </div>
 
-        <div className="flex-1 p-6 bg-background overflow-y-auto">
+        <div className="flex-1 px-6 pt-6 pb-4 bg-background overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8 relative">
             {/* Extremely Subtle Vertical Divider */}
             <div className="hidden lg:block absolute left-1/2 top-4 bottom-4 w-[1px] bg-slate-100/50 -translate-x-1/2" />
 
             {/* Left Column: Essential Info */}
-            <div className="space-y-6">
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 pb-1 text-slate-400">
-                  <User className="w-4 h-4" />
-                  <h3 className="text-sm font-bold text-slate-800">账号基础信息</h3>
-                </div>
+            <div className="flex h-full flex-col">
+              <div className="flex items-center gap-2 pb-1 text-slate-400">
+                <User className="w-4 h-4" />
+                <h3 className="text-sm font-bold text-slate-800">账号基础信息</h3>
+              </div>
 
-                <div className="space-y-6">
+              <div className="mt-4 flex flex-1 flex-col justify-between gap-4">
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 1. Name */}
                     <div className="space-y-1.5">
@@ -366,7 +389,7 @@ const UserFormContent: React.FC<{
                 </div>
 
                 {/* Bottom Row: Assignments */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                   {/* 4. Mentor Select */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-1 text-slate-400">
@@ -457,68 +480,67 @@ const UserFormContent: React.FC<{
             </div>
 
             {/* Right Column: Roles */}
-            <div className="space-y-6">
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 pb-1 text-slate-400">
-                  <Shield className="w-4 h-4" />
-                  <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
-                </div>
+            <div className="flex h-full flex-col">
+              <div className="flex items-center gap-2 pb-1 text-slate-400">
+                <Shield className="w-4 h-4" />
+                <h3 className="text-sm font-bold text-slate-800">系统角色</h3>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {roles.filter(r => r.code !== 'STUDENT').map(role => {
-                    const roleCode = role.code as RoleCode;
-                    const active = formData.role_codes.includes(roleCode);
-                    const disabled = isRoleToggleDisabled(roleCode, active);
-                    const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
+              <div className="mt-4 grid flex-1 grid-cols-1 md:grid-cols-2 gap-3 content-stretch">
+                {roles.filter(r => r.code !== 'STUDENT').map(role => {
+                  const roleCode = role.code as RoleCode;
+                  const active = formData.role_codes.includes(roleCode);
+                  const disabled = isRoleToggleDisabled(roleCode, active);
+                  const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
-                    return (
-                      <div
-                        key={role.code}
-                        onClick={() => !disabled && toggleRole(roleCode)}
-                        className={cn(
-                          "group relative p-4 rounded-xl border transition-all duration-500 cursor-pointer overflow-hidden bg-white shadow-sm",
-                          disabled ? "opacity-20 grayscale cursor-not-allowed" : "active:scale-[0.98]",
-                          active
-                            ? "border-slate-200/60"
-                            : "border-slate-100/50 hover:border-slate-200"
-                        )}
-                      >
-                        {/* Background Minimal Icon */}
-                        <div className={cn(
-                          "absolute -right-3 -bottom-5 transition-all duration-700",
-                          active ? cn("opacity-[0.2] scale-110", colorConfig.textClass) : "opacity-[0.3] scale-100 text-slate-200"
-                        )}>
-                          {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
-                            role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
-                              role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
-                                <User className="w-24 h-24" strokeWidth={0.5} />}
-                        </div>
-
-                        <div className="relative z-10 flex flex-col gap-1">
-                          <p className={cn(
-                            "text-sm font-bold transition-all duration-300",
-                            active ? colorConfig.textClass : "text-slate-600"
-                          )}>{role.name}</p>
-                          <p className={cn(
-                            "text-[10px] font-bold transition-all duration-300 opacity-60",
-                            active ? colorConfig.textClass : "text-slate-300"
-                          )}>
-                            {role.code === 'ADMIN' ? '全系统最高管理权限' :
-                              role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
-                                role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
-                                  '职能岗位权限'}
-                          </p>
-                        </div>
+                  return (
+                    <div
+                      key={role.code}
+                      onClick={() => !disabled && toggleRole(roleCode)}
+                      className={cn(
+                        "group relative p-4 rounded-xl border transition-all duration-500 cursor-pointer overflow-hidden bg-white shadow-sm",
+                        disabled ? "opacity-20 grayscale cursor-not-allowed" : "active:scale-[0.98]",
+                        active
+                          ? "border-slate-200/60"
+                          : "border-slate-100/50 hover:border-slate-200"
+                      )}
+                    >
+                      {/* Background Minimal Icon */}
+                      <div className={cn(
+                        "absolute -right-3 -bottom-5 transition-all duration-700",
+                        active ? cn("opacity-[0.2] scale-110", colorConfig.textClass) : "opacity-[0.3] scale-100 text-slate-200"
+                      )}>
+                        {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
+                          role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
+                            role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
+                              <User className="w-24 h-24" strokeWidth={0.5} />}
                       </div>
-                    );
-                  })}
-                </div>
+
+                      <div className="relative z-10 flex flex-col gap-1">
+                        <p className={cn(
+                          "text-sm font-bold transition-all duration-300",
+                          active ? colorConfig.textClass : "text-slate-600"
+                        )}>{role.name}</p>
+                        <p className={cn(
+                          "text-[10px] font-bold transition-all duration-300 opacity-60",
+                          active ? colorConfig.textClass : "text-slate-300"
+                        )}>
+                          {role.code === 'ADMIN' ? '全系统最高管理权限' :
+                            role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
+                              role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
+                                '职能岗位权限'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
           {isEdit && (
             <UserPermissionSection
+              ref={permissionSectionRef}
               userId={userId}
               userDetail={userDetail}
               roles={roles}
@@ -532,10 +554,10 @@ const UserFormContent: React.FC<{
         </div>
 
         {/* Footer - Aligned with Grid */}
-        <div className="px-8 pb-8 flex-shrink-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 border-t border-slate-100">
+        <div className="px-8 pb-3 flex-shrink-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-3 border-t border-slate-100">
             <div className="hidden lg:block" />
-            <div className="flex items-center justify-end gap-10">
+            <div className="flex items-center justify-end gap-6">
               <button
                 onClick={onClose}
                 className="text-sm font-bold text-slate-300 hover:text-slate-500 transition-colors"
@@ -545,7 +567,7 @@ const UserFormContent: React.FC<{
               <Button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="h-11 px-10 rounded-full bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
+                className="h-10 px-9 rounded-full bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
               >
                 {isLoading ? "处理中..." : isEdit ? "更新" : "创建"}
               </Button>

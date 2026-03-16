@@ -49,7 +49,7 @@ export const formatScopeSummary = (
 
   const scopeLabels: Record<PermissionOverrideScope, string> = {
     SELF: '本人',
-    MENTEES: '名下学员',
+    MENTEES: '学员',
     DEPARTMENT: '同部门',
     ALL: '全部对象',
     EXPLICIT_USERS: scopeUserIds.length > 0 ? `指定${scopeUserIds.length}人` : '指定用户',
