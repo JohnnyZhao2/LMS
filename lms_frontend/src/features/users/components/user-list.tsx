@@ -47,13 +47,13 @@ export const UserList: React.FC = () => {
   const { hasPermission } = useAuth()
   const canViewRoleTemplate =
     hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update')
-  const canManageUser = hasPermission('user.manage')
-  const canManageUserAccount = hasPermission('user.account.manage')
-  const canManageUserAuthorization = hasPermission('user.authorization.manage')
-  const canCreateUser = canManageUser
+  const canCreateUser = hasPermission('user.create')
+  const canUpdateUser = hasPermission('user.update')
+  const canManageUserAccount = hasPermission('user.activate')
+  const canManageUserAuthorization = hasPermission('user.authorize')
   const canDeleteUser = hasPermission('user.delete')
   const canResetPassword = canManageUserAccount
-  const canOpenUserEditor = canManageUser || canManageUserAuthorization
+  const canOpenUserEditor = canUpdateUser || canManageUserAuthorization
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -252,10 +252,10 @@ export const UserList: React.FC = () => {
               </DropdownMenuLabel>
 
               <DropdownMenuItem
-                disabled={!canManageUser}
+                disabled={!canUpdateUser}
                 className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                 onClick={() => {
-                  if (!canManageUser) return
+                  if (!canUpdateUser) return
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
                 }}

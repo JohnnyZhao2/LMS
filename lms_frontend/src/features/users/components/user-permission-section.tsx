@@ -110,7 +110,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   dialogContentElement,
 }, ref) => {
   const { hasPermission, refreshUser } = useAuth();
-  const canManageUserAuthorization = hasPermission('user.authorization.manage');
+  const canManageUserAuthorization = hasPermission('user.authorize');
   const canViewOverride = canManageUserAuthorization;
   const canCreateOverride = canManageUserAuthorization;
   const canRevokeOverride = canManageUserAuthorization;

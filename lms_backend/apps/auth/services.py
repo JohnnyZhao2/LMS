@@ -281,7 +281,7 @@ class AuthenticationService(BaseService):
 
     def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
         AuthorizationService(self.request).enforce(
-            'user.account.manage',
+            'user.activate',
             error_message='只有管理员可以重置用户密码',
         )
 

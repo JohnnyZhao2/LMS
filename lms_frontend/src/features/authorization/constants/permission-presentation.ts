@@ -170,16 +170,20 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
     pageLabel: '用户管理 / 用户列表',
     detail: '查看用户列表和用户详情。',
   },
-  'user.manage': {
-    pageLabel: '用户管理 / 用户资料',
-    detail: '创建用户、编辑资料并指定导师。',
+  'user.create': {
+    pageLabel: '用户管理 / 创建用户',
+    detail: '创建新用户。',
   },
-  'user.account.manage': {
-    pageLabel: '用户管理 / 账号控制',
+  'user.update': {
+    pageLabel: '用户管理 / 编辑用户',
+    detail: '编辑用户资料并指定导师。',
+  },
+  'user.activate': {
+    pageLabel: '用户管理 / 启停账号',
     detail: '启用/停用账号并重置密码。',
   },
-  'user.authorization.manage': {
-    pageLabel: '用户管理 / 用户授权',
+  'user.authorize': {
+    pageLabel: '用户管理 / 分配权限',
     detail: '分配角色并配置用户权限自定义。',
   },
   'user.delete': {

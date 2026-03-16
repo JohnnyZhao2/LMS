@@ -49,7 +49,7 @@ def admin_user(department, roles):
     admin_role = roles['ADMIN']
     UserRole.objects.get_or_create(user=user, role=admin_role)
     permission_ids = Permission.objects.filter(
-        code__in=['user.view', 'user.manage', 'user.authorization.manage'],
+        code__in=['user.view', 'user.create', 'user.update', 'user.authorize'],
     ).values_list('id', flat=True)
     RolePermission.objects.bulk_create(
         [

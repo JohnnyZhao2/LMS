@@ -106,11 +106,11 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def post(self, request):
-        enforce_user_permission(request, 'user.manage', '只有管理员可以创建用户')
+        enforce_user_permission(request, 'user.create', '只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes'):
-            enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
+            enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return created_response(response_serializer.data)
@@ -155,7 +155,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        enforce_user_permission(request, 'user.manage', '只有管理员可以更新用户信息')
+        enforce_user_permission(request, 'user.update', '只有管理员可以更新用户信息')
         user = self.get_object(pk)
         serializer = UserUpdateSerializer(
             user,
@@ -165,7 +165,7 @@ class UserDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes') is not None:
-            enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
+            enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return success_response(response_serializer.data)
@@ -205,7 +205,7 @@ class UserDeactivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.account.manage', '只有管理员可以停用用户')
+        enforce_user_permission(request, 'user.activate', '只有管理员可以停用用户')
         user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -227,7 +227,7 @@ class UserActivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.account.manage', '只有管理员可以启用用户')
+        enforce_user_permission(request, 'user.activate', '只有管理员可以启用用户')
         user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -250,7 +250,7 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
+        enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(
@@ -279,7 +279,7 @@ class UserAssignMentorView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.manage', '只有管理员可以指定导师')
+        enforce_user_permission(request, 'user.update', '只有管理员可以指定导师')
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_mentor(
@@ -353,7 +353,7 @@ class MentorsListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.manage', 'user.authorization.manage', 'user.view'],
+            ['user.create', 'user.update', 'user.authorize', 'user.view'],
             '无权查看导师列表',
         )
         mentors = list_mentors()
@@ -376,7 +376,7 @@ class DepartmentsListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.manage', 'user.authorization.manage', 'user.view'],
+            ['user.create', 'user.update', 'user.authorize', 'user.view'],
             '无权查看部门列表',
         )
         departments = list_departments()
@@ -399,7 +399,7 @@ class RolesListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.manage', 'user.authorization.manage', 'user.view'],
+            ['user.create', 'user.update', 'user.authorize', 'user.view'],
             '无权查看角色列表',
         )
         roles = list_roles(exclude_student=True)

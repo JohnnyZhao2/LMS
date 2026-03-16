@@ -177,9 +177,10 @@ const UserFormContent: React.FC<{
   onSuccess,
 }) => {
     const { hasPermission } = useAuth();
-    const canManageUser = hasPermission('user.manage');
-    const canManageUserAuthorization = hasPermission('user.authorization.manage');
-    const canSubmitForm = isEdit ? (canManageUser || canManageUserAuthorization) : canManageUser;
+    const canCreateUser = hasPermission('user.create');
+    const canUpdateUser = hasPermission('user.update');
+    const canUpdateUserAuthorization = hasPermission('user.authorize');
+    const canSubmitForm = isEdit ? (canUpdateUser || canUpdateUserAuthorization) : canCreateUser;
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
@@ -255,15 +256,15 @@ const UserFormContent: React.FC<{
           const mentorChanged = mentorTouched && formData.mentor_id !== initialAssignedMentorId;
           const hasPermissionDraftChanges = permissionSectionRef.current?.hasPendingChanges() ?? false;
 
-          if ((baseInfoChanged || mentorChanged) && !canManageUser) {
+          if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
             return;
           }
-          if (rolesChanged && !canManageUserAuthorization) {
+          if (rolesChanged && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法调整角色');
             return;
           }
-          if (hasPermissionDraftChanges && !canManageUserAuthorization) {
+          if (hasPermissionDraftChanges && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法提交权限草稿');
             return;
           }
@@ -289,11 +290,11 @@ const UserFormContent: React.FC<{
           }
           toast.success("账号信息已更新");
         } else {
-          if (!canManageUser) {
+          if (!canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
-          if (formData.role_codes.length > 0 && !canManageUserAuthorization) {
+          if (formData.role_codes.length > 0 && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法分配角色');
             return;
           }
@@ -390,7 +391,7 @@ const UserFormContent: React.FC<{
                           value={formData.username}
                           onChange={e => setFormData({ ...formData, username: e.target.value })}
                           placeholder="输入姓名"
-                          disabled={!canManageUser}
+                          disabled={!canUpdateUser}
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                         />
                       </div>
@@ -404,7 +405,7 @@ const UserFormContent: React.FC<{
                         <Input
                           value={formData.employee_id}
                           onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
-                          disabled={!canManageUser}
+                          disabled={!canUpdateUser}
                           className="h-10 font-mono bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="例如：EMP001"
                         />
@@ -422,7 +423,7 @@ const UserFormContent: React.FC<{
                           type="password"
                           value={formData.password}
                           onChange={e => setFormData({ ...formData, password: e.target.value })}
-                          disabled={!canManageUser}
+                          disabled={!canUpdateUser}
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="设置 6 位以上密码"
                         />
@@ -443,9 +444,9 @@ const UserFormContent: React.FC<{
                     <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
                       <Select
                         value={formData.mentor_id?.toString() || ''}
-                        disabled={!canManageUser}
+                        disabled={!canUpdateUser}
                         onValueChange={(v) => {
-                          if (!canManageUser) return;
+                          if (!canUpdateUser) return;
                           setMentorTouched(true);
                           setFormData({ ...formData, mentor_id: v ? Number(v) : null });
                         }}
@@ -479,12 +480,12 @@ const UserFormContent: React.FC<{
                           )}
                         </SelectContent>
                       </Select>
-                      {formData.mentor_id && canManageUser && (
+                      {formData.mentor_id && canUpdateUser && (
                         <button
                           type="button"
                           className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-destructive transition-colors z-[20]"
                           onClick={() => {
-                            if (!canManageUser) return;
+                            if (!canUpdateUser) return;
                             setMentorTouched(true);
                             setFormData({ ...formData, mentor_id: null });
                           }}
@@ -509,12 +510,12 @@ const UserFormContent: React.FC<{
                           <div
                             key={dept.id}
                             onClick={() => {
-                              if (!canManageUser) return;
+                              if (!canUpdateUser) return;
                               setFormData({ ...formData, department_id: dept.id });
                             }}
                             className={cn(
                               "px-6 py-2 rounded-full border transition-all duration-300 ease-in-out",
-                              canManageUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+                              canUpdateUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                               active
                                 ? "border-primary text-primary bg-white shadow-sm"
                                 : "bg-white border-slate-100 hover:border-slate-200 text-slate-500 hover:text-slate-700"
@@ -541,7 +542,7 @@ const UserFormContent: React.FC<{
                 {roles.filter(r => r.code !== 'STUDENT').map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
-                  const disabled = !canManageUserAuthorization || isRoleToggleDisabled(roleCode, active);
+                  const disabled = !canUpdateUserAuthorization || isRoleToggleDisabled(roleCode, active);
                   const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
                   return (

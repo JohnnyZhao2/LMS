@@ -89,7 +89,7 @@ def test_admin_effective_permissions_follow_default_menu_and_system_rules():
     assert 'grading.score' not in permissions
     assert 'user.view' not in permissions
     assert 'authorization.role_template.view' not in permissions
-    assert 'user.authorization.manage' not in permissions
+    assert 'user.authorize' not in permissions
     assert 'activity_log.view' not in permissions
     assert 'activity_log.policy.update' not in permissions
 
@@ -383,7 +383,7 @@ def test_self_scoped_override_does_not_grant_global_page_access_without_target_u
     client = APIClient()
     admin_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_ADMIN', username='Scope Fix Admin', role_code='ADMIN')
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_SCOPE_FIX_MENTOR', username='Scope Fix Mentor', role_code='MENTOR')
-    permission = Permission.objects.get(code='user.authorization.manage')
+    permission = Permission.objects.get(code='user.authorize')
 
     UserPermissionOverride.objects.create(
         user=mentor_user,
