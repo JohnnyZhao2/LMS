@@ -132,7 +132,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   const createUserOverride = useCreateUserPermissionOverride();
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const [selectedPermissionModule, setSelectedPermissionModule] = useState('');
-  const [selectedPermissionRole, setSelectedPermissionRole] = useState<RoleCode>('MENTOR');
   const [selectedPermissionScopes, setSelectedPermissionScopes] = useState<PermissionOverrideScope[]>([]);
   const [selectedScopeUserIds, setSelectedScopeUserIds] = useState<number[]>([]);
   const scopeSelectionByRoleRef = useRef<Partial<Record<RoleCode, RoleScopeSelection>>>({});
@@ -193,20 +192,9 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     return scopeMap;
   }, [previewRoleCodes, roleTemplateQueries]);
 
-  const overrideRoleOptions = useMemo<Array<{ code: RoleCode; label: string }>>(
-    () => previewRoleCodes.map((roleCode) => ({
-      code: roleCode,
-      label: roleNameMap.get(roleCode) ?? roleCode,
-    })),
-    [previewRoleCodes, roleNameMap],
-  );
-
   const normalizedSelectedPermissionRole = useMemo<RoleCode>(() => {
-    if (previewRoleCodes.includes(selectedPermissionRole)) {
-      return selectedPermissionRole;
-    }
     return previewRoleCodes[0] ?? (isSuperuserAccount ? 'SUPER_ADMIN' : 'MENTOR');
-  }, [isSuperuserAccount, selectedPermissionRole, previewRoleCodes]);
+  }, [isSuperuserAccount, previewRoleCodes]);
 
   const selectedRoleDefaultScopeTypes = useMemo(
     () => normalizeScopeTypes(
@@ -1012,8 +1000,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     }
   });
   const selectedRoleLabel = roleNameMap.get(normalizedSelectedPermissionRole) ?? normalizedSelectedPermissionRole;
-  const selectedScopeSummary = formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds);
-  const permissionContextSummary = `${selectedRoleLabel}·${selectedScopeSummary}`;
 
   return (
     <div className="mt-6 border-t border-slate-100 pt-6">
@@ -1027,17 +1013,14 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
           <div className="flex items-center gap-6 flex-1 justify-end max-w-2xl">
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">生效角色</span>
-              <select
-                value={normalizedSelectedPermissionRole}
-                onChange={(event) => setSelectedPermissionRole(event.target.value as RoleCode)}
-                className="h-9 min-w-[140px] rounded-xl border border-slate-200/70 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition-all hover:border-primary/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-              >
-                {overrideRoleOptions.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.label} ({getPermissionTemplateCount(item.code)})
-                  </option>
-                ))}
-              </select>
+              <div className="inline-flex h-9 min-w-[140px] items-center gap-2 rounded-xl border border-slate-200/70 bg-white px-3 text-xs font-bold text-slate-700">
+                <span>{selectedRoleLabel}</span>
+                {canViewRoleTemplate && (
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    {getPermissionTemplateCount(normalizedSelectedPermissionRole)}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-3 flex-1 max-w-[320px]">
@@ -1114,7 +1097,6 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
                       <UserPermissionCard
                         key={permission.code}
                         permission={permission}
-                        contextSummary={permissionContextSummary}
                         permissionState={permissionState}
                         loading={false}
                         canCreateOverride={canCreateOverride}

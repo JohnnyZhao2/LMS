@@ -11,7 +11,6 @@ import type {
 
 interface UserPermissionCardProps {
   permission: PermissionCatalogEntry;
-  contextSummary: string;
   permissionState: PermissionState;
   loading: boolean;
   canCreateOverride: boolean;
@@ -24,7 +23,6 @@ interface UserPermissionCardProps {
 
 export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
   permission,
-  contextSummary,
   permissionState,
   loading,
   canCreateOverride,
@@ -69,7 +67,7 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
       <div className="flex items-start justify-between gap-3 min-w-0">
         <div className="flex-1 min-w-0 space-y-1">
           <p className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">{permission.name}</p>
-          <p className="text-[11px] text-slate-500 line-clamp-1">{contextSummary}</p>
+          <p className="text-[11px] text-slate-500 line-clamp-1">{permission.description || permission.code}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
           {loading && <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />}
