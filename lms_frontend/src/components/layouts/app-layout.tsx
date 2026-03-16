@@ -125,8 +125,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </div>
               </div>
 
-              {/* 7. 动态掠光：增加质感亮色 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_10s_infinite] pointer-events-none" />
             </div>
           </>
         );

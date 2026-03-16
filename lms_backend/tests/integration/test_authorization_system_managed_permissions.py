@@ -180,8 +180,6 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'profile.update' not in permission_codes
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
-    assert 'activity_log.view' not in permission_codes
-    assert 'activity_log.policy.update' not in permission_codes
 
 
 @pytest.mark.django_db
@@ -194,7 +192,7 @@ def test_system_managed_permissions_cannot_be_overridden_per_user():
     response = client.post(
         f'/api/authorization/users/{target_user.id}/overrides/',
         {
-            'permission_code': 'activity_log.view',
+            'permission_code': 'submission.answer',
             'effect': 'ALLOW',
             'scope_type': 'ALL',
             'reason': 'should fail',
@@ -357,7 +355,7 @@ def test_replace_role_permissions_preserves_role_dashboard_and_strips_system_man
     assert 'task.view' in permission_codes
     assert 'task.create' in permission_codes
     assert 'quiz.view' in permission_codes
-    assert 'activity_log.view' not in permission_codes
+    assert 'activity_log.view' in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
 
 

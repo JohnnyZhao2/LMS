@@ -47,9 +47,9 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     summary: '管理员菜单中的用户管理页，覆盖用户资料、账号控制和用户授权维护。',
     order: 70,
   },
-  authorization: {
-    label: '授权管理',
-    summary: '权限中心里的角色模板配置能力。',
+  config: {
+    label: '配置管理',
+    summary: '权限中心的角色模板配置和审计日志策略管理。',
     order: 80,
   },
   submission: {
@@ -191,12 +191,20 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
     detail: '彻底删除离职用户。',
   },
   'authorization.role_template.view': {
-    pageLabel: '权限中心 / 角色模板配置',
-    detail: '查看角色模板。',
+    pageLabel: '配置管理 / 角色模板',
+    detail: '查看角色权限模板配置。',
   },
   'authorization.role_template.update': {
-    pageLabel: '权限中心 / 角色模板配置',
-    detail: '更新角色模板。',
+    pageLabel: '配置管理 / 角色模板',
+    detail: '更新角色权限模板配置。',
+  },
+  'activity_log.view': {
+    pageLabel: '配置管理 / 审计日志',
+    detail: '查看用户日志、内容日志和操作日志。',
+  },
+  'activity_log.policy.update': {
+    pageLabel: '配置管理 / 日志策略',
+    detail: '更新活动日志记录策略。',
   },
   'submission.answer': {
     pageLabel: '答题流程',

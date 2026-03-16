@@ -199,13 +199,13 @@ PERMISSION_CATALOG: List[Dict[str, str]] = [
     {
         'code': 'authorization.role_template.view',
         'name': '查看角色模板',
-        'module': 'authorization',
+        'module': 'config',
         'description': '查看角色权限模板',
     },
     {
         'code': 'authorization.role_template.update',
         'name': '更新角色模板',
-        'module': 'authorization',
+        'module': 'config',
         'description': '更新角色权限模板',
     },
     {
@@ -229,13 +229,13 @@ PERMISSION_CATALOG: List[Dict[str, str]] = [
     {
         'code': 'activity_log.view',
         'name': '查看活动日志',
-        'module': 'activity_log',
+        'module': 'config',
         'description': '查看用户日志、内容日志和操作日志',
     },
     {
         'code': 'activity_log.policy.update',
         'name': '更新日志策略',
-        'module': 'activity_log',
+        'module': 'config',
         'description': '更新活动日志记录策略',
     },
 ]
@@ -255,8 +255,6 @@ SYSTEM_MANAGED_PERMISSION_CODES = sorted([
     'profile.update',
     'submission.answer',
     'submission.review',
-    'activity_log.view',
-    'activity_log.policy.update',
 ])
 
 ROLE_SYSTEM_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
