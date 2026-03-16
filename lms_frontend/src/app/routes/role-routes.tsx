@@ -69,7 +69,7 @@ const Dashboard = () => {
   if (currentRole === 'TEAM_MANAGER') {
     return <TeamManagerDashboard />;
   }
-  if (currentRole === 'ADMIN') {
+  if (currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN') {
     return <AdminDashboard />;
   }
 

@@ -156,20 +156,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!permissionCode) {
       return false;
     }
+    if (state.currentRole === 'SUPER_ADMIN' || state.user?.is_superuser) {
+      return true;
+    }
     return state.effectivePermissions.includes(permissionCode);
-  }, [state.effectivePermissions]);
+  }, [state.currentRole, state.effectivePermissions, state.user?.is_superuser]);
 
   const hasAnyPermission = useCallback((permissionCodes: string[]) => {
     if (!permissionCodes.length) {
       return false;
     }
+    if (state.currentRole === 'SUPER_ADMIN' || state.user?.is_superuser) {
+      return true;
+    }
     return permissionCodes.some((permissionCode) => state.effectivePermissions.includes(permissionCode));
-  }, [state.effectivePermissions]);
+  }, [state.currentRole, state.effectivePermissions, state.user?.is_superuser]);
 
   // 初始化时检查 token
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  // 页面重新聚焦时刷新会话，减少权限变更后的滞后感
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      return;
+    }
+
+    const syncSession = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshUser();
+      }
+    };
+
+    window.addEventListener('focus', syncSession);
+    document.addEventListener('visibilitychange', syncSession);
+
+    return () => {
+      window.removeEventListener('focus', syncSession);
+      document.removeEventListener('visibilitychange', syncSession);
+    };
+  }, [refreshUser, state.isAuthenticated]);
 
   const value: AuthContextValue = {
     ...state,

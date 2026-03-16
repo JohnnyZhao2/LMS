@@ -32,6 +32,7 @@ import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
+import { isAdminLikeRole } from '@/lib/role-utils';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
 const assignmentStatusLabelMap: Record<string, string> = {
@@ -62,9 +63,9 @@ export const TaskDetail: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
-  const effectiveRole = role?.toUpperCase() || currentRole;
+  const effectiveRole = (role?.toUpperCase() as typeof currentRole) || currentRole;
   const isStudent = !authLoading && effectiveRole === 'STUDENT';
-  const isAdmin = effectiveRole === 'ADMIN';
+  const isAdmin = isAdminLikeRole(effectiveRole);
   const isMentorOrManager = effectiveRole === 'MENTOR' || effectiveRole === 'DEPT_MANAGER' || effectiveRole === 'TEAM_MANAGER';
 
   const taskId = Number(id);

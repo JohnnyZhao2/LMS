@@ -1,6 +1,7 @@
 import pytest
 from rest_framework.test import APIClient
 
+from apps.authorization.models import Permission, RolePermission
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -45,7 +46,18 @@ def admin_user(department, roles):
         password='password123',
         department=department,
     )
-    UserRole.objects.get_or_create(user=user, role=roles['ADMIN'])
+    admin_role = roles['ADMIN']
+    UserRole.objects.get_or_create(user=user, role=admin_role)
+    permission_ids = Permission.objects.filter(
+        code__in=['user.view', 'user.manage', 'user.authorization.manage'],
+    ).values_list('id', flat=True)
+    RolePermission.objects.bulk_create(
+        [
+            RolePermission(role=admin_role, permission_id=permission_id)
+            for permission_id in permission_ids
+        ],
+        ignore_conflicts=True,
+    )
     return user
 
 
@@ -71,7 +83,6 @@ def super_admin_user(department, roles):
         is_staff=True,
         is_superuser=True,
     )
-    UserRole.objects.get_or_create(user=user, role=roles['ADMIN'])
     return user
 
 
@@ -189,7 +200,7 @@ def test_assign_admin_and_mentor_for_non_superuser_removes_student(api_client, a
 
 
 @pytest.mark.django_db
-def test_assign_roles_for_superuser_only_allows_admin(api_client, admin_user, super_admin_user):
+def test_assign_roles_for_superuser_rejected(api_client, admin_user, super_admin_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -200,11 +211,11 @@ def test_assign_roles_for_superuser_only_allows_admin(api_client, admin_user, su
 
     assert response.status_code == 400
     assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '超级管理员账号只能保留管理员角色' in response.data['message']
+    assert '超管账号为专有角色，不允许分配业务角色' in response.data['message']
 
 
 @pytest.mark.django_db
-def test_assign_admin_role_for_superuser_keeps_admin_only(api_client, admin_user, super_admin_user):
+def test_assign_admin_role_for_superuser_rejected(api_client, admin_user, super_admin_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -213,10 +224,9 @@ def test_assign_admin_role_for_superuser_keeps_admin_only(api_client, admin_user
         format='json',
     )
 
-    assert response.status_code == 200
-    data = unwrap_response_data(response)
-    role_codes = {item['code'] for item in data['roles']}
-    assert role_codes == {'ADMIN'}
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '超管账号为专有角色，不允许分配业务角色' in response.data['message']
 
 
 @pytest.mark.django_db
@@ -254,3 +264,15 @@ def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, admin_us
     data = unwrap_response_data(response)
     role_codes = {item['code'] for item in data['roles']}
     assert role_codes == {'MENTOR', 'STUDENT'}
+
+
+@pytest.mark.django_db
+def test_superuser_detail_exposes_dedicated_super_admin_role(api_client, admin_user, super_admin_user):
+    api_client.force_authenticate(user=admin_user)
+
+    response = api_client.get(f'/api/users/{super_admin_user.id}/')
+
+    assert response.status_code == 200
+    data = unwrap_response_data(response)
+    role_codes = {item['code'] for item in data['roles']}
+    assert role_codes == {'SUPER_ADMIN'}

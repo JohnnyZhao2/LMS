@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from apps.authorization.services import AuthorizationService
 from apps.users.models import User
-from apps.users.permissions import get_current_role
+from apps.users.permissions import SUPER_ADMIN_ROLE, get_accessible_students, get_current_role
 from apps.users.selectors import (
     get_user_by_id,
     list_departments,
@@ -106,9 +106,11 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def post(self, request):
-        enforce_user_permission(request, 'user.create', '只有管理员可以创建用户')
+        enforce_user_permission(request, 'user.manage', '只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('role_codes'):
+            enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return created_response(response_serializer.data)
@@ -153,7 +155,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        enforce_user_permission(request, 'user.update', '只有管理员可以更新用户信息')
+        enforce_user_permission(request, 'user.manage', '只有管理员可以更新用户信息')
         user = self.get_object(pk)
         serializer = UserUpdateSerializer(
             user,
@@ -162,6 +164,8 @@ class UserDetailView(APIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('role_codes') is not None:
+            enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return success_response(response_serializer.data)
@@ -201,7 +205,7 @@ class UserDeactivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.deactivate', '只有管理员可以停用用户')
+        enforce_user_permission(request, 'user.account.manage', '只有管理员可以停用用户')
         user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -223,7 +227,7 @@ class UserActivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.activate', '只有管理员可以启用用户')
+        enforce_user_permission(request, 'user.account.manage', '只有管理员可以启用用户')
         user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -246,7 +250,7 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.assign_roles', '只有管理员可以分配角色')
+        enforce_user_permission(request, 'user.authorization.manage', '只有管理员可以分配角色')
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(
@@ -275,7 +279,7 @@ class UserAssignMentorView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.assign_mentor', '只有管理员可以指定导师')
+        enforce_user_permission(request, 'user.manage', '只有管理员可以指定导师')
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_mentor(
@@ -297,12 +301,16 @@ class MenteesListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user, request) != 'MENTOR':
+        current_role = get_current_role(request.user, request)
+        if current_role == 'MENTOR':
+            mentees = request.user.get_mentees()
+        elif current_role == SUPER_ADMIN_ROLE:
+            mentees = get_accessible_students(request.user, request)
+        else:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有导师可以查看名下学员'
+                message='只有导师或超管可以查看名下学员'
             )
-        mentees = request.user.get_mentees()
         serializer = MenteeListSerializer(mentees, many=True)
         return list_response(serializer.data)
 class DepartmentMembersListView(APIView):
@@ -318,12 +326,16 @@ class DepartmentMembersListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        if get_current_role(request.user, request) != 'DEPT_MANAGER':
+        current_role = get_current_role(request.user, request)
+        if current_role == 'DEPT_MANAGER':
+            members = request.user.get_department_members()
+        elif current_role == SUPER_ADMIN_ROLE:
+            members = list_users(is_active=True)
+        else:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有室经理可以查看本室成员'
+                message='只有室经理或超管可以查看本室成员'
             )
-        members = request.user.get_department_members()
         serializer = DepartmentMemberListSerializer(members, many=True)
         return list_response(serializer.data)
 class MentorsListView(APIView):
@@ -341,7 +353,7 @@ class MentorsListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.create', 'user.update', 'user.assign_mentor', 'user.view'],
+            ['user.manage', 'user.authorization.manage', 'user.view'],
             '无权查看导师列表',
         )
         mentors = list_mentors()
@@ -364,7 +376,7 @@ class DepartmentsListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.create', 'user.update', 'user.view'],
+            ['user.manage', 'user.authorization.manage', 'user.view'],
             '无权查看部门列表',
         )
         departments = list_departments()
@@ -387,7 +399,7 @@ class RolesListView(APIView):
     def get(self, request):
         enforce_any_user_permission(
             request,
-            ['user.create', 'user.update', 'user.assign_roles', 'user.view'],
+            ['user.manage', 'user.authorization.manage', 'user.view'],
             '无权查看角色列表',
         )
         roles = list_roles(exclude_student=True)

@@ -7,6 +7,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.dashboard.services import TeamManagerDashboardService
+from apps.users.permissions import SUPER_ADMIN_ROLE
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.responses import success_response
@@ -31,10 +32,10 @@ class TeamManagerDashboardView(BaseAPIView):
     )
     def get(self, request):
         current_role = self.service.get_current_role()
-        if current_role != 'TEAM_MANAGER':
+        if current_role not in ['TEAM_MANAGER', SUPER_ADMIN_ROLE]:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
-                message='只有团队经理可以访问此仪表盘'
+                message='只有团队经理或超管可以访问此仪表盘'
             )
         data = self.service.get_dashboard_data()
         return success_response(data)

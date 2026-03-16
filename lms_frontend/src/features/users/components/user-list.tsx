@@ -47,12 +47,13 @@ export const UserList: React.FC = () => {
   const { hasPermission } = useAuth()
   const canViewRoleTemplate =
     hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update')
-  const canCreateUser = hasPermission('user.create')
-  const canUpdateUser = hasPermission('user.update')
-  const canDeactivateUser = hasPermission('user.deactivate')
-  const canActivateUser = hasPermission('user.activate')
+  const canManageUser = hasPermission('user.manage')
+  const canManageUserAccount = hasPermission('user.account.manage')
+  const canManageUserAuthorization = hasPermission('user.authorization.manage')
+  const canCreateUser = canManageUser
   const canDeleteUser = hasPermission('user.delete')
-  const canResetPassword = hasPermission('user.reset_password')
+  const canResetPassword = canManageUserAccount
+  const canOpenUserEditor = canManageUser || canManageUserAuthorization
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -251,10 +252,10 @@ export const UserList: React.FC = () => {
               </DropdownMenuLabel>
 
               <DropdownMenuItem
-                disabled={!canUpdateUser}
+                disabled={!canManageUser}
                 className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                 onClick={() => {
-                  if (!canUpdateUser) return
+                  if (!canManageUser) return
                   setEditingUserId(row.original.id)
                   setFormModalOpen(true)
                 }}
@@ -272,7 +273,7 @@ export const UserList: React.FC = () => {
 
               <DropdownMenuSeparator className="my-1" />
 
-              {(row.original.is_active ? canDeactivateUser : canActivateUser) && (
+              {canManageUserAccount && (
                 <DropdownMenuItem
                   className={cn(
                     "rounded-md px-3 py-2 text-sm font-medium cursor-pointer",
@@ -385,7 +386,7 @@ export const UserList: React.FC = () => {
               }}
               rowClassName="group cursor-pointer hover:bg-muted transition-colors"
               onRowClick={(row) => {
-                if (!canUpdateUser) return
+                if (!canOpenUserEditor) return
                 setEditingUserId(row.id)
                 setFormModalOpen(true)
               }}

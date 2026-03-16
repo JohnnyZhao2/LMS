@@ -8,7 +8,10 @@
 """
 from typing import Optional, TypeVar
 
-from apps.users.permissions import get_current_role as _get_current_role
+from apps.users.permissions import (
+    get_current_role as _get_current_role,
+    is_admin_like_role as _is_admin_like_role,
+)
 from core.exceptions import BusinessError, ErrorCodes
 
 T = TypeVar('T')
@@ -107,7 +110,7 @@ class BaseService:
         effective_user = self.user
         effective_request = self.request
         
-        if effective_user and _get_current_role(effective_user, effective_request) != 'ADMIN':
+        if effective_user and not _is_admin_like_role(_get_current_role(effective_user, effective_request)):
             if not hasattr(resource, 'is_current'):
                 return  # 如果资源没有这些属性，跳过检查
             if not resource.is_current:

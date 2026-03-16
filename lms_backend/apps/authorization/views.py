@@ -39,9 +39,7 @@ class PermissionCatalogView(BaseAPIView):
         if not (
             self.service.can('authorization.role_template.view')
             or self.service.can('authorization.role_template.update')
-            or self.service.can('authorization.user_override.view')
-            or self.service.can('authorization.user_override.create')
-            or self.service.can('authorization.user_override.revoke')
+            or self.service.can('user.authorization.manage')
         ):
             self.service.enforce('authorization.role_template.view', error_message='无权查看权限目录')
 
@@ -131,7 +129,7 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, user_id: int):
-        self.service.enforce('authorization.user_override.view', error_message='只有管理员可以查看用户权限覆盖')
+        self.service.enforce('user.authorization.manage', error_message='只有管理员可以查看用户权限覆盖')
 
         include_inactive = request.query_params.get('include_inactive') == 'true'
         overrides = self.service.list_user_permission_overrides(
@@ -152,7 +150,7 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int):
-        self.service.enforce('authorization.user_override.create', error_message='只有管理员可以创建用户权限覆盖')
+        self.service.enforce('user.authorization.manage', error_message='只有管理员可以创建用户权限覆盖')
 
         serializer = UserPermissionOverrideCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -188,7 +186,7 @@ class UserPermissionOverrideRevokeView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int, override_id: int):
-        self.service.enforce('authorization.user_override.revoke', error_message='只有管理员可以撤销用户权限覆盖')
+        self.service.enforce('user.authorization.manage', error_message='只有管理员可以撤销用户权限覆盖')
 
         serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

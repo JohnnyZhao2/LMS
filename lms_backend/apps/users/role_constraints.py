@@ -21,7 +21,7 @@ def validate_role_assignment_constraints(
 
     Rules:
     - DEPT_MANAGER and TEAM_MANAGER are mutually exclusive.
-    - Superuser account can only keep ADMIN role.
+    - Superuser account is a dedicated role and cannot be assigned business roles.
     - TEAM_MANAGER is globally unique (active users only).
     - DEPT_MANAGER is unique per department (active users only).
     """
@@ -50,10 +50,10 @@ def _validate_dedicated_role_composition(*, role_codes: Set[str], is_superuser: 
             message='室经理与团队经理角色互斥，不能同时分配'
         )
 
-    if is_superuser and role_codes != {'ADMIN'}:
+    if is_superuser and role_codes:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
-            message='超级管理员账号只能保留管理员角色'
+            message='超管账号为专有角色，不允许分配业务角色'
         )
 
 

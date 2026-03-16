@@ -26,6 +26,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
@@ -74,7 +75,7 @@ const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean
   const managerCount = roleCodes.filter((code) => MANAGER_MUTEX_ROLE_CODES.includes(code)).length;
 
   if (managerCount > 1) return false;
-  if (isSuperuserAccount) return roleCodes.length === 1 && roleCodes[0] === 'ADMIN';
+  if (isSuperuserAccount) return roleCodes.length === 0;
   return true;
 };
 
@@ -175,6 +176,11 @@ const UserFormContent: React.FC<{
   onClose,
   onSuccess,
 }) => {
+    const { hasPermission } = useAuth();
+    const canManageUser = hasPermission('user.manage');
+    const canManageUserAuthorization = hasPermission('user.authorization.manage');
+    const canSubmitForm = isEdit ? (canManageUser || canManageUserAuthorization) : canManageUser;
+
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
     const assignRoles = useAssignRoles();
@@ -183,7 +189,11 @@ const UserFormContent: React.FC<{
     // 直接从 props 初始化，组件通过 key 重挂载时自动重置
     const [initialRoleCodes] = useState<RoleCode[]>(() =>
       isEdit && userDetail
-        ? userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode)
+        ? (
+          userDetail.is_superuser
+            ? []
+            : userDetail.roles.filter((r) => r.code !== 'STUDENT').map((r) => r.code as RoleCode)
+        )
         : [],
     );
     const [initialAssignedMentorId] = useState<number | null>(() =>
@@ -232,30 +242,61 @@ const UserFormContent: React.FC<{
       setIsSubmitting(true);
       try {
         if (isEdit) {
-          // 检查角色是否有变化
           const roleSet = new Set(formData.role_codes);
           const initialRoleSet = new Set(initialRoleCodes);
           const rolesChanged =
             roleSet.size !== initialRoleSet.size ||
             [...roleSet].some((code) => !initialRoleSet.has(code));
+          const baseInfoChanged = (
+            formData.username !== (userDetail?.username ?? '')
+            || formData.employee_id !== (userDetail?.employee_id ?? '')
+            || (formData.department_id ?? null) !== (userDetail?.department?.id ?? null)
+          );
+          const mentorChanged = mentorTouched && formData.mentor_id !== initialAssignedMentorId;
+          const hasPermissionDraftChanges = permissionSectionRef.current?.hasPendingChanges() ?? false;
 
-          // 一次性更新用户信息（包括角色），后端会在一个事务中处理
-          await updateUser.mutateAsync({
-            id: userId!,
-            data: {
-              username: formData.username,
-              employee_id: formData.employee_id,
-              department_id: formData.department_id,
-              ...(rolesChanged ? { role_codes: formData.role_codes } : {}),
-            },
-          });
+          if ((baseInfoChanged || mentorChanged) && !canManageUser) {
+            toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
+            return;
+          }
+          if (rolesChanged && !canManageUserAuthorization) {
+            toast.error('当前账号没有用户授权管理权限，无法调整角色');
+            return;
+          }
+          if (hasPermissionDraftChanges && !canManageUserAuthorization) {
+            toast.error('当前账号没有用户授权管理权限，无法提交权限草稿');
+            return;
+          }
 
-          if (mentorTouched && formData.mentor_id !== initialAssignedMentorId) {
+          if (baseInfoChanged) {
+            await updateUser.mutateAsync({
+              id: userId!,
+              data: {
+                username: formData.username,
+                employee_id: formData.employee_id,
+                department_id: formData.department_id,
+              },
+            });
+          }
+          if (mentorChanged) {
             await assignMentor.mutateAsync({ id: userId!, mentorId: formData.mentor_id });
           }
-          await permissionSectionRef.current?.submitChanges();
+          if (rolesChanged) {
+            await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
+          }
+          if (hasPermissionDraftChanges) {
+            await permissionSectionRef.current?.submitChanges();
+          }
           toast.success("账号信息已更新");
         } else {
+          if (!canManageUser) {
+            toast.error('当前账号没有用户资料管理权限，无法创建账号');
+            return;
+          }
+          if (formData.role_codes.length > 0 && !canManageUserAuthorization) {
+            toast.error('当前账号没有用户授权管理权限，无法分配角色');
+            return;
+          }
           const newUser = await createUser.mutateAsync({
             username: formData.username,
             employee_id: formData.employee_id,
@@ -349,6 +390,7 @@ const UserFormContent: React.FC<{
                           value={formData.username}
                           onChange={e => setFormData({ ...formData, username: e.target.value })}
                           placeholder="输入姓名"
+                          disabled={!canManageUser}
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                         />
                       </div>
@@ -362,6 +404,7 @@ const UserFormContent: React.FC<{
                         <Input
                           value={formData.employee_id}
                           onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
+                          disabled={!canManageUser}
                           className="h-10 font-mono bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="例如：EMP001"
                         />
@@ -379,6 +422,7 @@ const UserFormContent: React.FC<{
                           type="password"
                           value={formData.password}
                           onChange={e => setFormData({ ...formData, password: e.target.value })}
+                          disabled={!canManageUser}
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="设置 6 位以上密码"
                         />
@@ -399,7 +443,9 @@ const UserFormContent: React.FC<{
                     <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
                       <Select
                         value={formData.mentor_id?.toString() || ''}
+                        disabled={!canManageUser}
                         onValueChange={(v) => {
+                          if (!canManageUser) return;
                           setMentorTouched(true);
                           setFormData({ ...formData, mentor_id: v ? Number(v) : null });
                         }}
@@ -433,11 +479,12 @@ const UserFormContent: React.FC<{
                           )}
                         </SelectContent>
                       </Select>
-                      {formData.mentor_id && (
+                      {formData.mentor_id && canManageUser && (
                         <button
                           type="button"
                           className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-destructive transition-colors z-[20]"
                           onClick={() => {
+                            if (!canManageUser) return;
                             setMentorTouched(true);
                             setFormData({ ...formData, mentor_id: null });
                           }}
@@ -461,9 +508,13 @@ const UserFormContent: React.FC<{
                         return (
                           <div
                             key={dept.id}
-                            onClick={() => setFormData({ ...formData, department_id: dept.id })}
+                            onClick={() => {
+                              if (!canManageUser) return;
+                              setFormData({ ...formData, department_id: dept.id });
+                            }}
                             className={cn(
-                              "cursor-pointer px-6 py-2 rounded-full border transition-all duration-300 ease-in-out",
+                              "px-6 py-2 rounded-full border transition-all duration-300 ease-in-out",
+                              canManageUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                               active
                                 ? "border-primary text-primary bg-white shadow-sm"
                                 : "bg-white border-slate-100 hover:border-slate-200 text-slate-500 hover:text-slate-700"
@@ -490,7 +541,7 @@ const UserFormContent: React.FC<{
                 {roles.filter(r => r.code !== 'STUDENT').map(role => {
                   const roleCode = role.code as RoleCode;
                   const active = formData.role_codes.includes(roleCode);
-                  const disabled = isRoleToggleDisabled(roleCode, active);
+                  const disabled = !canManageUserAuthorization || isRoleToggleDisabled(roleCode, active);
                   const colorConfig = ROLE_COLORS[role.code] || ROLE_COLORS.STUDENT;
 
                   return (
@@ -510,7 +561,7 @@ const UserFormContent: React.FC<{
                         "absolute -right-3 -bottom-5 transition-all duration-700",
                         active ? cn("opacity-[0.2] scale-110", colorConfig.textClass) : "opacity-[0.3] scale-100 text-slate-200"
                       )}>
-                        {role.code === 'ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
+                        {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? <Shield className="w-24 h-24" strokeWidth={0.5} /> :
                           role.code === 'DEPT_MANAGER' ? <Building2 className="w-24 h-24" strokeWidth={0.5} /> :
                             role.code === 'TEAM_MANAGER' ? <Users className="w-24 h-24" strokeWidth={0.5} /> :
                               <User className="w-24 h-24" strokeWidth={0.5} />}
@@ -525,7 +576,7 @@ const UserFormContent: React.FC<{
                           "text-[10px] font-bold transition-all duration-300 opacity-60",
                           active ? colorConfig.textClass : "text-slate-300"
                         )}>
-                          {role.code === 'ADMIN' ? '全系统最高管理权限' :
+                          {role.code === 'ADMIN' || role.code === 'SUPER_ADMIN' ? '全系统最高管理权限' :
                             role.code === 'DEPT_MANAGER' ? '部门及人员管理' :
                               role.code === 'TEAM_MANAGER' ? '团队协作与执行' :
                                 '职能岗位权限'}
@@ -566,7 +617,7 @@ const UserFormContent: React.FC<{
               </button>
               <Button
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || !canSubmitForm}
                 className="h-10 px-9 rounded-full bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
               >
                 {isLoading ? "处理中..." : isEdit ? "更新" : "创建"}

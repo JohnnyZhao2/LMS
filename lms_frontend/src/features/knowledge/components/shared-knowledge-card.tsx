@@ -3,7 +3,6 @@ import {
   Pencil,
   Eye,
   List,
-  ArrowUpRight,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
@@ -64,11 +63,10 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={e => e.stopPropagation()}>
           {shouldShowActions && (
             <button
-              className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-text-muted hover:bg-primary-100 hover:text-primary-700 transition-all duration-200 "
+              className="h-8 w-8 rounded-md bg-muted flex items-center justify-center text-text-muted hover:bg-primary-100 hover:text-primary-700 transition-all duration-200"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -120,13 +118,10 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
           avatarText={(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
         />
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <div className="flex items-center gap-1 text-text-muted">
             <Eye className="w-3.5 h-3.5" />
             <span className="text-[10px] font-semibold">{item.view_count || 0}</span>
-          </div>
-          <div className="h-8 w-8 rounded-md bg-primary text-white flex items-center justify-center group-hover:bg-primary-600 transition-all duration-200 group-hover:scale-110">
-            <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
       </div>

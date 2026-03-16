@@ -9,7 +9,7 @@ const USER_INFO_KEY = 'lms_user_info';
 const CURRENT_ROLE_KEY = 'lms_current_role';
 const AVAILABLE_ROLES_KEY = 'lms_available_roles';
 const EFFECTIVE_PERMISSIONS_KEY = 'lms_effective_permissions';
-const ROLE_CODES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER'];
+const ROLE_CODES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER', 'SUPER_ADMIN'];
 
 const parseStorageJson = <T>(key: string, fallback: T): T => {
   const rawValue = localStorage.getItem(key);

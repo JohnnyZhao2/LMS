@@ -34,6 +34,7 @@ import type { TaskListItem } from "@/types/api"
 import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
 import { ContentPanel } from '@/components/ui/content-panel';
+import { isAdminLikeRole } from '@/lib/role-utils';
 
 /**
  * 辅助组件: 趋势图标
@@ -55,7 +56,7 @@ export const TaskManagement: React.FC = () => {
     const [isDeleting, setIsDeleting] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
-    const isAdmin = currentRole === 'ADMIN'
+    const isAdmin = isAdminLikeRole(currentRole)
 
     const { data: tasksData, isLoading, refetch } = useTaskList({
         page,
@@ -186,8 +187,8 @@ export const TaskManagement: React.FC = () => {
             header: "操作",
             id: "actions",
             cell: ({ row }) => {
-                const canEdit = currentRole === 'ADMIN' || row.original.created_by === user?.id;
-                const canPreview = currentRole === 'ADMIN' || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
+                const canEdit = isAdminLikeRole(currentRole) || row.original.created_by === user?.id;
+                const canPreview = isAdminLikeRole(currentRole) || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
                     <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>

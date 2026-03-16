@@ -8,6 +8,9 @@ from .constants import EFFECT_CHOICES, SCOPE_CHOICES, SCOPE_EXPLICIT_USERS, VISI
 from .models import Permission, UserPermissionOverride
 
 
+NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'STUDENT']
+
+
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
@@ -43,7 +46,7 @@ class UserPermissionOverrideCreateSerializer(serializers.Serializer):
     permission_code = serializers.CharField(help_text='权限编码')
     effect = serializers.ChoiceField(choices=EFFECT_CHOICES, help_text='覆盖效果')
     applies_to_role = serializers.ChoiceField(
-        choices=Role.ROLE_CHOICES,
+        choices=NON_STUDENT_ROLE_CHOICES,
         required=False,
         allow_null=True,
         help_text='仅对某个激活角色生效（可选）',

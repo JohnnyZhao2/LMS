@@ -14,6 +14,7 @@ from django.db.models import Max
 
 from apps.knowledge.models import Tag
 from apps.questions.models import Question
+from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -117,7 +118,7 @@ class QuizService(BaseService):
             True 如果有权限
         """
         # Admin can edit/delete any quiz
-        if self.get_current_role() == 'ADMIN':
+        if is_admin_like_role(self.get_current_role()):
             return True
         # Others can only edit/delete their own quizzes
         return quiz.created_by_id == self.user.id

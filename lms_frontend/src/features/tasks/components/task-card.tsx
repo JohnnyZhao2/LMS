@@ -22,6 +22,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
+import { isAdminLikeRole } from '@/lib/role-utils';
 
 type TaskCardProps =
   | { variant: 'student'; task: StudentTaskCenterItem }
@@ -103,7 +104,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const deadline = dayjs(task.deadline);
   const isUrgent = !managerClosed && deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
 
-  const canEditTask = !isStudentView && (currentRole === 'ADMIN' || managerTask?.created_by === user?.id);
+  const canEditTask = !isStudentView && (isAdminLikeRole(currentRole) || managerTask?.created_by === user?.id);
 
   return (
     <div

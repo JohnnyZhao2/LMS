@@ -61,6 +61,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             label: "管 理 后 台 // 架构 · 权限 · 全局",
             ref: "卷号索引: ROOT-ADMIN",
             bgTint: "rgba(244, 63, 94, 0.025)"
+          },
+          SUPER_ADMIN: {
+            color: "#DC2626", // 深红 (Red-600)
+            label: "超 管 中 心 // 全域 · 审计 · 主控",
+            ref: "卷号索引: ROOT-SUPER",
+            bgTint: "rgba(220, 38, 38, 0.03)"
           }
         };
 

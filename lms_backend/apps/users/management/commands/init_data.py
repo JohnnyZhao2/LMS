@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.authorization.services import AuthorizationService
-from apps.users.models import Department, Role, User, UserRole
+from apps.users.models import Department, Role, User
 
 
 class Command(BaseCommand):
@@ -49,12 +49,12 @@ class Command(BaseCommand):
             status = '创建' if created else '已存在'
             self.stdout.write(f"  角色 {role.name}: {status}")
     def create_admin_user(self):
-        """创建管理员账号"""
+        """创建超管账号"""
         dept = Department.objects.filter(code='DEPT1').first()
         admin, created = User.objects.get_or_create(
             employee_id='ADMIN001',
             defaults={
-                'username': '系统管理员',  # username 字段存储显示名称
+                'username': '系统超管',  # username 字段存储显示名称
                 'department': dept,
                 'is_staff': True,
                 'is_superuser': True,
@@ -63,9 +63,6 @@ class Command(BaseCommand):
         if created:
             admin.set_password('admin123')
             admin.save()
-            self.stdout.write(f"  管理员账号: 创建 (工号: ADMIN001, 密码: admin123)")
+            self.stdout.write(f"  超管账号: 创建 (工号: ADMIN001, 密码: admin123)")
         else:
-            self.stdout.write(f"  管理员账号: 已存在")
-        # 确保管理员有 ADMIN 角色
-        admin_role = Role.objects.get(code='ADMIN')
-        UserRole.objects.get_or_create(user=admin, role=admin_role)
+            self.stdout.write(f"  超管账号: 已存在")

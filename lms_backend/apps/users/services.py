@@ -127,7 +127,7 @@ class UserManagementService(BaseService):
         Assign roles to a user.
         For non-superusers, STUDENT role is preserved only when user has
         no leadership role (ADMIN/DEPT_MANAGER/TEAM_MANAGER).
-        Superuser accounts can only keep ADMIN role.
+        Superuser accounts are dedicated and cannot be assigned business roles.
         Args:
             user_id: The user ID to assign roles to
             role_codes: List of role codes to assign (excluding STUDENT)
@@ -143,6 +143,11 @@ class UserManagementService(BaseService):
         """
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
+        if user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='超管账号为专有角色，不允许分配业务角色',
+            )
 
         # 统一验证角色约束（专有角色组合、超级管理员限制、唯一性）
         validate_role_assignment_constraints(

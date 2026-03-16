@@ -5,6 +5,7 @@ from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.authorization.models import Permission, RolePermission
 from apps.knowledge.models import Knowledge, Tag
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz, QuizQuestion
@@ -39,6 +40,9 @@ def admin_user(department, admin_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=admin_role)
+    permission = Permission.objects.filter(code='user.delete').first()
+    if permission:
+        RolePermission.objects.get_or_create(role=admin_role, permission=permission)
     return user
 
 

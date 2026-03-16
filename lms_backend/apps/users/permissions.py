@@ -9,6 +9,9 @@ from rest_framework.permissions import BasePermission
 
 NON_STUDENT_ROLES = ['ADMIN', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER']
 LEARNING_POOL_EXCLUDED_ROLE_CODES = ['DEPT_MANAGER', 'TEAM_MANAGER']
+SUPER_ADMIN_ROLE = 'SUPER_ADMIN'
+SUPER_ADMIN_ROLE_NAME = '超管'
+ADMIN_LIKE_ROLES = {'ADMIN', SUPER_ADMIN_ROLE}
 SCOPE_ALL = 'ALL'
 SCOPE_SELF = 'SELF'
 SCOPE_MENTEES = 'MENTEES'
@@ -16,6 +19,18 @@ SCOPE_DEPARTMENT = 'DEPARTMENT'
 SCOPE_EXPLICIT_USERS = 'EXPLICIT_USERS'
 EFFECT_ALLOW = 'ALLOW'
 EFFECT_DENY = 'DENY'
+
+
+def is_super_admin(user) -> bool:
+    return bool(
+        user
+        and getattr(user, 'is_authenticated', False)
+        and getattr(user, 'is_superuser', False)
+    )
+
+
+def is_admin_like_role(role_code: Optional[str]) -> bool:
+    return role_code in ADMIN_LIKE_ROLES
 
 
 def get_current_role(user, request):
@@ -29,6 +44,9 @@ def get_current_role(user, request):
     """
     if not user or not user.is_authenticated:
         return None
+
+    if is_super_admin(user):
+        return SUPER_ADMIN_ROLE
 
     # Priority 1: Use current_role attribute set by authentication (token claim)
     if hasattr(user, 'current_role') and user.current_role:
@@ -56,7 +74,8 @@ class IsAdminOrMentorOrDeptManager(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        return get_current_role(request.user, request) in ['ADMIN', 'MENTOR', 'DEPT_MANAGER']
+        current_role = get_current_role(request.user, request)
+        return is_admin_like_role(current_role) or current_role in ['MENTOR', 'DEPT_MANAGER']
 
 
 def _pure_student_queryset() -> QuerySet:
@@ -73,6 +92,7 @@ def _pure_student_queryset() -> QuerySet:
 
     return User.objects.filter(
         is_active=True,
+        is_superuser=False,
         roles__code='STUDENT',
     ).exclude(
         id__in=non_student_user_ids,
@@ -110,7 +130,7 @@ def _get_role_default_accessible_students(user, request) -> QuerySet:
 
     base_qs = _pure_student_queryset()
 
-    if current_role == 'ADMIN':
+    if is_admin_like_role(current_role):
         return base_qs
 
     if current_role == 'TEAM_MANAGER':
@@ -144,7 +164,7 @@ def _resolve_scope_student_ids(
     ids = tuple(sorted({int(user_id) for user_id in scope_user_ids}))
 
     if scope_type == SCOPE_ALL:
-        if current_role == 'ADMIN':
+        if is_admin_like_role(current_role):
             queryset = _pure_student_queryset()
         else:
             queryset = _learning_member_queryset()

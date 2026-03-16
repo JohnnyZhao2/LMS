@@ -130,7 +130,7 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin(self) -> bool:
         """是否为管理员"""
-        return self.has_role('ADMIN')
+        return self.is_superuser or self.has_role('ADMIN')
     @cached_property
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""

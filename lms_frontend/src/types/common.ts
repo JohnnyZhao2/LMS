@@ -8,7 +8,7 @@
 /**
  * 角色代码
  */
-export type RoleCode = 'STUDENT' | 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN' | 'TEAM_MANAGER';
+export type RoleCode = 'STUDENT' | 'MENTOR' | 'DEPT_MANAGER' | 'ADMIN' | 'TEAM_MANAGER' | 'SUPER_ADMIN';
 
 /**
  * 任务状态

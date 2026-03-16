@@ -141,11 +141,11 @@ def test_login_response_contains_effective_permissions():
     assert login_response.data['code'] == 'SUCCESS'
     effective_permissions = login_response.data['data'].get('effective_permissions')
     assert isinstance(effective_permissions, list)
-    assert 'user.view' in effective_permissions
+    assert 'knowledge.view' in effective_permissions
 
 
 @pytest.mark.django_db
-def test_user_view_permission_can_be_denied_by_override():
+def test_knowledge_view_permission_can_be_denied_by_override():
     client = APIClient()
 
     department = Department.objects.create(name='Dept 5', code='DEPT5')
@@ -159,7 +159,7 @@ def test_user_view_permission_can_be_denied_by_override():
     )
     UserRole.objects.get_or_create(user=admin_user, role=admin_role)
 
-    permission = Permission.objects.get(code='user.view')
+    permission = Permission.objects.get(code='knowledge.view')
     UserPermissionOverride.objects.create(
         user=admin_user,
         permission=permission,
@@ -179,6 +179,69 @@ def test_user_view_permission_can_be_denied_by_override():
     access_token = login_response.data['data']['access_token']
 
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    response = client.get('/api/users/')
+    response = client.get('/api/knowledge/')
     assert response.status_code == 400
     assert response.data['code'] == 'PERMISSION_DENIED'
+
+
+@pytest.mark.django_db
+def test_superuser_login_returns_dedicated_super_admin_role():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept 6', code='DEPT6')
+    User.objects.create_user(
+        employee_id='EMP006',
+        username='Super Admin User',
+        password='password123',
+        department=department,
+        is_staff=True,
+        is_superuser=True,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP006', 'password': 'password123'},
+        format='json',
+    )
+
+    assert login_response.status_code == 200
+    payload = login_response.data['data']
+    assert payload['current_role'] == 'SUPER_ADMIN'
+    assert payload['available_roles'] == [{'code': 'SUPER_ADMIN', 'name': '超管'}]
+    assert 'user.view' in payload['effective_permissions']
+    assert 'knowledge.view' in payload['effective_permissions']
+    assert 'activity_log.view' in payload['effective_permissions']
+
+
+@pytest.mark.django_db
+def test_superuser_switch_role_rejected():
+    client = APIClient()
+
+    department = Department.objects.create(name='Dept 7', code='DEPT7')
+    User.objects.create_user(
+        employee_id='EMP007',
+        username='Super Admin Switch User',
+        password='password123',
+        department=department,
+        is_staff=True,
+        is_superuser=True,
+    )
+
+    login_response = client.post(
+        '/api/auth/login/',
+        {'employee_id': 'EMP007', 'password': 'password123'},
+        format='json',
+    )
+    assert login_response.status_code == 200
+    access_token = login_response.data['data']['access_token']
+
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    switch_response = client.post(
+        '/api/auth/switch-role/',
+        {'role_code': 'ADMIN'},
+        format='json',
+    )
+
+    assert switch_response.status_code == 400
+    assert switch_response.data['code'] == 'AUTH_INVALID_ROLE'
+    assert '不支持角色切换' in switch_response.data['message']

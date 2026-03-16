@@ -11,6 +11,7 @@ import uuid
 from django.db import transaction
 
 from apps.knowledge.models import Tag
+from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -65,7 +66,7 @@ class QuestionService(BaseService):
             QuerySet
         """
         # 非管理员默认只显示当前版本的题目
-        if self.user and self.get_current_role() != 'ADMIN':
+        if self.user and not is_admin_like_role(self.get_current_role()):
             if not filters:
                 filters = {}
             if 'is_current' not in filters:
@@ -92,7 +93,7 @@ class QuestionService(BaseService):
             BusinessError: 如果权限不足
         """
         # 管理员可以编辑/删除任何题目
-        if self.get_current_role() == 'ADMIN':
+        if is_admin_like_role(self.get_current_role()):
             return True
         # 其他人只能编辑/删除自己创建的题目
         if question.created_by_id != self.user.id:

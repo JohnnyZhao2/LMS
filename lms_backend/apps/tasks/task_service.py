@@ -15,6 +15,7 @@ from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
 from apps.authorization.services import AuthorizationService
 from apps.users.models import User
+from apps.users.permissions import SUPER_ADMIN_ROLE, is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
@@ -41,7 +42,7 @@ class TaskService(BaseService):
     - Permission checks for task operations
     """
 
-    MANAGEMENT_SIDE_ROLES = ['ADMIN']
+    MANAGEMENT_SIDE_ROLES = ['ADMIN', SUPER_ADMIN_ROLE]
 
     def get_task_queryset_for_user(self) -> QuerySet:
         """
@@ -51,7 +52,7 @@ class TaskService(BaseService):
         """
         current_role = self.get_current_role()
         qs = task_base_queryset(include_deleted=False)
-        if current_role == 'ADMIN':
+        if is_admin_like_role(current_role):
             return qs
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
             return qs.filter(
@@ -75,7 +76,7 @@ class TaskService(BaseService):
         if not creator_side or creator_side == 'all':
             return queryset
 
-        if self.get_current_role() != 'ADMIN':
+        if not is_admin_like_role(self.get_current_role()):
             return queryset
 
         if creator_side == 'management':
@@ -126,7 +127,7 @@ class TaskService(BaseService):
             )
 
         current_role = self.get_current_role()
-        if current_role == 'ADMIN':
+        if is_admin_like_role(current_role):
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
             if task.created_by == self.user and task.created_role == current_role:
@@ -182,7 +183,7 @@ class TaskService(BaseService):
             )
 
         current_role = self.get_current_role()
-        if current_role == 'ADMIN':
+        if is_admin_like_role(current_role):
             return True
         if current_role in ['MENTOR', 'DEPT_MANAGER']:
             if task.created_by == self.user and task.created_role == current_role:
@@ -224,7 +225,12 @@ class TaskService(BaseService):
             'task.create',
             error_message='无权创建任务',
         )
-        created_role = self.get_current_role() or 'ADMIN'
+        current_role = self.get_current_role()
+        created_role = (
+            'ADMIN'
+            if current_role == SUPER_ADMIN_ROLE
+            else (current_role or 'ADMIN')
+        )
         # Create task
         task = Task.objects.create(
             title=title,

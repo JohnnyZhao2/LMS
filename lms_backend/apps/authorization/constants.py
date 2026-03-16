@@ -167,52 +167,28 @@ PERMISSION_CATALOG: List[Dict[str, str]] = [
         'description': '查看用户列表和详情',
     },
     {
-        'code': 'user.create',
-        'name': '创建用户',
+        'code': 'user.manage',
+        'name': '管理用户资料',
         'module': 'user',
-        'description': '创建新用户',
+        'description': '创建用户、编辑用户资料和指定导师',
     },
     {
-        'code': 'user.update',
-        'name': '更新用户',
+        'code': 'user.account.manage',
+        'name': '管理用户账号',
         'module': 'user',
-        'description': '更新用户基础信息',
+        'description': '启用/停用账号并重置密码',
+    },
+    {
+        'code': 'user.authorization.manage',
+        'name': '管理用户授权',
+        'module': 'user',
+        'description': '分配角色并配置用户权限自定义',
     },
     {
         'code': 'user.delete',
         'name': '删除用户',
         'module': 'user',
         'description': '彻底删除离职用户',
-    },
-    {
-        'code': 'user.activate',
-        'name': '启用用户',
-        'module': 'user',
-        'description': '启用停用账号',
-    },
-    {
-        'code': 'user.deactivate',
-        'name': '停用用户',
-        'module': 'user',
-        'description': '停用账号',
-    },
-    {
-        'code': 'user.reset_password',
-        'name': '重置密码',
-        'module': 'user',
-        'description': '重置用户密码并生成临时密码',
-    },
-    {
-        'code': 'user.assign_roles',
-        'name': '分配角色',
-        'module': 'user',
-        'description': '为用户分配角色',
-    },
-    {
-        'code': 'user.assign_mentor',
-        'name': '指定导师',
-        'module': 'user',
-        'description': '为学员指定导师',
     },
     {
         'code': 'authorization.role_template.view',
@@ -225,24 +201,6 @@ PERMISSION_CATALOG: List[Dict[str, str]] = [
         'name': '更新角色模板',
         'module': 'authorization',
         'description': '更新角色权限模板',
-    },
-    {
-        'code': 'authorization.user_override.view',
-        'name': '查看用户权限覆盖',
-        'module': 'authorization',
-        'description': '查看用户级权限覆盖规则',
-    },
-    {
-        'code': 'authorization.user_override.create',
-        'name': '创建用户权限覆盖',
-        'module': 'authorization',
-        'description': '新增用户级权限覆盖规则',
-    },
-    {
-        'code': 'authorization.user_override.revoke',
-        'name': '撤销用户权限覆盖',
-        'module': 'authorization',
-        'description': '撤销用户级权限覆盖规则',
     },
     {
         'code': 'analytics.view',
@@ -305,10 +263,7 @@ ROLE_SYSTEM_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
     'TEAM_MANAGER': [
         'analytics.view',
     ],
-    'ADMIN': [
-        'activity_log.view',
-        'activity_log.policy.update',
-    ],
+    'ADMIN': [],
 }
 
 
@@ -386,23 +341,6 @@ ROLE_PERMISSION_DEFAULTS: Dict[str, List[str]] = {
         'task.update',
         'task.delete',
         'task.assign',
-        'task.analytics.view',
-        'grading.view',
-        'grading.score',
-        'user.view',
-        'user.create',
-        'user.update',
-        'user.delete',
-        'user.activate',
-        'user.deactivate',
-        'user.reset_password',
-        'user.assign_roles',
-        'user.assign_mentor',
-        'authorization.role_template.view',
-        'authorization.role_template.update',
-        'authorization.user_override.view',
-        'authorization.user_override.create',
-        'authorization.user_override.revoke',
     ],
 }
 
@@ -442,6 +380,16 @@ ROLE_DEFAULT_SCOPE_TYPES = {
     'DEPT_MANAGER': [SCOPE_DEPARTMENT],
     'TEAM_MANAGER': [SCOPE_ALL],
     'ADMIN': [SCOPE_ALL],
+}
+
+# 仅这些权限会在服务端按“学员对象范围”解析覆盖规则。
+# 其他权限的覆盖规则统一按全局能力处理（scope=ALL）。
+SCOPE_AWARE_PERMISSION_CODES = {
+    'spot_check.view',
+    'spot_check.create',
+    'task.assign',
+    'task.analytics.view',
+    'knowledge.view',
 }
 
 

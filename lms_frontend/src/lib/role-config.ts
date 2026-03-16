@@ -14,6 +14,7 @@ export interface RoleColorConfig {
  * 角色颜色映射（用于标签显示）
  */
 export const ROLE_COLORS: Record<string, RoleColorConfig> = {
+  SUPER_ADMIN: { bgClass: 'bg-destructive-100', textClass: 'text-destructive', iconBgClass: 'bg-destructive', borderClass: 'border-destructive' },
   ADMIN: { bgClass: 'bg-destructive-100', textClass: 'text-destructive', iconBgClass: 'bg-destructive', borderClass: 'border-destructive' },
   MENTOR: { bgClass: 'bg-warning-100', textClass: 'text-warning', iconBgClass: 'bg-warning', borderClass: 'border-warning' },
   DEPT_MANAGER: { bgClass: 'bg-primary-100', textClass: 'text-primary-600', iconBgClass: 'bg-primary-600', borderClass: 'border-primary-600' },

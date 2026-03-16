@@ -110,12 +110,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   dialogContentElement,
 }, ref) => {
   const { hasPermission, refreshUser } = useAuth();
-  const canViewOverride =
-    hasPermission('authorization.user_override.view')
-    || hasPermission('authorization.user_override.create')
-    || hasPermission('authorization.user_override.revoke');
-  const canCreateOverride = hasPermission('authorization.user_override.create');
-  const canRevokeOverride = hasPermission('authorization.user_override.revoke');
+  const canManageUserAuthorization = hasPermission('user.authorization.manage');
+  const canViewOverride = canManageUserAuthorization;
+  const canCreateOverride = canManageUserAuthorization;
+  const canRevokeOverride = canManageUserAuthorization;
   const canViewRoleTemplate =
     hasPermission('authorization.role_template.view')
     || hasPermission('authorization.role_template.update');
@@ -134,7 +132,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   const createUserOverride = useCreateUserPermissionOverride();
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const [selectedPermissionModule, setSelectedPermissionModule] = useState('');
-  const [selectedPermissionRole, setSelectedPermissionRole] = useState<RoleCode>('STUDENT');
+  const [selectedPermissionRole, setSelectedPermissionRole] = useState<RoleCode>('MENTOR');
   const [selectedPermissionScopes, setSelectedPermissionScopes] = useState<PermissionOverrideScope[]>([]);
   const [selectedScopeUserIds, setSelectedScopeUserIds] = useState<number[]>([]);
   const scopeSelectionByRoleRef = useRef<Partial<Record<RoleCode, RoleScopeSelection>>>({});
@@ -155,18 +153,21 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     roles.forEach((role) => {
       nameMap.set(role.code, role.name);
     });
-    if (!nameMap.has('STUDENT')) {
-      nameMap.set('STUDENT', '学员');
+    if (!nameMap.has('SUPER_ADMIN')) {
+      nameMap.set('SUPER_ADMIN', '超级管理员');
     }
     return nameMap;
   }, [roles]);
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => {
     if (isSuperuserAccount) {
-      return ['ADMIN'];
+      return ['SUPER_ADMIN'];
     }
-    return Array.from(new Set<RoleCode>(['STUDENT', ...selectedRoleCodes]));
+    return Array.from(new Set(
+      selectedRoleCodes.filter((roleCode) => roleCode !== 'STUDENT' && roleCode !== 'SUPER_ADMIN'),
+    ));
   }, [selectedRoleCodes, isSuperuserAccount]);
+  const hasConfigurablePermissionRoles = previewRoleCodes.length > 0;
 
   const roleTemplateQueries = useRolePermissionTemplates(
     previewRoleCodes,
@@ -204,8 +205,8 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     if (previewRoleCodes.includes(selectedPermissionRole)) {
       return selectedPermissionRole;
     }
-    return previewRoleCodes[0] ?? 'STUDENT';
-  }, [selectedPermissionRole, previewRoleCodes]);
+    return previewRoleCodes[0] ?? (isSuperuserAccount ? 'SUPER_ADMIN' : 'MENTOR');
+  }, [isSuperuserAccount, selectedPermissionRole, previewRoleCodes]);
 
   const selectedRoleDefaultScopeTypes = useMemo(
     () => normalizeScopeTypes(
@@ -237,7 +238,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
       return [];
     }
     return userOverrides
-      .filter((override) => override.is_active)
+      .filter((override) => override.is_active && override.applies_to_role !== 'STUDENT')
       .map((override) => ({
         ...override,
         scope_user_ids: normalizeScopeUserIds(override.scope_user_ids),
@@ -380,6 +381,13 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   }, [effectiveDraftOverrides, getPresetMatchedScopeUserIds]);
 
   useEffect(() => {
+    if (!hasConfigurablePermissionRoles) {
+      setSelectedPermissionScopes((prev) => (prev.length > 0 ? [] : prev));
+      setSelectedScopeUserIds((prev) => (prev.length > 0 ? [] : prev));
+      lastAppliedRoleSelectionRef.current = null;
+      return;
+    }
+
     if (shouldLoadUserOverrides && isLoadingUserOverrides && effectiveDraftOverrides.length === 0) {
       return;
     }
@@ -428,6 +436,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     effectiveDraftOverrides.length,
     getPresetMatchedScopeUserIds,
     getRoleScopeSelectionFromOverrides,
+    hasConfigurablePermissionRoles,
     isLoadingUserOverrides,
     normalizedSelectedPermissionRole,
     selectedRoleDefaultScopeTypes,
@@ -435,6 +444,9 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   ]);
 
   useEffect(() => {
+    if (!hasConfigurablePermissionRoles) {
+      return;
+    }
     const roleCode = normalizedSelectedPermissionRole;
     const normalizedScopeTypes = normalizeScopeTypes(selectedPermissionScopes);
     const normalizedScopeUserIds = normalizeScopeUserIds(selectedScopeUserIds);
@@ -443,7 +455,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
       scopeTypes: normalizedScopeTypes,
       scopeUserIds: normalizedScopeUserIds,
     };
-  }, [normalizedSelectedPermissionRole, selectedPermissionScopes, selectedScopeUserIds]);
+  }, [hasConfigurablePermissionRoles, normalizedSelectedPermissionRole, selectedPermissionScopes, selectedScopeUserIds]);
 
   const applyScopePresetWithAutoSelection = (scopeTypes: PermissionOverrideScope[]) => {
     const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
@@ -774,6 +786,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
 
   const handlePermissionToggle = (permissionCode: string, nextChecked: boolean) => {
     if (!userId) return;
+    if (!hasConfigurablePermissionRoles) {
+      toast.error('请先分配管理角色，再配置用户权限');
+      return;
+    }
 
     if (selectedPermissionScopes.length === 0) {
       toast.error('请先选择扩展范围');
@@ -1007,57 +1023,67 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
           <h3 className="text-base font-bold text-slate-800">用户权限自定义</h3>
         </div>
 
-        <div className="flex items-center gap-6 flex-1 justify-end max-w-2xl">
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">生效角色</span>
-            <select
-              value={normalizedSelectedPermissionRole}
-              onChange={(event) => setSelectedPermissionRole(event.target.value as RoleCode)}
-              className="h-9 min-w-[140px] rounded-xl border border-slate-200/70 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition-all hover:border-primary/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
-            >
-              {overrideRoleOptions.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.label} ({getPermissionTemplateCount(item.code)})
-                </option>
-              ))}
-            </select>
-          </div>
+        {hasConfigurablePermissionRoles ? (
+          <div className="flex items-center gap-6 flex-1 justify-end max-w-2xl">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">生效角色</span>
+              <select
+                value={normalizedSelectedPermissionRole}
+                onChange={(event) => setSelectedPermissionRole(event.target.value as RoleCode)}
+                className="h-9 min-w-[140px] rounded-xl border border-slate-200/70 bg-white px-3 text-xs font-bold text-slate-700 outline-none transition-all hover:border-primary/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/10"
+              >
+                {overrideRoleOptions.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.label} ({getPermissionTemplateCount(item.code)})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex items-center gap-3 flex-1 max-w-[320px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
-            <UserPermissionScopePopover
-              open={showScopeAdjustPanel}
-              onOpenChange={setShowScopeAdjustPanel}
-              summary={formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)}
-              scopeFilterOptions={scopeFilterOptions}
-              scopeUserFilter={scopeUserFilter}
-              onScopeFilterChange={handleScopeFilterChange}
-              showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
-              onReset={() => {
-                applyDefaultScopePreset();
-                setScopeUserFilter('all');
-              }}
-              scopeUserSearch={scopeUserSearch}
-              onScopeUserSearchChange={setScopeUserSearch}
-              isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
-              hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
-              onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
-              selectedFilteredScopeCount={selectedFilteredScopeCount}
-              filteredScopeUsers={filteredScopeUsers}
-              selectedScopeUserIds={selectedScopeUserIds}
-              onToggleScopeUser={toggleScopeUser}
-              isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
-              onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
-              isScopeUsersLoading={isScopeUsersLoading}
-              dialogContentElement={dialogContentElement}
-            />
+            <div className="flex items-center gap-3 flex-1 max-w-[320px]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
+              <UserPermissionScopePopover
+                open={showScopeAdjustPanel}
+                onOpenChange={setShowScopeAdjustPanel}
+                summary={formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)}
+                scopeFilterOptions={scopeFilterOptions}
+                scopeUserFilter={scopeUserFilter}
+                onScopeFilterChange={handleScopeFilterChange}
+                showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
+                onReset={() => {
+                  applyDefaultScopePreset();
+                  setScopeUserFilter('all');
+                }}
+                scopeUserSearch={scopeUserSearch}
+                onScopeUserSearchChange={setScopeUserSearch}
+                isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
+                hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
+                onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
+                selectedFilteredScopeCount={selectedFilteredScopeCount}
+                filteredScopeUsers={filteredScopeUsers}
+                selectedScopeUserIds={selectedScopeUserIds}
+                onToggleScopeUser={toggleScopeUser}
+                isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
+                onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
+                isScopeUsersLoading={isScopeUsersLoading}
+                dialogContentElement={dialogContentElement}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 text-right text-xs font-semibold text-slate-400">
+            学员是固定工作台角色，不参与用户赋权生效
+          </div>
+        )}
       </div>
 
       {!canViewOverride ? (
         <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
           您没有“用户权限自定义配置”权限，仅可查看上方默认角色包信息。
+        </div>
+      ) : !hasConfigurablePermissionRoles ? (
+        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
+          当前账号仅包含学员工作台角色，请先分配导师/室经理/团队经理/管理员角色后再配置用户权限覆盖。
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 xl:grid-cols-[200px_1fr] gap-8 items-start relative">

@@ -7,6 +7,7 @@ from rest_framework import serializers
 from core.exceptions import BusinessError
 
 from .models import Department, Role, User
+from .permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from .role_constraints import validate_role_assignment_constraints
 
 
@@ -27,6 +28,12 @@ def validate_mentor(mentor_id):
         return mentor
     except User.DoesNotExist:
         raise serializers.ValidationError('导师不存在')
+
+
+def _serialize_user_roles(user: User) -> list[dict]:
+    if user.is_superuser:
+        return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
+    return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
 
 
 class UserValidationMixin:
@@ -91,7 +98,7 @@ class UserListSerializer(serializers.ModelSerializer):
     """
     department = DepartmentSerializer(read_only=True)
     mentor = MentorSerializer(read_only=True)
-    roles = RoleSerializer(many=True, read_only=True)
+    roles = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
@@ -99,13 +106,19 @@ class UserListSerializer(serializers.ModelSerializer):
             'department', 'mentor', 'roles', 'is_active', 'is_superuser',
             'last_login', 'created_at', 'updated_at'
         ]
+
+    @extend_schema_field(RoleSerializer(many=True))
+    def get_roles(self, obj):
+        return _serialize_user_roles(obj)
+
+
 class UserDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for user detail view.
     """
     department = DepartmentSerializer(read_only=True)
     mentor = MentorSerializer(read_only=True)
-    roles = RoleSerializer(many=True, read_only=True)
+    roles = serializers.SerializerMethodField()
     mentees_count = serializers.SerializerMethodField()
     class Meta:
         model = User
@@ -114,10 +127,15 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'department', 'mentor', 'roles', 'is_active', 'is_superuser',
             'last_login', 'mentees_count', 'created_at', 'updated_at'
         ]
+
     @extend_schema_field(serializers.IntegerField())
     def get_mentees_count(self, obj):
         """Get count of mentees for this user."""
         return obj.mentees.filter(is_active=True).count()
+
+    @extend_schema_field(RoleSerializer(many=True))
+    def get_roles(self, obj):
+        return _serialize_user_roles(obj)
 class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating new users.
@@ -150,7 +168,7 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         ]),
         required=False,
         default=list,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -267,7 +285,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=False,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -364,7 +382,7 @@ class AssignRolesSerializer(serializers.Serializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=True,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超级管理员仅管理员）'
+        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
     )
 class AssignMentorSerializer(serializers.Serializer):
     """
@@ -393,10 +411,14 @@ class MenteeListSerializer(serializers.ModelSerializer):
 class DepartmentMemberListSerializer(serializers.ModelSerializer):
     """Serializer for listing department members."""
     mentor = MentorSerializer(read_only=True)
-    roles = RoleSerializer(many=True, read_only=True)
+    roles = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
             'id', 'employee_id', 'username',
             'mentor', 'roles', 'is_active'
         ]
+
+    @extend_schema_field(RoleSerializer(many=True))
+    def get_roles(self, obj):
+        return _serialize_user_roles(obj)

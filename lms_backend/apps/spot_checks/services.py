@@ -13,7 +13,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.users.models import User
-from apps.users.permissions import get_accessible_students
+from apps.users.permissions import get_accessible_students, is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
@@ -136,7 +136,7 @@ class SpotCheckService(BaseService):
         spot_check = self.get_by_id(pk)
         
         # 验证更新权限：只能更新自己创建的记录（管理员除外）
-        if self.get_current_role() != 'ADMIN' and spot_check.checker_id != self.user.id:
+        if not is_admin_like_role(self.get_current_role()) and spot_check.checker_id != self.user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只能更新自己创建的抽查记录'
@@ -172,7 +172,7 @@ class SpotCheckService(BaseService):
         spot_check = self.get_by_id(pk)
         
         # 验证删除权限：只能删除自己创建的记录（管理员除外）
-        if self.get_current_role() != 'ADMIN' and spot_check.checker_id != self.user.id:
+        if not is_admin_like_role(self.get_current_role()) and spot_check.checker_id != self.user.id:
             raise BusinessError(
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只能删除自己创建的抽查记录'

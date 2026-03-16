@@ -26,6 +26,7 @@ from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
 from apps.authorization.services import AuthorizationService
 from apps.users.models import Role, User
+from apps.users.permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from apps.users.serializers import UserInfoSerializer
 
 
@@ -93,10 +94,13 @@ class AuthenticationService(BaseService):
         requested_role: Optional[str] = None,
     ) -> Dict[str, Any]:
         available_roles = self._get_user_roles(user)
-        current_role = self._resolve_current_role(
-            available_roles=available_roles,
-            requested_role=requested_role,
-        )
+        if user.is_superuser:
+            current_role = SUPER_ADMIN_ROLE
+        else:
+            current_role = self._resolve_current_role(
+                available_roles=available_roles,
+                requested_role=requested_role,
+            )
         authorization_service = AuthorizationService(self.request)
         effective_permissions = authorization_service.get_effective_permission_codes(
             current_role=current_role,
@@ -259,6 +263,11 @@ class AuthenticationService(BaseService):
         - Property 4: 角色切换权限生效
         """
         active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        if active_user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.AUTH_INVALID_ROLE,
+                message='超管账号为专有角色，不支持角色切换',
+            )
         if not active_user.has_role(role_code):
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_ROLE,
@@ -272,7 +281,7 @@ class AuthenticationService(BaseService):
 
     def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
         AuthorizationService(self.request).enforce(
-            'user.reset_password',
+            'user.account.manage',
             error_message='只有管理员可以重置用户密码',
         )
 
@@ -314,14 +323,18 @@ class AuthenticationService(BaseService):
         # Add custom claims
         refresh['employee_id'] = user.employee_id
         refresh['username'] = user.username  # username 字段存储显示名称
-        refresh['roles'] = user.role_codes
-        if current_role:
-            refresh['current_role'] = current_role
+        if user.is_superuser:
+            refresh['roles'] = [SUPER_ADMIN_ROLE]
+            refresh['current_role'] = SUPER_ADMIN_ROLE
         else:
-            # Set default role
-            refresh['current_role'] = self._get_default_role(
-                self._get_user_roles(user)
-            )
+            refresh['roles'] = user.role_codes
+            if current_role:
+                refresh['current_role'] = current_role
+            else:
+                # Set default role
+                refresh['current_role'] = self._get_default_role(
+                    self._get_user_roles(user)
+                )
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
@@ -335,6 +348,8 @@ class AuthenticationService(BaseService):
         Returns:
             List of role dicts with code and name
         """
+        if user.is_superuser:
+            return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
         return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
 
     def _get_default_role(self, roles: List[Dict[str, str]]) -> str:
@@ -347,6 +362,8 @@ class AuthenticationService(BaseService):
             The highest priority role code
         """
         role_codes = {r['code'] for r in roles}
+        if SUPER_ADMIN_ROLE in role_codes:
+            return SUPER_ADMIN_ROLE
         # Use the priority order from Role model
         for role_code in Role.ROLE_PRIORITY_ORDER:
             if role_code in role_codes:

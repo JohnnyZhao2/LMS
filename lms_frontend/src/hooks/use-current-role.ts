@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { RoleCode } from '@/types/api';
 
-const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'];
+const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
 /**
  * 获取当前角色

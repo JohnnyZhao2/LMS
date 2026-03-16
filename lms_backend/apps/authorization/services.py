@@ -9,6 +9,7 @@ from django.utils import timezone
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 from apps.users.models import Role, User
+from apps.users.permissions import SUPER_ADMIN_ROLE
 
 from .constants import (
     EFFECT_ALLOW,
@@ -18,6 +19,7 @@ from .constants import (
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
+    SCOPE_AWARE_PERMISSION_CODES,
     SCOPE_DESCRIPTIONS,
     SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
@@ -37,6 +39,10 @@ from .selectors import (
 
 class AuthorizationService(BaseService):
     """Unified authorization service."""
+
+    @staticmethod
+    def _supports_scope_override(permission_code: str) -> bool:
+        return permission_code in SCOPE_AWARE_PERMISSION_CODES
 
     @staticmethod
     def _get_system_role_permission_code_set(role_code: str) -> Set[str]:
@@ -191,6 +197,8 @@ class AuthorizationService(BaseService):
         """Evaluate permission with deny > allow > role baseline."""
         if not self.user or not self.user.is_authenticated:
             return False
+        if self.user.is_superuser:
+            return True
 
         resolved_role = self._resolve_role(current_role)
         resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
@@ -246,6 +254,12 @@ class AuthorizationService(BaseService):
         base_user = user or self.user
         if not base_user or not base_user.is_authenticated:
             return []
+        if base_user.is_superuser:
+            all_codes = set(
+                Permission.objects.filter(is_active=True).values_list('code', flat=True)
+            )
+            all_codes.update(SYSTEM_MANAGED_PERMISSION_CODES)
+            return sorted(all_codes)
 
         resolved_role = current_role or self._resolve_role()
         if not resolved_role:
@@ -276,9 +290,15 @@ class AuthorizationService(BaseService):
         return list_permissions(module=module)
 
     def get_role_permission_codes(self, role_code: str) -> List[str]:
+        if role_code == SUPER_ADMIN_ROLE:
+            all_codes = set(Permission.objects.filter(is_active=True).values_list('code', flat=True))
+            all_codes.update(SYSTEM_MANAGED_PERMISSION_CODES)
+            return sorted(all_codes)
         return sorted(self._get_role_permission_code_set(role_code))
 
     def get_role_default_scope_types(self, role_code: str) -> List[str]:
+        if role_code == SUPER_ADMIN_ROLE:
+            return [SCOPE_ALL]
         return list(ROLE_DEFAULT_SCOPE_TYPES.get(role_code, [SCOPE_ALL]))
 
     def get_role_scope_options(self, role_code: str) -> List[dict]:
@@ -295,6 +315,11 @@ class AuthorizationService(BaseService):
 
     @transaction.atomic
     def replace_role_permissions(self, role_code: str, permission_codes: Iterable[str]) -> List[str]:
+        if role_code == SUPER_ADMIN_ROLE:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='超管为系统专有角色，不支持配置模板权限',
+            )
         role = self.validate_not_none(
             Role.objects.filter(code=role_code).first(),
             f'角色 {role_code} 不存在',
@@ -366,8 +391,20 @@ class AuthorizationService(BaseService):
                 message=f'权限 {permission.code} 属于系统保留权限，不支持手动覆盖',
             )
 
+        normalized_applies_to_role = applies_to_role or None
+        if normalized_applies_to_role == 'STUDENT':
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='学员角色为固定工作台角色，不支持配置用户权限覆盖',
+            )
+
+        normalized_scope_type = scope_type
         normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
-        if scope_type == SCOPE_EXPLICIT_USERS:
+        if not self._supports_scope_override(permission.code):
+            normalized_scope_type = SCOPE_ALL
+            normalized_scope_user_ids = []
+
+        if normalized_scope_type == SCOPE_EXPLICIT_USERS:
             if not normalized_scope_user_ids:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,
@@ -395,8 +432,8 @@ class AuthorizationService(BaseService):
             user=target_user,
             permission=permission,
             effect=effect,
-            applies_to_role=applies_to_role or None,
-            scope_type=scope_type,
+            applies_to_role=normalized_applies_to_role,
+            scope_type=normalized_scope_type,
             scope_user_ids=normalized_scope_user_ids,
             reason=reason,
             expires_at=expires_at,

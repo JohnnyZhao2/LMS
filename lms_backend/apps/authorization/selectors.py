@@ -33,10 +33,15 @@ def list_active_user_overrides(
     current_role: str | None,
     permission_code: str | None = None,
 ) -> List[UserPermissionOverride]:
+    if current_role == 'STUDENT':
+        return []
+
     queryset = UserPermissionOverride.objects.select_related('permission', 'user').filter(
         user_id=user_id,
         is_active=True,
         revoked_at__isnull=True,
+    ).exclude(
+        applies_to_role='STUDENT',
     ).filter(
         Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
     )

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import { useParams } from 'react-router-dom';
 import {
     Search,
     Home,
@@ -32,14 +31,13 @@ interface KnowledgeCenterProps {
 
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
-    const { role } = useParams<{ role: string }>();
     const { roleNavigate } = useRoleNavigate();
     const incrementViewCount = useIncrementViewCount();
-    const { currentRole } = useAuth();
-
-    // 优先使用 URL 中的角色参数
-    const effectiveRole = role?.toUpperCase() || currentRole;
-    const isAdminView = isAdmin || effectiveRole === 'ADMIN' || effectiveRole === 'DEPT_MANAGER';
+    const { hasPermission } = useAuth();
+    const canCreateKnowledge = hasPermission('knowledge.create');
+    const canUpdateKnowledge = hasPermission('knowledge.update');
+    const canDeleteKnowledge = hasPermission('knowledge.delete');
+    const isManagementView = isAdmin || canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge;
 
     const {
         search,
@@ -77,7 +75,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     };
 
     const handleView = (id: number) => {
-        if (!isAdminView) {
+        if (!isManagementView) {
             incrementViewCount.mutate(id, {
                 onSuccess: () => {
                     refetch();
@@ -96,7 +94,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     return (
         <div className="space-y-8">
             <PageHeader
-                title={isAdminView ? "知识库管理" : "知识中心"}
+                title={isManagementView ? "知识库管理" : "知识中心"}
                 icon={<Database />}
                 extra={
                     <div className="flex items-center gap-4">
@@ -110,7 +108,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 className="pl-9 h-10 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm"
                             />
                         </div>
-                        {isAdminView ? (
+                        {canCreateKnowledge ? (
                             <Button
                                 onClick={handleCreate}
                                 className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 transition duration-200 hover:scale-105 shadow-sm"
@@ -219,10 +217,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     <div key={item.id} className="group">
                                         <SharedKnowledgeCard
                                             item={item}
-                                            variant={isAdminView ? "admin" : "student"}
-                                            showActions={isAdminView}
+                                            variant={isManagementView ? "admin" : "student"}
+                                            showActions={canUpdateKnowledge}
                                             onView={handleView}
-                                            onEdit={isAdminView ? handleEdit : undefined}
+                                            onEdit={canUpdateKnowledge ? handleEdit : undefined}
                                         />
                                     </div>
                                 ))}

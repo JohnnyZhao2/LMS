@@ -51,10 +51,11 @@ export const KnowledgeDetail: React.FC = () => {
   const taskId = Number(searchParams.get('task') || 0);
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
-  const { currentRole } = useAuth();
-  const effectiveRole = role?.toUpperCase() || currentRole;
+  const { currentRole, hasPermission } = useAuth();
+  const effectiveRole = (role?.toUpperCase() as typeof currentRole) || currentRole;
   const isStudent = effectiveRole === 'STUDENT';
-  const isAdmin = effectiveRole === 'ADMIN' || effectiveRole === 'DEPT_MANAGER';
+  const canUpdateKnowledge = hasPermission('knowledge.update');
+  const canDeleteKnowledge = hasPermission('knowledge.delete');
 
   const knowledgeQuery = useKnowledgeDetail(Number(id));
   const studentTaskQuery = useStudentTaskKnowledgeDetail(taskKnowledgeId);
@@ -217,16 +218,20 @@ export const KnowledgeDetail: React.FC = () => {
           </div>
         </div>
 
-        {isAdmin && (
+        {(canUpdateKnowledge || canDeleteKnowledge) && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleEdit} className="h-9 rounded-lg font-semibold">
-              <Edit className="w-4 h-4 mr-1.5" />
-              编辑
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-destructive-500 hover:bg-destructive-600 rounded-lg font-semibold">
-              <Trash2 className="w-4 h-4 mr-1.5" />
-              删除
-            </Button>
+            {canUpdateKnowledge && (
+              <Button variant="outline" size="sm" onClick={handleEdit} className="h-9 rounded-lg font-semibold">
+                <Edit className="w-4 h-4 mr-1.5" />
+                编辑
+              </Button>
+            )}
+            {canDeleteKnowledge && (
+              <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-destructive-500 hover:bg-destructive-600 rounded-lg font-semibold">
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                删除
+              </Button>
+            )}
           </div>
         )}
 

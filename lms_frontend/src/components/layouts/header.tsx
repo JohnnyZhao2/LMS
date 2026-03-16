@@ -96,6 +96,7 @@ const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   DEPT_MANAGER: "室",
   ADMIN: "管",
   TEAM_MANAGER: "团",
+  SUPER_ADMIN: "超",
 }
 
 const ROLE_FULL_LABELS: Record<RoleCode, string> = {
@@ -104,6 +105,7 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   DEPT_MANAGER: "室经理",
   ADMIN: "管理员",
   TEAM_MANAGER: "团队经理",
+  SUPER_ADMIN: "超管",
 }
 
 // 角色颜色 - 每个角色固定颜色，不随主题变化
@@ -113,9 +115,10 @@ const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
   DEPT_MANAGER: "bg-violet-500", // 紫色
   TEAM_MANAGER: "bg-amber-500",  // 琥珀色
   ADMIN: "bg-rose-500",          // 玫红
+  SUPER_ADMIN: "bg-red-600",     // 深红
 }
 
-const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN"]
+const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN", "SUPER_ADMIN"]
 
 // 图标映射
 const getMenuIcon = (path: string): React.ReactNode => {
@@ -129,6 +132,9 @@ const getMenuIcon = (path: string): React.ReactNode => {
     'users': <IconUsers className="w-4 h-4" />,
     'quiz-center': <IconQuiz className="w-4 h-4" />,
     'spot-checks': <IconSpotCheck className="w-4 h-4" />,
+    'grading-center': <IconQuiz className="w-4 h-4" />,
+    'authorization': <IconUsers className="w-4 h-4" />,
+    'activity-logs/settings': <IconBell className="w-4 h-4" />,
     'analytics': <IconAnalytics className="w-4 h-4" />,
     'personal': <IconPersonal className="w-4 h-4" />,
   }

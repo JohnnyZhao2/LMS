@@ -44,12 +44,12 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
   },
   user: {
     label: '用户管理',
-    summary: '管理员菜单中的用户管理页，覆盖用户列表、账号操作和组织关系维护。',
+    summary: '管理员菜单中的用户管理页，覆盖用户资料、账号控制和用户授权维护。',
     order: 70,
   },
   authorization: {
     label: '授权管理',
-    summary: '用户管理里的授权配置能力，覆盖角色模板和用户级权限覆盖。',
+    summary: '权限中心里的角色模板配置能力。',
     order: 80,
   },
   submission: {
@@ -170,57 +170,29 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
     pageLabel: '用户管理 / 用户列表',
     detail: '查看用户列表和用户详情。',
   },
-  'user.create': {
-    pageLabel: '用户管理 / 新建用户',
-    detail: '创建新用户。',
+  'user.manage': {
+    pageLabel: '用户管理 / 用户资料',
+    detail: '创建用户、编辑资料并指定导师。',
   },
-  'user.update': {
-    pageLabel: '用户管理 / 编辑用户',
-    detail: '编辑用户基础信息。',
+  'user.account.manage': {
+    pageLabel: '用户管理 / 账号控制',
+    detail: '启用/停用账号并重置密码。',
+  },
+  'user.authorization.manage': {
+    pageLabel: '用户管理 / 用户授权',
+    detail: '分配角色并配置用户权限自定义。',
   },
   'user.delete': {
     pageLabel: '用户管理 / 删除用户',
     detail: '彻底删除离职用户。',
   },
-  'user.activate': {
-    pageLabel: '用户管理 / 启用账号',
-    detail: '启用已停用账号。',
-  },
-  'user.deactivate': {
-    pageLabel: '用户管理 / 停用账号',
-    detail: '停用账号。',
-  },
-  'user.reset_password': {
-    pageLabel: '用户管理 / 重置密码',
-    detail: '重置用户密码并生成临时密码。',
-  },
-  'user.assign_roles': {
-    pageLabel: '用户管理 / 分配角色',
-    detail: '为用户分配角色。',
-  },
-  'user.assign_mentor': {
-    pageLabel: '用户管理 / 指定导师',
-    detail: '为学员指定导师。',
-  },
   'authorization.role_template.view': {
-    pageLabel: '用户管理 / 角色模板配置',
+    pageLabel: '权限中心 / 角色模板配置',
     detail: '查看角色模板。',
   },
   'authorization.role_template.update': {
-    pageLabel: '用户管理 / 角色模板配置',
+    pageLabel: '权限中心 / 角色模板配置',
     detail: '更新角色模板。',
-  },
-  'authorization.user_override.view': {
-    pageLabel: '用户管理 / 用户权限自定义',
-    detail: '查看用户级权限覆盖规则。',
-  },
-  'authorization.user_override.create': {
-    pageLabel: '用户管理 / 用户权限自定义',
-    detail: '创建用户级权限覆盖规则。',
-  },
-  'authorization.user_override.revoke': {
-    pageLabel: '用户管理 / 用户权限自定义',
-    detail: '撤销用户级权限覆盖规则。',
   },
   'submission.answer': {
     pageLabel: '答题流程',

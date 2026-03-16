@@ -14,6 +14,7 @@ export const DEFAULT_ROLE_SCOPE_TYPES: Record<RoleCode, PermissionOverrideScope[
   DEPT_MANAGER: ['DEPARTMENT'],
   TEAM_MANAGER: ['ALL'],
   ADMIN: ['ALL'],
+  SUPER_ADMIN: ['ALL'],
 };
 
 export const normalizeScopeTypes = (

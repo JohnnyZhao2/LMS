@@ -19,7 +19,7 @@ export function useRoleNavigate() {
       // 如果路径已经包含角色前缀，直接导航
       if (path.startsWith('/student/') || path.startsWith('/mentor/') ||
           path.startsWith('/admin/') || path.startsWith('/dept_manager/') ||
-          path.startsWith('/team_manager/')) {
+          path.startsWith('/team_manager/') || path.startsWith('/super_admin/')) {
         navigate(path, options);
         return;
       }

@@ -19,6 +19,7 @@ const ROLE_LABELS: Record<RoleCode, string> = {
   DEPT_MANAGER: '室经理',
   TEAM_MANAGER: '团队经理',
   ADMIN: '管理员',
+  SUPER_ADMIN: '超管',
 };
 
 interface RolePermissionTemplatePanelProps {
