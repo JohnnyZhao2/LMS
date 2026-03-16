@@ -62,10 +62,10 @@ class Role(TimestampMixin, models.Model):
     """
     角色模型
     系统预定义角色:
-    - STUDENT: 学员（默认角色；与 ADMIN/DEPT_MANAGER/TEAM_MANAGER 互斥）
+    - STUDENT: 学员（默认角色；与 DEPT_MANAGER/TEAM_MANAGER 互斥）
     - MENTOR: 导师
     - DEPT_MANAGER: 室经理
-    - ADMIN: 管理员
+    - ADMIN: 管理员（能力叠加角色，可与学员共存）
     - TEAM_MANAGER: 团队经理
     """
     ROLE_CHOICES = [
@@ -175,14 +175,14 @@ class UserRole(TimestampMixin, models.Model):
         return f"{self.user.username} - {self.role.name}"
     def delete(self, *args, **kwargs):
         """
-        非管理角色用户必须保留学员角色。
-        管理角色（ADMIN/DEPT_MANAGER/TEAM_MANAGER）可移除学员角色。
+        非室经理/团队经理用户必须保留学员角色。
+        仅 DEPT_MANAGER/TEAM_MANAGER 可移除学员角色。
         """
         if self.role.code == 'STUDENT':
-            leadership_roles = {'ADMIN', 'DEPT_MANAGER', 'TEAM_MANAGER'}
+            leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
             user_roles = set(self.user.roles.values_list('code', flat=True))
             if not user_roles.intersection(leadership_roles):
-                raise ValidationError('非管理角色用户必须保留学员角色')
+                raise ValidationError('非室经理/团队经理用户必须保留学员角色')
         super().delete(*args, **kwargs)
 # Signal handlers for automatic role assignment
 from django.db.models.signals import post_save
@@ -193,7 +193,7 @@ from django.dispatch import receiver
 def assign_default_student_role(sender, instance, created, **kwargs):
     """
     新用户创建后自动分配学员角色。
-    后续若分配管理角色，角色分配流程会移除学员角色。
+    后续仅在分配室经理/团队经理时，角色分配流程会移除学员角色。
     - Property 5: 新用户默认学员角色
     """
     if created and not instance.is_superuser:

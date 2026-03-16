@@ -168,7 +168,7 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         ]),
         required=False,
         default=list,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -285,7 +285,7 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=False,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
     )
 
     class Meta:
@@ -382,7 +382,7 @@ class AssignRolesSerializer(serializers.Serializer):
             ('TEAM_MANAGER', '团队经理'),
         ]),
         required=True,
-        help_text='要分配的角色代码列表（不包含学员角色；仅导师/空角色默认保留学员，含管理员/室经理/团队经理时不保留学员；超管账号禁止分配业务角色）'
+        help_text='要分配的角色代码列表（不包含学员角色；默认保留学员，室经理/团队经理不保留学员；超管账号禁止分配业务角色）'
     )
 class AssignMentorSerializer(serializers.Serializer):
     """

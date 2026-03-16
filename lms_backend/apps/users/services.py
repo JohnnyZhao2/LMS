@@ -125,8 +125,8 @@ class UserManagementService(BaseService):
     def assign_roles(self, user_id: int, role_codes: List[str], assigned_by: User) -> User:
         """
         Assign roles to a user.
-        For non-superusers, STUDENT role is preserved only when user has
-        no leadership role (ADMIN/DEPT_MANAGER/TEAM_MANAGER).
+        For non-superusers, STUDENT role is preserved unless user is assigned
+        department/team manager role.
         Superuser accounts are dedicated and cannot be assigned business roles.
         Args:
             user_id: The user ID to assign roles to
@@ -137,7 +137,7 @@ class UserManagementService(BaseService):
         Raises:
             BusinessError: If user not found or role constraints violated
         Properties:
-        - Property 9: 管理角色与学员角色互斥（ADMIN/DEPT_MANAGER/TEAM_MANAGER）
+        - Property 9: 室经理/团队经理与学员角色互斥；ADMIN 可叠加学员角色
         - 每个部门只能有一个室经理
         - 全局只能有一个团队经理
         """
@@ -157,7 +157,7 @@ class UserManagementService(BaseService):
             exclude_user_id=user.id,
         )
 
-        leadership_roles = {'ADMIN', 'DEPT_MANAGER', 'TEAM_MANAGER'}
+        leadership_roles = {'DEPT_MANAGER', 'TEAM_MANAGER'}
         should_keep_student = (
             not user.is_superuser
             and leadership_roles.isdisjoint(set(role_codes))

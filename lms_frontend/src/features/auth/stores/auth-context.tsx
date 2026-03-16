@@ -29,6 +29,12 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const MIN_ROLE_SWITCH_DURATION_MS = 850;
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 
 const buildLoggedOutState = (): AuthState => ({
   user: null,
@@ -135,11 +141,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const switchRole = useCallback(async (roleCode: RoleCode) => {
     setState((prev) => ({ ...prev, isSwitching: true }));
+    const startTime = Date.now();
     try {
       const response = await switchRoleApi.switchRole({ role_code: roleCode });
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
+        await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
+      }
       tokenStorage.setTokens(response.access_token, response.refresh_token);
       applyAuthSession(response, { isSwitching: false });
     } catch (error) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
+        await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
+      }
       setState((prev) => ({ ...prev, isSwitching: false }));
       throw error;
     }

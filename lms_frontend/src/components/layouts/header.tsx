@@ -146,7 +146,7 @@ const getMenuIcon = (path: string): React.ReactNode => {
  * 顶部导航栏组件 - 极致美学版
  */
 export const Header: React.FC = () => {
-  const { user, availableRoles, logout, isLoading, switchRole, setIsSwitching, isSwitching } = useAuth()
+  const { user, availableRoles, logout, isLoading, switchRole } = useAuth()
   const currentRole = useCurrentRole()
   const navigate = useNavigate()
   const location = useLocation()
@@ -177,32 +177,8 @@ export const Header: React.FC = () => {
       navigate(`/${roleCode.toLowerCase()}/${currentPath}${suffix}`)
     } catch (error) {
       showApiError(error, "角色切换失败")
-      setIsSwitching(false)
     }
   }
-
-  const prevPathRef = React.useRef(location.pathname)
-
-  React.useEffect(() => {
-    const prevPath = prevPathRef.current
-    prevPathRef.current = location.pathname
-
-    if (!isSwitching) {
-      return
-    }
-
-    if (prevPath === location.pathname) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setIsSwitching(false)
-    }, 400)
-
-    return () => {
-      window.clearTimeout(timeoutId)
-    }
-  }, [location.pathname, isSwitching, setIsSwitching])
 
   const handleNavClick = (path: string) => {
     navigate(path)

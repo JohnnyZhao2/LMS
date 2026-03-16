@@ -96,7 +96,7 @@ class UserListCreateView(APIView):
         return list_response(serializer.data)
     @extend_schema(
         summary='创建用户',
-        description='创建新用户，按角色规则自动处理学员角色（管理角色不保留学员）',
+        description='创建新用户，按角色规则自动处理学员角色（默认保留学员，室经理/团队经理不保留）',
         request=UserCreateSerializer,
         responses={
             201: UserDetailSerializer,

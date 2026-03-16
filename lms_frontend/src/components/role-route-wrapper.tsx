@@ -1,5 +1,4 @@
 import { Navigate, useParams, Outlet, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
@@ -14,7 +13,7 @@ const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANA
 export const RoleRouteWrapper: React.FC = () => {
   const { role } = useParams<{ role: string }>();
   const location = useLocation();
-  const { isAuthenticated, isLoading, availableRoles, currentRole, switchRole, isSwitching } = useAuth();
+  const { isAuthenticated, isLoading, availableRoles, currentRole, isSwitching } = useAuth();
 
   const roleCode = role?.toUpperCase() as RoleCode;
   const isValidRole = VALID_ROLES.includes(roleCode);
@@ -24,21 +23,6 @@ export const RoleRouteWrapper: React.FC = () => {
     }
     return availableRoles[0]?.code ?? null;
   };
-
-  // URL 角色与 token 角色不一致时，走后端 switch-role 保持单一真相源
-  useEffect(() => {
-    if (!isAuthenticated || !isValidRole) {
-      return;
-    }
-    const hasRole = availableRoles.some((r) => r.code === roleCode);
-    if (!hasRole) {
-      return;
-    }
-    if (!currentRole || currentRole === roleCode) {
-      return;
-    }
-    void switchRole(roleCode);
-  }, [isAuthenticated, isValidRole, availableRoles, currentRole, roleCode, switchRole]);
 
   if (isLoading || isSwitching) {
     return (
