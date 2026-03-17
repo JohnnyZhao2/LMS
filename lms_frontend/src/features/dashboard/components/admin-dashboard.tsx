@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Shield,
   Users,
   Cloud,
   Database,
@@ -96,14 +95,6 @@ export const AdminDashboard: React.FC = () => {
                 route={ROUTES.GRADING_CENTER}
                 actionColor="emerald"
                 delay="stagger-delay-4"
-              />
-              <ActionCard
-                title="系统审计"
-                description="操作与日志"
-                icon={Shield}
-                route={ROUTES.ANALYTICS}
-                actionColor="amber"
-                delay="stagger-delay-5"
               />
             </div>
           </div>
