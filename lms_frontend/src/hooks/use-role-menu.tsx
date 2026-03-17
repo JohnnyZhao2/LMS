@@ -10,7 +10,6 @@ import {
   FileSearch,
   BarChart3,
   ClipboardCheck,
-  ShieldCheck,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -93,14 +92,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/users`,
         icon: <Users className="w-4 h-4" />,
         label: '用户管理',
-      });
-    }
-
-    if (hasAnyPermission(['authorization.role_template.view', 'authorization.role_template.update'])) {
-      menu.push({
-        key: `${rolePrefix}/authorization`,
-        icon: <ShieldCheck className="w-4 h-4" />,
-        label: '权限中心',
       });
     }
 

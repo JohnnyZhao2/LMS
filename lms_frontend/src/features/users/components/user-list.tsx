@@ -17,7 +17,7 @@ import {
   Trash2,
   SlidersHorizontal,
 } from "lucide-react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword } from "../api/manage-users"
 import { UserForm } from "./user-form"
@@ -40,6 +40,7 @@ import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
+import { RolePermissionDialog } from '@/features/authorization/components/role-permission-dialog';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -83,6 +84,7 @@ export const UserList: React.FC = () => {
     open: boolean
     user?: UserListType
   }>({ open: false })
+  const [rolePermissionDialogOpen, setRolePermissionDialogOpen] = React.useState(false)
 
   // API Hooks
   const { data: departments = [] } = useDepartments()
@@ -320,11 +322,13 @@ export const UserList: React.FC = () => {
         extra={
           <div className="flex items-center gap-3">
             {canViewRoleTemplate && currentRole && (
-              <Button asChild variant="outline" className="h-10 px-4 rounded-md font-semibold">
-                <Link to={`/${currentRole.toLowerCase()}/authorization`}>
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  角色模板配置
-                </Link>
+              <Button
+                variant="outline"
+                className="h-10 px-4 rounded-md font-semibold"
+                onClick={() => setRolePermissionDialogOpen(true)}
+              >
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                角色模板配置
               </Button>
             )}
             {canCreateUser && (
@@ -490,6 +494,12 @@ export const UserList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 角色权限配置弹窗 */}
+      <RolePermissionDialog
+        open={rolePermissionDialogOpen}
+        onOpenChange={setRolePermissionDialogOpen}
+      />
     </div>
   )
 }
