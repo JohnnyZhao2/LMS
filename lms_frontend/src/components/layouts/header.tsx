@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { LogOut } from "lucide-react"
+import { Bell, LogOut } from "lucide-react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { useRoleMenu } from "@/hooks/use-role-menu"
 import { useCurrentRole } from "@/hooks/use-current-role"
@@ -76,13 +76,6 @@ const IconPersonal = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const IconBell = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path d="M10 2a5 5 0 0 0-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 0 0-5-5z" />
-    <path d="M8 14.5a2 2 0 0 0 4 0" />
-  </svg>
-)
-
 const IconLogo = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
@@ -134,7 +127,6 @@ const getMenuIcon = (path: string): React.ReactNode => {
     'spot-checks': <IconSpotCheck className="w-4 h-4" />,
     'grading-center': <IconQuiz className="w-4 h-4" />,
     'authorization': <IconUsers className="w-4 h-4" />,
-    'activity-logs/settings': <IconBell className="w-4 h-4" />,
     'analytics': <IconAnalytics className="w-4 h-4" />,
     'personal': <IconPersonal className="w-4 h-4" />,
   }
@@ -283,7 +275,7 @@ export const Header: React.FC = () => {
 
         {/* 通知 */}
         <button className="relative w-8 h-8 flex items-center justify-center rounded-md text-text-muted hover:text-foreground hover:bg-muted transition-colors">
-          <IconBell className="w-4 h-4" />
+          <Bell className="w-4 h-4" />
           <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
         </button>
 

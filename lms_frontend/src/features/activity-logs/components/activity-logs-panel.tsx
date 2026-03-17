@@ -1,13 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Activity, FileText, RefreshCw, Settings, User } from 'lucide-react';
+import { Activity, FileText, RefreshCw, Settings, ShieldAlert, User } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
-import {
-  useUserLogs,
-  useContentLogs,
-  useOperationLogs,
-} from '../api/use-activity-logs';
-import { ActivityLogTimeline, type ActivityLogTimelineItem } from './activity-log-timeline';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +10,13 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import {
+  useUserLogs,
+  useContentLogs,
+  useOperationLogs,
+} from '../api/use-activity-logs';
+import { ActivityLogTimeline, type ActivityLogTimelineItem } from './activity-log-timeline';
 import { ActivityLogPolicyPanel } from './activity-log-policy-panel';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -75,6 +76,9 @@ const getOperationTypeLabel = (type: string): string => {
 export const ActivityLogsPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState('user');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { hasPermission } = useAuth();
+  const canViewActivityLogs = hasPermission('activity_log.view');
+  const canUpdateActivityLogPolicy = hasPermission('activity_log.policy.update');
 
 
   // 分页状态
@@ -84,19 +88,25 @@ export const ActivityLogsPanel: React.FC = () => {
 
   const { data: userLogsData, isLoading: userLogsLoading, refetch: refetchUserLogs } = useUserLogs(
     userPagination.page,
-    userPagination.pageSize
+    userPagination.pageSize,
+    canViewActivityLogs
   );
   const { data: contentLogsData, isLoading: contentLogsLoading, refetch: refetchContentLogs } = useContentLogs(
     contentPagination.page,
-    contentPagination.pageSize
+    contentPagination.pageSize,
+    canViewActivityLogs
   );
   const { data: operationLogsData, isLoading: operationLogsLoading, refetch: refetchOperationLogs } = useOperationLogs(
     operationPagination.page,
-    operationPagination.pageSize
+    operationPagination.pageSize,
+    canViewActivityLogs
   );
 
 
   const handleRefresh = () => {
+    if (!canViewActivityLogs) {
+      return;
+    }
     if (activeTab === 'user') {
       void refetchUserLogs();
       return;
@@ -165,6 +175,27 @@ export const ActivityLogsPanel: React.FC = () => {
     }));
   }, [operationLogsData]);
 
+  if (!canViewActivityLogs) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
+          <div className="px-6 py-4 border-b border-border/30 bg-background/40 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-[0.15em]">审计流水线</h2>
+            </div>
+          </div>
+          <div className="px-8 py-10">
+            <div className="flex items-center gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-4 text-sm font-medium text-rose-600 dark:text-rose-400">
+              <ShieldAlert className="h-4 w-4" />
+              无权查看活动日志。
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
@@ -213,14 +244,16 @@ export const ActivityLogsPanel: React.FC = () => {
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted/50 transition-all text-muted-foreground active:scale-90"
-                    title="设置"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                  </button>
+                  {canUpdateActivityLogPolicy && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted/50 transition-all text-muted-foreground active:scale-90"
+                      title="设置"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

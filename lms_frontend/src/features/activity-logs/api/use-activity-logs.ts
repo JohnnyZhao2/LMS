@@ -6,7 +6,7 @@ import type { ActivityLogPolicy, UserLog, ContentLog, OperationLog } from '../ty
 /**
  * 获取用户日志列表
  */
-export const useUserLogs = (page: number = 1, pageSize: number = 20) => {
+export const useUserLogs = (page: number = 1, pageSize: number = 20, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['user-logs', page, pageSize],
     queryFn: async () => {
@@ -14,6 +14,7 @@ export const useUserLogs = (page: number = 1, pageSize: number = 20) => {
         `/logs/user/?page=${page}&page_size=${pageSize}`
       );
     },
+    enabled,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -22,7 +23,7 @@ export const useUserLogs = (page: number = 1, pageSize: number = 20) => {
 /**
  * 获取内容日志列表
  */
-export const useContentLogs = (page: number = 1, pageSize: number = 20) => {
+export const useContentLogs = (page: number = 1, pageSize: number = 20, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['content-logs', page, pageSize],
     queryFn: async () => {
@@ -30,6 +31,7 @@ export const useContentLogs = (page: number = 1, pageSize: number = 20) => {
         `/logs/content/?page=${page}&page_size=${pageSize}`
       );
     },
+    enabled,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -38,7 +40,7 @@ export const useContentLogs = (page: number = 1, pageSize: number = 20) => {
 /**
  * 获取操作日志列表
  */
-export const useOperationLogs = (page: number = 1, pageSize: number = 20) => {
+export const useOperationLogs = (page: number = 1, pageSize: number = 20, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['operation-logs', page, pageSize],
     queryFn: async () => {
@@ -46,13 +48,14 @@ export const useOperationLogs = (page: number = 1, pageSize: number = 20) => {
         `/logs/operation/?page=${page}&page_size=${pageSize}`
       );
     },
+    enabled,
     staleTime: 0,
     refetchOnMount: 'always',
   });
 };
 
 /**
- * 获取活动日志策略（超级用户）
+ * 获取活动日志策略（需 activity_log.view 权限）
  */
 export const useActivityLogPolicies = (enabled: boolean = true) => {
   return useQuery({
@@ -65,7 +68,7 @@ export const useActivityLogPolicies = (enabled: boolean = true) => {
 };
 
 /**
- * 更新活动日志策略（超级用户）
+ * 更新活动日志策略（需 activity_log.policy.update 权限）
  */
 export const useUpdateActivityLogPolicy = () => {
   const queryClient = useQueryClient();

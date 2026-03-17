@@ -19,10 +19,11 @@ const categoryIcons: Record<ActivityLogPolicy['category'], React.ReactNode> = {
 };
 
 export const ActivityLogPolicyPanel: React.FC = () => {
-  const { user } = useAuth();
-  const isSuperuser = Boolean(user?.is_superuser);
+  const { hasPermission } = useAuth();
+  const canViewPolicies = hasPermission('activity_log.view');
+  const canUpdatePolicies = hasPermission('activity_log.policy.update');
 
-  const { data: policies = [], isLoading } = useActivityLogPolicies(isSuperuser);
+  const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies && canUpdatePolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
 
   const groupedPolicies = useMemo(() => {
@@ -49,11 +50,20 @@ export const ActivityLogPolicyPanel: React.FC = () => {
     }
   };
 
-  if (!isSuperuser) {
+  if (!canViewPolicies) {
     return (
       <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-3">
         <ShieldCheck size={18} />
-        仅超级用户可配置日志白名单。
+        无权查看日志策略。
+      </div>
+    );
+  }
+
+  if (!canUpdatePolicies) {
+    return (
+      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-3">
+        <ShieldCheck size={18} />
+        无权配置日志策略。
       </div>
     );
   }
