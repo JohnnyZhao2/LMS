@@ -288,12 +288,17 @@ const UserFormContent: React.FC<{
           }
           toast.success("账号信息已更新");
         } else {
+          const hasPermissionDraftChanges = permissionSectionRef.current?.hasPendingChanges() ?? false;
           if (!canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
           if (formData.role_codes.length > 0 && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法分配角色');
+            return;
+          }
+          if (hasPermissionDraftChanges && !canUpdateUserAuthorization) {
+            toast.error('当前账号没有用户授权管理权限，无法提交权限草稿');
             return;
           }
           const newUser = await createUser.mutateAsync({
@@ -306,6 +311,9 @@ const UserFormContent: React.FC<{
           // 创建成功后分配额外角色
           if (formData.role_codes.length > 0) {
             await assignRoles.mutateAsync({ id: newUser.id, roles: formData.role_codes });
+          }
+          if (hasPermissionDraftChanges) {
+            await permissionSectionRef.current?.submitChanges(newUser.id);
           }
           toast.success("新账号已创建");
         }
@@ -586,18 +594,16 @@ const UserFormContent: React.FC<{
             </div>
           </div>
 
-          {isEdit && (
-            <UserPermissionSection
-              ref={permissionSectionRef}
-              userId={userId}
-              userDetail={userDetail}
-              departments={departments}
-              selectedRoleCodes={formData.role_codes}
-              departmentId={formData.department_id}
-              isSuperuserAccount={isSuperuserAccount}
-              dialogContentElement={dialogContentElement}
-            />
-          )}
+          <UserPermissionSection
+            ref={permissionSectionRef}
+            userId={userId}
+            userDetail={userDetail}
+            departments={departments}
+            selectedRoleCodes={formData.role_codes}
+            departmentId={formData.department_id}
+            isSuperuserAccount={isSuperuserAccount}
+            dialogContentElement={dialogContentElement}
+          />
         </div>
 
         {/* Footer - Aligned with Grid */}

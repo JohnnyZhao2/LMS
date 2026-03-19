@@ -33,7 +33,7 @@ def list_active_user_overrides(
     current_role: str | None,
     permission_code: str | None = None,
 ) -> List[UserPermissionOverride]:
-    if current_role == 'STUDENT':
+    if current_role in {'STUDENT', 'SUPER_ADMIN'}:
         return []
 
     queryset = UserPermissionOverride.objects.select_related('permission', 'user').filter(

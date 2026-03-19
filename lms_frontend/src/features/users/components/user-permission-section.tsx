@@ -48,7 +48,7 @@ interface UserPermissionSectionProps {
 
 export interface UserPermissionSectionHandle {
   hasPendingChanges: () => boolean;
-  submitChanges: () => Promise<void>;
+  submitChanges: (targetUserId?: number) => Promise<void>;
 }
 
 export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, UserPermissionSectionProps>(({
@@ -68,9 +68,11 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   const canViewRoleTemplate =
     hasPermission('authorization.role_template.view')
     || hasPermission('authorization.role_template.update');
+  const shouldLoadPermissionCatalog = canViewOverride;
+  const shouldLoadScopeUsers = canViewOverride;
   const shouldLoadUserOverrides = Boolean(userId) && canViewOverride;
 
-  const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadUserOverrides);
+  const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadPermissionCatalog);
   const {
     data: userOverrides = [],
     isLoading: isLoadingUserOverrides,
@@ -88,7 +90,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
 
   const { data: scopeUsers = [], isLoading: isScopeUsersLoading } = useUsers(
     {},
-    { enabled: shouldLoadUserOverrides },
+    { enabled: shouldLoadScopeUsers },
   );
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => {
@@ -103,7 +105,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
 
   const roleTemplateQueries = useRolePermissionTemplates(
     previewRoleCodes,
-    shouldLoadUserOverrides && canViewRoleTemplate,
+    canViewOverride && canViewRoleTemplate,
   );
 
   const roleTemplatePermissionCodeMap = useMemo(() => {

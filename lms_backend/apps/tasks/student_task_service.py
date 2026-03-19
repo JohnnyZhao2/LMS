@@ -25,19 +25,9 @@ from .selectors import (
 )
 
 
-def extract_knowledge_summary(knowledge, max_length: int = 160) -> str:
-    """Extract a summary from knowledge content."""
-    if knowledge.knowledge_type == 'OTHER':
-        text = knowledge.content or ''
-    else:
-        parts = [
-            knowledge.fault_scenario,
-            knowledge.trigger_process,
-            knowledge.solution,
-            knowledge.verification_plan,
-            knowledge.recovery_plan,
-        ]
-        text = next((p for p in parts if p), '')
+def extract_knowledge_preview(knowledge, max_length: int = 160) -> str:
+    """Extract a preview from knowledge content."""
+    text = getattr(knowledge, 'content_preview', '') or ''
     return text[:max_length] if text else ''
 
 
@@ -152,9 +142,8 @@ class StudentTaskService(BaseService):
                 'id': tk.id,
                 'knowledge_id': tk.knowledge_id,
                 'title': knowledge.title,
-                'knowledge_type': knowledge.knowledge_type,
-                'knowledge_type_display': knowledge.get_knowledge_type_display(),
-                'summary': extract_knowledge_summary(knowledge),
+                'line_tag_name': knowledge.line_tag.name if knowledge.line_tag else None,
+                'content_preview': extract_knowledge_preview(knowledge),
                 'order': tk.order,
                 'is_completed': progress.is_completed if progress else False,
                 'completed_at': progress.completed_at if progress else None,

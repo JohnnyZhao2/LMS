@@ -11,6 +11,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from django.utils.html import strip_tags
 
 from apps.authorization.services import AuthorizationService
 from apps.knowledge.serializers import (
@@ -57,10 +58,6 @@ def _enforce_knowledge_action_permission(request, permission_code: str, error_me
 def _build_knowledge_filters(request):
     """构建并校验知识筛选参数。"""
     filters = {}
-
-    knowledge_type = request.query_params.get('knowledge_type')
-    if knowledge_type:
-        filters['knowledge_type'] = knowledge_type
 
     line_tag_id = parse_int_query_param(
         request=request,
@@ -133,12 +130,11 @@ class KnowledgeListCreateView(BaseAPIView):
         return list_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
-        description='''获取知识文档列表，支持条线类型、知识类型和系统标签筛选。
+        description='''获取知识文档列表，支持条线类型和系统/操作标签筛选。
 所有用户只能看到当前版本的知识。
 **注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
 ''',
         parameters=[
-            OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
             OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
@@ -269,9 +265,8 @@ class KnowledgeStatsView(BaseAPIView):
     service_class = KnowledgeService
     @extend_schema(
         summary='获取知识统计',
-        description='获取知识文档的统计数据',
+        description='获取知识文档的统计数据，统计维度已统一到正文内容。',
         parameters=[
-            OpenApiParameter(name='knowledge_type', type=str, description='知识类型（EMERGENCY/OTHER）'),
             OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
             OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
             OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
@@ -295,7 +290,7 @@ class KnowledgeStatsView(BaseAPIView):
         stats = {
             'total': len(knowledge_list),
             'published': len(knowledge_list),  # 所有返回的都是当前版本
-            'emergency': len([k for k in knowledge_list if k.knowledge_type == 'EMERGENCY']),
+            'with_content': len([k for k in knowledge_list if strip_tags(k.content).strip()]),
             'monthly_new': len([k for k in knowledge_list if k.created_at >= first_day_of_month]),
         }
         # 4. 序列化输出

@@ -1,25 +1,17 @@
 /**
- * 题目表单输入组件（选项输入和答案输入）
+ * 题目表单输入组件 — 选项输入 + 答案输入
+ * 设计：卡片式选项行，正确答案高亮，hover 显示删除
  */
-import { Plus, X } from 'lucide-react';
+import { Check, GripVertical, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { QuestionType } from '@/types/api';
 
-/**
- * 选项输入组件
- */
+/* ─────────────────────────────────────────────
+   选项输入组件
+   ───────────────────────────────────────────── */
 interface OptionsInputProps {
   questionType: QuestionType;
   value: Array<{ key: string; value: string }>;
@@ -44,23 +36,41 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
     onChange([...value, { key: nextKey, value: '' }]);
   };
 
-  const handleChange = (index: number, field: 'key' | 'value', val: string) => {
+  const handleChange = (index: number, val: string) => {
     if (disabled) return;
     const newOptions = [...value];
-    newOptions[index] = { ...newOptions[index], [field]: val };
+    newOptions[index] = { ...newOptions[index], value: val };
     onChange(newOptions);
   };
 
   const handleRemove = (index: number) => {
     if (disabled) return;
     const removedKey = value[index]?.key;
-    onChange(value.filter((_, i) => i !== index));
+    const remaining = value.filter((_, i) => i !== index);
+    // 重新编号
+    const reKeyed = remaining.map((opt, i) => ({
+      ...opt,
+      key: String.fromCharCode(65 + i),
+    }));
+    onChange(reKeyed);
 
     // 同步更新答案
     if (questionType === 'MULTIPLE_CHOICE' && Array.isArray(answer)) {
-      onAnswerChange(answer.filter((k) => k !== removedKey));
+      const newAnswer = answer
+        .filter((k) => k !== removedKey)
+        .map((k) => {
+          const oldIndex = value.findIndex((o) => o.key === k);
+          const newIndex = oldIndex > index ? oldIndex - 1 : oldIndex;
+          return String.fromCharCode(65 + newIndex);
+        });
+      onAnswerChange(newAnswer);
     } else if (answer === removedKey) {
       onAnswerChange('');
+    } else if (typeof answer === 'string' && answer) {
+      const oldIndex = value.findIndex((o) => o.key === answer);
+      if (oldIndex > index) {
+        onAnswerChange(String.fromCharCode(65 + oldIndex - 1));
+      }
     }
   };
 
@@ -79,66 +89,81 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   };
 
   const isSelected = (key: string) => {
-    if (Array.isArray(answer)) {
-      return answer.includes(key);
-    }
+    if (Array.isArray(answer)) return answer.includes(key);
     return answer === key;
   };
 
   return (
-    <div className="mt-1.5 space-y-2">
-      {value.map((opt, index) => (
-        <div
-          key={index}
-          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${isSelected(opt.key) ? 'border-secondary-200 bg-secondary-50/50' : 'border-border bg-muted/50'
-            }`}
-        >
-          {/* 选择控件 */}
-          <div className="flex-shrink-0 flex items-center justify-center w-8">
-            {questionType === 'SINGLE_CHOICE' ? (
-              <RadioGroup value={isSelected(opt.key) ? opt.key : ''} onValueChange={() => handleToggleAnswer(opt.key)}>
-                <RadioGroupItem value={opt.key} className="border-border" disabled={disabled} />
-              </RadioGroup>
-            ) : (
-              <Checkbox
-                checked={isSelected(opt.key)}
-                onCheckedChange={() => handleToggleAnswer(opt.key)}
-                className="border-border"
-                disabled={disabled}
-              />
+    <div className="space-y-1.5">
+      {value.map((opt, index) => {
+        const selected = isSelected(opt.key);
+        return (
+          <div
+            key={opt.key}
+            className={`
+              group relative flex items-center gap-2 rounded-lg border px-3 py-2.5
+              transition-all duration-150
+              ${selected
+                ? 'border-secondary-300 bg-secondary-50/60 ring-1 ring-secondary-200'
+                : 'border-border bg-background hover:border-gray-300'
+              }
+            `}
+          >
+            {/* 拖拽手柄占位（视觉层次） */}
+            <GripVertical className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+
+            {/* 选项字母标签 */}
+            <button
+              type="button"
+              onClick={() => handleToggleAnswer(opt.key)}
+              disabled={disabled}
+              className={`
+                shrink-0 w-7 h-7 rounded-md flex items-center justify-center
+                text-xs font-bold transition-all duration-150 cursor-pointer
+                ${selected
+                  ? 'bg-secondary-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }
+              `}
+            >
+              {selected ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : opt.key}
+            </button>
+
+            {/* 选项内容输入 */}
+            <Input
+              value={opt.value}
+              onChange={(e) => handleChange(index, e.target.value)}
+              placeholder={`选项 ${opt.key} 的内容`}
+              className="flex-1 h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-2 text-sm"
+              readOnly={disabled}
+            />
+
+            {/* 删除按钮 — hover 时显示 */}
+            {!disabled && value.length > 2 && (
+              <button
+                type="button"
+                onClick={() => handleRemove(index)}
+                className="shrink-0 w-6 h-6 rounded flex items-center justify-center
+                  opacity-0 group-hover:opacity-100 transition-opacity
+                  text-gray-400 hover:text-destructive-500 hover:bg-destructive-50"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
+        );
+      })}
 
-          <Input
-            value={opt.key}
-            onChange={(e) => handleChange(index, 'key', e.target.value)}
-            placeholder="选项"
-            className="w-12 h-8 text-center font-bold bg-background"
-            readOnly={disabled}
-          />
-          <Input
-            value={opt.value}
-            onChange={(e) => handleChange(index, 'value', e.target.value)}
-            placeholder="输入选项内容..."
-            className="flex-1 h-8 bg-background border-transparent focus:border-border"
-            readOnly={disabled}
-          />
-          {!disabled && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => handleRemove(index)}
-              className="h-8 w-8 p-0 text-text-muted hover:text-destructive-500 hover:bg-destructive-50"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      ))}
       {!disabled && (
-        <Button type="button" variant="outline" size="sm" onClick={handleAdd} className="h-8">
-          <Plus className="w-3 h-3 mr-1" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleAdd}
+          className="h-9 w-full border border-dashed border-gray-200 text-text-muted
+            hover:border-gray-300 hover:bg-gray-50 hover:text-foreground transition-all"
+        >
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
           添加选项
         </Button>
       )}
@@ -146,9 +171,9 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   );
 };
 
-/**
- * 答案输入组件
- */
+/* ─────────────────────────────────────────────
+   答案输入组件（判断题 / 简答题）
+   ───────────────────────────────────────────── */
 interface AnswerInputProps {
   questionType: QuestionType;
   options: Array<{ key: string; value: string }>;
@@ -157,75 +182,58 @@ interface AnswerInputProps {
   disabled?: boolean;
 }
 
-export const AnswerInput: React.FC<AnswerInputProps> = ({ questionType, options, value, onChange, disabled = false }) => {
-  if (questionType === 'SINGLE_CHOICE') {
+export const AnswerInput: React.FC<AnswerInputProps> = ({
+  questionType,
+  value,
+  onChange,
+  disabled = false,
+}) => {
+  if (questionType === 'TRUE_FALSE') {
+    const current = value as string;
     return (
-      <Select value={value as string} onValueChange={(val) => { if (!disabled) onChange(val); }}>
-        <SelectTrigger className="mt-1.5" disabled={disabled}>
-          <SelectValue placeholder="请选择答案" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((opt) => (
-            <SelectItem key={opt.key} value={opt.key}>
-              {opt.key}: {opt.value}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  if (questionType === 'MULTIPLE_CHOICE') {
-    const selectedKeys = Array.isArray(value) ? value : [];
-    return (
-      <div className="mt-1.5 space-y-2">
-        {options.map((opt) => (
-          <div key={opt.key} className="flex items-center gap-2">
-            <Checkbox
-              checked={selectedKeys.includes(opt.key)}
-              onCheckedChange={(checked) => {
-                if (disabled) return;
-                if (checked) {
-                  onChange([...selectedKeys, opt.key]);
-                } else {
-                  onChange(selectedKeys.filter((k) => k !== opt.key));
-                }
-              }}
-              disabled={disabled}
-            />
-            <span className="text-sm">
-              {opt.key}: {opt.value}
-            </span>
-          </div>
+      <div className="flex gap-2">
+        {[
+          { val: 'TRUE', label: '正确' },
+          { val: 'FALSE', label: '错误' },
+        ].map(({ val, label }) => (
+          <button
+            key={val}
+            type="button"
+            disabled={disabled}
+            onClick={() => !disabled && onChange(val)}
+            className={`
+              flex-1 h-10 rounded-lg border text-sm font-semibold
+              transition-all duration-150 cursor-pointer
+              ${current === val
+                ? val === 'TRUE'
+                  ? 'border-secondary-300 bg-secondary-50 text-secondary-700 ring-1 ring-secondary-200'
+                  : 'border-destructive-300 bg-destructive-50 text-destructive-700 ring-1 ring-destructive-200'
+                : 'border-border bg-background text-text-muted hover:border-gray-300'
+              }
+            `}
+          >
+            {label}
+          </button>
         ))}
       </div>
     );
   }
 
-  if (questionType === 'TRUE_FALSE') {
+  if (questionType === 'SHORT_ANSWER') {
     return (
-      <Select value={value as string} onValueChange={(val) => { if (!disabled) onChange(val); }}>
-        <SelectTrigger className="mt-1.5" disabled={disabled}>
-          <SelectValue placeholder="请选择答案" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="TRUE">正确</SelectItem>
-          <SelectItem value="FALSE">错误</SelectItem>
-        </SelectContent>
-      </Select>
+      <Textarea
+        value={value as string}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+          if (!disabled) onChange(e.target.value);
+        }}
+        placeholder="输入参考答案..."
+        readOnly={disabled}
+        rows={3}
+        className="resize-none"
+      />
     );
   }
 
-  return (
-    <Textarea
-      value={value as string}
-      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        if (!disabled) onChange(e.target.value);
-      }}
-      placeholder="请输入参考答案"
-      className="mt-1.5"
-      readOnly={disabled}
-      rows={2}
-    />
-  );
+  // 选择题不使用此组件（由 OptionsInput 直接处理答案）
+  return null;
 };

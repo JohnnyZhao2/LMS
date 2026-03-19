@@ -2,6 +2,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.authorization.models import Permission, RolePermission
 from apps.activity_logs.models import ContentLog, OperationLog, UserLog
 from apps.knowledge.models import Knowledge, Tag
 from apps.questions.models import Question
@@ -22,15 +23,58 @@ def department():
     return Department.objects.create(name='契约测试部门', code='CONTRACT_DEPT')
 
 
+def _grant_role_permissions(role, permission_codes):
+    permissions = Permission.objects.filter(code__in=permission_codes)
+    for permission in permissions:
+        RolePermission.objects.get_or_create(role=role, permission=permission)
+
+
 @pytest.fixture
 def mentor_role():
     role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    _grant_role_permissions(
+        role,
+        [
+            'question.view',
+            'question.create',
+            'question.update',
+            'question.delete',
+            'quiz.view',
+            'quiz.create',
+            'quiz.update',
+            'quiz.delete',
+            'task.view',
+            'task.create',
+            'task.update',
+            'task.delete',
+            'task.assign',
+            'task.analytics.view',
+            'spot_check.view',
+            'spot_check.create',
+            'spot_check.update',
+            'spot_check.delete',
+            'grading.view',
+            'grading.score',
+            'knowledge.view',
+        ],
+    )
     return role
 
 
 @pytest.fixture
 def admin_role():
     role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
+    _grant_role_permissions(
+        role,
+        [
+            'knowledge.view',
+            'knowledge.create',
+            'knowledge.update',
+            'knowledge.delete',
+            'user.view',
+            'activity_log.view',
+        ],
+    )
     return role
 
 
@@ -121,9 +165,7 @@ def sample_exam_quiz(mentor_user):
 def sample_knowledge(mentor_user, line_tag):
     return Knowledge.objects.create(
         title='契约测试知识',
-        knowledge_type='OTHER',
         content='契约测试正文内容',
-        summary='契约测试摘要',
         created_by=mentor_user,
         updated_by=mentor_user,
         is_current=True,
@@ -865,15 +907,15 @@ class TestGradingApiContracts:
 
 @pytest.mark.django_db
 class TestActivityLogApiContracts:
-    def test_user_log_list_response_is_wrapped(self, api_client, mentor_user, student_user):
+    def test_user_log_list_response_is_wrapped(self, api_client, admin_user, student_user):
         log = UserLog.objects.create(
             user=student_user,
-            operator=mentor_user,
+            operator=admin_user,
             action='login',
             description='测试登录',
             status='success',
         )
-        api_client.force_authenticate(user=mentor_user)
+        api_client.force_authenticate(user=admin_user)
         response = api_client.get('/api/logs/user/?page=1&page_size=10')
 
         assert response.status_code == 200
@@ -883,17 +925,17 @@ class TestActivityLogApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert log.id in result_ids
 
-    def test_content_log_list_response_is_wrapped(self, api_client, mentor_user):
+    def test_content_log_list_response_is_wrapped(self, api_client, admin_user):
         log = ContentLog.objects.create(
             content_type='knowledge',
             content_id='K-1',
             content_title='知识A',
-            operator=mentor_user,
+            operator=admin_user,
             action='create',
             description='创建知识',
             status='success',
         )
-        api_client.force_authenticate(user=mentor_user)
+        api_client.force_authenticate(user=admin_user)
         response = api_client.get('/api/logs/content/?page=1&page_size=10')
 
         assert response.status_code == 200
@@ -902,16 +944,16 @@ class TestActivityLogApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert log.id in result_ids
 
-    def test_operation_log_list_response_is_wrapped(self, api_client, mentor_user):
+    def test_operation_log_list_response_is_wrapped(self, api_client, admin_user):
         log = OperationLog.objects.create(
-            operator=mentor_user,
+            operator=admin_user,
             operation_type='grading',
             action='manual_grade',
             description='批阅试卷',
             status='success',
             duration=120,
         )
-        api_client.force_authenticate(user=mentor_user)
+        api_client.force_authenticate(user=admin_user)
         response = api_client.get('/api/logs/operation/?page=1&page_size=10')
 
         assert response.status_code == 200

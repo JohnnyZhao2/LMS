@@ -2,10 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { KnowledgeListItem, KnowledgeDetail, KnowledgeType, PaginatedResponse } from '@/types/api';
+import type { KnowledgeListItem, KnowledgeDetail, PaginatedResponse } from '@/types/api';
 
 interface GetKnowledgeListParams {
-  knowledge_type?: KnowledgeType;
   line_tag_id?: number;
   system_tag_id?: number;
   operation_tag_id?: number;
@@ -16,13 +15,12 @@ interface GetKnowledgeListParams {
 
 export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
   const currentRole = useCurrentRole();
-  const { knowledge_type, line_tag_id, system_tag_id, operation_tag_id, search, page = 1, pageSize = 20 } = params;
+  const { line_tag_id, system_tag_id, operation_tag_id, search, page = 1, pageSize = 20 } = params;
 
   return useQuery({
     queryKey: [
       'knowledge-list',
       currentRole ?? 'UNKNOWN',
-      knowledge_type,
       line_tag_id,
       system_tag_id,
       operation_tag_id,
@@ -33,7 +31,6 @@ export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
-        ...(knowledge_type && { knowledge_type }),
         ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
         ...(system_tag_id && { system_tag_id: String(system_tag_id) }),
         ...(operation_tag_id && { operation_tag_id: String(operation_tag_id) }),

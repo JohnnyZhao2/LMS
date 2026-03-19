@@ -46,9 +46,8 @@ interface KnowledgeListViewItem {
   id: number;
   knowledgeId: number;
   title: string;
-  summary?: string;
-  knowledgeType: string;
-  knowledgeTypeDisplay?: string;
+  lineTagName?: string | null;
+  contentPreview?: string;
   isCompleted?: boolean;
   completedAt?: string | null;
 }
@@ -91,9 +90,8 @@ export const TaskDetail: React.FC = () => {
         id: item.id,
         knowledgeId: item.knowledge_id,
         title: item.title || '无标题',
-        summary: item.summary,
-        knowledgeType: item.knowledge_type,
-        knowledgeTypeDisplay: item.knowledge_type_display,
+        lineTagName: item.line_tag_name,
+        contentPreview: item.content_preview,
         isCompleted: item.is_completed,
         completedAt: item.completed_at,
       }));
@@ -103,9 +101,8 @@ export const TaskDetail: React.FC = () => {
       id: item.id,
       knowledgeId: item.knowledge,
       title: item.knowledge_title || '无标题',
-      summary: item.summary,
-      knowledgeType: item.knowledge_type,
-      knowledgeTypeDisplay: item.knowledge_type_display,
+      lineTagName: item.line_tag_name,
+      contentPreview: item.content_preview,
       isCompleted: false,
     }));
   }, [isStudent, learningDetail, task]);
@@ -333,7 +330,7 @@ export const TaskDetail: React.FC = () => {
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 h-5 bg-muted text-text-muted border-border uppercase tracking-wide rounded-full">
-                              {item.knowledgeTypeDisplay || item.knowledgeType}
+                              {item.lineTagName || '知识文档'}
                             </Badge>
                             <h4 className={cn(
                               "font-bold text-foreground truncate text-lg transition-colors",
@@ -343,9 +340,9 @@ export const TaskDetail: React.FC = () => {
                             </h4>
                           </div>
                           <div className="h-10">
-                            {item.summary && (
+                            {item.contentPreview && (
                               <p className="text-sm text-text-muted line-clamp-2 leading-relaxed group-hover:text-text-muted">
-                                {item.summary.replace(/<[^>]*>/g, '')}
+                                {item.contentPreview.replace(/<[^>]*>/g, '')}
                               </p>
                             )}
                           </div>

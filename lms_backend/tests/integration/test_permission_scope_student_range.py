@@ -20,6 +20,17 @@ def _create_user(*, employee_id: str, username: str, department: Department, rol
     return user
 
 
+def _create_superuser(*, employee_id: str, username: str, department: Department) -> User:
+    return User.objects.create_user(
+        employee_id=employee_id,
+        username=username,
+        password='password123',
+        department=department,
+        is_staff=True,
+        is_superuser=True,
+    )
+
+
 def _extract_list_items(response):
     return response.data['data']['results']
 
@@ -95,6 +106,101 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
     student_ids = {item['id'] for item in response.data['data']}
     assert mentee.id not in student_ids
     assert extra_student.id in student_ids
+
+
+@pytest.mark.django_db
+def test_task_assign_scope_includes_mentee_with_admin_and_student_roles():
+    client = APIClient()
+    department = Department.objects.create(name='导师学员身份部门', code='SCOPE_RANGE_D4')
+
+    mentor = _create_user(
+        employee_id='SCOPE_MENTOR_003',
+        username='导师范围3',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    mentee_with_admin_role = _create_user(
+        employee_id='SCOPE_STU_ADMIN_001',
+        username='学员兼管理员',
+        department=department,
+        role_codes=['ADMIN'],
+    )
+    mentee_with_admin_role.mentor = mentor
+    mentee_with_admin_role.save(update_fields=['mentor'])
+
+    client.force_authenticate(user=mentor)
+
+    response = client.get('/api/tasks/assignable-users/')
+    assert response.status_code == 200
+    student_ids = {item['id'] for item in response.data['data']}
+    assert mentee_with_admin_role.id in student_ids
+
+
+@pytest.mark.django_db
+def test_super_admin_scope_is_not_constrained_by_user_overrides():
+    client = APIClient()
+    department = Department.objects.create(name='超管范围部门', code='SCOPE_RANGE_D3')
+
+    super_admin = _create_superuser(
+        employee_id='SCOPE_SUPER_001',
+        username='范围超管',
+        department=department,
+    )
+    mentee = _create_user(
+        employee_id='SCOPE_SUPER_STU_001',
+        username='超管名下学员',
+        department=department,
+    )
+    extra_student = _create_user(
+        employee_id='SCOPE_SUPER_STU_002',
+        username='超管非名下学员',
+        department=department,
+        role_codes=['ADMIN'],
+    )
+    mentee.mentor = super_admin
+    mentee.save(update_fields=['mentor'])
+
+    for permission_code in ('task.assign', 'spot_check.view'):
+        permission = Permission.objects.get(code=permission_code)
+        UserPermissionOverride.objects.create(
+            user=super_admin,
+            permission=permission,
+            effect='DENY',
+            scope_type='EXPLICIT_USERS',
+            scope_user_ids=[extra_student.id],
+            granted_by=super_admin,
+        )
+
+    SpotCheck.objects.create(
+        student=mentee,
+        checker=super_admin,
+        content='超管范围记录1',
+        score='88.00',
+        comment='ok',
+        checked_at=timezone.now(),
+    )
+    SpotCheck.objects.create(
+        student=extra_student,
+        checker=super_admin,
+        content='超管范围记录2',
+        score='86.00',
+        comment='ok',
+        checked_at=timezone.now(),
+    )
+
+    client.force_authenticate(user=super_admin)
+
+    assignable_response = client.get('/api/tasks/assignable-users/')
+    assert assignable_response.status_code == 200
+    assignable_ids = {item['id'] for item in assignable_response.data['data']}
+    assert mentee.id in assignable_ids
+    assert extra_student.id in assignable_ids
+
+    spot_check_response = client.get('/api/spot-checks/')
+    assert spot_check_response.status_code == 200
+    spot_check_student_ids = {item['student'] for item in _extract_list_items(spot_check_response)}
+    assert mentee.id in spot_check_student_ids
+    assert extra_student.id in spot_check_student_ids
 
 
 @pytest.mark.django_db

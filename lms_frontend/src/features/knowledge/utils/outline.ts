@@ -8,17 +8,6 @@ export interface OutlineItem {
 }
 
 /**
- * 应急类知识的结构化标签页
- */
-export const EMERGENCY_TABS = [
-    { key: 'fault_scenario', label: '故障场景' },
-    { key: 'trigger_process', label: '触发流程' },
-    { key: 'solution', label: '解决方案' },
-    { key: 'verification_plan', label: '验证方案' },
-    { key: 'recovery_plan', label: '恢复方案' },
-] as const;
-
-/**
  * 从 HTML 内容解析标题生成目录
  */
 export function parseOutlineFromHtml(html: string): OutlineItem[] {
@@ -36,17 +25,8 @@ export function parseOutlineFromHtml(html: string): OutlineItem[] {
 }
 
 /**
- * 从内容解析目录（支持应急类和标准类）
+ * 从内容解析目录
  */
-export function parseOutline(content: string, isEmergency: boolean): OutlineItem[] {
-    if (isEmergency) {
-        // 应急类使用固定的标签页作为目录
-        return EMERGENCY_TABS.map((tab) => ({
-            id: tab.key,
-            level: 1,
-            text: tab.label,
-        }));
-    }
-
+export function parseOutline(content: string): OutlineItem[] {
     return parseOutlineFromHtml(content);
 }

@@ -279,3 +279,18 @@ def test_admin_creator_side_filter_invalid_value_raises(monkeypatch):
         service.filter_task_queryset_by_creator_side(Task.objects.all(), 'invalid')
 
     assert exc.value.code == ErrorCodes.INVALID_INPUT
+
+
+@pytest.mark.django_db
+def test_validate_assignee_ids_rejects_non_student_identity():
+    """分配目标必须具备学员身份（STUDENT 角色）"""
+    student_user = UserFactory()
+    super_admin_user = UserFactory(is_superuser=True, is_staff=True)
+
+    is_valid, invalid_ids = TaskService.validate_assignee_ids(
+        [student_user.id, super_admin_user.id]
+    )
+
+    assert not is_valid
+    assert super_admin_user.id in invalid_ids
+    assert student_user.id not in invalid_ids

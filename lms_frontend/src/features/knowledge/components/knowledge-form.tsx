@@ -20,25 +20,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
 
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
 import { useParseDocument } from '../api/parse-document';
-import { EMERGENCY_TABS, parseOutline } from '../utils';
+import { parseOutline } from '../utils';
 import { showApiError } from '@/utils/error-handler';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import type { KnowledgeType, KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
+import type { KnowledgeCreateRequest, KnowledgeUpdateRequest, Tag } from '@/types/api';
 
 const RichTextEditor = lazy(() => import('./rich-text-editor').then(m => ({ default: m.RichTextEditor })));
 
-
-
 /**
- * 知识表单组件 - Unified Layout 版本 (Tasks/Quizzes Style)
+ * 知识表单组件 - 统一正文版本
  */
 export const KnowledgeForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,62 +42,38 @@ export const KnowledgeForm: React.FC = () => {
   const { roleNavigate, getRolePath } = useRoleNavigate();
   const isEdit = !!id;
 
-  // API Hooks
+  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
+  const [title, setTitle] = useState('');
+  const [lineTypeId, setLineTypeId] = useState<number | undefined>();
+  const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
+  const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [content, setContent] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const { data: knowledgeDetail, isLoading: detailLoading } = useKnowledgeDetail(Number(id));
   const { data: lineTypeTags = [] } = useLineTypeTags();
+  const { data: systemTags = [] } = useSystemTags(lineTypeId);
+  const { data: operationTags = [] } = useOperationTags(lineTypeId);
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const createTag = useCreateTag();
   const parseDocument = useParseDocument();
 
-  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
-
-  // 表单状态
-  const [title, setTitle] = useState('');
-  const [knowledgeType, setKnowledgeType] = useState<KnowledgeType>('OTHER');
-  const [lineTypeId, setLineTypeId] = useState<number | undefined>();
-  const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
-  const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
-  const [sourceUrl, setSourceUrl] = useState('');
-
-  const { data: systemTags = [] } = useSystemTags();
-  const { data: operationTags = [] } = useOperationTags();
-
-  const [content, setContent] = useState('');
-  const [summary, setSummary] = useState('');
-  const [faultScenario, setFaultScenario] = useState('');
-  const [triggerProcess, setTriggerProcess] = useState('');
-  const [solution, setSolution] = useState('');
-  const [verificationPlan, setVerificationPlan] = useState('');
-  const [recoveryPlan, setRecoveryPlan] = useState('');
-
-  const [activeEmergencyTab, setActiveEmergencyTab] = useState('fault_scenario');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // 编辑模式下填充数据
   useEffect(() => {
-    if (isEdit && knowledgeDetail) {
-      if (title === '') setTitle(knowledgeDetail.title || '');
-      setKnowledgeType(knowledgeDetail.knowledge_type);
-      setLineTypeId(knowledgeDetail.line_tag?.id);
-      setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
-      setOperationTagIds(knowledgeDetail.operation_tags?.map((t) => t.id) || []);
-      setContent(knowledgeDetail.content || '');
-      setSummary(knowledgeDetail.summary || '');
-      setFaultScenario(knowledgeDetail.fault_scenario || '');
-      setTriggerProcess(knowledgeDetail.trigger_process || '');
-      setSolution(knowledgeDetail.solution || '');
-      setVerificationPlan(knowledgeDetail.verification_plan || '');
-      setRecoveryPlan(knowledgeDetail.recovery_plan || '');
-      setSourceUrl(knowledgeDetail.source_url || '');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!knowledgeDetail || !isEdit) return;
+
+    setTitle(knowledgeDetail.title || '');
+    setLineTypeId(knowledgeDetail.line_tag?.id);
+    setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
+    setOperationTagIds(knowledgeDetail.operation_tags?.map((t) => t.id) || []);
+    setSourceUrl(knowledgeDetail.source_url || '');
+    setContent(knowledgeDetail.content || '');
   }, [isEdit, knowledgeDetail]);
 
-  // 新建模式下设置默认值
   useEffect(() => {
     if (!isEdit && lineTypeTags.length > 0 && !lineTypeId) {
-      const defaultLineType = lineTypeTags.find((t: Tag) => t.name === '其他');
+      const defaultLineType = lineTypeTags.find((t: Tag) => t.name === '其他') ?? lineTypeTags[0];
       if (defaultLineType) {
         setLineTypeId(defaultLineType.id);
       }
@@ -122,72 +94,44 @@ export const KnowledgeForm: React.FC = () => {
         setTitle(result.suggested_title);
       }
       setContent(result.content);
-      toast.success('文档解析成功');
+      toast.success('正文导入成功');
     } catch (error) {
-      showApiError(error, '文档解析失败');
+      showApiError(error, '正文导入失败');
     }
 
-    // 清空 input 以便重复上传同一文件
     e.target.value = '';
   }, [parseDocument, title]);
 
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
+    const plainContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
     if (!title.trim()) {
       newErrors.title = '请输入标题';
     }
+
     if (!lineTypeId) {
       newErrors.lineTypeId = '请选择条线类型';
     }
 
-    if (knowledgeType === 'OTHER' && !content.trim()) {
+    if (!plainContent) {
       newErrors.content = '请填写正文内容';
-    }
-
-    if (knowledgeType === 'EMERGENCY') {
-      const hasAnyContent = faultScenario || triggerProcess || solution || verificationPlan || recoveryPlan;
-      if (!hasAnyContent) {
-        newErrors.emergency = '至少需要填写一个结构化字段';
-      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [title, lineTypeId, knowledgeType, content, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan]);
+  }, [title, lineTypeId, content]);
 
   const buildRequestData = useCallback((): KnowledgeCreateRequest | KnowledgeUpdateRequest => {
-    const requestData: KnowledgeCreateRequest | KnowledgeUpdateRequest = {
+    return {
       title,
-      knowledge_type: knowledgeType,
       line_tag_id: lineTypeId!,
       system_tag_ids: systemTagIds,
       operation_tag_ids: operationTagIds,
-      summary,
+      content,
       source_url: sourceUrl || undefined,
     };
-
-    if (knowledgeType === 'EMERGENCY') {
-      requestData.fault_scenario = faultScenario;
-      requestData.trigger_process = triggerProcess;
-      requestData.solution = solution;
-      requestData.verification_plan = verificationPlan;
-      requestData.recovery_plan = recoveryPlan;
-      requestData.content = '';
-    } else {
-      requestData.content = content;
-      requestData.fault_scenario = '';
-      requestData.trigger_process = '';
-      requestData.solution = '';
-      requestData.verification_plan = '';
-      requestData.recovery_plan = '';
-    }
-
-    return requestData;
-  }, [
-    title, knowledgeType, lineTypeId, systemTagIds, operationTagIds,
-    content, summary, sourceUrl, faultScenario, triggerProcess, solution, verificationPlan, recoveryPlan
-  ]);
+  }, [title, lineTypeId, systemTagIds, operationTagIds, content, sourceUrl]);
 
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
@@ -222,20 +166,18 @@ export const KnowledgeForm: React.FC = () => {
       return {
         label: '新建',
         isDraft: false,
-        description: '保存后将立即对所有用户可见。'
+        description: '保存后将立即对所有用户可见。',
       };
     }
 
     return {
       label: '当前版本',
       isDraft: false,
-      description: '保存修改后将创建新版本并立即对所有用户可见。'
+      description: '保存修改后将创建新版本并立即对所有用户可见。',
     };
   }, [isEdit]);
 
-  const outline = useMemo(() => {
-    return parseOutline(knowledgeType === 'EMERGENCY' ? '' : content, knowledgeType === 'EMERGENCY');
-  }, [knowledgeType, content]);
+  const outline = useMemo(() => parseOutline(content), [content]);
 
   if (isEdit && detailLoading) {
     return (
@@ -247,7 +189,6 @@ export const KnowledgeForm: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-var(--header-height)-1px)] -m-6 bg-muted overflow-hidden">
-      {/* 顶部导航栏 - Unified Style */}
       <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
         <div className="flex items-center gap-4 shrink-0">
           <Button
@@ -267,19 +208,17 @@ export const KnowledgeForm: React.FC = () => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入知识标题..."
             className={cn(
-              "text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4 hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100",
-              "transition-all duration-200",
-              errors.title && "border-destructive-300 placeholder:text-destructive-300 focus:border-destructive-500 focus:ring-destructive-100"
+              'text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4 hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200',
+              errors.title && 'border-destructive-300 placeholder:text-destructive-300 focus:border-destructive-500 focus:ring-destructive-100'
             )}
           />
         </div>
 
-        {/* 原始文档链接 */}
         <div className="flex items-center gap-2 shrink-0">
           <Input
             value={sourceUrl}
             onChange={(e) => setSourceUrl(e.target.value)}
-            placeholder="原始文档链接..."
+            placeholder="来源链接（可选）"
             className="w-48 h-10 text-sm"
           />
           {sourceUrl && (
@@ -288,7 +227,7 @@ export const KnowledgeForm: React.FC = () => {
               size="icon"
               className="h-10 w-10"
               onClick={() => window.open(sourceUrl, '_blank')}
-              title="打开原始文档"
+              title="打开来源链接"
             >
               <ExternalLink className="w-4 h-4" />
             </Button>
@@ -329,12 +268,10 @@ export const KnowledgeForm: React.FC = () => {
         </div>
       </div>
 
-      {/* 主体内容区域 - 三栏结构 */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左侧目录 */}
         <div className={cn(
-          "flex flex-col border-r border-border bg-background transition-all duration-300",
-          outlineCollapsed ? "w-14" : "w-64"
+          'flex flex-col border-r border-border bg-background transition-all duration-300',
+          outlineCollapsed ? 'w-14' : 'w-64'
         )}>
           {outlineCollapsed ? (
             <div className="flex flex-col items-center py-4">
@@ -349,10 +286,10 @@ export const KnowledgeForm: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
+                  <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
                 <div className="flex items-center gap-2">
                   <ListOrdered className="w-5 h-5 text-primary-500" />
-                  内容大纲
+                  正文目录
                 </div>
                 <Button
                   variant="ghost"
@@ -373,19 +310,14 @@ export const KnowledgeForm: React.FC = () => {
                         <div
                           key={outlineKey}
                           className={cn(
-                            "group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all",
-                            item.level === 1 ? 'font-semibold text-foreground bg-muted' : 'text-text-muted hover:bg-muted',
-                            knowledgeType === 'EMERGENCY' && activeEmergencyTab === item.id && 'bg-primary-50 text-primary-600 ring-1 ring-primary-100'
+                            'group flex items-center gap-3 py-3 px-4 text-xs rounded-lg cursor-pointer transition-all',
+                            item.level === 1 ? 'font-semibold text-foreground bg-muted' : 'text-text-muted hover:bg-muted'
                           )}
                           style={{ paddingLeft: `${paddingLeft}px` }}
                           onClick={() => {
-                            if (knowledgeType === 'EMERGENCY') {
-                              setActiveEmergencyTab(item.id);
-                            } else {
-                              const element = document.getElementById(item.id);
-                              if (element) {
-                                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                              }
+                            const element = document.getElementById(item.id);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
                           }}
                         >
@@ -398,8 +330,8 @@ export const KnowledgeForm: React.FC = () => {
                   <div className="h-60">
                     <EmptyState
                       icon={FileText}
-                      description="暂无大纲数据"
-                      subDescription="添加标题后将自动在此生成目录"
+                      description="暂无正文目录"
+                      subDescription="在正文中添加标题后会自动生成目录"
                       iconSize="md"
                     />
                   </div>
@@ -409,106 +341,50 @@ export const KnowledgeForm: React.FC = () => {
           )}
         </div>
 
-        {/* 中间编辑区 */}
         <div className="flex-1 flex flex-col bg-background min-w-0">
-          {/* 文档上传区域 - 仅在非应急类型时显示 */}
-          {knowledgeType === 'OTHER' && (
-            <div className="px-8 py-4 border-b border-border">
-              <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg cursor-pointer hover:bg-primary-100 transition-colors">
-                <Upload className="w-4 h-4" />
-                <span className="text-sm font-medium">上传文档解析</span>
-                <input
-                  type="file"
-                  accept=".docx,.pptx,.pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={parseDocument.isPending}
-                />
-              </label>
-              <span className="ml-3 text-xs text-text-muted">
-                支持 .docx, .pptx, .pdf 格式
-              </span>
-              {parseDocument.isPending && (
-                <span className="ml-3 text-xs text-primary-600">
-                  <Loader2 className="w-3 h-3 inline animate-spin mr-1" />
-                  解析中...
-                </span>
-              )}
+          <div className="px-8 py-4 border-b border-border flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">正文编辑</h2>
+              <p className="text-xs text-text-muted mt-1">所有知识统一使用同一份富文本正文，标题自动生成目录，标签仅用于归类与筛选。</p>
             </div>
-          )}
+            <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg cursor-pointer hover:bg-primary-100 transition-colors shrink-0">
+              <Upload className="w-4 h-4" />
+              <span className="text-sm font-medium">导入文档正文</span>
+              <input
+                type="file"
+                accept=".docx,.pptx,.pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={parseDocument.isPending}
+              />
+            </label>
+          </div>
+
           <div className="flex-1 overflow-y-auto">
             <div className="w-full h-full">
-              {knowledgeType === 'EMERGENCY' ? (
-                <div className="flex flex-col h-full overflow-hidden">
-                  {EMERGENCY_TABS.map((tab, index) => {
-                    if (tab.key !== activeEmergencyTab) return null;
-
-                    return (
-                      <div key={tab.key} className="flex flex-col h-full animate-in fade-in duration-300">
-                        {/* Tab Header */}
-                        <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-border">
-                          <div className="flex items-center gap-3">
-                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-50 text-primary-600 text-xs font-bold ring-1 ring-primary-100">
-                              {index + 1}
-                            </span>
-                            <h2 className="text-base font-bold text-foreground tracking-tight">{tab.label}</h2>
-                          </div>
-                        </div>
-
-                        {/* Editor Area */}
-                        <div className="flex-1 overflow-hidden">
-                          <Suspense fallback={null}>
-                            <RichTextEditor
-                              value={
-                                tab.key === 'fault_scenario' ? faultScenario :
-                                  tab.key === 'trigger_process' ? triggerProcess :
-                                    tab.key === 'solution' ? solution :
-                                      tab.key === 'verification_plan' ? verificationPlan :
-                                        tab.key === 'recovery_plan' ? recoveryPlan : ''
-                              }
-                              onChange={(val) => {
-                                if (tab.key === 'fault_scenario') setFaultScenario(val);
-                                else if (tab.key === 'trigger_process') setTriggerProcess(val);
-                                else if (tab.key === 'solution') setSolution(val);
-                                else if (tab.key === 'verification_plan') setVerificationPlan(val);
-                                else if (tab.key === 'recovery_plan') setRecoveryPlan(val);
-                              }}
-                              placeholder={`在此输入${tab.label}详情...`}
-                              className="border-none  ring-0 w-full h-full"
-                              contentClassName="p-6 px-8 max-w-6xl text-base leading-relaxed"
-                            />
-                          </Suspense>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="flex flex-col h-full">
+                <div className="flex-1">
+                  <Suspense fallback={null}>
+                    <RichTextEditor
+                      value={content}
+                      onChange={setContent}
+                      placeholder="请输入知识正文..."
+                      className="border-none ring-0 h-full min-h-[calc(100vh-160px)]"
+                      contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
+                    />
+                  </Suspense>
                 </div>
-              ) : (
-                <div className="flex flex-col h-full">
-                  <div className="flex-1">
-                    <Suspense fallback={null}>
-                      <RichTextEditor
-                        value={content}
-                        onChange={setContent}
-                        placeholder="请输入知识正文..."
-                        className="border-none  ring-0 h-full min-h-[calc(100vh-160px)]"
-                        contentClassName="p-6 px-8 max-w-6xl mx-auto text-base leading-relaxed"
-                      />
-                    </Suspense>
+                {errors.content && (
+                  <div className="m-6 p-4 bg-destructive-50 border border-destructive-100 rounded-lg text-xs font-semibold text-destructive-600 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-destructive-500 animate-pulse" />
+                    {errors.content}
                   </div>
-                  {errors.content && (
-                    <div className="m-6 p-4 bg-destructive-50 border border-destructive-100 rounded-lg text-xs font-semibold text-destructive-600 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-destructive-500 animate-pulse" />
-                      {errors.content}
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 右侧配置 */}
         <div className="w-[380px] flex flex-col bg-background border-l border-border shrink-0 overflow-y-auto">
           <div className="flex items-center h-16 px-8 bg-background border-b border-border shrink-0">
             <h2 className="text-sm font-semibold text-foreground flex items-center gap-3">
@@ -518,71 +394,51 @@ export const KnowledgeForm: React.FC = () => {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* 基础定义 */}
             <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
               <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 基础配置
               </h3>
               <div className="space-y-2.5">
-                <Label className="text-xs font-semibold text-foreground ml-1">知识分类</Label>
-                <SegmentedControl
-                  options={[
-                    { label: '标准类', value: 'OTHER' },
-                    { label: '应急类', value: 'EMERGENCY' },
-                  ]}
-                  value={knowledgeType}
-                  onChange={(val) => setKnowledgeType(val as KnowledgeType)}
-                  className="w-full"
-                  activeColor="white"
-                  variant="premium"
+                <Label className="text-xs font-semibold text-foreground ml-1">所属条线</Label>
+                <SearchableSelect
+                  items={lineTypeTags}
+                  value={lineTypeId}
+                  onSelect={(v) => {
+                    setLineTypeId(Number(v));
+                    setSystemTagIds([]);
+                    setOperationTagIds([]);
+                  }}
+                  onCreate={async (name) => {
+                    const newTag = await createTag.mutateAsync({ name, tag_type: 'LINE', is_active: true });
+                    setLineTypeId(newTag.id);
+                    setSystemTagIds([]);
+                    setOperationTagIds([]);
+                    toast.success('新条线已创建');
+                  }}
+                  placeholder="选择条线..."
+                  getLabel={(t) => t.name}
+                  getValue={(t) => t.id}
                 />
+                {errors.lineTypeId && <p className="text-xs font-semibold text-destructive-500 px-1">{errors.lineTypeId}</p>}
               </div>
             </section>
 
-            {/* 内容摘要 */}
             <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
               <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-secondary-500" />
-                内容摘要
+                来源信息
               </h3>
               <div className="space-y-4">
-                <Textarea
-                  placeholder="添加说明..."
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  className="min-h-[120px] font-medium"
+                <Input
+                  placeholder="来源链接（可选）"
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  className="h-11"
                 />
               </div>
             </section>
 
-            {/* 分类归属 */}
-            <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
-              <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                分类归属
-              </h3>
-              <div className="space-y-4">
-                <div className="space-y-2.5">
-                  <Label className="text-xs font-semibold text-foreground ml-1">所属条线</Label>
-                  <SearchableSelect
-                    items={lineTypeTags}
-                    value={lineTypeId}
-                    onSelect={(v) => setLineTypeId(Number(v))}
-                    onCreate={async (name) => {
-                      const newTag = await createTag.mutateAsync({ name, tag_type: 'LINE', is_active: true });
-                      setLineTypeId(newTag.id);
-                      toast.success('新条线已创建');
-                    }}
-                    placeholder="选择条线..."
-                    getLabel={(t) => t.name}
-                    getValue={(t) => t.id}
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* 精细标签 */}
             <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
               <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-warning-500" />
@@ -598,7 +454,7 @@ export const KnowledgeForm: React.FC = () => {
                     {systemTagIds.map(id => {
                       const tag = systemTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
+                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setSystemTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>
@@ -628,7 +484,7 @@ export const KnowledgeForm: React.FC = () => {
                     {operationTagIds.map(id => {
                       const tag = operationTags.find(t => t.id === id);
                       return tag ? (
-                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none  bg-secondary-50 text-secondary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
+                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none bg-secondary-50 text-secondary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
                           {tag.name}
                           <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setOperationTagIds(prev => prev.filter(i => i !== id))} />
                         </Badge>

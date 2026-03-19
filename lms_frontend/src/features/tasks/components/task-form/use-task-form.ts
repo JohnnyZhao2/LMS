@@ -58,8 +58,7 @@ export const useTaskForm = () => {
   const [resourceSearch, setResourceSearch] = useState('');
   const [resourceType, setResourceType] = useState<'ALL' | ResourceType>('ALL');
   const [selectedUserIdsDraft, setSelectedUserIdsDraft] = useState<number[] | null>(null);
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [userModalSearch, setUserModalSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   // API hooks
@@ -81,7 +80,7 @@ export const useTaskForm = () => {
     page_size: 100,
     enabled: resourceType === 'ALL' || resourceType === 'QUIZ'
   });
-  const { data: users } = useAssignableUsers();
+  const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
   // Disabled state logic
   const hasProgress = task?.has_progress || false;
@@ -100,7 +99,7 @@ export const useTaskForm = () => {
         is_current: item.is_current,
         title: item.knowledge_title || `文档 ${item.knowledge}`,
         resourceType: 'DOCUMENT' as ResourceType,
-        category: (item as { knowledge_type_display?: string }).knowledge_type_display || '文档',
+        category: item.line_tag_name || '文档',
       }));
 
       const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
@@ -185,18 +184,13 @@ export const useTaskForm = () => {
     return filteredResources.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredResources, safeCurrentPage]);
 
-  const modalFilteredUsers = useMemo(() => {
+  const filteredUsers = useMemo(() => {
     if (!users) return [];
     return users.filter(u =>
-      u.username.toLowerCase().includes(userModalSearch.toLowerCase()) ||
-      (u.employee_id && u.employee_id.toLowerCase().includes(userModalSearch.toLowerCase()))
+      u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.employee_id && u.employee_id.toLowerCase().includes(userSearch.toLowerCase()))
     );
-  }, [users, userModalSearch]);
-
-  const selectedUserDetails = useMemo(() => {
-    if (!users) return [];
-    return users.filter(u => selectedUserIds.includes(u.id));
-  }, [users, selectedUserIds]);
+  }, [users, userSearch]);
 
   // Handlers
   const addResource = (res: ResourceItem) => {
@@ -280,10 +274,10 @@ export const useTaskForm = () => {
 
   const toggleAllUsers = (checked: boolean) => {
     if (checked) {
-      const allIds = modalFilteredUsers.map(u => u.id);
+      const allIds = filteredUsers.map(u => u.id);
       setSelectedUserIds(prev => Array.from(new Set([...prev, ...allIds])));
     } else {
-      const currentIds = modalFilteredUsers.map(u => u.id);
+      const currentIds = filteredUsers.map(u => u.id);
       if (canRemoveAssignee) {
         setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id)));
       } else {
@@ -366,10 +360,8 @@ export const useTaskForm = () => {
     resourceType,
     setResourceType,
     selectedUserIds,
-    isUserModalOpen,
-    setIsUserModalOpen,
-    userModalSearch,
-    setUserModalSearch,
+    userSearch,
+    setUserSearch,
     currentPage,
     setCurrentPage,
 
@@ -377,8 +369,8 @@ export const useTaskForm = () => {
     availableResources,
     totalPages,
     safeCurrentPage,
-    modalFilteredUsers,
-    selectedUserDetails,
+    filteredUsers,
+    isUsersLoading,
     isLoading,
     isSubmitting,
     canSubmit,

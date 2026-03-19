@@ -11,6 +11,7 @@ import uuid
 from typing import List, Optional, Tuple
 
 from django.db import transaction
+from django.utils.html import strip_tags
 from django.utils.html import escape
 
 from core.base_service import BaseService
@@ -27,9 +28,7 @@ class KnowledgeService(BaseService):
     # 创建新版本时需要复制的内容字段
     # 添加新的内容字段时，只需在此列表中添加即可
     VERSION_COPY_FIELDS = [
-        'title', 'knowledge_type', 'summary',
-        'fault_scenario', 'trigger_process', 'solution',
-        'verification_plan', 'recovery_plan',
+        'title',
         'content', 'source_url',
     ]
 
@@ -183,26 +182,11 @@ class KnowledgeService(BaseService):
 
     def _validate_knowledge_data(self, data: dict) -> None:
         """验证知识文档数据"""
-        knowledge_type = data.get('knowledge_type')
-        if knowledge_type == 'EMERGENCY':
-            structured_fields = [
-                data.get('fault_scenario', ''),
-                data.get('trigger_process', ''),
-                data.get('solution', ''),
-                data.get('verification_plan', ''),
-                data.get('recovery_plan', ''),
-            ]
-            if not any(f.strip() for f in structured_fields):
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='应急类知识必须至少填写一个结构化字段'
-                )
-        elif knowledge_type == 'OTHER':
-            if not data.get('content', '').strip():
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='其他类型知识必须填写正文内容'
-                )
+        if not strip_tags(str(data.get('content', ''))).strip():
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='知识文档必须填写正文内容'
+            )
 
     def _set_tags(
         self,

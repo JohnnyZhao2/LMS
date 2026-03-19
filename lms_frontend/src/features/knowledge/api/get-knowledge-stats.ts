@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { KnowledgeType } from '@/types/api';
 
 /**
  * 知识统计数据
@@ -10,15 +9,14 @@ import type { KnowledgeType } from '@/types/api';
 export interface KnowledgeStats {
   total: number;
   published: number;
-  emergency: number;
   monthly_new: number;
+  with_content: number;
 }
 
 /**
  * 获取知识统计参数
  */
 interface GetKnowledgeStatsParams {
-  knowledge_type?: KnowledgeType;
   line_tag_id?: number;
   system_tag_id?: number;
   operation_tag_id?: number;
@@ -31,13 +29,12 @@ interface GetKnowledgeStatsParams {
  */
 export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { knowledge_type, line_tag_id, system_tag_id, operation_tag_id, search } = params;
+  const { line_tag_id, system_tag_id, operation_tag_id, search } = params;
 
   return useQuery({
     queryKey: [
       'knowledge-stats',
       currentRole ?? 'UNKNOWN',
-      knowledge_type,
       line_tag_id,
       system_tag_id,
       operation_tag_id,
@@ -45,7 +42,6 @@ export const useKnowledgeStats = (params: GetKnowledgeStatsParams = {}) => {
     ],
     queryFn: () => {
       const queryParams = {
-        ...(knowledge_type && { knowledge_type }),
         ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
         ...(system_tag_id && { system_tag_id: String(system_tag_id) }),
         ...(operation_tag_id && { operation_tag_id: String(operation_tag_id) }),

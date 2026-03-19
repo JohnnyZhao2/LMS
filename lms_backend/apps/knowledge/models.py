@@ -2,12 +2,11 @@
 Knowledge models for LMS.
 Implements:
 - Tag: 统一标签模型（条线类型/系统标签/操作标签）
-- Knowledge: 知识文档
+- Knowledge: 统一知识文档
 """
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
 from django.utils.html import strip_tags
 
 from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin, VersionedResourceMixin
@@ -73,25 +72,14 @@ class Tag(TimestampMixin, models.Model):
                 })
 class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
-    知识文档模型
-    知识类型:
-    - EMERGENCY: 应急类知识 - 使用结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）
-    - OTHER: 其他类型知识 - 使用富文本自由正文
+    统一知识文档模型
+    所有知识都使用富文本正文 content，不再区分知识类型或结构化子字段。
     标签关系:
     - line_tag: 条线类型（单选）
     - system_tags: 系统标签（多对多，多选）
     - operation_tags: 操作标签（多对多，多选）
     """
-    KNOWLEDGE_TYPE_CHOICES = [
-        ('EMERGENCY', '应急类'),
-        ('OTHER', '其他类型'),
-    ]
     title = models.CharField(max_length=200, verbose_name='标题')
-    knowledge_type = models.CharField(
-        max_length=20,
-        choices=KNOWLEDGE_TYPE_CHOICES,
-        verbose_name='知识类型'
-    )
     line_tag = models.ForeignKey(
         Tag,
         on_delete=models.PROTECT,
@@ -117,16 +105,8 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         verbose_name='操作标签',
         limit_choices_to={'tag_type': 'OPERATION', 'is_active': True}
     )
-    # 应急类知识的结构化字段
-    fault_scenario = models.TextField(blank=True, default='', verbose_name='故障场景')
-    trigger_process = models.TextField(blank=True, default='', verbose_name='触发流程')
-    solution = models.TextField(blank=True, default='', verbose_name='解决方案')
-    verification_plan = models.TextField(blank=True, default='', verbose_name='验证方案')
-    recovery_plan = models.TextField(blank=True, default='', verbose_name='恢复方案')
-    # 其他类型知识的正文内容
+    # 统一正文内容
     content = models.TextField(blank=True, default='', verbose_name='正文内容')
-    # 知识概要（用于卡片预览显示）
-    summary = models.CharField(max_length=500, blank=True, default='', verbose_name='知识概要')
     # 最后更新者
     updated_by = models.ForeignKey(
         'users.User',
@@ -167,25 +147,10 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
     def clean(self):
         """验证知识文档数据"""
         super().clean()
-        # 应急类知识必须至少填写一个结构化字段
-        if self.knowledge_type == 'EMERGENCY':
-            structured_fields = [
-                self.fault_scenario,
-                self.trigger_process,
-                self.solution,
-                self.verification_plan,
-                self.recovery_plan,
-            ]
-            if not any(field.strip() for field in structured_fields):
-                raise ValidationError({
-                    'knowledge_type': '应急类知识必须至少填写一个结构化字段'
-                })
-        # 其他类型知识必须有正文内容
-        elif self.knowledge_type == 'OTHER':
-            if not self.content.strip():
-                raise ValidationError({
-                    'content': '其他类型知识必须填写正文内容'
-                })
+        if not strip_tags(self.content).strip():
+            raise ValidationError({
+                'content': '知识文档必须填写正文内容'
+            })
     def increment_view_count(self):
         """
         增加知识文档的阅读次数
@@ -205,19 +170,9 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
     def content_preview(self):
         """
         生成内容预览（用于列表显示）
-        从文章内容中自动提取并清洗 HTML 标签：
-        - 应急类知识：从结构化字段中提取关键信息
-        - 其他类型知识：从 content 字段中提取前150个字符
-        注意：不使用 summary 字段，summary 仅用于知识详情页
+        从 content 字段中提取并清洗 HTML 标签，供卡片和列表展示。
         """
-        if self.knowledge_type == 'EMERGENCY':
-            # 应急类知识：优先显示故障场景，如果没有则显示解决方案
-            preview_text = self.fault_scenario.strip() or self.solution.strip()
-            if not preview_text:
-                preview_text = self.trigger_process.strip() or self.verification_plan.strip() or self.recovery_plan.strip()
-        else:
-            # 其他类型知识：从 content 字段提取
-            preview_text = self.content.strip()
+        preview_text = self.content.strip()
 
         # 清洗 HTML 标签
         if preview_text:
@@ -234,26 +189,9 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         """
         从 HTML 内容中提取目录结构（用于卡片预览显示）
         返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
-        对于应急类知识：返回结构化字段的标题
-        对于其他类型知识：从 HTML 内容中解析 h1/h2/h3 标签
+        从 HTML 内容中解析 h1/h2/h3 标签。
         """
         import re
-        if self.knowledge_type == 'EMERGENCY':
-            # 应急类知识：返回有内容的结构化字段标题
-            toc = []
-            fields = [
-                ('fault_scenario', '故障场景'),
-                ('trigger_process', '触发流程'),
-                ('solution', '解决方案'),
-                ('verification_plan', '验证方案'),
-                ('recovery_plan', '恢复方案'),
-            ]
-            for field_name, label in fields:
-                value = getattr(self, field_name, '')
-                if value and value.strip():
-                    toc.append({'level': 1, 'text': label})
-            return toc
-        # 其他类型知识：从 HTML 解析标题
         if not self.content:
             return []
         toc = []

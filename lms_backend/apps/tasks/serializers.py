@@ -19,7 +19,7 @@ from .models import (
     TaskKnowledge,
     TaskQuiz,
 )
-from .student_task_service import StudentTaskService, extract_knowledge_summary
+from .student_task_service import StudentTaskService, extract_knowledge_preview
 from .task_service import TaskService
 
 
@@ -50,23 +50,23 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
 class TaskKnowledgeSerializer(serializers.ModelSerializer):
     """Serializer for TaskKnowledge model."""
     knowledge_title = serializers.CharField(source='knowledge.title', read_only=True)
-    knowledge_type = serializers.CharField(source='knowledge.knowledge_type', read_only=True)
-    knowledge_type_display = serializers.SerializerMethodField()
-    summary = serializers.SerializerMethodField()
+    line_tag_name = serializers.SerializerMethodField()
+    content_preview = serializers.SerializerMethodField()
     resource_uuid = serializers.UUIDField(source='knowledge.resource_uuid', read_only=True)
     is_current = serializers.BooleanField(source='knowledge.is_current', read_only=True)
     class Meta:
         model = TaskKnowledge
         fields = [
-            'id', 'knowledge', 'knowledge_title', 'knowledge_type', 'knowledge_type_display',
-            'summary', 'order', 'resource_uuid', 'is_current'
+            'id', 'knowledge', 'knowledge_title', 'line_tag_name',
+            'content_preview', 'order', 'resource_uuid', 'is_current'
         ]
         read_only_fields = ['order']
-    def get_knowledge_type_display(self, obj):
-        return obj.knowledge.get_knowledge_type_display()
 
-    def get_summary(self, obj):
-        return extract_knowledge_summary(obj.knowledge)
+    def get_line_tag_name(self, obj):
+        return obj.knowledge.line_tag.name if obj.knowledge.line_tag else None
+
+    def get_content_preview(self, obj):
+        return extract_knowledge_preview(obj.knowledge)
 class TaskQuizSerializer(serializers.ModelSerializer):
     """Serializer for TaskQuiz model."""
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
@@ -186,7 +186,7 @@ class TaskCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError('请至少选择一个学员')
         is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
         if not is_valid:
-            raise serializers.ValidationError(f'学员不存在或已停用: {invalid_ids}')
+            raise serializers.ValidationError(f'学员不存在、已停用或无学员身份: {invalid_ids}')
         return value
     def validate(self, attrs):
         """验证任务数据"""
@@ -271,7 +271,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('请至少选择一个学员')
         is_valid, invalid_ids = TaskService.validate_assignee_ids(value)
         if not is_valid:
-            raise serializers.ValidationError(f'学员不存在或已停用: {invalid_ids}')
+            raise serializers.ValidationError(f'学员不存在、已停用或无学员身份: {invalid_ids}')
         return value
     def validate(self, attrs):
         """验证更新数据"""
@@ -311,12 +311,11 @@ class KnowledgeLearningProgressSerializer(serializers.ModelSerializer):
     """Serializer for KnowledgeLearningProgress model."""
     knowledge_id = serializers.IntegerField(source='task_knowledge.knowledge_id', read_only=True)
     knowledge_title = serializers.CharField(source='task_knowledge.knowledge.title', read_only=True)
-    knowledge_type = serializers.CharField(source='task_knowledge.knowledge.knowledge_type', read_only=True)
     order = serializers.IntegerField(source='task_knowledge.order', read_only=True)
     class Meta:
         model = KnowledgeLearningProgress
         fields = [
-            'id', 'knowledge_id', 'knowledge_title', 'knowledge_type', 'order',
+            'id', 'knowledge_id', 'knowledge_title', 'order',
             'is_completed', 'completed_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['is_completed', 'completed_at', 'created_at', 'updated_at']

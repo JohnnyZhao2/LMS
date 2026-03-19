@@ -34,8 +34,6 @@ def get_knowledge_queryset(
 ) -> QuerySet:
     qs = knowledge_base_queryset(include_deleted=False).filter(is_current=True)
     if filters:
-        if filters.get('knowledge_type'):
-            qs = qs.filter(knowledge_type=filters['knowledge_type'])
         if filters.get('line_tag_id') is not None:
             qs = qs.filter(line_tag_id=filters['line_tag_id'])
         if filters.get('system_tag_id'):

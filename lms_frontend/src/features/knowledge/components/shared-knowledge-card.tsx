@@ -34,9 +34,6 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
   const shouldShowActions = showActions ?? (variant === 'admin');
 
 
-  const isEmergency = item.knowledge_type === 'EMERGENCY';
-
-
 
   // 内容预览（后端已清洗 HTML 标签）
   const contentPreview = item.content_preview || '暂无详细内容...';
@@ -53,13 +50,13 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         <div className="flex items-center gap-2">
           <StatusDot
             size="lg"
-            color={isEmergency ? "bg-destructive" : "bg-secondary"}
+            color="bg-primary"
           />
           <span className={cn(
             "text-[10px] font-bold uppercase tracking-wider",
-            isEmergency ? "text-destructive" : "text-secondary"
+            "text-primary"
           )}>
-            {isEmergency ? '应急类' : '标准类'}
+            {item.line_tag?.name || '知识文档'}
           </span>
         </div>
 

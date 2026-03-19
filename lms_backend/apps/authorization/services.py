@@ -149,6 +149,8 @@ class AuthorizationService(BaseService):
 
         if not self.user:
             return None
+        if self.user.is_superuser:
+            return None
 
         overrides = list_active_user_overrides(
             user_id=self.user.id,
@@ -418,6 +420,11 @@ class AuthorizationService(BaseService):
             User.objects.filter(pk=user_id).first(),
             f'用户 {user_id} 不存在',
         )
+        if target_user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='超管账号为专有角色，不支持配置用户权限覆盖',
+            )
         permission = self.validate_not_none(
             Permission.objects.filter(code=permission_code, is_active=True).first(),
             f'权限 {permission_code} 不存在',

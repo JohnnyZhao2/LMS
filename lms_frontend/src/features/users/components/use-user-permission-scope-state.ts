@@ -195,6 +195,21 @@ export const useUserPermissionScopeState = ({
     };
   }, [effectiveDraftOverrides, getPresetMatchedScopeUserIds]);
 
+  const syncSelectionWithLatestPresetUsers = useCallback((selection: RoleScopeSelection): RoleScopeSelection => {
+    const normalizedScopeTypes = normalizeScopeTypes(selection.scopeTypes);
+    const normalizedScopeUserIds = normalizeScopeUserIds(selection.scopeUserIds);
+    if (normalizedScopeTypes.includes('EXPLICIT_USERS')) {
+      return {
+        scopeTypes: normalizedScopeTypes,
+        scopeUserIds: normalizedScopeUserIds,
+      };
+    }
+    return {
+      scopeTypes: normalizedScopeTypes,
+      scopeUserIds: normalizeScopeUserIds(getPresetMatchedScopeUserIds(normalizedScopeTypes)),
+    };
+  }, [getPresetMatchedScopeUserIds]);
+
   useEffect(() => {
     if (!hasConfigurablePermissionRoles) {
       setSelectedPermissionScopes((prev) => (prev.length > 0 ? [] : prev));
@@ -208,7 +223,21 @@ export const useUserPermissionScopeState = ({
     }
 
     const roleCode = normalizedSelectedPermissionRole;
-    const cachedSelection = scopeSelectionByRoleRef.current[roleCode];
+    const rawCachedSelection = scopeSelectionByRoleRef.current[roleCode];
+    const cachedSelection = rawCachedSelection
+      ? syncSelectionWithLatestPresetUsers(rawCachedSelection)
+      : null;
+    const isCachedSelectionStale = Boolean(
+      rawCachedSelection
+      && cachedSelection
+      && (
+        !sameScopeTypes(rawCachedSelection.scopeTypes, cachedSelection.scopeTypes)
+        || !sameScopeUserIds(rawCachedSelection.scopeUserIds, cachedSelection.scopeUserIds)
+      ),
+    );
+    if (cachedSelection && isCachedSelectionStale) {
+      scopeSelectionByRoleRef.current[roleCode] = cachedSelection;
+    }
 
     const fallbackSelection = getRoleScopeSelectionFromOverrides(roleCode);
     const fallbackScopeTypes = fallbackSelection?.scopeTypes ?? selectedRoleDefaultScopeTypes;
@@ -216,13 +245,13 @@ export const useUserPermissionScopeState = ({
       fallbackSelection?.scopeUserIds
       ?? getPresetMatchedScopeUserIds(fallbackScopeTypes),
     );
-    const resolvedSelection = cachedSelection ?? {
+    const resolvedSelection = cachedSelection ?? syncSelectionWithLatestPresetUsers({
       scopeTypes: fallbackScopeTypes,
       scopeUserIds: fallbackScopeUserIds,
-    };
+    });
 
     if (cachedSelection) {
-      if (lastAppliedRoleSelectionRef.current !== roleCode) {
+      if (lastAppliedRoleSelectionRef.current !== roleCode || isCachedSelectionStale) {
         setSelectedPermissionScopes((prev) => (
           sameScopeTypes(prev, cachedSelection.scopeTypes) ? prev : cachedSelection.scopeTypes
         ));
@@ -259,6 +288,7 @@ export const useUserPermissionScopeState = ({
     setSelectedScopeUserIds,
     selectedRoleDefaultScopeTypes,
     shouldLoadUserOverrides,
+    syncSelectionWithLatestPresetUsers,
   ]);
 
   useEffect(() => {

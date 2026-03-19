@@ -2,19 +2,7 @@
  * 知识相关类型定义
  */
 
-import type { KnowledgeType, SimpleTag } from './common';
-
-/**
- * 知识分类
- */
-export interface KnowledgeCategory {
-  id: number;
-  name: string;
-  code: string;
-  description?: string;
-  level: 'PRIMARY' | 'SECONDARY';
-  knowledge_count: string;
-}
+import type { SimpleTag } from './common';
 
 /**
  * 学员知识列表项
@@ -22,12 +10,8 @@ export interface KnowledgeCategory {
 export interface StudentKnowledgeList {
   id: number;
   title: string;
-  summary?: string;
-  knowledge_type: KnowledgeType;
-  knowledge_type_display: string;
-  operation_tags?: Record<string, unknown>;
-  primary_category_name?: string;
-  secondary_category_name?: string;
+  content_preview?: string;
+  line_tag_name?: string;
   updated_by_name?: string;
   created_by_name?: string;
   updated_at: string;
@@ -40,20 +24,12 @@ export interface StudentKnowledgeList {
 export interface StudentKnowledgeDetail {
   id: number;
   title: string;
-  knowledge_type: KnowledgeType;
-  knowledge_type_display: string;
-  summary?: string;
   content?: string;
-  operation_tags?: Record<string, unknown>;
-  fault_scenario?: string;
-  trigger_process?: string;
-  solution?: string;
-  verification_plan?: string;
-  recovery_plan?: string;
-  structured_content?: string;
+  content_preview?: string;
   table_of_contents?: TableOfContentsItem[];
-  primary_category_name?: string;
-  secondary_category_name?: string;
+  line_tag?: SimpleTag | null;
+  system_tags?: SimpleTag[];
+  operation_tags?: SimpleTag[];
   created_by_name?: string;
   updated_by_name?: string;
   view_count: number;
@@ -67,7 +43,6 @@ export interface StudentKnowledgeDetail {
 export interface LatestKnowledge {
   id: number;
   title: string;
-  summary?: string;
   content_preview?: string;
   updated_at: string;
 }
@@ -88,14 +63,9 @@ export interface KnowledgeListItem {
   resource_uuid: string;
   version_number: number;
   title: string;
-  knowledge_type: KnowledgeType;
-  knowledge_type_display: string;
   is_current: boolean;
   line_tag?: SimpleTag | null;
-  /** 知识概要 */
-  summary?: string;
   content_preview?: string;
-  /** 目录结构 */
   table_of_contents?: TableOfContentsItem[];
   system_tags: SimpleTag[];
   operation_tags: SimpleTag[];
@@ -104,7 +74,6 @@ export interface KnowledgeListItem {
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
-  // 原始文档链接
   source_url?: string;
   created_at: string;
   updated_at: string;
@@ -118,32 +87,17 @@ export interface KnowledgeDetail {
   resource_uuid: string;
   version_number: number;
   title: string;
-  knowledge_type: KnowledgeType;
-  knowledge_type_display: string;
   is_current: boolean;
   line_tag?: SimpleTag | null;
-  // 应急类知识结构化字段
-  fault_scenario?: string;
-  trigger_process?: string;
-  solution?: string;
-  verification_plan?: string;
-  recovery_plan?: string;
-  // 其他类型知识正文
-  content?: string;
-  // 知识概要
-  summary?: string;
-  // 目录结构
+  content: string;
   table_of_contents?: TableOfContentsItem[];
-  // 标签
   system_tags: SimpleTag[];
   operation_tags: SimpleTag[];
-  // 元数据
   created_by?: number;
   created_by_name?: string;
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
-  // 原始文档链接
   source_url?: string;
   created_at: string;
   updated_at: string;
@@ -154,23 +108,10 @@ export interface KnowledgeDetail {
  */
 export interface KnowledgeCreateRequest {
   title: string;
-  knowledge_type: KnowledgeType;
-  // 条线类型（使用 ID 或名称）
   line_tag_id?: number;
   line_tag_name?: string;
-  // 应急类知识结构化字段
-  fault_scenario?: string;
-  trigger_process?: string;
-  solution?: string;
-  verification_plan?: string;
-  recovery_plan?: string;
-  // 其他类型知识正文
-  content?: string;
-  // 知识概要
-  summary?: string;
-  // 原始文档链接
+  content: string;
   source_url?: string;
-  // 标签（使用ID）
   system_tag_ids?: number[];
   operation_tag_ids?: number[];
 }
@@ -180,17 +121,8 @@ export interface KnowledgeCreateRequest {
  */
 export interface KnowledgeUpdateRequest {
   title?: string;
-  knowledge_type?: KnowledgeType;
   line_tag_id?: number;
-  fault_scenario?: string;
-  trigger_process?: string;
-  solution?: string;
-  verification_plan?: string;
-  recovery_plan?: string;
   content?: string;
-  // 知识概要
-  summary?: string;
-  // 原始文档链接
   source_url?: string;
   system_tag_ids?: number[];
   operation_tag_ids?: number[];

@@ -25,7 +25,7 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
             {knowledge.title}
           </h5>
           <p className="text-[12px] text-slate-400/80 line-clamp-1 break-all font-medium leading-none tracking-tight">
-            {knowledge.summary || knowledge.content_preview || "点击进入深度学习..."}
+            {knowledge.content_preview || '点击进入深度学习...'}
           </p>
         </div>
 

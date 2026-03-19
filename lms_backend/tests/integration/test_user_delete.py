@@ -83,7 +83,6 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
 
     knowledge = Knowledge.objects.create(
         title='离职用户知识',
-        knowledge_type='OTHER',
         content='knowledge content',
         created_by=inactive_user,
         updated_by=inactive_user,

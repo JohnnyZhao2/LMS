@@ -277,6 +277,34 @@ def test_student_role_cannot_be_used_for_user_override_applies_to_role():
 
 
 @pytest.mark.django_db
+def test_super_admin_cannot_be_target_of_user_permission_override():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_SUPER_OVERRIDE_ADMIN', username='Super Override Admin')
+    target_super_user = _create_superuser(employee_id='EMP_AUTH_SUPER_OVERRIDE_TARGET', username='Super Override Target')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.post(
+        f'/api/authorization/users/{target_super_user.id}/overrides/',
+        {
+            'permission_code': 'knowledge.update',
+            'effect': 'DENY',
+            'scope_type': 'ALL',
+            'reason': 'should reject super admin target',
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '超管账号为专有角色' in response.data['message']
+    assert not UserPermissionOverride.objects.filter(
+        user=target_super_user,
+        permission__code='knowledge.update',
+        is_active=True,
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_student_current_role_ignores_user_permission_overrides():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_STUDENT_ROLE_ADMIN', username='Student Role Super')

@@ -1,6 +1,7 @@
 """
 Serializers for knowledge management.
 """
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from .models import Knowledge, Tag
@@ -26,9 +27,8 @@ class TagSimpleSerializer(serializers.ModelSerializer):
 class KnowledgeListSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge list view.
-    Returns a summary of knowledge documents for list display.
+    Returns a preview of knowledge documents for list display.
     """
-    knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
     line_tag = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
@@ -40,10 +40,10 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'id', 'resource_uuid', 'version_number',
-            'title', 'knowledge_type', 'knowledge_type_display',
+            'title',
             'is_current',
             'line_tag', 'system_tags', 'operation_tags',
-            'view_count', 'summary', 'content_preview', 'table_of_contents', 'source_url',
+            'view_count', 'content_preview', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 class KnowledgeDetailSerializer(serializers.ModelSerializer):
@@ -51,7 +51,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     Serializer for knowledge detail view.
     Returns full knowledge document details.
     """
-    knowledge_type_display = serializers.CharField(source='get_knowledge_type_display', read_only=True)
     line_tag = TagSimpleSerializer(read_only=True)
     system_tags = TagSimpleSerializer(many=True, read_only=True)
     operation_tags = TagSimpleSerializer(many=True, read_only=True)
@@ -62,16 +61,10 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'id', 'resource_uuid', 'version_number',
-            'title', 'knowledge_type', 'knowledge_type_display',
+            'title',
             'is_current',
             'line_tag', 'system_tags', 'operation_tags',
-            # 应急类知识结构化字段
-            'fault_scenario', 'trigger_process', 'solution',
-            'verification_plan', 'recovery_plan',
-            # 其他类型知识正文
             'content',
-            # 概要
-            'summary',
             # 元数据
             'view_count', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'created_at',
@@ -98,48 +91,27 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Knowledge
         fields = [
-            'title', 'knowledge_type',
+            'title',
             'line_tag_id',
             'system_tag_ids', 'operation_tag_ids',
-            # 应急类知识的结构化字段
-            'fault_scenario', 'trigger_process', 'solution',
-            'verification_plan', 'recovery_plan',
-            # 其他类型知识的正文内容
             'content',
-            # 知识概要
-            'summary',
             # 原始文档链接
             'source_url',
         ]
     def validate(self, attrs):
         """
-        Validate knowledge document based on knowledge type.
+        Validate knowledge document.
         """
-        knowledge_type = attrs.get('knowledge_type')
         # 验证条线类型
         if attrs.get('line_tag_id') is None:
             raise serializers.ValidationError({
                 'line_tag_id': '必须提供条线标签ID'
             })
-        if knowledge_type == 'EMERGENCY':
-            # 应急类知识：至少填写一个结构化字段
-            has_content = any([
-                attrs.get('fault_scenario'),
-                attrs.get('trigger_process'),
-                attrs.get('solution'),
-                attrs.get('verification_plan'),
-                attrs.get('recovery_plan'),
-            ])
-            if not has_content:
-                raise serializers.ValidationError({
-                    'fault_scenario': '应急类知识至少需要填写一个结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）'
-                })
-        else:
-            # 其他类型知识：必须填写正文内容
-            if not attrs.get('content'):
-                raise serializers.ValidationError({
-                    'content': '必须填写正文内容'
-                })
+        content = attrs.get('content', '')
+        if not content or not strip_tags(str(content)).strip():
+            raise serializers.ValidationError({
+                'content': '必须填写正文内容'
+            })
         return attrs
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
@@ -159,50 +131,23 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Knowledge
         fields = [
-            'title', 'knowledge_type',
+            'title',
             'line_tag_id',
             'system_tag_ids', 'operation_tag_ids',
-            # 应急类知识的结构化字段
-            'fault_scenario', 'trigger_process', 'solution',
-            'verification_plan', 'recovery_plan',
-            # 其他类型知识的正文内容
             'content',
-            # 知识概要
-            'summary',
             # 原始文档链接
             'source_url',
         ]
     def validate(self, attrs):
         """
-        Validate knowledge document based on knowledge type.
+        Validate knowledge document.
         """
         instance = self.instance
-        knowledge_type = attrs.get('knowledge_type', instance.knowledge_type if instance else None)
-        if knowledge_type == 'EMERGENCY':
-            # 应急类知识：至少填写一个结构化字段
-            fault_scenario = attrs.get('fault_scenario', instance.fault_scenario if instance else '')
-            trigger_process = attrs.get('trigger_process', instance.trigger_process if instance else '')
-            solution = attrs.get('solution', instance.solution if instance else '')
-            verification_plan = attrs.get('verification_plan', instance.verification_plan if instance else '')
-            recovery_plan = attrs.get('recovery_plan', instance.recovery_plan if instance else '')
-            has_content = any([
-                fault_scenario,
-                trigger_process,
-                solution,
-                verification_plan,
-                recovery_plan,
-            ])
-            if not has_content:
-                raise serializers.ValidationError({
-                    'fault_scenario': '应急类知识至少需要填写一个结构化字段（故障场景/触发流程/解决方案/验证方案/恢复方案）'
-                })
-        else:
-            # 其他类型知识：必须填写正文内容
-            content = attrs.get('content', instance.content if instance else '')
-            if not content:
-                raise serializers.ValidationError({
-                    'content': '必须填写正文内容'
-                })
+        content = attrs.get('content', instance.content if instance else '')
+        if not content or not strip_tags(str(content)).strip():
+            raise serializers.ValidationError({
+                'content': '必须填写正文内容'
+            })
         return attrs
 class KnowledgeStatsSerializer(serializers.Serializer):
     """
@@ -211,5 +156,5 @@ class KnowledgeStatsSerializer(serializers.Serializer):
     """
     total = serializers.IntegerField(help_text='总文档数')
     published = serializers.IntegerField(help_text='已发布数')
-    emergency = serializers.IntegerField(help_text='应急类型文档数')
     monthly_new = serializers.IntegerField(help_text='本月新增文档数')
+    with_content = serializers.IntegerField(help_text='包含正文的文档数')

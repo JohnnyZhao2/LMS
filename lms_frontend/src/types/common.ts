@@ -26,11 +26,6 @@ export type SubmissionStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'GRADING' | 'GRADED
 export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
 
 /**
- * 知识类型
- */
-export type KnowledgeType = 'EMERGENCY' | 'OTHER';
-
-/**
  * 通知类型
  */
 export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_COMPLETED' | 'SPOT_CHECK';

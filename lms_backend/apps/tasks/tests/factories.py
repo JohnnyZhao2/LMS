@@ -59,7 +59,7 @@ class KnowledgeFactory(DjangoModelFactory):
         model = Knowledge
 
     title = factory.Sequence(lambda n: f'Knowledge {n}')
-    knowledge_type = 'OTHER'
+    content = '<p>Test knowledge content</p>'
     created_by = factory.SubFactory(UserFactory)
 
 

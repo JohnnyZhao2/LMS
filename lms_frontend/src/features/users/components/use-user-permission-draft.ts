@@ -52,7 +52,7 @@ interface UseUserPermissionDraftResult {
   hasDraftChanges: boolean;
   getPermissionState: (permissionCode: string) => PermissionState;
   handlePermissionToggle: (permissionCode: string, nextChecked: boolean) => void;
-  submitDraftChanges: () => Promise<void>;
+  submitDraftChanges: (targetUserId?: number) => Promise<void>;
 }
 
 const matchesSelectedScope = (
@@ -275,7 +275,6 @@ export const useUserPermissionDraft = ({
   ]);
 
   const handlePermissionToggle = useCallback((permissionCode: string, nextChecked: boolean) => {
-    if (!userId) return;
     if (!hasConfigurablePermissionRoles) {
       toast.error('请先分配管理角色，再配置用户权限');
       return;
@@ -425,7 +424,6 @@ export const useUserPermissionDraft = ({
     normalizedSelectedPermissionRole,
     selectedPermissionScopes,
     selectedScopeUserIds,
-    userId,
   ]);
 
   const hasDraftChanges = useMemo(() => {
@@ -437,8 +435,9 @@ export const useUserPermissionDraft = ({
     return Array.from(initialSignatureSet).some((signature) => !draftSignatureSet.has(signature));
   }, [effectiveDraftOverrides, initialDraftOverrides]);
 
-  const submitDraftChanges = useCallback(async () => {
-    if (!userId || !hasDraftChanges) {
+  const submitDraftChanges = useCallback(async (targetUserId?: number) => {
+    const resolvedUserId = targetUserId ?? userId;
+    if (!resolvedUserId || !hasDraftChanges) {
       return;
     }
 
@@ -464,13 +463,13 @@ export const useUserPermissionDraft = ({
 
     await Promise.all(
       overridesToRevoke.map((override) =>
-        revokeOverride({ userId, overrideId: override.id }),
+        revokeOverride({ userId: resolvedUserId, overrideId: override.id }),
       ),
     );
     await Promise.all(
       overridesToCreate.map((override) =>
         createOverride({
-          userId,
+          userId: resolvedUserId,
           data: {
             permission_code: override.permission_code,
             effect: override.effect,

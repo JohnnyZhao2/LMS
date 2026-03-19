@@ -42,7 +42,7 @@ def task_detail_queryset(include_deleted: bool = False) -> QuerySet:
         'created_by',
         'updated_by'
     ).prefetch_related(
-        'task_knowledge__knowledge',
+        'task_knowledge__knowledge__line_tag',
         'task_quizzes__quiz',
         'assignments__assignee'
     )
@@ -65,9 +65,9 @@ def assignment_detail_queryset() -> QuerySet:
         'task__updated_by',
         'assignee'
     ).prefetch_related(
-        'task__task_knowledge__knowledge',
+        'task__task_knowledge__knowledge__line_tag',
         'task__task_quizzes__quiz',
-        'knowledge_progress__task_knowledge__knowledge'
+        'knowledge_progress__task_knowledge__knowledge__line_tag'
     )
 
 
@@ -78,7 +78,7 @@ def assignment_list_queryset() -> QuerySet:
         'task__updated_by',
         'assignee'
     ).prefetch_related(
-        'task__task_knowledge',
+        'task__task_knowledge__knowledge__line_tag',
         'task__task_quizzes',
         'knowledge_progress'
     )
@@ -87,7 +87,7 @@ def assignment_list_queryset() -> QuerySet:
 def task_knowledge_queryset(task_id: int) -> QuerySet:
     return TaskKnowledge.objects.filter(
         task_id=task_id
-    ).select_related('knowledge', 'task').order_by('order')
+    ).select_related('knowledge', 'knowledge__line_tag', 'task').order_by('order')
 
 
 def task_quiz_queryset(task_id: int) -> QuerySet:
@@ -101,7 +101,8 @@ def knowledge_progress_queryset(assignment_id: int) -> QuerySet:
         assignment_id=assignment_id
     ).select_related(
         'task_knowledge',
-        'task_knowledge__knowledge'
+        'task_knowledge__knowledge',
+        'task_knowledge__knowledge__line_tag'
     ).order_by('task_knowledge__order')
 
 

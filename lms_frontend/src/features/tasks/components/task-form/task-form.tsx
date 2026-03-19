@@ -4,7 +4,6 @@ import {
   Plus,
   BookOpen,
   FileText,
-  Trash2,
   Send,
   Loader2,
   LayoutGrid,
@@ -31,7 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserPickerPanel } from '@/components/common/user-picker-panel';
 import { MicroLabel } from '@/components/common/micro-label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -39,7 +38,6 @@ import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
 import { SortableResourceItem } from './sortable-resource-item';
-import { UserSelectionModal } from './user-selection-modal';
 import type { ResourceItem } from './task-form.types';
 
 export const TaskForm: React.FC = () => {
@@ -59,16 +57,14 @@ export const TaskForm: React.FC = () => {
     resourceType,
     setResourceType,
     selectedUserIds,
-    isUserModalOpen,
-    setIsUserModalOpen,
-    userModalSearch,
-    setUserModalSearch,
+    userSearch,
+    setUserSearch,
     setCurrentPage,
     availableResources,
     totalPages,
     safeCurrentPage,
-    modalFilteredUsers,
-    selectedUserDetails,
+    filteredUsers,
+    isUsersLoading,
     isLoading,
     isSubmitting,
     canSubmit,
@@ -92,6 +88,9 @@ export const TaskForm: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const selectedFilteredUserCount = filteredUsers.filter((user) => selectedUserIds.includes(user.id)).length;
+  const isAllFilteredUsersSelected = filteredUsers.length > 0 && selectedFilteredUserCount === filteredUsers.length;
 
   if (taskError) {
     return (
@@ -414,19 +413,20 @@ export const TaskForm: React.FC = () => {
               <Badge variant="secondary" className="ml-auto bg-muted text-text-muted font-bold px-2 h-5 border-none">已选 {selectedUserIds.length}</Badge>
             </div>
 
-            <div className="px-6 py-4">
+            <div className="px-6 py-4 flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-muted">可分配学员</span>
               <Button
-                variant="outline"
-                className="w-full h-11 border-dashed border-2 hover:border-primary-500 hover:text-primary-500 hover:bg-primary-50 transition-all rounded-xl"
-                onClick={() => setIsUserModalOpen(true)}
+                variant="link"
+                size="sm"
+                className="h-auto px-0 text-destructive-500 hover:text-destructive-600"
+                onClick={clearUsers}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                添加参与人员
+                清空
               </Button>
             </div>
 
             {!canRemoveAssignee && (
-              <div className="px-6 mb-4">
+              <div className="px-6 pb-4">
                 <Alert variant="warning">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
@@ -436,56 +436,27 @@ export const TaskForm: React.FC = () => {
               </div>
             )}
 
-            <div className="px-6 flex-1 overflow-y-auto pb-6">
-              {selectedUserDetails.length === 0 ? (
-                <div className="text-text-muted text-xs text-center py-10 font-medium">
-                  暂未选择人员
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedUserDetails.map(u => (
-                    <div key={u.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 border border-border group hover:bg-background hover:border-primary-100 transition-all">
-                      <Avatar className="w-9 h-9">
-                        <AvatarFallback className="bg-primary-500 text-white text-[10px] font-bold">
-                          {u.username[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-foreground truncate">{u.username}</div>
-                        <div className="text-[10px] text-text-muted">{u.employee_id}</div>
-                      </div>
-                      {canRemoveAssignee && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive-400 hover:text-destructive-500 hover:bg-destructive-50"
-                          onClick={() => toggleUser(u.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="px-6 pb-6 flex-1 min-h-0">
+              <UserPickerPanel
+                users={filteredUsers}
+                selectedUserIds={selectedUserIds}
+                searchValue={userSearch}
+                onSearchChange={setUserSearch}
+                onToggleUser={toggleUser}
+                onToggleAllUsers={() => toggleAllUsers(!isAllFilteredUsersSelected)}
+                selectedCount={selectedFilteredUserCount}
+                isAllSelected={isAllFilteredUsersSelected}
+                isLoading={isUsersLoading}
+                searchPlaceholder="搜索姓名或工号..."
+                emptyText="暂无可分配学员"
+                loadingText="加载学员列表..."
+                className="h-full rounded-xl border border-border bg-background"
+                getUserMeta={(user) => `${user.employee_id || '-'} | ${user.department?.name || '无部门'}`}
+              />
             </div>
           </div>
         </div>
       </div>
-
-      {/* User Selection Modal */}
-      <UserSelectionModal
-        open={isUserModalOpen}
-        onOpenChange={setIsUserModalOpen}
-        users={modalFilteredUsers}
-        selectedUserIds={selectedUserIds}
-        searchValue={userModalSearch}
-        onSearchChange={setUserModalSearch}
-        onToggleUser={toggleUser}
-        onToggleAll={toggleAllUsers}
-        onClear={clearUsers}
-        canRemoveAssignee={canRemoveAssignee}
-      />
     </div>
   );
 };

@@ -69,7 +69,6 @@ export const KnowledgeDetail: React.FC = () => {
   const deleteKnowledge = useDeleteKnowledge();
 
   const knowledge = data as KnowledgeDetailType | undefined;
-  const isEmergency = knowledge?.knowledge_type === 'EMERGENCY';
 
   const taskKnowledgeItem = useMemo(() => {
     return learningDetail?.knowledge_items.find((item) => item.knowledge_id === Number(id));
@@ -79,8 +78,19 @@ export const KnowledgeDetail: React.FC = () => {
 
   const outline = useMemo(() => {
     if (!knowledge) return [];
-    return parseOutline(knowledge.content || '', isEmergency);
-  }, [knowledge, isEmergency]);
+    return parseOutline(knowledge.content || '');
+  }, [knowledge]);
+
+  const renderedContent = useMemo(() => {
+    if (!knowledge?.content) return '';
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(knowledge.content, 'text/html');
+    doc.querySelectorAll('h1, h2, h3').forEach((heading, index) => {
+      heading.id = `heading-${index}`;
+    });
+    return doc.body.innerHTML;
+  }, [knowledge?.content]);
 
 
 
@@ -195,7 +205,7 @@ export const KnowledgeDetail: React.FC = () => {
                   onClick={() => window.open(knowledge.source_url, '_blank')}
                 >
                   <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                  <span className="text-xs">原始文档</span>
+                  <span className="text-xs">来源文档</span>
                 </Button>
               )}
             </div>
@@ -284,10 +294,10 @@ export const KnowledgeDetail: React.FC = () => {
           ) : (
             <div className="flex flex-col h-full overflow-hidden">
               <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
-                <div className="flex items-center gap-2">
-                  <List className="w-4 h-4 text-primary-500" />
-                  内容大纲
-                </div>
+              <div className="flex items-center gap-2">
+                <List className="w-4 h-4 text-primary-500" />
+                  正文目录
+              </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -320,7 +330,7 @@ export const KnowledgeDetail: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 text-[10px] text-text-muted text-center font-medium">暂无目录</div>
+                  <div className="p-4 text-[10px] text-text-muted text-center font-medium">暂无正文目录</div>
                 )}
               </div>
             </div>
@@ -355,33 +365,10 @@ export const KnowledgeDetail: React.FC = () => {
               contentPaddingClass
             )}>
               <h1 className="text-3xl font-bold text-foreground mb-10 tracking-tight">{knowledge.title}</h1>
-            {isEmergency ? (
-              <div className="space-y-12">
-                {[
-                  { key: 'fault_scenario', label: '故障场景', content: knowledge.fault_scenario, id: 'tab-0' },
-                  { key: 'trigger_process', label: '触发流程', content: knowledge.trigger_process, id: 'tab-1' },
-                  { key: 'solution', label: '解决方案', content: knowledge.solution, id: 'tab-2' },
-                  { key: 'verification_plan', label: '验证方案', content: knowledge.verification_plan, id: 'tab-3' },
-                  { key: 'recovery_plan', label: '恢复方案', content: knowledge.recovery_plan, id: 'tab-4' },
-                ].filter(s => s.content).map((section) => (
-                  <div key={section.key} id={section.id} className="scroll-mt-6">
-                    <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-3 -ml-4.5">
-                      <span className="w-1.5 h-6 bg-primary-500 rounded-full" />
-                      {section.label}
-                    </h3>
-                    <div
-                      className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
-                      dangerouslySetInnerHTML={{ __html: section.content || '' }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
-                dangerouslySetInnerHTML={{ __html: knowledge.content || '' }}
-              />
-            )}
+            <div
+              className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
+              dangerouslySetInnerHTML={{ __html: renderedContent }}
+            />
             </div>
           </div>
         </div>

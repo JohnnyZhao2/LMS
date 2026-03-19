@@ -128,16 +128,14 @@ def _get_role_default_accessible_students(user, request) -> QuerySet:
 
     current_role = get_current_role(user, request)
 
-    base_qs = _pure_student_queryset()
-
     if is_admin_like_role(current_role):
-        return base_qs
+        return _learning_member_queryset()
 
     if current_role == 'TEAM_MANAGER':
         return _learning_member_queryset()
 
     if current_role == 'MENTOR':
-        return base_qs.filter(mentor=user)
+        return _learning_member_queryset().filter(mentor=user)
 
     if current_role == 'DEPT_MANAGER':
         if user.department_id:
@@ -164,10 +162,7 @@ def _resolve_scope_student_ids(
     ids = tuple(sorted({int(user_id) for user_id in scope_user_ids}))
 
     if scope_type == SCOPE_ALL:
-        if is_admin_like_role(current_role):
-            queryset = _pure_student_queryset()
-        else:
-            queryset = _learning_member_queryset()
+        queryset = _learning_member_queryset()
         return set(queryset.values_list('id', flat=True))
 
     if scope_type == SCOPE_SELF:
@@ -177,7 +172,7 @@ def _resolve_scope_student_ids(
 
     if scope_type == SCOPE_MENTEES:
         return set(
-            _pure_student_queryset().filter(mentor=user).values_list('id', flat=True)
+            _learning_member_queryset().filter(mentor=user).values_list('id', flat=True)
         )
 
     if scope_type == SCOPE_DEPARTMENT:
@@ -211,6 +206,8 @@ def get_accessible_students_for_permission(user, request, permission_code: str) 
 
     if not user or not user.is_authenticated:
         return User.objects.none()
+    if is_super_admin(user):
+        return _learning_member_queryset()
 
     current_role = get_current_role(user, request)
     if not current_role:

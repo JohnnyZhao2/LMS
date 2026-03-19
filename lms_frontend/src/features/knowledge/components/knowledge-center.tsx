@@ -101,7 +101,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         <div className="relative group min-w-[300px]">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-primary transition-colors" />
                             <Input
-                                placeholder="搜索知识文档..."
+                                placeholder="搜索知识内容..."
                                 value={searchValue}
                                 onChange={(e) => setSearchValue(e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
@@ -132,7 +132,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 {/* 左侧筛选侧边栏 */}
                 <div className="bg-background rounded-lg p-6 space-y-8 sticky top-24 border-0">
                     <div>
-                        <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-6 px-2">条线分类</h4>
+                        <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-6 px-2">知识条线</h4>
                         <nav className="space-y-2">
                             <button
                                 onClick={() => handleLineTypeSelect(undefined)}
@@ -166,7 +166,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
                     {selectedLineTypeId && systemTags.length > 0 && (
                         <div>
-                            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-4 px-2">系统详情</h4>
+                            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-4 px-2">系统标签</h4>
                             <div className="flex flex-wrap gap-2 px-1">
                                 <button
                                     onClick={() => toggleSystemTag(-1)}
@@ -240,7 +240,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     ) : (
                         <EmptyState
                             icon={Inbox}
-                            description="暂无知识文档"
+                            description="暂无知识内容"
                             className="py-32 bg-muted rounded-lg"
                         />
                     )}

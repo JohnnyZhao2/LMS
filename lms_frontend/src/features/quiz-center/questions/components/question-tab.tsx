@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, MoreHorizontal, FileText, Eye, FileEdit } from 'lucide-react';
+import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -228,14 +228,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                     }
                 }}
             >
-                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-background rounded-xl">
-                    <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-                            <FileEdit className="w-5 h-5 text-secondary-500" />
+                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                    <DialogHeader className="px-6 pt-5 pb-0">
+                        <DialogTitle className="text-base font-bold text-foreground">
                             新建题目
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[70vh] overflow-y-auto">
+                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
                         <QuestionEditorPanel
                             questionForm={questionForm}
                             setQuestionForm={setQuestionForm}
@@ -249,17 +248,16 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                 </DialogContent>
             </Dialog>
 
-            {/* 预览对话框 (Keep this as Dialog since it's a detail view, not a confirmation) */}
+            {/* 预览对话框 */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
-                <DialogContent className="max-w-2xl p-0 overflow-hidden border-none  bg-background rounded-xl">
-                    <DialogHeader className="px-6 py-4 bg-muted/80 border-b border-border">
-                        <DialogTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
-                            <FileText className="w-5 h-5 text-secondary-500" />
-                            题目详情预览
-                            <span className="ml-2 text-xs font-medium text-text-muted"></span>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                    <DialogHeader className="px-6 pt-5 pb-0">
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                            <FileText className="w-4 h-4 text-primary-500" />
+                            题目详情
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[70vh] overflow-y-auto">
+                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
                         <QuestionEditorPanel
                             questionForm={previewForm}
                             setQuestionForm={() => { }}
@@ -272,11 +270,15 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                             showActions={false}
                         />
                     </div>
-                    <DialogFooter className="px-6 py-4 bg-muted/50 border-t border-border">
-                        <Button onClick={() => setPreviewQuestion(null)} className="font-bold">
-                            关闭预览
+                    <div className="px-6 py-3 border-t border-border flex justify-end">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setPreviewQuestion(null)}
+                            className="text-text-muted"
+                        >
+                            关闭
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 
