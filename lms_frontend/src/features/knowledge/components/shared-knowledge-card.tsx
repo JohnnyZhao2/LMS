@@ -1,16 +1,13 @@
 import * as React from 'react';
 import {
   Pencil,
-  Eye,
   List,
   Trash2,
   MoreVertical,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
-import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { UserInfoRow } from '@/components/common/user-info-row';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,21 +118,6 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         ))}
       </div>
 
-      {/* 底部信息 */}
-      <div className="mt-auto pt-6 border-t border-border flex items-center justify-between">
-        <UserInfoRow
-          name={item.updated_by_name || item.created_by_name || '系统'}
-          metadata={dayjs(item.updated_at).format('YYYY.MM.DD')}
-          avatarText={(item.updated_by_name || item.created_by_name || 'U').charAt(0)}
-        />
-
-        <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <div className="flex items-center gap-1 text-text-muted">
-            <Eye className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-semibold">{item.view_count || 0}</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
