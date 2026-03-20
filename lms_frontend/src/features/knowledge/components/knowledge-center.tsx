@@ -13,12 +13,15 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
 
 import { useKnowledgeList } from '../api/knowledge';
+import { useDeleteKnowledge } from '../api/manage-knowledge';
 import { useLineTypeTags, useSystemTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
@@ -38,6 +41,9 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const canUpdateKnowledge = hasPermission('knowledge.update');
     const canDeleteKnowledge = hasPermission('knowledge.delete');
     const isManagementView = isAdmin || canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge;
+
+    const deleteKnowledge = useDeleteKnowledge();
+    const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
 
     const {
         search,
@@ -89,6 +95,22 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     const handleEdit = (id: number) => {
         roleNavigate(`${ROUTES.KNOWLEDGE}/${id}/edit`);
+    };
+
+    const handleDelete = (id: number) => {
+        setDeleteTarget(id);
+    };
+
+    const confirmDelete = async () => {
+        if (deleteTarget === null) return;
+        try {
+            await deleteKnowledge.mutateAsync(deleteTarget);
+            toast.success('删除成功');
+        } catch {
+            toast.error('删除失败');
+        } finally {
+            setDeleteTarget(null);
+        }
     };
 
     return (
@@ -218,9 +240,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         <SharedKnowledgeCard
                                             item={item}
                                             variant={isManagementView ? "admin" : "student"}
-                                            showActions={canUpdateKnowledge}
+                                            showActions={canUpdateKnowledge || canDeleteKnowledge}
                                             onView={handleView}
                                             onEdit={canUpdateKnowledge ? handleEdit : undefined}
+                                            onDelete={canDeleteKnowledge ? handleDelete : undefined}
                                         />
                                     </div>
                                 ))}
@@ -246,6 +269,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     )}
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+                title="确认删除"
+                description="确定要删除该知识文档吗？"
+                confirmText="删除"
+                confirmVariant="destructive"
+                isConfirming={deleteKnowledge.isPending}
+                onConfirm={confirmDelete}
+            />
         </div>
     );
 };

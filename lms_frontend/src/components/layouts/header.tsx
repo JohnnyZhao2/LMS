@@ -76,13 +76,6 @@ const IconPersonal = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const IconLogo = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M8 12l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-
 const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   STUDENT: "学",
   MENTOR: "师",
@@ -212,9 +205,11 @@ export const Header: React.FC = () => {
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate(getDashboardPath())}
         >
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <IconLogo className="text-white w-5 h-5" />
-          </div>
+          <img
+            src="/logo.svg"
+            alt="学习平台 Logo"
+            className="w-10 h-10 object-contain"
+          />
           <span className="text-[15px] font-semibold text-foreground">
             学习平台
           </span>
