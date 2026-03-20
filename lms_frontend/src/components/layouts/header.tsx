@@ -7,7 +7,6 @@ import { useCurrentRole } from "@/hooks/use-current-role"
 import { cn } from "@/lib/utils"
 import { ROUTES } from "@/config/routes"
 import { showApiError } from "@/utils/error-handler"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import type { RoleCode } from "@/types/api"
@@ -94,14 +93,13 @@ const ROLE_FULL_LABELS: Record<RoleCode, string> = {
   SUPER_ADMIN: "超管",
 }
 
-// 角色颜色 - 每个角色固定颜色，不随主题变化
-const ROLE_COLOR_CLASSES: Record<RoleCode, string> = {
-  STUDENT: "bg-sky-500",         // 天蓝
-  MENTOR: "bg-emerald-500",      // 翠绿
-  DEPT_MANAGER: "bg-violet-500", // 紫色
-  TEAM_MANAGER: "bg-amber-500",  // 琥珀色
-  ADMIN: "bg-rose-500",          // 玫红
-  SUPER_ADMIN: "bg-red-600",     // 深红
+const ROLE_INDICATOR_CLASSES: Record<RoleCode, { bar: string; glow: string }> = {
+  STUDENT: { bar: "bg-sky-400", glow: "bg-sky-400/80" },
+  MENTOR: { bar: "bg-emerald-400", glow: "bg-emerald-400/80" },
+  DEPT_MANAGER: { bar: "bg-violet-400", glow: "bg-violet-400/80" },
+  TEAM_MANAGER: { bar: "bg-amber-400", glow: "bg-amber-400/80" },
+  ADMIN: { bar: "bg-rose-400", glow: "bg-rose-400/80" },
+  SUPER_ADMIN: { bar: "bg-red-500", glow: "bg-red-500/80" },
 }
 
 const ROLE_ORDER: RoleCode[] = ["STUDENT", "MENTOR", "DEPT_MANAGER", "TEAM_MANAGER", "ADMIN", "SUPER_ADMIN"]
@@ -195,6 +193,9 @@ export const Header: React.FC = () => {
   }
 
   const selectedNavKey = getSelectedNavKey()
+  const roleLabel = currentRole ? (ROLE_FULL_LABELS[currentRole] || "未知角色") : "未登录"
+  const userLabel = user?.username || ""
+  const indicatorClasses = currentRole ? ROLE_INDICATOR_CLASSES[currentRole] : { bar: "bg-slate-400", glow: "bg-slate-400/70" }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-6 bg-background border-b border-border">
@@ -202,17 +203,31 @@ export const Header: React.FC = () => {
       <div className="flex items-center gap-10">
         {/* Logo */}
         <div
-          className="flex items-center gap-2 cursor-pointer"
+          className="inline-flex items-center gap-1 cursor-pointer min-w-[172px]"
           onClick={() => navigate(getDashboardPath())}
         >
           <img
             src="/logo.svg"
             alt="学习平台 Logo"
-            className="w-10 h-10 object-contain"
+            className="h-9 w-9 shrink-0 object-contain"
           />
-          <span className="text-[15px] font-semibold text-foreground">
-            学习平台
-          </span>
+          <div className="flex flex-col items-start justify-center gap-0.5 pl-0.5">
+            <span className="inline-flex h-4 items-center gap-1 text-[12px] font-medium leading-none text-foreground/88">
+              <span>{roleLabel}</span>
+              {userLabel ? (
+                <>
+                  <span className="relative inline-flex h-2.5 w-1 shrink-0 items-center justify-center">
+                    <span className={cn("absolute h-2.5 w-1 rounded-full blur-[1px] animate-pulse", indicatorClasses.glow)} />
+                    <span className={cn("relative h-2.5 w-1 rounded-full", indicatorClasses.bar)} />
+                  </span>
+                  <span>{userLabel}</span>
+                </>
+              ) : null}
+            </span>
+            <span className="text-[10px] font-normal leading-none text-text-muted/85">
+              你好，欢迎回来！
+            </span>
+          </div>
         </div>
 
         {/* 导航菜单 */}
@@ -301,33 +316,9 @@ export const Header: React.FC = () => {
           </div>
         )}
 
-        {/* 用户信息 */}
+        {/* 用户操作 */}
         {user && (
           <div className="ml-2 flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/${currentRole!.toLowerCase()}/personal`)}
-              className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted transition-colors"
-            >
-              <Avatar className="h-7 w-7">
-                <AvatarFallback
-                  className={cn(
-                    "text-white text-xs font-medium",
-                    ROLE_COLOR_CLASSES[currentRole!] || "bg-primary"
-                  )}
-                >
-                  {user.username.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:flex flex-col items-start">
-                <span className="text-sm font-medium text-foreground leading-tight">
-                  {user.username}
-                </span>
-                <span className="text-[10px] text-text-muted leading-tight">
-                  {ROLE_FULL_LABELS[currentRole!]}
-                </span>
-              </div>
-            </button>
-            <span className="hidden sm:block h-5 w-px bg-border" />
             <button
               onClick={handleLogout}
               aria-label="退出登录"
