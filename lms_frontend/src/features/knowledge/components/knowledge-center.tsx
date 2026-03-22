@@ -22,10 +22,14 @@ import type { Tag as TagType } from '@/types/api';
 
 import { useKnowledgeList } from '../api/knowledge';
 import { useDeleteKnowledge } from '../api/manage-knowledge';
-import { useLineTypeTags, useSystemTags } from '../api/get-tags';
+import { useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
-import { SharedKnowledgeCard } from './shared-knowledge-card';
+import { KnowledgeCardMymind } from './knowledge-card-mymind';
+import { AddKnowledgeCard } from './add-knowledge-card';
+import { AddKnowledgeModal } from './add-knowledge-modal';
+import { KnowledgeDetailModal } from './knowledge-detail-modal';
+
 import { getLineTypeIcon } from '../utils';
 
 interface KnowledgeCenterProps {
@@ -44,6 +48,9 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     const deleteKnowledge = useDeleteKnowledge();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
+    const [showAddModal, setShowAddModal] = React.useState(false);
+    const [modalInitialContent, setModalInitialContent] = React.useState('');
+    const [detailId, setDetailId] = React.useState<number | null>(null);
 
     const {
         search,
@@ -52,20 +59,16 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         submitSearch,
         selectedLineTypeId,
         handleLineTypeSelect,
-        selectedSystemTagIds,
-        toggleSystemTag,
         page,
         pageSize,
         handlePageChange,
     } = useKnowledgeFilters({ defaultPageSize: 9 });
 
     const { data: lineTypeTags = [] } = useLineTypeTags();
-    const { data: systemTags = [] } = useSystemTags(selectedLineTypeId);
 
     const { data, isLoading, refetch } = useKnowledgeList({
         search: search || undefined,
         line_tag_id: selectedLineTypeId,
-        system_tag_id: selectedSystemTagIds[0],
         page,
         pageSize,
     });
@@ -87,10 +90,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     refetch();
                 },
             });
-            roleNavigate(`${ROUTES.KNOWLEDGE}/${id}`);
-        } else {
-            roleNavigate(`${ROUTES.KNOWLEDGE}/${id}`);
         }
+        setDetailId(id);
     };
 
     const handleEdit = (id: number) => {
@@ -185,39 +186,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             ))}
                         </nav>
                     </div>
-
-                    {selectedLineTypeId && systemTags.length > 0 && (
-                        <div>
-                            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-4 px-2">系统标签</h4>
-                            <div className="flex flex-wrap gap-2 px-1">
-                                <button
-                                    onClick={() => toggleSystemTag(-1)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-md text-xs font-semibold transition duration-200",
-                                        selectedSystemTagIds.length === 0
-                                            ? "bg-primary text-white"
-                                            : "bg-muted text-text-muted hover:bg-muted"
-                                    )}
-                                >
-                                    全部系统
-                                </button>
-                                {systemTags.map((tag: TagType) => (
-                                    <button
-                                        key={tag.id}
-                                        onClick={() => toggleSystemTag(tag.id)}
-                                        className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-semibold transition duration-200",
-                                            selectedSystemTagIds.includes(tag.id)
-                                                ? "bg-primary text-white"
-                                                : "bg-muted text-text-muted hover:bg-muted"
-                                        )}
-                                    >
-                                        {tag.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* 右侧列表区 */}
@@ -234,18 +202,34 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         </div>
                     ) : data?.results && data.results.length > 0 ? (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {data.results.map((item) => (
-                                    <div key={item.id} className="group">
-                                        <SharedKnowledgeCard
-                                            item={item}
-                                            variant={isManagementView ? "admin" : "student"}
-                                            showActions={canUpdateKnowledge || canDeleteKnowledge}
-                                            onView={handleView}
-                                            onEdit={canUpdateKnowledge ? handleEdit : undefined}
-                                            onDelete={canDeleteKnowledge ? handleDelete : undefined}
-                                        />
-                                    </div>
+                            <div
+                                style={{
+                                    columns: '280px',
+                                    columnGap: 12,
+                                }}
+                            >
+                                {canCreateKnowledge && (
+                                    <AddKnowledgeCard
+                                        onSave={(content) => {
+                                            setModalInitialContent(content);
+                                            setShowAddModal(true);
+                                        }}
+                                        onExpand={(content) => {
+                                            setModalInitialContent(content);
+                                            setShowAddModal(true);
+                                        }}
+                                    />
+                                )}
+                                {data.results.map((item, index) => (
+                                    <KnowledgeCardMymind
+                                        key={item.id}
+                                        item={item}
+                                        onClick={handleView}
+                                        onEdit={canUpdateKnowledge ? handleEdit : undefined}
+                                        onDelete={canDeleteKnowledge ? handleDelete : undefined}
+                                        showActions={canUpdateKnowledge || canDeleteKnowledge}
+                                        index={index}
+                                    />
                                 ))}
                             </div>
 
@@ -280,6 +264,31 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 isConfirming={deleteKnowledge.isPending}
                 onConfirm={confirmDelete}
             />
+
+            <AddKnowledgeModal
+                open={showAddModal}
+                onClose={() => {
+                    setShowAddModal(false);
+                    setModalInitialContent('');
+                }}
+                initialContent={modalInitialContent}
+                onSuccess={(id) => {
+                    refetch();
+                    setDetailId(id);
+                }}
+            />
+
+            {detailId !== null && (
+                <KnowledgeDetailModal
+                    knowledgeId={detailId}
+                    onClose={() => setDetailId(null)}
+                    onDelete={(id) => {
+                        setDeleteTarget(id);
+                        setDetailId(null);
+                    }}
+                    onUpdated={() => refetch()}
+                />
+            )}
         </div>
     );
 };

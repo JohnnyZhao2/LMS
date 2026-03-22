@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,19 +102,6 @@ export const SharedKnowledgeCard: React.FC<SharedKnowledgeCardProps> = ({
         <div className="text-xs font-medium text-text-muted leading-relaxed line-clamp-6">
           {contentPreview}
         </div>
-      </div>
-
-      {/* 标签 */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {item.system_tags?.slice(0, 2).map((tag) => (
-          <Badge
-            key={tag.id}
-            variant="secondary"
-            className="bg-muted text-foreground border-0 rounded-md font-semibold text-[10px]"
-          >
-            {tag.name}
-          </Badge>
-        ))}
       </div>
 
     </div>

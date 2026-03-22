@@ -8,18 +8,15 @@ import {
   User,
   Edit,
   Trash2,
-  List,
-  PanelLeftClose,
-  PanelLeft,
   CheckCircle,
   ExternalLink,
+  Link as LinkIcon,
+  X,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 import { useStudentTaskKnowledgeDetail } from '../api/get-student-task-knowledge-detail';
 import { useKnowledgeDetail } from '../api/knowledge';
@@ -30,9 +27,16 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
+import { bionicHtml } from '../utils/content-utils';
 import dayjs from '@/lib/dayjs';
 
-import { parseOutline } from '../utils';
+function relTime(dateStr: string): string {
+  const d = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (d === 0) return '今天';
+  if (d === 1) return '昨天';
+  if (d < 30) return `${d} 天前`;
+  return `${Math.floor(d / 30)} 个月前`;
+}
 
 export const KnowledgeDetail: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();
@@ -40,7 +44,6 @@ export const KnowledgeDetail: React.FC = () => {
   const navigate = useNavigate();
   const { getRolePath } = useRoleNavigate();
 
-  const [outlineCollapsed, setOutlineCollapsed] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ visible: boolean; type: 'delete' | null }>({
     visible: false,
     type: null,
@@ -76,11 +79,6 @@ export const KnowledgeDetail: React.FC = () => {
 
   const isCompleted = taskKnowledgeItem?.is_completed;
 
-  const outline = useMemo(() => {
-    if (!knowledge) return [];
-    return parseOutline(knowledge.content || '');
-  }, [knowledge]);
-
   const renderedContent = useMemo(() => {
     if (!knowledge?.content) return '';
 
@@ -89,10 +87,8 @@ export const KnowledgeDetail: React.FC = () => {
     doc.querySelectorAll('h1, h2, h3').forEach((heading, index) => {
       heading.id = `heading-${index}`;
     });
-    return doc.body.innerHTML;
+    return bionicHtml(doc.body.innerHTML);
   }, [knowledge?.content]);
-
-
 
   const handleEdit = () => {
     navigate(getRolePath(`knowledge/${id}/edit`));
@@ -143,30 +139,20 @@ export const KnowledgeDetail: React.FC = () => {
     };
   };
 
-  const contentPaddingClass = outlineCollapsed ? 'md:px-16' : 'md:px-20';
-
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted">
-        <div className="flex items-center justify-between p-4 px-6 bg-background border-b-2 border-border">
-          <div className="flex items-center gap-4">
-            <Skeleton className="w-9 h-9 rounded-md" />
-            <div>
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          </div>
+      <div className="flex h-[calc(100vh-9rem)] -mx-6 bg-[#e8eaec] rounded-[18px] overflow-hidden">
+        <div className="flex-1 p-16">
+          <Skeleton className="h-10 w-3/4 mb-8" />
+          <Skeleton className="h-6 w-full mb-4" />
+          <Skeleton className="h-4 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
-        <div className="flex flex-1 min-h-0 overflow-hidden h-full">
-          <div className="w-52 border-r-2 border-border bg-background h-full" />
-          <div className="flex-1 bg-background h-full">
-            <div className="p-12 px-20">
-              <Skeleton className="h-10 w-3/4 mb-8" />
-              <Skeleton className="h-6 w-full mb-4" />
-              <Skeleton className="h-4 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          </div>
+        <div className="w-[300px] bg-[#eef0f3] p-5">
+          <Skeleton className="h-7 w-full mb-3" />
+          <Skeleton className="h-4 w-20 mb-6" />
+          <Skeleton className="h-4 w-16 mb-3" />
+          <Skeleton className="h-8 w-24" />
         </div>
       </div>
     );
@@ -174,202 +160,259 @@ export const KnowledgeDetail: React.FC = () => {
 
   if (!knowledge) {
     return (
-      <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted">
-        <div className="flex items-center justify-center h-full text-text-muted font-semibold">知识文档不存在</div>
+      <div className="flex items-center justify-center h-[calc(100vh-9rem)] -mx-6 bg-[#e8eaec] rounded-[18px] text-text-muted font-semibold">
+        知识文档不存在
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 bg-muted overflow-hidden">
-      {/* 顶部栏 */}
-      <div className="flex items-center justify-between h-16 px-6 bg-background border-b border-border shrink-0">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="flex items-center gap-2.5 px-3 h-10 text-text-muted hover:text-primary-500 hover:bg-primary-50 transition-all group rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            <span className="text-sm font-semibold">{fromDashboard ? '返回首页' : taskId ? '返回任务' : '返回列表'}</span>
-          </Button>
-          <div className="w-px h-5 bg-muted" />
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold text-foreground m-0 leading-tight">{knowledge.title}</h1>
-              {knowledge.source_url && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-primary-600 hover:text-primary-700"
-                  onClick={() => window.open(knowledge.source_url, '_blank')}
-                >
-                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                  <span className="text-xs">来源文档</span>
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-[11px] text-text-muted">
-              {(knowledge.updated_by_name || knowledge.created_by_name) && (
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  {knowledge.updated_by_name || knowledge.created_by_name}
-                </span>
-              )}
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}
-              </span>
-              <span className="flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                {knowledge.view_count} 次阅读
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {(canUpdateKnowledge || canDeleteKnowledge) && (
-          <div className="flex items-center gap-2">
-            {canUpdateKnowledge && (
-              <Button variant="outline" size="sm" onClick={handleEdit} className="h-9 rounded-lg font-semibold">
-                <Edit className="w-4 h-4 mr-1.5" />
-                编辑
-              </Button>
-            )}
-            {canDeleteKnowledge && (
-              <Button variant="destructive" size="sm" onClick={handleDelete} className="h-9 bg-destructive-500 hover:bg-destructive-600 rounded-lg font-semibold">
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                删除
-              </Button>
-            )}
-          </div>
-        )}
-
-        {isStudent && !!taskId && (
-          <div className="flex items-center gap-2">
-            {isCompleted ? (
-              <span className="text-xs font-bold text-secondary-600 flex items-center gap-1.5 bg-secondary-50 px-4 py-2 rounded-lg border border-secondary-100">
-                <CheckCircle className="w-4 h-4" />
-                已学习
-              </span>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleComplete}
-                disabled={completeLearning.isPending}
-                className="h-10 bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 rounded-lg transition-all flex items-center gap-2"
-              >
-                {completeLearning.isPending ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <CheckCircle className="w-4 h-4" />
-                )}
-                标记已学习
-              </Button>
-            )}
-          </div>
-        )}
+    <div className="flex flex-col h-[calc(100vh-9rem)] -mx-6 overflow-hidden">
+      {/* 返回按钮条 */}
+      <div
+        className="shrink-0 px-5 py-3 flex items-center"
+        style={{ background: 'rgba(232,234,236,0.92)' }}
+      >
+        <Button
+          variant="ghost"
+          onClick={handleBack}
+          className="flex items-center gap-2 px-3 h-9 text-text-muted hover:text-foreground transition-all group rounded-lg text-sm font-semibold"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          {fromDashboard ? '返回首页' : taskId ? '返回任务' : '返回列表'}
+        </Button>
       </div>
 
-      {/* 主体内容 */}
-      <div className="flex flex-1 min-h-0 overflow-hidden h-full">
-        {/* 左侧目录 */}
+      {/* 主体：左内容 + 右meta */}
+      <div
+        className="flex flex-1 min-h-0 overflow-hidden rounded-[18px] mx-4 mb-4"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
+      >
+        {/* 左侧内容 */}
         <div
-          className={cn(
-            "flex flex-col border-r border-border bg-background max-lg:hidden h-full transition-all duration-300",
-            outlineCollapsed ? "w-14" : "w-52"
-          )}
+          className="flex-1 overflow-y-auto scrollbar-subtle"
+          style={{
+            padding: '60px 72px 80px',
+            background: '#fff',
+            fontFamily: "Georgia, 'Times New Roman', 'PingFang SC', serif",
+          }}
         >
-          {outlineCollapsed ? (
-            <div className="flex flex-col items-center py-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setOutlineCollapsed(false)}
-                title="展开目录"
-              >
-                <PanelLeft className="w-5 h-5" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-border text-sm font-semibold text-foreground shrink-0">
-              <div className="flex items-center gap-2">
-                <List className="w-4 h-4 text-primary-500" />
-                  正文目录
-              </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-text-muted hover:text-primary-500"
-                  onClick={() => setOutlineCollapsed(true)}
-                >
-                  <PanelLeftClose className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto py-4 px-2 scrollbar-subtle">
-                {outline.length > 0 ? (
-                  <div className="space-y-0.5">
-                    {outline.map((item) => (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "flex items-center gap-3 py-2.5 px-4 text-xs rounded-lg cursor-pointer transition-all",
-                          item.level === 1 ? 'font-semibold text-foreground hover:bg-muted' : 'text-text-muted hover:bg-muted'
-                        )}
-                        style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
-                        onClick={() => {
-                          const element = document.getElementById(item.id);
-                          if (element) {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }
-                        }}
-                      >
-                        <span className="truncate">{item.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-[10px] text-text-muted text-center font-medium">暂无正文目录</div>
-                )}
-              </div>
-            </div>
-          )}
+          <div
+            className="detail-content-mymind"
+            dangerouslySetInnerHTML={{ __html: renderedContent }}
+          />
         </div>
 
-        {/* 右侧内容 */}
-        <div className="flex-1 flex flex-col bg-background overflow-hidden min-w-0 h-full">
-          {/* 标签栏 */}
-          {(knowledge.system_tags?.length || knowledge.operation_tags?.length) ? (
-            <div className={cn(
-              "flex items-center gap-2 py-4 px-6 border-b border-border flex-wrap bg-muted transition-[padding] duration-300",
-              contentPaddingClass
-            )}>
-              {knowledge.system_tags?.map((tag) => (
-                <Badge key={tag.id} variant="info" className="text-[10px] rounded-md border-none px-2.5 py-1">
-                  {tag.name}
-                </Badge>
-              ))}
-              {knowledge.operation_tags?.map((tag) => (
-                <Badge key={tag.id} variant="secondary" className="text-[10px] rounded-md border-none px-2.5 py-1">
-                  {tag.name}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
+        {/* 右侧 meta 面板 */}
+        <div
+          className="w-[300px] shrink-0 flex flex-col overflow-y-auto scrollbar-subtle"
+          style={{ background: '#eef0f3' }}
+        >
+          {/* Header 渐变区 */}
+          <div
+            style={{
+              background: 'linear-gradient(160deg, #dce4ee 0%, #eef0f3 100%)',
+              padding: '22px 20px 16px',
+            }}
+          >
+            <h1
+              style={{
+                fontSize: 17,
+                fontWeight: 400,
+                color: '#4a5a6a',
+                margin: 0,
+                lineHeight: 1.3,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {knowledge.title}
+            </h1>
+            <p style={{ fontSize: 12, color: '#9aa0aa', margin: '5px 0 0' }}>
+              {relTime(knowledge.updated_at)}
+            </p>
+          </div>
 
-          {/* 内容 */}
-          <div className="flex-1 overflow-y-auto w-full scrollbar-subtle">
-            <div className={cn(
-              "p-8 md:p-12 px-6 min-h-full transition-[padding] duration-300",
-              contentPaddingClass
-            )}>
-              <h1 className="text-3xl font-bold text-foreground mb-10 tracking-tight">{knowledge.title}</h1>
-            <div
-              className="prose prose-gray max-w-none prose-sm sm:prose-base leading-relaxed text-foreground"
-              dangerouslySetInnerHTML={{ __html: renderedContent }}
-            />
+          {/* Body */}
+          <div style={{ padding: '18px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 元信息 */}
+            <div style={{ marginBottom: 18 }}>
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase' as const,
+                  color: '#a0a8b0',
+                  margin: '0 0 10px',
+                }}
+              >
+                详细信息
+              </p>
+              <div className="space-y-2.5">
+                {(knowledge.updated_by_name || knowledge.created_by_name) && (
+                  <div className="flex items-center gap-2 text-xs text-[#777]">
+                    <User className="w-3.5 h-3.5 text-[#aaa]" />
+                    <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs text-[#777]">
+                  <Calendar className="w-3.5 h-3.5 text-[#aaa]" />
+                  <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#777]">
+                  <Eye className="w-3.5 h-3.5 text-[#aaa]" />
+                  <span>{knowledge.view_count} 次阅读</span>
+                </div>
+              </div>
             </div>
+
+            {/* 标签 */}
+            {knowledge.tags?.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                <p
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase' as const,
+                    color: '#a0a8b0',
+                    margin: '0 0 10px',
+                  }}
+                >
+                  系统标签
+                </p>
+                <div className="flex flex-wrap gap-[7px]">
+                  {knowledge.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] text-[#555]"
+                      style={{ background: '#e0e3e8' }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 条线 */}
+            {knowledge.line_tag && (
+              <div style={{ marginBottom: 18 }}>
+                <p
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase' as const,
+                    color: '#a0a8b0',
+                    margin: '0 0 10px',
+                  }}
+                >
+                  所属条线
+                </p>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-medium"
+                  style={{ background: '#e8793a18', color: '#e8793a', border: '1.5px solid #e8793a40' }}
+                >
+                  {knowledge.line_tag.name}
+                </span>
+              </div>
+            )}
+
+            {/* 来源链接 */}
+            {knowledge.source_url && (
+              <a
+                href={knowledge.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 text-xs no-underline mb-4 break-all"
+                style={{ color: '#7a9baa' }}
+              >
+                <LinkIcon className="w-3 h-3 shrink-0" />
+                {knowledge.source_url.replace(/^https?:\/\//, '')}
+              </a>
+            )}
+
+            {/* 学生标记已学习 */}
+            {isStudent && !!taskId && (
+              <div style={{ marginBottom: 18 }}>
+                {isCompleted ? (
+                  <div
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
+                    style={{ background: '#e0f5e0', color: '#2d8a2d' }}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    已学习
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleComplete}
+                    disabled={completeLearning.isPending}
+                    className="w-full border-none rounded-xl py-3 text-sm font-semibold cursor-pointer transition-all"
+                    style={{
+                      background: '#e8793a',
+                      color: '#fff',
+                      fontFamily: 'inherit',
+                      opacity: completeLearning.isPending ? 0.6 : 1,
+                    }}
+                  >
+                    {completeLearning.isPending ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        处理中...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        标记已学习
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="flex-1" />
+          </div>
+
+          {/* 底部操作按钮 */}
+          <div
+            style={{
+              borderTop: '1px solid rgba(0,0,0,0.07)',
+              padding: '14px 20px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 16,
+            }}
+          >
+            {knowledge.source_url && (
+              <button
+                onClick={() => window.open(knowledge.source_url, '_blank')}
+                className="detail-action-btn"
+                title="查看来源"
+              >
+                <ExternalLink className="w-[15px] h-[15px]" />
+              </button>
+            )}
+            {canUpdateKnowledge && (
+              <button
+                onClick={handleEdit}
+                className="detail-action-btn"
+                title="编辑"
+              >
+                <Edit className="w-[15px] h-[15px]" />
+              </button>
+            )}
+            {canDeleteKnowledge && (
+              <button
+                onClick={handleDelete}
+                className="detail-action-btn detail-action-btn-danger"
+                title="删除"
+              >
+                <Trash2 className="w-[15px] h-[15px]" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -389,6 +432,136 @@ export const KnowledgeDetail: React.FC = () => {
           contentClassName="sm:max-w-md rounded-lg border-2 border-border"
         />
       )}
+
+      {/* mymind Detail 内容样式 */}
+      <style>{`
+        .detail-content-mymind {
+          font-family: Georgia, 'Times New Roman', 'PingFang SC', serif;
+        }
+        .detail-content-mymind h1 {
+          font-size: 32px;
+          font-weight: 600;
+          color: #111;
+          margin: 0 0 28px;
+          text-align: center;
+          letter-spacing: -0.02em;
+          line-height: 1.2;
+        }
+        .detail-content-mymind h2 {
+          font-size: 24px;
+          font-weight: 600;
+          color: #111;
+          margin: 32px 0 14px;
+          letter-spacing: -0.02em;
+          line-height: 1.3;
+          font-family: 'DM Sans', 'PingFang SC', sans-serif;
+        }
+        .detail-content-mymind h3 {
+          font-size: 17px;
+          font-weight: 600;
+          color: #222;
+          margin: 28px 0 10px;
+          font-family: 'DM Sans', 'PingFang SC', sans-serif;
+        }
+        .detail-content-mymind p {
+          font-size: 16px;
+          line-height: 1.85;
+          color: #333;
+          margin: 0 0 18px;
+        }
+        .detail-content-mymind p:last-child {
+          margin: 0;
+        }
+        .detail-content-mymind ul,
+        .detail-content-mymind ol {
+          padding-left: 24px;
+          margin: 10px 0 18px;
+        }
+        .detail-content-mymind li {
+          font-size: 15px;
+          line-height: 1.8;
+          color: #444;
+          margin-bottom: 7px;
+        }
+        .detail-content-mymind strong {
+          font-weight: 700;
+          color: #111;
+        }
+        .detail-content-mymind em {
+          font-style: italic;
+        }
+        .detail-content-mymind code {
+          background: #f4f4f2;
+          padding: 2px 6px;
+          border-radius: 5px;
+          font-size: 0.87em;
+          font-family: 'SF Mono', monospace;
+          color: #555;
+        }
+        .detail-content-mymind pre {
+          background: #f4f4f2;
+          border-radius: 10px;
+          padding: 18px 22px;
+          font-size: 13px;
+          margin: 16px 0;
+          overflow-x: auto;
+          font-family: monospace;
+          line-height: 1.6;
+        }
+        .detail-content-mymind blockquote {
+          border-left: 3px solid #e0e0e0;
+          padding-left: 20px;
+          color: #777;
+          margin: 18px 0;
+          font-style: italic;
+          font-size: 18px;
+        }
+        .detail-content-mymind img {
+          max-width: 100%;
+          border-radius: 10px;
+          margin: 16px 0;
+        }
+        .detail-content-mymind table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+          font-size: 14px;
+        }
+        .detail-content-mymind th,
+        .detail-content-mymind td {
+          text-align: left;
+          padding: 10px 14px;
+          border-bottom: 1px solid #eee;
+        }
+        .detail-content-mymind th {
+          font-weight: 600;
+          color: #333;
+          background: #fafafa;
+        }
+
+        /* 底部操作按钮 */
+        .detail-action-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: 1.5px solid #d0d4d8;
+          background: #fff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #9aa0aa;
+          transition: all 0.15s;
+        }
+        .detail-action-btn:hover {
+          border-color: #888;
+          color: #555;
+        }
+        .detail-action-btn-danger:hover {
+          border-color: #e44;
+          color: #e44;
+        }
+      `}</style>
     </div>
   );
 };

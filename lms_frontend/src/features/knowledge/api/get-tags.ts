@@ -10,8 +10,6 @@ import type { Tag, TagType } from '@/types/api';
 interface GetTagsParams {
   /** 标签类型 */
   tag_type?: TagType;
-  /** 条线类型ID（用于级联筛选：获取该条线下知识使用的系统/操作标签） */
-  line_tag_id?: number;
   /** 搜索关键词 */
   search?: string;
   /** 返回数量限制 */
@@ -22,21 +20,16 @@ interface GetTagsParams {
 
 /**
  * 获取标签列表
- * 
- * 级联筛选：
- * - 当 tag_type=SYSTEM 且提供 line_tag_id 时，返回该条线下知识使用的系统标签
- * - 当 tag_type=OPERATION 且提供 line_tag_id 时，返回该条线下知识使用的操作标签
  */
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { tag_type, line_tag_id, search, limit = 50, active_only = true } = params;
+  const { tag_type, search, limit = 50, active_only = true } = params;
 
   return useQuery({
-    queryKey: ['tags', currentRole ?? 'UNKNOWN', tag_type, line_tag_id, search, limit, active_only],
+    queryKey: ['tags', currentRole ?? 'UNKNOWN', tag_type, search, limit, active_only],
     queryFn: () => {
       const queryParams = {
         ...(tag_type && { tag_type }),
-        ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
         ...(search && { search }),
         ...(limit && { limit: String(limit) }),
         active_only: String(active_only),
@@ -57,19 +50,10 @@ export const useLineTypeTags = (search?: string) => {
 };
 
 /**
- * 获取系统标签列表
- * @param lineTypeId - 可选，如果提供则返回该条线下知识使用的系统标签（级联筛选）
+ * 获取知识标签列表
  */
-export const useSystemTags = (lineTypeId?: number, search?: string) => {
-  return useTags({ tag_type: 'SYSTEM', line_tag_id: lineTypeId, search });
-};
-
-/**
- * 获取操作标签列表
- * @param lineTypeId - 可选，如果提供则返回该条线下知识使用的操作标签（级联筛选）
- */
-export const useOperationTags = (lineTypeId?: number, search?: string) => {
-  return useTags({ tag_type: 'OPERATION', line_tag_id: lineTypeId, search });
+export const useKnowledgeTags = (search?: string) => {
+  return useTags({ tag_type: 'TAG', search });
 };
 
 /**
@@ -78,7 +62,6 @@ export const useOperationTags = (lineTypeId?: number, search?: string) => {
 interface CreateTagRequest {
   name: string;
   tag_type: TagType;
-  parent?: number | null;
   sort_order?: number;
   is_active?: boolean;
 }

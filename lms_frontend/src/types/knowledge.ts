@@ -28,8 +28,7 @@ export interface StudentKnowledgeDetail {
   content_preview?: string;
   table_of_contents?: TableOfContentsItem[];
   line_tag?: SimpleTag | null;
-  system_tags?: SimpleTag[];
-  operation_tags?: SimpleTag[];
+  tags?: SimpleTag[];
   created_by_name?: string;
   updated_by_name?: string;
   view_count: number;
@@ -65,10 +64,9 @@ export interface KnowledgeListItem {
   title: string;
   is_current: boolean;
   line_tag?: SimpleTag | null;
+  content: string;
   content_preview?: string;
   table_of_contents?: TableOfContentsItem[];
-  system_tags: SimpleTag[];
-  operation_tags: SimpleTag[];
   created_by?: number;
   created_by_name?: string;
   updated_by?: number;
@@ -91,8 +89,7 @@ export interface KnowledgeDetail {
   line_tag?: SimpleTag | null;
   content: string;
   table_of_contents?: TableOfContentsItem[];
-  system_tags: SimpleTag[];
-  operation_tags: SimpleTag[];
+  tags: SimpleTag[];
   created_by?: number;
   created_by_name?: string;
   updated_by?: number;
@@ -112,8 +109,7 @@ export interface KnowledgeCreateRequest {
   line_tag_name?: string;
   content: string;
   source_url?: string;
-  system_tag_ids?: number[];
-  operation_tag_ids?: number[];
+  tag_ids?: number[];
 }
 
 /**
@@ -124,8 +120,7 @@ export interface KnowledgeUpdateRequest {
   line_tag_id?: number;
   content?: string;
   source_url?: string;
-  system_tag_ids?: number[];
-  operation_tag_ids?: number[];
+  tag_ids?: number[];
 }
 
 /**

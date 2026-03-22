@@ -15,8 +15,7 @@ def knowledge_base_queryset(include_deleted: bool = False) -> QuerySet:
         'updated_by',
         'line_tag',
     ).prefetch_related(
-        'system_tags',
-        'operation_tags'
+        'tags'
     )
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
@@ -36,10 +35,8 @@ def get_knowledge_queryset(
     if filters:
         if filters.get('line_tag_id') is not None:
             qs = qs.filter(line_tag_id=filters['line_tag_id'])
-        if filters.get('system_tag_id'):
-            qs = qs.filter(system_tags__id=filters['system_tag_id'])
-        if filters.get('operation_tag_id'):
-            qs = qs.filter(operation_tags__id=filters['operation_tag_id'])
+        if filters.get('tag_id'):
+            qs = qs.filter(tags__id=filters['tag_id'])
     if search:
         qs = qs.filter(
             Q(title__icontains=search) |

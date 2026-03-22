@@ -93,15 +93,14 @@ class KnowledgeService(BaseService):
         data['version_number'] = 1
         # 提取标签数据
         line_tag_id = data.pop('line_tag_id', None)
-        system_tag_ids = data.pop('system_tag_ids', [])
-        operation_tag_ids = data.pop('operation_tag_ids', [])
+        tag_ids = data.pop('tag_ids', [])
         # 3. 创建知识
         knowledge = Knowledge.objects.create(**data)
         Knowledge.objects.filter(
             resource_uuid=knowledge.resource_uuid
         ).exclude(pk=knowledge.pk).update(is_current=False)
         # 4. 设置标签
-        self._set_tags(knowledge, line_tag_id, system_tag_ids, operation_tag_ids)
+        self._set_tags(knowledge, line_tag_id, tag_ids)
         return knowledge
 
     @transaction.atomic
@@ -126,16 +125,15 @@ class KnowledgeService(BaseService):
         self._validate_knowledge_data(data)
         # 提取标签数据
         line_tag_id = data.pop('line_tag_id', None)
-        system_tag_ids = data.pop('system_tag_ids', None)
-        operation_tag_ids = data.pop('operation_tag_ids', None)
+        tag_ids = data.pop('tag_ids', None)
         data['updated_by'] = self.user
         if data:
             for key, value in data.items():
                 setattr(knowledge, key, value)
             knowledge.save(update_fields=list(data.keys()))
         # 更新标签
-        if line_tag_id is not None or system_tag_ids is not None or operation_tag_ids is not None:
-            self._set_tags(knowledge, line_tag_id, system_tag_ids, operation_tag_ids)
+        if line_tag_id is not None or tag_ids is not None:
+            self._set_tags(knowledge, line_tag_id, tag_ids)
         return knowledge
 
     @transaction.atomic
@@ -192,17 +190,14 @@ class KnowledgeService(BaseService):
         self,
         knowledge: Knowledge,
         line_tag_id: Optional[int],
-        system_tag_ids: Optional[List[int]],
-        operation_tag_ids: Optional[List[int]]
+        tag_ids: Optional[List[int]],
     ) -> None:
         """设置标签"""
         if line_tag_id is not None:
             knowledge.line_tag = self._get_line_tag_or_error(line_tag_id)
             knowledge.save(update_fields=['line_tag'])
-        if system_tag_ids is not None:
-            knowledge.system_tags.set(system_tag_ids)
-        if operation_tag_ids is not None:
-            knowledge.operation_tags.set(operation_tag_ids)
+        if tag_ids is not None:
+            knowledge.tags.set(self._get_tag_ids_or_error(tag_ids))
 
     def _get_line_tag_or_error(self, line_tag_id: int) -> Tag:
         """获取并校验条线标签。"""
@@ -217,6 +212,35 @@ class KnowledgeService(BaseService):
                 message='无效的条线标签ID'
             )
         return line_tag
+
+    def _get_tag_ids_or_error(self, tag_ids: List[int]) -> List[int]:
+        """获取并校验知识标签 ID 列表。"""
+        if not tag_ids:
+            return []
+
+        valid_tag_ids = set(
+            Tag.objects.filter(
+                id__in=tag_ids,
+                tag_type='TAG',
+                is_active=True,
+            ).values_list('id', flat=True)
+        )
+        invalid_tag_ids = [tag_id for tag_id in tag_ids if tag_id not in valid_tag_ids]
+        if invalid_tag_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='包含无效的知识标签ID',
+                details={'invalid_tag_ids': invalid_tag_ids},
+            )
+
+        deduped_tag_ids = []
+        seen_ids = set()
+        for tag_id in tag_ids:
+            if tag_id in seen_ids:
+                continue
+            seen_ids.add(tag_id)
+            deduped_tag_ids.append(tag_id)
+        return deduped_tag_ids
 
     def _is_referenced_by_task(self, knowledge_id: int) -> bool:
         """检查知识文档是否被任务引用"""
@@ -236,8 +260,7 @@ class KnowledgeService(BaseService):
         next_version = Knowledge.next_version_number(source.resource_uuid)
         # 提取标签数据
         line_tag_id = data.pop('line_tag_id', None)
-        system_tag_ids = data.pop('system_tag_ids', None)
-        operation_tag_ids = data.pop('operation_tag_ids', None)
+        tag_ids = data.pop('tag_ids', None)
         # 准备新版本数据：自动复制所有内容字段
         new_version_data = {
             'resource_uuid': source.resource_uuid,
@@ -259,21 +282,15 @@ class KnowledgeService(BaseService):
         new_version = Knowledge.objects.create(**new_version_data)
         # 设置标签：按字段粒度处理，未传字段继承 source
         inherited_line_tag_id = line_tag_id if line_tag_id is not None else source.line_tag_id
-        inherited_system_tag_ids = (
-            system_tag_ids
-            if system_tag_ids is not None
-            else list(source.system_tags.values_list('id', flat=True))
-        )
-        inherited_operation_tag_ids = (
-            operation_tag_ids
-            if operation_tag_ids is not None
-            else list(source.operation_tags.values_list('id', flat=True))
+        inherited_tag_ids = (
+            tag_ids
+            if tag_ids is not None
+            else list(source.tags.values_list('id', flat=True))
         )
         self._set_tags(
             new_version,
             inherited_line_tag_id,
-            inherited_system_tag_ids,
-            inherited_operation_tag_ids
+            inherited_tag_ids,
         )
         return new_version
 

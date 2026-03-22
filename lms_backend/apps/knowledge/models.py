@@ -1,7 +1,7 @@
 """
 Knowledge models for LMS.
 Implements:
-- Tag: 统一标签模型（条线类型/系统标签/操作标签）
+- Tag: 统一标签模型（条线类型/知识标签）
 - Knowledge: 统一知识文档
 """
 from django.core.exceptions import ValidationError
@@ -15,36 +15,24 @@ from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin, Versioned
 class Tag(TimestampMixin, models.Model):
     """
     统一标签模型
-    支持三种标签类型：
-    - LINE: 条线类型（一级分类）
-    - SYSTEM: 系统标签（二级分类，可关联条线）
-    - OPERATION: 操作标签
+    支持两种标签类型：
+    - LINE: 条线类型（大分类）
+    - TAG: 知识标签（平级标签）
     Attributes:
         name: 标签名称
         tag_type: 标签类型
-        parent: 父标签（系统标签可关联条线类型）
         sort_order: 排序序号
         is_active: 是否启用
     """
     TAG_TYPE_CHOICES = [
         ('LINE', '条线类型'),
-        ('SYSTEM', '系统标签'),
-        ('OPERATION', '操作标签'),
+        ('TAG', '知识标签'),
     ]
     name = models.CharField(max_length=100, verbose_name='标签名称')
     tag_type = models.CharField(
         max_length=20,
         choices=TAG_TYPE_CHOICES,
         verbose_name='标签类型'
-    )
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='children',
-        verbose_name='父标签',
-        help_text='系统标签可关联条线类型'
     )
     sort_order = models.IntegerField(default=0, verbose_name='排序序号')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
@@ -57,27 +45,15 @@ class Tag(TimestampMixin, models.Model):
         unique_together = [['name', 'tag_type']]
     def __str__(self):
         return f"{self.name} ({self.get_tag_type_display()})"
-    def clean(self):
-        """验证标签"""
-        super().clean()
-        # 只有系统标签可以有父标签，且父标签必须是条线类型
-        if self.parent:
-            if self.tag_type != 'SYSTEM':
-                raise ValidationError({
-                    'parent': '只有系统标签可以关联父标签'
-                })
-            if self.parent.tag_type != 'LINE':
-                raise ValidationError({
-                    'parent': '父标签必须是条线类型'
-                })
+
+
 class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     统一知识文档模型
     所有知识都使用富文本正文 content，不再区分知识类型或结构化子字段。
     标签关系:
     - line_tag: 条线类型（单选）
-    - system_tags: 系统标签（多对多，多选）
-    - operation_tags: 操作标签（多对多，多选）
+    - tags: 知识标签（多对多，多选）
     """
     title = models.CharField(max_length=200, verbose_name='标题')
     line_tag = models.ForeignKey(
@@ -89,21 +65,12 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         verbose_name='条线类型',
         limit_choices_to={'tag_type': 'LINE', 'is_active': True}
     )
-    # 系统标签（二级分类）- 多对多，多选
-    system_tags = models.ManyToManyField(
+    tags = models.ManyToManyField(
         Tag,
-        related_name='knowledge_by_system',
+        related_name='knowledge_items',
         blank=True,
-        verbose_name='系统标签',
-        limit_choices_to={'tag_type': 'SYSTEM', 'is_active': True}
-    )
-    # 操作类型标签 - 多对多，多选
-    operation_tags = models.ManyToManyField(
-        Tag,
-        related_name='knowledge_by_operation',
-        blank=True,
-        verbose_name='操作标签',
-        limit_choices_to={'tag_type': 'OPERATION', 'is_active': True}
+        verbose_name='知识标签',
+        limit_choices_to={'tag_type': 'TAG', 'is_active': True}
     )
     # 统一正文内容
     content = models.TextField(blank=True, default='', verbose_name='正文内容')

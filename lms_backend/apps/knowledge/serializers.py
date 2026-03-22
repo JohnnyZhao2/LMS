@@ -12,11 +12,13 @@ class TagSerializer(serializers.ModelSerializer):
     标签序列化器
     """
     tag_type_display = serializers.CharField(source='get_tag_type_display', read_only=True)
-    parent_name = serializers.CharField(source='parent.name', read_only=True, allow_null=True)
+
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'tag_type', 'tag_type_display', 'parent', 'parent_name', 'sort_order', 'is_active']
+        fields = ['id', 'name', 'tag_type', 'tag_type_display', 'sort_order', 'is_active']
         read_only_fields = ['id']
+
+
 class TagSimpleSerializer(serializers.ModelSerializer):
     """
     标签简单序列化器（用于知识列表）
@@ -27,11 +29,9 @@ class TagSimpleSerializer(serializers.ModelSerializer):
 class KnowledgeListSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge list view.
-    Returns a preview of knowledge documents for list display.
+    Returns full content for mymind-style card rendering.
     """
     line_tag = TagSimpleSerializer(read_only=True)
-    system_tags = TagSimpleSerializer(many=True, read_only=True)
-    operation_tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     content_preview = serializers.CharField(read_only=True)
@@ -42,18 +42,20 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title',
             'is_current',
-            'line_tag', 'system_tags', 'operation_tags',
+            'line_tag',
+            'content',
             'view_count', 'content_preview', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
+
+
 class KnowledgeDetailSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge detail view.
     Returns full knowledge document details.
     """
     line_tag = TagSimpleSerializer(read_only=True)
-    system_tags = TagSimpleSerializer(many=True, read_only=True)
-    operation_tags = TagSimpleSerializer(many=True, read_only=True)
+    tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     table_of_contents = serializers.ListField(read_only=True)
@@ -63,37 +65,34 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title',
             'is_current',
-            'line_tag', 'system_tags', 'operation_tags',
+            'line_tag', 'tags',
             'content',
             # 元数据
             'view_count', 'table_of_contents', 'source_url',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]
+
+
 class KnowledgeCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating knowledge documents.
     """
     # 前端传入标签ID
     line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    system_tag_ids = serializers.ListField(
+    tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
         required=False,
         default=list
     )
-    operation_tag_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False,
-        default=list
-    )
+
     class Meta:
         model = Knowledge
         fields = [
             'title',
             'line_tag_id',
-            'system_tag_ids', 'operation_tag_ids',
+            'tag_ids',
             'content',
             # 原始文档链接
             'source_url',
@@ -113,27 +112,25 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
                 'content': '必须填写正文内容'
             })
         return attrs
+
+
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating knowledge documents.
     """
     line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    system_tag_ids = serializers.ListField(
+    tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
         required=False
     )
-    operation_tag_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False
-    )
+
     class Meta:
         model = Knowledge
         fields = [
             'title',
             'line_tag_id',
-            'system_tag_ids', 'operation_tag_ids',
+            'tag_ids',
             'content',
             # 原始文档链接
             'source_url',
@@ -149,6 +146,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
                 'content': '必须填写正文内容'
             })
         return attrs
+
+
 class KnowledgeStatsSerializer(serializers.Serializer):
     """
     知识统计序列化器

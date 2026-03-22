@@ -881,6 +881,20 @@
         }
     }
 
+    /* ============================================
+       MyMind 风格动画
+       ============================================ */
+    @keyframes mymind-appear {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
 }
 
 /* ============================================
@@ -969,4 +983,18 @@
     --theme-radius-md: 4px;
     --theme-radius-lg: 6px;
     --theme-radius-xl: 8px;
+}
+
+/* ============================================
+   MyMind 风格动画效果
+   ============================================ */
+@keyframes mymind-appear {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

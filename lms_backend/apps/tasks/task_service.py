@@ -292,7 +292,7 @@ class TaskService(BaseService):
                 id__in=resource_ids,
                 is_deleted=False,
                 is_current=True
-            ).select_related('created_by', 'updated_by').prefetch_related('system_tags', 'operation_tags')
+            ).select_related('created_by', 'updated_by').prefetch_related('tags')
         else:
             queryset = resource_model.objects.filter(
                 id__in=resource_ids,

@@ -4,8 +4,6 @@ import { useState, useCallback } from 'react';
  * 知识列表筛选状态配置
  */
 export interface KnowledgeFilterConfig {
-  /** 是否启用操作标签筛选（学员端需要） */
-  enableOperationTags?: boolean;
   /** 默认页面大小 */
   defaultPageSize?: number;
 }
@@ -20,10 +18,6 @@ export interface KnowledgeFilterState {
   searchValue: string;
   /** 选中的条线类型 ID */
   selectedLineTypeId: number | undefined;
-  /** 选中的系统标签 IDs */
-  selectedSystemTagIds: number[];
-  /** 选中的操作标签 IDs */
-  selectedOperationTagIds: number[];
   /** 当前页码 */
   page: number;
   /** 每页数量 */
@@ -42,10 +36,6 @@ export interface KnowledgeFilterActions {
   searchDirectly: (value: string) => void;
   /** 选择/取消条线类型 */
   handleLineTypeSelect: (id: number | undefined) => void;
-  /** 切换系统标签 */
-  toggleSystemTag: (tagId: number) => void;
-  /** 切换操作标签 */
-  toggleOperationTag: (tagId: number) => void;
   /** 处理分页变化 */
   handlePageChange: (page: number, pageSize: number) => void;
   /** 重置所有筛选 */
@@ -68,8 +58,6 @@ export const useKnowledgeFilters = (
   const [search, setSearch] = useState('');
   const [searchValue, setSearchValue] = useState('');
   const [selectedLineTypeId, setSelectedLineTypeId] = useState<number | undefined>();
-  const [selectedSystemTagIds, setSelectedSystemTagIds] = useState<number[]>([]);
-  const [selectedOperationTagIds, setSelectedOperationTagIds] = useState<number[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 
@@ -95,28 +83,6 @@ export const useKnowledgeFilters = (
    */
   const handleLineTypeSelect = useCallback((id: number | undefined) => {
     setSelectedLineTypeId(prev => (prev === id ? undefined : id));
-    setSelectedSystemTagIds([]);
-    setSelectedOperationTagIds([]);
-    setPage(1);
-  }, []);
-
-  /**
-   * 切换系统标签
-   */
-  const toggleSystemTag = useCallback((tagId: number) => {
-    setSelectedSystemTagIds(prev =>
-      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [tagId]
-    );
-    setPage(1);
-  }, []);
-
-  /**
-   * 切换操作标签
-   */
-  const toggleOperationTag = useCallback((tagId: number) => {
-    setSelectedOperationTagIds(prev =>
-      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
-    );
     setPage(1);
   }, []);
 
@@ -135,8 +101,6 @@ export const useKnowledgeFilters = (
     setSearch('');
     setSearchValue('');
     setSelectedLineTypeId(undefined);
-    setSelectedSystemTagIds([]);
-    setSelectedOperationTagIds([]);
     setPage(1);
     setPageSize(defaultPageSize);
   }, [defaultPageSize]);
@@ -146,8 +110,6 @@ export const useKnowledgeFilters = (
     search,
     searchValue,
     selectedLineTypeId,
-    selectedSystemTagIds,
-    selectedOperationTagIds,
     page,
     pageSize,
     // 操作
@@ -155,10 +117,7 @@ export const useKnowledgeFilters = (
     submitSearch,
     searchDirectly,
     handleLineTypeSelect,
-    toggleSystemTag,
-    toggleOperationTag,
     handlePageChange,
     resetFilters,
   };
 };
-

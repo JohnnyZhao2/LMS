@@ -67,21 +67,13 @@ def _build_knowledge_filters(request):
     if line_tag_id is not None:
         filters['line_tag_id'] = line_tag_id
 
-    system_tag_id = parse_int_query_param(
+    tag_id = parse_int_query_param(
         request=request,
-        name='system_tag_id',
+        name='tag_id',
         minimum=1,
     )
-    if system_tag_id is not None:
-        filters['system_tag_id'] = system_tag_id
-
-    operation_tag_id = parse_int_query_param(
-        request=request,
-        name='operation_tag_id',
-        minimum=1,
-    )
-    if operation_tag_id is not None:
-        filters['operation_tag_id'] = operation_tag_id
+    if tag_id is not None:
+        filters['tag_id'] = tag_id
 
     search = request.query_params.get('search')
     return filters, search
@@ -130,14 +122,13 @@ class KnowledgeListCreateView(BaseAPIView):
         return list_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
-        description='''获取知识文档列表，支持条线类型和系统/操作标签筛选。
+        description='''获取知识文档列表，支持条线类型和知识标签筛选。
 所有用户只能看到当前版本的知识。
 **注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
 ''',
         parameters=[
             OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
-            OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
-            OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
+            OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
             OpenApiParameter(name='page', type=int, description='页码（默认1）'),
             OpenApiParameter(name='page_size', type=int, description='每页数量（默认20）'),
@@ -268,8 +259,7 @@ class KnowledgeStatsView(BaseAPIView):
         description='获取知识文档的统计数据，统计维度已统一到正文内容。',
         parameters=[
             OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
-            OpenApiParameter(name='system_tag_id', type=int, description='系统标签ID'),
-            OpenApiParameter(name='operation_tag_id', type=int, description='操作标签ID'),
+            OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
         ],
         responses={200: KnowledgeStatsSerializer},

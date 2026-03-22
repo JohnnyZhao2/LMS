@@ -33,7 +33,7 @@ export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_
 /**
  * 标签类型
  */
-export type TagType = 'LINE' | 'SYSTEM' | 'OPERATION';
+export type TagType = 'LINE' | 'TAG';
 
 // ==================== 标签相关 ====================
 
@@ -45,8 +45,6 @@ export interface Tag {
   name: string;
   tag_type: TagType;
   tag_type_display: string;
-  parent?: number | null;
-  parent_name?: string | null;
   sort_order: number;
   is_active: boolean;
 }

@@ -23,7 +23,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { EmptyState } from '@/components/ui/empty-state';
 
 import { useKnowledgeDetail } from '../api/knowledge';
-import { useLineTypeTags, useSystemTags, useOperationTags, useCreateTag } from '../api/get-tags';
+import { useLineTypeTags, useKnowledgeTags, useCreateTag } from '../api/get-tags';
 import { useCreateKnowledge, useUpdateKnowledge } from '../api/manage-knowledge';
 import { useParseDocument } from '../api/parse-document';
 import { parseOutline } from '../utils';
@@ -45,16 +45,14 @@ export const KnowledgeForm: React.FC = () => {
   const [outlineCollapsed, setOutlineCollapsed] = useState(false);
   const [title, setTitle] = useState('');
   const [lineTypeId, setLineTypeId] = useState<number | undefined>();
-  const [systemTagIds, setSystemTagIds] = useState<number[]>([]);
-  const [operationTagIds, setOperationTagIds] = useState<number[]>([]);
+  const [tagIds, setTagIds] = useState<number[]>([]);
   const [sourceUrl, setSourceUrl] = useState('');
   const [content, setContent] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: knowledgeDetail, isLoading: detailLoading } = useKnowledgeDetail(Number(id));
   const { data: lineTypeTags = [] } = useLineTypeTags();
-  const { data: systemTags = [] } = useSystemTags(lineTypeId);
-  const { data: operationTags = [] } = useOperationTags(lineTypeId);
+  const { data: knowledgeTags = [] } = useKnowledgeTags();
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const createTag = useCreateTag();
@@ -65,8 +63,7 @@ export const KnowledgeForm: React.FC = () => {
 
     setTitle(knowledgeDetail.title || '');
     setLineTypeId(knowledgeDetail.line_tag?.id);
-    setSystemTagIds(knowledgeDetail.system_tags?.map((t) => t.id) || []);
-    setOperationTagIds(knowledgeDetail.operation_tags?.map((t) => t.id) || []);
+    setTagIds(knowledgeDetail.tags?.map((t) => t.id) || []);
     setSourceUrl(knowledgeDetail.source_url || '');
     setContent(knowledgeDetail.content || '');
   }, [isEdit, knowledgeDetail]);
@@ -126,12 +123,11 @@ export const KnowledgeForm: React.FC = () => {
     return {
       title,
       line_tag_id: lineTypeId!,
-      system_tag_ids: systemTagIds,
-      operation_tag_ids: operationTagIds,
+      tag_ids: tagIds,
       content,
       source_url: sourceUrl || undefined,
     };
-  }, [title, lineTypeId, systemTagIds, operationTagIds, content, sourceUrl]);
+  }, [title, lineTypeId, tagIds, content, sourceUrl]);
 
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
@@ -404,16 +400,10 @@ export const KnowledgeForm: React.FC = () => {
                 <SearchableSelect
                   items={lineTypeTags}
                   value={lineTypeId}
-                  onSelect={(v) => {
-                    setLineTypeId(Number(v));
-                    setSystemTagIds([]);
-                    setOperationTagIds([]);
-                  }}
+                  onSelect={(v) => setLineTypeId(Number(v))}
                   onCreate={async (name) => {
                     const newTag = await createTag.mutateAsync({ name, tag_type: 'LINE', is_active: true });
                     setLineTypeId(newTag.id);
-                    setSystemTagIds([]);
-                    setOperationTagIds([]);
                     toast.success('新条线已创建');
                   }}
                   placeholder="选择条线..."
@@ -442,68 +432,36 @@ export const KnowledgeForm: React.FC = () => {
             <section className="p-6 bg-muted rounded-2xl border border-border space-y-5">
               <h3 className="text-[11px] font-bold text-text-muted uppercase tracking-[0.2em] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-warning-500" />
-                精细标签
+                知识标签
               </h3>
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between ml-1">
-                    <Label className="text-xs font-semibold text-foreground">系统标签</Label>
-                    <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{systemTagIds.length}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {systemTagIds.map(id => {
-                      const tag = systemTags.find(t => t.id === id);
-                      return tag ? (
-                        <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
-                          {tag.name}
-                          <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setSystemTagIds(prev => prev.filter(i => i !== id))} />
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                  <SearchableSelect
-                    items={systemTags.filter(t => !systemTagIds.includes(t.id))}
-                    onSelect={(v) => setSystemTagIds(prev => [...prev, Number(v)])}
-                    onCreate={async (name) => {
-                      const newTag = await createTag.mutateAsync({ name, tag_type: 'SYSTEM', is_active: true });
-                      setSystemTagIds(prev => [...prev, newTag.id]);
-                      toast.success('标签已创建');
-                    }}
-                    placeholder="关联系统..."
-                    getLabel={(t) => t.name}
-                    getValue={(t) => t.id}
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between ml-1">
+                  <Label className="text-xs font-semibold text-foreground">标签</Label>
+                  <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{tagIds.length}</span>
                 </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between ml-1">
-                    <Label className="text-xs font-semibold text-foreground">操作标签</Label>
-                    <span className="text-[10px] font-bold text-text-muted bg-muted px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">{operationTagIds.length}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {operationTagIds.map(id => {
-                      const tag = operationTags.find(t => t.id === id);
-                      return tag ? (
-                        <Badge key={id} variant="success" className="h-8 px-3 text-[10px] rounded-lg border-none bg-secondary-50 text-secondary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
-                          {tag.name}
-                          <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setOperationTagIds(prev => prev.filter(i => i !== id))} />
-                        </Badge>
-                      ) : null;
-                    })}
-                  </div>
-                  <SearchableSelect
-                    items={operationTags.filter(t => !operationTagIds.includes(t.id))}
-                    onSelect={(v) => setOperationTagIds(prev => [...prev, Number(v)])}
-                    onCreate={async (name) => {
-                      const newTag = await createTag.mutateAsync({ name, tag_type: 'OPERATION', is_active: true });
-                      setOperationTagIds(prev => [...prev, newTag.id]);
-                      toast.success('标签已创建');
-                    }}
-                    placeholder="选择操作..."
-                    getLabel={(t) => t.name}
-                    getValue={(t) => t.id}
-                  />
+                <div className="flex flex-wrap gap-2">
+                  {tagIds.map(id => {
+                    const tag = knowledgeTags.find(t => t.id === id);
+                    return tag ? (
+                      <Badge key={id} variant="info" className="h-8 px-3 text-[10px] rounded-lg border-none bg-primary-50 text-primary-600 hover:bg-destructive-50 hover:text-destructive-500 transition-all group">
+                        {tag.name}
+                        <X className="w-3 h-3 ml-2 cursor-pointer group-hover:scale-125 transition-transform" onClick={() => setTagIds(prev => prev.filter(i => i !== id))} />
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
+                <SearchableSelect
+                  items={knowledgeTags.filter(t => !tagIds.includes(t.id))}
+                  onSelect={(v) => setTagIds(prev => [...prev, Number(v)])}
+                  onCreate={async (name) => {
+                    const newTag = await createTag.mutateAsync({ name, tag_type: 'TAG', is_active: true });
+                    setTagIds(prev => [...prev, newTag.id]);
+                    toast.success('标签已创建');
+                  }}
+                  placeholder="选择或创建标签..."
+                  getLabel={(t) => t.name}
+                  getValue={(t) => t.id}
+                />
               </div>
             </section>
 

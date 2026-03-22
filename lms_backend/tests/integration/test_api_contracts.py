@@ -440,48 +440,37 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == 'success'
         assert response.data['data']['view_count'] >= 1
 
-    def test_knowledge_patch_only_system_tags_inherits_unprovided_tags(
+    def test_knowledge_patch_only_tags_inherits_unprovided_line_tag(
         self,
         api_client,
         admin_user,
         sample_knowledge,
-        line_tag
     ):
-        source_system_tag = Tag.objects.create(
-            name='契约测试系统标签源',
-            tag_type='SYSTEM',
-            parent=line_tag,
-            sort_order=1,
-            is_active=True,
-        )
-        target_system_tag = Tag.objects.create(
-            name='契约测试系统标签新',
-            tag_type='SYSTEM',
-            parent=line_tag,
+        source_tag = Tag.objects.create(
+            name='契约测试标签源',
+            tag_type='TAG',
             sort_order=2,
             is_active=True,
         )
-        source_operation_tag = Tag.objects.create(
-            name='契约测试操作标签源',
-            tag_type='OPERATION',
+        target_tag = Tag.objects.create(
+            name='契约测试标签新',
+            tag_type='TAG',
             sort_order=1,
             is_active=True,
         )
-        sample_knowledge.system_tags.set([source_system_tag.id])
-        sample_knowledge.operation_tags.set([source_operation_tag.id])
+        sample_knowledge.tags.set([source_tag.id])
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(
             f'/api/knowledge/{sample_knowledge.id}/',
-            {'system_tag_ids': [target_system_tag.id]},
+            {'tag_ids': [target_tag.id]},
             format='json'
         )
 
         assert response.status_code == 200, response.data
         data = response.data['data']
         assert data['line_tag']['id'] == sample_knowledge.line_tag_id
-        assert {item['id'] for item in data['system_tags']} == {target_system_tag.id}
-        assert {item['id'] for item in data['operation_tags']} == {source_operation_tag.id}
+        assert {item['id'] for item in data['tags']} == {target_tag.id}
 
         sample_knowledge.refresh_from_db()
         assert sample_knowledge.is_current is False
@@ -490,47 +479,38 @@ class TestKnowledgeApiContracts:
             is_current=True
         ).count() == 1
 
-    def test_knowledge_patch_only_operation_tags_inherits_unprovided_tags(
+    def test_knowledge_patch_only_line_tag_inherits_unprovided_tags(
         self,
         api_client,
         admin_user,
         sample_knowledge,
-        line_tag
+        line_tag,
     ):
-        source_system_tag = Tag.objects.create(
-            name='契约测试系统标签保留',
-            tag_type='SYSTEM',
-            parent=line_tag,
+        source_tag = Tag.objects.create(
+            name='契约测试标签保留',
+            tag_type='TAG',
             sort_order=1,
             is_active=True,
         )
-        source_operation_tag = Tag.objects.create(
-            name='契约测试操作标签源2',
-            tag_type='OPERATION',
-            sort_order=1,
+        target_line_tag = Tag.objects.create(
+            name='契约测试条线新',
+            tag_type='LINE',
+            sort_order=3,
             is_active=True,
         )
-        target_operation_tag = Tag.objects.create(
-            name='契约测试操作标签新2',
-            tag_type='OPERATION',
-            sort_order=2,
-            is_active=True,
-        )
-        sample_knowledge.system_tags.set([source_system_tag.id])
-        sample_knowledge.operation_tags.set([source_operation_tag.id])
+        sample_knowledge.tags.set([source_tag.id])
 
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(
             f'/api/knowledge/{sample_knowledge.id}/',
-            {'operation_tag_ids': [target_operation_tag.id]},
+            {'line_tag_id': target_line_tag.id},
             format='json'
         )
 
         assert response.status_code == 200, response.data
         data = response.data['data']
-        assert data['line_tag']['id'] == sample_knowledge.line_tag_id
-        assert {item['id'] for item in data['system_tags']} == {source_system_tag.id}
-        assert {item['id'] for item in data['operation_tags']} == {target_operation_tag.id}
+        assert data['line_tag']['id'] == target_line_tag.id
+        assert {item['id'] for item in data['tags']} == {source_tag.id}
 
         sample_knowledge.refresh_from_db()
         assert sample_knowledge.is_current is False
