@@ -137,10 +137,10 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
           <p
             style={{
               margin: 0,
-              fontSize: short ? 20 : 15,
-              lineHeight: short ? 1.45 : 1.72,
+              fontSize: short ? 18 : 14.5,
+              lineHeight: short ? 1.48 : 1.68,
               color: '#1a1a1a',
-              letterSpacing: short ? '-0.02em' : '-0.01em',
+              letterSpacing: short ? '-0.015em' : '-0.008em',
             }}
             dangerouslySetInnerHTML={{ __html: bionicHtml(text) }}
           />
@@ -153,8 +153,8 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
         <p
           style={{
             margin: '5px 6px 0',
-            fontSize: 12,
-            color: '#b8b8b8',
+            fontSize: 12.5,
+            color: '#8ea0b5',
             lineHeight: 1.3,
             textAlign: 'center',
           }}

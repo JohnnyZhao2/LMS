@@ -6,7 +6,6 @@ import {
     Plus,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
@@ -14,7 +13,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
 
-import { useKnowledgeList } from '../api/knowledge';
+import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
 import { useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
@@ -71,20 +70,29 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         submitSearch,
         selectedLineTypeId,
         handleLineTypeSelect,
-        page,
         pageSize,
-        handlePageChange,
-    } = useKnowledgeFilters({ defaultPageSize: 9 });
+    } = useKnowledgeFilters({ defaultPageSize: 24 });
 
     const { data: lineTypeTags = [] } = useLineTypeTags();
 
-    const { data, isLoading, refetch } = useKnowledgeList({
+    const {
+        data,
+        isLoading,
+        refetch,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+    } = useInfiniteKnowledgeList({
         search: search || undefined,
         line_tag_id: selectedLineTypeId,
-        page,
         pageSize,
     });
-    const hasKnowledgeResults = Boolean(data?.results?.length);
+    const knowledgeItems = React.useMemo(
+        () => (data?.pages ?? []).flatMap((pageData) => pageData.results),
+        [data?.pages],
+    );
+    const totalCount = data?.pages?.[0]?.count ?? 0;
+    const hasKnowledgeResults = knowledgeItems.length > 0;
     const shouldShowKnowledgeGrid = canCreateKnowledge || hasKnowledgeResults;
 
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -201,7 +209,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     }, [createKnowledge, selectedLineTypeId, refetch]);
 
     return (
-        <div className="space-y-3">
+        <div
+            className="space-y-3"
+            style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
+        >
             {/* 搜索栏 — 底部横线样式 */}
             <div className="flex items-center gap-3">
                 <input
@@ -232,7 +243,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 selectedLineTypeId === tag.id ? undefined : tag.id
                             )}
                             className="inline-flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all bg-white"
-                            style={{ fontSize: 13 }}
+                            style={{ fontSize: 12.5 }}
                         >
                             <span className={cn(
                                 "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
@@ -255,8 +266,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             {/* 知识卡片区 */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between px-1">
-                    <span className="font-semibold text-text-muted" style={{ fontSize: 13 }}>
-                        找到 <span className="text-foreground font-bold">{data?.count || 0}</span> 篇相关知识
+                    <span className="font-semibold text-text-muted" style={{ fontSize: 12.5 }}>
+                        找到 <span className="text-foreground font-bold">{totalCount}</span> 篇相关知识
                     </span>
                 </div>
 
@@ -282,7 +293,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     isSaving={createKnowledge.isPending}
                                 />
                             )}
-                            {(data?.results ?? []).map((item, index) => (
+                            {knowledgeItems.map((item, index) => (
                                 <KnowledgeCardMymind
                                     key={item.id}
                                     item={item}
@@ -295,14 +306,19 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             ))}
                         </div>
 
-                        {hasKnowledgeResults && Math.ceil((data?.count ?? 0) / pageSize) > 1 && (
-                            <div className="flex justify-center pt-8">
-                                <Pagination
-                                    current={page}
-                                    total={data?.count ?? 0}
-                                    pageSize={pageSize}
-                                    onChange={handlePageChange}
-                                />
+                        {hasKnowledgeResults && (
+                            <div className="flex flex-col items-center gap-3 pt-8">
+                                {hasNextPage ? (
+                                    <button
+                                        onClick={() => void fetchNextPage()}
+                                        disabled={isFetchingNextPage}
+                                        className="px-6 py-2.5 rounded-full border border-foreground/15 bg-white/90 text-foreground/70 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        {isFetchingNextPage ? '加载中…' : '加载更多'}
+                                    </button>
+                                ) : (
+                                    <span className="text-xs text-foreground/35">已加载全部内容</span>
+                                )}
                             </div>
                         )}
                     </>
