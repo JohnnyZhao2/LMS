@@ -5,6 +5,7 @@ import {
   User,
   Edit,
   Trash2,
+  CheckCircle,
   ExternalLink,
   Link as LinkIcon,
   X,
@@ -16,6 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useUpdateKnowledge } from '../api/manage-knowledge';
 import { useKnowledgeTags, useLineTypeTags } from '../api/get-tags';
+import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
+import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
@@ -33,6 +36,9 @@ function relTime(dateStr: string): string {
 
 interface KnowledgeDetailModalProps {
   knowledgeId: number;
+  startEditing?: boolean;
+  taskId?: number;
+  taskKnowledgeId?: number;
   onClose: () => void;
   onDelete?: (id: number) => void;
   onUpdated?: () => void;
@@ -40,24 +46,32 @@ interface KnowledgeDetailModalProps {
 
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
+  startEditing = false,
+  taskId,
+  taskKnowledgeId,
   onClose,
   onDelete,
   onUpdated,
 }) => {
-  const { hasPermission } = useAuth();
+  const { currentRole, hasPermission } = useAuth();
+  const isStudent = currentRole === 'STUDENT';
   const canUpdateKnowledge = hasPermission('knowledge.update');
   const canDeleteKnowledge = hasPermission('knowledge.delete');
 
   const { data, isLoading } = useKnowledgeDetail(knowledgeId);
   const updateKnowledge = useUpdateKnowledge();
+  const completeLearning = useCompleteLearning();
   const knowledge = data as KnowledgeDetailType | undefined;
+  const { data: learningDetail } = useStudentLearningTaskDetail(taskId || 0, {
+    enabled: isStudent && !!taskId,
+  });
 
   // 标签和条线列表
   const { data: allKnowledgeTags = [] } = useKnowledgeTags();
   const { data: allLineTypes = [] } = useLineTypeTags();
 
   // 编辑状态
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startEditing);
   const [editContent, setEditContent] = useState<string | undefined>(undefined);
   const [editTitle, setEditTitle] = useState<string | undefined>(undefined);
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
@@ -66,7 +80,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   // 标签输入
   const [showTagInput, setShowTagInput] = useState(false);
   const [tagInput, setTagInput] = useState('');
-
   // 条线选择
   const [showLineTypes, setShowLineTypes] = useState(false);
 
@@ -88,7 +101,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const activeLineTagId = editLineTagId === undefined
     ? knowledge?.line_tag?.id ?? null
     : editLineTagId;
-  const activeLineTag = allLineTypes.find(lt => lt.id === activeLineTagId);
+  const taskKnowledgeItem = useMemo(() => {
+    if (!learningDetail) return undefined;
+    return learningDetail.knowledge_items.find((item) => (
+      taskKnowledgeId ? item.id === taskKnowledgeId : item.knowledge_id === knowledgeId
+    ));
+  }, [learningDetail, taskKnowledgeId, knowledgeId]);
+  const isCompleted = taskKnowledgeItem?.is_completed;
 
   // 判断是否有改动
   const hasChanges = knowledge && (
@@ -169,6 +188,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     onDelete?.(knowledgeId);
     onClose();
   };
+
+  const handleComplete = useCallback(async () => {
+    if (!taskId || !knowledgeId) return;
+    try {
+      await completeLearning.mutateAsync({ taskId, knowledgeId });
+      toast.success('已标记为完成');
+      onUpdated?.();
+    } catch {
+      toast.error('操作失败，请稍后重试');
+    }
+  }, [taskId, knowledgeId, completeLearning, onUpdated]);
 
   return (
     <div
@@ -309,23 +339,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* ── 所属条线 ── */}
-                <div className="kd-section">
-                  <p className="kd-label">所属条线</p>
-                  {activeLineTag ? (
-                    <span className="kd-line-tag">
-                      {activeLineTag.name}
-                      {canUpdateKnowledge && (
-                        <button onClick={() => setEditLineTagId(null)} className="kd-tag-remove" style={{ color: '#e8793a' }}>
-                          <X style={{ width: 10, height: 10 }} />
-                        </button>
-                      )}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 12, color: '#bbb' }}>未设置</span>
-                  )}
-                </div>
-
                 {/* 元信息 */}
                 <div className="kd-section">
                   <p className="kd-label">详细信息</p>
@@ -335,6 +348,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                         <User className="kd-meta-icon" />
                         <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
                       </div>
+                    )}
+                    {knowledge.source_url && (
+                      <a
+                        href={knowledge.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="kd-source-link"
+                      >
+                        <LinkIcon style={{ width: 11, height: 11, flexShrink: 0 }} />
+                        {knowledge.source_url.replace(/^https?:\/\//, '')}
+                      </a>
                     )}
                     <div className="kd-meta-item">
                       <Calendar className="kd-meta-icon" />
@@ -347,17 +371,23 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* 来源链接 */}
-                {knowledge.source_url && (
-                  <a
-                    href={knowledge.source_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="kd-source-link"
-                  >
-                    <LinkIcon style={{ width: 11, height: 11, flexShrink: 0 }} />
-                    {knowledge.source_url.replace(/^https?:\/\//, '')}
-                  </a>
+                {isStudent && !!taskId && (
+                  <div className="kd-section">
+                    {isCompleted ? (
+                      <div className="kd-complete-done">
+                        <CheckCircle style={{ width: 14, height: 14 }} />
+                        已学习
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleComplete}
+                        disabled={completeLearning.isPending}
+                        className="kd-complete-btn"
+                      >
+                        {completeLearning.isPending ? '处理中…' : '标记已学习'}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 <div style={{ flex: 1 }} />
@@ -561,13 +591,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-tag-suggestion-item:hover { background: #f5f5f5; }
 
-        /* Line tag */
-        .kd-line-tag {
-          display: inline-flex; align-items: center; gap: 6px;
-          border-radius: 100px; padding: 5px 14px;
-          font-size: 13px; font-weight: 500;
-          background: rgba(232,121,58,0.09); color: #e8793a;
-          border: 1.5px solid rgba(232,121,58,0.25);
+        .kd-complete-done {
+          display: flex; align-items: center; gap: 8px;
+          border-radius: 10px; padding: 10px 12px;
+          font-size: 13px; font-weight: 600;
+          background: #e0f5e0; color: #2d8a2d;
+        }
+        .kd-complete-btn {
+          width: 100%; border: none; border-radius: 10px;
+          padding: 10px 12px; font-size: 13px; font-weight: 600;
+          color: #fff; background: #e8793a; cursor: pointer;
+          font-family: inherit; transition: opacity 0.15s;
+        }
+        .kd-complete-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         /* Line type popover */

@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { toast } from 'sonner';
-import { X, Link as LinkIcon } from 'lucide-react';
+import { X, Link as LinkIcon, Upload } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
 
 import { useLineTypeTags, useKnowledgeTags } from '../api/get-tags';
 import { useCreateKnowledge } from '../api/manage-knowledge';
+import { useParseDocument } from '../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
 
 interface AddKnowledgeModalProps {
@@ -24,6 +25,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   initialContent = '',
   onSuccess,
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [lineTagId, setLineTagId] = React.useState<number | undefined>();
   const [tagId, setTagId] = React.useState<number | undefined>();
   const [content, setContent] = React.useState(initialContent);
@@ -33,6 +35,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const { data: lineTypeTags = [] } = useLineTypeTags();
   const { data: knowledgeTags = [] } = useKnowledgeTags();
   const createKnowledge = useCreateKnowledge();
+  const parseDocument = useParseDocument();
 
   // 每次打开时重置状态
   React.useEffect(() => {
@@ -58,10 +61,52 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   const plainContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
   const canSave = plainContent.length > 0 && !!title.trim();
+  const isUploading = parseDocument.isPending;
+  const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
+
+  const convertHtmlToPlainText = React.useCallback((html: string) => {
+    if (!html.trim()) return '';
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const blockNodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li');
+    if (blockNodes.length > 0) {
+      return Array.from(blockNodes)
+        .map((node) => node.textContent?.replace(/\u00A0/g, ' ').trim() ?? '')
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    return (doc.body.textContent ?? '')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join('\n');
+  }, []);
+
+  const handleFileUpload = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await parseDocument.mutateAsync(file);
+      const nextContent = convertHtmlToPlainText(result.content);
+      setContent(nextContent);
+
+      if (!title.trim() && result.suggested_title?.trim()) {
+        setTitle(result.suggested_title.trim());
+      }
+      toast.success('文档导入成功');
+    } catch (error) {
+      showApiError(error, '文档导入失败');
+    } finally {
+      e.target.value = '';
+    }
+  }, [convertHtmlToPlainText, parseDocument, title]);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -87,6 +132,8 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       showApiError(error, '创建失败');
     }
   };
+
+  if (!open) return null;
 
   return (
     <div
@@ -304,6 +351,36 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
               }}
             />
             <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              style={{
+                border: '1.5px solid #eee',
+                borderRadius: 10,
+                padding: '7px 12px',
+                fontSize: 13,
+                cursor: isUploading ? 'not-allowed' : 'pointer',
+                background: 'none',
+                color: '#8b8b8b',
+                fontFamily: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                opacity: isUploading ? 0.6 : 1,
+              }}
+            >
+              <Upload size={13} />
+              {isUploading ? '上传中…' : '上传文档'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx,.pptx,.pdf"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={isUploading}
+            />
+            <button
               onClick={onClose}
               style={{
                 border: '1.5px solid #eee',
@@ -320,16 +397,16 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
             </button>
             <button
               onClick={handleSave}
-              disabled={!canSave || createKnowledge.isPending}
+              disabled={!canSubmit}
               style={{
                 border: 'none',
                 borderRadius: 10,
                 padding: '7px 20px',
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: canSave && !createKnowledge.isPending ? 'pointer' : 'not-allowed',
-                background: canSave ? '#111' : '#f0f0f0',
-                color: canSave ? '#fff' : '#ccc',
+                cursor: canSubmit ? 'pointer' : 'not-allowed',
+                background: canSubmit ? '#111' : '#f0f0f0',
+                color: canSubmit ? '#fff' : '#ccc',
                 fontFamily: 'inherit',
               }}
             >

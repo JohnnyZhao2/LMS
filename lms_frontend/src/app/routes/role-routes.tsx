@@ -21,8 +21,6 @@ const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-prev
 
 // Knowledge
 const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
-const KnowledgeDetail = lazy(() => import('@/features/knowledge/components/knowledge-detail').then(m => ({ default: m.KnowledgeDetail })));
-const KnowledgeForm = lazy(() => import('@/features/knowledge/components/knowledge-form').then(m => ({ default: m.KnowledgeForm })));
 
 // Quiz Center
 const QuizCenter = lazy(() => import('@/features/quiz-center/components/quiz-center').then(m => ({ default: m.QuizCenter })));
@@ -141,7 +139,7 @@ export const roleRoutes = [
     path="knowledge/create"
     element={
       <ProtectedRoute requiredPermissions={['knowledge.create']}>
-        <KnowledgeForm />
+        <KnowledgeCenter />
       </ProtectedRoute>
     }
   />,
@@ -150,7 +148,7 @@ export const roleRoutes = [
     path="knowledge/:id/edit"
     element={
       <ProtectedRoute requiredPermissions={['knowledge.update']}>
-        <KnowledgeForm />
+        <KnowledgeCenter />
       </ProtectedRoute>
     }
   />,
@@ -159,7 +157,7 @@ export const roleRoutes = [
     path="knowledge/:id"
     element={
       <ProtectedRoute requiredPermissions={['knowledge.view']}>
-        <KnowledgeDetail />
+        <KnowledgeCenter />
       </ProtectedRoute>
     }
   />,

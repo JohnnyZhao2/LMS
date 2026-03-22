@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useLocation, useParams } from 'react-router-dom';
 import {
     Search,
     Home,
@@ -15,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
-import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
@@ -39,6 +39,8 @@ interface KnowledgeCenterProps {
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
     const { roleNavigate } = useRoleNavigate();
+    const location = useLocation();
+    const { id: routeKnowledgeId } = useParams<{ id?: string }>();
     const incrementViewCount = useIncrementViewCount();
     const { hasPermission } = useAuth();
     const canCreateKnowledge = hasPermission('knowledge.create');
@@ -51,6 +53,15 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const [showAddModal, setShowAddModal] = React.useState(false);
     const [modalInitialContent, setModalInitialContent] = React.useState('');
     const [detailId, setDetailId] = React.useState<number | null>(null);
+    const [detailStartEditing, setDetailStartEditing] = React.useState(false);
+
+    const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
+    const taskId = Number(searchParams.get('task') || 0);
+    const taskKnowledgeId = Number(searchParams.get('taskKnowledgeId') || 0);
+    const fromDashboard = searchParams.get('from') === 'dashboard';
+    const isCreateRoute = location.pathname.endsWith('/knowledge/create');
+    const isEditRoute = location.pathname.endsWith('/edit');
 
     const {
         search,
@@ -79,8 +90,32 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
     };
 
+    React.useEffect(() => {
+        if (isCreateRoute) {
+            setShowAddModal(true);
+            return;
+        }
+        if (routeKnowledgeIdNumber && Number.isFinite(routeKnowledgeIdNumber)) {
+            setDetailId(routeKnowledgeIdNumber);
+            setDetailStartEditing(isEditRoute);
+        }
+    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute]);
+
+    const navigateFromLegacyRoute = React.useCallback(() => {
+        if (fromDashboard) {
+            roleNavigate('dashboard');
+            return;
+        }
+        if (taskId > 0) {
+            roleNavigate(`tasks/${taskId}`);
+            return;
+        }
+        roleNavigate('knowledge');
+    }, [fromDashboard, taskId, roleNavigate]);
+
     const handleCreate = () => {
-        roleNavigate(`${ROUTES.KNOWLEDGE}/create`);
+        setModalInitialContent('');
+        setShowAddModal(true);
     };
 
     const handleView = (id: number) => {
@@ -91,11 +126,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 },
             });
         }
+        setDetailStartEditing(false);
         setDetailId(id);
     };
 
     const handleEdit = (id: number) => {
-        roleNavigate(`${ROUTES.KNOWLEDGE}/${id}/edit`);
+        setDetailStartEditing(true);
+        setDetailId(id);
     };
 
     const handleDelete = (id: number) => {
@@ -270,21 +307,43 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 onClose={() => {
                     setShowAddModal(false);
                     setModalInitialContent('');
+                    if (isCreateRoute) {
+                        roleNavigate('knowledge');
+                    }
                 }}
                 initialContent={modalInitialContent}
                 onSuccess={(id) => {
                     refetch();
+                    setShowAddModal(false);
+                    setModalInitialContent('');
+                    setDetailStartEditing(false);
                     setDetailId(id);
+                    if (isCreateRoute) {
+                        roleNavigate('knowledge');
+                    }
                 }}
             />
 
             {detailId !== null && (
                 <KnowledgeDetailModal
                     knowledgeId={detailId}
-                    onClose={() => setDetailId(null)}
+                    startEditing={detailStartEditing}
+                    taskId={taskId || undefined}
+                    taskKnowledgeId={taskKnowledgeId || undefined}
+                    onClose={() => {
+                        setDetailId(null);
+                        setDetailStartEditing(false);
+                        if (routeKnowledgeIdNumber) {
+                            navigateFromLegacyRoute();
+                        }
+                    }}
                     onDelete={(id) => {
                         setDeleteTarget(id);
                         setDetailId(null);
+                        setDetailStartEditing(false);
+                        if (routeKnowledgeIdNumber) {
+                            navigateFromLegacyRoute();
+                        }
                     }}
                     onUpdated={() => refetch()}
                 />
