@@ -440,6 +440,65 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == 'success'
         assert response.data['data']['view_count'] >= 1
 
+    def test_knowledge_create_allows_missing_title(self, api_client, admin_user, line_tag):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/knowledge/',
+            {
+                'line_tag_id': line_tag.id,
+                'content': '<p>无标题正文内容</p>',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == '创建成功'
+        assert response.data['data']['title'] == ''
+
+    def test_knowledge_create_allows_missing_line_tag(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/knowledge/',
+            {
+                'content': '<p>无条线正文内容</p>',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == '创建成功'
+        assert response.data['data']['line_tag'] is None
+
+    def test_knowledge_create_rejects_empty_content(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/knowledge/',
+            {
+                'title': '仅标题',
+                'line_tag_id': None,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'ERROR'
+        assert 'content' in response.data['message']
+
+    def test_knowledge_patch_allows_blank_title(self, api_client, admin_user, sample_knowledge):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/knowledge/{sample_knowledge.id}/',
+            {'title': ''},
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert response.data['data']['title'] == ''
+
     def test_knowledge_patch_only_tags_inherits_unprovided_line_tag(
         self,
         api_client,

@@ -1,30 +1,44 @@
 import * as React from 'react';
 
 interface AddKnowledgeCardProps {
-  onSave: (content: string) => void;
+  onSave: (content: string) => Promise<void> | void;
   onExpand: (content: string) => void;
+  isSaving?: boolean;
 }
 
 /**
  * 内嵌在瀑布流中的快速新建知识卡片
- * 风格来自 mymind — 点击展开输入区，⌘+Enter 快速保存
+ * 风格来自 mymind — 支持卡片内快速保存，也支持展开进入完整编辑
  */
 export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   onSave,
   onExpand,
+  isSaving = false,
 }) => {
   const [focused, setFocused] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [value, setValue] = React.useState('');
   const taRef = React.useRef<HTMLTextAreaElement>(null);
 
-  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && value.trim()) {
-      e.preventDefault();
-      onSave(value.trim());
+  const saveDraft = React.useCallback(async () => {
+    if (isSaving) return;
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return;
+
+    try {
+      await onSave(trimmedValue);
       setValue('');
       setFocused(false);
       taRef.current?.blur();
+    } catch {
+      // 创建失败时保留草稿，方便用户修正后重试
+    }
+  }, [isSaving, onSave, value]);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && value.trim()) {
+      e.preventDefault();
+      void saveDraft();
     }
     if (e.key === 'Escape') {
       setValue('');
@@ -59,7 +73,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              onExpand(value);
+              onExpand(value.trim());
             }}
             style={{
               position: 'absolute',
@@ -147,12 +161,9 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             <button
               onMouseDown={(e) => {
                 e.preventDefault();
-                if (value.trim()) {
-                  onSave(value.trim());
-                  setValue('');
-                  setFocused(false);
-                }
+                void saveDraft();
               }}
+              disabled={!value.trim() || isSaving}
               style={{
                 width: '100%',
                 border: 'none',
@@ -162,11 +173,12 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
                 color: '#fff',
                 fontSize: 13,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: !value.trim() || isSaving ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
+                opacity: !value.trim() || isSaving ? 0.7 : 1,
               }}
             >
-              保存
+              {isSaving ? '保存中…' : '保存'}
             </button>
           </div>
         )}

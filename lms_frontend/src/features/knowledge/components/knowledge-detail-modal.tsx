@@ -10,6 +10,8 @@ import {
   Link as LinkIcon,
   X,
   Plus,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -82,6 +84,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   // 条线选择
   const [showLineTypes, setShowLineTypes] = useState(false);
+  // 专注模式（全屏查看）
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   const content = knowledge?.content ?? '';
   const renderedContent = useMemo(() => {
@@ -147,6 +151,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           setShowTagInput(false);
         } else if (editing) {
           setEditing(false);
+        } else if (isFocusMode) {
+          setIsFocusMode(false);
         } else {
           onClose();
         }
@@ -158,7 +164,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [onClose, editing, showLineTypes, showTagInput]);
+  }, [onClose, editing, showLineTypes, showTagInput, isFocusMode]);
 
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
@@ -205,7 +211,20 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       className="kd-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="kd-container" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`kd-container${isFocusMode ? ' kd-container-focus' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={() => setIsFocusMode(v => !v)}
+          className="kd-focus-btn"
+          data-tip={isFocusMode ? '退出专注' : '专注'}
+          title={isFocusMode ? '退出专注' : '专注'}
+          aria-label={isFocusMode ? '退出专注' : '专注'}
+        >
+          {isFocusMode ? <Minimize2 style={{ width: 14, height: 14 }} /> : <Maximize2 style={{ width: 14, height: 14 }} />}
+        </button>
 
         {isLoading ? (
           <>
@@ -496,6 +515,58 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           box-shadow: 0 40px 100px rgba(0,0,0,0.35);
           animation: kdPopIn .22s cubic-bezier(.4,0,.2,1);
           background: #fff;
+          position: relative;
+          transition: width 0.22s ease, height 0.22s ease, border-radius 0.22s ease;
+        }
+        .kd-container-focus {
+          width: 100vw;
+          height: 100vh;
+          border-radius: 0;
+        }
+        .kd-focus-btn {
+          position: absolute;
+          left: 16px;
+          top: 14px;
+          width: 32px;
+          height: 32px;
+          border-radius: 999px;
+          border: 1px solid rgba(120, 136, 152, 0.28);
+          background: rgba(255, 255, 255, 0.88);
+          color: #7c8794;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          z-index: 20;
+          backdrop-filter: blur(6px);
+          transition: all 0.18s ease;
+        }
+        .kd-focus-btn:hover {
+          background: #fff;
+          color: #3f4b58;
+          border-color: rgba(90, 103, 117, 0.45);
+        }
+        .kd-focus-btn::after {
+          content: attr(data-tip);
+          position: absolute;
+          left: calc(100% + 8px);
+          top: 50%;
+          transform: translateY(-50%) translateX(-2px);
+          border-radius: 999px;
+          padding: 4px 10px;
+          background: rgba(34, 40, 48, 0.92);
+          color: #fff;
+          font-size: 11px;
+          line-height: 1;
+          opacity: 0;
+          pointer-events: none;
+          white-space: nowrap;
+          transition: opacity 0.16s ease, transform 0.16s ease;
+        }
+        .kd-focus-btn:hover::after {
+          opacity: 1;
+          transform: translateY(-50%) translateX(0);
         }
         .kd-left {
           flex: 1; overflow-y: auto;

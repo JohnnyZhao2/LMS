@@ -12,6 +12,7 @@ interface AddKnowledgeModalProps {
   open: boolean;
   onClose: () => void;
   initialContent?: string;
+  initialLineTagId?: number;
   onSuccess?: (id: number) => void;
 }
 
@@ -23,6 +24,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   open,
   onClose,
   initialContent = '',
+  initialLineTagId,
   onSuccess,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -44,12 +46,10 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       setTitle('');
       setSourceUrl('');
       setTagId(undefined);
-      // 默认选中第一个条线
-      if (lineTypeTags.length > 0 && !lineTagId) {
-        setLineTagId(lineTypeTags[0].id);
-      }
+      const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
+      setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
     }
-  }, [open, initialContent, lineTypeTags, lineTagId]);
+  }, [open, initialContent, initialLineTagId, lineTypeTags]);
 
   // ESC 关闭
   React.useEffect(() => {
@@ -62,7 +62,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   }, [open, onClose]);
 
   const plainContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-  const canSave = plainContent.length > 0 && !!title.trim();
+  const canSave = plainContent.length > 0;
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
 
@@ -116,9 +116,10 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         .split('\n')
         .map((line) => `<p>${line}</p>`)
         .join('');
+      const trimmedTitle = title.trim();
 
       const result = await createKnowledge.mutateAsync({
-        title: title.trim(),
+        ...(trimmedTitle && { title: trimmedTitle }),
         line_tag_id: lineTagId,
         content: htmlContent,
         source_url: sourceUrl.trim() || undefined,
@@ -314,7 +315,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="卡片标题（展示在卡片底部）"
+            placeholder="卡片标题（可选，展示在卡片底部）"
             style={{
               border: '1.5px solid #eee',
               borderRadius: 8,

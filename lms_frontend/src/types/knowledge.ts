@@ -104,7 +104,7 @@ export interface KnowledgeDetail {
  * 创建知识文档请求
  */
 export interface KnowledgeCreateRequest {
-  title: string;
+  title?: string;
   line_tag_id?: number;
   line_tag_name?: string;
   content: string;

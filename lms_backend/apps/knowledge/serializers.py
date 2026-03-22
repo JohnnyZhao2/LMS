@@ -78,6 +78,12 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating knowledge documents.
     """
+    title = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default='',
+    )
     # 前端传入标签ID
     line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
@@ -101,11 +107,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         """
         Validate knowledge document.
         """
-        # 验证条线类型
-        if attrs.get('line_tag_id') is None:
-            raise serializers.ValidationError({
-                'line_tag_id': '必须提供条线标签ID'
-            })
+        if attrs.get('title') is None:
+            attrs['title'] = ''
         content = attrs.get('content', '')
         if not content or not strip_tags(str(content)).strip():
             raise serializers.ValidationError({
@@ -118,6 +121,11 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating knowledge documents.
     """
+    title = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
     line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -139,6 +147,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         """
         Validate knowledge document.
         """
+        if 'title' in attrs and attrs['title'] is None:
+            attrs['title'] = ''
         instance = self.instance
         content = attrs.get('content', instance.content if instance else '')
         if not content or not strip_tags(str(content)).strip():
