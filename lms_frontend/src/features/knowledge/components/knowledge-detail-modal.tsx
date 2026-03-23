@@ -22,7 +22,6 @@ import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-deta
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
-import { bionicHtml } from '../utils/content-utils';
 import { FocusOrbIcon } from './focus-orb-icon';
 import { SlashQuillEditor } from './slash-quill-editor';
 import { TagInput } from './tag-input';
@@ -93,15 +92,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [isFocusMode, setIsFocusMode] = useState(false);
 
   const activeContent = editContent ?? knowledge?.content ?? '';
-  const renderedContent = useMemo(() => {
-    if (!activeContent) return '';
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(activeContent, 'text/html');
-    doc.querySelectorAll('h1, h2, h3').forEach((heading, index) => {
-      heading.id = `heading-${index}`;
-    });
-    return bionicHtml(doc.body.innerHTML);
-  }, [activeContent]);
 
   // 实际使用的值
   const activeTitle = editTitle ?? knowledge?.title ?? '';
@@ -252,22 +242,24 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <>
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <div className="kd-left scrollbar-subtle">
-              {editing ? (
+              <div
+                onClick={() => {
+                  if (!editing && canUpdateKnowledge) {
+                    setEditing(true);
+                  }
+                }}
+                style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
+              >
                 <SlashQuillEditor
                   value={activeContent}
                   onChange={setEditContent}
                   placeholder="编辑内容…"
-                  className="kd-content kd-content-editable"
+                  className={`kd-content kd-content-shell${editing ? ' kd-content-editable' : ''}`}
                   minHeight={300}
+                  autoFocus={editing}
+                  readOnly={!editing}
                 />
-              ) : (
-                <div
-                  className="kd-content"
-                  onClick={() => { if (canUpdateKnowledge) setEditing(true); }}
-                  style={{ cursor: canUpdateKnowledge ? 'text' : 'default' }}
-                  dangerouslySetInnerHTML={{ __html: renderedContent }}
-                />
-              )}
+              </div>
             </div>
 
             {/* ── 右侧 meta 面板 ── */}
@@ -688,61 +680,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           max-width: 860px;
           margin: 0 auto;
         }
-        .kd-content h1 {
-          font-size: 32px; font-weight: 600; color: #111;
-          margin: 0 0 28px; text-align: center;
-          letter-spacing: -0.02em; line-height: 1.2;
-        }
-        .kd-content h2 {
-          font-size: 24px; font-weight: 600; color: #111;
-          margin: 32px 0 14px; letter-spacing: -0.02em; line-height: 1.3;
-        }
-        .kd-content h3 {
-          font-size: 17px; font-weight: 600; color: #222;
-          margin: 28px 0 10px;
-        }
-        .kd-content p {
-          font-size: 16px; line-height: 1.85; color: #333;
-          margin: 0 0 18px;
-        }
-        .kd-content p:last-child { margin: 0; }
-        .kd-content ul, .kd-content ol { padding-left: 24px; margin: 10px 0 18px; }
-        .kd-content li { font-size: 15px; line-height: 1.8; color: #444; margin-bottom: 7px; }
-        .kd-content strong { font-weight: 700; color: #111; }
-        .kd-content em { font-style: italic; }
-        .kd-content code {
-          background: #f4f4f2; padding: 2px 6px; border-radius: 6px;
-          font-size: 0.87em; font-family: 'SF Mono', monospace; color: #555;
-        }
-        .kd-content pre {
-          background: #f4f4f2; border-radius: 6px; padding: 18px 22px;
-          font-size: 13px; margin: 16px 0; overflow-x: auto;
-          font-family: monospace; line-height: 1.6;
-        }
-        .kd-content blockquote {
-          border-left: 3px solid #e0e0e0; padding-left: 20px;
-          color: #777; margin: 18px 0; font-style: italic; font-size: 18px;
-        }
-        .kd-content hr {
-          border: none;
-          border-top: 1px solid #d9dde3;
-          margin: 20px 0;
-        }
-        .kd-content img { max-width: 100%; border-radius: 6px; margin: 16px 0; }
-        .kd-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-        .kd-content th, .kd-content td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
-        .kd-content th { font-weight: 600; color: #333; background: #fafafa; }
-
-        .kd-content-editable {
-          min-height: 300px;
-          position: relative;
-        }
-        .kd-content-editable .ql-container {
+        .kd-content-shell .ql-container {
           font-family: inherit;
           height: auto;
           overflow: visible;
         }
-        .kd-content-editable .ql-editor {
+        .kd-content-shell .ql-editor {
           min-height: 300px;
           height: auto;
           padding: 0;
@@ -752,12 +695,74 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           color: #333;
           overflow-y: visible;
         }
-        .kd-content-editable .ql-editor.ql-blank::before {
+        .kd-content-shell .ql-editor[contenteditable='false'] {
+          cursor: inherit;
+        }
+        .kd-content-shell .ql-editor.ql-blank::before {
           left: 0;
           right: 0;
           font-style: normal;
           color: #9aa0aa;
           font-size: 14px;
+        }
+        .kd-content-shell .ql-editor > *:last-child {
+          margin-bottom: 0;
+        }
+        .kd-content-shell .ql-editor h1 {
+          font-size: 32px; font-weight: 600; color: #111;
+          margin: 0 0 28px; text-align: center;
+          letter-spacing: -0.02em; line-height: 1.2;
+        }
+        .kd-content-shell .ql-editor h2 {
+          font-size: 24px; font-weight: 600; color: #111;
+          margin: 32px 0 14px; letter-spacing: -0.02em; line-height: 1.3;
+        }
+        .kd-content-shell .ql-editor h3 {
+          font-size: 17px; font-weight: 600; color: #222;
+          margin: 28px 0 10px;
+        }
+        .kd-content-shell .ql-editor p {
+          font-size: 16px; line-height: 1.85; color: #333;
+          margin: 0 0 18px;
+        }
+        .kd-content-shell .ql-editor ul, .kd-content-shell .ql-editor ol { padding-left: 24px; margin: 10px 0 18px; }
+        .kd-content-shell .ql-editor li { font-size: 15px; line-height: 1.8; color: #444; margin-bottom: 7px; }
+        .kd-content-shell .ql-editor strong { font-weight: 700; color: #111; }
+        .kd-content-shell .ql-editor em { font-style: italic; }
+        .kd-content-shell .ql-editor code {
+          background: #f4f4f2; padding: 2px 6px; border-radius: 6px;
+          font-size: 0.87em; font-family: 'SF Mono', monospace; color: #555;
+        }
+        .kd-content-shell .ql-editor .ql-code-block-container {
+          background: #f4f4f2;
+          border-radius: 6px;
+          padding: 18px 22px;
+          font-size: 13px;
+          margin: 16px 0;
+          overflow-x: auto;
+          font-family: monospace;
+          line-height: 1.6;
+        }
+        .kd-content-shell .ql-editor blockquote {
+          border-left: 3px solid #e0e0e0; padding-left: 20px;
+          color: #777; margin: 18px 0; font-style: italic; font-size: 18px;
+        }
+        .kd-content-shell .ql-editor hr {
+          border: none;
+          border-top: 1px solid #d9dde3;
+          margin: 20px 0;
+        }
+        .kd-content-shell .ql-editor img { max-width: 100%; border-radius: 6px; margin: 16px 0; }
+        .kd-content-shell .ql-editor table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+        .kd-content-shell .ql-editor th, .kd-content-shell .ql-editor td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
+        .kd-content-shell .ql-editor th { font-weight: 600; color: #333; background: #fafafa; }
+
+        .kd-content-editable {
+          min-height: 300px;
+          position: relative;
+        }
+        .kd-content-editable .ql-editor {
+          cursor: text;
         }
 
         @keyframes kdFadeIn { from { opacity: 0; } to { opacity: 1; } }

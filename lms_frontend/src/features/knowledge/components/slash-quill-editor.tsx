@@ -32,6 +32,7 @@ interface SlashQuillEditorProps {
   minHeight?: number;
   onFocus?: () => void;
   onBlur?: () => void;
+  readOnly?: boolean;
 }
 
 const EMPTY_HTML = '<p><br></p>';
@@ -52,6 +53,7 @@ export function SlashQuillEditor({
   minHeight = 120,
   onFocus,
   onBlur,
+  readOnly = false,
 }: SlashQuillEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -62,6 +64,7 @@ export function SlashQuillEditor({
   const onChangeRef = useRef(onChange);
   const onFocusRef = useRef(onFocus);
   const onBlurRef = useRef(onBlur);
+  const readOnlyRef = useRef(readOnly);
   const slashTriggerRef = useRef<SlashTrigger | null>(null);
   const filteredSlashShortcutsRef = useRef(filterSlashShortcuts(''));
   const activeSlashIndexRef = useRef(0);
@@ -97,11 +100,16 @@ export function SlashQuillEditor({
   }, [onBlur]);
 
   useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
+
+  useEffect(() => {
     if (!editorRef.current || quillRef.current) return;
 
     const quill = new Quill(editorRef.current, {
       theme: 'bubble',
-      placeholder,
+      placeholder: readOnly ? '' : placeholder,
+      readOnly,
       modules: {
         toolbar: false,
       },
@@ -119,6 +127,11 @@ export function SlashQuillEditor({
     }
 
     const updateSlashState = () => {
+      if (readOnlyRef.current) {
+        setSlashTrigger(null);
+        return;
+      }
+
       const selection = quill.getSelection();
       if (!selection || selection.length > 0) {
         setSlashTrigger(null);
@@ -314,6 +327,23 @@ export function SlashQuillEditor({
     isSyncingRef.current = false;
     lastValueRef.current = nextValue;
   }, [value]);
+
+  useEffect(() => {
+    const quill = quillRef.current;
+    if (!quill) return;
+
+    quill.enable(!readOnly);
+    if (readOnly) {
+      setSlashTrigger(null);
+    }
+  }, [readOnly]);
+
+  useEffect(() => {
+    const quill = quillRef.current;
+    if (!quill || !autoFocus || readOnly) return;
+
+    quill.focus();
+  }, [autoFocus, readOnly]);
 
   return (
     <div
