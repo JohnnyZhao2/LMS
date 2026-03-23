@@ -1,12 +1,12 @@
 /**
  * 题目表单输入组件 — 选项输入 + 答案输入
- * 设计：卡片式选项行，正确答案高亮，hover 显示删除
  */
-import { Check, GripVertical, Plus, X } from 'lucide-react';
+import { Check, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/api';
 
 /* ─────────────────────────────────────────────
@@ -31,46 +31,38 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
 }) => {
   const handleAdd = () => {
     if (disabled) return;
-    const keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    const nextKey = keys[value.length] || String.fromCharCode(65 + value.length);
+    const nextKey = String.fromCharCode(65 + value.length);
     onChange([...value, { key: nextKey, value: '' }]);
   };
 
   const handleChange = (index: number, val: string) => {
     if (disabled) return;
-    const newOptions = [...value];
-    newOptions[index] = { ...newOptions[index], value: val };
-    onChange(newOptions);
+    const next = [...value];
+    next[index] = { ...next[index], value: val };
+    onChange(next);
   };
 
   const handleRemove = (index: number) => {
     if (disabled) return;
     const removedKey = value[index]?.key;
-    const remaining = value.filter((_, i) => i !== index);
-    // 重新编号
-    const reKeyed = remaining.map((opt, i) => ({
-      ...opt,
-      key: String.fromCharCode(65 + i),
-    }));
-    onChange(reKeyed);
+    const remaining = value
+      .filter((_, i) => i !== index)
+      .map((opt, i) => ({ ...opt, key: String.fromCharCode(65 + i) }));
+    onChange(remaining);
 
-    // 同步更新答案
     if (questionType === 'MULTIPLE_CHOICE' && Array.isArray(answer)) {
       const newAnswer = answer
         .filter((k) => k !== removedKey)
         .map((k) => {
           const oldIndex = value.findIndex((o) => o.key === k);
-          const newIndex = oldIndex > index ? oldIndex - 1 : oldIndex;
-          return String.fromCharCode(65 + newIndex);
+          return String.fromCharCode(65 + (oldIndex > index ? oldIndex - 1 : oldIndex));
         });
       onAnswerChange(newAnswer);
     } else if (answer === removedKey) {
       onAnswerChange('');
     } else if (typeof answer === 'string' && answer) {
       const oldIndex = value.findIndex((o) => o.key === answer);
-      if (oldIndex > index) {
-        onAnswerChange(String.fromCharCode(65 + oldIndex - 1));
-      }
+      if (oldIndex > index) onAnswerChange(String.fromCharCode(65 + oldIndex - 1));
     }
   };
 
@@ -78,76 +70,69 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
     if (disabled) return;
     if (questionType === 'SINGLE_CHOICE') {
       onAnswerChange(key);
-    } else if (questionType === 'MULTIPLE_CHOICE') {
-      const selectedKeys = Array.isArray(answer) ? answer : [];
-      if (selectedKeys.includes(key)) {
-        onAnswerChange(selectedKeys.filter((k) => k !== key));
-      } else {
-        onAnswerChange([...selectedKeys, key]);
-      }
+    } else {
+      const selected = Array.isArray(answer) ? answer : [];
+      onAnswerChange(
+        selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key],
+      );
     }
   };
 
-  const isSelected = (key: string) => {
-    if (Array.isArray(answer)) return answer.includes(key);
-    return answer === key;
-  };
+  const isSelected = (key: string) =>
+    Array.isArray(answer) ? answer.includes(key) : answer === key;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {value.map((opt, index) => {
         const selected = isSelected(opt.key);
         return (
           <div
             key={opt.key}
-            className={`
-              group relative flex items-center gap-2 rounded-lg border px-3 py-2.5
-              transition-all duration-150
-              ${selected
-                ? 'border-secondary-300 bg-secondary-50/60 ring-1 ring-secondary-200'
-                : 'border-border bg-background hover:border-gray-300'
-              }
-            `}
+            className={cn(
+              'group flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-all duration-100',
+              selected
+                ? 'border-primary-200 bg-primary-50/50'
+                : 'border-border bg-background hover:border-border/80 hover:bg-muted/30',
+            )}
           >
-            {/* 拖拽手柄占位（视觉层次） */}
-            <GripVertical className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-
-            {/* 选项字母标签 */}
+            {/* 答案标签 */}
             <button
               type="button"
               onClick={() => handleToggleAnswer(opt.key)}
               disabled={disabled}
-              className={`
-                shrink-0 w-7 h-7 rounded-md flex items-center justify-center
-                text-xs font-bold transition-all duration-150 cursor-pointer
-                ${selected
-                  ? 'bg-secondary-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }
-              `}
+              className={cn(
+                'shrink-0 w-6 h-6 rounded-md flex items-center justify-center',
+                'text-[11px] font-bold transition-all duration-150',
+                disabled ? 'cursor-default' : 'cursor-pointer',
+                selected
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-muted text-text-muted hover:bg-muted/80',
+              )}
             >
-              {selected ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : opt.key}
+              {selected ? <Check className="w-3 h-3" strokeWidth={3} /> : opt.key}
             </button>
 
-            {/* 选项内容输入 */}
+            {/* 选项内容 */}
             <Input
               value={opt.value}
               onChange={(e) => handleChange(index, e.target.value)}
-              placeholder={`选项 ${opt.key} 的内容`}
-              className="flex-1 h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-2 text-sm"
+              placeholder={`选项 ${opt.key}`}
+              className="flex-1 h-7 border-0 bg-transparent shadow-none focus-visible:ring-0 px-1.5 text-sm"
               readOnly={disabled}
             />
 
-            {/* 删除按钮 — hover 时显示 */}
+            {/* 删除按钮 */}
             {!disabled && value.length > 2 && (
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
-                className="shrink-0 w-6 h-6 rounded flex items-center justify-center
-                  opacity-0 group-hover:opacity-100 transition-opacity
-                  text-gray-400 hover:text-destructive-500 hover:bg-destructive-50"
+                className={cn(
+                  'shrink-0 w-5 h-5 rounded flex items-center justify-center',
+                  'opacity-0 group-hover:opacity-100 transition-opacity',
+                  'text-text-muted/50 hover:text-destructive hover:bg-destructive/10',
+                )}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -160,10 +145,12 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
           variant="ghost"
           size="sm"
           onClick={handleAdd}
-          className="h-9 w-full border border-dashed border-gray-200 text-text-muted
-            hover:border-gray-300 hover:bg-gray-50 hover:text-foreground transition-all"
+          className={cn(
+            'h-8 w-full border border-dashed border-border/60 text-text-muted/70',
+            'hover:border-border hover:bg-muted/30 hover:text-text-muted transition-all text-xs',
+          )}
         >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          <Plus className="w-3.5 h-3.5 mr-1" />
           添加选项
         </Button>
       )}
@@ -193,24 +180,23 @@ export const AnswerInput: React.FC<AnswerInputProps> = ({
     return (
       <div className="flex gap-2">
         {[
-          { val: 'TRUE', label: '正确' },
-          { val: 'FALSE', label: '错误' },
+          { val: 'TRUE', label: '✓ 正确' },
+          { val: 'FALSE', label: '✗ 错误' },
         ].map(({ val, label }) => (
           <button
             key={val}
             type="button"
             disabled={disabled}
             onClick={() => !disabled && onChange(val)}
-            className={`
-              flex-1 h-10 rounded-lg border text-sm font-semibold
-              transition-all duration-150 cursor-pointer
-              ${current === val
+            className={cn(
+              'flex-1 h-9 rounded-lg border text-sm font-medium transition-all duration-150',
+              disabled ? 'cursor-default' : 'cursor-pointer',
+              current === val
                 ? val === 'TRUE'
-                  ? 'border-secondary-300 bg-secondary-50 text-secondary-700 ring-1 ring-secondary-200'
-                  : 'border-destructive-300 bg-destructive-50 text-destructive-700 ring-1 ring-destructive-200'
-                : 'border-border bg-background text-text-muted hover:border-gray-300'
-              }
-            `}
+                  ? 'border-primary-200 bg-primary-50 text-primary-700'
+                  : 'border-destructive/30 bg-destructive/5 text-destructive/80'
+                : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/30',
+            )}
           >
             {label}
           </button>
@@ -229,11 +215,10 @@ export const AnswerInput: React.FC<AnswerInputProps> = ({
         placeholder="输入参考答案..."
         readOnly={disabled}
         rows={3}
-        className="resize-none"
+        className="resize-none text-sm"
       />
     );
   }
 
-  // 选择题不使用此组件（由 OptionsInput 直接处理答案）
   return null;
 };

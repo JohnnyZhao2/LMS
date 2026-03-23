@@ -681,7 +681,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         /* Content typography */
         .kd-content {
-          font-family: Georgia, 'Times New Roman', 'PingFang SC', serif;
+          font-family: var(--theme-font-sans);
           flex: 1; min-height: 100%;
           width: 100%;
           max-width: 860px;
@@ -695,12 +695,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content h2 {
           font-size: 24px; font-weight: 600; color: #111;
           margin: 32px 0 14px; letter-spacing: -0.02em; line-height: 1.3;
-          font-family: 'DM Sans', 'PingFang SC', sans-serif;
         }
         .kd-content h3 {
           font-size: 17px; font-weight: 600; color: #222;
           margin: 28px 0 10px;
-          font-family: 'DM Sans', 'PingFang SC', sans-serif;
         }
         .kd-content p {
           font-size: 16px; line-height: 1.85; color: #333;
@@ -734,14 +732,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-content-editable .ql-container {
           font-family: inherit;
+          height: auto;
+          overflow: visible;
         }
         .kd-content-editable .ql-editor {
           min-height: 300px;
+          height: auto;
           padding: 0;
           font-family: inherit;
           font-size: 16px;
           line-height: 1.85;
           color: #333;
+          overflow-y: visible;
         }
         .kd-content-editable .ql-editor.ql-blank::before {
           left: 0;
