@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Eye,
   Calendar,
@@ -24,6 +24,7 @@ import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
 import { bionicHtml } from '../utils/content-utils';
 import { FocusOrbIcon } from './focus-orb-icon';
+import { InlineQuillEditor } from './inline-quill-editor';
 import { TagInput } from './tag-input';
 import dayjs from '@/lib/dayjs';
 
@@ -62,10 +63,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const { data, isLoading } = useKnowledgeDetail(knowledgeId);
   const updateKnowledge = useUpdateKnowledge();
   const completeLearning = useCompleteLearning();
-  const knowledge = data as KnowledgeDetailType | undefined;
+  const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
+  const [localKnowledgeSnapshot, setLocalKnowledgeSnapshot] = useState<{
+    knowledgeId: number;
+    detail: KnowledgeDetailType;
+  } | undefined>(undefined);
   const { data: learningDetail } = useStudentLearningTaskDetail(taskId || 0, {
     enabled: isStudent && !!taskId,
   });
+  const knowledge = localKnowledgeSnapshot?.knowledgeId === knowledgeId
+    ? localKnowledgeSnapshot.detail
+    : knowledgeFromQuery;
 
   // 条线列表
   const { data: allLineTypes = [] } = useLineTypeTags();
@@ -83,8 +91,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showLineTypes, setShowLineTypes] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(false);
-  const editableContentRef = useRef<HTMLDivElement | null>(null);
-  const editableInitializedRef = useRef(false);
 
   const activeContent = editContent ?? knowledge?.content ?? '';
   const renderedContent = useMemo(() => {
@@ -154,24 +160,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     };
   }, [onClose, editing, showLineTypes, isFocusMode]);
 
-  useEffect(() => {
-    if (!editing) {
-      editableInitializedRef.current = false;
-      return;
-    }
-    if (!editableContentRef.current || editableInitializedRef.current) return;
-    const nextHtml = editContent ?? knowledge?.content ?? '';
-    if (editableContentRef.current.innerHTML !== nextHtml) {
-      editableContentRef.current.innerHTML = nextHtml;
-    }
-    editableContentRef.current.focus();
-    editableInitializedRef.current = true;
-  }, [editing, knowledge?.id, knowledge?.content, editContent]);
-
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
     try {
-      await updateKnowledge.mutateAsync({
+      const updatedKnowledge = await updateKnowledge.mutateAsync({
         id: knowledgeId,
         data: {
           ...(editTitle !== undefined && { title: editTitle }),
@@ -179,6 +171,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           ...(editTags !== undefined && { tag_ids: editTags.map(t => t.id) }),
           ...(editLineTagId !== undefined && { line_tag_id: editLineTagId ?? undefined }),
         },
+      });
+      setLocalKnowledgeSnapshot({
+        knowledgeId,
+        detail: updatedKnowledge,
       });
       toast.success('已保存');
       setEditing(false);
@@ -257,14 +253,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <div className="kd-left scrollbar-subtle">
               {editing ? (
-                <div
-                  ref={editableContentRef}
+                <InlineQuillEditor
+                  value={activeContent}
+                  onChange={setEditContent}
+                  placeholder="编辑内容…"
                   className="kd-content kd-content-editable"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={(event) => {
-                    setEditContent(event.currentTarget.innerHTML);
-                  }}
                 />
               ) : (
                 <div
@@ -737,9 +730,25 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content th { font-weight: 600; color: #333; background: #fafafa; }
 
         .kd-content-editable {
-          outline: none;
-          cursor: text;
           min-height: 300px;
+        }
+        .kd-content-editable .ql-container {
+          font-family: inherit;
+        }
+        .kd-content-editable .ql-editor {
+          min-height: 300px;
+          padding: 0;
+          font-family: inherit;
+          font-size: 16px;
+          line-height: 1.85;
+          color: #333;
+        }
+        .kd-content-editable .ql-editor.ql-blank::before {
+          left: 0;
+          right: 0;
+          font-style: normal;
+          color: #9aa0aa;
+          font-size: 14px;
         }
 
         @keyframes kdFadeIn { from { opacity: 0; } to { opacity: 1; } }
