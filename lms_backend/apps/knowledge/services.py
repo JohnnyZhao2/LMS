@@ -140,7 +140,7 @@ class KnowledgeService(BaseService):
     @log_content_action('knowledge', 'delete', '删除知识文档《{result.title}》')
     def delete(self, pk: int) -> Knowledge:
         """
-        删除知识文档
+        硬删除知识文档
         Args:
             pk: 主键
         Returns:
@@ -159,8 +159,8 @@ class KnowledgeService(BaseService):
                 code=ErrorCodes.RESOURCE_REFERENCED,
                 message='该知识文档已被任务引用，无法删除'
             )
-        # 软删除
-        knowledge.soft_delete()
+        # 硬删除
+        knowledge.delete()
         return knowledge
 
     def increment_view_count(self, pk: int) -> int:

@@ -310,7 +310,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
         .akm-editor-inner {
           width: 100%;
-          max-width: 720px;
+          max-width: 960px;
           padding: 72px 40px 120px;
         }
 

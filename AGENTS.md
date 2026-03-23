@@ -1,5 +1,5 @@
 # 仓库指南
-用中文回复
+用中文回复，不要乱改没有说明的ui
 **No backward compatibility** - Break old formats freely
 
 ## 项目结构

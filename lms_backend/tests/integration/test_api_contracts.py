@@ -440,6 +440,13 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == 'success'
         assert response.data['data']['view_count'] >= 1
 
+    def test_knowledge_delete_hard_deletes_record(self, api_client, admin_user, sample_knowledge):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.delete(f'/api/knowledge/{sample_knowledge.id}/')
+
+        assert response.status_code == 204
+        assert not Knowledge.objects.filter(id=sample_knowledge.id).exists()
+
     def test_knowledge_create_allows_missing_title(self, api_client, admin_user, line_tag):
         api_client.force_authenticate(user=admin_user)
         response = api_client.post(

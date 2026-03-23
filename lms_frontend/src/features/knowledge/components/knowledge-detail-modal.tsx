@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Eye,
   Calendar,
@@ -23,7 +23,6 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
 import { bionicHtml } from '../utils/content-utils';
-import { RichTextEditor } from './rich-text-editor';
 import { FocusOrbIcon } from './focus-orb-icon';
 import { TagInput } from './tag-input';
 import dayjs from '@/lib/dayjs';
@@ -84,20 +83,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showLineTypes, setShowLineTypes] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const editableContentRef = useRef<HTMLDivElement | null>(null);
+  const editableInitializedRef = useRef(false);
 
-  const content = knowledge?.content ?? '';
+  const activeContent = editContent ?? knowledge?.content ?? '';
   const renderedContent = useMemo(() => {
-    if (!content) return '';
+    if (!activeContent) return '';
     const parser = new DOMParser();
-    const doc = parser.parseFromString(content, 'text/html');
+    const doc = parser.parseFromString(activeContent, 'text/html');
     doc.querySelectorAll('h1, h2, h3').forEach((heading, index) => {
       heading.id = `heading-${index}`;
     });
     return bionicHtml(doc.body.innerHTML);
-  }, [content]);
+  }, [activeContent]);
 
   // 实际使用的值
-  const activeContent = editContent ?? knowledge?.content ?? '';
   const activeTitle = editTitle ?? knowledge?.title ?? '';
   const activeTags = editTags ?? knowledge?.tags ?? [];
   const activeLineTagId = editLineTagId === undefined
@@ -153,6 +153,20 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       document.body.style.overflow = '';
     };
   }, [onClose, editing, showLineTypes, isFocusMode]);
+
+  useEffect(() => {
+    if (!editing) {
+      editableInitializedRef.current = false;
+      return;
+    }
+    if (!editableContentRef.current || editableInitializedRef.current) return;
+    const nextHtml = editContent ?? knowledge?.content ?? '';
+    if (editableContentRef.current.innerHTML !== nextHtml) {
+      editableContentRef.current.innerHTML = nextHtml;
+    }
+    editableContentRef.current.focus();
+    editableInitializedRef.current = true;
+  }, [editing, knowledge?.id, knowledge?.content, editContent]);
 
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
@@ -243,15 +257,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <div className="kd-left scrollbar-subtle">
               {editing ? (
-                <div className="kd-editor-wrap">
-                  <RichTextEditor
-                    value={activeContent}
-                    onChange={setEditContent}
-                    placeholder="编辑内容…"
-                    className="kd-tiptap-editor"
-                    contentClassName="kd-tiptap-content"
-                  />
-                </div>
+                <div
+                  ref={editableContentRef}
+                  className="kd-content kd-content-editable"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(event) => {
+                    setEditContent(event.currentTarget.innerHTML);
+                  }}
+                />
               ) : (
                 <div
                   className="kd-content"
@@ -722,24 +736,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content th, .kd-content td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
         .kd-content th { font-weight: 600; color: #333; background: #fafafa; }
 
-        /* Editor */
-        .kd-editor-wrap {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-height: 200px;
-          width: 100%;
-          max-width: 860px;
-          margin: 0 auto;
-        }
-        .kd-tiptap-editor {
-          flex: 1; display: flex; flex-direction: column;
-          border: none !important; border-radius: 0 !important; overflow: hidden;
-        }
-        .kd-tiptap-content {
-          font-family: Georgia, 'Times New Roman', 'PingFang SC', serif !important;
-          font-size: 16px !important; line-height: 1.85 !important;
-          color: #333 !important; padding: 0 !important; min-height: 300px !important;
+        .kd-content-editable {
+          outline: none;
+          cursor: text;
+          min-height: 300px;
         }
 
         @keyframes kdFadeIn { from { opacity: 0; } to { opacity: 1; } }
