@@ -10,8 +10,6 @@ import {
   Link as LinkIcon,
   X,
   Plus,
-  Maximize2,
-  Minimize2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,6 +24,7 @@ import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
 import { bionicHtml } from '../utils/content-utils';
 import { RichTextEditor } from './rich-text-editor';
+import { FocusOrbIcon } from './focus-orb-icon';
 import dayjs from '@/lib/dayjs';
 
 function relTime(dateStr: string): string {
@@ -223,7 +222,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           title={isFocusMode ? '退出专注' : '专注'}
           aria-label={isFocusMode ? '退出专注' : '专注'}
         >
-          {isFocusMode ? <Minimize2 style={{ width: 14, height: 14 }} /> : <Maximize2 style={{ width: 14, height: 14 }} />}
+          <FocusOrbIcon size={20} active={isFocusMode} interactive />
         </button>
 
         {isLoading ? (
@@ -510,11 +509,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-container {
           display: flex;
-          width: min(1100px, 96vw); height: min(700px, 92vh);
-          border-radius: 18px; overflow: hidden;
+          width: min(1640px, 96vw); height: min(900px, 94vh);
+          border-radius: 6px; overflow: hidden;
+          padding: 10px;
+          gap: 10px;
           box-shadow: 0 40px 100px rgba(0,0,0,0.35);
           animation: kdPopIn .22s cubic-bezier(.4,0,.2,1);
-          background: #fff;
+          background: #f1f3f6;
           position: relative;
           transition: width 0.22s ease, height 0.22s ease, border-radius 0.22s ease;
         }
@@ -522,16 +523,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           width: 100vw;
           height: 100vh;
           border-radius: 0;
+          padding: 12px;
+          gap: 12px;
         }
         .kd-focus-btn {
           position: absolute;
           left: 16px;
           top: 14px;
-          width: 32px;
-          height: 32px;
+          width: 30px;
+          height: 30px;
           border-radius: 999px;
-          border: 1px solid rgba(120, 136, 152, 0.28);
-          background: rgba(255, 255, 255, 0.88);
+          border: none;
+          background: transparent;
           color: #7c8794;
           cursor: pointer;
           display: flex;
@@ -539,29 +542,28 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           justify-content: center;
           padding: 0;
           z-index: 20;
-          backdrop-filter: blur(6px);
-          transition: all 0.18s ease;
+          transition: transform 0.18s ease;
         }
         .kd-focus-btn:hover {
-          background: #fff;
-          color: #3f4b58;
-          border-color: rgba(90, 103, 117, 0.45);
+          transform: translateY(-1px);
         }
         .kd-focus-btn::after {
           content: attr(data-tip);
           position: absolute;
-          left: calc(100% + 8px);
+          left: calc(100% + 12px);
           top: 50%;
           transform: translateY(-50%) translateX(-2px);
           border-radius: 999px;
-          padding: 4px 10px;
-          background: rgba(34, 40, 48, 0.92);
-          color: #fff;
-          font-size: 11px;
+          padding: 10px 24px;
+          background: rgba(243, 245, 248, 0.96);
+          color: #22252b;
+          font-size: 17px;
+          font-weight: 500;
           line-height: 1;
           opacity: 0;
           pointer-events: none;
           white-space: nowrap;
+          box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
           transition: opacity 0.16s ease, transform 0.16s ease;
         }
         .kd-focus-btn:hover::after {
@@ -570,13 +572,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-left {
           flex: 1; overflow-y: auto;
-          padding: 60px 72px 80px;
+          background: #fff;
+          border-radius: 6px;
+          box-shadow: 0 10px 24px rgba(21, 38, 61, 0.07);
+          padding: 60px 92px 80px;
           display: flex; flex-direction: column;
         }
         .kd-right {
-          width: 300px; background: #eef0f3;
+          width: 320px; background: #eef2f6;
+          border-radius: 6px;
+          box-shadow: 0 10px 24px rgba(21, 38, 61, 0.08);
           display: flex; flex-direction: column; flex-shrink: 0;
-          overflow-y: auto; position: relative;
+          overflow: hidden; position: relative;
         }
         .kd-right-header {
           background: linear-gradient(160deg, #dce4ee 0%, #eef0f3 100%);
@@ -597,6 +604,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-right-body {
           padding: 18px 20px; flex: 1;
           display: flex; flex-direction: column;
+          overflow-y: auto;
         }
         .kd-section { margin-bottom: 18px; }
         .kd-label {
@@ -636,7 +644,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         /* Tag input */
         .kd-tag-input-wrap {
           margin-bottom: 8px; background: #fff;
-          border-radius: 12px; overflow: hidden;
+          border-radius: 6px; overflow: hidden;
           box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         .kd-tag-input-row {
@@ -664,12 +672,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         .kd-complete-done {
           display: flex; align-items: center; gap: 8px;
-          border-radius: 10px; padding: 10px 12px;
+          border-radius: 6px; padding: 10px 12px;
           font-size: 13px; font-weight: 600;
           background: #e0f5e0; color: #2d8a2d;
         }
         .kd-complete-btn {
-          width: 100%; border: none; border-radius: 10px;
+          width: 100%; border: none; border-radius: 6px;
           padding: 10px 12px; font-size: 13px; font-weight: 600;
           color: #fff; background: #e8793a; cursor: pointer;
           font-family: inherit; transition: opacity 0.15s;
@@ -683,7 +691,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-linetype-popover {
           position: absolute; bottom: calc(100% + 8px);
           left: 20px; right: 20px; background: #fff;
-          border-radius: 14px; box-shadow: 0 -4px 28px rgba(0,0,0,0.13);
+          border-radius: 6px; box-shadow: 0 -4px 28px rgba(0,0,0,0.13);
           overflow: hidden; z-index: 10;
         }
         .kd-linetype-item {
@@ -710,14 +718,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         /* Bottom */
         .kd-bottom {
-          border-top: 1px solid rgba(0,0,0,0.07);
           padding: 14px 20px 16px;
           display: flex; align-items: center; justify-content: center;
         }
         .kd-action-group { display: flex; align-items: center; gap: 24px; }
         .kd-action-btn {
           width: 36px; height: 36px; border-radius: 50%;
-          border: 1.5px solid #d0d4d8; background: #fff;
+          border: none; background: #fff;
           cursor: pointer; display: flex; align-items: center;
           justify-content: center; color: #9aa0aa;
           transition: all 0.15s; padding: 0; font-family: inherit;
@@ -726,7 +733,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-action-danger:hover { border-color: #e44; color: #e44; }
         .kd-save-btn {
           width: 100%; background: #111; border: none;
-          border-radius: 12px; padding: 12px 0; color: #fff;
+          border-radius: 6px; padding: 12px 0; color: #fff;
           font-size: 14px; font-weight: 500; cursor: pointer;
           font-family: inherit; transition: opacity 0.15s;
         }
@@ -736,6 +743,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content {
           font-family: Georgia, 'Times New Roman', 'PingFang SC', serif;
           flex: 1; min-height: 100%;
+          width: 100%;
+          max-width: 860px;
+          margin: 0 auto;
         }
         .kd-content h1 {
           font-size: 32px; font-weight: 600; color: #111;
@@ -762,11 +772,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content strong { font-weight: 700; color: #111; }
         .kd-content em { font-style: italic; }
         .kd-content code {
-          background: #f4f4f2; padding: 2px 6px; border-radius: 5px;
+          background: #f4f4f2; padding: 2px 6px; border-radius: 6px;
           font-size: 0.87em; font-family: 'SF Mono', monospace; color: #555;
         }
         .kd-content pre {
-          background: #f4f4f2; border-radius: 10px; padding: 18px 22px;
+          background: #f4f4f2; border-radius: 6px; padding: 18px 22px;
           font-size: 13px; margin: 16px 0; overflow-x: auto;
           font-family: monospace; line-height: 1.6;
         }
@@ -774,13 +784,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           border-left: 3px solid #e0e0e0; padding-left: 20px;
           color: #777; margin: 18px 0; font-style: italic; font-size: 18px;
         }
-        .kd-content img { max-width: 100%; border-radius: 10px; margin: 16px 0; }
+        .kd-content img { max-width: 100%; border-radius: 6px; margin: 16px 0; }
         .kd-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
         .kd-content th, .kd-content td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
         .kd-content th { font-weight: 600; color: #333; background: #fafafa; }
 
         /* Editor */
-        .kd-editor-wrap { flex: 1; display: flex; flex-direction: column; min-height: 200px; }
+        .kd-editor-wrap {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 200px;
+          width: 100%;
+          max-width: 860px;
+          margin: 0 auto;
+        }
         .kd-tiptap-editor {
           flex: 1; display: flex; flex-direction: column;
           border: none !important; border-radius: 0 !important; overflow: hidden;
@@ -793,6 +811,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         @keyframes kdFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes kdPopIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @keyframes kdOrbSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

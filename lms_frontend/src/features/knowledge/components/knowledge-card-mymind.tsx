@@ -3,6 +3,7 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
+  Link as LinkGlyph,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import {
@@ -36,11 +37,22 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   const text = plain(item.content);
   const short = !long && text.length < 80;
 
+  const getSourceHost = React.useCallback((url?: string) => {
+    if (!url) return '';
+    try {
+      return new URL(url).host;
+    } catch {
+      return url.replace(/^https?:\/\//i, '').split('/')[0] ?? '';
+    }
+  }, []);
+
+  const sourceHost = getSourceHost(item.source_url);
+
   return (
     <div
       style={{
         breakInside: 'avoid',
-        marginBottom: 14,
+        marginBottom: 22,
         animation: 'mymind-appear .25s ease both',
         animationDelay: `${index * 0.015}s`,
       }}
@@ -51,9 +63,10 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
         onClick={() => onClick(item.id)}
         style={{
           background: '#fff',
-          borderRadius: 18,
+          borderRadius: 6,
           padding: short ? '28px 26px 24px' : '24px 26px 22px',
           position: 'relative',
+          overflow: 'hidden',
           cursor: 'pointer',
           transition: 'box-shadow .22s ease, border-color .22s ease',
           boxShadow: hovered
@@ -144,6 +157,41 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             }}
             dangerouslySetInnerHTML={{ __html: bionicHtml(text) }}
           />
+        )}
+
+        {sourceHost && item.source_url && (
+          <a
+            href={item.source_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '5px 9px',
+              borderRadius: '6px 0 0 0',
+              background: '#ffffff',
+              border: '1px solid #d9e0ea',
+              color: '#1f2937',
+              fontSize: 10.5,
+              textDecoration: 'none',
+              maxWidth: '62%',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              opacity: hovered ? 1 : 0,
+              transform: hovered ? 'none' : 'translateY(4px)',
+              pointerEvents: hovered ? 'auto' : 'none',
+              transition: 'opacity .16s ease, transform .16s ease',
+            }}
+          >
+            <LinkGlyph size={10} />
+            {sourceHost}
+          </a>
         )}
 
       </div>

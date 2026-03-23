@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { FocusOrbIcon } from './focus-orb-icon';
 
 interface AddKnowledgeCardProps {
   onSave: (content: string) => Promise<void> | void;
@@ -77,14 +78,13 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             }}
             style={{
               position: 'absolute',
-              top: 14,
-              right: 14,
-              width: 16,
-              height: 16,
+              top: 10,
+              right: 10,
+              width: 28,
+              height: 28,
               borderRadius: '50%',
               border: 'none',
-              background:
-                'linear-gradient(135deg, #f97316, #ec4899, #8b5cf6)',
+              background: 'transparent',
               cursor: 'pointer',
               padding: 0,
               display: 'flex',
@@ -92,19 +92,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
               justifyContent: 'center',
             }}
           >
-            <svg
-              width="7"
-              height="7"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#fff"
-              strokeWidth="2.5"
-            >
-              <polyline points="15 3 21 3 21 9" />
-              <polyline points="9 21 3 21 3 15" />
-              <line x1="21" y1="3" x2="14" y2="10" />
-              <line x1="3" y1="21" x2="10" y2="14" />
-            </svg>
+            <FocusOrbIcon size={16} interactive />
           </button>
         )}
 

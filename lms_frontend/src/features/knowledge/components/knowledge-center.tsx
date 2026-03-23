@@ -242,7 +242,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             onClick={() => handleLineTypeSelect(
                                 selectedLineTypeId === tag.id ? undefined : tag.id
                             )}
-                            className="inline-flex items-center gap-3 px-4 py-2 rounded-lg font-medium transition-all bg-white"
+                            className="inline-flex items-center gap-3 px-4 py-2 rounded-[6px] font-medium transition-all bg-white"
                             style={{ fontSize: 12.5 }}
                         >
                             <span className={cn(
@@ -280,7 +280,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         <div
                             style={{
                                 columns: '280px',
-                                columnGap: 14,
+                                columnGap: 25,
                             }}
                         >
                             {canCreateKnowledge && (
