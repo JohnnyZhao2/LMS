@@ -24,7 +24,7 @@ import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
 import { bionicHtml } from '../utils/content-utils';
 import { FocusOrbIcon } from './focus-orb-icon';
-import { InlineQuillEditor } from './inline-quill-editor';
+import { SlashQuillEditor } from './slash-quill-editor';
 import { TagInput } from './tag-input';
 import dayjs from '@/lib/dayjs';
 
@@ -253,11 +253,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <div className="kd-left scrollbar-subtle">
               {editing ? (
-                <InlineQuillEditor
+                <SlashQuillEditor
                   value={activeContent}
                   onChange={setEditContent}
                   placeholder="编辑内容…"
                   className="kd-content kd-content-editable"
+                  minHeight={300}
                 />
               ) : (
                 <div
@@ -722,6 +723,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           border-left: 3px solid #e0e0e0; padding-left: 20px;
           color: #777; margin: 18px 0; font-style: italic; font-size: 18px;
         }
+        .kd-content hr {
+          border: none;
+          border-top: 1px solid #d9dde3;
+          margin: 20px 0;
+        }
         .kd-content img { max-width: 100%; border-radius: 6px; margin: 16px 0; }
         .kd-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
         .kd-content th, .kd-content td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eee; }
@@ -729,6 +735,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
         .kd-content-editable {
           min-height: 300px;
+          position: relative;
         }
         .kd-content-editable .ql-container {
           font-family: inherit;

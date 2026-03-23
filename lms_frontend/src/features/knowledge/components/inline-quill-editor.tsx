@@ -25,6 +25,8 @@ export function InlineQuillEditor({
   const quillRef = useRef<Quill | null>(null);
   const isSyncingRef = useRef(false);
   const lastValueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; });
 
   useEffect(() => {
     if (!editorRef.current || quillRef.current) return;
@@ -38,8 +40,8 @@ export function InlineQuillEditor({
     });
     quillRef.current = quill;
 
-    if (value) {
-      quill.clipboard.dangerouslyPasteHTML(value);
+    if (lastValueRef.current) {
+      quill.clipboard.dangerouslyPasteHTML(lastValueRef.current);
     }
     quill.focus();
 
@@ -48,13 +50,14 @@ export function InlineQuillEditor({
       const html = quill.root.innerHTML;
       const normalized = html === '<p><br></p>' ? '' : html;
       lastValueRef.current = normalized;
-      onChange(normalized);
+      onChangeRef.current(normalized);
     });
 
     return () => {
       quillRef.current = null;
     };
-  }, [onChange, placeholder, value]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const quill = quillRef.current;

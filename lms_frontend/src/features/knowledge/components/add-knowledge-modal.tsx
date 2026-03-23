@@ -8,6 +8,11 @@ import { useCreateKnowledge } from '../api/manage-knowledge';
 import { useParseDocument } from '../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
 import { TagInput } from './tag-input';
+import {
+  hasMeaningfulKnowledgeHtml,
+  textToKnowledgeHtml,
+} from '../utils/slash-shortcuts';
+import { SlashQuillEditor } from './slash-quill-editor';
 
 interface AddKnowledgeModalProps {
   open: boolean;
@@ -25,7 +30,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   onSuccess,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [lineTagId, setLineTagId] = React.useState<number | undefined>();
   const [selectedTags, setSelectedTags] = React.useState<{ id: number; name: string }[]>([]);
   const [content, setContent] = React.useState(initialContent);
@@ -39,7 +43,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
   React.useEffect(() => {
     if (open) {
-      setContent(initialContent);
+      setContent(initialContent.includes('<') ? initialContent : textToKnowledgeHtml(initialContent));
       setTitle('');
       setSourceUrl('');
       setSelectedTags([]);
@@ -67,69 +71,35 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
     };
   }, [open, onClose, content, title, sourceUrl, lineTagId, selectedTags]);
 
-  // 自动调整 textarea 高度
-  React.useEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = 'auto';
-    ta.style.height = `${ta.scrollHeight}px`;
-  }, [content]);
-
-  const plainContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-  const canSave = plainContent.length > 0;
+  const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
 
-  const convertHtmlToPlainText = React.useCallback((html: string) => {
-    if (!html.trim()) return '';
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const blockNodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li');
-    if (blockNodes.length > 0) {
-      return Array.from(blockNodes)
-        .map((node) => node.textContent?.replace(/\u00A0/g, ' ').trim() ?? '')
-        .filter(Boolean)
-        .join('\n');
-    }
-    return (doc.body.textContent ?? '')
-      .replace(/\u00A0/g, ' ')
-      .replace(/\r\n/g, '\n')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .join('\n');
-  }, []);
-
   const handleFileUpload = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const result = await parseDocument.mutateAsync(file);
-      const nextContent = convertHtmlToPlainText(result.content);
-      setContent(nextContent);
-      if (!title.trim() && result.suggested_title?.trim()) {
-        setTitle(result.suggested_title.trim());
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const result = await parseDocument.mutateAsync(file);
+        setContent(result.content);
+        if (!title.trim() && result.suggested_title?.trim()) {
+          setTitle(result.suggested_title.trim());
+        }
+        toast.success('文档导入成功');
+      } catch (error) {
+        showApiError(error, '文档导入失败');
+      } finally {
+        e.target.value = '';
       }
-      toast.success('文档导入成功');
-    } catch (error) {
-      showApiError(error, '文档导入失败');
-    } finally {
-      e.target.value = '';
-    }
-  }, [convertHtmlToPlainText, parseDocument, title]);
+    }, [parseDocument, title]);
 
   const handleSave = async () => {
     if (!canSave) return;
     try {
-      const htmlContent = content
-        .split('\n')
-        .map((line) => `<p>${line}</p>`)
-        .join('');
       const trimmedTitle = title.trim();
       const result = await createKnowledge.mutateAsync({
         ...(trimmedTitle && { title: trimmedTitle }),
         line_tag_id: lineTagId,
-        content: htmlContent,
+        content,
         source_url: sourceUrl.trim() || undefined,
         tag_ids: selectedTags.map((t) => t.id),
       });
@@ -158,14 +128,13 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       {/* 主编辑区 */}
       <div className="akm-editor-area scrollbar-subtle">
         <div className="akm-editor-inner">
-          <textarea
-            ref={textareaRef}
+          <SlashQuillEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Type  /  for shortcuts"
+            onChange={setContent}
+            placeholder="Type / for shortcuts"
             autoFocus
-            className="akm-textarea"
-            rows={1}
+            className="akm-editor"
+            minHeight={380}
           />
         </div>
       </div>
@@ -314,21 +283,25 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           padding: 72px 40px 120px;
         }
 
-        .akm-textarea {
-          width: 100%;
-          border: none;
-          outline: none;
-          resize: none;
-          background: none;
+        .akm-editor .ql-editor {
           font-size: 16px;
           line-height: 2;
           color: #2a2a2e;
           font-family: 'Georgia', 'Times New Roman', 'PingFang SC', serif;
-          overflow: hidden;
         }
-        .akm-textarea::placeholder {
+        .akm-editor .ql-editor.ql-blank::before {
           color: #c0c4cc;
-          font-style: italic;
+        }
+        .akm-editor .ql-editor h1 {
+          font-size: 40px;
+          margin-bottom: 18px;
+          color: #1f2937;
+        }
+        .akm-editor .ql-editor p {
+          margin-bottom: 14px;
+        }
+        .akm-editor .sqe-menu {
+          min-width: 240px;
         }
 
         .akm-tag-panel {

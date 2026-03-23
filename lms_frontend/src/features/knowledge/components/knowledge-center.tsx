@@ -18,6 +18,7 @@ import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge'
 import { useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
+import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
 import { KnowledgeCardMymind } from './knowledge-card-mymind';
 import { AddKnowledgeCard } from './add-knowledge-card';
 import { AddKnowledgeModal } from './add-knowledge-modal';
@@ -186,17 +187,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     };
 
     const handleQuickSave = React.useCallback(async (content: string) => {
-        const trimmedContent = content.trim();
-        if (!trimmedContent) return;
+        if (!hasMeaningfulKnowledgeHtml(content)) return;
 
         try {
-            const htmlContent = trimmedContent
-                .split('\n')
-                .map((line) => `<p>${line}</p>`)
-                .join('');
-
             await createKnowledge.mutateAsync({
-                content: htmlContent,
+                content,
                 ...(selectedLineTypeId !== undefined && { line_tag_id: selectedLineTypeId }),
             });
 

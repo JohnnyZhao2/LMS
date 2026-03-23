@@ -1,5 +1,8 @@
 import * as React from 'react';
+
+import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
 import { FocusOrbIcon } from './focus-orb-icon';
+import { SlashQuillEditor } from './slash-quill-editor';
 
 interface AddKnowledgeCardProps {
   onSave: (content: string) => Promise<void> | void;
@@ -19,49 +22,29 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   const [focused, setFocused] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [value, setValue] = React.useState('');
-  const taRef = React.useRef<HTMLTextAreaElement>(null);
-  const MIN_TEXTAREA_HEIGHT = 24;
-
-  const adjustTextareaHeight = React.useCallback(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
-    el.style.height = `${Math.max(el.scrollHeight, MIN_TEXTAREA_HEIGHT)}px`;
-  }, []);
-
-  React.useLayoutEffect(() => {
-    adjustTextareaHeight();
-  }, [adjustTextareaHeight, value]);
+  const hasContent = hasMeaningfulKnowledgeHtml(value);
 
   const saveDraft = React.useCallback(async () => {
-    if (isSaving) return;
-    const trimmedValue = value.trim();
-    if (!trimmedValue) return;
+    if (isSaving || !hasContent) return;
 
     try {
-      await onSave(trimmedValue);
+      await onSave(value);
       setValue('');
       setFocused(false);
-      taRef.current?.blur();
     } catch {
       // 创建失败时保留草稿，方便用户修正后重试
     }
-  }, [isSaving, onSave, value]);
-
-  const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && value.trim()) {
-      e.preventDefault();
-      void saveDraft();
-    }
-    if (e.key === 'Escape') {
-      setValue('');
-      setFocused(false);
-      taRef.current?.blur();
-    }
-  };
+  }, [hasContent, isSaving, onSave, value]);
 
   return (
-    <div style={{ marginBottom: 14, breakInside: 'avoid' }}>
+    <div
+      style={{
+        marginBottom: 14,
+        breakInside: 'avoid',
+        position: 'relative',
+        zIndex: focused ? 40 : 1,
+      }}
+    >
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -69,7 +52,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           background: '#fff',
           borderRadius: 7,
           minHeight: 200,
-          overflow: 'hidden',
+          overflow: focused ? 'visible' : 'hidden',
           position: 'relative',
           boxShadow:
             focused || hovered
@@ -79,15 +62,13 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           transition: 'box-shadow .22s ease',
           cursor: 'text',
         }}
-        onClick={() => taRef.current?.focus()}
       >
-        {/* 展开按钮 — 打开完整弹窗 */}
         {focused && (
           <button
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onExpand(value.trim());
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onExpand(value);
             }}
             style={{
               position: 'absolute',
@@ -103,6 +84,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              zIndex: 3,
             }}
           >
             <FocusOrbIcon size={16} interactive />
@@ -112,7 +94,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         <div
           style={{
             padding: '22px 24px',
-            paddingBottom: focused && value.trim() ? 58 : 22,
+            paddingBottom: focused && hasContent ? 58 : 22,
           }}
         >
           <p
@@ -127,55 +109,38 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           >
             添加知识
           </p>
-          <textarea
-            ref={taRef}
+
+          <SlashQuillEditor
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-            }}
-            onFocus={() => {
-              setFocused(true);
-              adjustTextareaHeight();
-            }}
+            onChange={setValue}
+            onFocus={() => setFocused(true)}
             onBlur={() => {
-              if (!value.trim()) setFocused(false);
+              if (!hasMeaningfulKnowledgeHtml(value)) {
+                setFocused(false);
+              }
             }}
-            onKeyDown={handleKey}
-            placeholder="在这里输入…"
-            style={{
-              width: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              background: 'none',
-              fontSize: 14.5,
-              lineHeight: 1.68,
-              color: '#1a1a1a',
-              fontFamily: 'inherit',
-              letterSpacing: '-0.008em',
-              height: MIN_TEXTAREA_HEIGHT,
-              overflow: 'hidden',
-              display: 'block',
-            }}
+            placeholder="在这里输入，键入 / 调出快捷命令"
+            className="akc-editor"
+            minHeight={28}
           />
         </div>
 
-        {/* 保存按钮 */}
-        {focused && value.trim() && (
+        {focused && hasContent && (
           <div
             style={{
               position: 'absolute',
               left: 0,
               right: 0,
               bottom: 0,
+              zIndex: 2,
             }}
           >
             <button
-              onMouseDown={(e) => {
-                e.preventDefault();
+              onMouseDown={(event) => {
+                event.preventDefault();
                 void saveDraft();
               }}
-              disabled={!value.trim() || isSaving}
+              disabled={!hasContent || isSaving}
               style={{
                 width: '100%',
                 border: 'none',
@@ -185,9 +150,9 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
                 color: '#fff',
                 fontSize: 12,
                 fontWeight: 600,
-                cursor: !value.trim() || isSaving ? 'not-allowed' : 'pointer',
+                cursor: !hasContent || isSaving ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
-                opacity: !value.trim() || isSaving ? 0.7 : 1,
+                opacity: !hasContent || isSaving ? 0.7 : 1,
               }}
             >
               {isSaving ? '保存中…' : '保存'}
@@ -195,6 +160,34 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           </div>
         )}
       </div>
+
+      <style>{`
+        .akc-editor .ql-editor {
+          font-size: 14.5px;
+          line-height: 1.68;
+          color: #1a1a1a;
+          letter-spacing: -0.008em;
+        }
+
+        .akc-editor .ql-editor.ql-blank::before {
+          color: #b8bec8;
+          font-style: normal;
+        }
+
+        .akc-editor .ql-editor h1 {
+          font-size: 28px;
+          margin-bottom: 14px;
+        }
+
+        .akc-editor .ql-editor p {
+          margin-bottom: 10px;
+        }
+
+        .akc-editor .sqe-menu {
+          left: 0 !important;
+          min-width: 210px;
+        }
+      `}</style>
     </div>
   );
 };
