@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKnowledgeDetail } from '../api/knowledge';
 import { useUpdateKnowledge } from '../api/manage-knowledge';
-import { useKnowledgeTags, useLineTypeTags } from '../api/get-tags';
+import { useLineTypeTags } from '../api/get-tags';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -25,6 +25,7 @@ import type { SimpleTag } from '@/types/common';
 import { bionicHtml } from '../utils/content-utils';
 import { RichTextEditor } from './rich-text-editor';
 import { FocusOrbIcon } from './focus-orb-icon';
+import { TagInput } from './tag-input';
 import dayjs from '@/lib/dayjs';
 
 function relTime(dateStr: string): string {
@@ -67,8 +68,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     enabled: isStudent && !!taskId,
   });
 
-  // 标签和条线列表
-  const { data: allKnowledgeTags = [] } = useKnowledgeTags();
+  // 条线列表
   const { data: allLineTypes = [] } = useLineTypeTags();
 
   // 编辑状态
@@ -78,9 +78,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editLineTagId, setEditLineTagId] = useState<number | undefined | null>(undefined);
 
-  // 标签输入
+  // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
-  const [tagInput, setTagInput] = useState('');
   // 条线选择
   const [showLineTypes, setShowLineTypes] = useState(false);
   // 专注模式（全屏查看）
@@ -121,12 +120,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   );
 
   // 标签操作
-  const addTag = useCallback((tag: SimpleTag) => {
+  const addTag = useCallback((tag: { id: number; name: string }) => {
     const current = editTags ?? knowledge?.tags ?? [];
     if (current.some(t => t.id === tag.id)) return;
     setEditTags([...current, tag]);
-    setTagInput('');
-    setShowTagInput(false);
   }, [editTags, knowledge?.tags]);
 
   const removeTag = useCallback((tagId: number) => {
@@ -134,20 +131,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditTags(current.filter(t => t.id !== tagId));
   }, [editTags, knowledge?.tags]);
 
-  // 可选的标签（排除已选）
-  const availableTags = allKnowledgeTags.filter(t =>
-    !activeTags.some(at => at.id === t.id) &&
-    (!tagInput || t.name.toLowerCase().includes(tagInput.toLowerCase()))
-  );
-
   // Esc 关闭 + 禁止背景滚动
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showLineTypes) {
           setShowLineTypes(false);
-        } else if (showTagInput) {
-          setShowTagInput(false);
         } else if (editing) {
           setEditing(false);
         } else if (isFocusMode) {
@@ -163,7 +152,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [onClose, editing, showLineTypes, showTagInput, isFocusMode]);
+  }, [onClose, editing, showLineTypes, isFocusMode]);
 
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
@@ -297,47 +286,20 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 <div className="kd-section">
                   <p className="kd-label">系统标签</p>
 
-                  {/* 标签输入框（mymind 风格） */}
+                  {/* 点击展开标签输入 */}
                   {canUpdateKnowledge && showTagInput && (
-                    <div className="kd-tag-input-wrap">
-                      <div className="kd-tag-input-row">
-                        <input
-                          autoFocus
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Escape') { setTagInput(''); setShowTagInput(false); }
-                          }}
-                          placeholder=""
-                          className="kd-tag-input"
-                        />
-                        <button
-                          onClick={() => setShowTagInput(false)}
-                          className="kd-tag-input-close"
-                        >
-                          <X style={{ width: 12, height: 12 }} />
-                        </button>
-                      </div>
-                      {availableTags.length > 0 && (
-                        <div className="kd-tag-suggestions">
-                          {availableTags.slice(0, 8).map(t => (
-                            <button
-                              key={t.id}
-                              onClick={() => addTag(t)}
-                              className="kd-tag-suggestion-item"
-                            >
-                              {t.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <TagInput
+                      selectedTags={activeTags}
+                      onAdd={addTag}
+                      onRemove={removeTag}
+                      hideChips
+                    />
                   )}
 
                   <div className="kd-tags">
                     {canUpdateKnowledge && (
                       <button
-                        onClick={() => { setShowTagInput(v => !v); setTagInput(''); }}
+                        onClick={() => setShowTagInput((v) => !v)}
                         className="kd-add-tag-btn"
                       >
                         <Plus style={{ width: 12, height: 12 }} />
@@ -640,35 +602,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           transition: background 0.15s;
         }
         .kd-add-tag-btn:hover { background: #d66b2e; }
-
-        /* Tag input */
-        .kd-tag-input-wrap {
-          margin-bottom: 8px; background: #fff;
-          border-radius: 6px; overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        .kd-tag-input-row {
-          display: flex; align-items: center;
-        }
-        .kd-tag-input {
-          flex: 1; border: none; background: none;
-          padding: 10px 14px; font-size: 13.5px;
-          color: #333; outline: none; font-family: inherit;
-        }
-        .kd-tag-input-close {
-          background: none; border: none; padding: 0 14px;
-          cursor: pointer; color: #ccc; display: flex;
-          align-items: center;
-        }
-        .kd-tag-input-close:hover { color: #999; }
-        .kd-tag-suggestions { border-top: 1px solid #f0f0f0; }
-        .kd-tag-suggestion-item {
-          width: 100%; text-align: left; border: none;
-          background: none; padding: 9px 14px; font-size: 13.5px;
-          color: #333; cursor: pointer; font-family: inherit;
-          display: block;
-        }
-        .kd-tag-suggestion-item:hover { background: #f5f5f5; }
 
         .kd-complete-done {
           display: flex; align-items: center; gap: 8px;

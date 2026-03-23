@@ -67,7 +67,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         onMouseLeave={() => setHovered(false)}
         style={{
           background: '#fff',
-          borderRadius: 6,
+          borderRadius: 7,
           minHeight: 200,
           overflow: 'hidden',
           position: 'relative',

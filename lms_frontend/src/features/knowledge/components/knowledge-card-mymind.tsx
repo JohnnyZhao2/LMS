@@ -63,7 +63,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
         onClick={() => onClick(item.id)}
         style={{
           background: '#fff',
-          borderRadius: 6,
+          borderRadius: 7,
           padding: short ? '28px 26px 24px' : '24px 26px 22px',
           position: 'relative',
           overflow: 'hidden',
@@ -173,7 +173,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
               alignItems: 'center',
               gap: 4,
               padding: '5px 9px',
-              borderRadius: '6px 0 0 0',
+              borderRadius: '7px 0 0 0',
               background: '#ffffff',
               border: '1px solid #d9e0ea',
               color: '#1f2937',

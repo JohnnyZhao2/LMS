@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { toast } from 'sonner';
-import { X, Link as LinkIcon, Upload } from 'lucide-react';
+import { Link as LinkIcon, Upload, Minimize2 } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
 
-import { useLineTypeTags, useKnowledgeTags } from '../api/get-tags';
+import { useLineTypeTags } from '../api/get-tags';
 import { useCreateKnowledge } from '../api/manage-knowledge';
 import { useParseDocument } from '../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
+import { TagInput } from './tag-input';
 
 interface AddKnowledgeModalProps {
   open: boolean;
@@ -16,10 +17,6 @@ interface AddKnowledgeModalProps {
   onSuccess?: (id: number) => void;
 }
 
-/**
- * mymind 风格的新建知识弹窗
- * 对接后端 API：选择条线 + 标签 + 内容 + 标题 + 链接
- */
 export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   open,
   onClose,
@@ -28,38 +25,55 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   onSuccess,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [lineTagId, setLineTagId] = React.useState<number | undefined>();
-  const [tagId, setTagId] = React.useState<number | undefined>();
+  const [selectedTags, setSelectedTags] = React.useState<{ id: number; name: string }[]>([]);
   const [content, setContent] = React.useState(initialContent);
   const [title, setTitle] = React.useState('');
   const [sourceUrl, setSourceUrl] = React.useState('');
+  const [showTagPanel, setShowTagPanel] = React.useState(false);
 
   const { data: lineTypeTags = [] } = useLineTypeTags();
-  const { data: knowledgeTags = [] } = useKnowledgeTags();
   const createKnowledge = useCreateKnowledge();
   const parseDocument = useParseDocument();
 
-  // 每次打开时重置状态
   React.useEffect(() => {
     if (open) {
       setContent(initialContent);
       setTitle('');
       setSourceUrl('');
-      setTagId(undefined);
+      setSelectedTags([]);
+      setShowTagPanel(false);
       const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
       setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
     }
   }, [open, initialContent, initialLineTagId, lineTypeTags]);
 
-  // ESC 关闭
+  // ESC 关闭 + ⌘+Enter 保存
   React.useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSave();
+      }
     };
     window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handler);
+      document.body.style.overflow = '';
+    };
+  }, [open, onClose, content, title, sourceUrl, lineTagId, selectedTags]);
+
+  // 自动调整 textarea 高度
+  React.useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [content]);
 
   const plainContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
   const canSave = plainContent.length > 0;
@@ -68,7 +82,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
   const convertHtmlToPlainText = React.useCallback((html: string) => {
     if (!html.trim()) return '';
-
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const blockNodes = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li');
@@ -78,7 +91,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         .filter(Boolean)
         .join('\n');
     }
-
     return (doc.body.textContent ?? '')
       .replace(/\u00A0/g, ' ')
       .replace(/\r\n/g, '\n')
@@ -91,12 +103,10 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const handleFileUpload = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const result = await parseDocument.mutateAsync(file);
       const nextContent = convertHtmlToPlainText(result.content);
       setContent(nextContent);
-
       if (!title.trim() && result.suggested_title?.trim()) {
         setTitle(result.suggested_title.trim());
       }
@@ -110,22 +120,19 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
   const handleSave = async () => {
     if (!canSave) return;
-
     try {
       const htmlContent = content
         .split('\n')
         .map((line) => `<p>${line}</p>`)
         .join('');
       const trimmedTitle = title.trim();
-
       const result = await createKnowledge.mutateAsync({
         ...(trimmedTitle && { title: trimmedTitle }),
         line_tag_id: lineTagId,
         content: htmlContent,
         source_url: sourceUrl.trim() || undefined,
-        tag_ids: tagId ? [tagId] : [],
+        tag_ids: selectedTags.map((t) => t.id),
       });
-
       toast.success('知识创建成功');
       onClose();
       onSuccess?.(result.id);
@@ -137,285 +144,386 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   if (!open) return null;
 
   return (
-    <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 500,
-        background: 'rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        animation: 'mymind-fadeIn .15s ease',
-      }}
-    >
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 18,
-          width: '100%',
-          maxWidth: 560,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.18)',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '88vh',
-          overflow: 'hidden',
-          animation: 'mymind-popIn .2s ease',
-        }}
-        onClick={(e) => e.stopPropagation()}
+    <div className="akm-fullscreen">
+      {/* 缩小按钮 */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="akm-minimize-btn"
+        title="关闭"
       >
-        {/* Header: 条线选择 + 标签选择 + 关闭按钮 */}
-        <div
-          style={{
-            padding: '18px 22px 0',
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
-          {/* 条线选择 */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <select
-              value={lineTagId ?? ''}
-              onChange={(e) => setLineTagId(e.target.value ? Number(e.target.value) : undefined)}
-              style={{
-                width: '100%',
-                border: '1.5px solid #eee',
-                borderRadius: 10,
-                padding: '8px 32px 8px 12px',
-                fontSize: 13,
-                color: lineTagId ? '#333' : '#bbb',
-                background: '#fafafa',
-                outline: 'none',
-                cursor: 'pointer',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                appearance: 'none',
-                fontFamily: 'inherit',
-              }}
-            >
-              <option value="">选择条线</option>
-              {lineTypeTags.map((tag: TagType) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
-            <span
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                color: '#bbb',
-                fontSize: 10,
-              }}
-            >
-              ▾
-            </span>
-          </div>
+        <Minimize2 size={18} />
+      </button>
 
-          {/* 标签选择 */}
-          <div style={{ flex: 1, position: 'relative' }}>
-            <select
-              value={tagId ?? ''}
-              onChange={(e) => setTagId(e.target.value ? Number(e.target.value) : undefined)}
-              style={{
-                width: '100%',
-                border: '1.5px solid #eee',
-                borderRadius: 10,
-                padding: '8px 32px 8px 12px',
-                fontSize: 13,
-                color: tagId ? '#333' : '#bbb',
-                background: '#fafafa',
-                outline: 'none',
-                cursor: 'pointer',
-                WebkitAppearance: 'none',
-                MozAppearance: 'none',
-                appearance: 'none',
-                fontFamily: 'inherit',
-              }}
-            >
-              <option value="">系统标签</option>
-              {knowledgeTags.map((tag: TagType) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
-            <span
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
-                color: '#bbb',
-                fontSize: 10,
-              }}
-            >
-              ▾
-            </span>
-          </div>
-
-          {/* 关闭按钮 */}
-          <button
-            onClick={onClose}
-            style={{
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              color: '#ccc',
-              display: 'flex',
-              padding: 4,
-            }}
-          >
-            <X size={12} />
-          </button>
-        </div>
-
-        {/* 内容编辑区 */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 22px' }}>
+      {/* 主编辑区 */}
+      <div className="akm-editor-area scrollbar-subtle">
+        <div className="akm-editor-inner">
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="写点什么…"
+            placeholder="Type  /  for shortcuts"
             autoFocus
-            style={{
-              width: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              background: 'none',
-              fontSize: 15,
-              lineHeight: 1.75,
-              color: '#1a1a1a',
-              fontFamily: 'inherit',
-              minHeight: 200,
-            }}
+            className="akm-textarea"
+            rows={1}
           />
         </div>
+      </div>
 
-        {/* 底部：标题 + 链接 + 操作按钮 */}
-        <div
-          style={{
-            padding: '10px 22px 18px',
-            borderTop: '1px solid #f5f5f5',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
-        >
+      {/* 标签面板（从底部弹出） */}
+      {showTagPanel && (
+        <div className="akm-tag-panel">
+          <TagInput
+            selectedTags={selectedTags}
+            onAdd={(tag) => setSelectedTags((prev) => [...prev, tag])}
+            onRemove={(id) => setSelectedTags((prev) => prev.filter((t) => t.id !== id))}
+          />
+        </div>
+      )}
+
+      {/* 底部工具栏 */}
+      <div className="akm-bottom-bar">
+        <div className="akm-bottom-tools">
+          {/* 条线选择 */}
+          <select
+            value={lineTagId ?? ''}
+            onChange={(e) => setLineTagId(e.target.value ? Number(e.target.value) : undefined)}
+            className="akm-select"
+          >
+            <option value="">条线</option>
+            {lineTypeTags.map((tag: TagType) => (
+              <option key={tag.id} value={tag.id}>{tag.name}</option>
+            ))}
+          </select>
+
+          {/* 标签按钮 */}
+          <button
+            type="button"
+            onClick={() => setShowTagPanel((v) => !v)}
+            className={`akm-tool-btn ${showTagPanel ? 'akm-tool-btn-active' : ''}`}
+          >
+            标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
+          </button>
+
+          {/* 标题输入 */}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="卡片标题（可选，展示在卡片底部）"
-            style={{
-              border: '1.5px solid #eee',
-              borderRadius: 8,
-              padding: '7px 12px',
-              fontSize: 13,
-              color: '#333',
-              outline: 'none',
-              background: '#fafafa',
-              fontFamily: 'inherit',
-            }}
+            placeholder="标题（可选）"
+            className="akm-title-input"
           />
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span style={{ color: '#ddd' }}>
-              <LinkIcon size={11} />
-            </span>
+
+          {/* 链接输入 */}
+          <div className="akm-link-wrap">
+            <LinkIcon size={12} className="akm-link-icon" />
             <input
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="关联链接（可选）"
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                fontSize: 13,
-                color: '#7090cc',
-                background: 'none',
-                fontFamily: 'inherit',
-              }}
+              placeholder="链接"
+              className="akm-link-input"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              style={{
-                border: '1.5px solid #eee',
-                borderRadius: 10,
-                padding: '7px 12px',
-                fontSize: 13,
-                cursor: isUploading ? 'not-allowed' : 'pointer',
-                background: 'none',
-                color: '#8b8b8b',
-                fontFamily: 'inherit',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: isUploading ? 0.6 : 1,
-              }}
-            >
-              <Upload size={13} />
-              {isUploading ? '上传中…' : '上传文档'}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".docx,.pptx,.pdf"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
-              disabled={isUploading}
-            />
-            <button
-              onClick={onClose}
-              style={{
-                border: '1.5px solid #eee',
-                borderRadius: 10,
-                padding: '7px 14px',
-                fontSize: 13,
-                cursor: 'pointer',
-                background: 'none',
-                color: '#bbb',
-                fontFamily: 'inherit',
-              }}
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!canSubmit}
-              style={{
-                border: 'none',
-                borderRadius: 10,
-                padding: '7px 20px',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: canSubmit ? 'pointer' : 'not-allowed',
-                background: canSubmit ? '#111' : '#f0f0f0',
-                color: canSubmit ? '#fff' : '#ccc',
-                fontFamily: 'inherit',
-              }}
-            >
-              {createKnowledge.isPending ? '保存中…' : '保存'}
-            </button>
           </div>
+
+          {/* 上传按钮 */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="akm-upload-btn"
+          >
+            <Upload size={13} />
+            {isUploading ? '上传中…' : '上传'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".docx,.pptx,.pdf"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            disabled={isUploading}
+          />
         </div>
+
+        {/* 保存按钮 */}
+        <button
+          onClick={handleSave}
+          disabled={!canSubmit}
+          className="akm-save-btn"
+        >
+          {createKnowledge.isPending ? '保存中…' : '保存'}
+        </button>
       </div>
+
+      <style>{`
+        .akm-fullscreen {
+          position: fixed;
+          inset: 0;
+          z-index: 500;
+          display: flex;
+          flex-direction: column;
+          animation: akmFadeIn .25s ease;
+          background:
+            linear-gradient(135deg,
+              #f5d7d2 0%,
+              #eedce8 12%,
+              #e2ddf0 22%,
+              #dde1f2 32%,
+              #e6e3ed 42%,
+              #edeaef 52%,
+              #f0eff2 62%,
+              #f4f3f5 75%,
+              #f7f7f9 100%
+            );
+        }
+
+        .akm-minimize-btn {
+          position: absolute;
+          top: 18px;
+          right: 22px;
+          z-index: 10;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(255, 255, 255, 0.6);
+          backdrop-filter: blur(8px);
+          color: #8a8f9a;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          transition: all 0.18s ease;
+        }
+        .akm-minimize-btn:hover {
+          background: rgba(255, 255, 255, 0.9);
+          color: #555;
+          transform: scale(1.06);
+        }
+
+        .akm-editor-area {
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          justify-content: center;
+        }
+
+        .akm-editor-inner {
+          width: 100%;
+          max-width: 720px;
+          padding: 72px 40px 120px;
+        }
+
+        .akm-textarea {
+          width: 100%;
+          border: none;
+          outline: none;
+          resize: none;
+          background: none;
+          font-size: 16px;
+          line-height: 2;
+          color: #2a2a2e;
+          font-family: 'Georgia', 'Times New Roman', 'PingFang SC', serif;
+          overflow: hidden;
+        }
+        .akm-textarea::placeholder {
+          color: #c0c4cc;
+          font-style: italic;
+        }
+
+        .akm-tag-panel {
+          position: absolute;
+          bottom: 56px;
+          left: 22px;
+          width: 340px;
+          background: rgba(255,255,255,0.45);
+          backdrop-filter: blur(20px);
+          border-radius: 16px;
+          padding: 16px 18px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+          border: 1px solid rgba(255,255,255,0.5);
+          z-index: 10;
+          animation: akmSlideUp .15s ease;
+        }
+        .akm-tag-panel .taginput-row {
+          background: rgba(255,255,255,0.7);
+          box-shadow: none;
+          border-radius: 10px;
+        }
+        .akm-tag-panel .taginput-suggestions {
+          background: rgba(255,255,255,0.7);
+          box-shadow: none;
+        }
+        .akm-tag-panel .taginput-chip {
+          background: rgba(255,255,255,0.6);
+        }
+        .akm-tag-panel .taginput-recent-label {
+          color: #9a95a8;
+        }
+        .akm-tag-panel .taginput-recent-item {
+          color: #8b7fad;
+        }
+        .akm-tag-panel .taginput-recent-item:hover {
+          text-decoration-color: #8b7fad;
+        }
+        .akm-tag-panel .taginput-field::placeholder {
+          color: #b0aabb;
+        }
+        .akm-tag-panel .taginput-add-btn {
+          background: #c5bdd4;
+          color: #fff;
+        }
+        .akm-tag-panel .taginput-add-btn:not(:disabled) {
+          background: #9b8fbc;
+        }
+        .akm-tag-panel .taginput-add-btn:not(:disabled):hover {
+          background: #8a7dab;
+        }
+        .akm-tag-panel .taginput-suggestion-create {
+          color: #8b7fad;
+        }
+
+        .akm-bottom-bar {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 22px;
+          pointer-events: none;
+        }
+
+        .akm-bottom-tools {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          pointer-events: auto;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+        .akm-fullscreen:hover .akm-bottom-tools {
+          opacity: 1;
+        }
+
+        .akm-select {
+          border: 1.5px solid rgba(0,0,0,0.08);
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-size: 12px;
+          color: #777;
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(6px);
+          outline: none;
+          cursor: pointer;
+          font-family: inherit;
+          appearance: none;
+          -webkit-appearance: none;
+        }
+
+        .akm-tool-btn {
+          border: 1.5px solid rgba(0,0,0,0.08);
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-size: 12px;
+          color: #777;
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(6px);
+          cursor: pointer;
+          font-family: inherit;
+          transition: all 0.15s;
+        }
+
+        .akm-title-input {
+          border: 1.5px solid rgba(0,0,0,0.08);
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-size: 12px;
+          color: #555;
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(6px);
+          outline: none;
+          font-family: inherit;
+          width: 200px;
+        }
+        .akm-title-input::placeholder { color: #bbb; }
+
+        .akm-link-wrap {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          border: 1.5px solid rgba(0,0,0,0.08);
+          border-radius: 20px;
+          padding: 6px 14px;
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(6px);
+        }
+        .akm-link-icon { color: #bbb; flex-shrink: 0; }
+        .akm-link-input {
+          border: none;
+          outline: none;
+          font-size: 12px;
+          color: #7090cc;
+          background: none;
+          font-family: inherit;
+          width: 120px;
+        }
+        .akm-link-input::placeholder { color: #bbb; }
+
+        .akm-upload-btn {
+          border: 1.5px solid rgba(0,0,0,0.08);
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-size: 12px;
+          cursor: pointer;
+          background: rgba(255,255,255,0.7);
+          backdrop-filter: blur(6px);
+          color: #888;
+          font-family: inherit;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          transition: background 0.15s;
+        }
+        .akm-upload-btn:hover { background: rgba(255,255,255,0.95); }
+        .akm-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .akm-save-btn {
+          pointer-events: auto;
+          border: none;
+          border-radius: 24px;
+          padding: 10px 28px;
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          font-family: inherit;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          color: #555;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          transition: all 0.18s ease;
+        }
+        .akm-save-btn:hover {
+          background: #fff;
+          color: #333;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .akm-save-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        @keyframes akmFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes akmSlideUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
