@@ -3,16 +3,16 @@ import { toast } from 'sonner';
 import { Link as LinkIcon, Upload, Minimize2 } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
 
-import { useLineTypeTags } from '../api/get-tags';
-import { useCreateKnowledge } from '../api/manage-knowledge';
-import { useParseDocument } from '../api/parse-document';
+import { useLineTypeTags } from '../../api/get-tags';
+import { useCreateKnowledge } from '../../api/manage-knowledge';
+import { useParseDocument } from '../../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
-import { TagInput } from './tag-input';
+import { TagInput } from '../shared/tag-input';
 import {
   hasMeaningfulKnowledgeHtml,
   textToKnowledgeHtml,
-} from '../utils/slash-shortcuts';
-import { SlashQuillEditor } from './slash-quill-editor';
+} from '../../utils/slash-shortcuts';
+import { SlashQuillEditor } from '../editor/rich-text-editor';
 
 interface AddKnowledgeModalProps {
   open: boolean;

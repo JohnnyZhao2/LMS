@@ -19,10 +19,10 @@ import { useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
-import { KnowledgeCardMymind } from './knowledge-card-mymind';
-import { AddKnowledgeCard } from './add-knowledge-card';
-import { AddKnowledgeModal } from './add-knowledge-modal';
-import { KnowledgeDetailModal } from './knowledge-detail-modal';
+import { KnowledgeCardMymind } from './cards/knowledge-card';
+import { AddKnowledgeCard } from './cards/knowledge-add-card';
+import { AddKnowledgeModal } from './modals/knowledge-add-modal';
+import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
 
 
 interface KnowledgeCenterProps {

@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { plain, isLong, bionicHtml } from '../utils/content-utils';
+import { plain, isLong, bionicHtml } from '../../utils/content-utils';
 
 interface KnowledgeCardMymindProps {
   item: KnowledgeListItem;

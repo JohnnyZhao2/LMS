@@ -14,17 +14,17 @@ import {
 import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { useKnowledgeDetail } from '../api/knowledge';
-import { useUpdateKnowledge } from '../api/manage-knowledge';
-import { useLineTypeTags } from '../api/get-tags';
+import { useKnowledgeDetail } from '../../api/knowledge';
+import { useUpdateKnowledge } from '../../api/manage-knowledge';
+import { useLineTypeTags } from '../../api/get-tags';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
-import { FocusOrbIcon } from './focus-orb-icon';
-import { SlashQuillEditor } from './slash-quill-editor';
-import { TagInput } from './tag-input';
+import { FocusOrbIcon } from '../shared/focus-icon';
+import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { TagInput } from '../shared/tag-input';
 import dayjs from '@/lib/dayjs';
 
 function relTime(dateStr: string): string {
@@ -736,6 +736,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-content-shell .ql-editor .ql-code-block-container {
           background: #f4f4f2;
           border-radius: 6px;
+          color: #1f2937;
+          padding: 18px 22px;
+          font-size: 13px;
+          margin: 16px 0;
+          overflow-x: auto;
+          font-family: monospace;
+          line-height: 1.6;
+        }
+        .kd-content-shell .ql-editor pre {
+          background: #f4f4f2;
+          border-radius: 6px;
+          color: #1f2937;
           padding: 18px 22px;
           font-size: 13px;
           margin: 16px 0;

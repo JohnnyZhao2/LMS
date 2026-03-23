@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useKnowledgeTags, useCreateTag } from '../api/get-tags';
+import { useKnowledgeTags, useCreateTag } from '../../api/get-tags';
 import { showApiError } from '@/utils/error-handler';
 
 interface TagInputProps {

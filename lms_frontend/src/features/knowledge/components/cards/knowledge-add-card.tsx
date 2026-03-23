@@ -1,8 +1,8 @@
 import * as React from 'react';
 
-import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
-import { FocusOrbIcon } from './focus-orb-icon';
-import { SlashQuillEditor } from './slash-quill-editor';
+import { hasMeaningfulKnowledgeHtml } from '../../utils/slash-shortcuts';
+import { FocusOrbIcon } from '../shared/focus-icon';
+import { SlashQuillEditor } from '../editor/rich-text-editor';
 
 interface AddKnowledgeCardProps {
   onSave: (content: string) => Promise<void> | void;
