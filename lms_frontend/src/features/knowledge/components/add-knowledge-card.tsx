@@ -20,6 +20,18 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   const [hovered, setHovered] = React.useState(false);
   const [value, setValue] = React.useState('');
   const taRef = React.useRef<HTMLTextAreaElement>(null);
+  const MIN_TEXTAREA_HEIGHT = 24;
+
+  const adjustTextareaHeight = React.useCallback(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = `${MIN_TEXTAREA_HEIGHT}px`;
+    el.style.height = `${Math.max(el.scrollHeight, MIN_TEXTAREA_HEIGHT)}px`;
+  }, []);
+
+  React.useLayoutEffect(() => {
+    adjustTextareaHeight();
+  }, [adjustTextareaHeight, value]);
 
   const saveDraft = React.useCallback(async () => {
     if (isSaving) return;
@@ -55,13 +67,14 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         onMouseLeave={() => setHovered(false)}
         style={{
           background: '#fff',
-          borderRadius: 18,
+          borderRadius: 6,
+          minHeight: 200,
           overflow: 'hidden',
           position: 'relative',
           boxShadow:
             focused || hovered
-              ? '0 8px 16px rgba(0,0,0,0.10), 4px 8px 16px rgba(0,0,0,0.06)'
-              : '0 2px 10px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04)',
+              ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
+              : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
           border: 'none',
           transition: 'box-shadow .22s ease',
           cursor: 'text',
@@ -99,7 +112,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         <div
           style={{
             padding: '22px 24px',
-            paddingBottom: focused ? 18 : 22,
+            paddingBottom: focused && value.trim() ? 58 : 22,
           }}
         >
           <p
@@ -117,8 +130,13 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           <textarea
             ref={taRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onFocus={() => setFocused(true)}
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            onFocus={() => {
+              setFocused(true);
+              adjustTextareaHeight();
+            }}
             onBlur={() => {
               if (!value.trim()) setFocused(false);
             }}
@@ -135,8 +153,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
               color: '#1a1a1a',
               fontFamily: 'inherit',
               letterSpacing: '-0.008em',
-              height: focused ? 160 : 24,
-              transition: 'height .22s ease',
+              height: MIN_TEXTAREA_HEIGHT,
               overflow: 'hidden',
               display: 'block',
             }}
@@ -144,8 +161,15 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         </div>
 
         {/* 保存按钮 */}
-        {focused && (
-          <div style={{ padding: '0 24px 20px' }}>
+        {focused && value.trim() && (
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          >
             <button
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -155,11 +179,11 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
               style={{
                 width: '100%',
                 border: 'none',
-                borderRadius: 100,
+                borderRadius: 0,
                 background: '#e8793a',
-                padding: '12px 0',
+                padding: '10px 0',
                 color: '#fff',
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 600,
                 cursor: !value.trim() || isSaving ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
