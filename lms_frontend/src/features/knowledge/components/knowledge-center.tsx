@@ -3,7 +3,6 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
-    Plus,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -47,6 +46,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const createKnowledge = useCreateKnowledge();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
     const [showAddModal, setShowAddModal] = React.useState(false);
+    const [showAddModalMinimal, setShowAddModalMinimal] = React.useState(false);
     const [modalInitialContent, setModalInitialContent] = React.useState('');
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
@@ -119,6 +119,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     React.useEffect(() => {
         if (isCreateRoute) {
+            setShowAddModalMinimal(false);
             setShowAddModal(true);
             return;
         }
@@ -150,11 +151,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
         roleNavigate('knowledge');
     }, [fromDashboard, taskId, roleNavigate]);
-
-    const handleCreate = () => {
-        setModalInitialContent('');
-        setShowAddModal(true);
-    };
 
     const handleView = (id: number) => {
         if (!isManagementView) {
@@ -230,14 +226,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     className="flex-1 bg-transparent border-0 border-b border-foreground/15 focus:border-foreground/40 outline-none text-2xl font-light text-foreground/60 placeholder:text-foreground/25 py-3 transition-colors"
                     style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
                 />
-                {canCreateKnowledge && (
-                    <button
-                        onClick={handleCreate}
-                        className="shrink-0 w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-colors"
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
-                )}
             </div>
 
             {/* 条线筛选标签 — 白色卡片 */}
@@ -294,6 +282,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <AddKnowledgeCard
                                     onSave={handleQuickSave}
                                     onExpand={(content) => {
+                                        setShowAddModalMinimal(true);
                                         setModalInitialContent(content);
                                         setShowAddModal(true);
                                     }}
@@ -351,6 +340,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 open={showAddModal}
                 onClose={() => {
                     setShowAddModal(false);
+                    setShowAddModalMinimal(false);
                     setModalInitialContent('');
                     if (isCreateRoute) {
                         roleNavigate('knowledge');
@@ -358,9 +348,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 }}
                 initialContent={modalInitialContent}
                 initialLineTagId={selectedLineTypeId}
+                minimalMode={showAddModalMinimal}
                 onSuccess={(id) => {
                     refetch();
                     setShowAddModal(false);
+                    setShowAddModalMinimal(false);
                     setModalInitialContent('');
                     setDetailStartEditing(false);
                     setDetailStartInFocus(false);
