@@ -4,16 +4,19 @@ import {
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
 import { plain, isLong, bionicHtml } from '../../utils/content-utils';
+import { FocusOrbIcon } from '../shared/focus-icon';
 
 interface KnowledgeCardMymindProps {
   item: KnowledgeListItem;
   onClick: (id: number) => void;
+  onFocusOpen?: (id: number) => void;
   index: number;
 }
 
 export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   item,
   onClick,
+  onFocusOpen,
   index,
 }) => {
   const [hovered, setHovered] = React.useState(false);
@@ -62,6 +65,40 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             : '2.5px solid transparent',
         }}
       >
+        {onFocusOpen && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onFocusOpen(item.id);
+            }}
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 3,
+              opacity: hovered ? 1 : 0,
+              transform: hovered ? 'none' : 'translateY(-2px)',
+              transition: 'opacity .18s ease, transform .18s ease',
+            }}
+            title="专注"
+            aria-label="专注"
+          >
+            <FocusOrbIcon size={16} interactive />
+          </button>
+        )}
+
         {/* 内容显示 */}
         {long ? (
           <div

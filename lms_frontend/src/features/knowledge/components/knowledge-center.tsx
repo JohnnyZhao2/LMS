@@ -49,6 +49,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const [modalInitialContent, setModalInitialContent] = React.useState('');
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
+    const [detailStartInFocus, setDetailStartInFocus] = React.useState(false);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -123,15 +124,18 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         if (routeKnowledgeIdNumber && Number.isFinite(routeKnowledgeIdNumber)) {
             setDetailId(routeKnowledgeIdNumber);
             setDetailStartEditing(isEditRoute);
+            setDetailStartInFocus(false);
             return;
         }
         if (hashKnowledgeId && Number.isFinite(hashKnowledgeId)) {
             setDetailId(hashKnowledgeId);
             setDetailStartEditing(false);
+            setDetailStartInFocus(false);
             return;
         }
         setDetailId(null);
         setDetailStartEditing(false);
+        setDetailStartInFocus(false);
     }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
@@ -160,6 +164,21 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             });
         }
         setDetailStartEditing(false);
+        setDetailStartInFocus(false);
+        setDetailId(id);
+        syncDetailHash(id);
+    };
+
+    const handleFocusView = (id: number) => {
+        if (!isManagementView) {
+            incrementViewCount.mutate(id, {
+                onSuccess: () => {
+                    refetch();
+                },
+            });
+        }
+        setDetailStartEditing(false);
+        setDetailStartInFocus(true);
         setDetailId(id);
         syncDetailHash(id);
     };
@@ -283,6 +302,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     key={item.id}
                                     item={item}
                                     onClick={handleView}
+                                    onFocusOpen={handleFocusView}
                                     index={index}
                                 />
                             ))}
@@ -340,6 +360,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     setShowAddModal(false);
                     setModalInitialContent('');
                     setDetailStartEditing(false);
+                    setDetailStartInFocus(false);
                     setDetailId(id);
                     if (isCreateRoute) {
                         roleNavigate(`knowledge#${id}`);
@@ -353,11 +374,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 <KnowledgeDetailModal
                     knowledgeId={detailId}
                     startEditing={detailStartEditing}
+                    startInFocus={detailStartInFocus}
                     taskId={taskId || undefined}
                     taskKnowledgeId={taskKnowledgeId || undefined}
                     onClose={() => {
                         setDetailId(null);
                         setDetailStartEditing(false);
+                        setDetailStartInFocus(false);
                         if (routeKnowledgeIdNumber) {
                             navigateFromLegacyRoute();
                             return;
@@ -368,6 +391,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         setDeleteTarget(id);
                         setDetailId(null);
                         setDetailStartEditing(false);
+                        setDetailStartInFocus(false);
                         if (routeKnowledgeIdNumber) {
                             navigateFromLegacyRoute();
                             return;

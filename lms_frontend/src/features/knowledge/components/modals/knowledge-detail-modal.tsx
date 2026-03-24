@@ -38,6 +38,7 @@ function relTime(dateStr: string): string {
 interface KnowledgeDetailModalProps {
   knowledgeId: number;
   startEditing?: boolean;
+  startInFocus?: boolean;
   taskId?: number;
   taskKnowledgeId?: number;
   onClose: () => void;
@@ -48,6 +49,7 @@ interface KnowledgeDetailModalProps {
 export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   knowledgeId,
   startEditing = false,
+  startInFocus = false,
   taskId,
   taskKnowledgeId,
   onClose,
@@ -89,7 +91,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   // 条线选择
   const [showLineTypes, setShowLineTypes] = useState(false);
   // 专注模式（全屏查看）
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(startInFocus);
 
   const activeContent = editContent ?? knowledge?.content ?? '';
 
@@ -106,6 +108,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     ));
   }, [learningDetail, taskKnowledgeId, knowledgeId]);
   const isCompleted = taskKnowledgeItem?.is_completed;
+
+  useEffect(() => {
+    setEditing(startEditing);
+    setIsFocusMode(startInFocus);
+    setEditContent(undefined);
+    setEditTitle(undefined);
+    setEditTags(undefined);
+    setEditLineTagId(undefined);
+    setShowTagInput(false);
+    setShowLineTypes(false);
+  }, [knowledgeId, startEditing, startInFocus]);
 
   // 判断是否有改动
   const hasChanges = knowledge && (
