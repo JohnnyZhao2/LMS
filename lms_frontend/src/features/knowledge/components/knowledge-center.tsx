@@ -50,6 +50,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
     const [detailStartInFocus, setDetailStartInFocus] = React.useState(false);
+    const [detailCloseOnExitFocus, setDetailCloseOnExitFocus] = React.useState(false);
+    const pendingHashOpenRef = React.useRef<{
+        id: number;
+        startEditing: boolean;
+        startInFocus: boolean;
+        closeOnExitFocus: boolean;
+    } | null>(null);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -125,17 +132,25 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             setDetailId(routeKnowledgeIdNumber);
             setDetailStartEditing(isEditRoute);
             setDetailStartInFocus(false);
+            setDetailCloseOnExitFocus(false);
+            pendingHashOpenRef.current = null;
             return;
         }
         if (hashKnowledgeId && Number.isFinite(hashKnowledgeId)) {
+            const pendingOpen = pendingHashOpenRef.current;
+            const shouldUsePending = pendingOpen?.id === hashKnowledgeId;
             setDetailId(hashKnowledgeId);
-            setDetailStartEditing(false);
-            setDetailStartInFocus(false);
+            setDetailStartEditing(shouldUsePending ? pendingOpen.startEditing : false);
+            setDetailStartInFocus(shouldUsePending ? pendingOpen.startInFocus : false);
+            setDetailCloseOnExitFocus(shouldUsePending ? pendingOpen.closeOnExitFocus : false);
+            pendingHashOpenRef.current = null;
             return;
         }
         setDetailId(null);
         setDetailStartEditing(false);
         setDetailStartInFocus(false);
+        setDetailCloseOnExitFocus(false);
+        pendingHashOpenRef.current = null;
     }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
@@ -151,6 +166,12 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     }, [fromDashboard, taskId, roleNavigate]);
 
     const handleView = (id: number) => {
+        pendingHashOpenRef.current = {
+            id,
+            startEditing: false,
+            startInFocus: false,
+            closeOnExitFocus: false,
+        };
         if (!isManagementView) {
             incrementViewCount.mutate(id, {
                 onSuccess: () => {
@@ -161,10 +182,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         setDetailStartEditing(false);
         setDetailStartInFocus(false);
         setDetailId(id);
+        setDetailCloseOnExitFocus(false);
         syncDetailHash(id);
     };
 
     const handleFocusView = (id: number) => {
+        pendingHashOpenRef.current = {
+            id,
+            startEditing: false,
+            startInFocus: true,
+            closeOnExitFocus: true,
+        };
         if (!isManagementView) {
             incrementViewCount.mutate(id, {
                 onSuccess: () => {
@@ -174,6 +202,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
         setDetailStartEditing(false);
         setDetailStartInFocus(true);
+        setDetailCloseOnExitFocus(true);
         setDetailId(id);
         syncDetailHash(id);
     };
@@ -350,6 +379,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     setModalInitialContent('');
                     setDetailStartEditing(false);
                     setDetailStartInFocus(false);
+                    setDetailCloseOnExitFocus(false);
                     setDetailId(id);
                     if (isCreateRoute) {
                         roleNavigate(`knowledge#${id}`);
@@ -364,12 +394,14 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     knowledgeId={detailId}
                     startEditing={detailStartEditing}
                     startInFocus={detailStartInFocus}
+                    closeOnExitFocus={detailCloseOnExitFocus}
                     taskId={taskId || undefined}
                     taskKnowledgeId={taskKnowledgeId || undefined}
                     onClose={() => {
                         setDetailId(null);
                         setDetailStartEditing(false);
                         setDetailStartInFocus(false);
+                        setDetailCloseOnExitFocus(false);
                         if (routeKnowledgeIdNumber) {
                             navigateFromLegacyRoute();
                             return;
@@ -381,6 +413,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         setDetailId(null);
                         setDetailStartEditing(false);
                         setDetailStartInFocus(false);
+                        setDetailCloseOnExitFocus(false);
                         if (routeKnowledgeIdNumber) {
                             navigateFromLegacyRoute();
                             return;
