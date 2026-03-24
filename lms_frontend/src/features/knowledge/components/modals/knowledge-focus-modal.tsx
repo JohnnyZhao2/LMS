@@ -16,26 +16,39 @@ import {
 } from '../../utils/slash-shortcuts';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
+import { KnowledgeDetailModal } from './knowledge-detail-modal';
+
+type KnowledgeFocusMode = 'create' | 'detail';
+
+interface KnowledgeFocusModalProps {
+  mode: KnowledgeFocusMode;
+  knowledgeId?: number;
+  initialContent?: string;
+  initialLineTagId?: number;
+  closeOnExitFocus?: boolean;
+  taskId?: number;
+  taskKnowledgeId?: number;
+  onClose: () => void;
+  onDelete?: (id: number) => void;
+  onCreated?: (id: number) => void;
+  onUpdated?: () => void;
+}
 
 const createEmptyRelatedLink = (): RelatedLink => ({
   title: '',
   url: '',
 });
 
-interface AddKnowledgeModalProps {
-  open: boolean;
-  onClose: () => void;
+const CreateKnowledgeFocus: React.FC<{
   initialContent?: string;
   initialLineTagId?: number;
-  onSuccess?: (id: number) => void;
-}
-
-export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
-  open,
-  onClose,
+  onClose: () => void;
+  onCreated?: (id: number) => void;
+}> = ({
   initialContent = '',
   initialLineTagId,
-  onSuccess,
+  onClose,
+  onCreated,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [lineTagId, setLineTagId] = React.useState<number | undefined>();
@@ -51,26 +64,21 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const parseDocument = useParseDocument();
 
   React.useEffect(() => {
-    if (open) {
-      const normalizedInitialContent = initialContent.includes('<')
-        ? initialContent
-        : textToKnowledgeHtml(initialContent);
+    const normalizedInitialContent = initialContent.includes('<')
+      ? initialContent
+      : textToKnowledgeHtml(initialContent);
 
-      setContent(normalizedInitialContent);
-      setTitle(getKnowledgeTitleFromHtml(normalizedInitialContent));
-      setRelatedLinks([]);
-      setSelectedTags([]);
-      setShowTagPanel(false);
-      setShowRelatedLinksPanel(false);
-      const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
-      setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
-    }
-  }, [open, initialContent, initialLineTagId, lineTypeTags]);
+    setContent(normalizedInitialContent);
+    setTitle(getKnowledgeTitleFromHtml(normalizedInitialContent));
+    setRelatedLinks([]);
+    setSelectedTags([]);
+    setShowTagPanel(false);
+    setShowRelatedLinksPanel(false);
+    const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
+    setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
+  }, [initialContent, initialLineTagId, lineTypeTags]);
 
-  // ESC 关闭 + ⌘+Enter 保存
   React.useEffect(() => {
-    if (!open) return;
-
     const htmlStyle = document.documentElement.style;
     const bodyStyle = document.body.style;
     const previousHtmlOverflow = htmlStyle.overflow;
@@ -84,7 +92,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       if (e.key === 'Escape') onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
-        handleSave();
+        void handleSave();
       }
     };
 
@@ -105,7 +113,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
       bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [open, onClose, content, title, lineTagId, selectedTags]);
+  }, [onClose, content, title, lineTagId, selectedTags]);
 
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
@@ -125,20 +133,20 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   }, []);
 
   const handleFileUpload = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const result = await parseDocument.mutateAsync(file);
-        setContent(result.content);
-        const derivedTitle = getKnowledgeTitleFromHtml(result.content);
-        setTitle(derivedTitle || result.suggested_title?.trim() || '');
-        toast.success('文档导入成功');
-      } catch (error) {
-        showApiError(error, '文档导入失败');
-      } finally {
-        e.target.value = '';
-      }
-    }, [parseDocument]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await parseDocument.mutateAsync(file);
+      setContent(result.content);
+      const derivedTitle = getKnowledgeTitleFromHtml(result.content);
+      setTitle(derivedTitle || result.suggested_title?.trim() || '');
+      toast.success('文档导入成功');
+    } catch (error) {
+      showApiError(error, '文档导入失败');
+    } finally {
+      e.target.value = '';
+    }
+  }, [parseDocument]);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -153,7 +161,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       });
       toast.success('知识创建成功');
       onClose();
-      onSuccess?.(result.id);
+      onCreated?.(result.id);
     } catch (error) {
       showApiError(error, '创建失败');
     }
@@ -178,8 +186,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const handleRemoveRelatedLink = React.useCallback((index: number) => {
     setRelatedLinks((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   }, []);
-
-  if (!open) return null;
 
   const modalContent = (
     <div className="akm-fullscreen">
@@ -214,7 +220,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         </svg>
       </button>
 
-      {/* 主编辑区 */}
       <div className="akm-editor-area scrollbar-subtle">
         <div className="akm-editor-inner">
           <SlashQuillEditor
@@ -228,7 +233,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         </div>
       </div>
 
-      {/* 标签面板（从底部弹出） */}
       {showTagPanel && (
         <div className="akm-tag-panel">
           <TagInput
@@ -239,7 +243,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         </div>
       )}
 
-      {/* 底部工具栏 */}
       <div className="akm-bottom-bar">
         <div className={`akm-bottom-tools-zone${keepBottomToolsVisible ? ' akm-bottom-tools-zone-open' : ''}`}>
           <div className="akm-bottom-tools-trigger" aria-hidden="true" />
@@ -259,7 +262,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
             <button
               type="button"
               onClick={() => setShowTagPanel((v) => !v)}
-              className={`akm-tool-btn ${showTagPanel ? 'akm-tool-btn-active' : ''}`}
+              className={`akm-tool-btn ${showTagPanel ? ' akm-tool-btn-active' : ''}`}
             >
               标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
             </button>
@@ -268,7 +271,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowRelatedLinksPanel((v) => !v)}
-                className={`akm-tool-btn ${showRelatedLinksPanel ? 'akm-tool-btn-active' : ''}`}
+                className={`akm-tool-btn ${showRelatedLinksPanel ? ' akm-tool-btn-active' : ''}`}
               >
                 相关链接{sanitizedRelatedLinks.length > 0 && ` (${sanitizedRelatedLinks.length})`}
               </button>
@@ -351,7 +354,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           </div>
         </div>
 
-        {/* 保存按钮 */}
         <button
           onClick={handleSave}
           disabled={!canSubmit}
@@ -385,7 +387,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
               #f7f7f9 100%
             );
         }
-
         .akm-minimize-btn {
           position: absolute;
           top: 22px;
@@ -412,7 +413,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           transform: translateY(-1px) scale(1.02);
           box-shadow: 0 9px 20px rgba(37, 49, 72, 0.13);
         }
-
         .akm-editor-area {
           flex: 1;
           min-height: 0;
@@ -421,13 +421,11 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           display: flex;
           justify-content: center;
         }
-
         .akm-editor-inner {
           width: 100%;
           max-width: 960px;
           padding: 72px 40px 120px;
         }
-
         .akm-editor .ql-editor {
           font-size: 16px;
           line-height: 2;
@@ -448,7 +446,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         .akm-editor .sqe-menu {
           min-width: 240px;
         }
-
         .akm-tag-panel {
           position: absolute;
           bottom: 56px;
@@ -499,14 +496,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           margin: 4px 0 0;
           font-size: 11px;
           color: #8a90a2;
-        }
-        .akm-links-add-btn {
-          border: 1px solid rgba(90, 114, 148, 0.16);
-          background: rgba(255,255,255,0.52);
-          color: #55657f;
-          border-radius: 12px;
-          font-size: 12px;
-          cursor: pointer;
         }
         .akm-links-add-btn {
           display: inline-flex;
@@ -615,7 +604,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         .akm-tag-panel .taginput-suggestion-create {
           color: #8b7fad;
         }
-
         .akm-bottom-bar {
           position: absolute;
           bottom: 0;
@@ -627,12 +615,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           padding: 14px 22px;
           pointer-events: none;
         }
-
-        .akm-fullscreen.akm-minimal .akm-bottom-bar {
-          justify-content: flex-end;
-          padding: 20px 26px 26px;
-        }
-
         .akm-bottom-tools {
           display: flex;
           align-items: center;
@@ -644,7 +626,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           position: relative;
           z-index: 1;
         }
-
         .akm-bottom-tools-zone {
           position: relative;
           display: flex;
@@ -652,7 +633,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           min-height: 52px;
           pointer-events: auto;
         }
-
         .akm-bottom-tools-trigger {
           position: absolute;
           left: -18px;
@@ -660,7 +640,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           width: 240px;
           height: 92px;
         }
-
         .akm-bottom-tools-zone:hover .akm-bottom-tools,
         .akm-bottom-tools-zone:focus-within .akm-bottom-tools,
         .akm-bottom-tools-zone-open .akm-bottom-tools {
@@ -668,7 +647,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           transform: translateY(0);
           pointer-events: auto;
         }
-
         .akm-select {
           border: 1.5px solid rgba(0,0,0,0.08);
           border-radius: 20px;
@@ -683,7 +661,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           appearance: none;
           -webkit-appearance: none;
         }
-
         .akm-tool-btn {
           border: 1.5px solid rgba(0,0,0,0.08);
           border-radius: 20px;
@@ -701,7 +678,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           color: #5c657c;
           box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-
         .akm-title-input {
           border: 1.5px solid rgba(0,0,0,0.08);
           border-radius: 20px;
@@ -715,7 +691,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           width: 200px;
         }
         .akm-title-input::placeholder { color: #bbb; }
-
         .akm-upload-btn {
           border: 1.5px solid rgba(0,0,0,0.08);
           border-radius: 20px;
@@ -733,7 +708,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         }
         .akm-upload-btn:hover { background: rgba(255,255,255,0.95); }
         .akm-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
         .akm-save-btn {
           pointer-events: auto;
           border: none;
@@ -759,7 +733,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           opacity: 0.4;
           cursor: not-allowed;
         }
-
         @keyframes akmFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -773,4 +746,45 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   );
 
   return createPortal(modalContent, document.body);
+};
+
+export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
+  mode,
+  knowledgeId,
+  initialContent,
+  initialLineTagId,
+  closeOnExitFocus = true,
+  taskId,
+  taskKnowledgeId,
+  onClose,
+  onDelete,
+  onCreated,
+  onUpdated,
+}) => {
+  if (mode === 'create') {
+    return (
+      <CreateKnowledgeFocus
+        initialContent={initialContent}
+        initialLineTagId={initialLineTagId}
+        onClose={onClose}
+        onCreated={onCreated}
+      />
+    );
+  }
+
+  if (!knowledgeId) return null;
+
+  return (
+    <KnowledgeDetailModal
+      knowledgeId={knowledgeId}
+      startInFocus
+      forceFocus
+      closeOnExitFocus={closeOnExitFocus || true}
+      taskId={taskId}
+      taskKnowledgeId={taskKnowledgeId}
+      onClose={onClose}
+      onDelete={onDelete}
+      onUpdated={onUpdated}
+    />
+  );
 };
