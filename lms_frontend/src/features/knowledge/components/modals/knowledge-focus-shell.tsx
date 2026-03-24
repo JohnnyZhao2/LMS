@@ -16,6 +16,7 @@ interface KnowledgeFocusShellProps {
   fixed?: boolean;
   zIndex?: number;
   fadeInDuration?: string;
+  readOnly?: boolean;
 }
 
 type FocusShellStyle = React.CSSProperties & {
@@ -39,6 +40,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
   fixed = false,
   zIndex = 500,
   fadeInDuration = '0.18s',
+  readOnly = false,
 }) => {
   const classes = ['kfs-shell', fixed ? 'kfs-shell-fixed' : '', shellClassName].filter(Boolean).join(' ');
   const editorClasses = ['kfs-editor', editorClassName].filter(Boolean).join(' ');
@@ -91,6 +93,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
             autoFocus
             className={editorClasses}
             minHeight={editorMinHeight}
+            readOnly={readOnly}
           />
         </div>
       </div>

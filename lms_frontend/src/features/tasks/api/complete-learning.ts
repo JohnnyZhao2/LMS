@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api-client';
 
 interface CompleteLearningPayload {
   taskId: number;
-  knowledgeId: number;
+  taskKnowledgeId: number;
 }
 
 /**
@@ -13,9 +13,9 @@ export const useCompleteLearning = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ taskId, knowledgeId }: CompleteLearningPayload) =>
+    mutationFn: ({ taskId, taskKnowledgeId }: CompleteLearningPayload) =>
       apiClient.post(`/tasks/${taskId}/complete-knowledge/`, {
-        knowledge_id: knowledgeId,
+        task_knowledge_id: taskKnowledgeId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-tasks'] });

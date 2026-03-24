@@ -2,8 +2,10 @@ from types import SimpleNamespace
 import pytest
 
 from apps.tasks.models import Task
+from apps.tasks.student_task_service import StudentTaskService
 from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import (
+    KnowledgeFactory,
     KnowledgeLearningProgressFactory,
     SubmissionFactory,
     TaskAssignmentFactory,
@@ -294,3 +296,19 @@ def test_validate_assignee_ids_rejects_non_student_identity():
     assert not is_valid
     assert super_admin_user.id in invalid_ids
     assert student_user.id not in invalid_ids
+
+
+@pytest.mark.django_db
+def test_complete_knowledge_learning_accepts_locked_task_knowledge_version():
+    """学生完成学习应基于 task_knowledge_id，而不是当前知识版本。"""
+    assignee = UserFactory()
+    task = TaskFactory()
+    assignment = TaskAssignmentFactory(task=task, assignee=assignee, status='IN_PROGRESS')
+    locked_knowledge = KnowledgeFactory(is_current=False)
+    task_knowledge = TaskKnowledgeFactory(task=task, knowledge=locked_knowledge)
+
+    service = StudentTaskService(_build_request(user=assignee))
+    progress = service.complete_knowledge_learning(assignment, task_knowledge.id)
+
+    assert progress.task_knowledge_id == task_knowledge.id
+    assert progress.is_completed is True

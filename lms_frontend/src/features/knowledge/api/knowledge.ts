@@ -75,11 +75,27 @@ export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) =>
   });
 };
 
-export const useKnowledgeDetail = (id: number) => {
+interface UseKnowledgeDetailParams {
+  knowledgeId?: number;
+  taskKnowledgeId?: number;
+}
+
+export const useKnowledgeDetail = ({ knowledgeId, taskKnowledgeId }: UseKnowledgeDetailParams) => {
   const currentRole = useCurrentRole();
+  const detailId = taskKnowledgeId ?? knowledgeId ?? 0;
+
   return useQuery({
-    queryKey: ['knowledge-detail', currentRole ?? 'UNKNOWN', id],
-    queryFn: () => apiClient.get<KnowledgeDetail>(`/knowledge/${id}/`),
-    enabled: !!id && currentRole !== null,
+    queryKey: [
+      'knowledge-detail',
+      currentRole ?? 'UNKNOWN',
+      taskKnowledgeId ? 'task' : 'knowledge',
+      detailId,
+    ],
+    queryFn: () => (
+      taskKnowledgeId
+        ? apiClient.get<KnowledgeDetail>(`/knowledge/task/${taskKnowledgeId}/`)
+        : apiClient.get<KnowledgeDetail>(`/knowledge/${knowledgeId}/`)
+    ),
+    enabled: !!detailId && currentRole !== null,
   });
 };

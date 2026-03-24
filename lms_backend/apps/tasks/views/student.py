@@ -135,10 +135,10 @@ class CompleteKnowledgeLearningView(BaseAPIView):
         
         serializer = CompleteKnowledgeLearningSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        knowledge_id = serializer.validated_data['knowledge_id']
+        task_knowledge_id = serializer.validated_data['task_knowledge_id']
         
         # Use service to complete knowledge learning
-        progress = self.service.complete_knowledge_learning(assignment, knowledge_id)
+        progress = self.service.complete_knowledge_learning(assignment, task_knowledge_id)
         
         # Refresh assignment to get updated status
         assignment.refresh_from_db()

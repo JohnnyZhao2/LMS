@@ -48,16 +48,27 @@ function createEmptyRelatedLink(): RelatedLink {
   };
 }
 
-function getRelatedLinkLabel(link: RelatedLink): string {
-  if (link.title?.trim()) {
-    return link.title.trim();
+const RELATED_LINK_DISPLAY_MAX_LENGTH = 42;
+
+function normalizeRelatedLinkUrl(url: string): string {
+  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
+}
+
+function truncateRelatedLinkText(text: string): string {
+  if (text.length <= RELATED_LINK_DISPLAY_MAX_LENGTH) {
+    return text;
   }
 
-  try {
-    return new URL(link.url).host;
-  } catch {
-    return link.url.replace(/^https?:\/\//i, '') || '相关链接';
+  return `${text.slice(0, RELATED_LINK_DISPLAY_MAX_LENGTH).trimEnd()}...`;
+}
+
+function getRelatedLinkDisplayText(link: RelatedLink): string {
+  const title = link.title?.trim();
+  if (title) {
+    return truncateRelatedLinkText(title);
   }
+
+  return truncateRelatedLinkText(normalizeRelatedLinkUrl(link.url) || '相关链接');
 }
 
 interface KnowledgeDetailModalProps {
@@ -102,7 +113,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     ? (draftInitialContent.includes('<') ? draftInitialContent : textToKnowledgeHtml(draftInitialContent))
     : '';
 
-  const { data, isLoading } = useKnowledgeDetail(knowledgeId ?? 0);
+  const { data, isLoading } = useKnowledgeDetail({
+    knowledgeId,
+    taskKnowledgeId,
+  });
   const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const completeLearning = useCompleteLearning();
@@ -137,7 +151,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showLineTypes, setShowLineTypes] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
-  const immersiveEditMode = isFocusMode && canUpdateKnowledge;
+  const canEditInFocus = isFocusMode && canUpdateKnowledge;
   const isSaving = isDraftMode ? createKnowledge.isPending : updateKnowledge.isPending;
 
   const activeContent = editContent ?? knowledge?.content ?? normalizedDraftContent;
@@ -145,6 +159,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   // 实际使用的值
   const activeTitle = editTitle ?? knowledge?.title ?? '';
   const activeTags = editTags ?? knowledge?.tags ?? [];
+  const shouldShowSystemTagsSection = !isStudent || activeTags.length > 0;
   const activeLineTagId = editLineTagId === undefined
     ? knowledge?.line_tag?.id ?? null
     : editLineTagId;
@@ -217,12 +232,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [editRelatedLinks, knowledge?.related_links]);
 
   const handleExitFocusMode = useCallback(() => {
-    if (closeOnExitFocus) {
+    if (closeOnExitFocus || forceFocus) {
       onClose();
       return;
     }
     setIsFocusMode(false);
-  }, [closeOnExitFocus, onClose]);
+  }, [closeOnExitFocus, forceFocus, onClose]);
 
   // Esc 关闭 + 禁止背景滚动
   useEffect(() => {
@@ -237,14 +252,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (immersiveEditMode) {
+        if (isFocusMode) {
           handleExitFocusMode();
         } else if (showLineTypes) {
           setShowLineTypes(false);
         } else if (editing) {
           setEditing(false);
-        } else if (isFocusMode) {
-          handleExitFocusMode();
         } else {
           onClose();
         }
@@ -266,7 +279,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
       bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [onClose, editing, showLineTypes, isFocusMode, immersiveEditMode, handleExitFocusMode]);
+  }, [onClose, editing, showLineTypes, isFocusMode, handleExitFocusMode]);
 
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
@@ -320,7 +333,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         });
       }
       toast.success('已保存');
-      if (!immersiveEditMode) {
+      if (!canEditInFocus) {
         setEditing(false);
       }
       setEditContent(undefined);
@@ -332,7 +345,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     } catch {
       toast.error(isDraftMode ? '创建失败' : '保存失败');
     }
-  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeLineTagId, activeTags, onCreated, onUpdated, editContent, editLineTagId, editRelatedLinks, editTags, editTitle, immersiveEditMode, knowledgeId, updateKnowledge]);
+  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeLineTagId, activeTags, onCreated, onUpdated, editContent, editLineTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge]);
 
   const handleContentChange = useCallback((nextContent: string) => {
     setEditContent(nextContent);
@@ -361,15 +374,43 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, []);
 
   const handleComplete = useCallback(async () => {
-    if (!taskId || !knowledgeId) return;
+    if (!taskId || !taskKnowledgeId) return;
     try {
-      await completeLearning.mutateAsync({ taskId, knowledgeId });
+      await completeLearning.mutateAsync({ taskId, taskKnowledgeId });
       toast.success('已标记为完成');
       onUpdated?.();
     } catch {
       toast.error('操作失败，请稍后重试');
     }
-  }, [taskId, knowledgeId, completeLearning, onUpdated]);
+  }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
+
+  const renderLearningAction = (immersive = false) => {
+    if (!isStudent || !taskId || !taskKnowledgeId) {
+      return null;
+    }
+
+    if (isCompleted) {
+      return (
+        <div className={`kd-complete-done${immersive ? ' kd-complete-done-immersive' : ''}`}>
+          <CheckCircle style={{ width: 14, height: 14 }} />
+          已学习
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={handleComplete}
+        disabled={completeLearning.isPending}
+        className={`kd-complete-btn${immersive ? ' kd-complete-btn-immersive' : ''}`}
+      >
+        {completeLearning.isPending ? '处理中…' : '标记已学习'}
+      </button>
+    );
+  };
+
+  const learningAction = renderLearningAction();
+  const immersiveLearningAction = renderLearningAction(true);
 
   const modalContent = (
     <div
@@ -380,7 +421,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         className={`kd-container${isFocusMode ? ' kd-container-focus' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {!immersiveEditMode && (
+        {!isFocusMode && (
           <button
             type="button"
             onClick={() => {
@@ -427,7 +468,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
           </div>
-        ) : immersiveEditMode ? (
+        ) : isFocusMode ? (
           <KnowledgeFocusShell
             content={activeContent}
             onContentChange={handleContentChange}
@@ -437,17 +478,23 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             editorPadding="64px 40px 144px"
             editorMinHeight={380}
             minimizeIconSize={22}
+            readOnly={!canUpdateKnowledge}
           >
-            <div className="kd-immersive-bottom">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!canSubmit || isSaving}
-                className="kd-immersive-save-btn"
-              >
-                {isSaving ? '保存中…' : '保存'}
-              </button>
-            </div>
+            {(canUpdateKnowledge || immersiveLearningAction) && (
+              <div className="kd-immersive-bottom">
+                {immersiveLearningAction}
+                {canUpdateKnowledge && (
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!canSubmit || isSaving}
+                    className="kd-immersive-save-btn"
+                  >
+                    {isSaving ? '保存中…' : '保存'}
+                  </button>
+                )}
+              </div>
+            )}
           </KnowledgeFocusShell>
         ) : (
           <>
@@ -494,41 +541,43 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               <div className="kd-right-body">
 
                 {/* ── 系统标签 ── */}
-                <div className="kd-section">
-                  <p className="kd-label">系统标签</p>
+                {shouldShowSystemTagsSection && (
+                  <div className="kd-section">
+                    <p className="kd-label">系统标签</p>
 
-                  {/* 点击展开标签输入 */}
-                  {canUpdateKnowledge && showTagInput && (
-                    <TagInput
-                      selectedTags={activeTags}
-                      onAdd={addTag}
-                      onRemove={removeTag}
-                      hideChips
-                    />
-                  )}
-
-                  <div className="kd-tags">
-                    {canUpdateKnowledge && (
-                      <button
-                        onClick={() => setShowTagInput((v) => !v)}
-                        className="kd-add-tag-btn"
-                      >
-                        <Plus style={{ width: 12, height: 12 }} />
-                        添加标签
-                      </button>
+                    {/* 点击展开标签输入 */}
+                    {canUpdateKnowledge && showTagInput && (
+                      <TagInput
+                        selectedTags={activeTags}
+                        onAdd={addTag}
+                        onRemove={removeTag}
+                        hideChips
+                      />
                     )}
-                    {activeTags.map(t => (
-                      <span key={t.id} className="kd-tag">
-                        {t.name}
-                        {canUpdateKnowledge && (
-                          <button onClick={() => removeTag(t.id)} className="kd-tag-remove">
-                            <X style={{ width: 10, height: 10 }} />
-                          </button>
-                        )}
-                      </span>
-                    ))}
+
+                    <div className="kd-tags">
+                      {canUpdateKnowledge && (
+                        <button
+                          onClick={() => setShowTagInput((v) => !v)}
+                          className="kd-add-tag-btn"
+                        >
+                          <Plus style={{ width: 12, height: 12 }} />
+                          添加标签
+                        </button>
+                      )}
+                      {activeTags.map(t => (
+                        <span key={t.id} className="kd-tag">
+                          {t.name}
+                          {canUpdateKnowledge && (
+                            <button onClick={() => removeTag(t.id)} className="kd-tag-remove">
+                              <X style={{ width: 10, height: 10 }} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 元信息 */}
                 <div className="kd-section">
@@ -612,12 +661,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                             rel="noreferrer"
                             className="kd-related-link"
                           >
-                            <span className="kd-related-link-main">
-                              <LinkIcon className="kd-related-link-icon" />
-                              <span className="kd-related-link-title">{getRelatedLinkLabel(link)}</span>
-                            </span>
-                            <span className="kd-related-link-url">
-                              {link.url.replace(/^https?:\/\//i, '')}
+                            <LinkIcon className="kd-related-link-icon" />
+                            <span className="kd-related-link-title">
+                              {getRelatedLinkDisplayText(link)}
                             </span>
                           </a>
                         ))}
@@ -626,22 +672,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 )}
 
-                {isStudent && !!taskId && (
+                {learningAction && (
                   <div className="kd-section">
-                    {isCompleted ? (
-                      <div className="kd-complete-done">
-                        <CheckCircle style={{ width: 14, height: 14 }} />
-                        已学习
-                      </div>
-                    ) : (
-                      <button
-                        onClick={handleComplete}
-                        disabled={completeLearning.isPending}
-                        className="kd-complete-btn"
-                      >
-                        {completeLearning.isPending ? '处理中…' : '标记已学习'}
-                      </button>
-                    )}
+                    {learningAction}
                   </div>
                 )}
 
@@ -915,42 +948,30 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-related-link {
           display: flex;
-          flex-direction: column;
-          gap: 6px;
-          border-radius: 14px;
-          padding: 10px 12px;
-          background: rgba(255,255,255,0.62);
-          text-decoration: none;
-          transition: background 0.15s ease, transform 0.15s ease;
-        }
-        .kd-related-link:hover {
-          background: rgba(255,255,255,0.86);
-          transform: translateY(-1px);
-        }
-        .kd-related-link-main {
-          display: flex;
           align-items: center;
           gap: 8px;
           min-width: 0;
+          text-decoration: none;
+          color: #777;
+          transition: color 0.15s ease;
+        }
+        .kd-related-link:hover {
+          color: #526277;
         }
         .kd-related-link-icon {
-          width: 13px;
-          height: 13px;
-          color: #7b8da3;
+          width: 12px;
+          height: 12px;
+          color: #aaa;
           flex-shrink: 0;
         }
         .kd-related-link-title {
-          font-size: 12.5px;
-          color: #48576a;
-          font-weight: 600;
-          line-height: 1.35;
-          word-break: break-word;
-        }
-        .kd-related-link-url {
-          font-size: 11px;
-          color: #8893a2;
-          word-break: break-all;
-          padding-left: 21px;
+          min-width: 0;
+          font-size: 12px;
+          color: inherit;
+          line-height: 1.45;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .kd-link-edit-row {
           display: grid;
@@ -1083,12 +1104,29 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           bottom: 0;
           left: 0;
           display: flex;
-          justify-content: flex-end;
+          align-items: flex-end;
+          justify-content: space-between;
           padding: 20px 26px 26px;
           pointer-events: none;
         }
+        .kd-complete-done-immersive {
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          background: rgba(224, 245, 224, 0.92);
+          backdrop-filter: blur(8px);
+          pointer-events: auto;
+        }
+        .kd-complete-btn-immersive {
+          width: auto;
+          border-radius: 24px;
+          padding: 10px 20px;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          backdrop-filter: blur(8px);
+          background: rgba(232, 121, 58, 0.92);
+          pointer-events: auto;
+        }
         .kd-immersive-save-btn {
           pointer-events: auto;
+          margin-left: auto;
           border: none;
           border-radius: 24px;
           padding: 10px 28px;

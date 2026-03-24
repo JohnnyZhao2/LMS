@@ -381,14 +381,15 @@ class StudentTaskDetailSerializer(serializers.ModelSerializer):
         return StudentTaskService.get_student_quiz_items(obj)
 class CompleteKnowledgeLearningSerializer(serializers.Serializer):
     """Serializer for completing knowledge learning."""
-    knowledge_id = serializers.IntegerField(
-        help_text='要标记为已学习的知识文档ID'
+    task_knowledge_id = serializers.IntegerField(
+        min_value=1,
+        help_text='要标记为已学习的任务知识节点ID'
     )
-    def validate_knowledge_id(self, value):
-        """Validate that the knowledge ID exists."""
-        is_valid, invalid_ids = TaskService.validate_knowledge_ids([value])
-        if not is_valid:
-            raise serializers.ValidationError(f'知识文档不可用: {invalid_ids}')
+
+    def validate_task_knowledge_id(self, value):
+        """Validate that the task knowledge item exists."""
+        if not TaskKnowledge.objects.filter(id=value).exists():
+            raise serializers.ValidationError('任务知识不存在')
         return value
 
 

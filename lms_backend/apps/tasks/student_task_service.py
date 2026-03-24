@@ -83,7 +83,7 @@ class StudentTaskService(BaseService):
     def complete_knowledge_learning(
         self,
         assignment: TaskAssignment,
-        knowledge_id: int
+        task_knowledge_id: int
     ) -> KnowledgeLearningProgress:
         """
         Mark a knowledge document as completed.
@@ -102,13 +102,13 @@ class StudentTaskService(BaseService):
         task_knowledge_items = task_knowledge_queryset(assignment.task.id)
         task_knowledge = None
         for tk in task_knowledge_items:
-            if tk.knowledge_id == knowledge_id:
+            if tk.id == task_knowledge_id:
                 task_knowledge = tk
                 break
         if not task_knowledge:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
-                message='该知识文档不在此任务中'
+                message='该任务知识不在此任务中'
             )
         progress, _ = KnowledgeLearningProgress.objects.get_or_create(
             assignment_id=assignment.id,
