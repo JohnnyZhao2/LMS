@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Upload, Plus, X } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
@@ -69,6 +70,16 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   // ESC 关闭 + ⌘+Enter 保存
   React.useEffect(() => {
     if (!open) return;
+
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const previousHtmlOverflow = htmlStyle.overflow;
+    const previousBodyOverflow = bodyStyle.overflow;
+    const previousHtmlOverscrollBehavior = htmlStyle.overscrollBehavior;
+    const previousBodyOverscrollBehavior = bodyStyle.overscrollBehavior;
+    const previousHtmlScrollbarGutter = htmlStyle.scrollbarGutter;
+    const previousBodyScrollbarGutter = bodyStyle.scrollbarGutter;
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -76,17 +87,30 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         handleSave();
       }
     };
+
     window.addEventListener('keydown', handler);
-    document.body.style.overflow = 'hidden';
+    htmlStyle.overflow = 'hidden';
+    bodyStyle.overflow = 'hidden';
+    htmlStyle.overscrollBehavior = 'none';
+    bodyStyle.overscrollBehavior = 'none';
+    htmlStyle.scrollbarGutter = 'auto';
+    bodyStyle.scrollbarGutter = 'auto';
+
     return () => {
       window.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
+      htmlStyle.overflow = previousHtmlOverflow;
+      bodyStyle.overflow = previousBodyOverflow;
+      htmlStyle.overscrollBehavior = previousHtmlOverscrollBehavior;
+      bodyStyle.overscrollBehavior = previousBodyOverscrollBehavior;
+      htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
+      bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
   }, [open, onClose, content, title, lineTagId, selectedTags]);
 
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
+  const keepBottomToolsVisible = showTagPanel || showRelatedLinksPanel;
   const sanitizedRelatedLinks = React.useMemo(
     () => relatedLinks.filter((item) => item.url.trim()),
     [relatedLinks],
@@ -157,7 +181,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
   if (!open) return null;
 
-  return (
+  const modalContent = (
     <div className="akm-fullscreen">
       <button
         type="button"
@@ -217,110 +241,114 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
       {/* 底部工具栏 */}
       <div className="akm-bottom-bar">
-        <div className="akm-bottom-tools">
-          <select
-            value={lineTagId ?? ''}
-            onChange={(e) => setLineTagId(e.target.value ? Number(e.target.value) : undefined)}
-            className="akm-select"
-          >
-            <option value="">条线</option>
-            {lineTypeTags.map((tag: TagType) => (
-              <option key={tag.id} value={tag.id}>{tag.name}</option>
-            ))}
-          </select>
+        <div className={`akm-bottom-tools-zone${keepBottomToolsVisible ? ' akm-bottom-tools-zone-open' : ''}`}>
+          <div className="akm-bottom-tools-trigger" aria-hidden="true" />
 
-          <button
-            type="button"
-            onClick={() => setShowTagPanel((v) => !v)}
-            className={`akm-tool-btn ${showTagPanel ? 'akm-tool-btn-active' : ''}`}
-          >
-            标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
-          </button>
+          <div className="akm-bottom-tools">
+            <select
+              value={lineTagId ?? ''}
+              onChange={(e) => setLineTagId(e.target.value ? Number(e.target.value) : undefined)}
+              className="akm-select"
+            >
+              <option value="">条线</option>
+              {lineTypeTags.map((tag: TagType) => (
+                <option key={tag.id} value={tag.id}>{tag.name}</option>
+              ))}
+            </select>
 
-          <div className="akm-links-anchor">
             <button
               type="button"
-              onClick={() => setShowRelatedLinksPanel((v) => !v)}
-              className={`akm-tool-btn ${showRelatedLinksPanel ? 'akm-tool-btn-active' : ''}`}
+              onClick={() => setShowTagPanel((v) => !v)}
+              className={`akm-tool-btn ${showTagPanel ? 'akm-tool-btn-active' : ''}`}
             >
-              相关链接{sanitizedRelatedLinks.length > 0 && ` (${sanitizedRelatedLinks.length})`}
+              标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
             </button>
 
-            {showRelatedLinksPanel && (
-              <div className="akm-links-panel">
-                <div className="akm-links-panel-header">
-                  <div>
-                    <p className="akm-links-panel-title">相关链接</p>
-                    <p className="akm-links-panel-subtitle">标题可选，URL 必填</p>
+            <div className="akm-links-anchor">
+              <button
+                type="button"
+                onClick={() => setShowRelatedLinksPanel((v) => !v)}
+                className={`akm-tool-btn ${showRelatedLinksPanel ? 'akm-tool-btn-active' : ''}`}
+              >
+                相关链接{sanitizedRelatedLinks.length > 0 && ` (${sanitizedRelatedLinks.length})`}
+              </button>
+
+              {showRelatedLinksPanel && (
+                <div className="akm-links-panel">
+                  <div className="akm-links-panel-header">
+                    <div>
+                      <p className="akm-links-panel-title">相关链接</p>
+                      <p className="akm-links-panel-subtitle">标题可选，URL 必填</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddRelatedLink}
+                      className="akm-links-add-btn"
+                      aria-label="添加相关链接"
+                    >
+                      <Plus size={12} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddRelatedLink}
-                    className="akm-links-add-btn"
-                    aria-label="添加相关链接"
-                  >
-                    <Plus size={12} />
-                  </button>
+
+                  {relatedLinks.length > 0 && (
+                    <div className="akm-links-list">
+                      {relatedLinks.map((item, index) => (
+                        <div key={`create-link-${index}`} className="akm-link-row">
+                          <input
+                            value={item.title ?? ''}
+                            onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
+                            placeholder=""
+                            aria-label="链接标题"
+                            className="akm-link-row-input akm-link-row-title"
+                          />
+                          <input
+                            value={item.url}
+                            onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
+                            placeholder=""
+                            aria-label="链接地址"
+                            className="akm-link-row-input akm-link-row-url"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRelatedLink(index)}
+                            className="akm-link-row-remove"
+                            aria-label="删除相关链接"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
 
-                {relatedLinks.length > 0 && (
-                  <div className="akm-links-list">
-                    {relatedLinks.map((item, index) => (
-                      <div key={`create-link-${index}`} className="akm-link-row">
-                        <input
-                          value={item.title ?? ''}
-                          onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
-                          placeholder=""
-                          aria-label="链接标题"
-                          className="akm-link-row-input akm-link-row-title"
-                        />
-                        <input
-                          value={item.url}
-                          onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
-                          placeholder=""
-                          aria-label="链接地址"
-                          className="akm-link-row-input akm-link-row-url"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRelatedLink(index)}
-                          className="akm-link-row-remove"
-                          aria-label="删除相关链接"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="标题（可选）"
+              className="akm-title-input"
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="akm-upload-btn"
+            >
+              <Upload size={13} />
+              {isUploading ? '上传中…' : '上传'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx,.pptx,.pdf"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              disabled={isUploading}
+            />
           </div>
-
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="标题（可选）"
-            className="akm-title-input"
-          />
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="akm-upload-btn"
-          >
-            <Upload size={13} />
-            {isUploading ? '上传中…' : '上传'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".docx,.pptx,.pdf"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-            disabled={isUploading}
-          />
         </div>
 
         {/* 保存按钮 */}
@@ -337,6 +365,9 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         .akm-fullscreen {
           position: fixed;
           inset: 0;
+          width: 100vw;
+          height: 100dvh;
+          overflow: hidden;
           z-index: 500;
           display: flex;
           flex-direction: column;
@@ -384,7 +415,9 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
         .akm-editor-area {
           flex: 1;
+          min-height: 0;
           overflow-y: auto;
+          overscroll-behavior: contain;
           display: flex;
           justify-content: center;
         }
@@ -604,13 +637,36 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           display: flex;
           align-items: center;
           gap: 8px;
-          pointer-events: auto;
           opacity: 0;
-          transition: opacity 0.2s ease;
+          transform: translateY(8px);
+          pointer-events: none;
+          transition: opacity 0.2s ease, transform 0.2s ease;
           position: relative;
+          z-index: 1;
         }
-        .akm-fullscreen:hover .akm-bottom-tools {
+
+        .akm-bottom-tools-zone {
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          min-height: 52px;
+          pointer-events: auto;
+        }
+
+        .akm-bottom-tools-trigger {
+          position: absolute;
+          left: -18px;
+          bottom: -18px;
+          width: 240px;
+          height: 92px;
+        }
+
+        .akm-bottom-tools-zone:hover .akm-bottom-tools,
+        .akm-bottom-tools-zone:focus-within .akm-bottom-tools,
+        .akm-bottom-tools-zone-open .akm-bottom-tools {
           opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
         }
 
         .akm-select {
@@ -715,4 +771,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       `}</style>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };

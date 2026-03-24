@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Eye,
   Calendar,
@@ -190,12 +191,25 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditRelatedLinks(current.filter((_, itemIndex) => itemIndex !== index));
   }, [editRelatedLinks, knowledge?.related_links]);
 
+  const handleExitImmersive = useCallback(() => {
+    setIsFocusMode(false);
+  }, []);
+
   // Esc 关闭 + 禁止背景滚动
   useEffect(() => {
+    const htmlStyle = document.documentElement.style;
+    const bodyStyle = document.body.style;
+    const previousHtmlOverflow = htmlStyle.overflow;
+    const previousBodyOverflow = bodyStyle.overflow;
+    const previousHtmlOverscrollBehavior = htmlStyle.overscrollBehavior;
+    const previousBodyOverscrollBehavior = bodyStyle.overscrollBehavior;
+    const previousHtmlScrollbarGutter = htmlStyle.scrollbarGutter;
+    const previousBodyScrollbarGutter = bodyStyle.scrollbarGutter;
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (immersiveEditMode) {
-          onClose();
+          handleExitImmersive();
         } else if (showLineTypes) {
           setShowLineTypes(false);
         } else if (editing) {
@@ -208,12 +222,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       }
     };
     window.addEventListener('keydown', handler);
-    document.body.style.overflow = 'hidden';
+    htmlStyle.overflow = 'hidden';
+    bodyStyle.overflow = 'hidden';
+    htmlStyle.overscrollBehavior = 'none';
+    bodyStyle.overscrollBehavior = 'none';
+    htmlStyle.scrollbarGutter = 'auto';
+    bodyStyle.scrollbarGutter = 'auto';
     return () => {
       window.removeEventListener('keydown', handler);
-      document.body.style.overflow = '';
+      htmlStyle.overflow = previousHtmlOverflow;
+      bodyStyle.overflow = previousBodyOverflow;
+      htmlStyle.overscrollBehavior = previousHtmlOverscrollBehavior;
+      bodyStyle.overscrollBehavior = previousBodyOverscrollBehavior;
+      htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
+      bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [onClose, editing, showLineTypes, isFocusMode, immersiveEditMode]);
+  }, [onClose, editing, showLineTypes, isFocusMode, immersiveEditMode, handleExitImmersive]);
 
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
@@ -291,7 +315,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [taskId, knowledgeId, completeLearning, onUpdated]);
 
-  return (
+  const modalContent = (
     <div
       className="kd-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -341,7 +365,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <div className="kd-immersive-shell">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleExitImmersive}
               className="kd-immersive-minimize-btn"
               title="收起"
               aria-label="收起"
@@ -719,14 +743,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-container-focus {
           width: 100vw;
-          height: 100vh;
+          height: 100dvh;
           border-radius: 0;
-          padding: 12px;
-          gap: 12px;
+          padding: 0;
+          gap: 0;
+          background: transparent;
+          box-shadow: none;
         }
         .kd-immersive-shell {
           position: relative;
           flex: 1;
+          min-height: 0;
           display: flex;
           flex-direction: column;
           animation: kdFadeIn .18s ease;
@@ -771,7 +798,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-immersive-editor-area {
           flex: 1;
+          min-height: 0;
           overflow-y: auto;
+          overscroll-behavior: contain;
           display: flex;
           justify-content: center;
         }
@@ -1282,4 +1311,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       `}</style>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
