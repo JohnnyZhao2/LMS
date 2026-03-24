@@ -25,6 +25,7 @@ import type { SimpleTag } from '@/types/common';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { TagInput } from '../shared/tag-input';
+import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import dayjs from '@/lib/dayjs';
 
 function relTime(dateStr: string): string {
@@ -166,10 +167,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const handleSave = useCallback(async () => {
     if (!knowledge || !hasChanges) return;
     try {
+      const derivedTitle = editContent !== undefined ? getKnowledgeTitleFromHtml(editContent) : '';
+      const nextTitle = editContent !== undefined
+        ? (derivedTitle || editTitle || knowledge.title)
+        : (editTitle ?? knowledge.title);
       const updatedKnowledge = await updateKnowledge.mutateAsync({
         id: knowledgeId,
         data: {
-          ...(editTitle !== undefined && { title: editTitle }),
+          title: nextTitle,
           ...(editContent !== undefined && { content: editContent }),
           ...(editTags !== undefined && { tag_ids: editTags.map(t => t.id) }),
           ...(editLineTagId !== undefined && { line_tag_id: editLineTagId ?? undefined }),
@@ -190,6 +195,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       toast.error('保存失败');
     }
   }, [knowledge, hasChanges, editTitle, editContent, editTags, editLineTagId, knowledgeId, updateKnowledge, onUpdated]);
+
+  const handleContentChange = useCallback((nextContent: string) => {
+    setEditContent(nextContent);
+
+    const derivedTitle = getKnowledgeTitleFromHtml(nextContent);
+    if (derivedTitle) {
+      setEditTitle(derivedTitle);
+    }
+  }, []);
 
   const handleDelete = () => {
     onDelete?.(knowledgeId);
@@ -265,7 +279,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               >
                 <SlashQuillEditor
                   value={activeContent}
-                  onChange={setEditContent}
+                  onChange={handleContentChange}
                   placeholder="编辑内容…"
                   className={`kd-content kd-content-shell${editing ? ' kd-content-editable' : ''}`}
                   minHeight={300}

@@ -18,6 +18,7 @@ import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge'
 import { useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
+import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
@@ -199,8 +200,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         if (!hasMeaningfulKnowledgeHtml(content)) return;
 
         try {
+            const derivedTitle = getKnowledgeTitleFromHtml(content);
             await createKnowledge.mutateAsync({
                 content,
+                ...(derivedTitle && { title: derivedTitle }),
                 ...(selectedLineTypeId !== undefined && { line_tag_id: selectedLineTypeId }),
             });
 

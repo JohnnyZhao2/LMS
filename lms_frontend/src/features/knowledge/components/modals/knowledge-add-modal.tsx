@@ -12,6 +12,7 @@ import {
   hasMeaningfulKnowledgeHtml,
   textToKnowledgeHtml,
 } from '../../utils/slash-shortcuts';
+import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 
 interface AddKnowledgeModalProps {
@@ -43,8 +44,12 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
   React.useEffect(() => {
     if (open) {
-      setContent(initialContent.includes('<') ? initialContent : textToKnowledgeHtml(initialContent));
-      setTitle('');
+      const normalizedInitialContent = initialContent.includes('<')
+        ? initialContent
+        : textToKnowledgeHtml(initialContent);
+
+      setContent(normalizedInitialContent);
+      setTitle(getKnowledgeTitleFromHtml(normalizedInitialContent));
       setSourceUrl('');
       setSelectedTags([]);
       setShowTagPanel(false);
@@ -75,27 +80,34 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
 
+  const handleContentChange = React.useCallback((nextContent: string) => {
+    setContent(nextContent);
+    const derivedTitle = getKnowledgeTitleFromHtml(nextContent);
+    if (derivedTitle) {
+      setTitle(derivedTitle);
+    }
+  }, []);
+
   const handleFileUpload = React.useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       try {
         const result = await parseDocument.mutateAsync(file);
         setContent(result.content);
-        if (!title.trim() && result.suggested_title?.trim()) {
-          setTitle(result.suggested_title.trim());
-        }
+        const derivedTitle = getKnowledgeTitleFromHtml(result.content);
+        setTitle(derivedTitle || result.suggested_title?.trim() || '');
         toast.success('文档导入成功');
       } catch (error) {
         showApiError(error, '文档导入失败');
       } finally {
         e.target.value = '';
       }
-    }, [parseDocument, title]);
+    }, [parseDocument]);
 
   const handleSave = async () => {
     if (!canSave) return;
     try {
-      const trimmedTitle = title.trim();
+      const trimmedTitle = getKnowledgeTitleFromHtml(content) || title.trim();
       const result = await createKnowledge.mutateAsync({
         ...(trimmedTitle && { title: trimmedTitle }),
         line_tag_id: lineTagId,
@@ -130,7 +142,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         <div className="akm-editor-inner">
           <SlashQuillEditor
             value={content}
-            onChange={setContent}
+            onChange={handleContentChange}
             placeholder="Type / for shortcuts"
             autoFocus
             className="akm-editor"

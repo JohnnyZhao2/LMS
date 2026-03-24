@@ -22,6 +22,14 @@ export function getH(html: string): string | null {
 }
 
 /**
+ * 提取内容中的第一个一级标题，作为知识主题
+ */
+export function getKnowledgeTitleFromHtml(html: string): string {
+  const match = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
+  return match ? plain(match[1]) : '';
+}
+
+/**
  * Bionic Reading - 只对英文单词前 60% 加粗显示
  * 保护 HTML 实体（如 &nbsp; &lt; &gt; 等）不被处理
  */
