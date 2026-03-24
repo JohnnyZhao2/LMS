@@ -8,7 +8,6 @@ import {
   Trash2,
   Check,
   CheckCircle,
-  ExternalLink,
   Link as LinkIcon,
   X,
   Plus,
@@ -384,14 +383,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     }
   }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
 
-  const renderLearningAction = (immersive = false) => {
+  const renderLearningAction = ({ immersive = false, docked = false }: { immersive?: boolean; docked?: boolean } = {}) => {
     if (!isStudent || !taskId || !taskKnowledgeId) {
       return null;
     }
 
     if (isCompleted) {
       return (
-        <div className={`kd-complete-done${immersive ? ' kd-complete-done-immersive' : ''}`}>
+        <div className={immersive ? 'kd-immersive-save-btn kd-immersive-learning-state' : `kd-complete-done${docked ? ' kd-complete-done-docked' : ''}`}>
           <CheckCircle style={{ width: 14, height: 14 }} />
           已学习
         </div>
@@ -400,17 +399,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
     return (
       <button
+        type="button"
         onClick={handleComplete}
         disabled={completeLearning.isPending}
-        className={`kd-complete-btn${immersive ? ' kd-complete-btn-immersive' : ''}`}
+        className={immersive ? 'kd-immersive-save-btn' : `kd-complete-btn${docked ? ' kd-complete-btn-docked' : ''}`}
       >
         {completeLearning.isPending ? '处理中…' : '标记已学习'}
       </button>
     );
   };
 
-  const learningAction = renderLearningAction();
-  const immersiveLearningAction = renderLearningAction(true);
+  const learningAction = renderLearningAction({ docked: true });
+  const immersiveLearningAction = renderLearningAction({ immersive: true });
 
   const modalContent = (
     <div
@@ -511,7 +511,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 <SlashQuillEditor
                   value={activeContent}
                   onChange={handleContentChange}
-                  placeholder="编辑内容…"
+                  placeholder="键入 / 调出快捷指令"
                   className={`kd-content kd-content-shell${editing ? ' kd-content-editable' : ''}`}
                   minHeight={300}
                   autoFocus={editing}
@@ -672,12 +672,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   </div>
                 )}
 
-                {learningAction && (
-                  <div className="kd-section">
-                    {learningAction}
-                  </div>
-                )}
-
                 <div style={{ flex: 1 }} />
               </div>
 
@@ -736,6 +730,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                       <Check style={{ width: 15, height: 15 }} strokeWidth={1.9} />
                     </button>
                   </div>
+                ) : learningAction ? (
+                  <div className="kd-bottom-learning">
+                    {learningAction}
+                  </div>
                 ) : (
                   <div className="kd-action-group">
                     {canUpdateKnowledge && (
@@ -747,20 +745,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                             <circle cx="12" cy="12" r="9" />
                           </svg>
-                      </button>
-                    )}
-                    {activeRelatedLinks[0]?.url && (
-                      <button
-                        onClick={() => {
-                          const firstLinkUrl = activeRelatedLinks[0]?.url;
-                          if (firstLinkUrl) {
-                            window.open(firstLinkUrl, '_blank');
-                          }
-                        }}
-                        className="kd-action-btn"
-                        title="打开首个相关链接"
-                      >
-                        <ExternalLink style={{ width: 15, height: 15 }} />
                       </button>
                     )}
                     {canUpdateKnowledge && (
@@ -1067,11 +1051,18 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           font-size: 13px; font-weight: 600;
           background: #e0f5e0; color: #2d8a2d;
         }
+        .kd-complete-done-docked {
+          min-width: 108px;
+          justify-content: center;
+        }
         .kd-complete-btn {
           width: 100%; border: none; border-radius: 6px;
           padding: 10px 12px; font-size: 13px; font-weight: 600;
           color: #fff; background: #e8793a; cursor: pointer;
           font-family: inherit; transition: opacity 0.15s;
+        }
+        .kd-complete-btn-docked {
+          width: min(100%, 156px);
         }
         .kd-complete-btn:disabled {
           opacity: 0.6;
@@ -1109,21 +1100,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           padding: 20px 26px 26px;
           pointer-events: none;
         }
-        .kd-complete-done-immersive {
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          background: rgba(224, 245, 224, 0.92);
-          backdrop-filter: blur(8px);
-          pointer-events: auto;
-        }
-        .kd-complete-btn-immersive {
-          width: auto;
-          border-radius: 24px;
-          padding: 10px 20px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          backdrop-filter: blur(8px);
-          background: rgba(232, 121, 58, 0.92);
-          pointer-events: auto;
-        }
         .kd-immersive-save-btn {
           pointer-events: auto;
           margin-left: auto;
@@ -1150,11 +1126,23 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           opacity: 0.4;
           cursor: not-allowed;
         }
+        .kd-immersive-learning-state {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #2d8a2d;
+          cursor: default;
+        }
 
         /* Bottom */
         .kd-bottom {
           padding: 14px 20px 16px;
           display: flex; align-items: center; justify-content: center;
+        }
+        .kd-bottom-learning {
+          width: 100%;
+          display: flex;
+          justify-content: center;
         }
         .kd-action-group { display: flex; align-items: center; gap: 24px; }
         .kd-action-btn {

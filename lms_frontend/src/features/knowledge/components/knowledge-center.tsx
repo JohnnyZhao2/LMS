@@ -3,6 +3,7 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Inbox,
+    Search,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -219,13 +220,19 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
         >
             {/* 搜索栏 — 底部横线样式 */}
-            <div className="flex items-center gap-3">
+            <div className="relative">
+                <Search
+                    className="pointer-events-none absolute left-0 bottom-[14px] h-4 w-4 text-foreground/28"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                />
                 <input
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onKeyDown={handleSearchKeyDown}
-                    placeholder="Search my mind..."
-                    className="flex-1 bg-transparent border-0 border-b border-foreground/15 focus:border-foreground/40 outline-none text-2xl font-light text-foreground/60 placeholder:text-foreground/25 py-3 transition-colors"
+                    placeholder=""
+                    aria-label="搜索知识"
+                    className="w-full bg-transparent border-0 border-b border-foreground/15 focus:border-foreground/40 outline-none pl-12 text-2xl font-light text-foreground/60 py-3 transition-colors"
                     style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
                 />
             </div>

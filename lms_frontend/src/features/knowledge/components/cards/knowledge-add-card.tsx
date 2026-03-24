@@ -125,7 +125,8 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
                 setFocused(false);
               }
             }}
-            placeholder="在这里输入，键入 / 调出快捷命令"
+            placeholder="在这里输入，键入 / 调出快捷指令"
+            placeholderMode="empty-only"
             className="akc-editor"
             minHeight={28}
           />

@@ -122,7 +122,10 @@ class KnowledgeService(BaseService):
         if knowledge.is_current:
             return self._create_new_version(knowledge, data)
         # 非当前版本直接更新（历史版本的修正）
-        self._validate_knowledge_data(data)
+        self._validate_knowledge_data(
+            data=data,
+            fallback_content=knowledge.content,
+        )
         # 提取标签数据
         line_tag_id = data.pop('line_tag_id', None)
         tag_ids = data.pop('tag_ids', None)
@@ -178,9 +181,14 @@ class KnowledgeService(BaseService):
         )
         return knowledge.increment_view_count()
 
-    def _validate_knowledge_data(self, data: dict) -> None:
+    def _validate_knowledge_data(
+        self,
+        data: dict,
+        fallback_content: Optional[str] = None,
+    ) -> None:
         """验证知识文档数据"""
-        if not strip_tags(str(data.get('content', ''))).strip():
+        effective_content = data.get('content', fallback_content or '')
+        if not strip_tags(str(effective_content)).strip():
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='知识文档必须填写正文内容'

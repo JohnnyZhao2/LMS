@@ -29,6 +29,7 @@ type ToolbarFormatState = {
 
 type BlockEmbedCtor = new (...args: never[]) => object;
 type QuillLine = Exclude<ReturnType<Quill['getLine']>[0], null>;
+type QuillLineLike = QuillLine & { length: () => number };
 
 const EMPTY_HTML = '<p><br></p>';
 const BlockEmbed = Quill.import('blots/block/embed') as BlockEmbedCtor;
@@ -52,10 +53,7 @@ const EDITOR_STYLES = `
   }
 
   .sqe-shell .ql-editor.ql-blank::before {
-    left: 0;
-    right: auto;
-    color: color-mix(in srgb, var(--theme-text-muted) 72%, white);
-    font-style: italic;
+    display: none;
   }
 
   .sqe-shell .ql-editor h1 {
@@ -112,6 +110,16 @@ const EDITOR_STYLES = `
     color: #2563eb;
     text-decoration: underline;
     text-decoration-color: rgba(37, 99, 235, 0.35);
+  }
+
+  .sqe-inline-placeholder {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    color: color-mix(in srgb, var(--theme-text-muted) 72%, white);
+    font-style: italic;
+    white-space: nowrap;
+    transform: translateY(-50%);
   }
 `;
 
@@ -248,10 +256,22 @@ function getToolbarFormats(quill: Quill, range: RangeState): ToolbarFormatState 
   };
 }
 
+function isCurrentLineEmpty(quill: Quill, selection: RangeState): boolean {
+  const [currentLine] = quill.getLine(selection.index);
+  if (!currentLine) return false;
+
+  const lineIndex = quill.getIndex(currentLine);
+  const lineLength = Math.max(0, (currentLine as QuillLineLike).length() - 1);
+  if (lineLength === 0) return true;
+
+  return quill.getText(lineIndex, lineLength).trim().length === 0;
+}
+
 interface SlashQuillEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  placeholderMode?: 'empty-only' | 'follow-caret';
   className?: string;
   autoFocus?: boolean;
   minHeight?: number;
@@ -265,7 +285,8 @@ interface SlashQuillEditorProps {
 export function SlashQuillEditor({
   value,
   onChange,
-  placeholder = '输入 / 调出快捷命令',
+  placeholder = '键入 / 调出快捷指令',
+  placeholderMode = 'follow-caret',
   className,
   autoFocus = false,
   minHeight = 120,
@@ -299,6 +320,8 @@ export function SlashQuillEditor({
   const [activeSlashIndex, setActiveSlashIndex] = useState(0);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
   const [toolbarVisible, setToolbarVisible] = useState(false);
+  const [inlinePlaceholderPosition, setInlinePlaceholderPosition] = useState({ top: 0, left: 0 });
+  const [inlinePlaceholderVisible, setInlinePlaceholderVisible] = useState(false);
   const [toolbarFormats, setToolbarFormats] = useState<ToolbarFormatState>({
     background: null,
     bold: false,
@@ -352,7 +375,7 @@ export function SlashQuillEditor({
 
     const quill = new Quill(editorRef.current, {
       theme: 'bubble',
-      placeholder: readOnly ? '' : placeholder,
+      placeholder: '',
       readOnly,
       modules: {
         toolbar: false,
@@ -376,6 +399,7 @@ export function SlashQuillEditor({
         selectionRef.current = null;
         setSlashTrigger(null);
         setToolbarVisible(false);
+        setInlinePlaceholderVisible(false);
         return;
       }
 
@@ -392,6 +416,7 @@ export function SlashQuillEditor({
           return;
         }
         setSlashTrigger(null);
+        setInlinePlaceholderVisible(false);
         setToolbarFormats(getToolbarFormats(quill, selection));
         setToolbarPosition({
           top: Math.max(8, bounds.top - 56),
@@ -403,7 +428,32 @@ export function SlashQuillEditor({
 
       setToolbarVisible(false);
 
-      if (readOnlyRef.current || !enableSlashMenuRef.current || selection.length > 0) {
+      if (readOnlyRef.current || selection.length > 0) {
+        setInlinePlaceholderVisible(false);
+        setSlashTrigger(null);
+        return;
+      }
+
+      const caretBounds = quill.getBounds(selection.index);
+      if (
+        placeholder &&
+        caretBounds &&
+        (
+          placeholderMode === 'empty-only'
+            ? quill.getText().trim().length === 0
+            : isCurrentLineEmpty(quill, selection)
+        )
+      ) {
+        setInlinePlaceholderPosition({
+          top: caretBounds.top + (caretBounds.height / 2),
+          left: caretBounds.left + 8,
+        });
+        setInlinePlaceholderVisible(true);
+      } else {
+        setInlinePlaceholderVisible(false);
+      }
+
+      if (!enableSlashMenuRef.current) {
         setSlashTrigger(null);
         return;
       }
@@ -415,7 +465,7 @@ export function SlashQuillEditor({
         return;
       }
 
-      const caretBounds = quill.getBounds(selection.index);
+      setInlinePlaceholderVisible(false);
       if (!caretBounds) {
         setSlashTrigger(null);
         return;
@@ -590,6 +640,7 @@ export function SlashQuillEditor({
     if (readOnly) {
       setSlashTrigger(null);
       setToolbarVisible(false);
+      setInlinePlaceholderVisible(false);
     }
   }, [readOnly]);
 
@@ -677,6 +728,17 @@ export function SlashQuillEditor({
       style={{ ['--sqe-min-height' as string]: `${minHeight}px` }}
     >
       <div ref={editorRef} />
+      {inlinePlaceholderVisible && !slashTrigger && (
+        <span
+          className="sqe-inline-placeholder"
+          style={{
+            top: inlinePlaceholderPosition.top,
+            left: inlinePlaceholderPosition.left,
+          }}
+        >
+          {placeholder}
+        </span>
+      )}
       {enableSlashMenu && slashTrigger && (
         <SlashCommandMenu
           activeIndex={activeSlashIndex}

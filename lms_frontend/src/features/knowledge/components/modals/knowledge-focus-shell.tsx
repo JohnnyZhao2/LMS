@@ -89,7 +89,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
           <SlashQuillEditor
             value={content}
             onChange={onContentChange}
-            placeholder="Type / for shortcuts"
+            placeholder="键入 / 调出快捷指令"
             autoFocus
             className={editorClasses}
             minHeight={editorMinHeight}

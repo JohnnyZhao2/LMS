@@ -585,6 +585,36 @@ class TestKnowledgeApiContracts:
             is_current=True
         ).count() == 1
 
+    def test_knowledge_patch_only_related_links_inherits_existing_content(
+        self,
+        api_client,
+        admin_user,
+        sample_knowledge,
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/knowledge/{sample_knowledge.id}/',
+            {
+                'related_links': [
+                    {
+                        'title': '知识补充资料',
+                        'url': 'https://example.com/docs',
+                    },
+                ],
+            },
+            format='json'
+        )
+
+        assert response.status_code == 200, response.data
+        data = response.data['data']
+        assert data['content'] == sample_knowledge.content
+        assert data['related_links'] == [
+            {
+                'title': '知识补充资料',
+                'url': 'https://example.com/docs',
+            },
+        ]
+
 
 @pytest.mark.django_db
 class TestStudentTaskApiContracts:
