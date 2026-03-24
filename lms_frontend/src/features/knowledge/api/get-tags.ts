@@ -62,6 +62,7 @@ export const useKnowledgeTags = (search?: string) => {
 interface CreateTagRequest {
   name: string;
   tag_type: TagType;
+  color?: string;
   sort_order?: number;
   is_active?: boolean;
 }

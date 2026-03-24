@@ -43,6 +43,7 @@ export type TagType = 'LINE' | 'TAG';
 export interface Tag {
   id: number;
   name: string;
+  color: string;
   tag_type: TagType;
   tag_type_display: string;
   sort_order: number;
@@ -55,6 +56,7 @@ export interface Tag {
 export interface SimpleTag {
   id: number;
   name: string;
+  color?: string;
 }
 
 // ==================== 基础类型 ====================

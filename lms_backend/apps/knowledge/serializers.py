@@ -49,7 +49,7 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'tag_type', 'tag_type_display', 'sort_order', 'is_active']
+        fields = ['id', 'name', 'color', 'tag_type', 'tag_type_display', 'sort_order', 'is_active']
         read_only_fields = ['id']
 
 
@@ -59,7 +59,7 @@ class TagSimpleSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Tag
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'color']
 class KnowledgeListSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge list view.

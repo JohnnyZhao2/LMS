@@ -5,17 +5,22 @@ import {
     Inbox,
     Search,
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
 
 import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
-import { useLineTypeTags } from '../api/get-tags';
+import { useCreateTag, useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
@@ -33,6 +38,25 @@ interface KnowledgeCenterProps {
     isAdmin?: boolean;
 }
 
+const LINE_TYPE_THEME_COLORS = [
+    '#FFE45C',
+    '#7A38D6',
+    '#F0444F',
+    '#63EEB1',
+    '#BDC0CF',
+    '#FF86A3',
+    '#0A0A0A',
+    '#28A3D1',
+    '#23BE73',
+    '#F6D4C8',
+    '#2A6CE5',
+    '#C8FF00',
+    '#FF9966',
+    '#B8A9DB',
+    '#9DD3DC',
+    '#C89AAA',
+] as const;
+
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
     const { roleNavigate } = useRoleNavigate();
@@ -48,10 +72,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     const deleteKnowledge = useDeleteKnowledge();
     const createKnowledge = useCreateKnowledge();
+    const createTag = useCreateTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
     const [focusState, setFocusState] = React.useState<FocusState | null>(null);
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
+    const [hoveredLineTypeId, setHoveredLineTypeId] = React.useState<number | null>(null);
+    const [isAddTypeHovered, setIsAddTypeHovered] = React.useState(false);
+    const [isCreateLineTypeOpen, setIsCreateLineTypeOpen] = React.useState(false);
+    const [createLineTypeStep, setCreateLineTypeStep] = React.useState<1 | 2>(1);
+    const [newLineTypeName, setNewLineTypeName] = React.useState('');
+    const [selectedLineTypeColor, setSelectedLineTypeColor] = React.useState<string>(LINE_TYPE_THEME_COLORS[0]);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -214,6 +245,29 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
     }, [createKnowledge, selectedLineTypeId, refetch]);
 
+    const handleCreateLineType = React.useCallback(async () => {
+        const name = newLineTypeName.trim();
+        if (!name) {
+            toast.error('请输入类型名称');
+            return;
+        }
+
+        try {
+            await createTag.mutateAsync({
+                name,
+                tag_type: 'LINE',
+                color: selectedLineTypeColor,
+            });
+            toast.success('条线类型已添加');
+            setIsCreateLineTypeOpen(false);
+            setCreateLineTypeStep(1);
+            setNewLineTypeName('');
+            setSelectedLineTypeColor(LINE_TYPE_THEME_COLORS[0]);
+        } catch {
+            toast.error('添加失败');
+        }
+    }, [createTag, newLineTypeName, selectedLineTypeColor]);
+
     return (
         <div
             className="space-y-3"
@@ -238,32 +292,66 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             </div>
 
             {/* 条线筛选标签 — 白色卡片 */}
-            {lineTypeTags.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                    {lineTypeTags.map((tag: TagType) => (
-                        <button
-                            key={tag.id}
-                            onClick={() => handleLineTypeSelect(
-                                selectedLineTypeId === tag.id ? undefined : tag.id
-                            )}
-                            className="inline-flex items-center gap-3 px-4 py-2 rounded-[6px] font-medium transition-all bg-white"
-                            style={{ fontSize: 12.5 }}
-                        >
-                            <span className={cn(
-                                "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all",
-                                selectedLineTypeId === tag.id
-                                    ? "border-[#4A90E2] bg-[#4A90E2]"
-                                    : "border-[#4A90E2]"
-                            )}>
-                                {selectedLineTypeId === tag.id && (
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            {(lineTypeTags.length > 0 || isManagementView) && (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {lineTypeTags.map((tag: TagType) => (
+                            <button
+                                key={tag.id}
+                                onClick={() => handleLineTypeSelect(
+                                    selectedLineTypeId === tag.id ? undefined : tag.id
                                 )}
+                                onMouseEnter={() => setHoveredLineTypeId(tag.id)}
+                                onMouseLeave={() => setHoveredLineTypeId((current) => (current === tag.id ? null : current))}
+                                className="inline-flex items-center gap-3 rounded-[6px] bg-white px-4 py-2 font-medium transition-[box-shadow] duration-200"
+                                style={{
+                                    fontSize: 12.5,
+                                    boxShadow: hoveredLineTypeId === tag.id
+                                        ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
+                                        : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
+                                }}
+                            >
+                                <span
+                                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
+                                    style={{
+                                        borderColor: tag.color || '#4A90E2',
+                                        backgroundColor: selectedLineTypeId === tag.id ? (tag.color || '#4A90E2') : 'transparent',
+                                    }}
+                                >
+                                    {selectedLineTypeId === tag.id && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                    )}
+                                </span>
+                                <span className="text-gray-900">
+                                    {tag.name}
+                                </span>
+                            </button>
+                        ))}
+
+                        {lineTypeTags.length === 0 && isManagementView && (
+                            <span className="px-4 py-2 text-sm text-text-muted">
+                                暂无条线类型
                             </span>
-                            <span className="text-gray-900">
-                                {tag.name}
-                            </span>
+                        )}
+                    </div>
+
+                    {isManagementView && (
+                        <button
+                            type="button"
+                            onClick={() => setIsCreateLineTypeOpen(true)}
+                            onMouseEnter={() => setIsAddTypeHovered(true)}
+                            onMouseLeave={() => setIsAddTypeHovered(false)}
+                            className="inline-flex h-10 items-center gap-3 rounded-full bg-white px-5 text-sm font-medium text-foreground transition-[box-shadow] duration-200"
+                            style={{
+                                boxShadow: isAddTypeHovered
+                                    ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
+                                    : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
+                            }}
+                        >
+                            <span className="h-4 w-4 rounded-full border-2 border-[#e8793a]" />
+                            添加类型
                         </button>
-                    ))}
+                    )}
                 </div>
             )}
 
@@ -424,6 +512,125 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     onUpdated={() => refetch()}
                 />
             )}
+
+            <Dialog
+                open={isCreateLineTypeOpen}
+                onOpenChange={(open) => {
+                    setIsCreateLineTypeOpen(open);
+                    if (open) {
+                        setCreateLineTypeStep(1);
+                    } else {
+                        setCreateLineTypeStep(1);
+                        setNewLineTypeName('');
+                        setSelectedLineTypeColor(LINE_TYPE_THEME_COLORS[0]);
+                    }
+                }}
+            >
+                <DialogContent className="max-w-[560px] border-0 bg-[#fcfbf8] p-0 shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
+                    <div className="px-7 py-8 sm:px-10 sm:py-9">
+                        {createLineTypeStep === 1 ? (
+                            <div className="flex flex-col items-center text-center">
+                                <div className="relative mb-5 h-12 w-12">
+                                    <span className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-[#9bd1d8]" />
+                                    <span className="absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-[#c8ff00]" />
+                                    <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-[#ff8aa0]" />
+                                    <span className="absolute bottom-0 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-[#2a6ce5]" />
+                                </div>
+
+                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-[#44526d] sm:text-[34px]">
+                                    创建新类型
+                                </DialogTitle>
+                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-[#6f81a0] sm:text-[15px]">
+                                    空间是你脑海中卡片的集合。你可以直接上传卡片到空间中，也可以从概览中选择一张卡片。
+                                </DialogDescription>
+
+                                <div className="mt-7 w-full max-w-[360px]">
+                                    <input
+                                        id="line-type-name"
+                                        value={newLineTypeName}
+                                        onChange={(e) => setNewLineTypeName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newLineTypeName.trim()) {
+                                                e.preventDefault();
+                                                setCreateLineTypeStep(2);
+                                            }
+                                        }}
+                                        placeholder="输入类型名称"
+                                        maxLength={20}
+                                        autoFocus
+                                        className="h-14 w-full rounded-[12px] border border-[#d8e1ee] bg-transparent px-5 text-center text-[16px] text-[#667999] outline-none transition-colors placeholder:text-[#8da0be] focus:border-[#c5d3e7]"
+                                    />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setCreateLineTypeStep(2)}
+                                    disabled={!newLineTypeName.trim()}
+                                    className="mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
+                                    style={{
+                                        background: !newLineTypeName.trim() ? '#d4d4d4' : '#cfcfcf',
+                                    }}
+                                >
+                                    下一步
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center text-center">
+                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-[#44526d] sm:text-[34px]">
+                                    选择主题色
+                                </DialogTitle>
+                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-[#6f81a0] sm:text-[15px]">
+                                    颜色会帮助你更快识别这个类型。先选一个你最顺眼的标记色。
+                                </DialogDescription>
+
+                                <div className="mt-7 grid w-full max-w-[280px] grid-cols-4 justify-items-center gap-x-3 gap-y-3">
+                                    {LINE_TYPE_THEME_COLORS.map((color) => {
+                                        const isSelected = selectedLineTypeColor === color;
+                                        return (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setSelectedLineTypeColor(color)}
+                                                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.04]"
+                                                aria-label={`选择颜色 ${color}`}
+                                            >
+                                                <span
+                                                    className="block h-7 w-7 rounded-full border-[3px]"
+                                                    style={{
+                                                        borderColor: color,
+                                                        boxShadow: isSelected ? `0 0 0 3px ${color}22` : 'none',
+                                                    }}
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-8 flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCreateLineTypeStep(1)}
+                                        className="rounded-full border border-[#d7deea] px-5 py-2 text-[13px] font-medium text-[#70809e] transition-colors hover:bg-[#f1f4f9]"
+                                    >
+                                        上一步
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleCreateLineType()}
+                                        disabled={createTag.isPending || !newLineTypeName.trim()}
+                                        className="rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
+                                        style={{
+                                            background: createTag.isPending ? '#d4d4d4' : '#cfcfcf',
+                                        }}
+                                    >
+                                        {createTag.isPending ? '保存中' : '保存'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

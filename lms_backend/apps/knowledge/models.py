@@ -29,6 +29,7 @@ class Tag(TimestampMixin, models.Model):
         ('TAG', '知识标签'),
     ]
     name = models.CharField(max_length=100, verbose_name='标签名称')
+    color = models.CharField(max_length=7, default='#4A90E2', verbose_name='主题色')
     tag_type = models.CharField(
         max_length=20,
         choices=TAG_TYPE_CHOICES,
