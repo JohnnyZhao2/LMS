@@ -46,7 +46,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const createKnowledge = useCreateKnowledge();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
     const [showAddModal, setShowAddModal] = React.useState(false);
-    const [showAddModalMinimal, setShowAddModalMinimal] = React.useState(false);
     const [modalInitialContent, setModalInitialContent] = React.useState('');
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
@@ -119,7 +118,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     React.useEffect(() => {
         if (isCreateRoute) {
-            setShowAddModalMinimal(false);
             setShowAddModal(true);
             return;
         }
@@ -282,7 +280,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <AddKnowledgeCard
                                     onSave={handleQuickSave}
                                     onExpand={(content) => {
-                                        setShowAddModalMinimal(true);
                                         setModalInitialContent(content);
                                         setShowAddModal(true);
                                     }}
@@ -340,7 +337,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 open={showAddModal}
                 onClose={() => {
                     setShowAddModal(false);
-                    setShowAddModalMinimal(false);
                     setModalInitialContent('');
                     if (isCreateRoute) {
                         roleNavigate('knowledge');
@@ -348,11 +344,9 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 }}
                 initialContent={modalInitialContent}
                 initialLineTagId={selectedLineTypeId}
-                minimalMode={showAddModalMinimal}
                 onSuccess={(id) => {
                     refetch();
                     setShowAddModal(false);
-                    setShowAddModalMinimal(false);
                     setModalInitialContent('');
                     setDetailStartEditing(false);
                     setDetailStartInFocus(false);
