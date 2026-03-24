@@ -28,7 +28,7 @@ import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { TagInput } from '../shared/tag-input';
-import { KnowledgeDetailFocusMode } from './knowledge-detail-focus-mode';
+import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml, textToKnowledgeHtml } from '../../utils/slash-shortcuts';
 import dayjs from '@/lib/dayjs';
@@ -428,14 +428,27 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
           </div>
         ) : immersiveEditMode ? (
-          <KnowledgeDetailFocusMode
-            activeContent={activeContent}
-            canSubmit={canSubmit}
-            isSaving={isSaving}
+          <KnowledgeFocusShell
+            content={activeContent}
             onContentChange={handleContentChange}
-            onExitFocus={handleExitFocusMode}
-            onSave={handleSave}
-          />
+            onExit={handleExitFocusMode}
+            editorClassName="kd-immersive-editor"
+            editorMaxWidth={1040}
+            editorPadding="64px 40px 144px"
+            editorMinHeight={380}
+            minimizeIconSize={22}
+          >
+            <div className="kd-immersive-bottom">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!canSubmit || isSaving}
+                className="kd-immersive-save-btn"
+              >
+                {isSaving ? '保存中…' : '保存'}
+              </button>
+            </div>
+          </KnowledgeFocusShell>
         ) : (
           <>
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
@@ -1062,6 +1075,42 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           width: 14px; height: 14px; border-radius: 50%;
           border: 2px solid #ccc; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
+        }
+
+        .kd-immersive-bottom {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          display: flex;
+          justify-content: flex-end;
+          padding: 20px 26px 26px;
+          pointer-events: none;
+        }
+        .kd-immersive-save-btn {
+          pointer-events: auto;
+          border: none;
+          border-radius: 24px;
+          padding: 10px 28px;
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          font-family: inherit;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(8px);
+          color: #555;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          transition: all 0.18s ease;
+        }
+        .kd-immersive-save-btn:hover {
+          background: #fff;
+          color: #333;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .kd-immersive-save-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
         }
 
         /* Bottom */

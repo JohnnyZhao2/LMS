@@ -15,8 +15,8 @@ import {
   textToKnowledgeHtml,
 } from '../../utils/slash-shortcuts';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
-import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { KnowledgeDetailModal } from './knowledge-detail-modal';
+import { KnowledgeFocusShell } from './knowledge-focus-shell';
 
 type KnowledgeFocusMode = 'create' | 'detail';
 
@@ -188,51 +188,19 @@ const CreateKnowledgeFocus: React.FC<{
   }, []);
 
   const modalContent = (
-    <div className="akm-fullscreen">
-      <button
-        type="button"
-        onClick={onClose}
-        className="akm-minimize-btn"
-        title="收起"
-        aria-label="收起"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M6 6V18H18"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 16L18 6"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      <div className="akm-editor-area scrollbar-subtle">
-        <div className="akm-editor-inner">
-          <SlashQuillEditor
-            value={content}
-            onChange={handleContentChange}
-            placeholder="Type / for shortcuts"
-            autoFocus
-            className="akm-editor"
-            minHeight={380}
-          />
-        </div>
-      </div>
-
+    <KnowledgeFocusShell
+      content={content}
+      onContentChange={handleContentChange}
+      onExit={onClose}
+      fixed
+      zIndex={500}
+      fadeInDuration="0.25s"
+      editorClassName="akm-editor"
+      editorMaxWidth={960}
+      editorPadding="72px 40px 120px"
+      editorMinHeight={380}
+      minimizeIconSize={16}
+    >
       {showTagPanel && (
         <div className="akm-tag-panel">
           <TagInput
@@ -364,88 +332,6 @@ const CreateKnowledgeFocus: React.FC<{
       </div>
 
       <style>{`
-        .akm-fullscreen {
-          position: fixed;
-          inset: 0;
-          width: 100vw;
-          height: 100dvh;
-          overflow: hidden;
-          z-index: 500;
-          display: flex;
-          flex-direction: column;
-          animation: akmFadeIn .25s ease;
-          background:
-            linear-gradient(135deg,
-              #f5d7d2 0%,
-              #eedce8 12%,
-              #e2ddf0 22%,
-              #dde1f2 32%,
-              #e6e3ed 42%,
-              #edeaef 52%,
-              #f0eff2 62%,
-              #f4f3f5 75%,
-              #f7f7f9 100%
-            );
-        }
-        .akm-minimize-btn {
-          position: absolute;
-          top: 22px;
-          right: 24px;
-          z-index: 10;
-          border-radius: 50%;
-          border: none;
-          width: 32px;
-          height: 32px;
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(14px);
-          color: #6a7a92;
-          box-shadow: 0 6px 18px rgba(37, 49, 72, 0.11);
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-          transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
-        }
-        .akm-minimize-btn:hover {
-          background: rgba(255, 255, 255, 0.98);
-          color: #53627b;
-          transform: translateY(-1px) scale(1.02);
-          box-shadow: 0 9px 20px rgba(37, 49, 72, 0.13);
-        }
-        .akm-editor-area {
-          flex: 1;
-          min-height: 0;
-          overflow-y: auto;
-          overscroll-behavior: contain;
-          display: flex;
-          justify-content: center;
-        }
-        .akm-editor-inner {
-          width: 100%;
-          max-width: 960px;
-          padding: 72px 40px 120px;
-        }
-        .akm-editor .ql-editor {
-          font-size: 16px;
-          line-height: 2;
-          color: #2a2a2e;
-          font-family: 'Georgia', 'Times New Roman', 'PingFang SC', serif;
-        }
-        .akm-editor .ql-editor.ql-blank::before {
-          color: #c0c4cc;
-        }
-        .akm-editor .ql-editor h1 {
-          font-size: 40px;
-          margin-bottom: 18px;
-          color: #1f2937;
-        }
-        .akm-editor .ql-editor p {
-          margin-bottom: 14px;
-        }
-        .akm-editor .sqe-menu {
-          min-width: 240px;
-        }
         .akm-tag-panel {
           position: absolute;
           bottom: 56px;
@@ -733,16 +619,12 @@ const CreateKnowledgeFocus: React.FC<{
           opacity: 0.4;
           cursor: not-allowed;
         }
-        @keyframes akmFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
         @keyframes akmSlideUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-    </div>
+    </KnowledgeFocusShell>
   );
 
   return createPortal(modalContent, document.body);
@@ -779,7 +661,7 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
       knowledgeId={knowledgeId}
       startInFocus
       forceFocus
-      closeOnExitFocus={closeOnExitFocus || true}
+      closeOnExitFocus={closeOnExitFocus ?? true}
       taskId={taskId}
       taskKnowledgeId={taskKnowledgeId}
       onClose={onClose}
