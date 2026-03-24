@@ -7,6 +7,40 @@ from rest_framework import serializers
 from .models import Knowledge, Tag
 
 
+class RelatedLinkSerializer(serializers.Serializer):
+    """相关链接序列化器。"""
+    title = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        max_length=200,
+        trim_whitespace=True,
+    )
+    url = serializers.URLField(max_length=500)
+
+
+def _normalize_related_links(related_links):
+    """标准化相关链接列表，去重并清理标题。"""
+    if related_links is None:
+        return None
+
+    normalized_links = []
+    seen_urls = set()
+
+    for item in related_links:
+        title = (item.get('title') or '').strip()
+        url = item['url'].strip()
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        normalized_links.append({
+            'title': title,
+            'url': url,
+        })
+
+    return normalized_links
+
+
 class TagSerializer(serializers.ModelSerializer):
     """
     标签序列化器
@@ -36,6 +70,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     content_preview = serializers.CharField(read_only=True)
     table_of_contents = serializers.ListField(read_only=True)
+    related_links = RelatedLinkSerializer(many=True, read_only=True)
     class Meta:
         model = Knowledge
         fields = [
@@ -43,8 +78,8 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'title',
             'is_current',
             'line_tag',
-            'content',
-            'view_count', 'content_preview', 'table_of_contents', 'source_url',
+            'content', 'related_links',
+            'view_count', 'content_preview', 'table_of_contents',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
         ]
 
@@ -59,6 +94,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     table_of_contents = serializers.ListField(read_only=True)
+    related_links = RelatedLinkSerializer(many=True, read_only=True)
     class Meta:
         model = Knowledge
         fields = [
@@ -66,9 +102,9 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'title',
             'is_current',
             'line_tag', 'tags',
-            'content',
+            'content', 'related_links',
             # 元数据
-            'view_count', 'table_of_contents', 'source_url',
+            'view_count', 'table_of_contents',
             'created_by', 'created_by_name', 'created_at',
             'updated_by', 'updated_by_name', 'updated_at'
         ]
@@ -92,6 +128,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         required=False,
         default=list
     )
+    related_links = RelatedLinkSerializer(many=True, required=False, default=list)
 
     class Meta:
         model = Knowledge
@@ -99,9 +136,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             'title',
             'line_tag_id',
             'tag_ids',
+            'related_links',
             'content',
-            # 原始文档链接
-            'source_url',
         ]
     def validate(self, attrs):
         """
@@ -114,6 +150,8 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'content': '必须填写正文内容'
             })
+        if 'related_links' in attrs:
+            attrs['related_links'] = _normalize_related_links(attrs['related_links'])
         return attrs
 
 
@@ -132,6 +170,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    related_links = RelatedLinkSerializer(many=True, required=False)
 
     class Meta:
         model = Knowledge
@@ -139,9 +178,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
             'title',
             'line_tag_id',
             'tag_ids',
+            'related_links',
             'content',
-            # 原始文档链接
-            'source_url',
         ]
     def validate(self, attrs):
         """
@@ -155,6 +193,8 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'content': '必须填写正文内容'
             })
+        if 'related_links' in attrs:
+            attrs['related_links'] = _normalize_related_links(attrs['related_links'])
         return attrs
 
 

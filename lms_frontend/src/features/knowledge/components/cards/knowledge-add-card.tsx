@@ -31,6 +31,12 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
       await onSave(value);
       setValue('');
       setFocused(false);
+      setHovered(false);
+
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement) {
+        activeElement.blur();
+      }
     } catch {
       // 创建失败时保留草稿，方便用户修正后重试
     }

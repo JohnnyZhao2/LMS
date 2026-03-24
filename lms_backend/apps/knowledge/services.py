@@ -29,7 +29,7 @@ class KnowledgeService(BaseService):
     # 添加新的内容字段时，只需在此列表中添加即可
     VERSION_COPY_FIELDS = [
         'title',
-        'content', 'source_url',
+        'content', 'related_links',
     ]
 
     def get_by_id(self, pk: int) -> Knowledge:

@@ -5,6 +5,7 @@ import {
   User,
   Edit,
   Trash2,
+  Check,
   CheckCircle,
   ExternalLink,
   Link as LinkIcon,
@@ -22,6 +23,7 @@ import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-deta
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
+import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { TagInput } from '../shared/tag-input';
@@ -34,6 +36,25 @@ function relTime(dateStr: string): string {
   if (d === 1) return '昨天';
   if (d < 30) return `${d} 天前`;
   return `${Math.floor(d / 30)} 个月前`;
+}
+
+function createEmptyRelatedLink(): RelatedLink {
+  return {
+    title: '',
+    url: '',
+  };
+}
+
+function getRelatedLinkLabel(link: RelatedLink): string {
+  if (link.title?.trim()) {
+    return link.title.trim();
+  }
+
+  try {
+    return new URL(link.url).host;
+  } catch {
+    return link.url.replace(/^https?:\/\//i, '') || '相关链接';
+  }
 }
 
 interface KnowledgeDetailModalProps {
@@ -86,6 +107,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTitle, setEditTitle] = useState<string | undefined>(undefined);
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editLineTagId, setEditLineTagId] = useState<number | undefined | null>(undefined);
+  const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
 
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
@@ -102,6 +124,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const activeLineTagId = editLineTagId === undefined
     ? knowledge?.line_tag?.id ?? null
     : editLineTagId;
+  const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
   const taskKnowledgeItem = useMemo(() => {
     if (!learningDetail) return undefined;
     return learningDetail.knowledge_items.find((item) => (
@@ -117,6 +140,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditTitle(undefined);
     setEditTags(undefined);
     setEditLineTagId(undefined);
+    setEditRelatedLinks(undefined);
     setShowTagInput(false);
     setShowLineTypes(false);
   }, [knowledgeId, startEditing, startInFocus]);
@@ -126,7 +150,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     (editContent !== undefined && editContent !== knowledge.content) ||
     (editTitle !== undefined && editTitle !== knowledge.title) ||
     (editTags !== undefined) ||
-    (editLineTagId !== undefined)
+    (editLineTagId !== undefined) ||
+    (editRelatedLinks !== undefined)
   );
 
   // 标签操作
@@ -140,6 +165,29 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     const current = editTags ?? knowledge?.tags ?? [];
     setEditTags(current.filter(t => t.id !== tagId));
   }, [editTags, knowledge?.tags]);
+
+  const handleRelatedLinkChange = useCallback((
+    index: number,
+    field: keyof RelatedLink,
+    value: string,
+  ) => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks(current.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, [field]: value }
+        : item
+    )));
+  }, [editRelatedLinks, knowledge?.related_links]);
+
+  const handleAddRelatedLink = useCallback(() => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks([...current, createEmptyRelatedLink()]);
+  }, [editRelatedLinks, knowledge?.related_links]);
+
+  const handleRemoveRelatedLink = useCallback((index: number) => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks(current.filter((_, itemIndex) => itemIndex !== index));
+  }, [editRelatedLinks, knowledge?.related_links]);
 
   // Esc 关闭 + 禁止背景滚动
   useEffect(() => {
@@ -171,6 +219,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       const nextTitle = editContent !== undefined
         ? (derivedTitle || editTitle || knowledge.title)
         : (editTitle ?? knowledge.title);
+      const sanitizedRelatedLinks = editRelatedLinks?.filter((item) => item.url.trim()).map((item) => ({
+        title: item.title?.trim() ?? '',
+        url: item.url.trim(),
+      }));
       const updatedKnowledge = await updateKnowledge.mutateAsync({
         id: knowledgeId,
         data: {
@@ -178,6 +230,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           ...(editContent !== undefined && { content: editContent }),
           ...(editTags !== undefined && { tag_ids: editTags.map(t => t.id) }),
           ...(editLineTagId !== undefined && { line_tag_id: editLineTagId ?? undefined }),
+          ...(editRelatedLinks !== undefined && { related_links: sanitizedRelatedLinks }),
         },
       });
       setLocalKnowledgeSnapshot({
@@ -190,11 +243,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditTitle(undefined);
       setEditTags(undefined);
       setEditLineTagId(undefined);
+      setEditRelatedLinks(undefined);
       onUpdated?.();
     } catch {
       toast.error('保存失败');
     }
-  }, [knowledge, hasChanges, editTitle, editContent, editTags, editLineTagId, knowledgeId, updateKnowledge, onUpdated]);
+  }, [knowledge, hasChanges, editTitle, editContent, editTags, editLineTagId, editRelatedLinks, knowledgeId, updateKnowledge, onUpdated]);
 
   const handleContentChange = useCallback((nextContent: string) => {
     setEditContent(nextContent);
@@ -209,6 +263,17 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     onDelete?.(knowledgeId);
     onClose();
   };
+
+  const handleCancelEdit = useCallback(() => {
+    setEditing(false);
+    setEditContent(undefined);
+    setEditTitle(undefined);
+    setEditTags(undefined);
+    setEditLineTagId(undefined);
+    setEditRelatedLinks(undefined);
+    setShowTagInput(false);
+    setShowLineTypes(false);
+  }, []);
 
   const handleComplete = useCallback(async () => {
     if (!taskId || !knowledgeId) return;
@@ -356,17 +421,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                         <span>{knowledge.updated_by_name || knowledge.created_by_name}</span>
                       </div>
                     )}
-                    {knowledge.source_url && (
-                      <a
-                        href={knowledge.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="kd-source-link"
-                      >
-                        <LinkIcon style={{ width: 11, height: 11, flexShrink: 0 }} />
-                        {knowledge.source_url.replace(/^https?:\/\//, '')}
-                      </a>
-                    )}
                     <div className="kd-meta-item">
                       <Calendar className="kd-meta-icon" />
                       <span>{dayjs(knowledge.updated_at).format('YYYY-MM-DD HH:mm')}</span>
@@ -377,6 +431,77 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {(editing || activeRelatedLinks.length > 0) && (
+                  <div className="kd-section">
+                    <div className="kd-links-header">
+                      <p className="kd-label">相关链接</p>
+                      {canUpdateKnowledge && editing && (
+                        <button
+                          type="button"
+                          onClick={handleAddRelatedLink}
+                          className="kd-links-add-btn"
+                          aria-label="添加相关链接"
+                        >
+                          <Plus style={{ width: 12, height: 12 }} />
+                        </button>
+                      )}
+                    </div>
+
+                    {editing && canUpdateKnowledge ? (
+                      activeRelatedLinks.length > 0 ? (
+                        <div className="kd-links-edit-list">
+                          {activeRelatedLinks.map((link, index) => (
+                            <div key={`detail-link-${index}`} className="kd-link-edit-row">
+                              <input
+                                value={link.title ?? ''}
+                                onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
+                                placeholder=""
+                                aria-label="链接标题"
+                                className="kd-link-input kd-link-input-title"
+                              />
+                              <input
+                                value={link.url}
+                                onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
+                                placeholder=""
+                                aria-label="链接地址"
+                                className="kd-link-input kd-link-input-url"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRelatedLink(index)}
+                                className="kd-link-remove-btn"
+                                aria-label="删除相关链接"
+                              >
+                                <X style={{ width: 12, height: 12 }} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null
+                    ) : (
+                      <div className="kd-links-list">
+                        {activeRelatedLinks.map((link, index) => (
+                          <a
+                            key={`detail-link-view-${index}`}
+                            href={link.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="kd-related-link"
+                          >
+                            <span className="kd-related-link-main">
+                              <LinkIcon className="kd-related-link-icon" />
+                              <span className="kd-related-link-title">{getRelatedLinkLabel(link)}</span>
+                            </span>
+                            <span className="kd-related-link-url">
+                              {link.url.replace(/^https?:\/\//i, '')}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {isStudent && !!taskId && (
                   <div className="kd-section">
@@ -429,17 +554,32 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 )}
 
                 {canUpdateKnowledge && (editing || hasChanges) ? (
-                  <button
-                    onClick={handleSave}
-                    disabled={!hasChanges || updateKnowledge.isPending}
-                    className="kd-save-btn"
-                    style={{
-                      opacity: !hasChanges ? 0.5 : 1,
-                      cursor: !hasChanges ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {updateKnowledge.isPending ? '保存中…' : '保存'}
-                  </button>
+                  <div className="kd-edit-actions">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      disabled={updateKnowledge.isPending}
+                      className="kd-edit-icon-btn"
+                      title="取消编辑"
+                      aria-label="取消编辑"
+                    >
+                      <X style={{ width: 15, height: 15 }} strokeWidth={1.9} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={!hasChanges || updateKnowledge.isPending}
+                      className="kd-edit-icon-btn kd-edit-icon-btn-confirm"
+                      title={updateKnowledge.isPending ? '保存中…' : '保存'}
+                      aria-label={updateKnowledge.isPending ? '保存中' : '保存'}
+                      style={{
+                        opacity: !hasChanges || updateKnowledge.isPending ? 0.5 : 1,
+                        cursor: !hasChanges || updateKnowledge.isPending ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      <Check style={{ width: 15, height: 15 }} strokeWidth={1.9} />
+                    </button>
+                  </div>
                 ) : (
                   <div className="kd-action-group">
                     {canUpdateKnowledge && (
@@ -447,17 +587,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                         onClick={() => setShowLineTypes(!showLineTypes)}
                         className="kd-action-btn"
                         title="切换条线"
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <circle cx="12" cy="12" r="9" />
-                        </svg>
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <circle cx="12" cy="12" r="9" />
+                          </svg>
                       </button>
                     )}
-                    {knowledge.source_url && (
+                    {knowledge.related_links?.[0]?.url && (
                       <button
-                        onClick={() => window.open(knowledge.source_url, '_blank')}
+                        onClick={() => {
+                          const firstLinkUrl = knowledge.related_links?.[0]?.url;
+                          if (firstLinkUrl) {
+                            window.open(firstLinkUrl, '_blank');
+                          }
+                        }}
                         className="kd-action-btn"
-                        title="查看来源"
+                        title="打开首个相关链接"
                       >
                         <ExternalLink style={{ width: 15, height: 15 }} />
                       </button>
@@ -607,6 +752,146 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           font-size: 12px; color: #777;
         }
         .kd-meta-icon { width: 14px; height: 14px; color: #aaa; flex-shrink: 0; }
+        .kd-links-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 10px;
+        }
+        .kd-links-header .kd-label {
+          margin-bottom: 0;
+        }
+        .kd-links-add-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          border: none;
+          border-radius: 999px;
+          background: transparent;
+          color: #7a8698;
+          padding: 0;
+          font-size: 12px;
+          cursor: pointer;
+          font-family: inherit;
+          transition: color 0.15s ease, background 0.15s ease;
+        }
+        .kd-links-add-btn:hover {
+          background: rgba(255,255,255,0.32);
+          color: #526277;
+        }
+        .kd-links-list,
+        .kd-links-edit-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .kd-related-link {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          border-radius: 14px;
+          padding: 10px 12px;
+          background: rgba(255,255,255,0.62);
+          text-decoration: none;
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .kd-related-link:hover {
+          background: rgba(255,255,255,0.86);
+          transform: translateY(-1px);
+        }
+        .kd-related-link-main {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+        .kd-related-link-icon {
+          width: 13px;
+          height: 13px;
+          color: #7b8da3;
+          flex-shrink: 0;
+        }
+        .kd-related-link-title {
+          font-size: 12.5px;
+          color: #48576a;
+          font-weight: 600;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+        .kd-related-link-url {
+          font-size: 11px;
+          color: #8893a2;
+          word-break: break-all;
+          padding-left: 21px;
+        }
+        .kd-link-edit-row {
+          display: grid;
+          grid-template-columns: minmax(0, 108px) minmax(0, 1fr) 28px;
+          gap: 10px;
+          align-items: center;
+        }
+        .kd-link-input {
+          width: 100%;
+          min-width: 0;
+          border: none;
+          border-bottom: 1px solid rgba(95, 109, 132, 0.18);
+          border-radius: 0;
+          background: transparent;
+          padding: 8px 2px 6px;
+          font-size: 12px;
+          color: #48576a;
+          outline: none;
+          font-family: inherit;
+          transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .kd-link-input::placeholder {
+          color: transparent;
+        }
+        .kd-link-input:focus {
+          border-bottom-color: rgba(86, 109, 145, 0.42);
+          color: #334155;
+        }
+        .kd-link-input-title {
+          max-width: 108px;
+        }
+        .kd-link-remove-btn {
+          width: 28px;
+          height: 28px;
+          border: none;
+          border-radius: 999px;
+          background: transparent;
+          color: #7a8698;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          padding: 0;
+          transition: color 0.15s ease, background 0.15s ease;
+        }
+        .kd-link-remove-btn:hover {
+          background: rgba(255,255,255,0.32);
+          color: #526277;
+        }
+        .kd-links-empty,
+        .kd-links-empty-text {
+          border-radius: 14px;
+          background: rgba(255,255,255,0.54);
+          color: #8a93a0;
+          font-size: 12px;
+        }
+        .kd-links-empty {
+          width: 100%;
+          border: 1px dashed rgba(126, 141, 161, 0.24);
+          padding: 14px 12px;
+          cursor: pointer;
+          font-family: inherit;
+        }
+        .kd-links-empty-text {
+          padding: 12px;
+        }
 
         /* Tags */
         .kd-tags { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
@@ -667,15 +952,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           display: flex; align-items: center; justify-content: center;
         }
 
-        /* Source link */
-        .kd-source-link {
-          font-size: 12px; color: #7a9baa;
-          display: flex; align-items: center; gap: 5px;
-          text-decoration: none; margin-bottom: 14px;
-          word-break: break-all;
-        }
-        .kd-source-link:hover { color: #5a8baa; }
-
         /* Bottom */
         .kd-bottom {
           padding: 14px 20px 16px;
@@ -691,14 +967,35 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
         .kd-action-btn:hover { border-color: #aaa; color: #555; }
         .kd-action-danger:hover { border-color: #e44; color: #e44; }
-        .kd-save-btn {
-          width: 100%; background: #111; border: none;
-          border-radius: 6px; padding: 12px 0; color: #fff;
-          font-size: 14px; font-weight: 500; cursor: pointer;
-          font-family: inherit; transition: opacity 0.15s;
+        .kd-edit-actions {
+          display: flex;
+          align-items: center;
+          gap: 24px;
         }
-        .kd-save-btn:hover { background: #222; }
-
+        .kd-edit-icon-btn {
+          width: 36px;
+          height: 36px;
+          border: none;
+          border-radius: 50%;
+          background: #fff;
+          color: #9aa3af;
+          cursor: pointer;
+          font-family: inherit;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          transition: color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+        .kd-edit-icon-btn:hover {
+          background: #fff;
+          color: #7f8998;
+        }
+        .kd-edit-icon-btn:disabled {
+          cursor: not-allowed;
+        }
+        .kd-edit-icon-btn-confirm {
+        }
         /* Content typography */
         .kd-content {
           font-family: var(--theme-font-sans);

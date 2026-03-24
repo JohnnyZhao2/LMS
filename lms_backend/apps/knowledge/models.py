@@ -85,13 +85,12 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
     )
     # 阅读统计
     view_count = models.PositiveIntegerField(default=0, verbose_name='阅读次数')
-    # 原始文档链接
-    source_url = models.URLField(
-        verbose_name='原始文档链接',
-        max_length=500,
+    # 相关链接列表
+    related_links = models.JSONField(
+        verbose_name='相关链接',
+        default=list,
         blank=True,
-        null=True,
-        help_text='在线文档链接（腾讯文档/飞书等）'
+        help_text='相关资料链接列表，格式为 [{"title": "文档标题", "url": "https://example.com"}]'
     )
     class Meta:
         db_table = 'lms_knowledge'

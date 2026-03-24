@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { toast } from 'sonner';
-import { Link as LinkIcon, Upload, Minimize2 } from 'lucide-react';
+import { Upload, Minimize2, Plus, X } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
+import type { RelatedLink } from '@/types/knowledge';
 
 import { useLineTypeTags } from '../../api/get-tags';
 import { useCreateKnowledge } from '../../api/manage-knowledge';
@@ -14,6 +15,11 @@ import {
 } from '../../utils/slash-shortcuts';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
+
+const createEmptyRelatedLink = (): RelatedLink => ({
+  title: '',
+  url: '',
+});
 
 interface AddKnowledgeModalProps {
   open: boolean;
@@ -35,8 +41,9 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
   const [selectedTags, setSelectedTags] = React.useState<{ id: number; name: string }[]>([]);
   const [content, setContent] = React.useState(initialContent);
   const [title, setTitle] = React.useState('');
-  const [sourceUrl, setSourceUrl] = React.useState('');
+  const [relatedLinks, setRelatedLinks] = React.useState<RelatedLink[]>([]);
   const [showTagPanel, setShowTagPanel] = React.useState(false);
+  const [showRelatedLinksPanel, setShowRelatedLinksPanel] = React.useState(false);
 
   const { data: lineTypeTags = [] } = useLineTypeTags();
   const createKnowledge = useCreateKnowledge();
@@ -50,9 +57,10 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
 
       setContent(normalizedInitialContent);
       setTitle(getKnowledgeTitleFromHtml(normalizedInitialContent));
-      setSourceUrl('');
+      setRelatedLinks([]);
       setSelectedTags([]);
       setShowTagPanel(false);
+      setShowRelatedLinksPanel(false);
       const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
       setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
     }
@@ -74,11 +82,15 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
     };
-  }, [open, onClose, content, title, sourceUrl, lineTagId, selectedTags]);
+  }, [open, onClose, content, title, lineTagId, selectedTags]);
 
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
+  const sanitizedRelatedLinks = React.useMemo(
+    () => relatedLinks.filter((item) => item.url.trim()),
+    [relatedLinks],
+  );
 
   const handleContentChange = React.useCallback((nextContent: string) => {
     setContent(nextContent);
@@ -112,7 +124,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
         ...(trimmedTitle && { title: trimmedTitle }),
         line_tag_id: lineTagId,
         content,
-        source_url: sourceUrl.trim() || undefined,
+        related_links: sanitizedRelatedLinks.length > 0 ? sanitizedRelatedLinks : undefined,
         tag_ids: selectedTags.map((t) => t.id),
       });
       toast.success('知识创建成功');
@@ -122,6 +134,26 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
       showApiError(error, '创建失败');
     }
   };
+
+  const handleRelatedLinkChange = React.useCallback((
+    index: number,
+    field: keyof RelatedLink,
+    value: string,
+  ) => {
+    setRelatedLinks((prev) => prev.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, [field]: value }
+        : item
+    )));
+  }, []);
+
+  const handleAddRelatedLink = React.useCallback(() => {
+    setRelatedLinks((prev) => [...prev, createEmptyRelatedLink()]);
+  }, []);
+
+  const handleRemoveRelatedLink = React.useCallback((index: number) => {
+    setRelatedLinks((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  }, []);
 
   if (!open) return null;
 
@@ -186,6 +218,66 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
             标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
           </button>
 
+          <div className="akm-links-anchor">
+            <button
+              type="button"
+              onClick={() => setShowRelatedLinksPanel((v) => !v)}
+              className={`akm-tool-btn ${showRelatedLinksPanel ? 'akm-tool-btn-active' : ''}`}
+            >
+              相关链接{sanitizedRelatedLinks.length > 0 && ` (${sanitizedRelatedLinks.length})`}
+            </button>
+
+            {showRelatedLinksPanel && (
+              <div className="akm-links-panel">
+                <div className="akm-links-panel-header">
+                  <div>
+                    <p className="akm-links-panel-title">相关链接</p>
+                    <p className="akm-links-panel-subtitle">标题可选，URL 必填</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddRelatedLink}
+                    className="akm-links-add-btn"
+                    aria-label="添加相关链接"
+                  >
+                    <Plus size={12} />
+                  </button>
+                </div>
+
+                {relatedLinks.length > 0 && (
+                  <div className="akm-links-list">
+                    {relatedLinks.map((item, index) => (
+                      <div key={`create-link-${index}`} className="akm-link-row">
+                        <input
+                          value={item.title ?? ''}
+                          onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
+                          placeholder=""
+                          aria-label="链接标题"
+                          className="akm-link-row-input akm-link-row-title"
+                        />
+                        <input
+                          value={item.url}
+                          onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
+                          placeholder=""
+                          aria-label="链接地址"
+                          className="akm-link-row-input akm-link-row-url"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRelatedLink(index)}
+                          className="akm-link-row-remove"
+                          aria-label="删除相关链接"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* 标题输入 */}
           <input
             value={title}
@@ -193,17 +285,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
             placeholder="标题（可选）"
             className="akm-title-input"
           />
-
-          {/* 链接输入 */}
-          <div className="akm-link-wrap">
-            <LinkIcon size={12} className="akm-link-icon" />
-            <input
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="链接"
-              className="akm-link-input"
-            />
-          </div>
 
           {/* 上传按钮 */}
           <button
@@ -330,6 +411,121 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           z-index: 10;
           animation: akmSlideUp .15s ease;
         }
+        .akm-links-anchor {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .akm-links-panel {
+          position: absolute;
+          left: 0;
+          bottom: calc(100% + 14px);
+          width: min(440px, calc(100vw - 56px));
+          background: rgba(255,255,255,0.42);
+          backdrop-filter: blur(20px);
+          border-radius: 16px;
+          padding: 14px 16px;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+          border: 1px solid rgba(255,255,255,0.5);
+          z-index: 10;
+          animation: akmSlideUp .15s ease;
+        }
+        .akm-links-panel-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 10px;
+        }
+        .akm-links-panel-title {
+          margin: 0;
+          font-size: 13px;
+          font-weight: 600;
+          color: #4a5466;
+        }
+        .akm-links-panel-subtitle {
+          margin: 4px 0 0;
+          font-size: 11px;
+          color: #8a90a2;
+        }
+        .akm-links-add-btn {
+          border: 1px solid rgba(90, 114, 148, 0.16);
+          background: rgba(255,255,255,0.52);
+          color: #55657f;
+          border-radius: 12px;
+          font-size: 12px;
+          cursor: pointer;
+        }
+        .akm-links-add-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          padding: 0;
+          border: none;
+          border-radius: 999px;
+          background: transparent;
+          color: #7a8698;
+          transition: color 0.15s ease, background 0.15s ease;
+        }
+        .akm-links-add-btn:hover {
+          background: rgba(255,255,255,0.32);
+          color: #526277;
+        }
+        .akm-links-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 240px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+        .akm-link-row {
+          display: grid;
+          grid-template-columns: minmax(0, 124px) minmax(0, 1fr) 28px;
+          gap: 10px;
+          align-items: center;
+        }
+        .akm-link-row-input {
+          border: none;
+          border-bottom: 1px solid rgba(95, 109, 132, 0.18);
+          outline: none;
+          border-radius: 0;
+          padding: 8px 2px 6px;
+          font-size: 12px;
+          background: transparent;
+          color: #475569;
+          min-width: 0;
+          transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .akm-link-row-input::placeholder {
+          color: transparent;
+        }
+        .akm-link-row-title {
+          max-width: 124px;
+        }
+        .akm-link-row-input:focus {
+          border-bottom-color: rgba(86, 109, 145, 0.42);
+          color: #334155;
+        }
+        .akm-link-row-remove {
+          width: 28px;
+          height: 28px;
+          border: none;
+          border-radius: 999px;
+          background: transparent;
+          color: #7a8698;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: color 0.15s ease, background 0.15s ease;
+        }
+        .akm-link-row-remove:hover {
+          background: rgba(255,255,255,0.32);
+          color: #526277;
+        }
         .akm-tag-panel .taginput-row {
           background: rgba(255,255,255,0.7);
           box-shadow: none;
@@ -387,6 +583,7 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           pointer-events: auto;
           opacity: 0;
           transition: opacity 0.2s ease;
+          position: relative;
         }
         .akm-fullscreen:hover .akm-bottom-tools {
           opacity: 1;
@@ -419,6 +616,11 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           font-family: inherit;
           transition: all 0.15s;
         }
+        .akm-tool-btn-active {
+          background: rgba(255,255,255,0.94);
+          color: #5c657c;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
 
         .akm-title-input {
           border: 1.5px solid rgba(0,0,0,0.08);
@@ -433,28 +635,6 @@ export const AddKnowledgeModal: React.FC<AddKnowledgeModalProps> = ({
           width: 200px;
         }
         .akm-title-input::placeholder { color: #bbb; }
-
-        .akm-link-wrap {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          border: 1.5px solid rgba(0,0,0,0.08);
-          border-radius: 20px;
-          padding: 6px 14px;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(6px);
-        }
-        .akm-link-icon { color: #bbb; flex-shrink: 0; }
-        .akm-link-input {
-          border: none;
-          outline: none;
-          font-size: 12px;
-          color: #7090cc;
-          background: none;
-          font-family: inherit;
-          width: 120px;
-        }
-        .akm-link-input::placeholder { color: #bbb; }
 
         .akm-upload-btn {
           border: 1.5px solid rgba(0,0,0,0.08);

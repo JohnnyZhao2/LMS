@@ -34,7 +34,8 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
     }
   }, []);
 
-  const sourceHost = getSourceHost(item.source_url);
+  const firstRelatedLink = item.related_links?.[0];
+  const sourceHost = getSourceHost(firstRelatedLink?.url);
 
   return (
     <div
@@ -125,9 +126,9 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
           />
         )}
 
-        {sourceHost && item.source_url && (
+        {sourceHost && firstRelatedLink?.url && (
           <a
-            href={item.source_url}
+            href={firstRelatedLink.url}
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}

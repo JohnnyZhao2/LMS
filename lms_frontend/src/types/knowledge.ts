@@ -4,6 +4,11 @@
 
 import type { SimpleTag } from './common';
 
+export interface RelatedLink {
+  title?: string;
+  url: string;
+}
+
 /**
  * 学员知识列表项
  */
@@ -31,6 +36,7 @@ export interface StudentKnowledgeDetail {
   tags?: SimpleTag[];
   created_by_name?: string;
   updated_by_name?: string;
+  related_links?: RelatedLink[];
   view_count: number;
   created_at: string;
   updated_at: string;
@@ -72,7 +78,7 @@ export interface KnowledgeListItem {
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
-  source_url?: string;
+  related_links?: RelatedLink[];
   created_at: string;
   updated_at: string;
 }
@@ -95,7 +101,7 @@ export interface KnowledgeDetail {
   updated_by?: number;
   updated_by_name?: string;
   view_count: number;
-  source_url?: string;
+  related_links?: RelatedLink[];
   created_at: string;
   updated_at: string;
 }
@@ -108,7 +114,7 @@ export interface KnowledgeCreateRequest {
   line_tag_id?: number;
   line_tag_name?: string;
   content: string;
-  source_url?: string;
+  related_links?: RelatedLink[];
   tag_ids?: number[];
 }
 
@@ -119,7 +125,7 @@ export interface KnowledgeUpdateRequest {
   title?: string;
   line_tag_id?: number;
   content?: string;
-  source_url?: string;
+  related_links?: RelatedLink[];
   tag_ids?: number[];
 }
 
