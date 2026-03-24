@@ -1,34 +1,19 @@
 import * as React from 'react';
 import {
-  Pencil,
-  Trash2,
-  MoreVertical,
   Link as LinkGlyph,
 } from 'lucide-react';
 import type { KnowledgeListItem } from '@/types/api';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { plain, isLong, bionicHtml } from '../../utils/content-utils';
 
 interface KnowledgeCardMymindProps {
   item: KnowledgeListItem;
   onClick: (id: number) => void;
-  onEdit?: (id: number) => void;
-  onDelete?: (id: number) => void;
-  showActions?: boolean;
   index: number;
 }
 
 export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
   item,
   onClick,
-  onEdit,
-  onDelete,
-  showActions,
   index,
 }) => {
   const [hovered, setHovered] = React.useState(false);
@@ -77,62 +62,6 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             : '2.5px solid transparent',
         }}
       >
-        {/* 操作菜单 */}
-        {showActions && (onEdit || onDelete) && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              zIndex: 10,
-              opacity: hovered ? 1 : 0,
-              transition: 'opacity .18s',
-            }}
-          >
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="h-7 w-7 rounded-full bg-muted/80 flex items-center justify-center text-text-muted hover:bg-muted hover:text-foreground transition-all"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {onEdit && (
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(item.id);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    编辑
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(item.id);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    删除
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
-
         {/* 内容显示 */}
         {long ? (
           <div

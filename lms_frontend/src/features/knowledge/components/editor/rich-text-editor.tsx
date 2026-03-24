@@ -28,6 +28,7 @@ type ToolbarFormatState = {
 };
 
 type BlockEmbedCtor = new (...args: never[]) => object;
+type QuillLine = Exclude<ReturnType<Quill['getLine']>[0], null>;
 
 const EMPTY_HTML = '<p><br></p>';
 const BlockEmbed = Quill.import('blots/block/embed') as BlockEmbedCtor;
@@ -122,6 +123,32 @@ class DividerBlot extends BlockEmbed {
 
 if (!Quill.imports['formats/divider']) {
   Quill.register({ 'formats/divider': DividerBlot });
+}
+
+function isDividerLine(line: ReturnType<Quill['getLine']>[0]): line is QuillLine {
+  return line?.statics.blotName === 'divider';
+}
+
+function deleteDividerBeforeCaret(quill: Quill): boolean {
+  const selection = quill.getSelection();
+  if (!selection || selection.length > 0 || selection.index === 0) {
+    return false;
+  }
+
+  const [, offset] = quill.getLine(selection.index);
+  if (offset !== 0) {
+    return false;
+  }
+
+  const [previousLine] = quill.getLine(selection.index - 1);
+  if (!isDividerLine(previousLine)) {
+    return false;
+  }
+
+  const dividerIndex = quill.getIndex(previousLine);
+  quill.deleteText(dividerIndex, 1, Quill.sources.USER);
+  quill.setSelection(Math.min(dividerIndex, quill.getLength() - 1), 0, Quill.sources.SILENT);
+  return true;
 }
 
 function getTextThroughIndex(quill: Quill, index: number): string {
@@ -395,6 +422,16 @@ export function SlashQuillEditor({
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Backspace') {
+        const removedDivider = deleteDividerBeforeCaret(quill);
+        if (removedDivider) {
+          event.preventDefault();
+          setSlashTrigger(null);
+          scheduleUiUpdate();
+          return;
+        }
+      }
+
       const currentTrigger = slashTriggerRef.current;
       if (!currentTrigger) return;
 

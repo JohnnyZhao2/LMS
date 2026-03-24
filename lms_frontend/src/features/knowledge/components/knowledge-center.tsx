@@ -164,16 +164,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         syncDetailHash(id);
     };
 
-    const handleEdit = (id: number) => {
-        setDetailStartEditing(true);
-        setDetailId(id);
-        syncDetailHash(id);
-    };
-
-    const handleDelete = (id: number) => {
-        setDeleteTarget(id);
-    };
-
     const confirmDelete = async () => {
         if (deleteTarget === null) return;
         try {
@@ -293,9 +283,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     key={item.id}
                                     item={item}
                                     onClick={handleView}
-                                    onEdit={canUpdateKnowledge ? handleEdit : undefined}
-                                    onDelete={canDeleteKnowledge ? handleDelete : undefined}
-                                    showActions={canUpdateKnowledge || canDeleteKnowledge}
                                     index={index}
                                 />
                             ))}

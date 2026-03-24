@@ -63,7 +63,7 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
           cursor: 'text',
         }}
       >
-        {focused && (
+        {(focused || hovered) && (
           <button
             onMouseDown={(event) => {
               event.preventDefault();
