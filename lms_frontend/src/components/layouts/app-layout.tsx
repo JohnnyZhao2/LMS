@@ -88,30 +88,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 }}
               />
 
-              {/* 3. 竹简结构与色彩深度 - 透明度降至 0.05 */}
-              <div
-                className="absolute inset-0 opacity-[0.05]"
-                style={{
-                  // 在 0px 位置补上一条线，确保左侧没有间距感
-                  backgroundImage: `linear-gradient(90deg, ${config.color} 0px, ${config.color} 0.5px, transparent 0.5px, transparent 47px, ${config.color} 47.5px, transparent 48px)`,
-                  backgroundSize: '48px 100%',
-                  maskImage: 'linear-gradient(to bottom, black 15%, transparent 95%)'
-                }}
-              />
-
-              {/* 4. 中式竖向题刻 - 调淡字色 */}
-              <div
-                className="absolute top-24 left-[18px] text-[13px] font-semibold tracking-[0.8em] opacity-35 select-none whitespace-nowrap"
-                style={{
-                  color: config.color,
-                  writingMode: 'vertical-rl',
-                  textOrientation: 'upright',
-                }}
-              >
-                {config.label}
-              </div>
-
-              {/* 5. 落款与印章 (Seal Style) - 调淡 */}
+              {/* 3. 落款与印章 (Seal Style) - 调淡 */}
               <div className="absolute bottom-12 right-12 flex flex-row-reverse gap-5 opacity-30 select-none">
                 <div
                   className="text-[11px] border-2 border-current p-1.5 leading-none rounded-[1px] font-bold"
@@ -125,6 +102,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 </div>
               </div>
 
+            </div>
+
+            {/* 独立前景热区，避免被背景负层级吞掉 hover */}
+            <div className="fixed inset-y-0 left-0 z-20 w-14 group/scroll-label">
+              <div
+                className="pointer-events-none absolute top-24 left-[18px] -translate-x-1 whitespace-nowrap select-none text-[13px] font-semibold tracking-[0.8em] opacity-0 transition-all duration-300 ease-out group-hover/scroll-label:translate-x-0 group-hover/scroll-label:opacity-35"
+                style={{
+                  color: config.color,
+                  writingMode: 'vertical-rl',
+                  textOrientation: 'upright',
+                }}
+              >
+                {config.label}
+              </div>
             </div>
           </>
         );
