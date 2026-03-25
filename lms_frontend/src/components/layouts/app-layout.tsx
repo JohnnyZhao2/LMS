@@ -62,7 +62,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         )}
 
         {/* 主内容区 */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-[20px] border border-black/10 bg-white">
           {/* 移动端菜单按钮 */}
           <button
             className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background/90 text-text-muted shadow-[0_10px_24px_rgba(148,163,184,0.2)] backdrop-blur-sm transition-colors hover:text-foreground"
@@ -74,7 +74,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           <main className="flex-1 overflow-y-auto scrollbar-subtle">
             <div
-              className="mx-auto flex w-full flex-1 flex-col px-4 py-6 lg:px-2"
+              className="mx-auto flex w-full flex-1 flex-col px-6 py-6"
               style={{ maxWidth: 'var(--container-max-width, 1200px)' }}
             >
               {children}
