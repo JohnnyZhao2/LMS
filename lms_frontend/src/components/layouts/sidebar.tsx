@@ -218,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     destructive
       ? 'text-[#D55F5A] hover:bg-[#F6F6F6]'
       : isActive
-        ? 'text-black'
+        ? 'bg-[#F6F6F6] text-black'
         : 'text-[#757575] hover:bg-[#F6F6F6]'
   )
 
