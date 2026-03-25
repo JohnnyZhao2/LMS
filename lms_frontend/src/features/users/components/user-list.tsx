@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   Building2,
   Trash2,
-  SlidersHorizontal,
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
@@ -24,7 +23,6 @@ import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
-import { useCurrentRole } from "@/hooks/use-current-role"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
@@ -40,14 +38,10 @@ import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import type { UserList as UserListType, Role } from "@/types/api"
-import { RolePermissionDialog } from '@/features/authorization/components/role-permission-dialog';
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
-  const currentRole = useCurrentRole()
   const { hasPermission } = useAuth()
-  const canViewRoleTemplate =
-    hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update')
   const canCreateUser = hasPermission('user.create')
   const canUpdateUser = hasPermission('user.update')
   const canManageUserAccount = hasPermission('user.activate')
@@ -84,7 +78,6 @@ export const UserList: React.FC = () => {
     open: boolean
     user?: UserListType
   }>({ open: false })
-  const [rolePermissionDialogOpen, setRolePermissionDialogOpen] = React.useState(false)
 
   // API Hooks
   const { data: departments = [] } = useDepartments()
@@ -321,16 +314,6 @@ export const UserList: React.FC = () => {
         icon={<UsersIcon />}
         extra={
           <div className="flex items-center gap-3">
-            {canViewRoleTemplate && currentRole && (
-              <Button
-                variant="outline"
-                className="h-10 px-4 rounded-md font-semibold"
-                onClick={() => setRolePermissionDialogOpen(true)}
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                角色模板配置
-              </Button>
-            )}
             {canCreateUser && (
               <Button
                 onClick={() => {
@@ -494,12 +477,6 @@ export const UserList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* 角色权限配置弹窗 */}
-      <RolePermissionDialog
-        open={rolePermissionDialogOpen}
-        onOpenChange={setRolePermissionDialogOpen}
-      />
     </div>
   )
 }

@@ -10,14 +10,16 @@ import {
   FileSearch,
   BarChart3,
   ClipboardCheck,
+  SquareCheck,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 
-interface MenuItem {
-  key: string;
+export interface MenuItem {
+  key?: string;
   icon: React.ReactNode;
   label: string;
+  children?: MenuItem[];
 }
 
 /**
@@ -46,6 +48,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     const menu: MenuItem[] = [...baseMenu];
     const isStudentLike = currentRole === 'STUDENT' || currentRole === 'TEAM_MANAGER';
     const isAdminLike = currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN';
+    const quizChildren: MenuItem[] = [];
 
     if (hasAnyPermission(['knowledge.view'])) {
       menu.push({
@@ -55,18 +58,35 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
-    if (hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete', 'question.view', 'question.create', 'question.update', 'question.delete'])) {
+    if (hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'])) {
+      quizChildren.push({
+        key: `${rolePrefix}/quiz-center?tab=quizzes`,
+        icon: <FileText className="w-4 h-4" />,
+        label: '试卷管理',
+      });
+    }
+
+    if (hasAnyPermission(['question.view', 'question.create', 'question.update', 'question.delete'])) {
+      quizChildren.push({
+        key: `${rolePrefix}/quiz-center?tab=questions`,
+        icon: <HelpCircle className="w-4 h-4" />,
+        label: '题目管理',
+      });
+    }
+
+    if (quizChildren.length > 0) {
       menu.push({
         key: `${rolePrefix}/quiz-center`,
         icon: <HelpCircle className="w-4 h-4" />,
-        label: isAdminLike ? '试卷管理' : '试卷中心',
+        label: '测评管理',
+        children: quizChildren,
       });
     }
 
     if (hasAnyPermission(['task.view'])) {
       menu.push({
         key: `${rolePrefix}/tasks`,
-        icon: <FileText className="w-4 h-4" />,
+        icon: <SquareCheck className="w-4 h-4" />,
         label: isAdminLike ? '任务管理' : '任务中心',
       });
     }

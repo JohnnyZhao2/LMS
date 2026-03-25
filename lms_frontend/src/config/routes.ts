@@ -4,6 +4,7 @@
 export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  AUTHORIZATION: '/authorization',
   KNOWLEDGE: '/knowledge',
   TASKS: '/tasks',
   PERSONAL: '/personal',

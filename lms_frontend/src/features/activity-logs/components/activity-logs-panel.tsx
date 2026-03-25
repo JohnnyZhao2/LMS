@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Activity, FileText, RefreshCw, Settings, ShieldAlert, User } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -74,11 +76,39 @@ const getOperationTypeLabel = (type: string): string => {
  * - 使用时间线展示日志详情
  */
 export const ActivityLogsPanel: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('user');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const { hasPermission } = useAuth();
   const canViewActivityLogs = hasPermission('activity_log.view');
   const canUpdateActivityLogPolicy = hasPermission('activity_log.policy.update');
+  const settingsTarget = searchParams.get('settings');
+
+  useEffect(() => {
+    if (!settingsTarget || !canViewActivityLogs) {
+      return;
+    }
+
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (settingsTarget === 'log-policy' && canUpdateActivityLogPolicy) {
+      setIsSettingsOpen(true);
+      return;
+    }
+
+    if (settingsTarget === 'audit-logs') {
+      setIsSettingsOpen(false);
+    }
+  }, [canUpdateActivityLogPolicy, canViewActivityLogs, settingsTarget]);
+
+  useEffect(() => {
+    if (!isSettingsOpen && settingsTarget === 'log-policy') {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('settings');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [isSettingsOpen, searchParams, setSearchParams, settingsTarget]);
 
 
   // 分页状态
@@ -197,7 +227,7 @@ export const ActivityLogsPanel: React.FC = () => {
   }
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div ref={panelRef} className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">

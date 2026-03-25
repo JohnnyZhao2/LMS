@@ -29,9 +29,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [currentRole])
 
   return (
-    <div className={cn('min-h-screen flex bg-muted', themeClass)}>
+    <div className={cn('h-screen flex bg-muted', themeClass)}>
       {/* Sidebar - 桌面端 */}
-      <div className="hidden shrink-0 sticky top-0 h-screen bg-white lg:flex">
+      <div className="hidden shrink-0 bg-white lg:flex">
         <Sidebar />
       </div>
 
@@ -55,11 +55,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </button>
 
       {/* 主内容区 */}
-      <main className="flex-1 min-w-0">
-        <div
-          className="mx-auto flex w-full flex-col px-6 py-6"
-          style={{ maxWidth: 'var(--container-max-width, 1200px)' }}
-        >
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="flex w-full min-w-0 flex-col px-4 py-6 md:px-6 xl:px-8">
           {children}
         </div>
       </main>
