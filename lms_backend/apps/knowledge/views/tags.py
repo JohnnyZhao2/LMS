@@ -4,6 +4,7 @@ Implements:
 - Tag CRUD
 - Tag listing
 """
+from rest_framework import status
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -11,9 +12,10 @@ from rest_framework.views import APIView
 from apps.authorization.services import AuthorizationService
 from apps.knowledge.models import Tag
 from apps.knowledge.serializers import TagSerializer
+from apps.knowledge.services import TagService
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_bool_query_param, parse_int_query_param
-from core.responses import created_response, list_response
+from core.responses import created_response, error_response, list_response, no_content_response
 
 
 def _enforce_knowledge_view_permission(request, error_message: str = '无权查看标签') -> None:
@@ -33,6 +35,26 @@ def _enforce_knowledge_write_permission(request, error_message: str) -> None:
     raise BusinessError(
         code=ErrorCodes.PERMISSION_DENIED,
         message=error_message,
+    )
+
+
+def _enforce_knowledge_delete_permission(request, error_message: str) -> None:
+    AuthorizationService(request).enforce('knowledge.delete', error_message=error_message)
+
+
+def _handle_tag_business_error(error: BusinessError):
+    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
+        status_code = status.HTTP_404_NOT_FOUND
+    elif error.code == ErrorCodes.PERMISSION_DENIED:
+        status_code = status.HTTP_403_FORBIDDEN
+    else:
+        status_code = status.HTTP_400_BAD_REQUEST
+
+    return error_response(
+        code=error.code,
+        message=error.message,
+        details=error.details,
+        status_code=status_code,
     )
 
 
@@ -100,3 +122,27 @@ class TagCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return created_response(serializer.data)
+
+
+class TagDetailView(APIView):
+    """标签详情端点。"""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='删除标签',
+        description='删除标签。删除条线类型时，仅移除与知识和题目的关联，不删除内容本身。',
+        responses={
+            204: OpenApiResponse(description='删除成功'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='标签不存在'),
+        },
+        tags=['知识管理']
+    )
+    def delete(self, request, pk):
+        _enforce_knowledge_delete_permission(request, '无权删除标签')
+        service = TagService(request)
+        try:
+            service.delete(pk)
+        except BusinessError as error:
+            return _handle_tag_business_error(error)
+        return no_content_response()

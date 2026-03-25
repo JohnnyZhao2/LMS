@@ -14,6 +14,7 @@ from .knowledge import (
 )
 from .tags import (
     TagCreateView,
+    TagDetailView,
     TagListView,
 )
 from .document import (
@@ -30,6 +31,7 @@ __all__ = [
     # Tag views
     'TagListView',
     'TagCreateView',
+    'TagDetailView',
     # Document views
     'ParseDocumentView',
 ]

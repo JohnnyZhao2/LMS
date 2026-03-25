@@ -303,6 +303,26 @@ class KnowledgeService(BaseService):
         return new_version
 
 
+class TagService(BaseService):
+    """知识标签应用服务。"""
+
+    @transaction.atomic
+    def delete(self, pk: int) -> Tag:
+        """删除标签，同时解除已有引用。"""
+        tag = Tag.objects.filter(pk=pk).first()
+        self.validate_not_none(tag, f'标签 {pk} 不存在')
+
+        if tag.tag_type == 'LINE':
+            Knowledge.objects.filter(line_tag_id=tag.id).update(line_tag=None)
+            from apps.questions.models import Question
+            Question.objects.filter(line_tag_id=tag.id).update(line_tag=None)
+        else:
+            tag.knowledge_items.clear()
+
+        tag.delete()
+        return tag
+
+
 class DocumentParserService:
     """
     文档解析服务

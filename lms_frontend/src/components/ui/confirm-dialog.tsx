@@ -2,12 +2,10 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from './dialog';
-import { Button } from './button';
+import { cn } from '@/lib/utils';
 
 /**
  * 确认对话框的属性
@@ -50,9 +48,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onOpenChange,
   title,
   description,
-  icon,
-  iconBgColor = 'bg-primary-100',
-  iconColor = 'text-primary',
   confirmText = '确认',
   cancelText = '取消',
   confirmVariant = 'default',
@@ -64,45 +59,54 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     await onConfirm();
   };
 
-  const defaultContentClassName = 'rounded-lg max-w-md p-10 border-0 bg-background';
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={contentClassName || defaultContentClassName}>
-        <DialogHeader>
-          {icon && (
-            <div className={`w-20 h-20 ${iconBgColor} ${iconColor} rounded-lg flex items-center justify-center mb-8 mx-auto`}>
-              {icon}
-            </div>
-          )}
+      <DialogContent
+        className={cn(
+          'max-w-md border-0 bg-background px-6 py-7 shadow-2xl sm:px-8 sm:py-8 [&>button]:hidden',
+          contentClassName,
+        )}
+      >
+        <div className="flex flex-col items-center text-center">
           <DialogTitle className="text-2xl font-bold text-foreground mb-2 text-center">
-            {title}
+            <span
+              className="text-2xl leading-none text-foreground sm:text-4xl"
+              style={{ fontFamily: "'Georgia', 'Times New Roman', 'PingFang SC', serif" }}
+            >
+              {title}
+            </span>
           </DialogTitle>
-          <DialogDescription className="text-text-muted font-medium text-center leading-relaxed">
+          <DialogDescription
+            className="mt-3 max-w-md text-base leading-[1.8] text-text-muted sm:text-xl"
+            style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
+          >
             {description}
           </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="mt-10 gap-4 sm:flex-row">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="flex-1 rounded-md h-14 font-semibold text-text-muted hover:bg-muted "
-          >
-            {cancelText}
-          </Button>
-          <Button
-            onClick={handleConfirm}
+
+          <button
+            type="button"
+            onClick={() => void handleConfirm()}
             disabled={isConfirming}
-            variant={confirmVariant === 'destructive' ? 'destructive' : 'default'}
-            className={`flex-1 text-white rounded-md h-14 font-semibold  hover:scale-105 transition-all duration-200 ${
+            className={cn(
+              'mt-8 inline-flex h-10 min-w-40 cursor-pointer items-center justify-center rounded-full px-6 text-sm font-bold tracking-[0.12em] text-white transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60',
               confirmVariant === 'destructive'
                 ? 'bg-destructive hover:bg-destructive'
-                : 'bg-foreground hover:bg-foreground/80'
-            }`}
+                : 'bg-foreground hover:bg-foreground/90',
+            )}
+            style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
           >
-            {isConfirming ? '处理中...' : confirmText}
-          </Button>
-        </DialogFooter>
+            {isConfirming ? '处理中' : confirmText}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="mt-5 cursor-pointer text-sm font-semibold tracking-[0.08em] text-text-muted transition-colors duration-200 hover:text-foreground/70"
+            style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
+          >
+            {cancelText}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

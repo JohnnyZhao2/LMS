@@ -135,9 +135,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       items.push({
         key: 'log-policy',
         label: '日志策略',
-        path: `${rolePrefix}${ROUTES.AUDIT_LOGS}?settings=log-policy`,
+        path: `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
         icon: <Settings className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}` && new URLSearchParams(location.search).get('settings') === 'log-policy',
+        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
       })
     }
 
@@ -147,9 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         label: '审计日志',
         path: `${rolePrefix}${ROUTES.AUDIT_LOGS}`,
         icon: <ScrollText className="h-4 w-4" />,
-        isActive:
-          location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}` &&
-          new URLSearchParams(location.search).get('settings') !== 'log-policy',
+        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}`,
       })
     }
 
@@ -234,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   )
 
   const renderSubMenuTree = (
-    items: { key?: string; label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void }[]
+    items: { key?: string; label: string; isActive: boolean; onClick: () => void }[]
   ) => (
     <div className="relative ml-[26px] space-y-0.5 pt-1.5">
       <div className="absolute left-0 top-[10px] bottom-[22px] w-[1.5px] bg-[#E8E8E8]" />
@@ -244,16 +242,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           type="button"
           onClick={child.onClick}
           className={cn(
-            'group relative ml-[14px] flex h-10 w-[calc(100%-14px)] items-center gap-2.5 rounded-xl px-2.5 text-left transition-colors',
+            'group relative ml-[14px] flex h-10 w-[calc(100%-14px)] items-center rounded-xl px-3 text-left transition-colors',
             child.isActive
               ? 'bg-[#F6F6F6] text-black'
               : 'text-[#757575] hover:bg-[#F6F6F6]'
           )}
         >
           <span className="absolute -left-[14px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-bl-[10px] border-b-[1.5px] border-l-[1.5px] border-[#E8E8E8]" />
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-            {renderMenuIcon(child.icon, child.isActive)}
-          </span>
           <span className="min-w-0 flex-1 truncate text-[13px] font-medium tracking-[-0.02em]">
             {child.label}
           </span>
@@ -327,7 +322,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               (item.children ?? []).map((child) => ({
                 key: child.key,
                 label: child.label,
-                icon: child.icon,
                 isActive: isMenuItemActive(child),
                 onClick: () => child.key && handleNavClick(child.key),
               }))
@@ -418,7 +412,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                           settingsItems.map((item) => ({
                             key: item.key,
                             label: item.label,
-                            icon: item.icon,
                             isActive: item.isActive,
                             onClick: () => handleNavClick(item.path),
                           }))
@@ -449,18 +442,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         className="mt-0.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-[12px] font-medium leading-4 text-[#757575] outline-none transition-colors hover:bg-[#F6F6F6]"
                         aria-label="切换角色"
                       >
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#757575]" />
                         <span className="truncate">{roleLabel}</span>
                         <span className="relative inline-flex h-2 w-2 shrink-0 items-center justify-center">
                           <span className={cn('absolute h-2 w-2 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
                           <span className={cn('relative h-1.5 w-1.5 rounded-full', indicatorClasses.bar)} />
                         </span>
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#757575]" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="start"
                       sideOffset={6}
-                      className="min-w-[132px] rounded-xl border border-[#F0F0F0] bg-white p-1.5 shadow-sm"
+                      className="min-w-[132px] rounded-xl border border-[#F0F0F0] bg-white p-1 shadow-sm"
                     >
                       {roleOptions.map((option) => {
                         const isActive = option.value === currentRole
@@ -470,8 +463,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                             key={option.value}
                             onClick={() => handleRoleChange(option.value)}
                             className={cn(
-                              'cursor-pointer rounded-lg px-2.5 py-2 text-[13px] text-[#757575] focus:bg-[#F6F6F6] focus:text-black',
-                              isActive && 'bg-[#F6F6F6] font-medium text-black'
+                              'mb-1 cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-[#757575] focus:bg-[#F8F8F8] focus:text-black last:mb-0',
+                              isActive && 'bg-[#F8F8F8] text-black'
                             )}
                           >
                             {option.label}

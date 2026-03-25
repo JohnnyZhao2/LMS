@@ -399,6 +399,26 @@ class TestTagApiContracts:
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'active_only' in response.data['message']
 
+    def test_tag_delete_detaches_linked_knowledge_and_question(
+        self,
+        api_client,
+        admin_user,
+        line_tag,
+        sample_knowledge,
+        sample_question,
+    ):
+        api_client.force_authenticate(user=admin_user)
+
+        response = api_client.delete(f'/api/knowledge/tags/{line_tag.id}/')
+
+        assert response.status_code == 204, response.data
+        assert not Tag.objects.filter(id=line_tag.id).exists()
+
+        sample_knowledge.refresh_from_db()
+        sample_question.refresh_from_db()
+        assert sample_knowledge.line_tag_id is None
+        assert sample_question.line_tag_id is None
+
 
 @pytest.mark.django_db
 class TestKnowledgeApiContracts:

@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import {
   LayoutGrid,
   BookOpen,
-  FileText,
   User,
   Users,
   HelpCircle,
@@ -17,7 +16,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 
 export interface MenuItem {
   key?: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   label: string;
   children?: MenuItem[];
 }
@@ -61,7 +60,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     if (hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'])) {
       quizChildren.push({
         key: `${rolePrefix}/quiz-center?tab=quizzes`,
-        icon: <FileText className="w-4 h-4" />,
         label: '试卷管理',
       });
     }
@@ -69,7 +67,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     if (hasAnyPermission(['question.view', 'question.create', 'question.update', 'question.delete'])) {
       quizChildren.push({
         key: `${rolePrefix}/quiz-center?tab=questions`,
-        icon: <HelpCircle className="w-4 h-4" />,
         label: '题目管理',
       });
     }

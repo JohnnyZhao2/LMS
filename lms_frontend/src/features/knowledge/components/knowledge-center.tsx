@@ -20,11 +20,12 @@ import type { Tag as TagType } from '@/types/api';
 
 import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
-import { useCreateTag, useLineTypeTags } from '../api/get-tags';
+import { useCreateTag, useDeleteTag, useLineTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
+import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
 import { KnowledgeFocusModal } from './modals/knowledge-focus-modal';
@@ -73,12 +74,14 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const deleteKnowledge = useDeleteKnowledge();
     const createKnowledge = useCreateKnowledge();
     const createTag = useCreateTag();
+    const deleteTag = useDeleteTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
+    const [deleteLineTypeTarget, setDeleteLineTypeTarget] = React.useState<number | null>(null);
     const [focusState, setFocusState] = React.useState<FocusState | null>(null);
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
     const [hoveredLineTypeId, setHoveredLineTypeId] = React.useState<number | null>(null);
-    const [isAddTypeHovered, setIsAddTypeHovered] = React.useState(false);
+    const [isTypeActionHovered, setIsTypeActionHovered] = React.useState(false);
     const [isCreateLineTypeOpen, setIsCreateLineTypeOpen] = React.useState(false);
     const [createLineTypeStep, setCreateLineTypeStep] = React.useState<1 | 2>(1);
     const [newLineTypeName, setNewLineTypeName] = React.useState('');
@@ -109,6 +112,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     } = useKnowledgeFilters({ defaultPageSize: 24 });
 
     const { data: lineTypeTags = [] } = useLineTypeTags();
+    const selectedLineType = React.useMemo(
+        () => lineTypeTags.find((tag) => tag.id === selectedLineTypeId),
+        [lineTypeTags, selectedLineTypeId],
+    );
+    const isDeleteLineTypeMode = canDeleteKnowledge && !!selectedLineType;
 
     const {
         data,
@@ -268,6 +276,20 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
     }, [createTag, newLineTypeName, selectedLineTypeColor]);
 
+    const handleDeleteLineType = React.useCallback(async () => {
+        if (!deleteLineTypeTarget) return;
+
+        try {
+            await deleteTag.mutateAsync(deleteLineTypeTarget);
+            handleLineTypeSelect(undefined);
+            toast.success('条线类型已删除');
+        } catch {
+            toast.error('删除失败');
+        } finally {
+            setDeleteLineTypeTarget(null);
+        }
+    }, [deleteLineTypeTarget, deleteTag, handleLineTypeSelect]);
+
     return (
         <div
             className="space-y-3"
@@ -338,18 +360,42 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     {isManagementView && (
                         <button
                             type="button"
-                            onClick={() => setIsCreateLineTypeOpen(true)}
-                            onMouseEnter={() => setIsAddTypeHovered(true)}
-                            onMouseLeave={() => setIsAddTypeHovered(false)}
-                            className="inline-flex h-10 items-center gap-3 rounded-full bg-white px-5 text-sm font-medium text-foreground transition-[box-shadow] duration-200"
+                            onClick={() => {
+                                if (isDeleteLineTypeMode && selectedLineType) {
+                                    setDeleteLineTypeTarget(selectedLineType.id);
+                                    return;
+                                }
+                                setIsCreateLineTypeOpen(true);
+                            }}
+                            onMouseEnter={() => setIsTypeActionHovered(true)}
+                            onMouseLeave={() => setIsTypeActionHovered(false)}
+                            className={cn(
+                                'inline-flex h-10 items-center rounded-full px-5 text-sm font-medium transition-[background-color,box-shadow,color] duration-200',
+                                isDeleteLineTypeMode
+                                    ? 'bg-destructive text-white'
+                                    : 'gap-3 bg-white text-foreground',
+                            )}
                             style={{
-                                boxShadow: isAddTypeHovered
-                                    ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
-                                    : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
+                                boxShadow: isTypeActionHovered
+                                    ? (
+                                        isDeleteLineTypeMode
+                                            ? '0 14px 28px rgba(220,38,38,0.26)'
+                                            : '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
+                                    )
+                                    : (
+                                        isDeleteLineTypeMode
+                                            ? '0 10px 24px rgba(220,38,38,0.18)'
+                                            : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)'
+                                    ),
                             }}
                         >
-                            <span className="h-4 w-4 rounded-full border-2 border-[#e8793a]" />
-                            添加类型
+                            {!isDeleteLineTypeMode && (
+                                <span
+                                    className="h-4 w-4 rounded-full border-2"
+                                    style={{ borderColor: '#e8793a' }}
+                                />
+                            )}
+                            {isDeleteLineTypeMode ? '删除此类型' : '添加类型'}
                         </button>
                     )}
                 </div>
@@ -435,6 +481,19 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 confirmVariant="destructive"
                 isConfirming={deleteKnowledge.isPending}
                 onConfirm={confirmDelete}
+            />
+
+            <ConfirmDialog
+                open={deleteLineTypeTarget !== null}
+                onOpenChange={(open) => { if (!open) setDeleteLineTypeTarget(null); }}
+                title="确认删除此类型吗？"
+                description={selectedLineType
+                    ? `删除“${selectedLineType.name}”不会删除知识卡片，只会删除此类型。`
+                    : '删除此类型不会删除知识卡片，只会删除此类型。'}
+                confirmText="删除此类型"
+                confirmVariant="destructive"
+                isConfirming={deleteTag.isPending}
+                onConfirm={handleDeleteLineType}
             />
 
             {detailId !== null && (

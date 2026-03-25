@@ -6,6 +6,7 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   AUTHORIZATION: '/authorization',
   AUDIT_LOGS: '/audit-logs',
+  AUDIT_LOG_POLICY: '/audit-logs/policy',
   KNOWLEDGE: '/knowledge',
   TASKS: '/tasks',
   PERSONAL: '/personal',

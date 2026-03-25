@@ -1,17 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { useEffect, useRef } from 'react';
 import { Activity, FileText, RefreshCw, Settings, ShieldAlert, User } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Pagination } from '@/components/ui/pagination';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import {
   useUserLogs,
@@ -19,7 +11,6 @@ import {
   useOperationLogs,
 } from '../api/use-activity-logs';
 import { ActivityLogTimeline, type ActivityLogTimelineItem } from './activity-log-timeline';
-import { ActivityLogPolicyPanel } from './activity-log-policy-panel';
 
 const ACTION_LABELS: Record<string, string> = {
   login: '登录系统',
@@ -76,40 +67,12 @@ const getOperationTypeLabel = (type: string): string => {
  * - 使用时间线展示日志详情
  */
 export const ActivityLogsPanel: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { role } = useParams<{ role: string }>();
   const [activeTab, setActiveTab] = useState('user');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const { hasPermission } = useAuth();
   const canViewActivityLogs = hasPermission('activity_log.view');
   const canUpdateActivityLogPolicy = hasPermission('activity_log.policy.update');
-  const settingsTarget = searchParams.get('settings');
-
-  useEffect(() => {
-    if (!settingsTarget || !canViewActivityLogs) {
-      return;
-    }
-
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    if (settingsTarget === 'log-policy' && canUpdateActivityLogPolicy) {
-      setIsSettingsOpen(true);
-      return;
-    }
-
-    if (settingsTarget === 'audit-logs') {
-      setIsSettingsOpen(false);
-    }
-  }, [canUpdateActivityLogPolicy, canViewActivityLogs, settingsTarget]);
-
-  useEffect(() => {
-    if (!isSettingsOpen && settingsTarget === 'log-policy') {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('settings');
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [isSettingsOpen, searchParams, setSearchParams, settingsTarget]);
-
 
   // 分页状态
   const [userPagination, setUserPagination] = useState({ page: 1, pageSize: 10 });
@@ -146,6 +109,14 @@ export const ActivityLogsPanel: React.FC = () => {
       return;
     }
     void refetchOperationLogs();
+  };
+
+  const handleOpenPolicyPage = () => {
+    if (!role || !canUpdateActivityLogPolicy) {
+      return;
+    }
+
+    navigate(`/${role}${ROUTES.AUDIT_LOG_POLICY}`);
   };
 
   const userTimelineItems = useMemo<ActivityLogTimelineItem[]>(() => {
@@ -227,7 +198,7 @@ export const ActivityLogsPanel: React.FC = () => {
   }
 
   return (
-    <div ref={panelRef} className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="relative overflow-hidden bg-card border border-border/50 rounded-3xl shadow-sm">
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full relative z-10">
@@ -277,9 +248,9 @@ export const ActivityLogsPanel: React.FC = () => {
                   {canUpdateActivityLogPolicy && (
                     <button
                       type="button"
-                      onClick={() => setIsSettingsOpen(true)}
+                      onClick={handleOpenPolicyPage}
                       className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted/50 transition-all text-muted-foreground active:scale-90"
-                      title="设置"
+                      title="日志策略"
                     >
                       <Settings className="w-3.5 h-3.5" />
                     </button>
@@ -356,27 +327,6 @@ export const ActivityLogsPanel: React.FC = () => {
           </div>
         </Tabs>
       </div>
-
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-          <div className="relative p-8 bg-background">
-            {/* Subtle Background Glow */}
-            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-
-            <DialogHeader className="mb-8 relative z-10">
-              <DialogTitle className="text-xl font-bold tracking-tight">审计策略配置</DialogTitle>
-              <DialogDescription className="text-xs font-medium text-slate-500">
-                精细化控制系统日志的记录范围，优化存储与性能。
-              </DialogDescription>
-            </DialogHeader>
-
-            <ScrollArea className="relative z-10 h-[70vh] pr-4">
-              <ActivityLogPolicyPanel />
-            </ScrollArea>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

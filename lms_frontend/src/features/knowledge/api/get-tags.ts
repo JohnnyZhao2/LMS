@@ -81,3 +81,22 @@ export const useCreateTag = () => {
     },
   });
 };
+
+/**
+ * 删除标签
+ */
+export const useDeleteTag = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/knowledge/tags/${id}/`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
+    },
+  });
+};
