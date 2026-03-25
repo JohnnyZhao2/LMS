@@ -37,14 +37,21 @@ const THEME_ICONS: Record<Theme, React.ReactNode> = {
   dark: <IconCyber className="w-4 h-4" />,
 };
 
-export function ThemeSwitcher() {
+interface ThemeSwitcherProps {
+  className?: string
+}
+
+export function ThemeSwitcher({ className }: ThemeSwitcherProps) {
   const { theme, setTheme } = useTheme();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="w-8 h-8 flex items-center justify-center rounded-md text-text-muted hover:text-foreground hover:bg-muted transition-colors"
+          className={cn(
+            'flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-text-muted transition-colors hover:bg-muted hover:text-foreground',
+            className
+          )}
           aria-label="切换主题"
         >
           {THEME_ICONS[theme]}
