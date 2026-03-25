@@ -54,7 +54,7 @@
     /* 语义化颜色 - 引用 CSS 变量 */
     --color-background: var(--theme-background);
     --color-foreground: var(--theme-foreground);
-    --color-card: var(--theme-background);
+    --color-card: #ffffff;
     --color-card-foreground: var(--theme-foreground);
     --color-primary: var(--theme-primary);
     --color-primary-hover: var(--theme-primary-hover);
@@ -170,8 +170,8 @@
     --theme-radius-xl: 12px;
 
     /* 主色调 - Trust Blue */
-    --theme-background: #F6F8FC;
-    /* Clean, Cool White */
+    --theme-background: #FFFFFF;
+    /* 白色背景，卡片/面板使用 */
     --theme-foreground: #1E293B;
     --theme-primary: #2563EB;
     --theme-primary-hover: #1D4ED8;
@@ -920,8 +920,8 @@
     --theme-primary-800: #065F46;
     --theme-primary-900: #064E3B;
 
-    /* Background: Slight Warmth/Green Tint */
-    --theme-background: #F8FCF8;
+    /* Background: 白色（卡片/面板），Muted: 角色色彩（内容区） */
+    --theme-background: #FFFFFF;
     --theme-muted: #F0FDF4;
     /* Emerald-50 */
     --theme-muted-hover: #D1FAE5;
@@ -954,8 +954,8 @@
     --theme-primary-800: #3730A3;
     --theme-primary-900: #312E81;
 
-    /* Background: Cool White */
-    --theme-background: #FAFAFF;
+    /* Background: 白色（卡片/面板），Muted: 角色色彩（内容区） */
+    --theme-background: #FFFFFF;
     --theme-muted: #F5F3FF;
     /* Violet-50 */
     --theme-muted-hover: #EDE9FE;
@@ -972,8 +972,8 @@
 
 /* ADMIN - Slate/Blue (系统、理性) - 默认Light主题即可，也可微调 */
 .theme-admin {
-    /* 使用默认 Light 主题变量，或者微调得更冷一些 */
-    --theme-background: #F8FAFC;
+    /* Background: 白色（卡片/面板），Muted: 角色色彩（内容区） */
+    --theme-background: #FFFFFF;
     /* Slate-50 */
     --theme-muted: #F1F5F9;
     /* Slate-100 */

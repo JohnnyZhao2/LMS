@@ -164,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
   return (
     <aside className="h-full w-[272px] shrink-0">
-      <div className="relative flex h-full flex-col gap-5 overflow-hidden rounded-[20px] border-r border-black/10 bg-white px-5 py-5">
+      <div className="relative flex h-full flex-col gap-5 overflow-hidden px-5 py-5">
 
         {onClose && (
           <button
