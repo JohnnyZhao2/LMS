@@ -218,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     destructive
       ? 'text-[#D55F5A] hover:bg-[#F6F6F6]'
       : isActive
-        ? 'bg-[#F6F6F6] text-black'
+        ? 'text-black'
         : 'text-[#757575] hover:bg-[#F6F6F6]'
   )
 
@@ -227,7 +227,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     destructive
       ? 'text-[#D55F5A]'
       : isActive
-        ? 'font-medium text-black'
+        ? 'font-semibold text-black'
         : 'font-medium text-[#757575]'
   )
 
@@ -249,7 +249,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           )}
         >
           <span className="absolute -left-[14px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-bl-[10px] border-b-[1.5px] border-l-[1.5px] border-[#E8E8E8]" />
-          <span className="min-w-0 flex-1 truncate text-[13px] font-medium tracking-[-0.02em]">
+          <span className={cn(
+            'min-w-0 flex-1 truncate text-[13px] tracking-[-0.02em]',
+            child.isActive ? 'font-semibold text-black' : 'font-medium text-[#757575]'
+          )}>
             {child.label}
           </span>
         </button>
@@ -292,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           className={cn(
             'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
             isActive
-              ? 'bg-[#F6F6F6] text-black'
+              ? 'text-black'
               : 'text-[#757575] hover:bg-[#F6F6F6]'
           )}
         >
@@ -353,15 +356,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             <span className="text-[20px] font-semibold tracking-[-0.03em] text-black">学习平台</span>
           </div>
 
-          <div className="mt-5 h-[2px] rounded-full bg-[#F6F6F6]" />
-
-          <nav className="mt-5 flex-1 overflow-y-auto scrollbar-subtle">
-            <div className="space-y-4">
+          <nav className="mt-8 flex-1 overflow-y-auto scrollbar-subtle">
+            <div className="space-y-1">
               {navSections.map((section) => (
-                <section key={section.title} className="space-y-2">
-                  <div className="px-3 text-[10px] font-medium uppercase leading-3 tracking-[0.18em] text-[#757575]">
-                    {section.title}
-                  </div>
+                <section key={section.title} className="space-y-1">
                   <div className="space-y-1">
                     {section.items.map((item) => renderWorkspaceItem(item))}
                   </div>
@@ -369,11 +367,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               ))}
 
               {settingsItems.length > 0 && (
-                <section className="space-y-2 pt-2">
-                  <div className="px-3 text-[10px] font-medium uppercase leading-3 tracking-[0.18em] text-[#757575]">
-                    设置
-                  </div>
-
+                <section className="space-y-1">
                   <div>
                     <button
                       type="button"
@@ -381,7 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       className={cn(
                         'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
                         hasActiveSettingsItem
-                          ? 'bg-[#F6F6F6] text-black'
+                          ? 'text-black'
                           : 'text-[#757575] hover:bg-[#F6F6F6]'
                       )}
                     >
@@ -423,8 +417,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               )}
             </div>
           </nav>
-          <div className="mt-5 h-[2px] rounded-full bg-[#F6F6F6]" />
-
           <div className="mt-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-linear-to-br from-[#F4B2C2] to-[#FFD8E2] text-[16px] font-semibold text-black">

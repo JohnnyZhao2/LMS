@@ -325,7 +325,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 )}
                                 onMouseEnter={() => setHoveredLineTypeId(tag.id)}
                                 onMouseLeave={() => setHoveredLineTypeId((current) => (current === tag.id ? null : current))}
-                                className="inline-flex items-center gap-3 rounded-[6px] bg-white px-4 py-2 font-medium transition-[box-shadow] duration-200"
+                                className="inline-flex items-center gap-3 rounded-[6px] bg-white px-3 py-2 font-medium transition-[box-shadow] duration-200"
                                 style={{
                                     fontSize: 12.5,
                                     boxShadow: hoveredLineTypeId === tag.id
@@ -370,12 +370,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             onMouseEnter={() => setIsTypeActionHovered(true)}
                             onMouseLeave={() => setIsTypeActionHovered(false)}
                             className={cn(
-                                'inline-flex h-10 items-center rounded-full px-5 text-sm font-medium transition-[background-color,box-shadow,color] duration-200',
+                                'inline-flex items-center rounded-full px-4 py-2 font-medium transition-[background-color,box-shadow,color] duration-200',
                                 isDeleteLineTypeMode
                                     ? 'bg-destructive text-white'
                                     : 'gap-3 bg-white text-foreground',
                             )}
                             style={{
+                                fontSize: 12.5,
                                 boxShadow: isTypeActionHovered
                                     ? (
                                         isDeleteLineTypeMode

@@ -8,7 +8,6 @@ import {
   HelpCircle,
   FileSearch,
   BarChart3,
-  ClipboardCheck,
   SquareCheck,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
@@ -71,6 +70,13 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
+    if (hasAnyPermission(['grading.view', 'grading.score'])) {
+      quizChildren.push({
+        key: `${rolePrefix}/grading-center`,
+        label: '阅卷中心',
+      });
+    }
+
     if (quizChildren.length > 0) {
       menu.push({
         key: `${rolePrefix}/quiz-center`,
@@ -93,14 +99,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/spot-checks`,
         icon: <FileSearch className="w-4 h-4" />,
         label: '抽查中心',
-      });
-    }
-
-    if (hasAnyPermission(['grading.view', 'grading.score'])) {
-      menu.push({
-        key: `${rolePrefix}/grading-center`,
-        icon: <ClipboardCheck className="w-4 h-4" />,
-        label: '阅卷中心',
       });
     }
 

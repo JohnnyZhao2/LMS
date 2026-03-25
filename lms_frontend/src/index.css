@@ -509,6 +509,16 @@
    Global Reset & Typography
    ============================================ */
 @layer base {
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]) {
+        cursor: pointer;
+    }
+
+    button:disabled,
+    [role="button"][aria-disabled="true"] {
+        cursor: not-allowed;
+    }
+
     body {
         @apply bg-background text-foreground antialiased;
         font-family: var(--theme-font-sans);
