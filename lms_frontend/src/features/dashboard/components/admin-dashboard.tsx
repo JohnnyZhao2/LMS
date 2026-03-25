@@ -15,7 +15,6 @@ import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ActionCard } from '@/components/ui/action-card';
-import { ActivityLogsPanel } from '@/features/activity-logs/components/activity-logs-panel';
 
 
 /**
@@ -127,8 +126,6 @@ export const AdminDashboard: React.FC = () => {
             />
           </div>
 
-          {/* 活动日志面板 - 放在主栏下方 */}
-          <ActivityLogsPanel />
         </div>
       </div>
     </div>

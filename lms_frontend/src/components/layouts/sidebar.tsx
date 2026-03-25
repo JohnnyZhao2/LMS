@@ -13,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useTheme } from '@/lib/use-theme'
 import {
   ROLE_FULL_LABELS,
   ROLE_INDICATOR_CLASSES,
@@ -25,35 +24,12 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-const ThemeSunIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-    <circle cx="10" cy="10" r="3" />
-    <path d="M10 2.8v2M10 15.2v2M2.8 10h2M15.2 10h2M4.8 4.8l1.4 1.4M13.8 13.8l1.4 1.4M4.8 15.2l1.4-1.4M13.8 6.2l1.4-1.4" />
-  </svg>
-)
-
-const ThemeBookIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-    <path d="M4 15.5V5a2 2 0 0 1 2-2h9v12.5H6a2 2 0 0 0-2 2Z" />
-    <path d="M4 15.5A2 2 0 0 1 6 13.5h9" />
-  </svg>
-)
-
-const ThemeLayersIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-    <path d="M10 3 3 6.8 10 10.5l7-3.7L10 3Z" />
-    <path d="M3 10.6 10 14.3l7-3.7" />
-    <path d="M3 14.2 10 17.9l7-3.7" />
-  </svg>
-)
-
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const { user, availableRoles, logout, switchRole, hasAnyPermission } = useAuth()
   const currentRole = useCurrentRole()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
-  const { theme, setTheme } = useTheme()
 
   const handleLogout = async () => {
     await logout()
@@ -91,9 +67,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return currentRole ? `/${currentRole.toLowerCase()}` : ''
   }, [currentRole, location.pathname])
 
-  const isMenuItemActive = React.useCallback((item: MenuItem): boolean => {
+  const isMenuItemActive = React.useCallback(function checkMenuItemActive(item: MenuItem): boolean {
     if (item.children?.length) {
-      return item.children.some((child) => isMenuItemActive(child))
+      return item.children.some((child) => checkMenuItemActive(child))
     }
 
     if (!item.key) {
@@ -159,9 +135,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       items.push({
         key: 'log-policy',
         label: '日志策略',
-        path: `${rolePrefix}${ROUTES.DASHBOARD}?settings=log-policy`,
+        path: `${rolePrefix}${ROUTES.AUDIT_LOGS}?settings=log-policy`,
         icon: <Settings className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.DASHBOARD}` && new URLSearchParams(location.search).get('settings') === 'log-policy',
+        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}` && new URLSearchParams(location.search).get('settings') === 'log-policy',
       })
     }
 
@@ -169,9 +145,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       items.push({
         key: 'audit-logs',
         label: '审计日志',
-        path: `${rolePrefix}${ROUTES.DASHBOARD}?settings=audit-logs`,
+        path: `${rolePrefix}${ROUTES.AUDIT_LOGS}`,
         icon: <ScrollText className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.DASHBOARD}` && new URLSearchParams(location.search).get('settings') === 'audit-logs',
+        isActive:
+          location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}` &&
+          new URLSearchParams(location.search).get('settings') !== 'log-policy',
       })
     }
 
@@ -254,12 +232,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         ? 'font-medium text-black'
         : 'font-medium text-[#757575]'
   )
-
-  const themeOptions = [
-    { value: 'light' as const, icon: ThemeSunIcon, label: '明亮' },
-    { value: 'scholar' as const, icon: ThemeBookIcon, label: '书院' },
-    { value: 'dark' as const, icon: ThemeLayersIcon, label: '暗夜' },
-  ]
 
   const renderSubMenuTree = (
     items: { key?: string; label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void }[]
@@ -458,34 +430,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               )}
             </div>
           </nav>
-
-          <div className="mt-5 flex px-1">
-            <div className="inline-flex items-center rounded-full bg-muted p-1">
-              {themeOptions.map((option) => {
-                const Icon = option.icon
-                const isActive = theme === option.value
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setTheme(option.value)}
-                    aria-label={`切换到${option.label}主题`}
-                    title={option.label}
-                    className={cn(
-                      'flex h-7 w-7 items-center justify-center rounded-full transition-colors',
-                      isActive
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-text-muted hover:text-foreground'
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
           <div className="mt-5 h-[2px] rounded-full bg-[#F6F6F6]" />
 
           <div className="mt-5">

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './sidebar'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 import { useCurrentRole } from '@/hooks/use-current-role'
 import { cn } from '@/lib/utils'
 
@@ -56,10 +57,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* 主内容区 */}
       <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="flex w-full min-w-0 flex-col px-4 py-6 md:px-6 xl:px-8">
+        <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8 xl:px-10">
           {children}
         </div>
       </main>
+
+      <ThemeSwitcher />
     </div>
   )
 }

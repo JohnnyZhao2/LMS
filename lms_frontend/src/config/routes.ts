@@ -5,6 +5,7 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
   AUTHORIZATION: '/authorization',
+  AUDIT_LOGS: '/audit-logs',
   KNOWLEDGE: '/knowledge',
   TASKS: '/tasks',
   PERSONAL: '/personal',
