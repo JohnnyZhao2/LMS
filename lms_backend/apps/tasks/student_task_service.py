@@ -82,7 +82,9 @@ class StudentTaskService(BaseService):
     @log_operation(
         'learning',
         'complete_knowledge',
-        '任务《{task_title}》中的知识《{result.task_knowledge.knowledge.title}》已标记完成',
+        '任务：{task_title}',
+        target_type='knowledge',
+        target_title_template='{result.task_knowledge.knowledge.title}',
     )
     def complete_knowledge_learning(
         self,

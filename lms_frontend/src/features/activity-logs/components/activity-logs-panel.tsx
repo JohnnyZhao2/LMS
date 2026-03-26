@@ -1,10 +1,13 @@
-import React, { startTransition, useDeferredValue, useMemo, useState } from 'react';
+import React, { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   Search,
   ShieldAlert,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -15,8 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { ApiError } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import { useActivityLogs } from '../api/use-activity-logs';
+import {
+  useActivityLogs,
+  useBulkDeleteActivityLogs,
+} from '../api/use-activity-logs';
 import { ActivityLogFeed } from './activity-log-feed';
 import { ActivityLogMemberList } from './activity-log-member-list';
 import type { ActivityLogItem, ActivityLogType } from '../types';
@@ -26,30 +33,6 @@ const LOG_TYPE_META = {
   content: { label: '内容' },
   operation: { label: '行为记录' },
 } as const;
-
-const ACTION_LABELS: Record<string, string> = {
-  login: '登录系统',
-  logout: '登出系统',
-  password_change: '修改密码',
-  login_failed: '登录失败',
-  role_assigned: '分配角色',
-  mentor_assigned: '分配导师',
-  activate: '启用账号',
-  deactivate: '停用账号',
-  switch_role: '切换角色',
-  create: '创建',
-  update: '更新',
-  delete: '删除',
-  publish: '发布',
-  create_and_assign: '创建并分配任务',
-  update_task: '更新任务',
-  delete_task: '删除任务',
-  manual_grade: '人工批改',
-  batch_grade: '批量评分',
-  submit: '提交答卷',
-  start_quiz: '开始答题',
-  complete_knowledge: '完成学习',
-};
 
 const ACTION_OPTIONS: Record<ActivityLogType, Array<{ label: string; value: string }>> = {
   user: [
@@ -73,6 +56,9 @@ const ACTION_OPTIONS: Record<ActivityLogType, Array<{ label: string; value: stri
     { label: '创建并分配任务', value: 'create_and_assign' },
     { label: '更新任务', value: 'update_task' },
     { label: '删除任务', value: 'delete_task' },
+    { label: '抽查', value: 'create_spot_check' },
+    { label: '更新抽查', value: 'update_spot_check' },
+    { label: '删除抽查', value: 'delete_spot_check' },
     { label: '人工批改', value: 'manual_grade' },
     { label: '批量评分', value: 'batch_grade' },
     { label: '开始答题', value: 'start_quiz' },
@@ -84,15 +70,18 @@ const ACTION_OPTIONS: Record<ActivityLogType, Array<{ label: string; value: stri
 export const ActivityLogsPanel: React.FC = () => {
   const { hasPermission } = useAuth();
   const canViewActivityLogs = hasPermission('activity_log.view');
+  const canDeleteActivityLogs = hasPermission('activity_log.view');
 
   const [activeType, setActiveType] = useState<ActivityLogType>('user');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const [action, setAction] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search.trim());
 
@@ -111,13 +100,10 @@ export const ActivityLogsPanel: React.FC = () => {
   );
 
   const { data, isLoading } = useActivityLogs(query, canViewActivityLogs);
+  const bulkDeleteActivityLogs = useBulkDeleteActivityLogs();
 
   const normalizedItems = useMemo<ActivityLogItem[]>(
-    () =>
-      (data?.results ?? []).map((item) => ({
-        ...item,
-        action: ACTION_LABELS[item.action] ?? item.action,
-      })),
+    () => data?.results ?? [],
     [data?.results]
   );
 
@@ -126,12 +112,45 @@ export const ActivityLogsPanel: React.FC = () => {
     () => (data?.members ?? []).filter((m) => selectedMemberIds.includes(m.user.id)),
     [data?.members, selectedMemberIds]
   );
+  const selectedLogs = useMemo(
+    () => normalizedItems.filter((item) => selectedLogIds.includes(item.id)),
+    [normalizedItems, selectedLogIds]
+  );
+  const isAllLogsSelected = normalizedItems.length > 0 && selectedLogIds.length === normalizedItems.length;
+  const hasPartialLogSelection = selectedLogIds.length > 0 && !isAllLogsSelected;
+  const isDeleting = bulkDeleteActivityLogs.isPending;
   const hasActiveFilters =
     selectedMemberIds.length > 0 ||
     search.trim().length > 0 ||
     action !== 'all' ||
     dateFrom !== '' ||
     dateTo !== '';
+
+  useEffect(() => {
+    setSelectedLogIds((current) =>
+      current.filter((logId) => normalizedItems.some((item) => item.id === logId))
+    );
+  }, [normalizedItems]);
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedLogs.length === 0) return;
+
+    try {
+      await bulkDeleteActivityLogs.mutateAsync(selectedLogs.map((item) => item.id));
+      if (selectedLogs.length === normalizedItems.length && page > 1) {
+        setPage((current) => Math.max(1, current - 1));
+      }
+      setSelectedLogIds([]);
+      setBulkDeleteOpen(false);
+      toast.success(`已删除 ${selectedLogs.length} 条日志`);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error('批量删除日志失败');
+      }
+    }
+  };
 
   const handleTypeChange = (nextType: ActivityLogType) => {
     if (nextType === activeType) return;
@@ -152,6 +171,18 @@ export const ActivityLogsPanel: React.FC = () => {
       );
       setPage(1);
     });
+  };
+
+  const handleToggleLog = (logId: string) => {
+    setSelectedLogIds((current) =>
+      current.includes(logId)
+        ? current.filter((itemId) => itemId !== logId)
+        : [...current, logId]
+    );
+  };
+
+  const handleToggleAllLogs = () => {
+    setSelectedLogIds(isAllLogsSelected ? [] : normalizedItems.map((item) => item.id));
   };
 
   if (!canViewActivityLogs) {
@@ -180,9 +211,6 @@ export const ActivityLogsPanel: React.FC = () => {
 
   return (
     <section className="space-y-5">
-      {/* 标题 */}
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">Activity Feed</h2>
-
       {/* 筛选栏 */}
       <div className="flex flex-wrap items-center gap-2.5">
         {/* 类型切换 */}
@@ -267,56 +295,113 @@ export const ActivityLogsPanel: React.FC = () => {
         />
 
         {/* 右侧日志流 */}
-        <div className="space-y-4">
+        <div>
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-background">
             {/* 选中成员标签 + Tab */}
-            <div className="border-b border-border/60 px-5 pt-4">
-              <div className="flex items-center gap-6">
-                <button type="button" className="relative pb-3 text-[13px] font-semibold text-primary">
-                  全部
-                  <span className="ml-1.5 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
-                    {data?.count ?? 0}
-                  </span>
-                  <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
-                </button>
+            <div className="border-b border-border/60 px-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                {selectedMembers.length > 0 ? (
+                  <div className="relative flex h-14 min-w-0 items-center gap-2 text-[13px] font-semibold text-primary">
+                    <div className="scrollbar-subtle flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+                      {selectedMembers.map((member) => (
+                        <button
+                          key={member.user.id}
+                          type="button"
+                          onClick={() => handleToggleMember(member.user.id)}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-50/70 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-100"
+                        >
+                          <span>{member.user.username}</span>
+                          <X className="h-3 w-3 opacity-70" />
+                        </button>
+                      ))}
+                    </div>
+                    <span className="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                      {data?.count ?? 0}
+                    </span>
+                    <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="relative inline-flex h-14 items-center text-[13px] font-semibold text-primary"
+                  >
+                    全部
+                    <span className="ml-1.5 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                      {data?.count ?? 0}
+                    </span>
+                    <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
+                  </button>
+                )}
+
+                {canDeleteActivityLogs && normalizedItems.length > 0 && (
+                  <div className="flex h-14 flex-wrap items-center gap-3">
+                    <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
+                      <Checkbox
+                        checked={isAllLogsSelected ? true : hasPartialLogSelection ? 'indeterminate' : false}
+                        onCheckedChange={handleToggleAllLogs}
+                        disabled={isDeleting}
+                      />
+                      <span>本页全选</span>
+                      <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-text-muted">
+                        {selectedLogIds.length}/{normalizedItems.length}
+                      </span>
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setBulkDeleteOpen(true)}
+                      disabled={selectedLogIds.length === 0 || isDeleting}
+                      className={cn(
+                        'inline-flex h-8 items-center rounded-lg border px-3 text-[12px] font-medium transition-colors',
+                        selectedLogIds.length > 0 && !isDeleting
+                          ? 'border-destructive/20 bg-error-50 text-destructive hover:bg-error-100'
+                          : 'cursor-not-allowed border-border/60 bg-background text-text-muted opacity-60'
+                      )}
+                    >
+                      删除选中
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 已选成员 pills */}
-            {selectedMembers.length > 0 && (
-              <div className="flex flex-wrap gap-2 border-b border-border/40 px-5 py-3">
-                {selectedMembers.map((m) => (
-                  <button
-                    key={m.user.id}
-                    type="button"
-                    onClick={() => handleToggleMember(m.user.id)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary-50/60 px-3 py-1 text-[12px] font-medium text-primary transition-colors hover:bg-primary-100"
-                  >
-                    {m.user.username}
-                    <X className="h-3 w-3 opacity-60" />
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* 日志列表 */}
-            <ActivityLogFeed items={normalizedItems} isLoading={isLoading} />
-          </div>
-
-          {/* 分页 */}
-          <div className="rounded-2xl border border-border/60 bg-background px-5 py-3">
-            <Pagination
-              current={page}
-              total={data?.count ?? 0}
-              pageSize={pageSize}
-              showSizeChanger
-              showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-              onChange={(p, s) => { setPage(p); setPageSize(s); }}
-              onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); }}
+            <ActivityLogFeed
+              items={normalizedItems}
+              isLoading={isLoading}
+              canDelete={canDeleteActivityLogs}
+              selectedLogIds={selectedLogIds}
+              selectionDisabled={isDeleting}
+              onToggleSelect={handleToggleLog}
             />
+
+            <div className="border-t border-border/40 px-5 py-3">
+              <Pagination
+                current={page}
+                total={data?.count ?? 0}
+                pageSize={pageSize}
+                showSizeChanger
+                showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                onChange={(p, s) => { setPage(p); setPageSize(s); }}
+                onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); }}
+              />
+            </div>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          setBulkDeleteOpen(open);
+        }}
+        title="删除选中日志？"
+        description={`将永久删除已选 ${selectedLogs.length} 条日志记录。此操作不可撤销。`}
+        confirmText="确认删除"
+        confirmVariant="destructive"
+        isConfirming={bulkDeleteActivityLogs.isPending}
+        onConfirm={handleConfirmBulkDelete}
+      />
     </section>
   );
 };

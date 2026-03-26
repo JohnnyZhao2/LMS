@@ -157,6 +157,9 @@ class ActivityLogService:
         duration: int = 0,
         status: str = 'success',
         action_key: Optional[str] = None,
+        target_type: str = '',
+        target_id: str = '',
+        target_title: str = '',
     ) -> Optional[OperationLog]:
         """
         记录操作日志
@@ -169,6 +172,9 @@ class ActivityLogService:
             duration: 耗时（毫秒）
             status: 状态 (success, failed, partial)
             action_key: 白名单动作标识（默认 operation.{operation_type}.{action}）
+            target_type: 目标类型 (task, quiz, knowledge, student)
+            target_id: 目标ID
+            target_title: 目标标题
         """
         policy_key = action_key or f'operation.{operation_type}.{action}'
         if not ActivityLogService.is_action_enabled(policy_key):
@@ -180,4 +186,7 @@ class ActivityLogService:
             description=description,
             duration=duration,
             status=status,
+            target_type=target_type,
+            target_id=str(target_id) if target_id else '',
+            target_title=target_title,
         )

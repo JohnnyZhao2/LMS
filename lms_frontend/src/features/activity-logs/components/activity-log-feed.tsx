@@ -1,35 +1,15 @@
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import type { ActivityLogItem } from '../types';
 
 interface ActivityLogFeedProps {
   items: ActivityLogItem[];
   isLoading?: boolean;
+  canDelete?: boolean;
+  selectedLogIds?: string[];
+  selectionDisabled?: boolean;
+  onToggleSelect?: (itemId: string) => void;
 }
-
-const STATUS_LABELS = {
-  success: '成功',
-  failed: '失败',
-  partial: '部分成功',
-} as const;
-
-const STATUS_STYLES = {
-  success: 'bg-secondary-50 text-secondary-700',
-  failed: 'bg-error-50 text-destructive',
-  partial: 'bg-warning-50 text-warning-700',
-} as const;
-
-const TARGET_TYPE_LABELS: Record<string, string> = {
-  knowledge: '知识',
-  quiz: '试卷',
-  question: '题目',
-  assignment: '作业',
-  task_management: '任务',
-  grading: '批改',
-  spot_check: '抽查',
-  data_export: '导出',
-  submission: '答题',
-  learning: '学习',
-};
 
 const AVATAR_COLORS = [
   'bg-primary-100 text-primary-600',
@@ -92,7 +72,14 @@ const LoadingState = () => (
   </div>
 );
 
-export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({ items, isLoading = false }) => {
+export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
+  items,
+  isLoading = false,
+  canDelete = false,
+  selectedLogIds = [],
+  selectionDisabled = false,
+  onToggleSelect,
+}) => {
   if (isLoading) return <LoadingState />;
 
   if (items.length === 0) {
@@ -107,36 +94,29 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({ items, isLoadi
 
   return (
     <div className="px-5 py-4">
-      {/* 时间线容器：左侧竖线贯穿 */}
       <div className="relative ml-[18px]">
-        {/* 贯穿竖线 */}
         <div className="absolute bottom-0 left-0 top-0 w-px bg-border/60" />
 
         {groups.map((group, gi) => (
           <div key={group.label}>
-            {/* 日期节点 */}
             <div className="relative flex items-center pb-1 pt-1">
-              {/* 节点圆点 - 大号，覆盖竖线 */}
               <div className="absolute -left-[5px] flex h-[10px] w-[10px] items-center justify-center rounded-full border-2 border-primary bg-background" />
               <span className="pl-7 text-[13px] font-semibold text-foreground">{group.label}</span>
             </div>
 
-            {/* 该日期下的日志条目 */}
             {group.items.map((item, ii) => {
               const isLast = gi === groups.length - 1 && ii === group.items.length - 1;
+              const isFailed = item.status === 'failed' || item.status === 'partial';
               return (
                 <div key={item.id} className="relative">
-                  {/* 节点小圆点 */}
                   <div className="absolute -left-[3px] top-[18px] h-1.5 w-1.5 rounded-full bg-border" />
 
-                  {/* 内容区 */}
                   <div
                     className={cn(
-                      'ml-5 flex gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors hover:bg-muted/30',
+                      'group ml-5 flex gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors hover:bg-muted/30',
                       isLast && 'mb-0'
                     )}
                   >
-                    {/* 头像 */}
                     <div
                       className={cn(
                         'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
@@ -146,31 +126,19 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({ items, isLoadi
                       {item.actor?.username.slice(0, 1) ?? '?'}
                     </div>
 
-                    {/* 文字内容 */}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] leading-6">
-                        <span className="font-semibold text-foreground">
-                          {item.actor?.username ?? '系统'}
-                        </span>
-                        <span className="text-text-muted">{item.action}</span>
-                        {item.target && (
-                          <>
-                            <span className="rounded-md border border-border/70 bg-muted/40 px-2 py-px text-[12px] font-medium text-foreground">
-                              #{item.target.title}
-                            </span>
-                            <span className="text-[12px] text-text-muted">
-                              {TARGET_TYPE_LABELS[item.target.type] ?? item.target.type}
-                            </span>
-                          </>
+                        <span className="text-foreground">{item.summary}</span>
+                        {isFailed && (
+                          <span className={cn(
+                            'rounded-full px-2 py-px text-[11px] font-medium',
+                            item.status === 'failed'
+                              ? 'bg-error-50 text-destructive'
+                              : 'bg-warning-50 text-warning-700'
+                          )}>
+                            {item.status === 'failed' ? '失败' : '部分成功'}
+                          </span>
                         )}
-                        <span
-                          className={cn(
-                            'ml-0.5 rounded-full px-2 py-px text-[11px] font-medium',
-                            STATUS_STYLES[item.status]
-                          )}
-                        >
-                          {STATUS_LABELS[item.status]}
-                        </span>
                       </div>
 
                       <div className="mt-0.5 text-[12px] text-text-muted">
@@ -180,6 +148,21 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({ items, isLoadi
                         )}
                       </div>
                     </div>
+
+                    {canDelete && onToggleSelect ? (
+                      <Checkbox
+                        checked={selectedLogIds.includes(item.id)}
+                        onCheckedChange={() => onToggleSelect(item.id)}
+                        disabled={selectionDisabled}
+                        aria-label={`选择日志 ${item.id}`}
+                        className={cn(
+                          'mt-2.5 shrink-0 transition-opacity',
+                          selectedLogIds.includes(item.id)
+                            ? 'opacity-100'
+                            : 'opacity-70 md:opacity-0 md:group-hover:opacity-100'
+                        )}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );

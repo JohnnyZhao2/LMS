@@ -300,7 +300,9 @@ def log_operation(
     action: str,
     description_template: Optional[str] = None,
     measure_duration: bool = False,
-    action_key: Optional[str] = None
+    action_key: Optional[str] = None,
+    target_type: str = '',
+    target_title_template: str = '',
 ):
     """
     记录操作日志的装饰器
@@ -310,9 +312,13 @@ def log_operation(
         action: 操作
         description_template: 描述模板
         measure_duration: 是否测量耗时
+        target_type: 目标类型 (task, quiz, knowledge, student)
+        target_title_template: 目标标题模板，如 '{title}' 或 '{result.title}'
 
     使用示例:
-        @log_operation('task_management', 'create_and_assign', '创建任务《{title}》并分配给 {assignee_count} 名学员', measure_duration=True)
+        @log_operation('task_management', 'create_and_assign',
+            '截止 {deadline_text}，{assignee_count} 名学员',
+            target_type='task', target_title_template='{title}')
         def create_task(self, title, description, deadline, assignee_ids=None):
             ...
             return task
@@ -333,12 +339,21 @@ def log_operation(
             try:
                 from apps.activity_logs.services import ActivityLogService
 
+                template_vars = _build_template_vars(func, self, args, kwargs, result)
+
                 # 构建描述
                 if description_template:
-                    template_vars = _build_template_vars(func, self, args, kwargs, result)
                     description = description_template.format(**template_vars)
                 else:
                     description = f'{action} 操作'
+
+                # 构建 target
+                resolved_target_title = ''
+                resolved_target_id = ''
+                if target_title_template:
+                    resolved_target_title = target_title_template.format(**template_vars)
+                if result is not None and hasattr(result, 'id'):
+                    resolved_target_id = str(result.id)
 
                 ActivityLogService.log_operation(
                     operator=getattr(self, 'user', None),
@@ -347,7 +362,10 @@ def log_operation(
                     description=description,
                     duration=duration,
                     status='success',
-                    action_key=action_key
+                    action_key=action_key,
+                    target_type=target_type,
+                    target_id=resolved_target_id,
+                    target_title=resolved_target_title,
                 )
             except Exception:
                 pass  # 日志记录失败不影响主流程

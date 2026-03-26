@@ -2,6 +2,7 @@ from datetime import datetime, time
 from typing import Any
 
 from django.db.models import Count, Max, Q, QuerySet
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import ContentLog, OperationLog, UserLog
@@ -10,28 +11,38 @@ from .models import ContentLog, OperationLog, UserLog
 LOG_TYPE_CONFIG = {
     'user': {
         'model': UserLog,
-        'actor_field': 'user',
-        'select_related': ('user',),
-        'search_fields': ('user__username', 'user__employee_id', 'description'),
+        'actor_field': 'effective_actor',
+        'select_related': ('user', 'operator'),
+        'search_fields': ('user__username', 'user__employee_id', 'operator__username', 'operator__employee_id', 'description'),
+        'needs_annotation': True,
     },
     'content': {
         'model': ContentLog,
         'actor_field': 'operator',
         'select_related': ('operator',),
         'search_fields': ('operator__username', 'operator__employee_id', 'content_title', 'description'),
+        'needs_annotation': False,
     },
     'operation': {
         'model': OperationLog,
         'actor_field': 'operator',
         'select_related': ('operator',),
-        'search_fields': ('operator__username', 'operator__employee_id', 'action', 'description'),
+        'search_fields': ('operator__username', 'operator__employee_id', 'action', 'description', 'target_title'),
+        'needs_annotation': False,
     },
 }
 
 
+def _annotate_effective_actor(queryset: QuerySet, log_type: str) -> QuerySet:
+    if LOG_TYPE_CONFIG[log_type]['needs_annotation']:
+        return queryset.annotate(effective_actor_id=Coalesce('operator_id', 'user_id'))
+    return queryset
+
+
 def get_activity_log_queryset(log_type: str) -> QuerySet:
     config = LOG_TYPE_CONFIG[log_type]
-    return config['model'].objects.select_related(*config['select_related']).all()
+    qs = config['model'].objects.select_related(*config['select_related']).all()
+    return _annotate_effective_actor(qs, log_type)
 
 
 def apply_activity_log_filters(queryset: QuerySet, log_type: str, filters: dict[str, Any]) -> QuerySet:
@@ -68,7 +79,46 @@ def apply_activity_log_filters(queryset: QuerySet, log_type: str, filters: dict[
 
 
 def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[str, Any]]:
-    actor_field = LOG_TYPE_CONFIG[log_type]['actor_field']
+    config = LOG_TYPE_CONFIG[log_type]
+
+    if config['needs_annotation']:
+        # UserLog: actor = COALESCE(operator, user)，需要用 annotation 聚合
+        from apps.users.models import User
+        actor_ids = (
+            queryset
+            .values_list('effective_actor_id', flat=True)
+            .distinct()
+        )
+        # 按 actor_id 聚合统计
+        aggregated = (
+            queryset
+            .values('effective_actor_id')
+            .annotate(
+                activity_count=Count('id'),
+                last_activity_at=Max('created_at'),
+            )
+            .order_by('-activity_count', '-last_activity_at')
+        )
+        # 批量查用户信息
+        user_map = {
+            u.id: u
+            for u in User.objects.filter(id__in=actor_ids).only('id', 'employee_id', 'username')
+        }
+        return [
+            {
+                'user': {
+                    'id': item['effective_actor_id'],
+                    'employee_id': user_map[item['effective_actor_id']].employee_id,
+                    'username': user_map[item['effective_actor_id']].username,
+                },
+                'activity_count': item['activity_count'],
+                'last_activity_at': item['last_activity_at'],
+            }
+            for item in aggregated
+            if item['effective_actor_id'] in user_map
+        ]
+
+    actor_field = config['actor_field']
     aggregated = queryset.values(
         f'{actor_field}__id',
         f'{actor_field}__employee_id',

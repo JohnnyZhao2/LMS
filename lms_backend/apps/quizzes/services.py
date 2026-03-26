@@ -127,7 +127,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'create',
-        '{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
     )
     def create(
         self,
@@ -180,7 +180,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'update',
-        '生成新版本 v{version_number}，{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+        'v{version_number}，{quiz_type_label}，{question_count} 题，{total_score_text} 分',
     )
     def update(
         self,
@@ -261,7 +261,7 @@ class QuizService(BaseService):
     @log_content_action(
         'quiz',
         'delete',
-        '{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+        '{quiz_type_label}，{question_count} 题，{total_score_text} 分',
     )
     def delete(self, pk: int) -> Quiz:
         """

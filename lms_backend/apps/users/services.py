@@ -30,10 +30,7 @@ class UserManagementService(BaseService):
     def _get_user(self, user_id: int) -> Optional[User]:
         return get_user_by_id(user_id)
 
-    @log_user_action(
-        'deactivate',
-        '操作者 {self.user.username}（{self.user.employee_id}），目标用户 {result.username}（{result.employee_id}）',
-    )
+    @log_user_action('deactivate', '')
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -58,10 +55,7 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
-    @log_user_action(
-        'activate',
-        '操作者 {self.user.username}（{self.user.employee_id}），目标用户 {result.username}（{result.employee_id}）',
-    )
+    @log_user_action('activate', '')
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
@@ -221,26 +215,15 @@ class UserManagementService(BaseService):
 
         # 记录用户日志（只记录实际变更）
         try:
-            operator_label = f'{assigned_by.username}（{assigned_by.employee_id}）'
-            target_label = f'{user.username}（{user.employee_id}）'
             role_name_map = dict(Role.ROLE_CHOICES)
-            added_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
-            removed_names = ', '.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
+            added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
+            removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
             if roles_to_add and roles_to_remove:
-                description = (
-                    f'操作者 {operator_label}；目标用户 {target_label}；'
-                    f'新增角色：{added_names}；移除角色：{removed_names}'
-                )
+                description = f'新增：{added_names}；移除：{removed_names}'
             elif roles_to_add:
-                description = (
-                    f'操作者 {operator_label}；目标用户 {target_label}；'
-                    f'新增角色：{added_names}'
-                )
+                description = f'新增：{added_names}'
             else:
-                description = (
-                    f'操作者 {operator_label}；目标用户 {target_label}；'
-                    f'移除角色：{removed_names}'
-                )
+                description = f'移除：{removed_names}'
 
             ActivityLogService.log_user_action(
                 user=user,
@@ -298,20 +281,11 @@ class UserManagementService(BaseService):
 
         # 记录用户日志
         try:
-            operator_label = f'{self.user.username}（{self.user.employee_id}）'
-            target_label = f'{user.username}（{user.employee_id}）'
             if mentor_id is None:
-                description = (
-                    f'操作者 {operator_label}；目标学员 {target_label}；'
-                    '已解除导师绑定'
-                )
+                description = '解除导师绑定'
             else:
                 mentor = self._get_user(mentor_id)
-                mentor_label = f'{mentor.username}（{mentor.employee_id}）'
-                description = (
-                    f'操作者 {operator_label}；目标学员 {target_label}；'
-                    f'导师调整为 {mentor_label}'
-                )
+                description = f'导师：{mentor.username}'
 
             ActivityLogService.log_user_action(
                 user=user,

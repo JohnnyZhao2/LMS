@@ -7,21 +7,15 @@ export interface ActivityLogActor {
   username: string;
 }
 
-export interface ActivityLogTarget {
-  type: string;
-  id?: string;
-  title: string;
-}
-
 export interface ActivityLogItem {
   id: string;
   category: ActivityLogType;
   actor: ActivityLogActor | null;
   action: string;
   status: ActivityLogStatus;
+  summary: string;
   description: string;
   created_at: string;
-  target?: ActivityLogTarget | null;
 }
 
 export interface ActivityLogMember {

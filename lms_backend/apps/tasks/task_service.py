@@ -199,7 +199,9 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'create_and_assign',
-        '任务《{title}》，截止 {deadline_text}，关联 {result.knowledge_count} 篇知识、{result.quiz_count} 份试卷，分配 {result.assignee_count} 名学员',
+        '截止 {deadline_text}，{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
+        target_type='task',
+        target_title_template='{title}',
     )
     def create_task(
         self,
@@ -353,7 +355,8 @@ class TaskService(BaseService):
         )
 
     @transaction.atomic
-    @log_operation('task_management', 'update_task', '任务《{task.title}》，{task_update_summary}')
+    @log_operation('task_management', 'update_task', '{task_update_summary}',
+                   target_type='task', target_title_template='{task.title}')
     def update_task(
         self,
         task: Task,
@@ -488,7 +491,9 @@ class TaskService(BaseService):
     @log_operation(
         'task_management',
         'delete_task',
-        '任务《{result.title}》，删除前关联 {result.knowledge_count} 篇知识、{result.quiz_count} 份试卷、{result.assignee_count} 名学员',
+        '{result.knowledge_count} 篇知识，{result.quiz_count} 份试卷，{result.assignee_count} 名学员',
+        target_type='task',
+        target_title_template='{result.title}',
     )
     def delete_task(self, task: Task) -> None:
         """Soft delete a task."""

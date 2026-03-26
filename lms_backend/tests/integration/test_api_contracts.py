@@ -1009,8 +1009,8 @@ class TestActivityLogApiContracts:
         log = UserLog.objects.create(
             user=student_user,
             operator=admin_user,
-            action='login',
-            description='测试登录',
+            action='role_assigned',
+            description='新增：学员',
             status='success',
         )
         api_client.force_authenticate(user=admin_user)
@@ -1023,12 +1023,13 @@ class TestActivityLogApiContracts:
         assert response.data['data']['page'] == 1
         assert response.data['data']['page_size'] == 10
         assert len(response.data['data']['members']) == 1
-        assert response.data['data']['members'][0]['user']['id'] == student_user.id
+        assert response.data['data']['members'][0]['user']['id'] == admin_user.id
         assert response.data['data']['members'][0]['activity_count'] == 1
         assert response.data['data']['results'][0]['id'] == f'user-{log.id}'
         assert response.data['data']['results'][0]['category'] == 'user'
-        assert response.data['data']['results'][0]['actor']['id'] == student_user.id
-        assert response.data['data']['results'][0]['target'] is None
+        assert response.data['data']['results'][0]['actor']['id'] == admin_user.id
+        assert admin_user.username in response.data['data']['results'][0]['summary']
+        assert student_user.username in response.data['data']['results'][0]['summary']
 
     def test_activity_log_filters_member_ids_by_active_actor(self, api_client, admin_user, mentor_user):
         ContentLog.objects.create(
@@ -1055,11 +1056,49 @@ class TestActivityLogApiContracts:
 
         assert response.status_code == 200
         assert response.data['data']['count'] == 1
-        assert len(response.data['data']['members']) == 1
-        assert response.data['data']['members'][0]['user']['id'] == mentor_user.id
+        assert {member['user']['id'] for member in response.data['data']['members']} == {
+            admin_user.id,
+            mentor_user.id,
+        }
         assert response.data['data']['results'][0]['id'] == f'content-{mentor_log.id}'
         assert response.data['data']['results'][0]['actor']['id'] == mentor_user.id
-        assert response.data['data']['results'][0]['target']['type'] == 'quiz'
+        assert '导师试卷' in response.data['data']['results'][0]['summary']
+
+    def test_activity_log_member_sidebar_keeps_full_member_pool_when_member_filter_is_active(
+        self,
+        api_client,
+        admin_user,
+        mentor_user,
+    ):
+        ContentLog.objects.create(
+            content_type='knowledge',
+            content_id='K-1',
+            content_title='管理员知识',
+            operator=admin_user,
+            action='create',
+            description='管理员创建知识',
+            status='success',
+        )
+        mentor_log = ContentLog.objects.create(
+            content_type='quiz',
+            content_id='Q-1',
+            content_title='导师试卷',
+            operator=mentor_user,
+            action='update',
+            description='导师更新试卷',
+            status='success',
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
+
+        assert response.status_code == 200
+        assert response.data['data']['count'] == 1
+        assert response.data['data']['results'][0]['id'] == f'content-{mentor_log.id}'
+        assert {member['user']['id'] for member in response.data['data']['members']} == {
+            admin_user.id,
+            mentor_user.id,
+        }
 
     def test_activity_log_filters_search_date_and_status(self, api_client, admin_user):
         old_log = OperationLog.objects.create(
@@ -1094,8 +1133,7 @@ class TestActivityLogApiContracts:
         assert response.status_code == 200
         assert response.data['data']['count'] == 1
         assert response.data['data']['results'][0]['id'] == f'operation-{matched_log.id}'
-        assert response.data['data']['results'][0]['target']['type'] == 'submission'
-        assert response.data['data']['results'][0]['target']['title'] == '答题/考试'
+        assert 'summary' in response.data['data']['results'][0]
 
     def test_activity_log_members_are_aggregated_from_full_filtered_set(
         self,
@@ -1143,6 +1181,101 @@ class TestActivityLogApiContracts:
     def test_activity_log_requires_permission(self, api_client, student_user):
         api_client.force_authenticate(user=student_user)
         response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'PERMISSION_DENIED'
+
+    def test_activity_log_delete_endpoint_removes_selected_log(self, api_client, admin_user):
+        log = OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='submission',
+            action='submit',
+            description='用于删除测试',
+            status='success',
+            duration=15,
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.delete(f'/api/logs/items/operation-{log.id}/')
+
+        assert response.status_code == 204
+        assert not OperationLog.objects.filter(pk=log.id).exists()
+
+    def test_activity_log_delete_requires_view_permission(
+        self,
+        api_client,
+        admin_user,
+        student_user,
+    ):
+        log = UserLog.objects.create(
+            user=student_user,
+            operator=admin_user,
+            action='login',
+            description='用于权限校验',
+            status='success',
+        )
+
+        api_client.force_authenticate(user=student_user)
+        response = api_client.delete(f'/api/logs/items/user-{log.id}/')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'PERMISSION_DENIED'
+
+    def test_activity_log_bulk_delete_endpoint_removes_selected_logs(self, api_client, admin_user):
+        first_log = OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='submission',
+            action='submit',
+            description='用于批量删除测试1',
+            status='success',
+            duration=12,
+        )
+        second_log = OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='grading',
+            action='manual_grade',
+            description='用于批量删除测试2',
+            status='success',
+            duration=18,
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/logs/items/bulk-delete/',
+            {
+                'item_ids': [
+                    f'operation-{first_log.id}',
+                    f'operation-{second_log.id}',
+                ]
+            },
+            format='json',
+        )
+
+        assert response.status_code == 200
+        assert response.data['data']['deleted_count'] == 2
+        assert not OperationLog.objects.filter(pk=first_log.id).exists()
+        assert not OperationLog.objects.filter(pk=second_log.id).exists()
+
+    def test_activity_log_bulk_delete_requires_view_permission(
+        self,
+        api_client,
+        admin_user,
+        student_user,
+    ):
+        log = UserLog.objects.create(
+            user=student_user,
+            operator=admin_user,
+            action='login',
+            description='用于批量删除权限校验',
+            status='success',
+        )
+
+        api_client.force_authenticate(user=student_user)
+        response = api_client.post(
+            '/api/logs/items/bulk-delete/',
+            {'item_ids': [f'user-{log.id}']},
+            format='json',
+        )
 
         assert response.status_code == 400
         assert response.data['code'] == 'PERMISSION_DENIED'

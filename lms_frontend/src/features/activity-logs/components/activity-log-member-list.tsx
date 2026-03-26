@@ -35,13 +35,12 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
   return (
     <aside className="overflow-hidden rounded-2xl border border-border/60 bg-background">
       {/* 头部 */}
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3.5">
+      <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />
-          <span className="text-[13px] font-semibold text-foreground">Member</span>
+          <span className="text-[13px] font-semibold text-foreground">成员</span>
           <span className="text-[12px] text-text-muted">({members.length})</span>
         </div>
-        <span className="text-[12px] font-medium text-text-muted">Activities</span>
       </div>
 
       {/* 成员列表 */}

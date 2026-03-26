@@ -76,8 +76,10 @@ class SpotCheckService(BaseService):
 
     @log_operation(
         'spot_check',
-        'create',
-        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+        'create_spot_check',
+        '{checked_at_text}，{score_text} 分，{content_preview}',
+        target_type='spot_check',
+        target_title_template='{student_label}',
     )
     def create(self, data: dict) -> SpotCheck:
         """
@@ -126,8 +128,10 @@ class SpotCheckService(BaseService):
 
     @log_operation(
         'spot_check',
-        'update',
-        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+        'update_spot_check',
+        '{checked_at_text}，{score_text} 分，{content_preview}',
+        target_type='spot_check',
+        target_title_template='{student_label}',
     )
     def update(self, pk: int, data: dict) -> SpotCheck:
         """
@@ -169,8 +173,10 @@ class SpotCheckService(BaseService):
 
     @log_operation(
         'spot_check',
-        'delete',
-        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+        'delete_spot_check',
+        '{checked_at_text}，{score_text} 分',
+        target_type='spot_check',
+        target_title_template='{student_label}',
     )
     def delete(self, pk: int) -> SpotCheck:
         """
