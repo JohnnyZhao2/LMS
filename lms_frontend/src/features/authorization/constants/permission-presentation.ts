@@ -49,7 +49,7 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
   },
   config: {
     label: '配置管理',
-    summary: '权限中心的角色模板配置和审计日志策略管理。',
+    summary: '权限中心的角色模板配置和日志策略管理。',
     order: 80,
   },
   submission: {
@@ -199,7 +199,7 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
     detail: '更新角色权限模板配置。',
   },
   'activity_log.view': {
-    pageLabel: '配置管理 / 审计日志',
+    pageLabel: '用户管理 / 日志审计',
     detail: '查看用户日志、内容日志和操作日志。',
   },
   'activity_log.policy.update': {

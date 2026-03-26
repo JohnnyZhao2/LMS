@@ -1,72 +1,104 @@
 from rest_framework import serializers
 
-from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
+from .models import ActivityLogPolicy
+
+
+LOG_TYPE_CHOICES = (
+    ('user', '账号'),
+    ('content', '内容'),
+    ('operation', '行为记录'),
+)
 
 
 class SimpleUserSerializer(serializers.Serializer):
-    """简单的用户信息序列化器"""
     id = serializers.IntegerField(read_only=True)
     employee_id = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
 
 
-class UserLogSerializer(serializers.ModelSerializer):
-    user = SimpleUserSerializer(read_only=True)
-    operator = SimpleUserSerializer(read_only=True)
-
-    class Meta:
-        model = UserLog
-        fields = [
-            'id',
-            'user',
-            'operator',
-            'action',
-            'description',
-            'status',
-            'created_at',
-        ]
+class ActivityLogTargetSerializer(serializers.Serializer):
+    type = serializers.CharField()
+    id = serializers.CharField(required=False)
+    title = serializers.CharField()
 
 
-class ContentLogSerializer(serializers.ModelSerializer):
-    operator = SimpleUserSerializer(read_only=True)
+class ActivityLogItemSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
+    actor = serializers.SerializerMethodField()
+    action = serializers.CharField()
+    status = serializers.CharField()
+    description = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    target = serializers.SerializerMethodField()
 
-    class Meta:
-        model = ContentLog
-        fields = [
-            'id',
-            'content_type',
-            'content_id',
-            'content_title',
-            'operator',
-            'action',
-            'description',
-            'status',
-            'created_at',
-        ]
+    def get_id(self, obj):
+        return f"{self.context['log_type']}-{obj.id}"
+
+    def get_category(self, obj):
+        return self.context['log_type']
+
+    def get_actor(self, obj):
+        actor = obj.user if self.context['log_type'] == 'user' else obj.operator
+        if actor is None:
+            return None
+        return SimpleUserSerializer(actor).data
+
+    def get_target(self, obj):
+        log_type = self.context['log_type']
+        if log_type == 'content':
+            return {
+                'type': obj.content_type,
+                'id': obj.content_id,
+                'title': obj.content_title,
+            }
+        if log_type == 'operation':
+            return {
+                'type': obj.operation_type,
+                'title': obj.get_operation_type_display(),
+            }
+        return None
 
 
-class OperationLogSerializer(serializers.ModelSerializer):
-    operator = serializers.SerializerMethodField()
+class ActivityLogMemberSerializer(serializers.Serializer):
+    user = SimpleUserSerializer()
+    activity_count = serializers.IntegerField()
+    last_activity_at = serializers.DateTimeField()
 
-    class Meta:
-        model = OperationLog
-        fields = [
-            'id',
-            'operator',
-            'operation_type',
-            'action',
-            'description',
-            'status',
-            'duration',
-            'created_at',
-        ]
 
-    def get_operator(self, obj):
-        return {
-            'employee_id': obj.operator.employee_id,
-            'username': obj.operator.username,
-            'role': ', '.join([role.name for role in obj.operator.roles.all()]),
-        }
+class ActivityLogListDataSerializer(serializers.Serializer):
+    members = ActivityLogMemberSerializer(many=True)
+    results = ActivityLogItemSerializer(many=True)
+    count = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+
+
+class ActivityLogQuerySerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=LOG_TYPE_CHOICES)
+    member_ids = serializers.CharField(required=False, allow_blank=True)
+    search = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    action = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    status = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)
+    page = serializers.IntegerField(required=False, default=1, min_value=1)
+    page_size = serializers.IntegerField(required=False, default=20, min_value=1, max_value=100)
+
+    def validate_member_ids(self, value: str) -> list[int]:
+        if not value:
+            return []
+
+        raw_items = [item.strip() for item in value.split(',') if item.strip()]
+        try:
+            return [int(item) for item in raw_items]
+        except ValueError as exc:
+            raise serializers.ValidationError('member_ids 必须是逗号分隔的整数列表') from exc
+
+    def validate(self, attrs):
+        if attrs.get('date_from') and attrs.get('date_to') and attrs['date_from'] > attrs['date_to']:
+            raise serializers.ValidationError('date_from 不能晚于 date_to')
+        return attrs
 
 
 class ActivityLogPolicySerializer(serializers.ModelSerializer):

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck, ScrollText } from 'lucide-react'
+import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/use-auth'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
 import { useCurrentRole } from '@/hooks/use-current-role'
@@ -138,16 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         path: `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
         icon: <Settings className="h-4 w-4" />,
         isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
-      })
-    }
-
-    if (hasAnyPermission(['activity_log.view'])) {
-      items.push({
-        key: 'audit-logs',
-        label: '审计日志',
-        path: `${rolePrefix}${ROUTES.AUDIT_LOGS}`,
-        icon: <ScrollText className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOGS}`,
       })
     }
 

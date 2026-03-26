@@ -1,6 +1,7 @@
 """
 Query parameter parsing helpers.
 """
+from datetime import date
 from typing import Optional
 
 from core.exceptions import BusinessError, ErrorCodes

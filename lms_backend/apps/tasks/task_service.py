@@ -196,7 +196,11 @@ class TaskService(BaseService):
         )
 
     @transaction.atomic
-    @log_operation('task_management', 'create_and_assign', '创建任务《{title}》并分配给 {assignee_count} 名学员')
+    @log_operation(
+        'task_management',
+        'create_and_assign',
+        '任务《{title}》，截止 {deadline_text}，关联 {result.knowledge_count} 篇知识、{result.quiz_count} 份试卷，分配 {result.assignee_count} 名学员',
+    )
     def create_task(
         self,
         title: str,
@@ -349,7 +353,7 @@ class TaskService(BaseService):
         )
 
     @transaction.atomic
-    @log_operation('task_management', 'update_task', '更新任务《{task.title}》')
+    @log_operation('task_management', 'update_task', '任务《{task.title}》，{task_update_summary}')
     def update_task(
         self,
         task: Task,
@@ -481,7 +485,11 @@ class TaskService(BaseService):
             assignee_ids=list(to_add)
         )
 
-    @log_operation('task_management', 'delete_task', '删除任务《{task.title}》')
+    @log_operation(
+        'task_management',
+        'delete_task',
+        '任务《{result.title}》，删除前关联 {result.knowledge_count} 篇知识、{result.quiz_count} 份试卷、{result.assignee_count} 名学员',
+    )
     def delete_task(self, task: Task) -> None:
         """Soft delete a task."""
         task.soft_delete()

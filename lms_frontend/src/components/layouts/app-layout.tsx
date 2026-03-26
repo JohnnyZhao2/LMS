@@ -30,9 +30,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [currentRole])
 
   return (
-    <div className={cn('h-screen flex bg-muted', themeClass)}>
+    <div className={cn('flex min-h-screen bg-muted', themeClass)}>
       {/* Sidebar - 桌面端 */}
-      <div className="hidden shrink-0 bg-white lg:flex">
+      <div className="hidden w-[272px] shrink-0 lg:block" aria-hidden="true" />
+      <div className="fixed inset-y-0 left-0 z-30 hidden w-[272px] bg-white lg:block">
         <Sidebar />
       </div>
 
@@ -56,7 +57,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </button>
 
       {/* 主内容区 */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0">
         <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8 xl:px-10">
           {children}
         </div>

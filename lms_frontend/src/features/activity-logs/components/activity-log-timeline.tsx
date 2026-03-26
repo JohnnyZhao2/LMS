@@ -1,11 +1,8 @@
 import React, { useMemo } from 'react';
-import { Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-type TimelineIconProps = {
-  size?: number;
-  strokeWidth?: number;
-};
+import { type ColumnDef } from "@tanstack/react-table";
+import { DataTable } from '@/components/ui/data-table/data-table';
+import { CellWithAvatar } from '@/components/ui/data-table/data-table-cells';
+import { ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 export type ActivityLogStatus = 'success' | 'failed' | 'partial';
 
@@ -13,10 +10,10 @@ export interface ActivityLogTimelineItem {
   id: string;
   createdAt: string;
   status: ActivityLogStatus;
-  title: React.ReactNode;
-  meta?: React.ReactNode;
+  actor: string;
+  action: string;
+  target?: string;
   description?: string;
-  icon?: React.ReactNode;
 }
 
 interface ActivityLogTimelineProps {
@@ -25,198 +22,110 @@ interface ActivityLogTimelineProps {
   emptyText?: string;
 }
 
-
-const getDateKeyFromDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const getDateKey = (dateString: string) => {
-  return getDateKeyFromDate(new Date(dateString));
-};
-
-const getDateLabel = (dateKey: string) => {
-  const todayKey = getDateKeyFromDate(new Date());
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = getDateKeyFromDate(yesterday);
-  if (dateKey === todayKey) return '今天';
-  if (dateKey === yesterdayKey) return '昨天';
-  return dateKey;
-};
-
-const getTimeLabel = (dateString: string) => {
+const formatDateTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-};
-
-const groupItemsByDate = (items: ActivityLogTimelineItem[]) => {
-  const grouped = new Map<string, ActivityLogTimelineItem[]>();
-  items.forEach((item) => {
-    const key = getDateKey(item.createdAt);
-    if (!grouped.has(key)) {
-      grouped.set(key, []);
-    }
-    grouped.get(key)?.push(item);
-  });
-
-  return Array.from(grouped.entries())
-    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-    .map(([dateKey, dateItems]) => ({ dateKey, items: dateItems }));
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
 export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
   items,
   isLoading = false,
-  emptyText = '暂无日志',
+  emptyText = '暂无相关数据',
 }) => {
-  const groupedItems = useMemo(() => groupItemsByDate(items), [items]);
 
-  if (isLoading) {
-    return <div className="text-sm text-text-muted">正在加载日志...</div>;
-  }
+  const columns = useMemo<ColumnDef<ActivityLogTimelineItem>[]>(() => [
+    {
+      header: "发生时间",
+      id: "createdAt",
+      size: 170,
+      cell: ({ row }) => (
+        <span className="text-[13px] font-mono text-muted-foreground whitespace-nowrap">
+          {formatDateTime(row.original.createdAt)}
+        </span>
+      ),
+    },
+    {
+      header: "操作账号",
+      id: "actor",
+      size: 200,
+      cell: ({ row }) => (
+        <CellWithAvatar name={row.original.actor} />
+      ),
+    },
+    {
+      header: "状态",
+      id: "status",
+      size: 130,
+      cell: ({ row }) => {
+        const isError = row.original.status === 'failed';
+        const isWarning = row.original.status === 'partial';
+        return (
+          <div className="flex items-center gap-2">
+             {isError ? <ShieldAlert className="w-4 h-4 text-rose-500" /> : 
+              isWarning ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />}
+             <span className="text-[13px] font-medium">
+               {row.original.status === 'success' ? '成功' : row.original.status === 'failed' ? '失败' : '部分成功'}
+             </span>
+          </div>
+        );
+      }
+    },
+    {
+      header: "动作类别",
+      id: "action",
+      size: 140,
+      cell: ({ row }) => (
+        <span className="font-semibold text-foreground/80 bg-muted/60 px-2 py-1 rounded text-[12px] border border-border/50 whitespace-nowrap">
+           {row.original.action}
+        </span>
+      )
+    },
+    {
+      header: "操作对象及详情",
+      id: "details",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-1.5 min-w-[200px] py-1">
+           {row.original.target && (
+             <div className="text-[13px] font-semibold text-foreground">
+                {row.original.target}
+             </div>
+           )}
+           {row.original.description && (
+             <div className="text-[12px] text-muted-foreground/80 leading-relaxed" title={row.original.description}>
+               {row.original.description}
+             </div>
+           )}
+           {!row.original.target && !row.original.description && (
+             <span className="text-[12px] text-muted-foreground/40 italic">System Auto Logging</span>
+           )}
+        </div>
+      )
+    }
+  ], []);
 
-  if (items.length === 0) {
-    return <div className="text-sm text-text-muted">{emptyText}</div>;
+  if (items.length === 0 && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50 border border-dashed border-border/40 rounded-xl bg-muted/5">
+        <p className="text-[13px] font-medium">{emptyText}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 px-1 pb-6 relative z-10">
-      {groupedItems.map((group, groupIdx) => (
-        <div
-          key={group.dateKey}
-          className={cn(
-            "space-y-2 animate-in fade-in slide-in-from-left-4 duration-700",
-            `stagger-delay-${(groupIdx % 5) + 1}`
-          )}
-        >
-          {/* Subtle Condensed Date Header */}
-          <div className="flex items-center gap-2 px-2 py-1">
-            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
-              {getDateLabel(group.dateKey)}
-            </span>
-            <div className="h-px flex-1 bg-border/20" />
-            <span className="text-[9px] font-bold text-muted-foreground/30 tabular-nums uppercase tracking-tighter">
-              Batch: {group.items.length}
-            </span>
-          </div>
-
-          <div className="space-y-0.5">
-            {group.items.map((item) => {
-              // Status-based stylistic DNA
-              const isError = item.status === 'failed';
-              const isWarning = item.status === 'partial';
-
-              const statusColors = {
-                success: {
-                  bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
-                  title: 'text-foreground group-hover/item:text-primary',
-                  indicator: 'bg-emerald-500'
-                },
-                failed: {
-                  bg: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
-                  title: 'text-rose-600 dark:text-rose-400',
-                  indicator: 'bg-rose-500'
-                },
-                partial: {
-                  bg: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
-                  title: 'text-amber-600 dark:text-amber-400',
-                  indicator: 'bg-amber-500'
-                }
-              };
-
-              const current = statusColors[item.status] || statusColors.success;
-
-              return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "group/item relative flex items-center gap-4 py-2.5 px-4 rounded-2xl transition-all duration-300 border border-transparent hover:border-border/40",
-                    isError
-                      ? "bg-rose-50/20 dark:bg-rose-500/5 hover:bg-rose-50/40"
-                      : (isWarning ? "bg-amber-50/20 dark:bg-amber-500/5 hover:bg-amber-50/40" : "hover:bg-white/40 hover:backdrop-blur-md hover:shadow-sm")
-                  )}
-                >
-                  {/* 1. Status Beam - Sharper architectural detail */}
-                  <div className={cn(
-                    "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full transition-all duration-500",
-                    isError || isWarning ? "h-6 opacity-100" : "h-3 opacity-20 group-hover/item:h-8 group-hover/item:opacity-100",
-                    isError ? "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" :
-                      isWarning ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                        "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]"
-                  )} />
-
-
-                  {/* 3. Machined Icon Container */}
-                  <div className="shrink-0 z-10">
-                    <div className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 border",
-                      "bg-muted/10 border-border/10",
-                      current.bg,
-                      isError && "animate-[pulse_2s_infinite]"
-                    )}>
-                      {React.isValidElement(item.icon) ? (
-                        React.cloneElement(item.icon as React.ReactElement<TimelineIconProps>, {
-                          size: 15,
-                          strokeWidth: 2.5,
-                        })
-                      ) : (
-                        <Activity size={15} strokeWidth={2.5} />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 4. High-Density Content Hub */}
-                  <div className="flex-1 min-w-0 z-10">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "text-[13px] font-bold tracking-tight leading-tight truncate transition-colors",
-                        isError ? "text-rose-600 dark:text-rose-400" :
-                          isWarning ? "text-amber-600 dark:text-amber-400" :
-                            "text-slate-800 dark:text-slate-200 group-hover/item:text-primary"
-                      )}>
-                        {item.title}
-                      </div>
-                      {item.meta && (
-                        <div className="shrink-0 text-[8px] font-black text-slate-500/40 dark:text-slate-400/40 uppercase tracking-[0.15em] bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded leading-none">
-                          {item.meta}
-                        </div>
-                      )}
-                    </div>
-                    {/* Description: Distinctive color, not just reduced opacity */}
-                    <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate tracking-tight transition-colors group-hover/item:text-slate-600 dark:group-hover/item:text-slate-300">
-                      {item.description || "System operation event"}
-                    </div>
-                  </div>
-
-                  {/* 5. Right-side Status & Time */}
-                  <div className="flex items-center gap-4 shrink-0 z-10 ml-auto">
-                    {(isError || isWarning) && (
-                      <div className={cn(
-                        "px-2.5 py-1 rounded text-[8px] font-black uppercase tracking-[0.2em] border transition-all duration-300 cursor-default",
-                        isError ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20",
-                        "group-hover/item:bg-background group-hover/item:border-current/40 shadow-sm"
-                      )}>
-                        {item.status}
-                      </div>
-                    )}
-
-                    <div className="text-[10px] font-bold text-muted-foreground/20 tabular-nums text-right min-w-[40px] tracking-tighter">
-                      {getTimeLabel(item.createdAt)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+    <div className="w-full">
+      <DataTable
+        columns={columns}
+        data={items}
+        isLoading={isLoading}
+        rowClassName="group transition-colors"
+      />
     </div>
   );
 };

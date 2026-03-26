@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -1003,7 +1005,7 @@ class TestGradingApiContracts:
 
 @pytest.mark.django_db
 class TestActivityLogApiContracts:
-    def test_user_log_list_response_is_wrapped(self, api_client, admin_user, student_user):
+    def test_activity_log_list_response_is_wrapped(self, api_client, admin_user, student_user):
         log = UserLog.objects.create(
             user=student_user,
             operator=admin_user,
@@ -1012,48 +1014,135 @@ class TestActivityLogApiContracts:
             status='success',
         )
         api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/user/?page=1&page_size=10')
+        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
 
         assert response.status_code == 200
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
-        assert 'results' in response.data['data']
-        result_ids = [item['id'] for item in response.data['data']['results']]
-        assert log.id in result_ids
+        assert response.data['data']['count'] == 1
+        assert response.data['data']['page'] == 1
+        assert response.data['data']['page_size'] == 10
+        assert len(response.data['data']['members']) == 1
+        assert response.data['data']['members'][0]['user']['id'] == student_user.id
+        assert response.data['data']['members'][0]['activity_count'] == 1
+        assert response.data['data']['results'][0]['id'] == f'user-{log.id}'
+        assert response.data['data']['results'][0]['category'] == 'user'
+        assert response.data['data']['results'][0]['actor']['id'] == student_user.id
+        assert response.data['data']['results'][0]['target'] is None
 
-    def test_content_log_list_response_is_wrapped(self, api_client, admin_user):
-        log = ContentLog.objects.create(
+    def test_activity_log_filters_member_ids_by_active_actor(self, api_client, admin_user, mentor_user):
+        ContentLog.objects.create(
             content_type='knowledge',
             content_id='K-1',
             content_title='知识A',
             operator=admin_user,
             action='create',
-            description='创建知识',
+            description='管理员创建知识',
             status='success',
         )
+        mentor_log = ContentLog.objects.create(
+            content_type='quiz',
+            content_id='Q-1',
+            content_title='导师试卷',
+            operator=mentor_user,
+            action='update',
+            description='导师更新试卷',
+            status='success',
+        )
+
         api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/content/?page=1&page_size=10')
+        response = api_client.get(f'/api/logs/?type=content&member_ids={mentor_user.id}&page=1&page_size=10')
 
         assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
-        result_ids = [item['id'] for item in response.data['data']['results']]
-        assert log.id in result_ids
+        assert response.data['data']['count'] == 1
+        assert len(response.data['data']['members']) == 1
+        assert response.data['data']['members'][0]['user']['id'] == mentor_user.id
+        assert response.data['data']['results'][0]['id'] == f'content-{mentor_log.id}'
+        assert response.data['data']['results'][0]['actor']['id'] == mentor_user.id
+        assert response.data['data']['results'][0]['target']['type'] == 'quiz'
 
-    def test_operation_log_list_response_is_wrapped(self, api_client, admin_user):
-        log = OperationLog.objects.create(
+    def test_activity_log_filters_search_date_and_status(self, api_client, admin_user):
+        old_log = OperationLog.objects.create(
             operator=admin_user,
             operation_type='grading',
             action='manual_grade',
-            description='批阅试卷',
-            status='success',
-            duration=120,
+            description='旧的批阅记录',
+            status='failed',
+            duration=10,
         )
+        matched_log = OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='submission',
+            action='submit',
+            description='提交答卷成功',
+            status='success',
+            duration=25,
+        )
+        OperationLog.objects.filter(pk=old_log.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 3, 10, 9, 0, 0))
+        )
+        OperationLog.objects.filter(pk=matched_log.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 3, 25, 15, 30, 0))
+        )
+
         api_client.force_authenticate(user=admin_user)
-        response = api_client.get('/api/logs/operation/?page=1&page_size=10')
+        response = api_client.get(
+            '/api/logs/?type=operation&search=答卷&status=success'
+            '&date_from=2026-03-20&date_to=2026-03-26&page=1&page_size=10'
+        )
 
         assert response.status_code == 200
-        assert response.data['code'] == 'SUCCESS'
-        assert response.data['message'] == 'success'
-        result_ids = [item['id'] for item in response.data['data']['results']]
-        assert log.id in result_ids
+        assert response.data['data']['count'] == 1
+        assert response.data['data']['results'][0]['id'] == f'operation-{matched_log.id}'
+        assert response.data['data']['results'][0]['target']['type'] == 'submission'
+        assert response.data['data']['results'][0]['target']['title'] == '答题/考试'
+
+    def test_activity_log_members_are_aggregated_from_full_filtered_set(
+        self,
+        api_client,
+        admin_user,
+        mentor_user,
+    ):
+        OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='task_management',
+            action='create_and_assign',
+            description='创建任务 1',
+            status='success',
+            duration=100,
+        )
+        OperationLog.objects.create(
+            operator=admin_user,
+            operation_type='task_management',
+            action='update_task',
+            description='更新任务 2',
+            status='success',
+            duration=80,
+        )
+        OperationLog.objects.create(
+            operator=mentor_user,
+            operation_type='spot_check',
+            action='create',
+            description='创建抽查',
+            status='success',
+            duration=50,
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get('/api/logs/?type=operation&page=1&page_size=1')
+
+        assert response.status_code == 200
+        assert response.data['data']['count'] == 3
+        assert len(response.data['data']['results']) == 1
+        assert len(response.data['data']['members']) == 2
+        assert response.data['data']['members'][0]['user']['id'] == admin_user.id
+        assert response.data['data']['members'][0]['activity_count'] == 2
+        assert response.data['data']['members'][1]['user']['id'] == mentor_user.id
+        assert response.data['data']['members'][1]['activity_count'] == 1
+
+    def test_activity_log_requires_permission(self, api_client, student_user):
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'PERMISSION_DENIED'

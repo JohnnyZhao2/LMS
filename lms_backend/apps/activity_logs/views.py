@@ -1,22 +1,30 @@
 """
 Activity logs views.
-提供用户日志、内容日志、操作日志的查询接口。
+提供统一的日志查询接口与日志策略接口。
 """
+from typing import Any
+
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.responses import success_response
 
-from .models import ActivityLogPolicy, ContentLog, OperationLog, UserLog
+from .models import ActivityLogPolicy
+from .selectors import (
+    apply_activity_log_filters,
+    get_activity_log_queryset,
+    list_activity_log_members,
+)
 from .serializers import (
+    ActivityLogItemSerializer,
+    ActivityLogListDataSerializer,
     ActivityLogPolicySerializer,
     ActivityLogPolicyUpdateSerializer,
-    ContentLogSerializer,
-    OperationLogSerializer,
-    UserLogSerializer,
+    ActivityLogQuerySerializer,
 )
 from .services import ActivityLogService
 
@@ -29,115 +37,66 @@ def enforce_activity_log_policy_update_permission(request, error_message: str) -
     AuthorizationService(request).enforce('activity_log.policy.update', error_message=error_message)
 
 
-class UserLogListView(BaseAPIView):
-    """
-    用户日志列表
-    记录用户登录、登出、密码修改等操作
-    """
+class ActivityLogListView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
 
     @extend_schema(
-        summary='获取用户日志列表',
-        description='获取用户日志列表，支持分页',
+        summary='获取日志列表',
+        description='获取统一日志列表，返回成员聚合与分页明细',
         parameters=[
+            OpenApiParameter(name='type', type=str, description='日志类型：user|content|operation', required=True),
+            OpenApiParameter(name='member_ids', type=str, description='行为主动方 ID 列表，逗号分隔'),
+            OpenApiParameter(name='search', type=str, description='搜索关键词'),
+            OpenApiParameter(name='date_from', type=str, description='开始日期 YYYY-MM-DD'),
+            OpenApiParameter(name='date_to', type=str, description='结束日期 YYYY-MM-DD'),
+            OpenApiParameter(name='action', type=str, description='动作过滤'),
+            OpenApiParameter(name='status', type=str, description='状态过滤'),
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
-        responses={200: UserLogSerializer(many=True)},
+        responses={200: ActivityLogListDataSerializer, 403: OpenApiResponse(description='无权限')},
         tags=['活动日志']
     )
     def get(self, request):
-        """获取用户日志列表"""
-        enforce_activity_log_view_permission(request, '无权查看用户日志')
-        queryset = UserLog.objects.select_related('user', 'operator').all()
+        enforce_activity_log_view_permission(request, '无权查看活动日志')
 
-        # 使用 DRF 分页器处理分页
+        params = self._validated_query_params(request.query_params)
+        log_type = params['type']
+        queryset = apply_activity_log_filters(
+            get_activity_log_queryset(log_type),
+            log_type,
+            params,
+        )
+        members = list_activity_log_members(queryset, log_type)
+
         paginator = self.pagination_class()
-        page = paginator.paginate_queryset(queryset, request)
-        if page is not None:
-            serializer = UserLogSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = ActivityLogItemSerializer(page, many=True, context={'log_type': log_type})
 
-        # 如果不分页，直接返回
-        serializer = UserLogSerializer(queryset, many=True)
-        return success_response(serializer.data)
+        return success_response(
+            {
+                'members': members,
+                'results': serializer.data,
+                'count': paginator.page.paginator.count,
+                'page': paginator.page.number,
+                'page_size': paginator.get_page_size(request),
+            }
+        )
 
+    def _validated_query_params(self, query_params) -> dict[str, Any]:
+        serializer = ActivityLogQuerySerializer(data=query_params)
+        if serializer.is_valid():
+            return serializer.validated_data
 
-class ContentLogListView(BaseAPIView):
-    """
-    内容日志列表
-    记录知识文档、试卷、题目等内容的创建、修改、删除
-    """
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination
-
-    @extend_schema(
-        summary='获取内容日志列表',
-        description='获取内容日志列表，支持分页',
-        parameters=[
-            OpenApiParameter(name='page', type=int, description='页码'),
-            OpenApiParameter(name='page_size', type=int, description='每页数量'),
-        ],
-        responses={200: ContentLogSerializer(many=True)},
-        tags=['活动日志']
-    )
-    def get(self, request):
-        """获取内容日志列表"""
-        enforce_activity_log_view_permission(request, '无权查看内容日志')
-        queryset = ContentLog.objects.select_related('operator').all()
-
-        # 使用 DRF 分页器处理分页
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(queryset, request)
-        if page is not None:
-            serializer = ContentLogSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        # 如果不分页，直接返回
-        serializer = ContentLogSerializer(queryset, many=True)
-        return success_response(serializer.data)
-
-
-class OperationLogListView(BaseAPIView):
-    """
-    操作日志列表
-    记录任务管理、评分、抽查、数据导出等操作
-    """
-    permission_classes = [IsAuthenticated]
-    pagination_class = StandardResultsSetPagination
-
-    @extend_schema(
-        summary='获取操作日志列表',
-        description='获取操作日志列表，支持分页',
-        parameters=[
-            OpenApiParameter(name='page', type=int, description='页码'),
-            OpenApiParameter(name='page_size', type=int, description='每页数量'),
-        ],
-        responses={200: OperationLogSerializer(many=True)},
-        tags=['活动日志']
-    )
-    def get(self, request):
-        """获取操作日志列表"""
-        enforce_activity_log_view_permission(request, '无权查看操作日志')
-        queryset = OperationLog.objects.select_related('operator').all()
-
-        # 使用 DRF 分页器处理分页
-        paginator = self.pagination_class()
-        page = paginator.paginate_queryset(queryset, request)
-        if page is not None:
-            serializer = OperationLogSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        # 如果不分页，直接返回
-        serializer = OperationLogSerializer(queryset, many=True)
-        return success_response(serializer.data)
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message=_extract_validation_message(serializer.errors),
+            details=serializer.errors,
+        )
 
 
 class ActivityLogPolicyView(BaseAPIView):
-    """
-    活动日志策略管理
-    """
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -174,3 +133,12 @@ class ActivityLogPolicyView(BaseAPIView):
         policy.save(update_fields=['enabled', 'updated_at'])
         ActivityLogService.invalidate_policy_cache(key)
         return success_response(ActivityLogPolicySerializer(policy).data)
+
+
+def _extract_validation_message(errors: Any) -> str:
+    if isinstance(errors, dict):
+        first_value = next(iter(errors.values()))
+        return _extract_validation_message(first_value)
+    if isinstance(errors, list) and errors:
+        return _extract_validation_message(errors[0])
+    return str(errors)

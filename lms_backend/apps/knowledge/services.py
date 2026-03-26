@@ -70,7 +70,7 @@ class KnowledgeService(BaseService):
         return list(qs)
 
     @transaction.atomic
-    @log_content_action('knowledge', 'create', '创建知识文档《{result.title}》')
+    @log_content_action('knowledge', 'create', '版本 v{version_number}')
     def create(self, data: dict) -> Knowledge:
         """
         创建知识文档
@@ -104,7 +104,7 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'update', '更新知识文档《{result.title}》（版本 {result.version_number}）')
+    @log_content_action('knowledge', 'update', '生成新版本 v{version_number}')
     def update(self, pk: int, data: dict) -> Knowledge:
         """
         更新知识文档
@@ -140,7 +140,7 @@ class KnowledgeService(BaseService):
         return knowledge
 
     @transaction.atomic
-    @log_content_action('knowledge', 'delete', '删除知识文档《{result.title}》')
+    @log_content_action('knowledge', 'delete', '永久删除当前版本')
     def delete(self, pk: int) -> Knowledge:
         """
         硬删除知识文档

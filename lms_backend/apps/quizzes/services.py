@@ -124,7 +124,11 @@ class QuizService(BaseService):
         return quiz.created_by_id == self.user.id
 
     @transaction.atomic
-    @log_content_action('quiz', 'create', '创建试卷《{result.title}》')
+    @log_content_action(
+        'quiz',
+        'create',
+        '{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+    )
     def create(
         self,
         data: dict,
@@ -173,7 +177,11 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    @log_content_action('quiz', 'update', '更新试卷《{result.title}》（版本 {result.version_number}）')
+    @log_content_action(
+        'quiz',
+        'update',
+        '生成新版本 v{version_number}，{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+    )
     def update(
         self,
         pk: int,
@@ -250,7 +258,11 @@ class QuizService(BaseService):
         return quiz
 
     @transaction.atomic
-    @log_content_action('quiz', 'delete', '删除试卷《{result.title}》')
+    @log_content_action(
+        'quiz',
+        'delete',
+        '{quiz_type_label}，题目 {question_count} 道，总分 {total_score_text} 分',
+    )
     def delete(self, pk: int) -> Quiz:
         """
         删除试卷

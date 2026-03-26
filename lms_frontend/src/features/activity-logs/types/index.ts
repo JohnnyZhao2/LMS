@@ -1,59 +1,53 @@
-/**
- * 用户日志类型
- */
-export interface UserLog {
+export type ActivityLogType = 'user' | 'content' | 'operation';
+export type ActivityLogStatus = 'success' | 'failed' | 'partial';
+
+export interface ActivityLogActor {
   id: number;
-  user: {
-    id: number;
-    employee_id: string;
-    username: string;
-  };
-  operator: {
-    id: number;
-    employee_id: string;
-    username: string;
-  } | null;
-  action: string;
-  description: string;
-  status: 'success' | 'failed';
-  created_at: string;
+  employee_id: string;
+  username: string;
 }
 
-/**
- * 内容日志类型
- */
-export interface ContentLog {
-  id: number;
-  content_type: 'knowledge' | 'quiz' | 'question' | 'assignment';
-  content_id: string;
-  content_title: string;
-  operator: {
-    id: number;
-    employee_id: string;
-    username: string;
-  };
-  action: 'create' | 'update' | 'delete' | 'publish';
-  description: string;
-  status: 'success' | 'failed';
-  created_at: string;
+export interface ActivityLogTarget {
+  type: string;
+  id?: string;
+  title: string;
 }
 
-/**
- * 操作日志类型
- */
-export interface OperationLog {
-  id: number;
-  operator: {
-    employee_id: string;
-    username: string;
-    role: string;
-  };
-  operation_type: 'task_management' | 'grading' | 'spot_check' | 'data_export' | 'submission' | 'learning';
+export interface ActivityLogItem {
+  id: string;
+  category: ActivityLogType;
+  actor: ActivityLogActor | null;
   action: string;
+  status: ActivityLogStatus;
   description: string;
-  status: 'success' | 'failed' | 'partial';
-  duration: number;
   created_at: string;
+  target?: ActivityLogTarget | null;
+}
+
+export interface ActivityLogMember {
+  user: ActivityLogActor;
+  activity_count: number;
+  last_activity_at: string;
+}
+
+export interface ActivityLogListResponse {
+  members: ActivityLogMember[];
+  results: ActivityLogItem[];
+  count: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ActivityLogsQuery {
+  type: ActivityLogType;
+  page: number;
+  pageSize: number;
+  memberIds?: number[];
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  action?: string;
+  status?: Exclude<ActivityLogStatus, 'partial'> | ActivityLogStatus;
 }
 
 export interface ActivityLogPolicy {

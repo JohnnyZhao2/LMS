@@ -74,7 +74,11 @@ class SpotCheckService(BaseService):
         qs = self._get_queryset_for_user(student_id, ordering)
         return list(qs)
 
-    @log_operation('spot_check', 'create', '创建抽查记录：学员 {result.student.username}')
+    @log_operation(
+        'spot_check',
+        'create',
+        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+    )
     def create(self, data: dict) -> SpotCheck:
         """
         创建抽查记录
@@ -120,7 +124,11 @@ class SpotCheckService(BaseService):
 
         return spot_check
 
-    @log_operation('spot_check', 'update', '更新抽查记录：学员 {result.student.username}')
+    @log_operation(
+        'spot_check',
+        'update',
+        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+    )
     def update(self, pk: int, data: dict) -> SpotCheck:
         """
         更新抽查记录
@@ -159,7 +167,11 @@ class SpotCheckService(BaseService):
 
         return spot_check
 
-    @log_operation('spot_check', 'delete', '删除抽查记录：学员 {result.student.username}')
+    @log_operation(
+        'spot_check',
+        'delete',
+        '学员 {student_label}，抽查时间 {checked_at_text}，得分 {score_text} 分，内容：{content_preview}',
+    )
     def delete(self, pk: int) -> SpotCheck:
         """
         删除抽查记录

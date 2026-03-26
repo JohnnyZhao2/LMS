@@ -104,7 +104,7 @@ class QuestionService(BaseService):
         return True
 
     @transaction.atomic
-    @log_content_action('question', 'create', '创建题目：{result.question_type}')
+    @log_content_action('question', 'create', '题型 {question_type_label}，分值 {score_text} 分')
     def create(self, data: dict) -> Question:
         """
         创建题目
@@ -137,7 +137,11 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    @log_content_action('question', 'update', '更新题目：{result.question_type}（版本 {result.version_number}）')
+    @log_content_action(
+        'question',
+        'update',
+        '生成新版本 v{version_number}，题型 {question_type_label}，分值 {score_text} 分',
+    )
     def update(self, pk: int, data: dict) -> Question:
         """
         更新题目
@@ -177,7 +181,7 @@ class QuestionService(BaseService):
         return question
 
     @transaction.atomic
-    @log_content_action('question', 'delete', '删除题目：{result.question_type}')
+    @log_content_action('question', 'delete', '题型 {question_type_label}，分值 {score_text} 分')
     def delete(self, pk: int) -> Question:
         """
         删除题目

@@ -9,6 +9,7 @@ import {
   FileSearch,
   BarChart3,
   SquareCheck,
+  SquareTerminal,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -107,6 +108,14 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/users`,
         icon: <Users className="w-4 h-4" />,
         label: '用户管理',
+      });
+    }
+
+    if (hasAnyPermission(['activity_log.view'])) {
+      menu.push({
+        key: `${rolePrefix}/audit-logs`,
+        icon: <SquareTerminal className="w-4 h-4" />,
+        label: '日志审计',
       });
     }
 

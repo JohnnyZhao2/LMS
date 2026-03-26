@@ -216,7 +216,11 @@ class SubmissionService(BaseService):
         return in_progress
 
     @transaction.atomic
-    @log_operation('submission', 'start_quiz', '开始答题：试卷《{result.quiz.title}》')
+    @log_operation(
+        'submission',
+        'start_quiz',
+        '任务《{task_title}》下试卷《{quiz_title}》，第 {attempt_number} 次作答，{quiz_type_label}，总分 {total_score_text} 分',
+    )
     def start_quiz(
         self,
         assignment: TaskAssignment,
@@ -300,7 +304,11 @@ class SubmissionService(BaseService):
         return answer
 
     @transaction.atomic
-    @log_operation('submission', 'submit', '提交答卷：试卷《{result.quiz.title}》')
+    @log_operation(
+        'submission',
+        'submit',
+        '任务《{task_title}》下试卷《{quiz_title}》，第 {attempt_number} 次提交，得分 {obtained_score_text}/{total_score_text} 分，{submission_status_detail}',
+    )
     def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
         """
         Submit a quiz/exam.

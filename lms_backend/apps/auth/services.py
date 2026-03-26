@@ -149,7 +149,7 @@ class AuthenticationService(BaseService):
             self._log_user_action_safely(
                 user=user_obj,
                 action='login_failed',
-                description=f'用户 {employee_id} 尝试登录，但账号已被停用',
+                description=f'工号 {employee_id}，失败原因：账号已停用',
                 status='failed',
             )
             raise BusinessError(
@@ -164,7 +164,7 @@ class AuthenticationService(BaseService):
                 self._log_user_action_safely(
                     user=user_obj,
                     action='login_failed',
-                    description=f'用户 {employee_id} 登录失败：密码错误',
+                    description=f'工号 {employee_id}，失败原因：密码错误',
                     status='failed',
                 )
             raise BusinessError(
@@ -179,7 +179,7 @@ class AuthenticationService(BaseService):
         self._log_user_action_safely(
             user=authenticated_user,
             action='login',
-            description=f'用户 {employee_id} 登录成功',
+            description=f'工号 {employee_id}，通过密码认证',
             status='success',
         )
         return self._build_auth_payload(authenticated_user)
@@ -205,7 +205,7 @@ class AuthenticationService(BaseService):
         self._log_user_action_safely(
             user=user,
             action='logout',
-            description=f'用户 {user.employee_id} 登出系统',
+            description=f'工号 {user.employee_id}，主动退出登录',
             status='success',
         )
 
@@ -248,7 +248,7 @@ class AuthenticationService(BaseService):
                 message='无效的刷新令牌',
             )
 
-    @log_user_action('switch_role', '切换角色为 {role_code}')
+    @log_user_action('switch_role', '当前生效角色切换为 {role_label}')
     def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
         """
         Switch user's current active role.
@@ -299,8 +299,8 @@ class AuthenticationService(BaseService):
             operator=operator,
             action='password_change',
             description=(
-                f'管理员 {operator.employee_id} 重置了用户 '
-                f'{target_user.employee_id} 的密码'
+                f'操作者 {operator.username}（{operator.employee_id}）；'
+                f'目标用户 {target_user.username}（{target_user.employee_id}）'
             ),
             status='success',
         )

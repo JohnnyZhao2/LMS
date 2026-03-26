@@ -14,7 +14,7 @@ export const ActivityLogPolicyPage: React.FC = () => {
         title="日志策略"
         icon={<Settings />}
         breadcrumbs={[
-          { title: '审计日志', path: auditLogsPath },
+          { title: '日志审计', path: auditLogsPath },
           { title: '日志策略' },
         ]}
       />
