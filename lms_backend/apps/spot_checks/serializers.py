@@ -17,12 +17,14 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
     """
     student_name = serializers.CharField(source='student.username', read_only=True)
     student_employee_id = serializers.CharField(source='student.employee_id', read_only=True)
+    student_avatar_key = serializers.CharField(source='student.avatar_key', read_only=True)
     checker_name = serializers.CharField(source='checker.username', read_only=True)
+    checker_avatar_key = serializers.CharField(source='checker.avatar_key', read_only=True)
     class Meta:
         model = SpotCheck
         fields = [
             'id', 'student', 'student_name', 'student_employee_id',
-            'checker', 'checker_name', 'content', 'score', 'comment',
+            'student_avatar_key', 'checker', 'checker_name', 'checker_avatar_key', 'content', 'score', 'comment',
             'checked_at', 'created_at', 'updated_at'
         ]
         read_only_fields = ['checker', 'created_at', 'updated_at']
@@ -32,17 +34,19 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
     """
     student_name = serializers.CharField(source='student.username', read_only=True)
     student_employee_id = serializers.CharField(source='student.employee_id', read_only=True)
+    student_avatar_key = serializers.CharField(source='student.avatar_key', read_only=True)
     student_department = serializers.CharField(
         source='student.department.name', 
         read_only=True,
         allow_null=True
     )
     checker_name = serializers.CharField(source='checker.username', read_only=True)
+    checker_avatar_key = serializers.CharField(source='checker.avatar_key', read_only=True)
     class Meta:
         model = SpotCheck
         fields = [
             'id', 'student', 'student_name', 'student_employee_id',
-            'student_department', 'checker', 'checker_name',
+            'student_avatar_key', 'student_department', 'checker', 'checker_name', 'checker_avatar_key',
             'content', 'score', 'comment', 'checked_at',
             'created_at', 'updated_at'
         ]

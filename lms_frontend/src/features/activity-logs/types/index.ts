@@ -5,6 +5,7 @@ export interface ActivityLogActor {
   id: number;
   employee_id: string;
   username: string;
+  avatar_key: string;
 }
 
 export interface ActivityLogItem {

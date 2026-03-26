@@ -227,6 +227,15 @@ export const roleRoutes = [
       </ProtectedRoute>
     }
   />,
+  <Route
+    key="spot-check-edit"
+    path="spot-checks/:id/edit"
+    element={
+      <ProtectedRoute requiredPermissions={['spot_check.view', 'spot_check.update']}>
+        <SpotCheckForm />
+      </ProtectedRoute>
+    }
+  />,
 
   // Users
   <Route

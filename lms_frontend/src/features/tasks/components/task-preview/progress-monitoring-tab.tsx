@@ -12,7 +12,6 @@ import {
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { CellWithIcon } from '@/components/ui/data-table/data-table-cells';
 import { cn } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
@@ -20,6 +19,7 @@ import type {
 } from '@/types/task-analytics';
 import { useTaskAnalytics, useStudentExecutions } from '../../api/task-analytics';
 import { IconBox } from '@/components/common/icon-box';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { StatCard } from '@/components/ui/stat-card';
 
 interface ProgressMonitoringTabProps {
@@ -79,11 +79,21 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
       header: '学员信息',
       id: 'student_info',
       cell: ({ row }) => (
-        <CellWithIcon
-          icon={<Users className="h-4 w-4 text-text-muted" />}
-          title={row.original.student_name}
-          subtitle={`${row.original.employee_id} · ${row.original.department}`}
-        />
+        <div className="flex items-center gap-3 py-1">
+          <UserAvatar
+            avatarKey={row.original.avatar_key}
+            name={row.original.student_name}
+            size="md"
+          />
+          <div className="flex flex-col">
+            <span className="font-bold text-foreground line-clamp-1">
+              {row.original.student_name}
+            </span>
+            <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+              {row.original.employee_id} · {row.original.department}
+            </span>
+          </div>
+        </div>
       ),
     },
     {

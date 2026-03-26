@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { Clock, Plus, Search, Star, User } from 'lucide-react';
+import { Clock, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { PageHeader } from '@/components/ui/page-header';
 import { SimplePagination } from '@/components/ui/simple-pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
-import { AvatarCircle } from '@/components/common/avatar-circle';
 import { ROUTES } from '@/config/routes';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { isAdminLikeRole } from '@/lib/role-utils';
 import type { SpotCheck } from '@/types/api';
+import { showApiError } from '@/utils/error-handler';
+import { useDeleteSpotCheck } from '../api/create-spot-check';
 import { useSpotChecks } from '../api/get-spot-checks';
 
 /**
@@ -39,7 +45,9 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  */
 export const SpotCheckList: React.FC = () => {
   const [pageByRole, setPageByRole] = useState<Record<string, number>>({});
+  const [deleteTarget, setDeleteTarget] = useState<SpotCheck | null>(null);
   const currentRole = useCurrentRole();
+  const { user, hasPermission } = useAuth();
   const roleKey = currentRole ?? 'UNKNOWN';
   const page = pageByRole[roleKey] ?? 1;
   const setPage = (nextPage: number) => {
@@ -49,7 +57,29 @@ export const SpotCheckList: React.FC = () => {
     }));
   };
   const { data, isLoading } = useSpotChecks({ page, role: currentRole });
+  const deleteSpotCheck = useDeleteSpotCheck();
   const { roleNavigate } = useRoleNavigate();
+  const canCreateSpotCheck = hasPermission('spot_check.create');
+  const canUpdateSpotCheck = hasPermission('spot_check.update');
+  const canDeleteSpotCheck = hasPermission('spot_check.delete');
+  const shouldShowActions = canUpdateSpotCheck || canDeleteSpotCheck;
+
+  const canManageRecord = (record: SpotCheck) =>
+    isAdminLikeRole(currentRole) || record.checker === user?.id;
+
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    try {
+      await deleteSpotCheck.mutateAsync(deleteTarget.id);
+      toast.success('抽查记录已删除');
+      setDeleteTarget(null);
+    } catch (error) {
+      showApiError(error, '删除失败');
+    }
+  };
 
   const columns: ColumnDef<SpotCheck>[] = [
     {
@@ -59,9 +89,11 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-3">
-            <AvatarCircle size="md" text={record.student_name?.charAt(0)}>
-              {!record.student_name && <User className="w-4 h-4" />}
-            </AvatarCircle>
+            <UserAvatar
+              avatarKey={record.student_avatar_key}
+              name={record.student_name}
+              size="md"
+            />
             <span className="font-semibold text-foreground">{record.student_name}</span>
           </div>
         );
@@ -105,9 +137,11 @@ export const SpotCheckList: React.FC = () => {
         const record = row.original;
         return (
           <div className="flex items-center gap-2">
-            <AvatarCircle size="sm" variant="secondary">
-              <User className="w-3 h-3" />
-            </AvatarCircle>
+            <UserAvatar
+              avatarKey={record.checker_avatar_key}
+              name={record.checker_name}
+              size="sm"
+            />
             <span className="text-foreground">{record.checker_name}</span>
           </div>
         );
@@ -129,57 +163,128 @@ export const SpotCheckList: React.FC = () => {
     },
   ];
 
-  return (
-    <div className="animate-fadeIn">
-      <PageHeader
-        title="抽查中心"
-        icon={<Search className="w-5 h-5" />}
-        extra={
-          <Button
-            onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
-            className="h-14 px-8 rounded-md bg-primary hover:bg-primary-600 text-white font-semibold hover:scale-105 transition-all duration-200"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            发起抽查
-          </Button>
-        }
-      />
+  if (shouldShowActions) {
+    columns.push({
+      id: 'actions',
+      header: '操作',
+      size: 120,
+      cell: ({ row }) => {
+        const record = row.original;
+        const canEditRecord = canUpdateSpotCheck && canManageRecord(record);
+        const canDeleteRecord = canDeleteSpotCheck && canManageRecord(record);
 
-      <Card>
-        <CardContent className="p-6">
-          <Spinner spinning={isLoading}>
-            {data?.results && data.results.length > 0 ? (
-              <div>
-                <DataTable
-                  columns={columns}
-                  data={data.results}
-                />
-                <SimplePagination
-                  currentPage={page}
-                  hasNext={!!data.next}
-                  totalCount={data.count || 0}
-                  countLabel="条抽查记录"
-                  onPageChange={setPage}
-                />
-              </div>
-            ) : (
-              <EmptyState
-                icon={Search}
-                description="暂无抽查记录"
-              >
+        if (!canEditRecord && !canDeleteRecord) {
+          return <span className="text-sm text-text-muted">-</span>;
+        }
+
+        return (
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {canEditRecord && (
+              <Tooltip title="修改抽查">
                 <Button
-                  onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
-                  className="bg-primary text-white hover:bg-primary-600 mt-4"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
+                  onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/${record.id}/edit`)}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  发起第一次抽查
+                  <Pencil className="w-4 h-4" />
                 </Button>
-              </EmptyState>
+              </Tooltip>
             )}
-          </Spinner>
-        </CardContent>
-      </Card>
-    </div>
+            {canDeleteRecord && (
+              <Tooltip title="删除抽查">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive-500 hover:text-destructive-700 hover:bg-destructive-50"
+                  onClick={() => setDeleteTarget(record)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+        );
+      },
+    });
+  }
+
+  return (
+    <>
+      <div className="animate-fadeIn">
+        <PageHeader
+          title="抽查中心"
+          icon={<Search className="w-5 h-5" />}
+          extra={
+            canCreateSpotCheck ? (
+              <Button
+                onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
+                className="h-14 px-8 rounded-md bg-primary hover:bg-primary-600 text-white font-semibold hover:scale-105 transition-all duration-200"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                发起抽查
+              </Button>
+            ) : null
+          }
+        />
+
+        <Card>
+          <CardContent className="p-6">
+            <Spinner spinning={isLoading}>
+              {data?.results && data.results.length > 0 ? (
+                <div>
+                  <DataTable
+                    columns={columns}
+                    data={data.results}
+                  />
+                  <SimplePagination
+                    currentPage={page}
+                    hasNext={!!data.next}
+                    totalCount={data.count || 0}
+                    countLabel="条抽查记录"
+                    onPageChange={setPage}
+                  />
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Search}
+                  description="暂无抽查记录"
+                >
+                  {canCreateSpotCheck ? (
+                    <Button
+                      onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
+                      className="bg-primary text-white hover:bg-primary-600 mt-4"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      发起第一次抽查
+                    </Button>
+                  ) : null}
+                </EmptyState>
+              )}
+            </Spinner>
+          </CardContent>
+        </Card>
+      </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+          }
+        }}
+        title="删除这条抽查记录？"
+        description={`将永久删除学员「${deleteTarget?.student_name ?? ''}」的抽查记录，此操作不可撤销。`}
+        icon={<Trash2 className="h-10 w-10" />}
+        iconBgColor="bg-destructive-100"
+        iconColor="text-destructive"
+        confirmText="确认删除"
+        cancelText="取消"
+        confirmVariant="destructive"
+        onConfirm={handleDelete}
+        isConfirming={deleteSpotCheck.isPending}
+      />
+    </>
   );
 };
 

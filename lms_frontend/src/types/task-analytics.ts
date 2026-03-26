@@ -37,6 +37,7 @@ export interface DistributionItem {
 export interface StudentExecution {
   student_id: number;
   student_name: string;
+  avatar_key: string;
   employee_id: string;
   department: string;
   status: 'COMPLETED' | 'IN_PROGRESS' | 'OVERDUE' | 'COMPLETED_ABNORMAL';
@@ -67,6 +68,7 @@ export interface GradingQuestion {
 interface GradingOptionStudent {
   student_id: number;
   student_name: string;
+  avatar_key: string;
   employee_id: string;
   department: string;
 }
@@ -82,6 +84,7 @@ interface GradingOption {
 export interface GradingSubjectiveAnswer {
   student_id: number;
   student_name: string;
+  avatar_key: string;
   employee_id: string;
   department: string;
   answer_text: string | null;

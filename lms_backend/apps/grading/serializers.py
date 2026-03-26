@@ -17,6 +17,7 @@ class GradingQuestionSerializer(serializers.Serializer):
 class GradingOptionStudentSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
     student_name = serializers.CharField()
+    avatar_key = serializers.CharField()
     employee_id = serializers.CharField()
     department = serializers.CharField()
 
@@ -32,6 +33,7 @@ class GradingOptionSerializer(serializers.Serializer):
 class GradingSubjectiveAnswerSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
     student_name = serializers.CharField()
+    avatar_key = serializers.CharField()
     employee_id = serializers.CharField()
     department = serializers.CharField()
     answer_text = serializers.CharField(allow_blank=True, allow_null=True)

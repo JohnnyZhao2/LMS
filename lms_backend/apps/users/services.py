@@ -11,6 +11,7 @@ from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 
+from .avatar_constants import validate_avatar_key
 from .models import Role, User, UserRole
 from .role_constraints import validate_role_assignment_constraints
 from .selectors import (
@@ -30,7 +31,7 @@ class UserManagementService(BaseService):
     def _get_user(self, user_id: int) -> Optional[User]:
         return get_user_by_id(user_id)
 
-    @log_user_action('deactivate', '')
+    @log_user_action('deactivate', '被操作账号：{result.username}（{result.employee_id}）')
     def deactivate_user(self, user_id: int) -> User:
         """
         Deactivate a user.
@@ -55,7 +56,7 @@ class UserManagementService(BaseService):
         user.save(update_fields=['is_active'])
         return user
 
-    @log_user_action('activate', '')
+    @log_user_action('activate', '被操作账号：{result.username}（{result.employee_id}）')
     def activate_user(self, user_id: int) -> User:
         """
         Activate a user.
@@ -219,12 +220,12 @@ class UserManagementService(BaseService):
             role_name_map = dict(Role.ROLE_CHOICES)
             added_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_add)])
             removed_names = '、'.join([role_name_map.get(code, code) for code in sorted(roles_to_remove)])
-            if roles_to_add and roles_to_remove:
-                description = f'新增：{added_names}；移除：{removed_names}'
-            elif roles_to_add:
-                description = f'新增：{added_names}'
-            else:
-                description = f'移除：{removed_names}'
+            parts = [f'被操作账号：{user.username}（{user.employee_id}）']
+            if roles_to_add:
+                parts.append(f'新增角色：{added_names}')
+            if roles_to_remove:
+                parts.append(f'移除角色：{removed_names}')
+            description = '；'.join(parts)
 
             ActivityLogService.log_user_action(
                 user=user,
@@ -282,11 +283,13 @@ class UserManagementService(BaseService):
 
         # 记录用户日志
         try:
+            parts = [f'学员：{user.username}（{user.employee_id}）']
             if mentor_id is None:
-                description = '解除导师绑定'
+                parts.append('导师：已解除绑定')
             else:
                 mentor = self._get_user(mentor_id)
-                description = f'导师：{mentor.username}'
+                parts.append(f'导师：{mentor.username}')
+            description = '；'.join(parts)
 
             ActivityLogService.log_user_action(
                 user=user,
@@ -298,4 +301,16 @@ class UserManagementService(BaseService):
         except Exception:
             pass  # 日志记录失败不影响主流程
 
+        return user
+
+    def update_avatar(self, user_id: int, avatar_key: str) -> User:
+        user = self._get_user(user_id)
+        self.validate_not_none(user, f'用户 {user_id} 不存在')
+
+        normalized_avatar_key = validate_avatar_key(avatar_key.strip())
+        if user.avatar_key == normalized_avatar_key:
+            return user
+
+        user.avatar_key = normalized_avatar_key
+        user.save(update_fields=['avatar_key'])
         return user

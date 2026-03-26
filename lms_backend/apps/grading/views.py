@@ -182,6 +182,7 @@ class GradingAnswersView(GradingBaseView):
                     students.append({
                         'student_id': user.id,
                         'student_name': user.username,
+                        'avatar_key': user.avatar_key,
                         'employee_id': user.employee_id or '',
                         'department': user.department.name if user.department else '',
                     })
@@ -204,6 +205,7 @@ class GradingAnswersView(GradingBaseView):
             results.append({
                 'student_id': user.id,
                 'student_name': user.username,
+                'avatar_key': user.avatar_key,
                 'employee_id': user.employee_id or '',
                 'department': user.department.name if user.department else '',
                 'answer_text': answer.user_answer if isinstance(answer.user_answer, str) else str(answer.user_answer or ''),

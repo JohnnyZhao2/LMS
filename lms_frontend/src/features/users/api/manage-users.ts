@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { UserList, RoleCode } from '@/types/api';
+import type { UserInfo, UserList, RoleCode } from '@/types/api';
 
 const invalidateUserQueries = (
   queryClient: ReturnType<typeof useQueryClient>,
@@ -32,6 +32,10 @@ interface UpdateUserRequest {
   role_codes?: RoleCode[];
 }
 
+interface UpdateAvatarRequest {
+  avatar_key: string;
+}
+
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
 
@@ -47,6 +51,25 @@ export const useUpdateUser = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) =>
       apiClient.patch<UserList>(`/users/${id}/`, data),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+  });
+};
+
+export const useUpdateMyAvatar = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateAvatarRequest) => apiClient.patch<UserInfo>('/users/me/avatar/', data),
+    onSuccess: () => invalidateUserQueries(queryClient, true, true),
+  });
+};
+
+export const useUpdateUserAvatar = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateAvatarRequest }) =>
+      apiClient.patch<UserList>(`/users/${id}/avatar/`, data),
     onSuccess: () => invalidateUserQueries(queryClient, true, true),
   });
 };

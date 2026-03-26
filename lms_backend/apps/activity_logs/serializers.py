@@ -12,15 +12,15 @@ LOG_TYPE_CHOICES = (
 # UserLog action → summary 模板
 # {actor}: 操作者, {user}: 被操作用户
 _USER_ACTION_SUMMARIES = {
-    'login': '{actor} 登录了系统',
-    'logout': '{actor} 退出了系统',
-    'login_failed': '{user} 登录失败',
+    'login': '{actor} 登录成功',
+    'logout': '{actor} 退出登录',
+    'login_failed': '{actor} 登录失败',
     'switch_role': '{actor} 切换了角色',
-    'password_change': '{actor} 重置了 {user} 的密码',
-    'role_assigned': '{actor} 为 {user} 分配了角色',
-    'mentor_assigned': '{actor} 为 {user} 分配了导师',
-    'activate': '{actor} 启用了 {user} 的账号',
-    'deactivate': '{actor} 停用了 {user} 的账号',
+    'password_change': '{actor} 重置了用户密码',
+    'role_assigned': '{actor} 更新了用户角色',
+    'mentor_assigned': '{actor} 分配了导师',
+    'activate': '{actor} 启用了用户账号',
+    'deactivate': '{actor} 停用了用户账号',
 }
 
 # ContentLog content_type → 中文名
@@ -92,6 +92,7 @@ class SimpleUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     employee_id = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
+    avatar_key = serializers.CharField(read_only=True)
 
 
 class ActivityLogItemSerializer(serializers.Serializer):

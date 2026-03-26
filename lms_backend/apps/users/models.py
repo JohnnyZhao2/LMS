@@ -111,6 +111,7 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     """
     employee_id = models.CharField(max_length=100, unique=True)
     username = models.CharField(max_length=150)
+    avatar_key = models.CharField(max_length=32, blank=True, default='avatar-01')
     mentor = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='mentees')
     department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name='members')
     roles = models.ManyToManyField(Role, through='UserRole', through_fields=('user', 'role'), related_name='users')

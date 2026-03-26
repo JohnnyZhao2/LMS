@@ -102,7 +102,7 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
         # 批量查用户信息
         user_map = {
             u.id: u
-            for u in User.objects.filter(id__in=actor_ids).only('id', 'employee_id', 'username')
+            for u in User.objects.filter(id__in=actor_ids).only('id', 'employee_id', 'username', 'avatar_key')
         }
         return [
             {
@@ -110,6 +110,7 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
                     'id': item['effective_actor_id'],
                     'employee_id': user_map[item['effective_actor_id']].employee_id,
                     'username': user_map[item['effective_actor_id']].username,
+                    'avatar_key': user_map[item['effective_actor_id']].avatar_key,
                 },
                 'activity_count': item['activity_count'],
                 'last_activity_at': item['last_activity_at'],
@@ -123,6 +124,7 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
         f'{actor_field}__id',
         f'{actor_field}__employee_id',
         f'{actor_field}__username',
+        f'{actor_field}__avatar_key',
     ).annotate(
         activity_count=Count('id'),
         last_activity_at=Max('created_at'),
@@ -138,6 +140,7 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
                 'id': item[f'{actor_field}__id'],
                 'employee_id': item[f'{actor_field}__employee_id'],
                 'username': item[f'{actor_field}__username'],
+                'avatar_key': item[f'{actor_field}__avatar_key'],
             },
             'activity_count': item['activity_count'],
             'last_activity_at': item['last_activity_at'],

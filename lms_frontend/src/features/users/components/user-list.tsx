@@ -18,9 +18,10 @@ import {
 } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
-import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword } from "../api/manage-users"
+import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword, useUpdateUserAvatar } from "../api/manage-users"
 import { UserForm } from "./user-form"
 import { UserSidebar, type ViewMode } from "./user-sidebar"
+import { AvatarPickerPopover } from "./avatar-picker-popover"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
 import { useAuth } from "@/features/auth/hooks/use-auth"
@@ -41,7 +42,7 @@ import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
-  const { hasPermission } = useAuth()
+  const { hasPermission, currentRole, user: currentUser } = useAuth()
   const canCreateUser = hasPermission('user.create')
   const canUpdateUser = hasPermission('user.update')
   const canManageUserAccount = hasPermission('user.activate')
@@ -49,6 +50,7 @@ export const UserList: React.FC = () => {
   const canDeleteUser = hasPermission('user.delete')
   const canResetPassword = canManageUserAccount
   const canOpenUserEditor = canUpdateUser || canManageUserAuthorization
+  const canAdminEditAvatar = currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN' || !!currentUser?.is_superuser
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -99,6 +101,7 @@ export const UserList: React.FC = () => {
   const deactivateUser = useDeactivateUser()
   const deleteUser = useDeleteUser()
   const resetPassword = useResetPassword()
+  const updateUserAvatar = useUpdateUserAvatar()
 
   // 筛选变化时重置页码
   React.useEffect(() => {
@@ -173,6 +176,18 @@ export const UserList: React.FC = () => {
     }
   }
 
+  const handleUserAvatarSelect = async (user: UserListType, avatarKey: string) => {
+    try {
+      await updateUserAvatar.mutateAsync({
+        id: user.id,
+        data: { avatar_key: avatarKey },
+      })
+      toast.success(`已更新 ${user.username} 的头像`)
+    } catch (error) {
+      showApiError(error, '头像更新失败')
+    }
+  }
+
   // DataTable 列定义 - 使用共用 Cell 组件
   const columns: ColumnDef<UserListType>[] = [
     {
@@ -183,6 +198,17 @@ export const UserList: React.FC = () => {
         <CellWithAvatar
           name={row.original.username}
           subtitle={row.original.employee_id || 'NO ID'}
+          avatar={(
+            <AvatarPickerPopover
+              avatarKey={row.original.avatar_key}
+              name={row.original.username}
+              size="md"
+              canEdit={canAdminEditAvatar}
+              isUpdating={updateUserAvatar.isPending}
+              align="start"
+              onSelectAvatar={(avatarKey) => handleUserAvatarSelect(row.original, avatarKey)}
+            />
+          )}
         />
       ),
     },
@@ -218,7 +244,7 @@ export const UserList: React.FC = () => {
       cell: ({ row }) => {
         const mentor = row.original.mentor
         if (!mentor) return <span className="text-text-muted italic text-xs">未分配</span>
-        return <CellSmallAvatar name={mentor.username} />
+        return <CellSmallAvatar name={mentor.username} avatarKey={mentor.avatar_key} />
       },
     },
     {

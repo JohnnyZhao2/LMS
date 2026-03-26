@@ -1,5 +1,6 @@
 import { Loader2, Users } from 'lucide-react';
 
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -8,6 +9,7 @@ export interface UserPickerUser {
   id: number;
   username: string;
   employee_id?: string;
+  avatar_key?: string | null;
   department?: {
     id?: number | null;
     name?: string | null;
@@ -173,16 +175,12 @@ export const UserPickerPanel = <TUser extends UserPickerUser>({
                     className="rounded-[3px] shrink-0"
                   />
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div
-                      className={cn(
-                        'w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold transition-colors',
-                        selected
-                          ? 'bg-primary/15 text-primary'
-                          : 'bg-slate-100 text-slate-400',
-                      )}
-                    >
-                      {user.username.charAt(0)}
-                    </div>
+                    <UserAvatar
+                      avatarKey={user.avatar_key}
+                      name={user.username}
+                      size="sm"
+                      className="shrink-0"
+                    />
                     <div className="min-w-0 flex-1">
                       <span
                         className={cn(

@@ -32,4 +32,18 @@ export const useUpdateSpotCheck = () => {
   });
 };
 
+/**
+ * 删除抽查记录
+ */
+export const useDeleteSpotCheck = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/spot-checks/${id}/`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['spot-checks'] });
+      queryClient.invalidateQueries({ queryKey: ['spot-check-detail'] });
+    },
+  });
+};
 

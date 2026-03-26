@@ -13,7 +13,12 @@ from rest_framework.views import APIView
 
 from apps.authorization.services import AuthorizationService
 from apps.users.models import User
-from apps.users.permissions import SUPER_ADMIN_ROLE, get_accessible_students, get_current_role
+from apps.users.permissions import (
+    SUPER_ADMIN_ROLE,
+    get_accessible_students,
+    get_current_role,
+    is_admin_like_role,
+)
 from apps.users.selectors import (
     get_user_by_id,
     list_departments,
@@ -24,6 +29,7 @@ from apps.users.selectors import (
 from apps.users.serializers import (
     AssignMentorSerializer,
     AssignRolesSerializer,
+    AvatarUpdateSerializer,
     DepartmentMemberListSerializer,
     DepartmentSerializer,
     MenteeListSerializer,
@@ -31,6 +37,7 @@ from apps.users.serializers import (
     RoleSerializer,
     UserCreateSerializer,
     UserDetailSerializer,
+    UserInfoSerializer,
     UserListSerializer,
     UserUpdateSerializer,
 )
@@ -187,6 +194,62 @@ class UserDetailView(APIView):
         service = UserManagementService(request)
         service.delete_user(pk)
         return no_content_response()
+
+
+class UserSelfAvatarView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserInfoSerializer
+    service_class = UserManagementService
+
+    @extend_schema(
+        summary='更新本人头像',
+        description='更新当前登录用户的默认头像',
+        request=AvatarUpdateSerializer,
+        responses={
+            200: UserInfoSerializer,
+            400: OpenApiResponse(description='头像标识无效'),
+            401: OpenApiResponse(description='未登录'),
+        },
+        tags=['用户管理']
+    )
+    def patch(self, request):
+        serializer = AvatarUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = self.service.update_avatar(request.user.id, serializer.validated_data['avatar_key'])
+        response_serializer = UserInfoSerializer(user)
+        return success_response(response_serializer.data)
+
+
+class UserAvatarUpdateView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserDetailSerializer
+    service_class = UserManagementService
+
+    @extend_schema(
+        summary='更新用户头像',
+        description='管理员更新指定用户的默认头像',
+        request=AvatarUpdateSerializer,
+        responses={
+            200: UserDetailSerializer,
+            400: OpenApiResponse(description='头像标识无效'),
+            403: OpenApiResponse(description='无权限'),
+            404: OpenApiResponse(description='用户不存在'),
+        },
+        tags=['用户管理']
+    )
+    def patch(self, request, pk):
+        current_role = get_current_role(request.user, request)
+        if not is_admin_like_role(current_role):
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='只有管理员可以修改其他用户头像',
+            )
+
+        serializer = AvatarUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = self.service.update_avatar(pk, serializer.validated_data['avatar_key'])
+        response_serializer = UserDetailSerializer(user)
+        return success_response(response_serializer.data)
 class UserDeactivateView(BaseAPIView):
     """
     User deactivation endpoint.

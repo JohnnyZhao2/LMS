@@ -149,7 +149,7 @@ class AuthenticationService(BaseService):
             self._log_user_action_safely(
                 user=user_obj,
                 action='login_failed',
-                description='账号已停用',
+                description=f'原因：账号已停用；账号：{user_obj.username}（{user_obj.employee_id}）',
                 status='failed',
             )
             raise BusinessError(
@@ -164,7 +164,7 @@ class AuthenticationService(BaseService):
                 self._log_user_action_safely(
                     user=user_obj,
                     action='login_failed',
-                    description='密码错误',
+                    description=f'原因：密码错误；账号：{user_obj.username}（{user_obj.employee_id}）',
                     status='failed',
                 )
             raise BusinessError(
@@ -179,7 +179,7 @@ class AuthenticationService(BaseService):
         self._log_user_action_safely(
             user=authenticated_user,
             action='login',
-            description=f'工号 {employee_id}',
+            description=f'账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
             status='success',
         )
         return self._build_auth_payload(authenticated_user)
@@ -205,7 +205,7 @@ class AuthenticationService(BaseService):
         self._log_user_action_safely(
             user=user,
             action='logout',
-            description='主动退出',
+            description=f'账号：{user.username}（{user.employee_id}）',
             status='success',
         )
 
@@ -248,7 +248,7 @@ class AuthenticationService(BaseService):
                 message='无效的刷新令牌',
             )
 
-    @log_user_action('switch_role', '切换为{role_label}')
+    @log_user_action('switch_role', '当前角色：{role_label}')
     def switch_role(self, user: User, role_code: str) -> Dict[str, Any]:
         """
         Switch user's current active role.
@@ -298,7 +298,7 @@ class AuthenticationService(BaseService):
             user=target_user,
             operator=operator,
             action='password_change',
-            description='重置密码',
+            description=f'被操作账号：{target_user.username}（{target_user.employee_id}）',
             status='success',
         )
         return {'temporary_password': temporary_password}

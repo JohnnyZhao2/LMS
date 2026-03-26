@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -326,8 +326,6 @@ const UserFormContent: React.FC<{
       }
     };
 
-    const getAvatarText = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
-
     const toggleRole = (code: RoleCode) => {
       setFormData((prev) => {
         const active = prev.role_codes.includes(code);
@@ -471,11 +469,7 @@ const UserFormContent: React.FC<{
                             mentors.filter(m => !userId || m.id !== userId).map(m => (
                               <SelectItem key={m.id} value={m.id.toString()} className="focus:bg-muted/50 cursor-pointer">
                                 <div className="flex items-center gap-3 py-1">
-                                  <Avatar className="w-6 h-6">
-                                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
-                                      {getAvatarText(m.username)}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  <UserAvatar avatarKey={m.avatar_key} name={m.username} size="sm" />
                                   <span className="text-sm font-medium">{m.username}</span>
                                 </div>
                               </SelectItem>

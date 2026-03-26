@@ -9,8 +9,12 @@ export interface SpotCheck {
   id: number;
   student: number;
   student_name: string;
+  student_employee_id?: string;
+  student_avatar_key: string;
+  student_department?: string | null;
   checker: number;
   checker_name: string;
+  checker_avatar_key: string;
   content: string;
   score: string;
   comment?: string;

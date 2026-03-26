@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,31 +15,45 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
+import { ROUTES } from '@/config/routes';
 
-import { useCreateSpotCheck } from '../api/create-spot-check';
-import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { showApiError } from '@/utils/error-handler';
+import { useCreateSpotCheck, useUpdateSpotCheck } from '../api/create-spot-check';
+import { useSpotCheckDetail } from '../api/get-spot-checks';
 
 /**
  * 抽查录入表单组件 - ShadCN UI 版本
  */
 export const SpotCheckForm: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const { roleNavigate } = useRoleNavigate();
+  const isEdit = !!id;
+  const spotCheckId = Number(id);
   const createSpotCheck = useCreateSpotCheck();
+  const updateSpotCheck = useUpdateSpotCheck();
+  const { data: spotCheckDetail, isLoading: detailLoading } = useSpotCheckDetail(spotCheckId);
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
   // Form state
   const [studentId, setStudentId] = useState<string>('');
-  const [content, setContent] = useState('');
-  const [score, setScore] = useState<number>(80);
-  const [comment, setComment] = useState('');
-  const [checkedAt, setCheckedAt] = useState<Date | undefined>(new Date());
+  const [draftContent, setDraftContent] = useState<string | undefined>(undefined);
+  const [draftScore, setDraftScore] = useState<number | undefined>(undefined);
+  const [draftComment, setDraftComment] = useState<string | undefined>(undefined);
+  const [draftCheckedAt, setDraftCheckedAt] = useState<Date | undefined>(() => (id ? undefined : new Date()));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const isSubmitting = createSpotCheck.isPending || updateSpotCheck.isPending;
+  const content = isEdit ? (draftContent ?? spotCheckDetail?.content ?? '') : (draftContent ?? '');
+  const score = isEdit ? (draftScore ?? Number(spotCheckDetail?.score ?? 80)) : (draftScore ?? 80);
+  const comment = isEdit ? (draftComment ?? spotCheckDetail?.comment ?? '') : (draftComment ?? '');
+  const checkedAt = isEdit
+    ? (draftCheckedAt ?? (spotCheckDetail ? new Date(spotCheckDetail.checked_at) : undefined))
+    : draftCheckedAt;
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!studentId) newErrors.student = '请选择学员';
+    if (!isEdit && !studentId) newErrors.student = '请选择学员';
     if (!content.trim()) newErrors.content = '请输入抽查内容';
     if (score < 0 || score > 100) newErrors.score = '请输入0-100分的评分';
     if (!checkedAt) newErrors.checkedAt = '请选择抽查时间';
@@ -52,44 +67,66 @@ export const SpotCheckForm: React.FC = () => {
       return;
     }
 
+    const payload = {
+      content,
+      score: String(score),
+      comment: comment || undefined,
+      checked_at: checkedAt!.toISOString(),
+    };
+
     try {
-      await createSpotCheck.mutateAsync({
-        student: Number(studentId),
-        content,
-        score: String(score),
-        comment: comment || undefined,
-        checked_at: checkedAt!.toISOString(),
-      });
-      toast.success('抽查记录创建成功');
-      roleNavigate('spot-checks');
+      if (isEdit) {
+        await updateSpotCheck.mutateAsync({
+          id: spotCheckId,
+          data: payload,
+        });
+        toast.success('抽查记录修改成功');
+      } else {
+        await createSpotCheck.mutateAsync({
+          student: Number(studentId),
+          ...payload,
+        });
+        toast.success('抽查记录创建成功');
+      }
+      roleNavigate(ROUTES.SPOT_CHECKS);
     } catch (error) {
-      showApiError(error, '创建失败');
+      showApiError(error, isEdit ? '修改失败' : '创建失败');
     }
   };
 
   return (
     <div className="animate-fadeIn">
-      <h2 className="text-2xl font-bold text-foreground mb-6">发起抽查</h2>
-      
+      <h2 className="text-2xl font-bold text-foreground mb-6">
+        {isEdit ? '修改抽查' : '发起抽查'}
+      </h2>
+
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-lg">抽查信息</CardTitle>
+          <CardTitle className="text-lg">
+            {isEdit ? '修改抽查信息' : '抽查信息'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label>选择学员</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger>
-                <SelectValue placeholder={usersLoading ? '加载中...' : '搜索并选择学员'} />
-              </SelectTrigger>
-              <SelectContent>
-                {(users || []).map((user) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    {user.username} ({user.employee_id})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isEdit ? (
+              <div className="flex min-h-10 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
+                {detailLoading ? '加载中...' : spotCheckDetail?.student_name}
+              </div>
+            ) : (
+              <Select value={studentId} onValueChange={setStudentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={usersLoading ? '加载中...' : '搜索并选择学员'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(users || []).map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.username} ({user.employee_id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {errors.student && <p className="text-sm text-destructive-500">{errors.student}</p>}
           </div>
 
@@ -100,7 +137,7 @@ export const SpotCheckForm: React.FC = () => {
               rows={3}
               placeholder="请输入抽查内容或主题"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => setDraftContent(e.target.value)}
             />
             {errors.content && <p className="text-sm text-destructive-500">{errors.content}</p>}
           </div>
@@ -112,7 +149,7 @@ export const SpotCheckForm: React.FC = () => {
               min={0}
               max={100}
               value={score}
-              onChange={(e) => setScore(Number(e.target.value))}
+              onChange={(e) => setDraftScore(Number(e.target.value))}
             />
             {errors.score && <p className="text-sm text-destructive-500">{errors.score}</p>}
           </div>
@@ -124,7 +161,7 @@ export const SpotCheckForm: React.FC = () => {
               rows={3}
               placeholder="请输入评语（可选）"
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e) => setDraftComment(e.target.value)}
             />
           </div>
 
@@ -132,7 +169,7 @@ export const SpotCheckForm: React.FC = () => {
             <Label>抽查时间</Label>
             <DatePicker
               date={checkedAt}
-              onDateChange={setCheckedAt}
+              onDateChange={setDraftCheckedAt}
               placeholder="选择抽查时间"
             />
             {errors.checkedAt && <p className="text-sm text-destructive-500">{errors.checkedAt}</p>}
@@ -141,12 +178,12 @@ export const SpotCheckForm: React.FC = () => {
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSubmit}
-              disabled={createSpotCheck.isPending}
+              disabled={isSubmitting || (isEdit && detailLoading)}
             >
-              {createSpotCheck.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              提交
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isEdit ? '保存修改' : '提交'}
             </Button>
-            <Button variant="outline" onClick={() => roleNavigate('spot-checks')}>
+            <Button variant="outline" onClick={() => roleNavigate(ROUTES.SPOT_CHECKS)}>
               取消
             </Button>
           </div>

@@ -391,6 +391,7 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
         results.append({
             'student_id': assignment.assignee.id,
             'student_name': assignment.assignee.username,
+            'avatar_key': assignment.assignee.avatar_key,
             'employee_id': assignment.assignee.employee_id or '',
             'department': assignment.assignee.department.name if assignment.assignee.department else '',
             'status': status,

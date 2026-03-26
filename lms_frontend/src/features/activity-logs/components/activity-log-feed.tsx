@@ -1,4 +1,5 @@
 import { Checkbox } from '@/components/ui/checkbox';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import type { ActivityLogItem } from '../types';
 
@@ -10,18 +11,6 @@ interface ActivityLogFeedProps {
   selectionDisabled?: boolean;
   onToggleSelect?: (itemId: string) => void;
 }
-
-const AVATAR_COLORS = [
-  'bg-primary-100 text-primary-600',
-  'bg-secondary-100 text-secondary-600',
-  'bg-warning-100 text-warning-700',
-  'bg-destructive-100 text-destructive-600',
-  'bg-primary-200 text-primary-700',
-  'bg-secondary-200 text-secondary-700',
-];
-
-const getAvatarColor = (id: number | undefined) =>
-  AVATAR_COLORS[(id ?? 0) % AVATAR_COLORS.length];
 
 const formatTime = (value: string) =>
   new Intl.DateTimeFormat('zh-CN', {
@@ -117,14 +106,12 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                       isLast && 'mb-0'
                     )}
                   >
-                    <div
-                      className={cn(
-                        'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
-                        getAvatarColor(item.actor?.id)
-                      )}
-                    >
-                      {item.actor?.username.slice(0, 1) ?? '?'}
-                    </div>
+                    <UserAvatar
+                      avatarKey={item.actor?.avatar_key}
+                      name={item.actor?.username ?? ''}
+                      size="md"
+                      className="mt-0.5 h-9 w-9 shrink-0"
+                    />
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] leading-6">

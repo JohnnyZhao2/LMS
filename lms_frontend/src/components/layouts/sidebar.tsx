@@ -2,6 +2,8 @@ import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth/hooks/use-auth'
+import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
+import { useUpdateMyAvatar } from '@/features/users/api/manage-users'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
 import { useCurrentRole } from '@/hooks/use-current-role'
 import { cn } from '@/lib/utils'
@@ -19,14 +21,16 @@ import {
   ROLE_ORDER,
 } from '@/config/role-constants'
 import type { RoleCode } from '@/types/api'
+import { toast } from 'sonner'
 
 interface SidebarProps {
   onClose?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { user, availableRoles, logout, switchRole, hasAnyPermission } = useAuth()
+  const { user, availableRoles, logout, switchRole, hasAnyPermission, refreshUser } = useAuth()
   const currentRole = useCurrentRole()
+  const updateMyAvatar = useUpdateMyAvatar()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -57,6 +61,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const handleNavClick = (path: string) => {
     navigate(path)
     onClose?.()
+  }
+
+  const handleMyAvatarSelect = async (avatarKey: string) => {
+    try {
+      await updateMyAvatar.mutateAsync({ avatar_key: avatarKey })
+      await refreshUser()
+      toast.success('头像已更新')
+    } catch (error) {
+      showApiError(error, '头像更新失败')
+    }
   }
 
   const rolePrefix = React.useMemo(() => {
@@ -341,9 +355,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         )}
 
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-center gap-2 px-1">
-            <img src="/logo.svg" alt="LMS" className="h-8 w-8 shrink-0 object-contain" />
-            <span className="text-[20px] font-semibold tracking-[-0.03em] text-black">学习平台</span>
+          <div className="flex items-center px-1">
+            <img src="/logo.svg" alt="LMS" className="h-10 w-10 shrink-0 object-contain" />
           </div>
 
           <nav className="mt-8 flex-1 overflow-y-auto scrollbar-subtle">
@@ -409,9 +422,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           </nav>
           <div className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full bg-linear-to-br from-[#F4B2C2] to-[#FFD8E2] text-[16px] font-semibold text-black">
-                {userInitials}
-              </div>
+              <AvatarPickerPopover
+                avatarKey={user?.avatar_key}
+                name={userLabel || userInitials}
+                size="lg"
+                canEdit={!!user}
+                isUpdating={updateMyAvatar.isPending}
+                align="start"
+                onSelectAvatar={handleMyAvatarSelect}
+              />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-medium leading-5 text-black">
                   {userLabel || 'LMS 用户'}

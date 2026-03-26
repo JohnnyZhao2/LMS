@@ -39,7 +39,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   onAddQuestion,
 }) => {
   return (
-    <div className="w-96 flex flex-col bg-background rounded-xl shadow-sm border border-border shrink-0 overflow-hidden">
+    <div className="w-72 flex flex-col bg-background rounded-xl shadow-sm border border-border shrink-0 overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <LayoutGrid className="w-4 h-4 text-primary-500" />

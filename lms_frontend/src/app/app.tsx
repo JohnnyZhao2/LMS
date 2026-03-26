@@ -1,6 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AppProvider } from './provider';
 import { AppContent } from './app-content';
+import { AgentationToolbar } from '@/components/dev/agentation-toolbar';
 
 /**
  * 应用根组件
@@ -15,6 +16,7 @@ export const App: React.FC = () => {
     >
       <AppProvider>
         <AppContent />
+        <AgentationToolbar />
       </AppProvider>
     </BrowserRouter>
   );

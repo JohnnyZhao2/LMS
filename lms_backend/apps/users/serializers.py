@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from core.exceptions import BusinessError
 
+from .avatar_constants import validate_avatar_key
 from .models import Department, Role, User
 from .permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from .role_constraints import validate_role_assignment_constraints
@@ -77,7 +78,7 @@ class MentorSerializer(serializers.ModelSerializer):
     """Serializer for mentor information."""
     class Meta:
         model = User
-        fields = ['id', 'username', 'employee_id']
+        fields = ['id', 'username', 'employee_id', 'avatar_key']
 class UserInfoSerializer(serializers.ModelSerializer):
     """
     Serializer for user information in responses.
@@ -88,7 +89,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'employee_id', 'username',
+            'id', 'employee_id', 'username', 'avatar_key',
             'department', 'mentor', 'is_active', 'is_superuser'
         ]
 # ============ User Management Serializers ============
@@ -102,7 +103,7 @@ class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'employee_id', 'username',
+            'id', 'employee_id', 'username', 'avatar_key',
             'department', 'mentor', 'roles', 'is_active', 'is_superuser',
             'last_login', 'created_at', 'updated_at'
         ]
@@ -123,7 +124,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'employee_id', 'username',
+            'id', 'employee_id', 'username', 'avatar_key',
             'department', 'mentor', 'roles', 'is_active', 'is_superuser',
             'last_login', 'mentees_count', 'created_at', 'updated_at'
         ]
@@ -263,6 +264,13 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
             )
 
         return user
+
+
+class AvatarUpdateSerializer(serializers.Serializer):
+    avatar_key = serializers.CharField(required=True, max_length=32, help_text='默认头像标识')
+
+    def validate_avatar_key(self, value):
+        return validate_avatar_key(value.strip())
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating user information.

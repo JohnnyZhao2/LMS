@@ -1,4 +1,5 @@
 import { Check, Users } from 'lucide-react';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import type { ActivityLogMember, ActivityLogType } from '../types';
 
@@ -14,17 +15,6 @@ const TYPE_LABELS: Record<ActivityLogType, string> = {
   content: '内容',
   operation: '行为记录',
 };
-
-const AVATAR_COLORS = [
-  'bg-primary-100 text-primary-600',
-  'bg-secondary-100 text-secondary-600',
-  'bg-warning-100 text-warning-700',
-  'bg-destructive-100 text-destructive-600',
-  'bg-primary-200 text-primary-700',
-  'bg-secondary-200 text-secondary-700',
-];
-
-const getAvatarColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
 export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
   members,
@@ -78,14 +68,12 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
                   </div>
 
                   {/* Avatar */}
-                  <div
-                    className={cn(
-                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
-                      getAvatarColor(member.user.id)
-                    )}
-                  >
-                    {member.user.username.slice(0, 1)}
-                  </div>
+                  <UserAvatar
+                    avatarKey={member.user.avatar_key}
+                    name={member.user.username}
+                    size="md"
+                    className="h-9 w-9 shrink-0"
+                  />
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">

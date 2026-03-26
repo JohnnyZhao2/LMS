@@ -3,9 +3,9 @@
  * 提供统一的表格单元格渲染样式，确保跨页面一致性
  */
 import * as React from 'react';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { AvatarCircle } from '@/components/common/avatar-circle';
 
 /**
  * Cell 带图标和文字
@@ -58,6 +58,7 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
 interface CellWithAvatarProps {
     name: string;
     subtitle?: string;
+    avatar?: React.ReactNode;
     avatarClassName?: string;
     size?: 'sm' | 'md' | 'lg';
     className?: string;
@@ -66,6 +67,7 @@ interface CellWithAvatarProps {
 export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
     name,
     subtitle,
+    avatar,
     avatarClassName = 'bg-primary-100 text-primary',
     size = 'md',
     className,
@@ -79,15 +81,17 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
 
     return (
         <div className={cn('flex items-center gap-3 py-1', s.wrap, className)}>
-            <div
-                className={cn(
-                    s.avatar,
-                    'rounded-md flex items-center justify-center flex-shrink-0 font-bold group-hover:scale-110 transition-transform',
-                    avatarClassName
-                )}
-            >
-                {name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
+            {avatar ? avatar : (
+                <div
+                    className={cn(
+                        s.avatar,
+                        'rounded-md flex items-center justify-center flex-shrink-0 font-bold group-hover:scale-110 transition-transform',
+                        avatarClassName
+                    )}
+                >
+                    {name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+            )}
             <div className="flex flex-col">
                 <span className={cn('font-bold text-foreground line-clamp-1', s.text)}>
                     {name}
@@ -191,20 +195,17 @@ export const CellIconText: React.FC<CellIconTextProps> = ({
  */
 interface CellSmallAvatarProps {
     name: string;
+    avatarKey?: string | null;
     className?: string;
 }
 
 export const CellSmallAvatar: React.FC<CellSmallAvatarProps> = ({
     name,
+    avatarKey,
     className,
 }) => (
     <div className={cn('flex items-center gap-2', className)}>
-        <AvatarCircle
-            size="sm"
-            text={name?.charAt(0)?.toUpperCase() || '?'}
-            bgColor="bg-primary-100"
-            textColor="text-primary"
-        />
+        <UserAvatar avatarKey={avatarKey} name={name} size="sm" />
         <span className="text-sm font-medium text-foreground">{name}</span>
     </div>
 );

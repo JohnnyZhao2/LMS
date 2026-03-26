@@ -727,6 +727,7 @@ class TestUserManagementApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert isinstance(response.data['data'], list)
+        assert response.data['data'][0]['avatar_key'] == student_user.avatar_key
         user_ids = [item['id'] for item in response.data['data']]
         assert admin_user.id in user_ids
         assert student_user.id in user_ids
@@ -803,6 +804,9 @@ class TestSpotCheckApiContracts:
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_spot_check.id in result_ids
+        result = next(item for item in response.data['data']['results'] if item['id'] == sample_spot_check.id)
+        assert result['student_avatar_key'] == sample_spot_check.student.avatar_key
+        assert result['checker_avatar_key'] == sample_spot_check.checker.avatar_key
 
     def test_spot_check_list_rejects_invalid_student_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -820,6 +824,8 @@ class TestSpotCheckApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['id'] == sample_spot_check.id
+        assert response.data['data']['student_avatar_key'] == sample_spot_check.student.avatar_key
+        assert response.data['data']['checker_avatar_key'] == sample_spot_check.checker.avatar_key
 
     def test_spot_check_patch_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
         api_client.force_authenticate(user=mentor_user)
@@ -1012,7 +1018,7 @@ class TestActivityLogApiContracts:
             user=student_user,
             operator=admin_user,
             action='role_assigned',
-            description='新增：学员',
+            description=f'被操作账号：{student_user.username}（{student_user.employee_id}）；新增角色：学员',
             status='success',
         )
         api_client.force_authenticate(user=admin_user)
@@ -1026,12 +1032,14 @@ class TestActivityLogApiContracts:
         assert response.data['data']['page_size'] == 10
         assert len(response.data['data']['members']) == 1
         assert response.data['data']['members'][0]['user']['id'] == admin_user.id
+        assert response.data['data']['members'][0]['user']['avatar_key'] == admin_user.avatar_key
         assert response.data['data']['members'][0]['activity_count'] == 1
         assert response.data['data']['results'][0]['id'] == f'user-{log.id}'
         assert response.data['data']['results'][0]['category'] == 'user'
         assert response.data['data']['results'][0]['actor']['id'] == admin_user.id
+        assert response.data['data']['results'][0]['actor']['avatar_key'] == admin_user.avatar_key
         assert admin_user.username in response.data['data']['results'][0]['summary']
-        assert student_user.username in response.data['data']['results'][0]['summary']
+        assert student_user.username in response.data['data']['results'][0]['description']
 
     def test_activity_log_filters_member_ids_by_active_actor(self, api_client, admin_user, mentor_user):
         ContentLog.objects.create(

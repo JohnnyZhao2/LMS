@@ -8,6 +8,7 @@ import {
   Users
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { UserAvatar } from '@/components/common/user-avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -390,9 +391,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 <div className="p-3 bg-muted/50 border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                   {option.students.map(student => (
                                     <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background border border-transparent hover:border-border transition-colors text-xs">
-                                      <div className="w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center text-text-muted font-bold shrink-0 text-[10px]">
-                                        {student.student_name.slice(0, 1)}
-                                      </div>
+                                      <UserAvatar
+                                        avatarKey={student.avatar_key}
+                                        name={student.student_name}
+                                        size="sm"
+                                        className="h-5 w-5 shrink-0"
+                                      />
                                       <div className="min-w-0">
                                         <div className="font-medium text-foreground truncate">{student.student_name}</div>
                                       </div>
@@ -427,9 +431,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             {/* Header: Student Info + Score */}
                             <div className="flex items-center justify-between p-4 bg-muted/50 border-b border-border">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-background border border-border text-text-muted flex items-center justify-center font-bold text-sm">
-                                  {answer.student_name.slice(0, 1)}
-                                </div>
+                                <UserAvatar
+                                  avatarKey={answer.avatar_key}
+                                  name={answer.student_name}
+                                  size="md"
+                                  className="h-9 w-9"
+                                />
                                 <div>
                                   <div className="font-bold text-foreground text-sm flex items-center gap-2">
                                     {answer.student_name}

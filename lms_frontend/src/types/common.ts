@@ -86,6 +86,7 @@ export interface Mentor {
   id: number;
   username: string;
   employee_id: string;
+  avatar_key: string;
 }
 
 /**
@@ -95,6 +96,7 @@ export interface UserInfo {
   id: number;
   employee_id: string;
   username: string;
+  avatar_key: string;
   department: Department;
   mentor?: Mentor;
   is_active: boolean;

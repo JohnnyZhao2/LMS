@@ -10,11 +10,13 @@ from .management import (
     MentorsListView,
     RolesListView,
     UserActivateView,
+    UserAvatarUpdateView,
     UserAssignMentorView,
     UserAssignRolesView,
     UserDeactivateView,
     UserDetailView,
     UserListCreateView,
+    UserSelfAvatarView,
 )
 
 __all__ = [
@@ -23,6 +25,7 @@ __all__ = [
     'UserDetailView',
     'UserDeactivateView',
     'UserActivateView',
+    'UserAvatarUpdateView',
     'UserAssignRolesView',
     'UserAssignMentorView',
     'MenteesListView',
@@ -30,4 +33,5 @@ __all__ = [
     'MentorsListView',
     'DepartmentsListView',
     'RolesListView',
+    'UserSelfAvatarView',
 ]

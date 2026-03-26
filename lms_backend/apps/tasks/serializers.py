@@ -440,6 +440,7 @@ class StudentExecutionSerializer(serializers.Serializer):
     """学员执行情况序列化器"""
     student_id = serializers.IntegerField()
     student_name = serializers.CharField()
+    avatar_key = serializers.CharField()
     employee_id = serializers.CharField()
     department = serializers.CharField()
     status = serializers.ChoiceField(

@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -9,20 +9,37 @@ import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/quiz-center/questions/api/create-question';
-import { getQuestionTypeLabel } from '@/features/quiz-center/questions/constants';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { Question, QuestionCreateRequest, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { apiClient } from '@/lib/api-client';
-import type { QuizQuestionItem } from '@/features/quiz-center/quizzes/types';
+import type { InlineQuestionItem } from '../types';
 
 import { QuestionBankPanel } from '@/features/quiz-center/questions/components/question-bank-panel';
-
 import { QuizFormHeader } from './quiz-form-header';
-import { QuizStructurePanel } from './quiz-structure-panel';
-import { QuizSidePanel } from './quiz-side-panel';
+import { QuizOutlinePanel } from './quiz-outline-panel';
+import { QuizDocumentEditor } from './quiz-document-editor';
 
+let _keyCounter = 0;
+const nextKey = () => `q_${++_keyCounter}`;
+
+/** 从 Question API 对象创建 InlineQuestionItem */
+const questionToInline = (q: Question, collapsed = false): InlineQuestionItem => ({
+  key: nextKey(),
+  questionId: q.id,
+  resourceUuid: q.resource_uuid,
+  isCurrent: q.is_current,
+  questionType: q.question_type,
+  lineTagId: q.line_tag?.id,
+  content: q.content,
+  options: q.options || [],
+  answer: q.answer || '',
+  explanation: q.explanation || '',
+  score: q.score || '1',
+  saved: true,
+  collapsed,
+});
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -35,25 +52,15 @@ export const QuizForm: React.FC = () => {
   const [duration, setDuration] = useState<number | undefined>();
   const [passScore, setPassScore] = useState<number | undefined>();
 
-  const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestionItem[]>([]);
-  const [rightPanelMode, setRightPanelMode] = useState<'EDIT_QUESTION' | 'PREVIEW_QUESTION' | null>(null);
-  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  // 文档流：所有题目的内联编辑数据
+  const [items, setItems] = useState<InlineQuestionItem[]>([]);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const [resourceSearch, setResourceSearch] = useState('');
   const [filterLineTypeId, setFilterLineTypeId] = useState<string>('all');
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
 
-  const [questionForm, setQuestionForm] = useState<Partial<QuestionCreateRequest>>({
-    question_type: 'SINGLE_CHOICE',
-    content: '',
-    options: [],
-    answer: '',
-    explanation: '',
-    score: '1',
-  });
-
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const initializedRef = useRef(false);
 
   const { data: quizData } = useQuizDetail(Number(id));
@@ -62,14 +69,14 @@ export const QuizForm: React.FC = () => {
     pageSize: 1000,
     search: resourceSearch || undefined,
     lineTypeId: filterLineTypeId === 'all' ? undefined : Number(filterLineTypeId),
-    questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType
+    questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType,
   });
 
   const createQuiz = useCreateQuiz();
   const updateQuiz = useUpdateQuiz();
   const createQuestion = useCreateQuestion();
   const updateQuestion = useUpdateQuestion();
-
+  // 初始化：编辑模式加载已有题目，需要逐个获取完整数据
   useEffect(() => {
     if (isEdit && quizData && !initializedRef.current) {
       setTitle(quizData.title);
@@ -78,212 +85,150 @@ export const QuizForm: React.FC = () => {
       setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
 
       if (quizData.questions) {
-        const items: QuizQuestionItem[] = quizData.questions
-          .map((qq) => ({
-            id: qq.question,
-            resource_uuid: qq.resource_uuid,
-            is_current: qq.is_current,
-            content: qq.question_content,
-            question_type: qq.question_type as QuestionType,
-            question_type_display: qq.question_type_display || getQuestionTypeLabel(qq.question_type as QuestionType),
-            score: qq.score,
-            order: qq.order,
+        const sorted = [...quizData.questions].sort((a, b) => a.order - b.order);
+        Promise.all(
+          sorted.map((qq) => apiClient.get<Question>(`/questions/${qq.question}/`).then((q) => {
+            const item = questionToInline(q, true);
+            item.score = qq.score; // 保留试卷中的分值
+            return item;
           }))
-          .sort((a, b) => a.order - b.order);
-        setSelectedQuestions(items);
+        ).then(setItems);
       }
       initializedRef.current = true;
     } else if (!isEdit && questionsData?.results && !initializedRef.current) {
       const qidParam = searchParams.get('question_ids');
       if (qidParam) {
         const qids = qidParam.split(',').map(Number).filter(Boolean);
-        const items = qids.map((qid, index) => {
-          const q = questionsData.results.find(x => x.id === qid);
-          if (!q) return null;
-          return {
-            id: q.id,
-            resource_uuid: q.resource_uuid,
-            is_current: q.is_current,
-            content: q.content,
-            question_type: q.question_type,
-            question_type_display: q.question_type_display || getQuestionTypeLabel(q.question_type),
-            score: q.score || '1',
-            order: index + 1,
-          };
-        }).filter(Boolean) as QuizQuestionItem[];
-        setSelectedQuestions(items);
+        Promise.all(
+          qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q, true)))
+        ).then(setItems);
       }
       initializedRef.current = true;
     }
   }, [isEdit, quizData, questionsData, searchParams]);
 
+  // 过滤已添加的题目
   const filteredQuestionsData = useMemo(() => {
     if (!questionsData) return undefined;
-    const selectedUuids = new Set(selectedQuestions.map(q => q.resource_uuid));
-    return {
-      ...questionsData,
-      results: questionsData.results.filter(q => !selectedUuids.has(q.resource_uuid))
-    };
-  }, [questionsData, selectedQuestions]);
-
-  const handleAddQuestion = (q: Question) => {
-    if (selectedQuestions.some(x => x.resource_uuid === q.resource_uuid)) return toast.warning('该题目已在试卷中');
-    const newItem: QuizQuestionItem = {
-      id: q.id,
-      resource_uuid: q.resource_uuid,
-      is_current: q.is_current,
-      content: q.content,
-      question_type: q.question_type,
-      question_type_display: q.question_type_display || getQuestionTypeLabel(q.question_type),
-      score: q.score || '1',
-      order: selectedQuestions.length + 1,
-    };
-    setSelectedQuestions(prev => [...prev, newItem]);
-    toast.success('已添加到试卷');
-  };
-
-  const moveQuestion = (idx: number, direction: 'up' | 'down') => {
-    const newItems = [...selectedQuestions];
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= newItems.length) return;
-    [newItems[idx], newItems[targetIdx]] = [newItems[targetIdx], newItems[idx]];
-    setSelectedQuestions(newItems);
-  };
-
-  const removeQuestion = (idx: number) => {
-    setSelectedQuestions(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleScoreChange = (id: number, score: string) => {
-    setSelectedQuestions(prev => prev.map(q => q.id === id ? { ...q, score } : q));
-  };
-
-  const handleSortQuestions = () => {
-    const typeOrder: Record<string, number> = {
-      'SINGLE_CHOICE': 1,
-      'MULTIPLE_CHOICE': 2,
-      'TRUE_FALSE': 3,
-      'SHORT_ANSWER': 4,
-    };
-
-    const sorted = [...selectedQuestions].sort((a, b) => {
-      const orderA = typeOrder[a.question_type] || 99;
-      const orderB = typeOrder[b.question_type] || 99;
-      return orderA - orderB;
-    });
-
-    setSelectedQuestions(sorted);
-    toast.success('已按题型一键排序');
-  };
-
-  const handleUpgradeQuestion = (index: number, resourceUuid: string) => {
-    // 从题库中找到该 resource_uuid 的最新版本
-    const latestQuestion = questionsData?.results.find(q => q.resource_uuid === resourceUuid);
-    if (!latestQuestion) {
-      toast.error('未找到最新版本');
-      return;
-    }
-    // 替换该位置的题目
-    setSelectedQuestions(prev => prev.map((q, idx) => {
-      if (idx !== index) return q;
-      return {
-        id: latestQuestion.id,
-        resource_uuid: latestQuestion.resource_uuid,
-        is_current: latestQuestion.is_current,
-        content: latestQuestion.content,
-        question_type: latestQuestion.question_type,
-        question_type_display: latestQuestion.question_type_display || getQuestionTypeLabel(latestQuestion.question_type),
-        score: q.score, // 保留原分值
-        order: q.order,
-      };
-    }));
-    toast.success('已升级到最新版本');
-  };
-
-  const handleEditQuestion = async (item: QuizQuestionItem) => {
+    const usedUuids = new Set(items.filter(i => i.resourceUuid).map(i => i.resourceUuid));
+    return { ...questionsData, results: questionsData.results.filter(q => !usedUuids.has(q.resource_uuid)) };
+  }, [questionsData, items]);
+  // 从题库添加题目
+  const handleAddQuestion = useCallback(async (q: Question) => {
+    if (items.some(i => i.resourceUuid === q.resource_uuid)) return toast.warning('该题目已在试卷中');
     try {
-      const res = await apiClient.get<Question>(`/questions/${item.id}/`);
-      setQuestionForm({
-        line_tag_id: res.line_tag?.id,
-        question_type: res.question_type,
-        content: res.content,
-        options: res.options || [],
-        answer: res.answer,
-        explanation: res.explanation || '',
-        score: res.score || '1',
-      });
-      setEditingQuestionId(item.id);
-      setPreviewQuestion(null);
-      setRightPanelMode('EDIT_QUESTION');
-    } catch (err) {
-      showApiError(err);
+      const full = await apiClient.get<Question>(`/questions/${q.id}/`);
+      const item = questionToInline(full, false);
+      setItems(prev => [...prev, item]);
+      setActiveKey(item.key);
+      toast.success('已添加到试卷');
+    } catch (e) {
+      showApiError(e);
     }
-  };
+  }, [items]);
 
-  const handleCreateNew = () => {
-    setQuestionForm({
-      line_tag_id: Number(filterLineTypeId) || undefined,
-      question_type: 'SINGLE_CHOICE',
+  // 新建空白题目
+  const handleAddBlank = useCallback(() => {
+    const item: InlineQuestionItem = {
+      key: nextKey(),
+      questionId: null,
+      resourceUuid: null,
+      isCurrent: true,
+      questionType: 'SINGLE_CHOICE',
+      lineTagId: filterLineTypeId !== 'all' ? Number(filterLineTypeId) : undefined,
       content: '',
       options: [{ key: 'A', value: '' }, { key: 'B', value: '' }],
       answer: '',
       explanation: '',
       score: '1',
+      saved: false,
+      collapsed: false,
+    };
+    setItems(prev => [...prev, item]);
+    setActiveKey(item.key);
+  }, [filterLineTypeId]);
+
+  // 更新某题的字段
+  const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
+    setItems(prev => prev.map(i => i.key === key ? { ...i, ...patch, saved: false } : i));
+  }, []);
+
+  // 删除某题
+  const handleRemoveItem = useCallback((key: string) => {
+    setItems(prev => prev.filter(i => i.key !== key));
+    if (activeKey === key) setActiveKey(null);
+  }, [activeKey]);
+
+  // 移动题目
+  const handleMoveItem = useCallback((key: string, direction: 'up' | 'down') => {
+    setItems(prev => {
+      const idx = prev.findIndex(i => i.key === key);
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
+      return next;
     });
-    setEditingQuestionId(null);
-    setPreviewQuestion(null);
-    setRightPanelMode('EDIT_QUESTION');
-  };
+  }, []);
 
-  const handlePreviewQuestion = (question: Question) => {
-    setPreviewQuestion(question);
-    setEditingQuestionId(null);
-    setRightPanelMode('PREVIEW_QUESTION');
-  };
+  // 折叠/展开
+  const handleToggleCollapse = useCallback((key: string) => {
+    setItems(prev => prev.map(i => i.key === key ? { ...i, collapsed: !i.collapsed } : i));
+  }, []);
 
-  const handleSaveQuestion = async () => {
-    if (!questionForm.line_tag_id) return toast.error('请选择条线类型');
-    if (!questionForm.content?.trim()) return toast.error('请输入内容');
-    if (!questionForm.answer) return toast.error('请设置答案');
+  // 排序
+  const handleSortQuestions = useCallback(() => {
+    const typeOrder: Record<string, number> = { SINGLE_CHOICE: 1, MULTIPLE_CHOICE: 2, TRUE_FALSE: 3, SHORT_ANSWER: 4 };
+    setItems(prev => [...prev].sort((a, b) => (typeOrder[a.questionType] || 99) - (typeOrder[b.questionType] || 99)));
+    toast.success('已按题型排序');
+  }, []);
 
-    try {
-      if (editingQuestionId) {
-        const updated = await updateQuestion.mutateAsync({ id: editingQuestionId, data: questionForm as QuestionCreateRequest });
-        setSelectedQuestions(prev => prev.map(q => q.id === editingQuestionId ? { ...q, content: updated.content, score: updated.score || q.score } : q));
-        toast.success('更新成功');
-      } else {
-        const created = await createQuestion.mutateAsync(questionForm as QuestionCreateRequest);
-        setSelectedQuestions(prev => [...prev, {
-          id: created.id,
-          resource_uuid: created.resource_uuid,
-          is_current: created.is_current,
-          content: created.content,
-          question_type: created.question_type,
-          question_type_display: created.question_type_display || getQuestionTypeLabel(created.question_type),
-          score: created.score || '1',
-          order: prev.length + 1,
-        }]);
-        toast.success('创建并添加成功');
-      }
-      setRightPanelMode(null);
-    } catch (e) {
-      showApiError(e);
-    }
-  };
-
+  // 预览题库中的题目（弹窗或其他方式，暂保留简单 toast）
+  const handlePreviewQuestion = useCallback((_q: Question) => {
+    toast.info('题目预览功能开发中');
+  }, []);
+  // 提交试卷：先保存所有未保存的题目，再提交试卷
   const handleSubmitQuiz = async () => {
     if (!title.trim()) return toast.error('请输入试卷名称');
-    if (selectedQuestions.length === 0) return toast.warning('请添加题目');
+    if (items.length === 0) return toast.warning('请添加题目');
     if (quizType === 'EXAM' && (!duration || !passScore)) return toast.error('考试模式需设置时长和及格分');
 
+    // 验证所有题目
+    for (const item of items) {
+      if (!item.lineTagId) return toast.error(`第${items.indexOf(item) + 1}题未选择条线`);
+      if (!item.content.trim()) return toast.error(`第${items.indexOf(item) + 1}题未填写内容`);
+      if (!item.answer || (Array.isArray(item.answer) && item.answer.length === 0)) return toast.error(`第${items.indexOf(item) + 1}题未设置答案`);
+    }
+
     try {
+      // 保存所有未保存的题目
+      const savedItems = await Promise.all(items.map(async (item) => {
+        if (item.questionId && item.saved) return item;
+        const formData: QuestionCreateRequest = {
+          line_tag_id: item.lineTagId!,
+          question_type: item.questionType,
+          content: item.content,
+          options: item.options,
+          answer: item.answer as string,
+          explanation: item.explanation,
+          score: item.score,
+        };
+        if (item.questionId) {
+          const updated = await updateQuestion.mutateAsync({ id: item.questionId, data: formData });
+          return { ...item, questionId: updated.id, resourceUuid: updated.resource_uuid, saved: true };
+        }
+        const created = await createQuestion.mutateAsync(formData);
+        return { ...item, questionId: created.id, resourceUuid: created.resource_uuid, saved: true };
+      }));
+
       const data: QuizCreateRequest = {
         title,
         quiz_type: quizType,
         duration: quizType === 'EXAM' ? duration : undefined,
         pass_score: quizType === 'EXAM' ? passScore : undefined,
-        existing_question_ids: selectedQuestions.map(q => q.id),
+        existing_question_ids: savedItems.map(i => i.questionId!),
       };
+
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data });
         toast.success('试卷更新成功');
@@ -296,9 +241,8 @@ export const QuizForm: React.FC = () => {
       showApiError(e);
     }
   };
-
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 gap-4 sm:gap-6 bg-transparent">
+    <div className="flex flex-col h-[calc(100vh-48px)] gap-5 bg-transparent">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}
@@ -311,7 +255,37 @@ export const QuizForm: React.FC = () => {
         isSubmitting={createQuiz.isPending || updateQuiz.isPending}
       />
 
-      <div className="flex flex-1 overflow-hidden gap-4 sm:gap-6">
+      <div className="flex flex-1 overflow-hidden gap-5">
+        {/* Left: 试卷大纲 */}
+        <QuizOutlinePanel
+          items={items}
+          activeKey={activeKey}
+          quizType={quizType}
+          duration={duration}
+          passScore={passScore}
+          onSelectItem={(key) => {
+            setActiveKey(key);
+            setItems(prev => prev.map(i => i.key === key ? { ...i, collapsed: false } : i));
+          }}
+          onDurationChange={setDuration}
+          onPassScoreChange={setPassScore}
+          onSortQuestions={handleSortQuestions}
+        />
+
+        {/* Center: 文档流编辑器 */}
+        <QuizDocumentEditor
+          items={items}
+          lineTypes={lineTypes}
+          activeKey={activeKey}
+          onUpdateItem={handleUpdateItem}
+          onRemoveItem={handleRemoveItem}
+          onMoveItem={handleMoveItem}
+          onToggleCollapse={handleToggleCollapse}
+          onAddBlank={handleAddBlank}
+          onFocusItem={setActiveKey}
+        />
+
+        {/* Right: 公共题库 */}
         <QuestionBankPanel
           resourceSearch={resourceSearch}
           onResourceSearchChange={setResourceSearch}
@@ -322,58 +296,10 @@ export const QuizForm: React.FC = () => {
           lineTypes={lineTypes}
           questionsData={filteredQuestionsData}
           questionsLoading={questionsLoading}
-          onCreateNew={handleCreateNew}
+          onCreateNew={handleAddBlank}
           onPreview={handlePreviewQuestion}
           onAddQuestion={handleAddQuestion}
         />
-
-        <QuizStructurePanel
-          selectedQuestions={selectedQuestions}
-          quizType={quizType}
-          duration={duration}
-          passScore={passScore}
-          onMoveQuestion={moveQuestion}
-          onEditQuestion={handleEditQuestion}
-          onRemoveQuestion={removeQuestion}
-          onScoreChange={handleScoreChange}
-          onDurationChange={setDuration}
-          onPassScoreChange={setPassScore}
-          onSortQuestions={handleSortQuestions}
-          onUpgradeQuestion={handleUpgradeQuestion}
-        />
-
-        {/* Drawer Overlay for Side Panel */}
-        {rightPanelMode && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={() => {
-                setRightPanelMode(null);
-                setPreviewQuestion(null);
-                setEditingQuestionId(null);
-              }}
-            />
-            {/* Drawer */}
-            <div className="fixed right-0 top-0 bottom-0 z-50 flex h-full p-4 sm:p-6 shadow-2xl animate-in slide-in-from-right duration-300 ease-out">
-              <QuizSidePanel
-                mode={rightPanelMode}
-                editingQuestionId={editingQuestionId}
-                previewQuestion={previewQuestion}
-                onBackToInfo={() => {
-                  setRightPanelMode(null);
-                  setPreviewQuestion(null);
-                  setEditingQuestionId(null);
-                }}
-                questionForm={questionForm}
-                setQuestionForm={setQuestionForm}
-                lineTypes={lineTypes}
-                onSaveQuestion={handleSaveQuestion}
-                isSavingQuestion={createQuestion.isPending || updateQuestion.isPending}
-              />
-            </div>
-          </>
-        )}
       </div>
 
       <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate('quiz-center'); }}>
