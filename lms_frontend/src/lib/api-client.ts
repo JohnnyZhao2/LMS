@@ -54,6 +54,7 @@ export interface ApiRequestOptions extends RequestInit {
  */
 class ApiClient {
   private baseURL: string;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -63,12 +64,16 @@ class ApiClient {
    * 刷新 token
    */
   private async refreshToken(): Promise<void> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
     const refreshToken = tokenStorage.getRefreshToken();
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    try {
+    this.refreshPromise = (async () => {
       const response = await fetch(`${this.baseURL}/auth/refresh/`, {
         method: 'POST',
         headers: {
@@ -89,9 +94,15 @@ class ApiClient {
         responseData.data.access_token,
         responseData.data.refresh_token,
       );
+    })();
+
+    try {
+      await this.refreshPromise;
     } catch (error) {
       tokenStorage.clearAll();
       throw error;
+    } finally {
+      this.refreshPromise = null;
     }
   }
 

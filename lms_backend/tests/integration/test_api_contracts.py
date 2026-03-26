@@ -413,7 +413,8 @@ class TestTagApiContracts:
 
         response = api_client.delete(f'/api/knowledge/tags/{line_tag.id}/')
 
-        assert response.status_code == 204, response.data
+        assert response.status_code == 200, response.data
+        assert response.data['code'] == 'SUCCESS'
         assert not Tag.objects.filter(id=line_tag.id).exists()
 
         sample_knowledge.refresh_from_db()
@@ -466,7 +467,8 @@ class TestKnowledgeApiContracts:
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(f'/api/knowledge/{sample_knowledge.id}/')
 
-        assert response.status_code == 204
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
         assert not Knowledge.objects.filter(id=sample_knowledge.id).exists()
 
     def test_knowledge_create_allows_missing_title(self, api_client, admin_user, line_tag):
@@ -1182,7 +1184,7 @@ class TestActivityLogApiContracts:
         api_client.force_authenticate(user=student_user)
         response = api_client.get('/api/logs/?type=user&page=1&page_size=10')
 
-        assert response.status_code == 400
+        assert response.status_code == 403
         assert response.data['code'] == 'PERMISSION_DENIED'
 
     def test_activity_log_delete_endpoint_removes_selected_log(self, api_client, admin_user):
@@ -1198,7 +1200,8 @@ class TestActivityLogApiContracts:
         api_client.force_authenticate(user=admin_user)
         response = api_client.delete(f'/api/logs/items/operation-{log.id}/')
 
-        assert response.status_code == 204
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
         assert not OperationLog.objects.filter(pk=log.id).exists()
 
     def test_activity_log_delete_requires_view_permission(
@@ -1218,7 +1221,7 @@ class TestActivityLogApiContracts:
         api_client.force_authenticate(user=student_user)
         response = api_client.delete(f'/api/logs/items/user-{log.id}/')
 
-        assert response.status_code == 400
+        assert response.status_code == 403
         assert response.data['code'] == 'PERMISSION_DENIED'
 
     def test_activity_log_bulk_delete_endpoint_removes_selected_logs(self, api_client, admin_user):
@@ -1277,5 +1280,5 @@ class TestActivityLogApiContracts:
             format='json',
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 403
         assert response.data['code'] == 'PERMISSION_DENIED'

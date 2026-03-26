@@ -221,7 +221,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         summary='删除试卷',
         description='删除试卷（仅创建者或管理员，被任务引用时禁止删除）',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='试卷被任务引用，无法删除'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='试卷不存在'),

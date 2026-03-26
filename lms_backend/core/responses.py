@@ -48,8 +48,8 @@ def created_response(data: Any = None, message: str = '创建成功') -> Respons
     """创建成功响应（201）"""
     return success_response(data=data, message=message, status_code=status.HTTP_201_CREATED)
 def no_content_response() -> Response:
-    """无内容响应（204）- 用于删除操作"""
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    """删除成功响应，保持统一响应包裹结构。"""
+    return success_response(data=None, message='删除成功')
 def error_response(
     code: str,
     message: str,

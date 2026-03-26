@@ -248,7 +248,7 @@ class TaskDetailView(BaseAPIView):
         summary='删除任务',
         description='删除任务（软删除）。',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='任务不存在'),
         },

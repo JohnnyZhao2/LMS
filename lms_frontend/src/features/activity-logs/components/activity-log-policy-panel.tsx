@@ -20,10 +20,10 @@ const categoryIcons: Record<ActivityLogPolicy['category'], React.ReactNode> = {
 
 export const ActivityLogPolicyPanel: React.FC = () => {
   const { hasPermission } = useAuth();
-  const canViewPolicies = hasPermission('activity_log.view');
   const canUpdatePolicies = hasPermission('activity_log.policy.update');
+  const canViewPolicies = hasPermission('activity_log.view') || canUpdatePolicies;
 
-  const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies && canUpdatePolicies);
+  const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
 
   const groupedPolicies = useMemo(() => {

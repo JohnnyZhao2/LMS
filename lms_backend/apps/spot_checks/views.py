@@ -4,12 +4,11 @@
 Properties: 35, 36
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
+from core.exceptions import BusinessError, get_status_code_for_error
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import (
@@ -31,18 +30,11 @@ from .services import SpotCheckService
 
 def _handle_business_error(error: BusinessError):
     """统一业务异常响应映射。"""
-    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
-        status_code = status.HTTP_404_NOT_FOUND
-    elif error.code == ErrorCodes.PERMISSION_DENIED:
-        status_code = status.HTTP_403_FORBIDDEN
-    else:
-        status_code = status.HTTP_400_BAD_REQUEST
-
     return error_response(
         code=error.code,
         message=error.message,
         details=error.details,
-        status_code=status_code,
+        status_code=get_status_code_for_error(error.code),
     )
 
 
@@ -217,7 +209,7 @@ class SpotCheckDetailView(BaseAPIView):
         summary='删除抽查记录',
         description='删除抽查记录（只能删除自己创建的记录）',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='抽查记录不存在'),
         },

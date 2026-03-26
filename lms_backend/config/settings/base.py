@@ -23,7 +23,13 @@ if DJANGO_ENV not in {'development', 'production'}:
 load_dotenv(BASE_DIR / f'.env.{DJANGO_ENV}', override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-development')
+secret_key = os.getenv('SECRET_KEY')
+if DJANGO_ENV == 'production':
+    if not secret_key:
+        raise ValueError('SECRET_KEY must be set when DJANGO_ENV=production')
+    SECRET_KEY = secret_key
+else:
+    SECRET_KEY = secret_key or 'django-insecure-fallback-key-for-development'
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

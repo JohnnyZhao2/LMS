@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: RoleCode[];
   requiredPermissions?: string[];
+  permissionMode?: 'all' | 'any';
 }
 
 /**
@@ -17,8 +18,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   allowedRoles,
   requiredPermissions,
+  permissionMode = 'all',
 }) => {
-  const { isAuthenticated, isLoading, hasAnyPermission } = useAuth();
+  const { isAuthenticated, isLoading, hasAnyPermission, hasPermission } = useAuth();
   const { role: urlRole } = useParams<{ role: string }>();
 
   // 从 URL 获取当前角色
@@ -42,7 +44,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={dashboardPath} replace />;
   }
 
-  if (requiredPermissions && requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions)) {
+  const hasRequiredPermissions = !requiredPermissions || requiredPermissions.length === 0
+    ? true
+    : permissionMode === 'any'
+      ? hasAnyPermission(requiredPermissions)
+      : requiredPermissions.every((permissionCode) => hasPermission(permissionCode));
+
+  if (!hasRequiredPermissions) {
     const dashboardPath = urlRole ? `/${urlRole.toLowerCase()}/dashboard` : '/dashboard';
     return <Navigate to={dashboardPath} replace />;
   }

@@ -235,7 +235,6 @@ def test_non_scope_permission_override_is_normalized_to_all_and_takes_effect():
 
     knowledge = Knowledge.objects.create(
         title='Scope Normalize Knowledge',
-        knowledge_type='OTHER',
         content='original content',
         created_by=admin_user,
         updated_by=admin_user,
@@ -351,7 +350,7 @@ def test_submission_endpoints_require_student_current_role():
         format='json',
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'
     assert '只有学员角色可以进行答题和查看结果' in response.data['message']
 
@@ -446,7 +445,7 @@ def test_self_scoped_override_does_not_grant_global_page_access_without_target_u
     _authenticate(client, employee_id=mentor_user.employee_id)
     response = client.get('/api/authorization/permissions/')
 
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'
 
 
@@ -493,9 +492,9 @@ def test_dashboard_endpoints_are_guarded_by_current_role_not_permission_codes():
     student_dashboard_response = client.get('/api/dashboard/student/')
     team_manager_dashboard_response = client.get('/api/dashboard/team-manager/')
 
-    assert student_dashboard_response.status_code == 400
+    assert student_dashboard_response.status_code == 403
     assert student_dashboard_response.data['code'] == 'PERMISSION_DENIED'
-    assert team_manager_dashboard_response.status_code == 400
+    assert team_manager_dashboard_response.status_code == 403
     assert team_manager_dashboard_response.data['code'] == 'PERMISSION_DENIED'
 
 

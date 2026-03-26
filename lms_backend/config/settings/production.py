@@ -2,6 +2,8 @@
 Django production settings for LMS project.
 """
 import os
+from pathlib import Path
+
 from corsheaders.defaults import default_headers
 from .base import *
 DEBUG = False
@@ -31,6 +33,9 @@ SESSION_COOKIE_SECURE = True
 CORS_ALLOWED_ORIGINS = [origin for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin]
 CORS_ALLOW_HEADERS = list(default_headers) + ['x-current-role']
 # Logging
+LOG_DIR = Path(BASE_DIR) / 'logs'
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -44,7 +49,7 @@ LOGGING = {
         'file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'error.log',
+            'filename': LOG_DIR / 'error.log',
             'formatter': 'verbose',
         },
     },

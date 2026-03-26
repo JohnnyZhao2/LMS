@@ -1,6 +1,9 @@
 """
 Custom exception handling for LMS API.
 """
+from rest_framework import status
+
+
 class BusinessError(Exception):
     """Base class for business logic errors."""
     def __init__(self, code: str, message: str, details: dict = None):
@@ -32,11 +35,35 @@ class ErrorCodes:
     # 提交错误
     EXAM_NOT_IN_WINDOW = 'EXAM_NOT_IN_WINDOW'
     EXAM_ALREADY_SUBMITTED = 'EXAM_ALREADY_SUBMITTED'
+
+
+ERROR_STATUS_CODE_MAP = {
+    ErrorCodes.RESOURCE_NOT_FOUND: status.HTTP_404_NOT_FOUND,
+    ErrorCodes.PERMISSION_DENIED: status.HTTP_403_FORBIDDEN,
+    ErrorCodes.VALIDATION_ERROR: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.INVALID_OPERATION: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.INVALID_INPUT: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.AUTH_INVALID_CREDENTIALS: status.HTTP_401_UNAUTHORIZED,
+    ErrorCodes.AUTH_USER_INACTIVE: status.HTTP_403_FORBIDDEN,
+    ErrorCodes.AUTH_INVALID_ROLE: status.HTTP_403_FORBIDDEN,
+    ErrorCodes.RESOURCE_REFERENCED: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.RESOURCE_VERSION_MISMATCH: status.HTTP_409_CONFLICT,
+    ErrorCodes.USER_HAS_DATA: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.TASK_INVALID_ASSIGNEES: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.TASK_ALREADY_CLOSED: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.EXAM_NOT_IN_WINDOW: status.HTTP_400_BAD_REQUEST,
+    ErrorCodes.EXAM_ALREADY_SUBMITTED: status.HTTP_400_BAD_REQUEST,
+}
+
+
+def get_status_code_for_error(error_code: str) -> int:
+    return ERROR_STATUS_CODE_MAP.get(error_code, status.HTTP_400_BAD_REQUEST)
+
+
 def custom_exception_handler(exc, context):
     """
     Custom exception handler that formats errors consistently.
     """
-    from rest_framework import status
     from rest_framework.response import Response
     from rest_framework.views import exception_handler
 
@@ -48,7 +75,7 @@ def custom_exception_handler(exc, context):
                 'message': exc.message,
                 'details': exc.details,
             },
-            status=status.HTTP_400_BAD_REQUEST
+            status=get_status_code_for_error(exc.code),
         )
     # Call REST framework's default exception handler
     response = exception_handler(exc, context)

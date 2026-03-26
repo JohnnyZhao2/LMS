@@ -111,7 +111,10 @@ export const roleRoutes = [
     key="task-preview"
     path="tasks/:id/preview"
     element={
-      <ProtectedRoute requiredPermissions={['task.update', 'task.analytics.view', 'grading.view', 'grading.score']}>
+      <ProtectedRoute
+        requiredPermissions={['task.update', 'task.analytics.view', 'grading.view']}
+        permissionMode="any"
+      >
         <TaskPreviewPage />
       </ProtectedRoute>
     }
@@ -180,6 +183,7 @@ export const roleRoutes = [
           'question.update',
           'question.delete',
         ]}
+        permissionMode="any"
       >
         <QuizCenter />
       </ProtectedRoute>
@@ -249,7 +253,7 @@ export const roleRoutes = [
     key="audit-logs"
     path="audit-logs"
     element={
-      <ProtectedRoute requiredPermissions={['activity_log.view', 'activity_log.policy.update']}>
+      <ProtectedRoute requiredPermissions={['activity_log.view']}>
         <ActivityLogsPage />
       </ProtectedRoute>
     }
@@ -258,7 +262,10 @@ export const roleRoutes = [
     key="authorization-center"
     path="authorization"
     element={
-      <ProtectedRoute requiredPermissions={['authorization.role_template.view', 'authorization.role_template.update']}>
+      <ProtectedRoute
+        requiredPermissions={['authorization.role_template.view', 'authorization.role_template.update']}
+        permissionMode="any"
+      >
         <AuthorizationCenterPage />
       </ProtectedRoute>
     }
@@ -298,7 +305,7 @@ export const roleRoutes = [
     key="grading-center"
     path="grading-center"
     element={
-      <ProtectedRoute requiredPermissions={['grading.view', 'grading.score']}>
+      <ProtectedRoute requiredPermissions={['grading.view']}>
         <GradingCenterPage />
       </ProtectedRoute>
     }

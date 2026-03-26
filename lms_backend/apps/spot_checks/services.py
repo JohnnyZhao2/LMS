@@ -77,7 +77,7 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'create_spot_check',
-        '{checked_at_text}，{score_text} 分，{content_preview}',
+        '{score_text} 分，{content_preview}',
         target_type='spot_check',
         target_title_template='{student_label}',
     )
@@ -129,7 +129,7 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'update_spot_check',
-        '{checked_at_text}，{score_text} 分，{content_preview}',
+        '{score_text} 分，{content_preview}',
         target_type='spot_check',
         target_title_template='{student_label}',
     )
@@ -174,7 +174,7 @@ class SpotCheckService(BaseService):
     @log_operation(
         'spot_check',
         'delete_spot_check',
-        '{checked_at_text}，{score_text} 分',
+        '{score_text} 分',
         target_type='spot_check',
         target_title_template='{student_label}',
     )

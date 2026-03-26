@@ -139,14 +139,14 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                             {item.status === 'failed' ? '失败' : '部分成功'}
                           </span>
                         )}
+                        <span className="text-[12px] text-text-muted/60">· {formatTime(item.created_at)}</span>
                       </div>
 
-                      <div className="mt-0.5 text-[12px] text-text-muted">
-                        {formatTime(item.created_at)}
-                        {item.description && (
-                          <span className="ml-2 text-text-muted/70">· {item.description}</span>
-                        )}
-                      </div>
+                      {item.description && (
+                        <div className="mt-1.5 rounded-lg border border-border/50 bg-muted/40 px-3 py-2 text-[13px] leading-relaxed text-foreground/80">
+                          {item.description}
+                        </div>
+                      )}
                     </div>
 
                     {canDelete && onToggleSelect ? (

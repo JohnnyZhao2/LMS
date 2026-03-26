@@ -25,9 +25,6 @@ const buildActivityLogsQueryString = (params: ActivityLogsQuery) => {
   if (params.dateTo) {
     query.set('date_to', params.dateTo);
   }
-  if (params.action) {
-    query.set('action', params.action);
-  }
   if (params.status) {
     query.set('status', params.status);
   }

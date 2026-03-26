@@ -197,7 +197,7 @@ class QuestionDetailView(BaseAPIView):
         summary='删除题目',
         description='删除题目（仅创建者或管理员，被试卷引用时禁止删除）',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='题目被试卷引用，无法删除'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='题目不存在'),

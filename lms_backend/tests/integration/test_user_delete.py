@@ -165,7 +165,8 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
 
     response = api_client.delete(f'/api/users/{inactive_user.id}/')
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.data['code'] == 'SUCCESS'
     assert not User.objects.filter(id=inactive_user.id).exists()
 
     assert not Task.objects.filter(id=created_task.id).exists()

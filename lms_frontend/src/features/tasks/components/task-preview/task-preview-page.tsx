@@ -20,15 +20,35 @@ import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
 import { GradingCenterTab } from './grading-center-tab';
 import dayjs from '@/lib/dayjs';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
 export const TaskPreviewPage: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hasPermission } = useAuth();
   const taskId = Number(id);
 
-  const defaultTab = searchParams.get('tab') || 'progress';
-  const [activeTab, setActiveTab] = React.useState(defaultTab);
+  const canViewProgress = hasPermission('task.update') || hasPermission('task.analytics.view');
+  const canViewGrading = hasPermission('grading.view');
+  const availableTabs = React.useMemo(() => {
+    const tabs: string[] = [];
+    if (canViewProgress) {
+      tabs.push('progress');
+    }
+    if (canViewGrading) {
+      tabs.push('grading');
+    }
+    return tabs;
+  }, [canViewGrading, canViewProgress]);
+  const initialTab = React.useMemo(() => {
+    const requestedTab = searchParams.get('tab') || 'progress';
+    if (availableTabs.includes(requestedTab)) {
+      return requestedTab;
+    }
+    return availableTabs[0] ?? 'progress';
+  }, [availableTabs, searchParams]);
+  const [activeTab, setActiveTab] = React.useState(initialTab);
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
   const { data: task, isLoading } = useTaskDetail(taskId);
@@ -52,7 +72,23 @@ export const TaskPreviewPage: React.FC = () => {
     }
   }, [activeTab, quizzes, selectedQuizId]);
 
+  React.useEffect(() => {
+    if (activeTab !== initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [activeTab, initialTab]);
+
+  React.useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true });
+    }
+  }, [activeTab, searchParams, setSearchParams]);
+
   const handleTabChange = (value: string) => {
+    if (!availableTabs.includes(value)) {
+      return;
+    }
     setActiveTab(value);
     setSearchParams({ tab: value });
   };
@@ -71,6 +107,17 @@ export const TaskPreviewPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-96 text-text-muted">
         <p>任务不存在</p>
+        <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
+          返回任务列表
+        </Button>
+      </div>
+    );
+  }
+
+  if (availableTabs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-text-muted">
+        <p>无权访问任务预览</p>
         <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
           返回任务列表
         </Button>
@@ -115,20 +162,24 @@ export const TaskPreviewPage: React.FC = () => {
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="bg-muted/80 p-1 rounded-xl border border-border/50">
-              <TabsTrigger
-                value="progress"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
-              >
-                <BarChart3 className="h-4 w-4" />
-                进度监控
-              </TabsTrigger>
-              <TabsTrigger
-                value="grading"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
-              >
-                <FileCheck className="h-4 w-4" />
-                阅卷中心
-              </TabsTrigger>
+              {canViewProgress && (
+                <TabsTrigger
+                  value="progress"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  进度监控
+                </TabsTrigger>
+              )}
+              {canViewGrading && (
+                <TabsTrigger
+                  value="grading"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
+                >
+                  <FileCheck className="h-4 w-4" />
+                  阅卷中心
+                </TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
         </div>

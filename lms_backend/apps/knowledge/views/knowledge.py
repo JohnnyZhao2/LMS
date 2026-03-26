@@ -8,7 +8,6 @@ Implements:
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers as drf_serializers
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from django.utils.html import strip_tags
@@ -24,7 +23,7 @@ from apps.knowledge.serializers import (
 from apps.knowledge.services import KnowledgeService
 from apps.tasks.models import TaskAssignment, TaskKnowledge
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
+from core.exceptions import BusinessError, ErrorCodes, get_status_code_for_error
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import (
@@ -81,18 +80,11 @@ def _build_knowledge_filters(request):
 
 def _handle_business_error(error: BusinessError):
     """统一业务异常响应映射。"""
-    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
-        status_code = status.HTTP_404_NOT_FOUND
-    elif error.code == ErrorCodes.PERMISSION_DENIED:
-        status_code = status.HTTP_403_FORBIDDEN
-    else:
-        status_code = status.HTTP_400_BAD_REQUEST
-
     return error_response(
         code=error.code,
         message=error.message,
         details=error.details,
-        status_code=status_code,
+        status_code=get_status_code_for_error(error.code),
     )
 
 
@@ -235,7 +227,7 @@ class KnowledgeDetailView(BaseAPIView):
         summary='删除知识文档',
         description='删除知识文档（管理员或室经理，被任务引用时禁止删除）',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='知识文档被任务引用，无法删除'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='知识文档不存在'),

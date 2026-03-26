@@ -174,7 +174,7 @@ class UserDetailView(APIView):
         summary='删除用户',
         description='彻底删除离职（已停用）用户及其全部关联数据',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='参数错误或用户状态不允许删除'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='用户不存在'),

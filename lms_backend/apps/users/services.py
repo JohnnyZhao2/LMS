@@ -190,26 +190,27 @@ class UserManagementService(BaseService):
         if not roles_to_add and not roles_to_remove:
             return user
 
-        if roles_to_remove:
-            UserRole.objects.filter(
-                user_id=user.id,
-                role__code__in=list(roles_to_remove)
-            ).delete()
-        for role_code in roles_to_add:
-            role = Role.objects.filter(code=role_code).first()
-            if not role:
-                role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
-                role = Role.objects.create(
-                    code=role_code,
-                    name=role_name,
-                    description=f'{role_name}角色'
-                )
-            if not user.roles.filter(code=role_code).exists():
-                UserRole.objects.create(
+        with transaction.atomic():
+            if roles_to_remove:
+                UserRole.objects.filter(
                     user_id=user.id,
-                    role_id=role.id,
-                    assigned_by_id=assigned_by.id
-                )
+                    role__code__in=list(roles_to_remove)
+                ).delete()
+            for role_code in roles_to_add:
+                role = Role.objects.filter(code=role_code).first()
+                if not role:
+                    role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
+                    role = Role.objects.create(
+                        code=role_code,
+                        name=role_name,
+                        description=f'{role_name}角色'
+                    )
+                if not user.roles.filter(code=role_code).exists():
+                    UserRole.objects.create(
+                        user_id=user.id,
+                        role_id=role.id,
+                        assigned_by_id=assigned_by.id
+                    )
         # Refresh user from database
         user.refresh_from_db()
 

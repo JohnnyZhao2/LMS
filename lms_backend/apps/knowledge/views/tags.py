@@ -4,7 +4,6 @@ Implements:
 - Tag CRUD
 - Tag listing
 """
-from rest_framework import status
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -13,7 +12,7 @@ from apps.authorization.services import AuthorizationService
 from apps.knowledge.models import Tag
 from apps.knowledge.serializers import TagSerializer
 from apps.knowledge.services import TagService
-from core.exceptions import BusinessError, ErrorCodes
+from core.exceptions import BusinessError, ErrorCodes, get_status_code_for_error
 from core.query_params import parse_bool_query_param, parse_int_query_param
 from core.responses import created_response, error_response, list_response, no_content_response
 
@@ -43,18 +42,11 @@ def _enforce_knowledge_delete_permission(request, error_message: str) -> None:
 
 
 def _handle_tag_business_error(error: BusinessError):
-    if error.code == ErrorCodes.RESOURCE_NOT_FOUND:
-        status_code = status.HTTP_404_NOT_FOUND
-    elif error.code == ErrorCodes.PERMISSION_DENIED:
-        status_code = status.HTTP_403_FORBIDDEN
-    else:
-        status_code = status.HTTP_400_BAD_REQUEST
-
     return error_response(
         code=error.code,
         message=error.message,
         details=error.details,
-        status_code=status_code,
+        status_code=get_status_code_for_error(error.code),
     )
 
 
@@ -132,7 +124,7 @@ class TagDetailView(APIView):
         summary='删除标签',
         description='删除标签。删除条线类型时，仅移除与知识和题目的关联，不删除内容本身。',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='标签不存在'),
         },

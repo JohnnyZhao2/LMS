@@ -1,4 +1,5 @@
 import { Navigate, useParams, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
@@ -13,10 +14,12 @@ const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANA
 export const RoleRouteWrapper: React.FC = () => {
   const { role } = useParams<{ role: string }>();
   const location = useLocation();
-  const { isAuthenticated, isLoading, availableRoles, currentRole, isSwitching } = useAuth();
+  const { isAuthenticated, isLoading, availableRoles, currentRole, isSwitching, switchRole } = useAuth();
+  const [pendingRoleSync, setPendingRoleSync] = useState<RoleCode | null>(null);
 
   const roleCode = role?.toUpperCase() as RoleCode;
   const isValidRole = VALID_ROLES.includes(roleCode);
+  const hasRole = availableRoles.some((item) => item.code === roleCode);
   const resolveFallbackRole = (): RoleCode | null => {
     if (currentRole && availableRoles.some((item) => item.code === currentRole)) {
       return currentRole;
@@ -24,7 +27,39 @@ export const RoleRouteWrapper: React.FC = () => {
     return availableRoles[0]?.code ?? null;
   };
 
-  if (isLoading || isSwitching) {
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      isLoading ||
+      !isValidRole ||
+      !hasRole ||
+      !currentRole ||
+      currentRole === roleCode
+    ) {
+      setPendingRoleSync((current) => (current === roleCode ? null : current));
+      return;
+    }
+
+    if (pendingRoleSync === roleCode) {
+      return;
+    }
+
+    setPendingRoleSync(roleCode);
+    void switchRole(roleCode).catch(() => {
+      setPendingRoleSync(null);
+    });
+  }, [
+    currentRole,
+    hasRole,
+    isAuthenticated,
+    isLoading,
+    isValidRole,
+    pendingRoleSync,
+    roleCode,
+    switchRole,
+  ]);
+
+  if (isLoading || isSwitching || pendingRoleSync === roleCode) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Spinner size="lg" />
@@ -46,7 +81,6 @@ export const RoleRouteWrapper: React.FC = () => {
   }
 
   // 检查用户是否有该角色权限
-  const hasRole = availableRoles.some((r) => r.code === roleCode);
   if (!hasRole) {
     const fallbackRole = resolveFallbackRole();
     if (!fallbackRole) {
@@ -59,10 +93,6 @@ export const RoleRouteWrapper: React.FC = () => {
     }
 
     return <Navigate to={fallbackPath} replace />;
-  }
-
-  if (currentRole && currentRole !== roleCode) {
-    return <Navigate to={`/${currentRole.toLowerCase()}/dashboard`} replace />;
   }
 
   return <Outlet />;

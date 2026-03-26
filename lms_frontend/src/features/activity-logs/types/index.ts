@@ -40,7 +40,6 @@ export interface ActivityLogsQuery {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
-  action?: string;
   status?: Exclude<ActivityLogStatus, 'partial'> | ActivityLogStatus;
 }
 

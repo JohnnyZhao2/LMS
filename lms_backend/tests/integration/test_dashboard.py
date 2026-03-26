@@ -306,7 +306,7 @@ class TestMentorDashboardAPI:
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/mentor/')
 
-        assert response.status_code == 400  # BusinessError
+        assert response.status_code == 403
 
     def test_get_dashboard_unauthenticated(self, api_client):
         """测试未认证用户无法访问"""
@@ -425,7 +425,7 @@ class TestTeamManagerDashboardAPI:
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='MENTOR')
 
-        assert response.status_code == 400
+        assert response.status_code == 403
 
     def test_get_dashboard_unauthenticated(self, api_client):
         """测试未认证用户无法访问团队经理仪表盘"""

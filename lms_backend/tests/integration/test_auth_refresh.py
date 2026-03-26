@@ -80,7 +80,7 @@ def test_refresh_token_should_rotate_and_invalidate_old_token():
         {'refresh_token': old_refresh_token},
         format='json',
     )
-    assert second_refresh_response.status_code == 400
+    assert second_refresh_response.status_code == 401
     assert second_refresh_response.data['code'] == 'AUTH_INVALID_CREDENTIALS'
 
 
@@ -180,7 +180,7 @@ def test_knowledge_view_permission_can_be_denied_by_override():
 
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
     response = client.get('/api/knowledge/')
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'
 
 
@@ -242,6 +242,6 @@ def test_superuser_switch_role_rejected():
         format='json',
     )
 
-    assert switch_response.status_code == 400
+    assert switch_response.status_code == 403
     assert switch_response.data['code'] == 'AUTH_INVALID_ROLE'
     assert '不支持角色切换' in switch_response.data['message']

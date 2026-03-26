@@ -45,6 +45,16 @@ def enforce_activity_log_policy_update_permission(request, error_message: str) -
     AuthorizationService(request).enforce('activity_log.policy.update', error_message=error_message)
 
 
+def enforce_activity_log_policy_access_permission(request, error_message: str) -> None:
+    service = AuthorizationService(request)
+    if service.can('activity_log.view') or service.can('activity_log.policy.update'):
+        return
+    raise BusinessError(
+        code=ErrorCodes.PERMISSION_DENIED,
+        message=error_message,
+    )
+
+
 def enforce_activity_log_delete_permission(request, error_message: str) -> None:
     AuthorizationService(request).enforce('activity_log.view', error_message=error_message)
 
@@ -123,7 +133,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce_activity_log_view_permission(request, '无权查看日志策略')
+        enforce_activity_log_policy_access_permission(request, '无权查看日志策略')
         ActivityLogService.sync_policies()
         queryset = ActivityLogPolicy.objects.all().order_by('category', 'group', 'label')
         serializer = ActivityLogPolicySerializer(queryset, many=True)
@@ -159,7 +169,7 @@ class ActivityLogItemView(BaseAPIView):
         summary='删除日志',
         description='根据日志项 ID 删除单条活动日志记录',
         responses={
-            204: OpenApiResponse(description='删除成功'),
+            200: OpenApiResponse(description='删除成功'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='日志不存在'),
         },
