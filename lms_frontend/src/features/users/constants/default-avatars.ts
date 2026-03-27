@@ -1,8 +1,6 @@
-// 原始头像（保持向后兼容）
+// 默认头像资源
 import avatar01 from '@/assets/avatars/avatar-01.webp'
 import avatar02 from '@/assets/avatars/avatar-02.webp'
-import avatar03 from '@/assets/avatars/avatar-03.webp'
-import avatar04 from '@/assets/avatars/avatar-04.webp'
 import avatar05 from '@/assets/avatars/avatar-05.webp'
 import avatar06 from '@/assets/avatars/avatar-06.webp'
 import avatar07 from '@/assets/avatars/avatar-07.webp'
@@ -90,12 +88,6 @@ export const AVATAR_CATEGORIES: AvatarCategory[] = [
     avatars: [
       { key: 'avatar-01', label: '头像 01', src: avatar01 },
       { key: 'avatar-02', label: '头像 02', src: avatar02 },
-      { key: 'avatar-03', label: '头像 03', src: avatar03 },
-      { key: 'avatar-04', label: '头像 04', src: avatar04 },
-      { key: 'avatar-05', label: '头像 05', src: avatar05 },
-      { key: 'avatar-06', label: '头像 06', src: avatar06 },
-      { key: 'avatar-07', label: '头像 07', src: avatar07 },
-      { key: 'avatar-08', label: '头像 08', src: avatar08 },
     ],
   },
   {
@@ -132,6 +124,10 @@ export const AVATAR_CATEGORIES: AvatarCategory[] = [
       { key: 'coloranimals-7', label: '彩色动物 7', src: coloranimals7 },
       { key: 'coloranimals-8', label: '彩色动物 8', src: coloranimals8 },
       { key: 'coloranimals-9', label: '彩色动物 9', src: coloranimals9 },
+      { key: 'avatar-05', label: '头像 05', src: avatar05 },
+      { key: 'avatar-06', label: '头像 06', src: avatar06 },
+      { key: 'avatar-07', label: '头像 07', src: avatar07 },
+      { key: 'avatar-08', label: '头像 08', src: avatar08 },
     ],
   },
   {

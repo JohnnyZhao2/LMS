@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Layout, FileText, CheckCircle } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -22,15 +22,9 @@ export const QuizCenter: React.FC = () => {
   const { roleNavigate } = useRoleNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'quizzes' | 'questions'>(
-    searchParams.get('tab') === 'questions' ? 'questions' : 'quizzes',
-  );
   const [quizType, setQuizType] = useState<'ALL' | 'EXAM' | 'PRACTICE'>('ALL');
   const [questionCreateSignal, setQuestionCreateSignal] = useState(0);
-
-  useEffect(() => {
-    setActiveTab(searchParams.get('tab') === 'questions' ? 'questions' : 'quizzes');
-  }, [searchParams]);
+  const activeTab = searchParams.get('tab') === 'questions' ? 'questions' : 'quizzes';
 
   const { data: quizzesData } = useQuizzes({ page: 1, pageSize: 1 });
   const { data: questionsData } = useQuestions({ page: 1, pageSize: 1 });
@@ -136,7 +130,6 @@ export const QuizCenter: React.FC = () => {
                 value={activeTab}
                 onChange={(v: string) => {
                   const nextTab = v as 'quizzes' | 'questions';
-                  setActiveTab(nextTab);
                   setSearch('');
                   const nextParams = new URLSearchParams(searchParams);
                   nextParams.set('tab', nextTab);

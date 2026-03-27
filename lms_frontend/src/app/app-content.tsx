@@ -1,7 +1,6 @@
-import { AppRouter } from './router';
 import { AppLayout } from '@/components/layouts/app-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';
 
@@ -29,10 +28,10 @@ export const AppContent: React.FC = () => {
 
   const content = (isAuthenticated && !isLoginPage) ? (
     <AppLayout>
-      <AppRouter />
+      <Outlet />
     </AppLayout>
   ) : (
-    <AppRouter />
+    <Outlet />
   );
 
   return (

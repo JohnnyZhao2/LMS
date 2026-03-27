@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown, FileText, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Plus, Trash2, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,8 +44,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   onFocusItem,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const displayItem = items.find((item) => item.key === activeKey) ?? items[0] ?? null;
-  const displayIndex = displayItem ? items.findIndex((item) => item.key === displayItem.key) : -1;
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   useEffect(() => {
@@ -61,27 +60,46 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showAddMenu]);
 
+  useEffect(() => {
+    if (!activeKey) return;
+
+    const node = itemRefs.current[activeKey];
+    if (!node) return;
+
+    node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [activeKey]);
+
   const handleCreateQuestion = (questionType: QuestionType) => {
     onAddBlank(questionType);
     setShowAddMenu(false);
   };
 
   return (
-    <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col overflow-hidden border-r border-border bg-muted/10">
+    <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col border-r border-border bg-muted/10">
       <div className="flex-1 overflow-y-auto scrollbar-subtle px-10 py-10">
-        {displayItem ? (
-          <div className="mx-auto max-w-[820px]">
-            <InlineQuestionCard
-              item={displayItem}
-              index={displayIndex}
-              total={items.length}
-              lineTypes={lineTypes}
-              onUpdate={(patch) => onUpdateItem(displayItem.key, patch)}
-              onRemove={() => onRemoveItem(displayItem.key)}
-              onMove={(dir) => onMoveItem(displayItem.key, dir)}
-              onToggleCollapse={() => onToggleCollapse(displayItem.key)}
-              onFocus={() => onFocusItem(displayItem.key)}
-            />
+        {items.length > 0 ? (
+          <div className="mx-auto flex max-w-[820px] flex-col gap-6 pb-28">
+            {items.map((item, index) => (
+              <div
+                key={item.key}
+                ref={(node) => {
+                  itemRefs.current[item.key] = node;
+                }}
+              >
+                <InlineQuestionCard
+                  item={item}
+                  index={index}
+                  total={items.length}
+                  isActive={item.key === activeKey}
+                  lineTypes={lineTypes}
+                  onUpdate={(patch) => onUpdateItem(item.key, patch)}
+                  onRemove={() => onRemoveItem(item.key)}
+                  onMove={(dir) => onMoveItem(item.key, dir)}
+                  onToggleCollapse={() => onToggleCollapse(item.key)}
+                  onFocus={() => onFocusItem(item.key)}
+                />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-text-muted">
@@ -145,6 +163,7 @@ interface InlineQuestionCardProps {
   item: InlineQuestionItem;
   index: number;
   total: number;
+  isActive: boolean;
   lineTypes?: Tag[];
   onUpdate: (patch: Partial<InlineQuestionItem>) => void;
   onRemove: () => void;
@@ -157,6 +176,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
   item,
   index,
   total,
+  isActive,
   lineTypes,
   onUpdate,
   onRemove,
@@ -168,8 +188,21 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
   const style = getQuestionTypeStyle(item.questionType);
 
   return (
-    <div onClick={onFocus} className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
-      <div className="flex items-center justify-between border-b border-border bg-background px-8 py-5">
+    <div
+      onClick={onFocus}
+      className={cn(
+        'overflow-hidden rounded-2xl border shadow-sm transition-all',
+        isActive
+          ? 'border-border bg-background'
+          : 'border-border/70 bg-muted/18 opacity-72 saturate-50 hover:opacity-90 hover:saturate-75',
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center justify-between border-b px-8 py-5',
+          isActive ? 'border-border bg-background' : 'border-border/70 bg-transparent',
+        )}
+      >
         <div className="flex items-center gap-3">
           <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
             {getQuestionTypeLabel(item.questionType)}
@@ -218,7 +251,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
               <ChevronDown className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:text-foreground" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
-              <ChevronsUpDown className="h-4 w-4" />
+              {item.collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:bg-destructive-50 hover:text-destructive-500" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
               <Trash2 className="h-4 w-4" />
@@ -227,66 +260,74 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
         </div>
       </div>
 
-      <div className="space-y-8 px-8 py-8">
-        <div className="flex items-center gap-3">
-          <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">所属条线</Label>
-          <Select value={item.lineTagId?.toString()} onValueChange={(val) => onUpdate({ lineTagId: Number(val) })}>
-            <SelectTrigger className="h-8 w-40 rounded-lg border-border bg-background text-[12px]"><SelectValue placeholder="选择条线" /></SelectTrigger>
-            <SelectContent>
-              {lineTypes?.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      {item.collapsed ? (
+        <div className="px-8 py-6">
+          <p className="line-clamp-2 text-[14px] leading-relaxed text-foreground/80">
+            {item.content || '未填写题目内容'}
+          </p>
         </div>
+      ) : (
+        <div className="space-y-8 px-8 py-8">
+          <div className="flex items-center gap-3">
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">所属条线</Label>
+            <Select value={item.lineTagId?.toString()} onValueChange={(val) => onUpdate({ lineTagId: Number(val) })}>
+              <SelectTrigger className="h-8 w-40 rounded-lg border-border bg-background text-[12px]"><SelectValue placeholder="选择条线" /></SelectTrigger>
+              <SelectContent>
+                {lineTypes?.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-3">
-          <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">题目内容</Label>
-          <Textarea
-            placeholder="输入题目描述..."
-            value={item.content}
-            onChange={(e) => onUpdate({ content: e.target.value })}
-            className="min-h-[64px] resize-none border-0 bg-transparent p-0 text-[15px] font-semibold leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-            {isChoiceType ? '选项配置' : '参考答案'}
-          </Label>
-          {isChoiceType ? (
-            <>
-              <OptionsInput
-                questionType={item.questionType}
-                value={item.options}
-                onChange={(opts) => onUpdate({ options: opts })}
-                answer={item.answer}
-                onAnswerChange={(ans) => onUpdate({ answer: ans })}
-              />
-              <p className="pl-0.5 text-[11px] text-text-muted/60">点击字母标签设置正确答案</p>
-            </>
-          ) : (
-            <AnswerInput
-              questionType={item.questionType}
-              options={item.options}
-              value={item.answer}
-              onChange={(ans) => onUpdate({ answer: ans })}
-            />
-          )}
-        </div>
-
-        <div className="border-t border-border pt-6">
-          <div className="rounded-xl bg-muted/30 px-6 py-5">
-            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-              答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
-            </div>
+          <div className="space-y-3">
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">题目内容</Label>
             <Textarea
-              placeholder="提供给学员的解析说明..."
-              value={item.explanation}
-              onChange={(e) => onUpdate({ explanation: e.target.value })}
-              className="min-h-[56px] resize-none border-0 bg-transparent p-0 text-[13px] leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
+              placeholder="输入题目描述..."
+              value={item.content}
+              onChange={(e) => onUpdate({ content: e.target.value })}
+              className="min-h-[64px] resize-none border-0 bg-transparent p-0 text-[15px] font-semibold leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
             />
           </div>
+
+          <div className="space-y-4">
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              {isChoiceType ? '选项配置' : '参考答案'}
+            </Label>
+            {isChoiceType ? (
+              <>
+                <OptionsInput
+                  questionType={item.questionType}
+                  value={item.options}
+                  onChange={(opts) => onUpdate({ options: opts })}
+                  answer={item.answer}
+                  onAnswerChange={(ans) => onUpdate({ answer: ans })}
+                />
+                <p className="pl-0.5 text-[11px] text-text-muted/60">点击字母标签设置正确答案</p>
+              </>
+            ) : (
+              <AnswerInput
+                questionType={item.questionType}
+                options={item.options}
+                value={item.answer}
+                onChange={(ans) => onUpdate({ answer: ans })}
+              />
+            )}
+          </div>
+
+          <div className="border-t border-border pt-6">
+            <div className="rounded-xl bg-muted/30 px-6 py-5">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+                答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
+              </div>
+              <Textarea
+                placeholder="提供给学员的解析说明..."
+                value={item.explanation}
+                onChange={(e) => onUpdate({ explanation: e.target.value })}
+                className="min-h-[56px] resize-none border-0 bg-transparent p-0 text-[13px] leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

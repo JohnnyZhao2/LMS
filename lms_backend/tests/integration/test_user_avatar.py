@@ -92,28 +92,28 @@ class TestUserAvatarApi:
 
         response = api_client.patch(
             '/api/users/me/avatar/',
-            {'avatar_key': 'avatar-03'},
+            {'avatar_key': 'avatar-07'},
             format='json',
         )
 
         assert response.status_code == 200, response.data
         normal_user.refresh_from_db()
-        assert normal_user.avatar_key == 'avatar-03'
-        assert response.data['data']['avatar_key'] == 'avatar-03'
+        assert normal_user.avatar_key == 'avatar-07'
+        assert response.data['data']['avatar_key'] == 'avatar-07'
 
     def test_admin_can_update_other_user_avatar(self, api_client, admin_user, normal_user):
         api_client.force_authenticate(user=admin_user)
 
         response = api_client.patch(
             f'/api/users/{normal_user.id}/avatar/',
-            {'avatar_key': 'avatar-04'},
+            {'avatar_key': 'avatar-08'},
             format='json',
         )
 
         assert response.status_code == 200, response.data
         normal_user.refresh_from_db()
-        assert normal_user.avatar_key == 'avatar-04'
-        assert response.data['data']['avatar_key'] == 'avatar-04'
+        assert normal_user.avatar_key == 'avatar-08'
+        assert response.data['data']['avatar_key'] == 'avatar-08'
 
     def test_non_admin_cannot_update_other_user_avatar(self, api_client, mentor_user, normal_user):
         api_client.force_authenticate(user=mentor_user)
@@ -132,6 +132,19 @@ class TestUserAvatarApi:
         response = api_client.patch(
             '/api/users/me/avatar/',
             {'avatar_key': 'avatar-99'},
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+
+    @pytest.mark.parametrize('removed_avatar_key', ['avatar-03', 'avatar-04'])
+    def test_removed_avatar_keys_are_invalid(self, api_client, normal_user, removed_avatar_key):
+        api_client.force_authenticate(user=normal_user)
+
+        response = api_client.patch(
+            '/api/users/me/avatar/',
+            {'avatar_key': removed_avatar_key},
             format='json',
         )
 

@@ -3,14 +3,22 @@ from core.exceptions import BusinessError, ErrorCodes
 
 DEFAULT_AVATAR_KEY = 'avatar-01'
 
-# 原始头像 (avatar-01 到 avatar-08)
-ORIGINAL_AVATAR_KEYS = tuple(f'avatar-{index:02d}' for index in range(1, 9))
+# 默认头像 (avatar-01, avatar-02)
+ORIGINAL_AVATAR_KEYS = (
+    'avatar-01',
+    'avatar-02',
+)
 
 # 彩色表情头像 (coloremoji-1 到 coloremoji-15)
 COLOREMOJI_AVATAR_KEYS = tuple(f'coloremoji-{index}' for index in range(1, 16))
 
-# 彩色动物头像 (coloranimals-1 到 coloranimals-9)
-COLORANIMALS_AVATAR_KEYS = tuple(f'coloranimals-{index}' for index in range(1, 10))
+# 萌宠头像 (coloranimals-1 到 coloranimals-9，加上迁移过来的 avatar-05 到 avatar-08)
+COLORANIMALS_AVATAR_KEYS = tuple(f'coloranimals-{index}' for index in range(1, 10)) + (
+    'avatar-05',
+    'avatar-06',
+    'avatar-07',
+    'avatar-08',
+)
 
 # 表情头像 (emoji-1 到 emoji-10)
 EMOJI_AVATAR_KEYS = tuple(f'emoji-{index}' for index in range(1, 11))

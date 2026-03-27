@@ -1,19 +1,18 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
-import { useQuizDetail } from '../api/get-quizzes';
-import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/quiz-center/questions/api/create-question';
+import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { apiClient } from '@/lib/api-client';
 import type { Question, QuestionCreateRequest, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
-import { apiClient } from '@/lib/api-client';
+import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
+import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem } from '../types';
 
 import { QuestionBankPanel } from '@/features/quiz-center/questions/components/question-bank-panel';
@@ -23,6 +22,14 @@ import { QuizDocumentEditor } from './quiz-document-editor';
 
 let _keyCounter = 0;
 const nextKey = () => `q_${++_keyCounter}`;
+const syncKeyCounter = (items: InlineQuestionItem[]) => {
+  const maxKey = items.reduce((currentMax, item) => {
+    const match = /^q_(\d+)$/.exec(item.key);
+    if (!match) return currentMax;
+    return Math.max(currentMax, Number(match[1]));
+  }, 0);
+  _keyCounter = Math.max(_keyCounter, maxKey);
+};
 
 /** 从 Question API 对象创建 InlineQuestionItem */
 const questionToInline = (q: Question, collapsed = false): InlineQuestionItem => ({
@@ -63,6 +70,11 @@ export const QuizForm: React.FC = () => {
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const initializedRef = useRef(false);
 
+  const appendItemPreservingFocus = useCallback((item: InlineQuestionItem) => {
+    setItems((prev) => [...prev, item]);
+    setActiveKey(item.key);
+  }, []);
+
   const { data: quizData } = useQuizDetail(Number(id));
   const { data: lineTypes } = useLineTypeTags();
   const { data: questionsData, isLoading: questionsLoading } = useQuestions({
@@ -76,42 +88,66 @@ export const QuizForm: React.FC = () => {
   const updateQuiz = useUpdateQuiz();
   const createQuestion = useCreateQuestion();
   const updateQuestion = useUpdateQuestion();
+  const isSubmitting = createQuiz.isPending || updateQuiz.isPending;
+
   // 初始化：编辑模式加载已有题目，需要逐个获取完整数据
   useEffect(() => {
-    if (isEdit && quizData && !initializedRef.current) {
-      setTitle(quizData.title);
-      setQuizType(quizData.quiz_type || 'PRACTICE');
-      setDuration(quizData.duration ?? undefined);
-      setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
+    if (initializedRef.current) return undefined;
 
-      if (quizData.questions) {
-        const sorted = [...quizData.questions].sort((a, b) => a.order - b.order);
-        Promise.all(
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      if (isEdit) {
+        if (!quizData) return;
+
+        const sorted = [...(quizData.questions ?? [])].sort((a, b) => a.order - b.order);
+        const loadedItems = await Promise.all(
           sorted.map((qq) => apiClient.get<Question>(`/questions/${qq.question}/`).then((q) => {
             const item = questionToInline(q, true);
-            item.score = qq.score; // 保留试卷中的分值
+            item.score = qq.score;
             return item;
-          }))
-        ).then((loadedItems) => {
-          setItems(loadedItems);
-          setActiveKey(loadedItems[0]?.key ?? null);
-        });
+          })),
+        );
+
+        if (cancelled) return;
+
+        syncKeyCounter(loadedItems);
+        setTitle(quizData.title);
+        setQuizType(quizData.quiz_type || 'PRACTICE');
+        setDuration(quizData.duration ?? undefined);
+        setPassScore(quizData.pass_score ? Number(quizData.pass_score) : undefined);
+        setItems(loadedItems);
+        setActiveKey(loadedItems[0]?.key ?? null);
+        initializedRef.current = true;
+        return;
       }
-      initializedRef.current = true;
-    } else if (!isEdit && questionsData?.results && !initializedRef.current) {
+
       const qidParam = searchParams.get('question_ids');
+      let loadedItems: InlineQuestionItem[] = [];
       if (qidParam) {
         const qids = qidParam.split(',').map(Number).filter(Boolean);
-        Promise.all(
-          qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q, true)))
-        ).then((loadedItems) => {
-          setItems(loadedItems);
-          setActiveKey(loadedItems[0]?.key ?? null);
-        });
+        loadedItems = await Promise.all(
+          qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q, true))),
+        );
+        if (cancelled) return;
       }
+
+      syncKeyCounter(loadedItems);
+      setTitle('');
+      setQuizType('PRACTICE');
+      setDuration(undefined);
+      setPassScore(undefined);
+      setItems(loadedItems);
+      setActiveKey(loadedItems[0]?.key ?? null);
       initializedRef.current = true;
-    }
-  }, [isEdit, quizData, questionsData, searchParams]);
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, quizData, searchParams]);
 
   // 过滤已添加的题目
   const filteredQuestionsData = useMemo(() => {
@@ -125,13 +161,12 @@ export const QuizForm: React.FC = () => {
     try {
       const full = await apiClient.get<Question>(`/questions/${q.id}/`);
       const item = questionToInline(full, false);
-      setItems(prev => [...prev, item]);
-      setActiveKey(item.key);
+      appendItemPreservingFocus(item);
       toast.success('已添加到试卷');
     } catch (e) {
       showApiError(e);
     }
-  }, [items]);
+  }, [appendItemPreservingFocus, items]);
 
   // 新建空白题目
   const handleAddBlank = useCallback((questionType: QuestionType = 'SINGLE_CHOICE') => {
@@ -151,9 +186,8 @@ export const QuizForm: React.FC = () => {
       saved: false,
       collapsed: false,
     };
-    setItems(prev => [...prev, item]);
-    setActiveKey(item.key);
-  }, [filterLineTypeId]);
+    appendItemPreservingFocus(item);
+  }, [appendItemPreservingFocus, filterLineTypeId]);
 
   // 更新某题的字段
   const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
@@ -191,7 +225,8 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   // 预览题库中的题目（弹窗或其他方式，暂保留简单 toast）
-  const handlePreviewQuestion = useCallback((_q: Question) => {
+  const handlePreviewQuestion = useCallback((question: Question) => {
+    void question;
     toast.info('题目预览功能开发中');
   }, []);
   // 提交试卷：先保存所有未保存的题目，再提交试卷
@@ -259,7 +294,7 @@ export const QuizForm: React.FC = () => {
         onQuizTypeChange={setQuizType}
         onBack={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}
-        isSubmitting={createQuiz.isPending || updateQuiz.isPending}
+        isSubmitting={isSubmitting}
       />
 
       <div className="flex flex-1 overflow-hidden">
