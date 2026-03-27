@@ -92,7 +92,10 @@ export const QuizForm: React.FC = () => {
             item.score = qq.score; // 保留试卷中的分值
             return item;
           }))
-        ).then(setItems);
+        ).then((loadedItems) => {
+          setItems(loadedItems);
+          setActiveKey(loadedItems[0]?.key ?? null);
+        });
       }
       initializedRef.current = true;
     } else if (!isEdit && questionsData?.results && !initializedRef.current) {
@@ -101,7 +104,10 @@ export const QuizForm: React.FC = () => {
         const qids = qidParam.split(',').map(Number).filter(Boolean);
         Promise.all(
           qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q, true)))
-        ).then(setItems);
+        ).then((loadedItems) => {
+          setItems(loadedItems);
+          setActiveKey(loadedItems[0]?.key ?? null);
+        });
       }
       initializedRef.current = true;
     }
@@ -128,16 +134,17 @@ export const QuizForm: React.FC = () => {
   }, [items]);
 
   // 新建空白题目
-  const handleAddBlank = useCallback(() => {
+  const handleAddBlank = useCallback((questionType: QuestionType = 'SINGLE_CHOICE') => {
+    const isChoiceType = questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE';
     const item: InlineQuestionItem = {
       key: nextKey(),
       questionId: null,
       resourceUuid: null,
       isCurrent: true,
-      questionType: 'SINGLE_CHOICE',
+      questionType,
       lineTagId: filterLineTypeId !== 'all' ? Number(filterLineTypeId) : undefined,
       content: '',
-      options: [{ key: 'A', value: '' }, { key: 'B', value: '' }],
+      options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }] : [],
       answer: '',
       explanation: '',
       score: '1',
@@ -242,7 +249,7 @@ export const QuizForm: React.FC = () => {
     }
   };
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)] gap-5 bg-transparent">
+    <div className="flex h-[calc(100vh-48px)] flex-col bg-muted/20">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}
@@ -255,7 +262,7 @@ export const QuizForm: React.FC = () => {
         isSubmitting={createQuiz.isPending || updateQuiz.isPending}
       />
 
-      <div className="flex flex-1 overflow-hidden gap-5">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left: 试卷大纲 */}
         <QuizOutlinePanel
           items={items}
