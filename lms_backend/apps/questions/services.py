@@ -7,6 +7,7 @@
     question = service.get_by_id(pk=123)
 """
 import uuid
+from typing import Optional
 
 from django.db import transaction
 
@@ -124,6 +125,7 @@ class QuestionService(BaseService):
         # 处理版本号
         self._prepare_version_data(data)
         # 提取条线类型数据
+        line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
         # 3. 创建题目
         question = Question.objects.create(**data)
@@ -168,6 +170,7 @@ class QuestionService(BaseService):
         }
         self._validate_question_data(merged_data)
         # 提取条线类型数据
+        line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
         # 更新题目
         data['updated_by'] = self.user
@@ -176,8 +179,7 @@ class QuestionService(BaseService):
                 setattr(question, key, value)
             question.save(update_fields=list(data.keys()))
         # 更新条线类型
-        if line_tag_id is not None:
-            self._set_line_tag(question, line_tag_id)
+        self._apply_line_tag_change(question, line_tag_id, line_tag_provided)
         return question
 
     @transaction.atomic
@@ -290,6 +292,23 @@ class QuestionService(BaseService):
         question.line_tag = line_tag
         question.save(update_fields=['line_tag'])
 
+    def _apply_line_tag_change(
+        self,
+        question: Question,
+        line_tag_id: Optional[int],
+        line_tag_provided: bool,
+    ) -> None:
+        """根据请求显式设置或清空条线。"""
+        if not line_tag_provided:
+            return
+        if line_tag_id is None:
+            if question.line_tag_id is None:
+                return
+            question.line_tag = None
+            question.save(update_fields=['line_tag'])
+            return
+        self._set_line_tag(question, line_tag_id)
+
     def _prepare_version_data(self, data: dict) -> None:
         """
         准备版本号相关数据
@@ -315,6 +334,7 @@ class QuestionService(BaseService):
         )
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
         # 提取条线类型数据
+        line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
         # 准备新版本数据：自动复制所有内容字段
         new_question_data = {
@@ -329,8 +349,8 @@ class QuestionService(BaseService):
             new_question_data[field] = data.get(field, getattr(source, field, None))
         new_question = Question.objects.create(**new_question_data)
         # 设置条线类型
-        if line_tag_id is not None:
-            self._set_line_tag(new_question, line_tag_id)
+        if line_tag_provided:
+            self._apply_line_tag_change(new_question, line_tag_id, True)
         elif source.line_tag:
             new_question.line_tag = source.line_tag
             new_question.save(update_fields=['line_tag'])

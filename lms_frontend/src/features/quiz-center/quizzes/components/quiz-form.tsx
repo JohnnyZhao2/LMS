@@ -38,7 +38,7 @@ const questionToInline = (q: Question, collapsed = false): InlineQuestionItem =>
   resourceUuid: q.resource_uuid,
   isCurrent: q.is_current,
   questionType: q.question_type,
-  lineTagId: q.line_tag?.id,
+  lineTagId: q.line_tag?.id ?? null,
   content: q.content,
   options: q.options || [],
   answer: q.answer || '',
@@ -177,7 +177,7 @@ export const QuizForm: React.FC = () => {
       resourceUuid: null,
       isCurrent: true,
       questionType,
-      lineTagId: filterLineTypeId !== 'all' ? Number(filterLineTypeId) : undefined,
+      lineTagId: filterLineTypeId !== 'all' ? Number(filterLineTypeId) : null,
       content: '',
       options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }] : [],
       answer: '',
@@ -236,10 +236,9 @@ export const QuizForm: React.FC = () => {
     if (quizType === 'EXAM' && (!duration || !passScore)) return toast.error('考试模式需设置时长和及格分');
 
     // 验证所有题目
-    for (const item of items) {
-      if (!item.lineTagId) return toast.error(`第${items.indexOf(item) + 1}题未选择条线`);
-      if (!item.content.trim()) return toast.error(`第${items.indexOf(item) + 1}题未填写内容`);
-      if (!item.answer || (Array.isArray(item.answer) && item.answer.length === 0)) return toast.error(`第${items.indexOf(item) + 1}题未设置答案`);
+    for (const [index, item] of items.entries()) {
+      if (!item.content.trim()) return toast.error(`第${index + 1}题未填写内容`);
+      if (!item.answer || (Array.isArray(item.answer) && item.answer.length === 0)) return toast.error(`第${index + 1}题未设置答案`);
     }
 
     try {
@@ -247,7 +246,7 @@ export const QuizForm: React.FC = () => {
       const savedItems = await Promise.all(items.map(async (item) => {
         if (item.questionId && item.saved) return item;
         const formData: QuestionCreateRequest = {
-          line_tag_id: item.lineTagId!,
+          line_tag_id: item.lineTagId ?? null,
           question_type: item.questionType,
           content: item.content,
           options: item.options,
@@ -338,7 +337,6 @@ export const QuizForm: React.FC = () => {
           lineTypes={lineTypes}
           questionsData={filteredQuestionsData}
           questionsLoading={questionsLoading}
-          onCreateNew={handleAddBlank}
           onPreview={handlePreviewQuestion}
           onAddQuestion={handleAddQuestion}
         />

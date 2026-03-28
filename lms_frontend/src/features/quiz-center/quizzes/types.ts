@@ -21,7 +21,7 @@ export interface InlineQuestionItem {
   isCurrent: boolean;
   /** 表单数据 */
   questionType: QuestionType;
-  lineTagId?: number;
+  lineTagId?: number | null;
   content: string;
   options: Array<{ key: string; value: string }>;
   answer: string | string[];

@@ -19,7 +19,6 @@ interface QuestionBankPanelProps {
   lineTypes?: Tag[];
   questionsData?: PaginatedResponse<Question>;
   questionsLoading: boolean;
-  onCreateNew: () => void;
   onPreview: (question: Question) => void;
   onAddQuestion: (question: Question) => void;
 }
@@ -34,20 +33,16 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   lineTypes,
   questionsData,
   questionsLoading,
-  onCreateNew,
   onPreview,
   onAddQuestion,
 }) => {
   return (
-    <div className="flex w-80 shrink-0 flex-col border-l border-border bg-background xl:w-96">
-      <div className="flex h-14 items-center justify-between border-b border-border px-5">
+    <div className="flex w-72 shrink-0 flex-col border-l border-border bg-background xl:w-80">
+      <div className="flex h-14 items-center border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <LayoutGrid className="h-4 w-4 text-text-muted" />
           公共题库
         </div>
-        <Button variant="ghost" size="sm" onClick={onCreateNew} className="h-8 px-0 text-[12px] font-semibold text-primary-600 hover:bg-transparent hover:text-primary-700">
-          + 新建题目
-        </Button>
       </div>
 
       <div className="space-y-3 border-b border-border bg-muted/20 px-4 py-4">
@@ -95,9 +90,9 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
             {questionsData?.results.map(q => (
               <div
                 key={q.id}
-                className="group rounded-xl border border-border bg-background p-4 transition-all hover:border-border/80 hover:shadow-sm"
+                className="group flex items-start gap-3 rounded-xl border border-border bg-background p-4 transition-all hover:border-border/80 hover:shadow-sm"
               >
-                <div className="min-w-0 cursor-pointer" onClick={() => onPreview(q)}>
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge
                       className={cn('h-5 px-1.5 text-[10px] font-semibold', getQuestionTypeStyle(q.question_type).bg, getQuestionTypeStyle(q.question_type).color)}
@@ -108,16 +103,15 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
                   <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">{q.content}</p>
                 </div>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="mt-4 h-8 w-full border-border bg-background text-[12px] font-semibold text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-foreground hover:text-background"
+                  className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-primary-50 hover:text-primary-600"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAddQuestion(q);
                   }}
                 >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  引用至试卷
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             ))}

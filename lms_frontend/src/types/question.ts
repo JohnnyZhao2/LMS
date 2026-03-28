@@ -40,5 +40,5 @@ export interface QuestionCreateRequest {
   answer?: string | string[];
   explanation?: string;
   score?: string | number;
-  line_tag_id?: number;
+  line_tag_id?: number | null;
 }

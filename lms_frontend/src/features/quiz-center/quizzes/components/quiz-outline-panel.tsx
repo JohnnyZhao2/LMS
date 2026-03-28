@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Clock3, FileText, PieChart, Target } from 'lucide-react';
+import { Clock3, FileText, Target } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
-import type { QuizType } from '@/types/api';
+import type { QuestionType, QuizType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
 
 interface QuizOutlinePanelProps {
@@ -47,16 +48,61 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
     ? String(stats.totalScore)
     : stats.totalScore.toFixed(1).replace(/\.0$/, '');
 
+  const distribution = useMemo(() => {
+    const totalItems = items.length;
+    const typeStats: Array<{
+      type: QuestionType;
+      label: string;
+      count: number;
+      dotClassName: string;
+      barClassName: string;
+    }> = [
+      {
+        type: 'SINGLE_CHOICE',
+        label: '单选题',
+        count: stats.single,
+        dotClassName: 'bg-primary-400',
+        barClassName: 'bg-primary-400',
+      },
+      {
+        type: 'MULTIPLE_CHOICE',
+        label: '多选题',
+        count: stats.multi,
+        dotClassName: 'bg-secondary-400',
+        barClassName: 'bg-secondary-400',
+      },
+      {
+        type: 'TRUE_FALSE',
+        label: '判断题',
+        count: stats.tf,
+        dotClassName: 'bg-warning-400',
+        barClassName: 'bg-warning-400',
+      },
+      {
+        type: 'SHORT_ANSWER',
+        label: '简答题',
+        count: stats.short,
+        dotClassName: 'bg-slate-400',
+        barClassName: 'bg-slate-400',
+      },
+    ];
+
+    return typeStats
+      .filter((item) => item.count > 0)
+      .map((item) => ({
+        ...item,
+        percent: totalItems > 0 ? (item.count / totalItems) * 100 : 0,
+        percentText: totalItems > 0 ? `${((item.count / totalItems) * 100).toFixed(1).replace(/\.0$/, '')}%` : '0%',
+      }));
+  }, [items.length, stats.multi, stats.short, stats.single, stats.tf]);
+
   return (
-    <div className="flex w-72 shrink-0 flex-col border-r border-border bg-background xl:w-80">
-      <div className="flex h-14 items-center justify-between border-b border-border px-5">
+    <div className="flex w-64 shrink-0 flex-col border-r border-border bg-background xl:w-72">
+      <div className="flex h-14 items-center border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <FileText className="h-4 w-4 text-primary-600" />
           <span>试卷结构</span>
         </div>
-        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
-          共 {items.length} 题
-        </span>
       </div>
       {quizType === 'EXAM' && (
         <div className="space-y-3 border-b border-border bg-muted/20 px-5 py-4">
@@ -96,29 +142,6 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           </div>
         </div>
       )}
-      <div className="border-b border-border bg-background px-5 py-4">
-        <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">
-          <PieChart className="h-3.5 w-3.5" />
-          题型概览
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {[
-            { label: '单选题', value: stats.single },
-            { label: '多选题', value: stats.multi },
-            { label: '判断题', value: stats.tf },
-            { label: '简答题', value: stats.short },
-          ].map((stat) => (
-            <div key={stat.label} className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-[12px] font-medium text-foreground">
-              <span>{stat.label}</span>
-              <span className="rounded bg-muted px-1 text-[10px] text-text-muted">{stat.value}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-[12px] font-medium text-foreground">
-            <span>总分</span>
-            <span className="rounded bg-muted px-1 text-[10px] text-text-muted">{totalScoreText}</span>
-          </div>
-        </div>
-      </div>
       <div className="flex-1 overflow-y-auto scrollbar-subtle">
         {items.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-12 text-text-muted">
@@ -160,6 +183,55 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             })}
           </div>
         )}
+      </div>
+      <div className="border-t border-border bg-muted/[0.18] px-3 py-2.5">
+        <div className="bg-background px-2.5 py-2.5">
+          <div className="mb-3.5 flex items-end justify-between">
+            <div className="flex items-baseline gap-1">
+              <span className="text-[15px] font-bold tabular-nums leading-none text-foreground">{totalScoreText}</span>
+              <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">分</span>
+            </div>
+            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
+          </div>
+
+          <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-muted">
+            {distribution.length > 0 ? (
+              <div className="flex h-full w-full">
+                {distribution.map((item, index) => (
+                  <React.Fragment key={item.type}>
+                    {index > 0 && <div className="w-px bg-background" />}
+                    <Tooltip
+                      title={`${item.label} ${item.percentText}`}
+                    >
+                      <div
+                        className={cn('h-full transition-[width] duration-200', item.barClassName)}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </Tooltip>
+                  </React.Fragment>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full w-full bg-muted" />
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+            {distribution.length > 0 ? (
+              distribution.map((item) => (
+                <div key={item.type} className="flex items-center justify-between">
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', item.dotClassName)} />
+                    <span className="truncate text-[10px] font-medium text-text-muted">{item.label}</span>
+                  </div>
+                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-text-muted">
+                    {item.count}
+                  </span>
+                </div>
+              ))
+            ) : null}
+          </div>
+        </div>
       </div>
     </div>
   );

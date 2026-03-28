@@ -207,7 +207,6 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
           <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
             {getQuestionTypeLabel(item.questionType)}
           </Badge>
-          <span className="text-[11px] text-text-muted">ID: {item.questionId ?? `temp-${index + 1}`}</span>
           {!item.questionId && (
             <div className="flex rounded-md bg-muted p-0.5">
               {QUESTION_TYPES.map(({ value, label }) => (
@@ -269,13 +268,32 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
       ) : (
         <div className="space-y-8 px-8 py-8">
           <div className="flex items-center gap-3">
-            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">所属条线</Label>
-            <Select value={item.lineTagId?.toString()} onValueChange={(val) => onUpdate({ lineTagId: Number(val) })}>
+            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              所属条线 <span className="normal-case font-normal text-text-muted/50">选填</span>
+            </Label>
+            <Select
+              value={item.lineTagId == null ? undefined : item.lineTagId.toString()}
+              onValueChange={(val) => onUpdate({ lineTagId: Number(val) })}
+            >
               <SelectTrigger className="h-8 w-40 rounded-lg border-border bg-background text-[12px]"><SelectValue placeholder="选择条线" /></SelectTrigger>
               <SelectContent>
                 {lineTypes?.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            {item.lineTagId != null && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-[11px] text-text-muted hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdate({ lineTagId: null });
+                }}
+              >
+                清空
+              </Button>
+            )}
           </div>
 
           <div className="space-y-3">

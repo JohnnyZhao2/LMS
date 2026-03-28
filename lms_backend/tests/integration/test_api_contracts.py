@@ -285,6 +285,48 @@ class TestQuestionApiContracts:
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'line_tag_id' in response.data['message']
 
+    def test_question_create_allows_missing_line_tag(self, api_client, mentor_user):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.post(
+            '/api/questions/',
+            {
+                'content': '无条线题目',
+                'question_type': 'SINGLE_CHOICE',
+                'options': [
+                    {'key': 'A', 'value': '选项A'},
+                    {'key': 'B', 'value': '选项B'},
+                ],
+                'answer': 'A',
+                'score': '1',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['data']['line_tag'] is None
+
+    def test_question_patch_allows_clearing_line_tag(self, api_client, mentor_user, sample_question):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.patch(
+            f'/api/questions/{sample_question.id}/',
+            {'line_tag_id': None},
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['data']['line_tag'] is None
+
+        sample_question.refresh_from_db()
+        assert sample_question.is_current is False
+
+        current_question = Question.objects.get(
+            resource_uuid=sample_question.resource_uuid,
+            is_current=True,
+        )
+        assert current_question.line_tag_id is None
+
 
 @pytest.mark.django_db
 class TestAuthApiContracts:

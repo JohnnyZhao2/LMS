@@ -14,27 +14,6 @@
   - `src/components/ui/` — 共享 UI 组件（基于 Radix UI）
   - `src/lib/` — 工具库（api-client, react-query, utils）
 
-## 构建、测试与开发命令
-
-### 后端（workdir: `lms_backend/`）
-```bash
-pip install -r requirements.txt                                    # 安装依赖
-python manage.py runserver --settings=config.settings.development  # 启动开发服务器
-python manage.py migrate --settings=config.settings.development    # 运行迁移
-python manage.py createsuperuser --settings=config.settings.development  # 创建超级用户
-
-# 测试命令
-python -m pytest tests/ -v                                         # 运行全部测试
-python -m pytest tests/integration/ -v                             # 仅集成测试
-python -m pytest tests/properties/ -v                              # 仅属性测试
-python -m pytest tests/test_domain_layer.py -v                     # 仅领域层测试
-python -m pytest tests/integration/test_exam_task_flow.py -v       # 运行单个测试文件
-python -m pytest tests/integration/test_exam_task_flow.py::TestExamTaskFlow::test_xxx -v  # 运行单个测试方法
-python -m pytest tests/ -k "keyword" -v                            # 按关键字筛选测试
-python -m pytest tests/ --cov=apps --cov-report=html               # 覆盖率报告
-python -m pytest tests/ -x                                         # 遇到第一个失败即停止
-python -m pytest tests/ --lf                                       # 仅运行上次失败的测试
-```
 
 ### 前端（workdir: `lms_frontend/`）
 ```bash
@@ -57,27 +36,6 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 // 3. 相对路径（同模块内）
 import { UserForm } from './user-form';
-```
-
-### 导入顺序（后端）
-```python
-# 1. Python 标准库
-from typing import Optional, List
-from decimal import Decimal
-# 2. Django 相关
-from django.db import transaction
-from django.utils import timezone
-# 3. 第三方库
-from rest_framework.views import APIView
-# 4. 项目核心模块（core/）
-from core.base_service import BaseService
-from core.exceptions import BusinessError, ErrorCodes
-# 5. 其他应用模块（apps/）
-from apps.users.models import User
-from apps.tasks.models import Task
-# 6. 当前应用内模块
-from .models import Submission
-from .selectors import get_submission_by_id
 ```
 
 ### 命名规范
@@ -170,71 +128,3 @@ try {
 - 动效：优先 CSS 动画；在 React 场景可用 framer-motion；注重高影响时刻
 - 背景：营造氛围与层次，使用渐变、几何图形或环境化纹理，避免单色铺底
 - 禁止：紫色渐变白底、可预期的布局与组件套路、无差别的模板化风格
-
-<skills_system priority="1">
-
-## Available Skills
-
-<!-- SKILLS_TABLE_START -->
-<usage>
-When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
-
-How to use skills:
-- Invoke: Bash("openskills read <skill-name>")
-- The skill content will load with detailed instructions on how to complete the task
-- Base directory provided in output for resolving bundled resources (references/, scripts/, assets/)
-
-Usage notes:
-- Only use skills listed in <available_skills> below
-- Do not invoke a skill that is already loaded in your context
-- Each skill invocation is stateless
-</usage>
-
-<available_skills>
-
-<skill>
-<name>frontend-design</name>
-<description>Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>internal-comms</name>
-<description>A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>mcp-builder</name>
-<description>Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>shadcn-tailwind-styles</name>
-<description>shadcn/ui 和 Tailwind CSS v4 样式代码规范和最佳实践。当编写或修改前端组件代码时使用此技能，确保：(1) 使用 CSS 变量而不是硬编码颜色，(2) 遵循 Tailwind v4 的新特性和语法，(3) 正确自定义 shadcn/ui 组件，(4) 保持样式代码的一致性和可维护性。适用于所有涉及样式的前端开发任务。</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>theme-factory</name>
-<description>Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set themes with colors/fonts that you can apply to any artifact that has been creating, or can generate a new theme on-the-fly.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>webapp-testing</name>
-<description>Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.</description>
-<location>project</location>
-</skill>
-
-<skill>
-<name>xlsx</name>
-<description>"Comprehensive spreadsheet creation, editing, and analysis with support for formulas, formatting, data analysis, and visualization. When Claude needs to work with spreadsheets (.xlsx, .xlsm, .csv, .tsv, etc) for: (1) Creating new spreadsheets with formulas and formatting, (2) Reading or analyzing data, (3) Modify existing spreadsheets while preserving formulas, (4) Data analysis and visualization in spreadsheets, or (5) Recalculating formulas"</description>
-<location>project</location>
-</skill>
-
-</available_skills>
-<!-- SKILLS_TABLE_END -->
-
-</skills_system>
