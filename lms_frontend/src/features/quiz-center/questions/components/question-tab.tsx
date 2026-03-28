@@ -35,6 +35,7 @@ const DEFAULT_QUESTION_FORM: Partial<QuestionCreateRequest> = {
     answer: '',
     explanation: '',
     score: '1',
+    tag_ids: [],
 };
 
 export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSignal = 0 }) => {
@@ -67,6 +68,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
 
     const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
         line_tag_id: previewQuestion.line_tag?.id,
+        tag_ids: previewQuestion.tags?.map((tag) => tag.id) ?? [],
         question_type: previewQuestion.question_type,
         content: previewQuestion.content,
         options: previewQuestion.options || [],
@@ -140,6 +142,20 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                     {row.original.line_tag?.name || '—'}
                 </span>
             )
+        },
+        {
+            id: 'tags',
+            header: '标签',
+            cell: ({ row }) => (
+                <CellTags
+                    tags={(row.original.tags ?? []).map((tag) => ({
+                        key: String(tag.id),
+                        label: tag.name,
+                        bgClass: 'bg-muted',
+                        textClass: 'text-foreground',
+                    }))}
+                />
+            ),
         },
         {
             id: 'timestamp',

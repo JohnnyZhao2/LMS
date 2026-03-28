@@ -61,6 +61,5 @@ lms_frontend/.vite/
 lms_frontend/.next/
 lms_frontend/out/
 
-# 文档构建
-docs/_build/
-docs/site/
+# 文档（本地设计稿等，不入库）
+docs/

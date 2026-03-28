@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.authorization',
     'apps.auth',
+    'apps.tags',
     'apps.knowledge',
     'apps.questions',
     'apps.quizzes',

@@ -548,6 +548,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                     {/* 点击展开标签输入 */}
                     {canUpdateKnowledge && showTagInput && (
                       <TagInput
+                        applicableTo="knowledge"
                         selectedTags={activeTags}
                         onAdd={addTag}
                         onRemove={removeTag}

@@ -10,6 +10,7 @@ interface GetQuestionsParams {
   questionType?: QuestionType;
   search?: string;
   lineTypeId?: number;
+  tagId?: number;
 }
 
 /**
@@ -17,16 +18,17 @@ interface GetQuestionsParams {
  */
 export const useQuestions = (params: GetQuestionsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, questionType, search, lineTypeId } = params;
+  const { page = 1, pageSize = 20, questionType, search, lineTypeId, tagId } = params;
 
   return useQuery({
-    queryKey: ['questions', currentRole ?? 'UNKNOWN', page, pageSize, questionType, search, lineTypeId],
+    queryKey: ['questions', currentRole ?? 'UNKNOWN', page, pageSize, questionType, search, lineTypeId, tagId],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(questionType && { question_type: questionType }),
         ...(search && { search }),
         ...(lineTypeId && { line_tag_id: String(lineTypeId) }),
+        ...(tagId && { tag_id: String(tagId) }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<PaginatedResponse<Question>>(`/questions/${queryString}`);
@@ -48,4 +50,3 @@ export const useQuestionDetail = (id: number) => {
     enabled: !!id && currentRole !== null,
   });
 };
-

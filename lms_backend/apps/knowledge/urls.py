@@ -10,9 +10,6 @@ from .views import (
     KnowledgeListCreateView,
     KnowledgeStatsView,
     StudentTaskKnowledgeDetailView,
-    TagCreateView,
-    TagDetailView,
-    TagListView,
     ParseDocumentView,
 )
 
@@ -24,8 +21,4 @@ urlpatterns = [
     path('stats/', KnowledgeStatsView.as_view(), name='knowledge-stats'),
     path('<int:pk>/', KnowledgeDetailView.as_view(), name='knowledge-detail'),
     path('<int:pk>/view/', KnowledgeIncrementViewCountView.as_view(), name='knowledge-view'),
-    # Tag management endpoints
-    path('tags/', TagListView.as_view(), name='tag-list'),
-    path('tags/create/', TagCreateView.as_view(), name='tag-create'),
-    path('tags/<int:pk>/', TagDetailView.as_view(), name='tag-detail'),
 ]

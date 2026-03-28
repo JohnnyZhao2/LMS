@@ -6,12 +6,13 @@ from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, RolePermission
 from apps.activity_logs.models import ContentLog, OperationLog, UserLog
-from apps.knowledge.models import Knowledge, Tag
+from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
 from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
+from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -41,6 +42,8 @@ def mentor_role():
             'question.create',
             'question.update',
             'question.delete',
+            'tag.view',
+            'tag.create',
             'quiz.view',
             'quiz.create',
             'quiz.update',
@@ -73,6 +76,10 @@ def admin_role():
             'knowledge.create',
             'knowledge.update',
             'knowledge.delete',
+            'tag.view',
+            'tag.create',
+            'tag.update',
+            'tag.delete',
             'user.view',
             'activity_log.view',
         ],
@@ -120,7 +127,33 @@ def line_tag():
     return Tag.objects.create(
         name='契约测试条线',
         tag_type='LINE',
+        allow_knowledge=True,
+        allow_question=True,
         sort_order=1,
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def knowledge_tag():
+    return Tag.objects.create(
+        name='知识标签',
+        tag_type='TAG',
+        allow_knowledge=True,
+        allow_question=False,
+        sort_order=2,
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def question_tag():
+    return Tag.objects.create(
+        name='题目标签',
+        tag_type='TAG',
+        allow_knowledge=False,
+        allow_question=True,
+        sort_order=3,
         is_active=True,
     )
 
@@ -306,6 +339,54 @@ class TestQuestionApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['line_tag'] is None
 
+    def test_question_create_accepts_question_tags(self, api_client, mentor_user, question_tag):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.post(
+            '/api/questions/',
+            {
+                'content': '带标签题目',
+                'question_type': 'SINGLE_CHOICE',
+                'options': [
+                    {'key': 'A', 'value': '选项A'},
+                    {'key': 'B', 'value': '选项B'},
+                ],
+                'answer': 'A',
+                'score': '1',
+                'tag_ids': [question_tag.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert {item['id'] for item in response.data['data']['tags']} == {question_tag.id}
+
+    def test_question_create_rejects_non_question_scope_tags(
+        self,
+        api_client,
+        mentor_user,
+        knowledge_tag,
+    ):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.post(
+            '/api/questions/',
+            {
+                'content': '错误标签题目',
+                'question_type': 'SINGLE_CHOICE',
+                'options': [
+                    {'key': 'A', 'value': '选项A'},
+                    {'key': 'B', 'value': '选项B'},
+                ],
+                'answer': 'A',
+                'score': '1',
+                'tag_ids': [knowledge_tag.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'ERROR'
+        assert 'tag_ids' in str(response.data['message'])
+
     def test_question_patch_allows_clearing_line_tag(self, api_client, mentor_user, sample_question):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.patch(
@@ -418,7 +499,7 @@ class TestQuizApiContracts:
 class TestTagApiContracts:
     def test_tag_list_response_is_wrapped(self, api_client, mentor_user, line_tag):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/tags/?tag_type=LINE')
+        response = api_client.get('/api/tags/?tag_type=LINE')
 
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
@@ -429,7 +510,7 @@ class TestTagApiContracts:
 
     def test_tag_list_rejects_invalid_limit(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/tags/?limit=bad')
+        response = api_client.get('/api/tags/?limit=bad')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
@@ -437,11 +518,20 @@ class TestTagApiContracts:
 
     def test_tag_list_rejects_invalid_active_only(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/tags/?active_only=maybe')
+        response = api_client.get('/api/tags/?active_only=maybe')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'active_only' in response.data['message']
+
+    def test_tag_list_supports_scope_filter(self, api_client, mentor_user, knowledge_tag, question_tag):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/tags/?tag_type=TAG&applicable_to=question')
+
+        assert response.status_code == 200, response.data
+        result_ids = {item['id'] for item in response.data['data']}
+        assert question_tag.id in result_ids
+        assert knowledge_tag.id not in result_ids
 
     def test_tag_delete_detaches_linked_knowledge_and_question(
         self,
@@ -453,7 +543,7 @@ class TestTagApiContracts:
     ):
         api_client.force_authenticate(user=admin_user)
 
-        response = api_client.delete(f'/api/knowledge/tags/{line_tag.id}/')
+        response = api_client.delete(f'/api/tags/{line_tag.id}/')
 
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
@@ -581,12 +671,16 @@ class TestKnowledgeApiContracts:
         source_tag = Tag.objects.create(
             name='契约测试标签源',
             tag_type='TAG',
+            allow_knowledge=True,
+            allow_question=False,
             sort_order=2,
             is_active=True,
         )
         target_tag = Tag.objects.create(
             name='契约测试标签新',
             tag_type='TAG',
+            allow_knowledge=True,
+            allow_question=False,
             sort_order=1,
             is_active=True,
         )
@@ -621,12 +715,16 @@ class TestKnowledgeApiContracts:
         source_tag = Tag.objects.create(
             name='契约测试标签保留',
             tag_type='TAG',
+            allow_knowledge=True,
+            allow_question=False,
             sort_order=1,
             is_active=True,
         )
         target_line_tag = Tag.objects.create(
             name='契约测试条线新',
             tag_type='LINE',
+            allow_knowledge=True,
+            allow_question=True,
             sort_order=3,
             is_active=True,
         )

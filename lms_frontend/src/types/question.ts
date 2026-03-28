@@ -19,6 +19,7 @@ export interface Question {
   explanation?: string;
   score: string;
   line_tag?: SimpleTag;
+  tags?: SimpleTag[];
   is_objective?: boolean;
   is_subjective?: boolean;
   is_current: boolean;
@@ -41,4 +42,5 @@ export interface QuestionCreateRequest {
   explanation?: string;
   score?: string | number;
   line_tag_id?: number | null;
+  tag_ids?: number[];
 }

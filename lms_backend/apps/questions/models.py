@@ -12,7 +12,7 @@ from core.mixins import (
     TimestampMixin,
     VersionedResourceMixin,
 )
-from apps.knowledge.models import Tag
+from apps.tags.models import Tag
 
 
 class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
@@ -84,6 +84,13 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         blank=True,
         verbose_name='条线类型',
         limit_choices_to={'tag_type': 'LINE', 'is_active': True}
+    )
+    tags = models.ManyToManyField(
+        Tag,
+        related_name='question_items',
+        blank=True,
+        verbose_name='题目标签',
+        limit_choices_to={'tag_type': 'TAG', 'is_active': True},
     )
     class Meta:
         db_table = 'lms_question'

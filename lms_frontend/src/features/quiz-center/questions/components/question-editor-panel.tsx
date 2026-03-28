@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { TagInput } from '@/features/knowledge/components/shared/tag-input';
 import { cn } from '@/lib/utils';
 import type { QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
 
@@ -140,6 +141,28 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
 
       {/* ─── 题目内容 + 选项/答案 + 解析 ─── */}
       <div className="flex-1 overflow-y-auto px-5 pb-2 space-y-4">
+        {!readOnly && (
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-text-muted font-medium">题目标签</Label>
+            <TagInput
+              applicableTo="question"
+              selectedTags={questionForm.tag_ids?.map((tagId) => ({ id: tagId })) ?? []}
+              onAdd={(tag) => {
+                setQuestionForm((prev) => ({
+                  ...prev,
+                  tag_ids: [...new Set([...(prev.tag_ids ?? []), tag.id])],
+                }));
+              }}
+              onRemove={(tagId) => {
+                setQuestionForm((prev) => ({
+                  ...prev,
+                  tag_ids: (prev.tag_ids ?? []).filter((id) => id !== tagId),
+                }));
+              }}
+            />
+          </div>
+        )}
+
         {/* 题目内容 */}
         <div className="space-y-1.5">
           <Label className="text-[11px] text-text-muted font-medium">题目内容</Label>

@@ -36,7 +36,7 @@ class QuestionListCreateView(BaseAPIView):
         description='获取所有题目，支持类型、标签筛选',
         parameters=[
             OpenApiParameter(name='question_type', type=str, description='题目类型'),
-            OpenApiParameter(name='tag', type=str, description='标签'),
+            OpenApiParameter(name='tag_id', type=int, description='题目标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
             OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
@@ -74,6 +74,13 @@ class QuestionListCreateView(BaseAPIView):
         )
         if line_tag_id is not None:
             filters['line_tag_id'] = line_tag_id
+        tag_id = parse_int_query_param(
+            request=request,
+            name='tag_id',
+            minimum=1,
+        )
+        if tag_id is not None:
+            filters['tag_id'] = tag_id
 
         search = request.query_params.get('search')
 

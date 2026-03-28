@@ -1,7 +1,6 @@
 """
 Knowledge models for LMS.
 Implements:
-- Tag: 统一标签模型（条线类型/知识标签）
 - Knowledge: 统一知识文档
 """
 from django.core.exceptions import ValidationError
@@ -9,43 +8,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils.html import strip_tags
 
+from apps.tags.models import Tag
 from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin, VersionedResourceMixin
-
-
-class Tag(TimestampMixin, models.Model):
-    """
-    统一标签模型
-    支持两种标签类型：
-    - LINE: 条线类型（大分类）
-    - TAG: 知识标签（平级标签）
-    Attributes:
-        name: 标签名称
-        tag_type: 标签类型
-        sort_order: 排序序号
-        is_active: 是否启用
-    """
-    TAG_TYPE_CHOICES = [
-        ('LINE', '条线类型'),
-        ('TAG', '知识标签'),
-    ]
-    name = models.CharField(max_length=100, verbose_name='标签名称')
-    color = models.CharField(max_length=7, default='#4A90E2', verbose_name='主题色')
-    tag_type = models.CharField(
-        max_length=20,
-        choices=TAG_TYPE_CHOICES,
-        verbose_name='标签类型'
-    )
-    sort_order = models.IntegerField(default=0, verbose_name='排序序号')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
-    class Meta:
-        db_table = 'lms_tag'
-        verbose_name = '标签'
-        verbose_name_plural = '标签'
-        ordering = ['tag_type', 'sort_order', 'name']
-        # 同类型下标签名称唯一
-        unique_together = [['name', 'tag_type']]
-    def __str__(self):
-        return f"{self.name} ({self.get_tag_type_display()})"
 
 
 class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):

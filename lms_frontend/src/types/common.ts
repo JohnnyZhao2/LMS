@@ -48,6 +48,8 @@ export interface Tag {
   tag_type_display: string;
   sort_order: number;
   is_active: boolean;
+  allow_knowledge: boolean;
+  allow_question: boolean;
 }
 
 /**

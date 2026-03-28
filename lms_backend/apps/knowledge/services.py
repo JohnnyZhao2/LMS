@@ -14,11 +14,12 @@ from django.db import transaction
 from django.utils.html import strip_tags
 from django.utils.html import escape
 
+from apps.tags.models import Tag
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 
-from .models import Knowledge, Tag
+from .models import Knowledge
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
 
 
@@ -231,6 +232,7 @@ class KnowledgeService(BaseService):
                 id__in=tag_ids,
                 tag_type='TAG',
                 is_active=True,
+                allow_knowledge=True,
             ).values_list('id', flat=True)
         )
         invalid_tag_ids = [tag_id for tag_id in tag_ids if tag_id not in valid_tag_ids]
@@ -301,26 +303,6 @@ class KnowledgeService(BaseService):
             inherited_tag_ids,
         )
         return new_version
-
-
-class TagService(BaseService):
-    """知识标签应用服务。"""
-
-    @transaction.atomic
-    def delete(self, pk: int) -> Tag:
-        """删除标签，同时解除已有引用。"""
-        tag = Tag.objects.filter(pk=pk).first()
-        self.validate_not_none(tag, f'标签 {pk} 不存在')
-
-        if tag.tag_type == 'LINE':
-            Knowledge.objects.filter(line_tag_id=tag.id).update(line_tag=None)
-            from apps.questions.models import Question
-            Question.objects.filter(line_tag_id=tag.id).update(line_tag=None)
-        else:
-            tag.knowledge_items.clear()
-
-        tag.delete()
-        return tag
 
 
 class DocumentParserService:

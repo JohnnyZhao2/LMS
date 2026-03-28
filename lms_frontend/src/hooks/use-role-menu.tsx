@@ -7,6 +7,7 @@ import {
   Users,
   HelpCircle,
   FileSearch,
+  Tags,
   BarChart3,
   SquareCheck,
   SquareTerminal,
@@ -54,6 +55,14 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/knowledge`,
         icon: <BookOpen className="w-4 h-4" />,
         label: isStudentLike ? '知识中心' : '知识管理',
+      });
+    }
+
+    if (hasAnyPermission(['tag.view'])) {
+      menu.push({
+        key: `${rolePrefix}/tags`,
+        icon: <Tags className="w-4 h-4" />,
+        label: '标签管理',
       });
     }
 

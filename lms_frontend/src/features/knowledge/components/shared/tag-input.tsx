@@ -2,11 +2,13 @@ import * as React from 'react';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { useKnowledgeTags, useCreateTag } from '../../api/get-tags';
+import { ApiError } from '@/lib/api-client';
 import { showApiError } from '@/utils/error-handler';
+import { useCreateTag, useScopedTags, useUpdateTag } from '../../api/get-tags';
 
 interface TagInputProps {
-  selectedTags: { id: number; name: string }[];
+  applicableTo: 'knowledge' | 'question';
+  selectedTags: { id: number; name?: string }[];
   onAdd: (tag: { id: number; name: string }) => void;
   onRemove: (tagId: number) => void;
   /** 不显示已选标签 chips（由外部渲染） */
@@ -14,14 +16,16 @@ interface TagInputProps {
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
+  applicableTo,
   selectedTags,
   onAdd,
   onRemove,
   hideChips = false,
 }) => {
   const [input, setInput] = React.useState('');
-  const { data: allTags = [] } = useKnowledgeTags();
+  const { data: allTags = [] } = useScopedTags(applicableTo);
   const createTag = useCreateTag();
+  const updateTag = useUpdateTag();
 
   // 输入时匹配的已有标签（排除已选）
   const matchedTags = input.trim()
@@ -63,10 +67,45 @@ export const TagInput: React.FC<TagInputProps> = ({
 
     // 新建
     try {
-      const newTag = await createTag.mutateAsync({ name, tag_type: 'TAG' });
+      const newTag = await createTag.mutateAsync({
+        name,
+        tag_type: 'TAG',
+        current_module: applicableTo,
+      });
       onAdd({ id: newTag.id, name: newTag.name });
       setInput('');
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        typeof error.data === 'object' &&
+        error.data !== null &&
+        'details' in error.data
+      ) {
+        const details = (error.data as {
+          details?: {
+            existing_tag_id?: number;
+            requires_scope_extension?: boolean;
+          };
+        }).details;
+        if (details?.existing_tag_id && details.requires_scope_extension) {
+          const shouldExtend = window.confirm(`已存在同名标签「${name}」，是否扩展到当前模块并复用？`);
+          if (!shouldExtend) {
+            return;
+          }
+          try {
+            const reusedTag = await updateTag.mutateAsync({
+              id: details.existing_tag_id,
+              data: { current_module: applicableTo },
+            });
+            onAdd({ id: reusedTag.id, name: reusedTag.name });
+            setInput('');
+            return;
+          } catch (updateError) {
+            showApiError(updateError, '扩展标签范围失败');
+            return;
+          }
+        }
+      }
       showApiError(error, '创建标签失败');
     }
   };
@@ -83,7 +122,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         <div className="taginput-chips">
           {selectedTags.map((t) => (
             <span key={t.id} className="taginput-chip">
-              {t.name}
+              {t.name || allTags.find((item) => item.id === t.id)?.name || `#${t.id}`}
               <button
                 type="button"
                 onClick={() => onRemove(t.id)}

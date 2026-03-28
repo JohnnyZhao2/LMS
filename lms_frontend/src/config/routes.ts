@@ -8,6 +8,7 @@ export const ROUTES = {
   AUDIT_LOGS: '/audit-logs',
   AUDIT_LOG_POLICY: '/audit-logs/policy',
   KNOWLEDGE: '/knowledge',
+  TAGS: '/tags',
   TASKS: '/tasks',
   PERSONAL: '/personal',
   SPOT_CHECKS: '/spot-checks',

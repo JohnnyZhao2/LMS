@@ -2,7 +2,6 @@
 Knowledge views module.
 Split into:
 - knowledge.py: Knowledge document CRUD, stats
-- tags.py: Tag management views
 - document.py: Document parsing views
 """
 from .knowledge import (
@@ -11,11 +10,6 @@ from .knowledge import (
     KnowledgeListCreateView,
     KnowledgeStatsView,
     StudentTaskKnowledgeDetailView,
-)
-from .tags import (
-    TagCreateView,
-    TagDetailView,
-    TagListView,
 )
 from .document import (
     ParseDocumentView,
@@ -28,10 +22,6 @@ __all__ = [
     'KnowledgeStatsView',
     'StudentTaskKnowledgeDetailView',
     'KnowledgeIncrementViewCountView',
-    # Tag views
-    'TagListView',
-    'TagCreateView',
-    'TagDetailView',
     # Document views
     'ParseDocumentView',
 ]

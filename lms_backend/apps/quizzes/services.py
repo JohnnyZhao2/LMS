@@ -12,8 +12,8 @@ from typing import List, Optional
 from django.db import transaction
 from django.db.models import Max
 
-from apps.knowledge.models import Tag
 from apps.questions.models import Question
+from apps.tags.models import Tag
 from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action

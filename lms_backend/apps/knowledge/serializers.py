@@ -4,7 +4,9 @@ Serializers for knowledge management.
 from django.utils.html import strip_tags
 from rest_framework import serializers
 
-from .models import Knowledge, Tag
+from apps.tags.serializers import TagSimpleSerializer
+
+from .models import Knowledge
 
 
 class RelatedLinkSerializer(serializers.Serializer):
@@ -39,27 +41,6 @@ def _normalize_related_links(related_links):
         })
 
     return normalized_links
-
-
-class TagSerializer(serializers.ModelSerializer):
-    """
-    标签序列化器
-    """
-    tag_type_display = serializers.CharField(source='get_tag_type_display', read_only=True)
-
-    class Meta:
-        model = Tag
-        fields = ['id', 'name', 'color', 'tag_type', 'tag_type_display', 'sort_order', 'is_active']
-        read_only_fields = ['id']
-
-
-class TagSimpleSerializer(serializers.ModelSerializer):
-    """
-    标签简单序列化器（用于知识列表）
-    """
-    class Meta:
-        model = Tag
-        fields = ['id', 'name', 'color']
 class KnowledgeListSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge list view.

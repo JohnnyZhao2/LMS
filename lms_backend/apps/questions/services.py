@@ -11,7 +11,7 @@ from typing import Optional
 
 from django.db import transaction
 
-from apps.knowledge.models import Tag
+from apps.tags.models import Tag
 from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
@@ -127,6 +127,7 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
+        tag_ids = data.pop('tag_ids', [])
         # 3. 创建题目
         question = Question.objects.create(**data)
         Question.objects.filter(
@@ -135,6 +136,8 @@ class QuestionService(BaseService):
         # 4. 设置条线类型
         if line_tag_id is not None:
             self._set_line_tag(question, line_tag_id)
+        if tag_ids is not None:
+            question.tags.set(self._get_tag_ids_or_error(tag_ids))
 
         return question
 
@@ -172,6 +175,8 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
+        tag_ids_provided = 'tag_ids' in data
+        tag_ids = data.pop('tag_ids', None)
         # 更新题目
         data['updated_by'] = self.user
         if data:
@@ -180,6 +185,7 @@ class QuestionService(BaseService):
             question.save(update_fields=list(data.keys()))
         # 更新条线类型
         self._apply_line_tag_change(question, line_tag_id, line_tag_provided)
+        self._apply_tag_change(question, tag_ids, tag_ids_provided)
         return question
 
     @transaction.atomic
@@ -282,7 +288,7 @@ class QuestionService(BaseService):
         line_tag = Tag.objects.filter(
             id=line_tag_id,
             tag_type='LINE',
-            is_active=True
+            is_active=True,
         ).first()
         if not line_tag:
             raise BusinessError(
@@ -291,6 +297,35 @@ class QuestionService(BaseService):
             )
         question.line_tag = line_tag
         question.save(update_fields=['line_tag'])
+
+    def _get_tag_ids_or_error(self, tag_ids: list[int]) -> list[int]:
+        if not tag_ids:
+            return []
+
+        valid_tag_ids = set(
+            Tag.objects.filter(
+                id__in=tag_ids,
+                tag_type='TAG',
+                is_active=True,
+                allow_question=True,
+            ).values_list('id', flat=True)
+        )
+        invalid_tag_ids = [tag_id for tag_id in tag_ids if tag_id not in valid_tag_ids]
+        if invalid_tag_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='包含无效的题目标签ID',
+                details={'invalid_tag_ids': invalid_tag_ids},
+            )
+
+        deduped_tag_ids = []
+        seen_ids = set()
+        for tag_id in tag_ids:
+            if tag_id in seen_ids:
+                continue
+            seen_ids.add(tag_id)
+            deduped_tag_ids.append(tag_id)
+        return deduped_tag_ids
 
     def _apply_line_tag_change(
         self,
@@ -308,6 +343,16 @@ class QuestionService(BaseService):
             question.save(update_fields=['line_tag'])
             return
         self._set_line_tag(question, line_tag_id)
+
+    def _apply_tag_change(
+        self,
+        question: Question,
+        tag_ids: Optional[list[int]],
+        tag_ids_provided: bool,
+    ) -> None:
+        if not tag_ids_provided:
+            return
+        question.tags.set(self._get_tag_ids_or_error(tag_ids or []))
 
     def _prepare_version_data(self, data: dict) -> None:
         """
@@ -336,6 +381,8 @@ class QuestionService(BaseService):
         # 提取条线类型数据
         line_tag_provided = 'line_tag_id' in data
         line_tag_id = data.pop('line_tag_id', None)
+        tag_ids_provided = 'tag_ids' in data
+        tag_ids = data.pop('tag_ids', None)
         # 准备新版本数据：自动复制所有内容字段
         new_question_data = {
             'resource_uuid': source.resource_uuid,
@@ -354,6 +401,12 @@ class QuestionService(BaseService):
         elif source.line_tag:
             new_question.line_tag = source.line_tag
             new_question.save(update_fields=['line_tag'])
+        inherited_tag_ids = (
+            tag_ids
+            if tag_ids_provided
+            else list(source.tags.values_list('id', flat=True))
+        )
+        new_question.tags.set(self._get_tag_ids_or_error(inherited_tag_ids))
         # 取消其他版本的 is_current 标志
         Question.objects.filter(
             resource_uuid=source.resource_uuid

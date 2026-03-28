@@ -6,12 +6,13 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, RolePermission
-from apps.knowledge.models import Knowledge, Tag
+from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Answer, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
+from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -79,7 +80,14 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         department=department,
     )
 
-    line_tag = Tag.objects.create(name='条线A', tag_type='LINE', sort_order=1, is_active=True)
+    line_tag = Tag.objects.create(
+        name='条线A',
+        tag_type='LINE',
+        allow_knowledge=True,
+        allow_question=True,
+        sort_order=1,
+        is_active=True,
+    )
 
     knowledge = Knowledge.objects.create(
         title='离职用户知识',

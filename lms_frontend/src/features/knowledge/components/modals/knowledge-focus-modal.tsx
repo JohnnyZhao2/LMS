@@ -204,6 +204,7 @@ const CreateKnowledgeFocus: React.FC<{
       {showTagPanel && (
         <div className="akm-tag-panel">
           <TagInput
+            applicableTo="knowledge"
             selectedTags={selectedTags}
             onAdd={(tag) => setSelectedTags((prev) => [...prev, tag])}
             onRemove={(id) => setSelectedTags((prev) => prev.filter((t) => t.id !== id))}

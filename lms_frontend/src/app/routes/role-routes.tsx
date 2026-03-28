@@ -21,6 +21,7 @@ const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-prev
 
 // Knowledge
 const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
+const TagManagementPage = lazy(() => import('@/features/tags/components/tag-management-page').then(m => ({ default: m.TagManagementPage })));
 
 // Quiz Center
 const QuizCenter = lazy(() => import('@/features/quiz-center/components/quiz-center').then(m => ({ default: m.QuizCenter })));
@@ -130,6 +131,16 @@ export const roleRoutes = [
   />,
 
   // Knowledge
+  <Route
+    key="tags"
+    path="tags"
+    element={
+      <ProtectedRoute requiredPermissions={['tag.view']}>
+        <TagManagementPage />
+      </ProtectedRoute>
+    }
+  />,
+
   <Route
     key="knowledge-list"
     path="knowledge"
