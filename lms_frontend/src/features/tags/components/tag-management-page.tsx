@@ -65,7 +65,7 @@ export const TagManagementPage: React.FC = () => {
 
   const handleSubmit = async (payload: {
     name: string;
-    color: string;
+    color?: string;
     sort_order: number;
     is_active: boolean;
     allow_knowledge: boolean;
@@ -167,7 +167,7 @@ export const TagManagementPage: React.FC = () => {
                 <TableRow>
                   <TableHead>名称</TableHead>
                   <TableHead>适用范围</TableHead>
-                  <TableHead>颜色</TableHead>
+                  {activeTab === 'LINE' && <TableHead>颜色</TableHead>}
                   <TableHead>排序</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="w-40">操作</TableHead>
@@ -195,12 +195,14 @@ export const TagManagementPage: React.FC = () => {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full border border-border" style={{ backgroundColor: tag.color }} />
-                        <span className="text-xs text-text-muted">{tag.color}</span>
-                      </div>
-                    </TableCell>
+                    {activeTab === 'LINE' && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="h-4 w-4 rounded-full border border-border" style={{ backgroundColor: tag.color }} />
+                          <span className="text-xs text-text-muted">{tag.color}</span>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>{tag.sort_order}</TableCell>
                     <TableCell>
                       <span className={tag.is_active ? 'text-emerald-600' : 'text-text-muted'}>
@@ -227,7 +229,7 @@ export const TagManagementPage: React.FC = () => {
                 ))}
                 {tags.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-12 text-center text-sm text-text-muted">
+                    <TableCell colSpan={activeTab === 'LINE' ? 6 : 5} className="py-12 text-center text-sm text-text-muted">
                       当前没有匹配的标签
                     </TableCell>
                   </TableRow>
@@ -261,4 +263,3 @@ export const TagManagementPage: React.FC = () => {
     </div>
   );
 };
-

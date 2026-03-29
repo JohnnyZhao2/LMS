@@ -23,7 +23,7 @@ interface TagFormDialogProps {
   tag?: Tag | null;
   onSubmit: (payload: {
     name: string;
-    color: string;
+    color?: string;
     sort_order: number;
     is_active: boolean;
     allow_knowledge: boolean;
@@ -61,7 +61,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
   const handleSubmit = async () => {
     await onSubmit({
       name: name.trim(),
-      color,
+      color: tagType === 'LINE' ? color : undefined,
       sort_order: Number(sortOrder) || 0,
       is_active: isActive,
       allow_knowledge: tagType === 'LINE' ? true : allowKnowledge,
@@ -90,17 +90,19 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="tag-color">颜色</Label>
-              <Input
-                id="tag-color"
-                type="color"
-                value={color}
-                onChange={(event) => setColor(event.target.value)}
-                className="h-10 p-1"
-              />
-            </div>
+          <div className={`grid gap-3 ${tagType === 'LINE' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {tagType === 'LINE' && (
+              <div className="space-y-2">
+                <Label htmlFor="tag-color">颜色</Label>
+                <Input
+                  id="tag-color"
+                  type="color"
+                  value={color}
+                  onChange={(event) => setColor(event.target.value)}
+                  className="h-10 p-1"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="tag-sort">排序</Label>
               <Input
@@ -159,4 +161,3 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
     </Dialog>
   );
 };
-

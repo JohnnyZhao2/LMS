@@ -32,7 +32,7 @@ const syncKeyCounter = (items: InlineQuestionItem[]) => {
 };
 
 /** 从 Question API 对象创建 InlineQuestionItem */
-const questionToInline = (q: Question, collapsed = false): InlineQuestionItem => ({
+const questionToInline = (q: Question): InlineQuestionItem => ({
   key: nextKey(),
   questionId: q.id,
   resourceUuid: q.resource_uuid,
@@ -45,7 +45,6 @@ const questionToInline = (q: Question, collapsed = false): InlineQuestionItem =>
   explanation: q.explanation || '',
   score: q.score || '1',
   saved: true,
-  collapsed,
 });
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -103,7 +102,7 @@ export const QuizForm: React.FC = () => {
         const sorted = [...(quizData.questions ?? [])].sort((a, b) => a.order - b.order);
         const loadedItems = await Promise.all(
           sorted.map((qq) => apiClient.get<Question>(`/questions/${qq.question}/`).then((q) => {
-            const item = questionToInline(q, true);
+            const item = questionToInline(q);
             item.score = qq.score;
             return item;
           })),
@@ -127,7 +126,7 @@ export const QuizForm: React.FC = () => {
       if (qidParam) {
         const qids = qidParam.split(',').map(Number).filter(Boolean);
         loadedItems = await Promise.all(
-          qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q, true))),
+          qids.map((qid) => apiClient.get<Question>(`/questions/${qid}/`).then((q) => questionToInline(q))),
         );
         if (cancelled) return;
       }
@@ -160,7 +159,7 @@ export const QuizForm: React.FC = () => {
     if (items.some(i => i.resourceUuid === q.resource_uuid)) return toast.warning('该题目已在试卷中');
     try {
       const full = await apiClient.get<Question>(`/questions/${q.id}/`);
-      const item = questionToInline(full, false);
+      const item = questionToInline(full);
       appendItemPreservingFocus(item);
       toast.success('已添加到试卷');
     } catch (e) {
@@ -184,7 +183,6 @@ export const QuizForm: React.FC = () => {
       explanation: '',
       score: '1',
       saved: false,
-      collapsed: false,
     };
     appendItemPreservingFocus(item);
   }, [appendItemPreservingFocus, filterLineTypeId]);
@@ -210,11 +208,6 @@ export const QuizForm: React.FC = () => {
       [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
       return next;
     });
-  }, []);
-
-  // 折叠/展开
-  const handleToggleCollapse = useCallback((key: string) => {
-    setItems(prev => prev.map(i => i.key === key ? { ...i, collapsed: !i.collapsed } : i));
   }, []);
 
   // 排序
@@ -306,7 +299,6 @@ export const QuizForm: React.FC = () => {
           passScore={passScore}
           onSelectItem={(key) => {
             setActiveKey(key);
-            setItems(prev => prev.map(i => i.key === key ? { ...i, collapsed: false } : i));
           }}
           onDurationChange={setDuration}
           onPassScoreChange={setPassScore}
@@ -316,12 +308,10 @@ export const QuizForm: React.FC = () => {
         {/* Center: 文档流编辑器 */}
         <QuizDocumentEditor
           items={items}
-          lineTypes={lineTypes}
           activeKey={activeKey}
           onUpdateItem={handleUpdateItem}
           onRemoveItem={handleRemoveItem}
           onMoveItem={handleMoveItem}
-          onToggleCollapse={handleToggleCollapse}
           onAddBlank={handleAddBlank}
           onFocusItem={setActiveKey}
         />

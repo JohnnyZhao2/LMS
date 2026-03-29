@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
 import { AnswerInput, OptionsInput } from '@/features/quiz-center/questions/components/question-form-inputs';
-import type { QuestionType, Tag } from '@/types/api';
+import type { QuestionType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
 
 const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
@@ -22,24 +22,23 @@ const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
 
 interface QuizDocumentEditorProps {
   items: InlineQuestionItem[];
-  lineTypes?: Tag[];
   activeKey: string | null;
   onUpdateItem: (key: string, patch: Partial<InlineQuestionItem>) => void;
   onRemoveItem: (key: string) => void;
   onMoveItem: (key: string, direction: 'up' | 'down') => void;
-  onToggleCollapse: (key: string) => void;
   onAddBlank: (questionType?: QuestionType) => void;
   onFocusItem: (key: string) => void;
 }
 
+/**
+ * 试卷文档流内联编辑：题目内容、分值、选项与解析。不展示条线标签编辑，条线归属在题库中心维护。
+ */
 export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   items,
-  lineTypes,
   activeKey,
   onUpdateItem,
   onRemoveItem,
   onMoveItem,
-  onToggleCollapse,
   onAddBlank,
   onFocusItem,
 }) => {
@@ -91,11 +90,9 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
                   index={index}
                   total={items.length}
                   isActive={item.key === activeKey}
-                  lineTypes={lineTypes}
                   onUpdate={(patch) => onUpdateItem(item.key, patch)}
                   onRemove={() => onRemoveItem(item.key)}
                   onMove={(dir) => onMoveItem(item.key, dir)}
-                  onToggleCollapse={() => onToggleCollapse(item.key)}
                   onFocus={() => onFocusItem(item.key)}
                 />
               </div>
@@ -164,11 +161,9 @@ interface InlineQuestionCardProps {
   index: number;
   total: number;
   isActive: boolean;
-  lineTypes?: Tag[];
   onUpdate: (patch: Partial<InlineQuestionItem>) => void;
   onRemove: () => void;
   onMove: (direction: 'up' | 'down') => void;
-  onToggleCollapse: () => void;
   onFocus: () => void;
 }
 
@@ -177,11 +172,9 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
   index,
   total,
   isActive,
-  lineTypes,
   onUpdate,
   onRemove,
   onMove,
-  onToggleCollapse,
   onFocus,
 }) => {
   const isChoiceType = item.questionType === 'SINGLE_CHOICE' || item.questionType === 'MULTIPLE_CHOICE';
@@ -204,28 +197,29 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
         )}
       >
         <div className="flex items-center gap-3">
-          <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
-            {getQuestionTypeLabel(item.questionType)}
-          </Badge>
-          {!item.questionId && (
-            <div className="flex rounded-md bg-muted p-0.5">
-              {QUESTION_TYPES.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdate({ questionType: value });
-                  }}
-                  className={cn(
-                    'rounded-[6px] px-2 py-1 text-[10px] font-semibold transition-all',
-                    item.questionType === value ? 'bg-background text-foreground shadow-sm' : 'text-text-muted hover:text-foreground',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          {item.questionId ? (
+            <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
+              {getQuestionTypeLabel(item.questionType)}
+            </Badge>
+          ) : (
+            <Select
+              value={item.questionType}
+              onValueChange={(value) => onUpdate({ questionType: value as QuestionType })}
+            >
+              <SelectTrigger
+                className="h-7 w-[110px] rounded-md border-border bg-muted text-[11px] font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {QUESTION_TYPES.map(({ value, label }) => (
+                  <SelectItem key={value} value={value} className="text-[11px]">
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
@@ -249,9 +243,6 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
             <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:text-foreground" disabled={index === total - 1} onClick={(e) => { e.stopPropagation(); onMove('down'); }}>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:text-foreground" onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}>
-              {item.collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:bg-destructive-50 hover:text-destructive-500" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -259,43 +250,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
         </div>
       </div>
 
-      {item.collapsed ? (
-        <div className="px-8 py-6">
-          <p className="line-clamp-2 text-[14px] leading-relaxed text-foreground/80">
-            {item.content || '未填写题目内容'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-8 px-8 py-8">
-          <div className="flex items-center gap-3">
-            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-              所属条线 <span className="normal-case font-normal text-text-muted/50">选填</span>
-            </Label>
-            <Select
-              value={item.lineTagId == null ? undefined : item.lineTagId.toString()}
-              onValueChange={(val) => onUpdate({ lineTagId: Number(val) })}
-            >
-              <SelectTrigger className="h-8 w-40 rounded-lg border-border bg-background text-[12px]"><SelectValue placeholder="选择条线" /></SelectTrigger>
-              <SelectContent>
-                {lineTypes?.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {item.lineTagId != null && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-[11px] text-text-muted hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdate({ lineTagId: null });
-                }}
-              >
-                清空
-              </Button>
-            )}
-          </div>
-
+      <div className="space-y-8 px-8 py-8">
           <div className="space-y-3">
             <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">题目内容</Label>
             <Textarea
@@ -344,8 +299,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
               />
             </div>
           </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

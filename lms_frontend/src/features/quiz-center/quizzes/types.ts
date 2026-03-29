@@ -29,6 +29,4 @@ export interface InlineQuestionItem {
   score: string;
   /** 是否已保存到后端 */
   saved: boolean;
-  /** 是否折叠 */
-  collapsed: boolean;
 }
