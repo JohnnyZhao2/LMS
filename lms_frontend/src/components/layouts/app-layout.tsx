@@ -2,35 +2,16 @@ import * as React from 'react'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './sidebar'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { useCurrentRole } from '@/hooks/use-current-role'
-import { cn } from '@/lib/utils'
 
 interface AppLayoutProps {
   children: React.ReactNode
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
-  const currentRole = useCurrentRole()
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
 
-  const themeClass = React.useMemo(() => {
-    switch (currentRole) {
-      case 'STUDENT':
-      case 'TEAM_MANAGER':
-        return 'theme-student'
-      case 'MENTOR':
-      case 'DEPT_MANAGER':
-        return 'theme-mentor'
-      case 'ADMIN':
-      case 'SUPER_ADMIN':
-        return 'theme-admin'
-      default:
-        return 'theme-admin'
-    }
-  }, [currentRole])
-
   return (
-    <div className={cn('flex min-h-screen bg-muted', themeClass)}>
+    <div className="flex min-h-screen bg-muted">
       {/* Sidebar - 桌面端 */}
       <div className="hidden w-[272px] shrink-0 lg:block" aria-hidden="true" />
       <div className="fixed inset-y-0 left-0 z-30 hidden w-[272px] bg-white lg:block">

@@ -1,73 +1,189 @@
-# Learning Management System (LMS)
+# LMS
 
-A full-stack Learning Management System built with Django REST Framework and React.
+企业内部学习管理系统，覆盖“学、练、考、评”全流程。
 
-## Project Structure
+当前仓库以前后端分离方式组织：
 
-- `lms_backend/` - Django REST Framework backend
-- `lms_frontend/` - React frontend
-- `docs/` - Documentation
+- `lms_backend/`：Django REST API + MySQL
+- `lms_frontend/`：React 19 + Vite + TypeScript + Tailwind CSS 4
 
-## Quick Start
+后续如果继续精简文档，以本文件为主，其他 README/说明文档建议逐步归档或删除。
 
-### Backend Setup
+## 核心能力
 
-1. Install Python dependencies:
+- 用户认证与角色切换
+- 角色权限与用户级权限覆盖
+- 知识库、题库、试卷管理
+- 学习/练习/考试任务分配
+- 提交记录、自动评分、人工阅卷
+- 抽查记录、仪表盘、操作日志
 
-```bash
-pip install -r lms_backend/requirements.txt
+## 目录结构
+
+```text
+LMS/
+├── lms_backend/
+│   ├── apps/         # 业务模块
+│   ├── config/       # Django 配置、路由、settings
+│   ├── core/         # 共享基类、异常、响应、分页
+│   └── tests/        # 集成测试
+├── lms_frontend/
+│   ├── src/app/      # 应用壳、路由
+│   ├── src/features/ # 按业务拆分的前端模块
+│   ├── src/components/ui/
+│   └── src/lib/
+└── README.md
 ```
 
-2. Set up environment variables:
+## 技术栈
+
+### 后端
+
+- Python 3.9+
+- Django 4.2
+- Django REST Framework
+- MySQL 8.0
+- drf-spectacular
+- pytest / pytest-django / hypothesis / factory-boy
+
+### 前端
+
+- React 19
+- Vite 7
+- TypeScript 5
+- Tailwind CSS 4
+- React Router
+- TanStack Query
+- Radix UI
+- Zod
+
+## 快速开始
+
+### 1. 准备环境
+
+建议本机安装：
+
+- Python 3.9+
+- Node.js 20+
+- MySQL 8.0
+
+先创建数据库：
 
 ```bash
-cp lms_backend/.env.example lms_backend/.env
+mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-3. Run migrations:
+### 2. 配置后端环境变量
+
+后端按环境读取 `lms_backend/.env.<env>` 文件。开发环境默认读取：
+
+- `lms_backend/.env.development`
+
+可直接创建：
+
+```bash
+cat > lms_backend/.env.development <<'EOF'
+DJANGO_ENV=development
+DB_NAME=lms
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_HOST=127.0.0.1
+DB_PORT=3306
+SECRET_KEY=dev-secret-key
+EOF
+```
+
+说明：
+
+- `manage.py` 默认使用 `config.settings.development`
+- `pytest` 也默认走开发配置
+- 前端默认请求 `http://127.0.0.1:8000/api`
+
+### 3. 启动后端
 
 ```bash
 cd lms_backend
-python manage.py migrate
-```
-
-4. Start the development server:
-
-```bash
+pip install -r requirements.txt
+python manage.py migrate --settings=config.settings.development
+python manage.py init_data --settings=config.settings.development
 python manage.py runserver
 ```
 
-### Frontend Setup
+启动后可访问：
 
-1. Install dependencies:
+- API 根路径：`http://127.0.0.1:8000/api`
+- Swagger：`http://127.0.0.1:8000/api/docs/`
+- Redoc：`http://127.0.0.1:8000/api/redoc/`
+
+### 4. 启动前端
 
 ```bash
 cd lms_frontend
 npm install
-```
-
-2. Start the development server:
-
-```bash
 npm run dev
 ```
 
-## Environment Configuration
+常用命令：
 
-This project uses environment variables for sensitive configuration. See [Environment Setup Guide](docs/deployment/environment-setup.md) for detailed instructions.
+```bash
+npm run build
+npm run lint
+npm run preview
+```
 
-Quick start:
+## 测试
 
-1. Copy environment template: `cp lms_backend/.env.example lms_backend/.env`
-2. Edit `.env` with your database credentials and a secure SECRET_KEY
+后端测试位于 `lms_backend/tests/`，默认使用开发配置并自动创建测试库 `test_<DB_NAME>`。
 
-## Security Features
+```bash
+cd lms_backend
+python -m pytest
+```
 
-- **API Rate Limiting**: Protects against abuse with configurable rate limits per endpoint
-  - Anonymous: 100 req/hour
-  - Authenticated: 1000 req/hour
-  - Auth endpoints: 10 req/minute
+常见单测入口：
 
-## Documentation
+```bash
+python -m pytest tests/integration/test_auth_refresh.py -q -x
+python -m pytest tests/integration/test_api_contracts.py -q -x
+python -m pytest tests/integration/test_dashboard.py -q -x
+```
 
-- [Environment Setup Guide](docs/deployment/environment-setup.md)
+说明：
+
+- 运行 Django 测试和迁移前，需要本机 MySQL 可连接
+- 前端当前没有成体系测试基建，只有少量零散测试文件
+
+## 开发约定
+
+- 不做向后兼容，旧格式可直接破坏性调整
+- API 响应统一为 `{ code, message, data }`
+- 前端按 `features` 组织业务代码
+- 后端复杂读查询优先抽到 `selectors.py`
+
+## 当前模块
+
+后端已启用模块：
+
+- `users`
+- `authorization`
+- `auth`
+- `tags`
+- `knowledge`
+- `questions`
+- `quizzes`
+- `tasks`
+- `grading`
+- `submissions`
+- `spot_checks`
+- `dashboard`
+- `activity_logs`
+
+## 清理建议
+
+仓库里仍有一批历史文档、设计稿、模板 README 和本地产物，后续可以继续精简。建议优先保留：
+
+- 根目录 `README.md`
+- `AGENTS.md`
+- 真正仍在维护的设计/规范文档
+
+其余说明文件可视内容合并后再删。
