@@ -9,10 +9,12 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Load only the current environment file: .env.<env>
+# Load a single environment file: .env
+load_dotenv(BASE_DIR / '.env', override=True)
+
 SETTINGS_MODULE = os.getenv('DJANGO_SETTINGS_MODULE', '')
 DEFAULT_DJANGO_ENV = 'development'
-if SETTINGS_MODULE.endswith('.production'):
+if SETTINGS_MODULE.endswith('.production') and 'DJANGO_ENV' not in os.environ:
     DEFAULT_DJANGO_ENV = 'production'
 
 DJANGO_ENV = os.getenv('DJANGO_ENV', DEFAULT_DJANGO_ENV).strip().lower()
@@ -20,7 +22,6 @@ if DJANGO_ENV not in {'development', 'production'}:
     raise ValueError(
         f'Unsupported DJANGO_ENV "{DJANGO_ENV}". Use "development" or "production".'
     )
-load_dotenv(BASE_DIR / f'.env.{DJANGO_ENV}', override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 secret_key = os.getenv('SECRET_KEY')

@@ -106,7 +106,7 @@ export const StudentDashboard: React.FC = () => {
             <div className="space-y-1 flex flex-col pt-2">
               {!selectedTask ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
-                  <div className="p-4 rounded-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative group/icon">
+                  <div className="p-4 rounded-full bg-slate-50 overflow-hidden relative group/icon">
                     <TrendingUp className="w-8 h-8 opacity-20 group-hover/icon:scale-110 transition-transform duration-500" strokeWidth={0.5} />
                   </div>
                   <p className="text-[10px] font-black tracking-[0.25em] text-slate-400/40">选择任务查看同伴进度</p>
@@ -134,8 +134,8 @@ export const StudentDashboard: React.FC = () => {
                       className={cn(
                         "group/peer flex items-center gap-5 p-3.5 rounded-[18px] transition-all duration-500",
                         p.is_me
-                          ? "bg-primary/[0.03] dark:bg-primary/5 shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
-                          : "hover:bg-slate-50/60 dark:hover:bg-slate-900/40"
+                          ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
+                          : "hover:bg-slate-50/60"
                       )}
                     >
                       <div className={cn(
@@ -143,7 +143,7 @@ export const StudentDashboard: React.FC = () => {
                         index === 0 ? "text-amber-500 font-black" :
                           index === 1 ? "text-slate-400" :
                             index === 2 ? "text-orange-400" :
-                              "text-slate-200 dark:text-slate-800"
+                              "text-slate-200"
                       )}>
                         {String(index + 1).padStart(2, '0')}
                       </div>
@@ -152,19 +152,19 @@ export const StudentDashboard: React.FC = () => {
                         <div className="flex items-center justify-between mb-2">
                           <span className={cn(
                             "text-[13px] font-bold tracking-tight transition-colors",
-                            p.is_me ? "text-primary" : "text-slate-600 dark:text-slate-400"
+                            p.is_me ? "text-primary" : "text-slate-600"
                           )}>
                             {p.is_me ? '我' : p.name}
                           </span>
                           <span className={cn(
                             "text-[10px] font-black transition-colors",
-                            p.is_me ? "text-primary/70" : "text-slate-300 dark:text-slate-700"
+                            p.is_me ? "text-primary/70" : "text-slate-300"
                           )}>
                             {Math.round(p.progress)}%
                           </span>
                         </div>
 
-                        <div className="h-[1.5px] w-full bg-slate-100 dark:bg-slate-800/50 rounded-full overflow-hidden">
+                        <div className="h-[1.5px] w-full bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className={cn(
                               "h-full transition-all duration-1000 ease-out",

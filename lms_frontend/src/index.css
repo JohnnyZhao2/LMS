@@ -1,8 +1,5 @@
 /* ============================================
-   主题字体 - 使用系统字体栈（内网部署）
-   Light: 系统无衬线 (现代专业)
-   Scholar: 宋体 + 系统无衬线 (中式书院)
-   Dark: 系统无衬线 (赛博朋克)
+   全局主题变量 - 固定单主题
    ============================================ */
 
 @import "tailwindcss";
@@ -150,12 +147,9 @@
 }
 
 /* ============================================
-   🌞 主题定义 - Light (Flat Design 扁平风格)
-   风格：现代、专业、干净、无阴影
-   字体：系统无衬线字体
+   全局默认主题
    ============================================ */
-:root,
-[data-theme="light"] {
+:root {
     /* 噪点纹理 - 本地 SVG data URL */
     --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
@@ -246,221 +240,12 @@
     --theme-gray-800: #1E293B;
     --theme-gray-900: #0F172A;
 
-    /* 特效变量 */
-    --theme-shadow: none;
-    --theme-card-shadow: none;
-    --theme-glow: none;
     --theme-transition: 150ms ease;
 }
 
 /* ============================================
-   📚 主题定义 - Scholar (书院风格)
-   设计理念：夸张极简主义 (Exaggerated Minimalism)
-   - 大量留白、高对比度、单一强调色
-   - 传统与现代融合，简洁大气
-   字体：宋体 (标题) + 系统无衬线 (正文)
-   主色：招商银行红 (#C41230) + 金色点缀 (#CA8A04)
-   ============================================ */
-[data-theme="scholar"] {
-    /* 字体 - 中式书院风格 */
-    --theme-font-sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
-    --theme-font-heading: "Songti SC", "STSong", "SimSun", Georgia, serif;
-
-    /* 圆角 - 极致方正 (Login Page DNA) */
-    --theme-radius-sm: 2px;
-    --theme-radius-md: 4px;
-    --theme-radius-lg: 6px;
-    --theme-radius-xl: 8px;
-
-    /* 主色调 - 招商银行红 + 宣纸白背景 */
-    --theme-background: #FFFBF5;
-    --theme-foreground: #1A1A1A;
-    --theme-primary: #C41230;
-    --theme-primary-hover: #A30F28;
-    --theme-secondary: #CA8A04;
-    --theme-secondary-hover: #A16207;
-    --theme-accent: #CA8A04;
-    --theme-accent-hover: #A16207;
-    --theme-muted: #F5F0E8;
-    --theme-muted-hover: #E8DFD0;
-    --theme-border: #E8DFD0;
-    --theme-text-muted: #73624D;
-    --theme-destructive: #DC2626;
-    --theme-destructive-hover: #B91C1C;
-    --theme-warning: #CA8A04;
-    --theme-warning-hover: #A16207;
-
-    /* Primary 色阶 (招行红 - Auth Page Version) */
-    --theme-primary-50: #FEF2F4;
-    --theme-primary-100: #FDE6E9;
-    --theme-primary-200: #FACDD4;
-    --theme-primary-300: #F5A3B0;
-    --theme-primary-400: #ED6B80;
-    --theme-primary-500: #E03E56;
-    --theme-primary-600: #C41230;
-    --theme-primary-700: #A30F28;
-    --theme-primary-800: #881024;
-    --theme-primary-900: #751223;
-
-    /* Secondary 色阶 (金色) */
-    --theme-secondary-50: #FEFCE8;
-    --theme-secondary-100: #FEF9C3;
-    --theme-secondary-200: #FEF08A;
-    --theme-secondary-300: #FDE047;
-    --theme-secondary-400: #FACC15;
-    --theme-secondary-500: #CA8A04;
-    --theme-secondary-600: #A16207;
-    --theme-secondary-700: #854D0E;
-    --theme-secondary-800: #713F12;
-    --theme-secondary-900: #422006;
-
-    /* Warning 色阶 */
-    --theme-warning-50: #FEFCE8;
-    --theme-warning-100: #FEF9C3;
-    --theme-warning-200: #FEF08A;
-    --theme-warning-300: #FDE047;
-    --theme-warning-400: #FACC15;
-    --theme-warning-500: #CA8A04;
-    --theme-warning-600: #A16207;
-    --theme-warning-700: #854D0E;
-    --theme-warning-800: #713F12;
-    --theme-warning-900: #422006;
-
-    /* Destructive 色阶 */
-    --theme-destructive-50: #FEF2F2;
-    --theme-destructive-100: #FEE2E2;
-    --theme-destructive-200: #FECACA;
-    --theme-destructive-300: #FCA5A5;
-    --theme-destructive-400: #F87171;
-    --theme-destructive-500: #EF4444;
-    --theme-destructive-600: #DC2626;
-    --theme-destructive-700: #B91C1C;
-    --theme-destructive-800: #991B1B;
-    --theme-destructive-900: #7F1D1D;
-
-    /* Gray 色阶 (Warm Paper/Ink) */
-    --theme-gray-50: #FFFBF5;
-    --theme-gray-100: #FDF8F0;
-    --theme-gray-200: #F5F0E8;
-    --theme-gray-300: #E8DFD0;
-    --theme-gray-400: #D4C5B0;
-    --theme-gray-500: #A39075;
-    --theme-gray-600: #73624D;
-    --theme-gray-700: #4D4032;
-    --theme-gray-800: #2E261D;
-    --theme-gray-900: #1A1A1A;
-
-    /* 特效变量 - 简洁微妙 */
-    --theme-shadow: 0 1px 2px rgba(28, 25, 23, 0.05);
-    --theme-card-shadow: 0 1px 3px rgba(28, 25, 23, 0.06);
-    --theme-glow: none;
-    --theme-transition: 200ms ease;
-}
-
-/* ============================================
-   🌙 主题定义 - Dark (Cyberpunk 赛博朋克风格)
-   风格：科幻、霓虹、未来感、发光效果
-   字体：系统等宽 (标题) + 系统无衬线 (正文)
-   ============================================ */
-[data-theme="dark"] {
-    /* 字体 - 赛博朋克风格 */
-    --theme-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-    --theme-font-heading: "SF Mono", "Cascadia Code", "Consolas", "PingFang SC", "Microsoft YaHei", monospace;
-
-    /* 圆角 - 赛博朋克使用锐利边角 */
-    --theme-radius-sm: 2px;
-    --theme-radius-md: 4px;
-    --theme-radius-lg: 6px;
-    --theme-radius-xl: 8px;
-
-    /* 主色调 - 霓虹紫 + 深色背景 */
-    --theme-background: #0A0A1A;
-    --theme-foreground: #E2E8F0;
-    --theme-primary: #8B5CF6;
-    --theme-primary-hover: #7C3AED;
-    --theme-secondary: #06B6D4;
-    --theme-secondary-hover: #0891B2;
-    --theme-accent: #F43F5E;
-    --theme-accent-hover: #E11D48;
-    --theme-muted: #1E1E3F;
-    --theme-muted-hover: #2D2D5A;
-    --theme-border: #2D2D5A;
-    --theme-text-muted: #94A3B8;
-    --theme-destructive: #F43F5E;
-    --theme-destructive-hover: #E11D48;
-    --theme-warning: #FBBF24;
-    --theme-warning-hover: #F59E0B;
-
-    /* Primary 色阶 (Violet/霓虹紫) */
-    --theme-primary-50: #2E1065;
-    --theme-primary-100: #3B0764;
-    --theme-primary-200: #4C1D95;
-    --theme-primary-300: #5B21B6;
-    --theme-primary-400: #6D28D9;
-    --theme-primary-500: #7C3AED;
-    --theme-primary-600: #8B5CF6;
-    --theme-primary-700: #A78BFA;
-    --theme-primary-800: #C4B5FD;
-    --theme-primary-900: #DDD6FE;
-
-    /* Secondary 色阶 (Cyan/霓虹青) */
-    --theme-secondary-50: #083344;
-    --theme-secondary-100: #164E63;
-    --theme-secondary-200: #155E75;
-    --theme-secondary-300: #0E7490;
-    --theme-secondary-400: #0891B2;
-    --theme-secondary-500: #06B6D4;
-    --theme-secondary-600: #22D3EE;
-    --theme-secondary-700: #67E8F9;
-    --theme-secondary-800: #A5F3FC;
-    --theme-secondary-900: #CFFAFE;
-
-    /* Warning 色阶 (反转) */
-    --theme-warning-50: #78350F;
-    --theme-warning-100: #92400E;
-    --theme-warning-200: #B45309;
-    --theme-warning-300: #D97706;
-    --theme-warning-400: #F59E0B;
-    --theme-warning-500: #FBBF24;
-    --theme-warning-600: #FCD34D;
-    --theme-warning-700: #FDE68A;
-    --theme-warning-800: #FEF3C7;
-    --theme-warning-900: #FFFBEB;
-
-    /* Destructive 色阶 (Rose/霓虹粉) */
-    --theme-destructive-50: #4C0519;
-    --theme-destructive-100: #881337;
-    --theme-destructive-200: #9F1239;
-    --theme-destructive-300: #BE123C;
-    --theme-destructive-400: #E11D48;
-    --theme-destructive-500: #F43F5E;
-    --theme-destructive-600: #FB7185;
-    --theme-destructive-700: #FDA4AF;
-    --theme-destructive-800: #FECDD3;
-    --theme-destructive-900: #FFF1F2;
-
-    /* Gray 色阶 (深色反转) */
-    --theme-gray-50: #0F172A;
-    --theme-gray-100: #1E293B;
-    --theme-gray-200: #334155;
-    --theme-gray-300: #475569;
-    --theme-gray-400: #64748B;
-    --theme-gray-500: #94A3B8;
-    --theme-gray-600: #CBD5E1;
-    --theme-gray-700: #E2E8F0;
-    --theme-gray-800: #F1F5F9;
-    --theme-gray-900: #F8FAFC;
-
-    /* 特效变量 - 赛博朋克霓虹发光 */
-    --theme-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
-    --theme-card-shadow: 0 0 20px rgba(139, 92, 246, 0.2), 0 0 40px rgba(6, 182, 212, 0.1);
-    --theme-glow: 0 0 10px currentColor;
-    --theme-transition: 200ms ease;
-}
-
-/* ============================================
    🔒 Auth Page Specific Theme Scope
-   强制登录页面使用书院风格配色，不依赖全局主题切换
+   登录页局部配色覆盖
    ============================================ */
 .auth-page-scope {
     /* 强制重写变量为书院红 (#C41230) */
@@ -567,102 +352,15 @@
 }
 
 /* ============================================
-   主题特定样式
+   通用组件样式钩子
    ============================================ */
-
-/* Light 主题 - 扁平风格，无阴影 */
-[data-theme="light"] .theme-card {
+.theme-card {
     @apply bg-background border border-border;
     box-shadow: none;
 }
 
-[data-theme="light"] .theme-button {
+.theme-button {
     @apply transition-colors duration-150;
-}
-
-/* ============================================
-   📚 Scholar 主题 - 夸张极简主义 (Exaggerated Minimalism)
-   设计理念：大量留白、高对比度、单一强调色、传统与现代融合
-   参考：ui-ux-pro-max 推荐的 Luxury/Premium 风格
-   ============================================ */
-
-/* 书院风格 - 纯净背景，不使用网格 */
-[data-theme="scholar"] body {
-    background-color: var(--theme-background);
-}
-
-/* 书院风格 - 卡片：简洁边框，微妙阴影 */
-[data-theme="scholar"] .theme-card {
-    @apply bg-background border border-border;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-/* 书院风格 - 标题：衬线字体，适度字间距 */
-[data-theme="scholar"] h1,
-[data-theme="scholar"] h2,
-[data-theme="scholar"] h3 {
-    letter-spacing: 0.02em;
-    font-weight: 600;
-}
-
-/* 书院风格 - 按钮：方正、简洁 */
-[data-theme="scholar"] .theme-button {
-    @apply transition-all duration-200;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    border-radius: var(--theme-radius-sm);
-}
-
-/* 书院风格 - 主按钮悬停效果 */
-[data-theme="scholar"] button[class*="bg-primary"]:hover,
-[data-theme="scholar"] .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(196, 18, 48, 0.25);
-}
-
-/* 书院风格 - 输入框：简洁底边强调 */
-[data-theme="scholar"] input:focus,
-[data-theme="scholar"] textarea:focus,
-[data-theme="scholar"] select:focus {
-    border-color: var(--theme-primary);
-    box-shadow: 0 1px 0 0 var(--theme-primary);
-}
-
-/* 书院风格 - 表格表头 */
-[data-theme="scholar"] th {
-    background: var(--theme-muted);
-    font-weight: 600;
-    letter-spacing: 0.02em;
-}
-
-/* 书院风格 - 对话框 */
-[data-theme="scholar"] [role="dialog"],
-[data-theme="scholar"] .modal {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-}
-
-/* Dark 主题 - 赛博朋克风格，霓虹发光 */
-[data-theme="dark"] .theme-card {
-    @apply bg-muted border border-border;
-    box-shadow: var(--theme-card-shadow);
-}
-
-[data-theme="dark"] .theme-glow {
-    text-shadow: var(--theme-glow);
-}
-
-[data-theme="dark"] .theme-button {
-    @apply transition-all duration-200;
-}
-
-[data-theme="dark"] .theme-button:hover {
-    box-shadow: var(--theme-shadow);
-}
-
-[data-theme="dark"] h1,
-[data-theme="dark"] h2 {
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
 }
 
 /* ============================================
@@ -696,15 +394,6 @@
         transform: translateX(-100%);
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
         animation: shimmer 2s infinite;
-    }
-
-    /* 赛博朋克霓虹发光效果 */
-    .neon-glow {
-        text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor;
-    }
-
-    .neon-border {
-        box-shadow: 0 0 5px var(--theme-primary), 0 0 10px var(--theme-primary);
     }
 
     .stagger-delay-1 {

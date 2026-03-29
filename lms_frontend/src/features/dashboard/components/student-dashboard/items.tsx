@@ -15,13 +15,13 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
       onClick={() => navigate(`knowledge/${knowledge.id}?from=dashboard`)}
       className={cn(
         "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex flex-col h-[100px] overflow-hidden",
-        "bg-slate-50/40 dark:bg-card/40 border border-slate-200/30 dark:border-white/5",
-        "hover:bg-white dark:hover:bg-slate-900 hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] hover:border-slate-200 dark:hover:border-white/10 hover:-translate-y-0.5 active:scale-[0.98]"
+        "bg-slate-50/40 border border-slate-200/30",
+        "hover:bg-white hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] hover:border-slate-200 hover:-translate-y-0.5 active:scale-[0.98]"
       )}
     >
       <div className="relative z-10 w-full flex h-full items-stretch">
         <div className="flex-1 min-w-0 pr-8 flex flex-col justify-center">
-          <h5 className="text-[16px] font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight leading-none mb-3 group-hover:text-primary transition-colors">
+          <h5 className="text-[16px] font-bold text-slate-800 truncate tracking-tight leading-none mb-3 group-hover:text-primary transition-colors">
             {knowledge.title}
           </h5>
           <p className="text-[12px] text-slate-400/80 line-clamp-1 break-all font-medium leading-none tracking-tight">
@@ -29,7 +29,7 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
           </p>
         </div>
 
-        <div className="w-[1px] bg-slate-200/50 dark:bg-white/5 h-10 my-auto" />
+        <div className="w-[1px] bg-slate-200/50 h-10 my-auto" />
 
         <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
           <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400/40 opacity-0 group-hover:opacity-100 transition-all duration-500">
@@ -63,24 +63,24 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
   return (
     <div
       onClick={onSelect}
-      className={cn(
-        "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex items-center gap-6",
-        isSelected
-          ? "bg-white dark:bg-slate-900 shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] border border-slate-200 dark:border-white/10 scale-[1.01]"
-          : "bg-slate-50/40 dark:bg-card/40 border border-slate-200/30 dark:border-white/5 hover:bg-slate-50/80"
+        className={cn(
+          "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex items-center gap-6",
+          isSelected
+          ? "bg-white shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] border border-slate-200 scale-[1.01]"
+          : "bg-slate-50/40 border border-slate-200/30 hover:bg-slate-50/80"
       )}
     >
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <h5 className={cn(
           "text-[16px] font-bold tracking-tight mb-3 transition-colors",
-          isCompleted ? "text-slate-300 line-through" : "text-slate-800 dark:text-slate-100",
+          isCompleted ? "text-slate-300 line-through" : "text-slate-800",
           isSelected && !isCompleted && "text-primary"
         )}>
           {task.task_title}
         </h5>
         {!isCompleted && (
           <div className="flex items-center gap-3">
-            <div className="w-20 h-[1.5px] bg-slate-200/50 dark:bg-white/5 rounded-full overflow-hidden">
+            <div className="w-20 h-[1.5px] bg-slate-200/50 rounded-full overflow-hidden">
               <div
                 className={cn("h-full transition-all duration-1000", isSelected ? "bg-primary" : "bg-slate-300/40")}
                 style={{ width: `${progress}%` }}
@@ -93,7 +93,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
         )}
       </div>
 
-      <div className="w-[1px] bg-slate-200/50 dark:bg-white/5 h-10 my-auto" />
+      <div className="w-[1px] bg-slate-200/50 h-10 my-auto" />
 
       <div className="w-[84px] flex flex-col items-center justify-center relative gap-1">
         <span className={cn(

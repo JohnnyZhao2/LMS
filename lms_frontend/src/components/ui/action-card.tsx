@@ -82,7 +82,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
             <div className={cn(
               "w-1 h-3 rounded-full transition-all duration-500 ease-out group-hover:h-5",
               theme.bg, // Uses the solid background color
-              "shadow-[0_0_12px_rgba(0,0,0,0.3)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+              "shadow-[0_0_12px_rgba(0,0,0,0.3)]"
             )} />
 
             {/* Description acts as the 'Label' */}
@@ -116,8 +116,7 @@ export const ActionCard: React.FC<ActionCardProps> = ({
               className={cn(
                 "w-full h-full",
                 theme.text, // Tint the icon lines
-                "opacity-[0.12] group-hover:opacity-[0.2]",
-                "dark:opacity-[0.15] dark:group-hover:opacity-[0.25]"
+                "opacity-[0.12] group-hover:opacity-[0.2]"
               )}
               strokeWidth={0.5}
             />

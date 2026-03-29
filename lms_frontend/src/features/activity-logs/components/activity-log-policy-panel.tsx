@@ -52,7 +52,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canViewPolicies) {
     return (
-      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-3">
+      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
         <ShieldCheck size={18} />
         无权查看日志策略。
       </div>
@@ -61,7 +61,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canUpdatePolicies) {
     return (
-      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 dark:text-rose-400 text-sm font-bold flex items-center gap-3">
+      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
         <ShieldCheck size={18} />
         无权配置日志策略。
       </div>

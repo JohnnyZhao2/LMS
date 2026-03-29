@@ -1,14 +1,15 @@
-# AI 助手与自动化工具
-.claude/
-.claude
-.gemini/
-.cursor/
-.aider*
-.agent/
-.codex/
-.shared/
+# AI 助手与本地自动化工具
+/.claude/
+/.gemini/
+/.cursor/
+/.aider*
+/.agent/
+/.codex/
+/.shared/
+/.playwright-mcp/
+/.mcp.json
 
-# IDE 与编辑器
+# IDE 与系统文件
 .vscode/
 .idea/
 *.swp
@@ -23,8 +24,8 @@ __pycache__/
 *.so
 .Python
 *.egg-info/
-dist/
 build/
+dist/
 *.egg
 
 # 测试与覆盖率
@@ -45,15 +46,17 @@ media/
 staticfiles/
 
 # 环境变量
-.env
-.env.local
-.env.*.local
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # 前端构建产物
 lms_frontend/dist/
@@ -61,5 +64,17 @@ lms_frontend/.vite/
 lms_frontend/.next/
 lms_frontend/out/
 
-# 文档（本地设计稿等，不入库）
-docs/
+# 后端生成文件
+lms_backend/openapi-schema.yaml
+
+# 仓库根目录杂项
+/docs/
+/avatars/
+/inspector.json
+/skills-lock.json
+/package-lock.json
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.pdf

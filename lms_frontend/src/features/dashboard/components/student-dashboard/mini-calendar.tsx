@@ -38,7 +38,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
 
   return (
     <Card className={cn(
-      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 dark:shadow-none flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-full",
+      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-full",
       className
     )}>
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
@@ -109,7 +109,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
 
                 <span className={cn(
                   "relative z-10 transition-all duration-300",
-                  isToday ? "text-[14px] font-[900] text-slate-800 dark:text-white scale-110 tracking-tighter" :
+                  isToday ? "text-[14px] font-[900] text-slate-800 scale-110 tracking-tighter" :
                     isDeadline ? "text-[12px] font-serif font-black text-rose-600/80 scale-105" :
                       "text-[11px] font-bold text-muted-foreground/30 hover:text-foreground hover:scale-110"
                 )}>

@@ -73,28 +73,19 @@ LMS/
 mysql -u root -p -e "CREATE DATABASE lms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-### 2. 配置后端环境变量
+### 2. 配置环境变量
 
-后端按环境读取 `lms_backend/.env.<env>` 文件。开发环境默认读取：
-
-- `lms_backend/.env.development`
-
-可直接创建：
+先复制模板文件：
 
 ```bash
-cat > lms_backend/.env.development <<'EOF'
-DJANGO_ENV=development
-DB_NAME=lms
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_HOST=127.0.0.1
-DB_PORT=3306
-SECRET_KEY=dev-secret-key
-EOF
+cp lms_backend/.env.example lms_backend/.env
+cp lms_frontend/.env.example lms_frontend/.env
 ```
 
 说明：
 
+- 后端统一读取 `lms_backend/.env`
+- 前端本地环境变量放在 `lms_frontend/.env`
 - `manage.py` 默认使用 `config.settings.development`
 - `pytest` 也默认走开发配置
 - 前端默认请求 `http://127.0.0.1:8000/api`

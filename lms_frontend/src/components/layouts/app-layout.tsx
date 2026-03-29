@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { Menu } from 'lucide-react'
 import { Sidebar } from './sidebar'
-import { ThemeSwitcher } from '@/components/theme-switcher'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -43,8 +42,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {children}
         </div>
       </main>
-
-      <ThemeSwitcher />
     </div>
   )
 }

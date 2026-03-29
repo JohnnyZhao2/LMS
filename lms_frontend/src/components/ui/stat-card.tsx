@@ -70,7 +70,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                         <div className={cn(
                             "w-1 h-3 rounded-full transition-all duration-500 ease-out group-hover:h-5",
                             accentClassName,
-                            "shadow-[0_0_12px_rgba(0,0,0,0.3)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                            "shadow-[0_0_12px_rgba(0,0,0,0.3)]"
                         )}
                         />
                         <p className="font-semibold text-muted-foreground/80 uppercase tracking-widest leading-none text-[10px] truncate group-hover:text-foreground transition-colors duration-300">
@@ -122,8 +122,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                                 "w-full h-full",
                                 // Use the final calculated color
                                 finalIconColor,
-                                "opacity-[0.12] group-hover:opacity-[0.2]",
-                                "dark:opacity-[0.15] dark:group-hover:opacity-[0.25]"
+                                "opacity-[0.12] group-hover:opacity-[0.2]"
                             )}
                             strokeWidth={0.5}
                         />
