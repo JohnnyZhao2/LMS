@@ -12,10 +12,10 @@ interface SearchInputProps {
 
 export function SearchInput({ value, onChange, placeholder = '搜索...', className, onKeyDown }: SearchInputProps) {
   return (
-    <div className={cn('relative group', className)}>
-      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-primary transition-colors" />
+    <div className={cn('relative w-full min-w-[13rem]', className)}>
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
       <Input
-        className="h-11 rounded-full border-border/60 pl-11 pr-4 text-sm font-medium shadow-sm"
+        className="h-10 rounded-xl border-border/60 bg-background pl-9 pr-4 text-[13px] shadow-none"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

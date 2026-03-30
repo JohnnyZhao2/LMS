@@ -1,7 +1,6 @@
-import React, { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { startTransition, useDeferredValue, useMemo, useState } from 'react';
 import {
   Activity,
-  Search,
   ShieldAlert,
   X,
 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
+import { SearchInput } from '@/components/ui/search-input';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -27,6 +27,8 @@ const LOG_TYPE_META = {
   content: { label: '内容' },
   operation: { label: '行为记录' },
 } as const;
+
+const PANEL_GRID_CLASS = 'grid gap-5 xl:grid-cols-[17rem_minmax(0,1fr)]';
 
 export const ActivityLogsPanel: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -83,12 +85,6 @@ export const ActivityLogsPanel: React.FC = () => {
     dateFrom !== '' ||
     dateTo !== '';
 
-  useEffect(() => {
-    setSelectedLogIds((current) =>
-      current.filter((logId) => normalizedItems.some((item) => item.id === logId))
-    );
-  }, [normalizedItems]);
-
   const handleConfirmBulkDelete = async () => {
     if (selectedLogs.length === 0) return;
 
@@ -114,6 +110,7 @@ export const ActivityLogsPanel: React.FC = () => {
     startTransition(() => {
       setActiveType(nextType);
       setPage(1);
+      setSelectedLogIds([]);
       setDateFrom('');
       setDateTo('');
       setSelectedMemberIds([]);
@@ -126,6 +123,7 @@ export const ActivityLogsPanel: React.FC = () => {
         cur.includes(memberId) ? cur.filter((id) => id !== memberId) : [...cur, memberId]
       );
       setPage(1);
+      setSelectedLogIds([]);
     });
   };
 
@@ -168,58 +166,58 @@ export const ActivityLogsPanel: React.FC = () => {
   return (
     <section className="space-y-5">
       {/* 筛选栏 */}
-      <div className="flex flex-wrap items-center gap-2.5">
-        {/* 类型切换 */}
-        <SegmentedControl
-          options={(['user', 'content', 'operation'] as const).map((type) => ({
-            label: LOG_TYPE_META[type].label,
-            value: type,
-          }))}
-          value={activeType}
-          onChange={(v) => handleTypeChange(v as ActivityLogType)}
-        />
-
-        {/* 搜索 */}
-        <div className="relative min-w-[13rem] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
-          <Input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search Activity..."
-            className="h-10 rounded-xl border-border/60 bg-background pl-9 text-[13px] shadow-none"
+      <div className={PANEL_GRID_CLASS}>
+        <div className="flex items-center">
+          <SegmentedControl
+            options={(['user', 'content', 'operation'] as const).map((type) => ({
+              label: LOG_TYPE_META[type].label,
+              value: type,
+            }))}
+            value={activeType}
+            onChange={(v) => handleTypeChange(v as ActivityLogType)}
           />
         </div>
 
-        {/* 日期 */}
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
-        />
+        <div className="flex flex-wrap items-center gap-2.5 xl:min-w-0">
+          {/* 搜索 */}
+          <SearchInput
+            className="flex-1"
+            value={search}
+            onChange={(value) => { setSearch(value); setPage(1); setSelectedLogIds([]); }}
+            placeholder="搜索日志"
+          />
 
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch(''); setDateFrom(''); setDateTo('');
-              setSelectedMemberIds([]); setPage(1);
-            }}
-            className="h-10 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:bg-muted hover:text-foreground"
-          >
-            清空
-          </button>
-        )}
+          {/* 日期 */}
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); setSelectedLogIds([]); }}
+            className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); setSelectedLogIds([]); }}
+            className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
+          />
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch(''); setDateFrom(''); setDateTo('');
+                setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
+              }}
+              className="h-10 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:bg-muted hover:text-foreground"
+            >
+              清空
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 主体 */}
-      <div className="grid gap-5 xl:grid-cols-[17rem_minmax(0,1fr)]">
+      <div className={PANEL_GRID_CLASS}>
         {/* 左侧成员列表 */}
         <ActivityLogMemberList
           members={data?.members ?? []}
@@ -316,8 +314,8 @@ export const ActivityLogsPanel: React.FC = () => {
                 pageSize={pageSize}
                 showSizeChanger
                 showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-                onChange={(p, s) => { setPage(p); setPageSize(s); }}
-                onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); }}
+                onChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
+                onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
               />
             </div>
           </div>
