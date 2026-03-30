@@ -5,7 +5,7 @@ interface RoleSwitchOverlayProps {
     isSwitching: boolean;
 }
 
-const EXIT_TRANSITION_MS = 240;
+const EXIT_TRANSITION_MS = 80;
 
 /**
  * 角色切换过渡遮罩
@@ -41,12 +41,12 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
 
     return (
         <div
-            className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background backdrop-blur-md transition-opacity duration-200 ease-out ${
+            className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background backdrop-blur-md transition-opacity duration-[80ms] ease-out ${
                 visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
         >
             <div
-                className={`flex flex-col items-center gap-6 transition-all duration-300 ease-out ${
+                className={`flex flex-col items-center gap-6 transition-all duration-[120ms] ease-out ${
                     visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-1 scale-[0.985] opacity-0'
                 }`}
             >

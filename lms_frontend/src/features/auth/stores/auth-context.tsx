@@ -1,8 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { tokenStorage } from '@/lib/token-storage';
-import type { AuthSessionPayload, LoginRequest, Role, RoleCode, UserInfo } from '@/types/api';
+import type { AuthSessionPayload, LoginRequest, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
 import { loginApi } from '../api/login';
 import { logoutApi } from '../api/logout';
 import { switchRoleApi } from '../api/switch-role';
@@ -29,7 +28,12 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-const MIN_ROLE_SWITCH_DURATION_MS = 850;
+const MIN_ROLE_SWITCH_DURATION_MS = 220;
+let activeRoleSwitchRequest: {
+  roleCode: RoleCode;
+  startedAt: number;
+  promise: Promise<SwitchRoleResponse>;
+} | null = null;
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -141,22 +145,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const switchRole = useCallback(async (roleCode: RoleCode) => {
     setState((prev) => ({ ...prev, isSwitching: true }));
-    const startTime = Date.now();
+
+    const sharedRequest = activeRoleSwitchRequest?.roleCode === roleCode
+      ? activeRoleSwitchRequest
+      : (() => {
+          const request = {
+            roleCode,
+            startedAt: Date.now(),
+            promise: switchRoleApi.switchRole({ role_code: roleCode }),
+          };
+          activeRoleSwitchRequest = request;
+          return request;
+        })();
+
     try {
-      const response = await switchRoleApi.switchRole({ role_code: roleCode });
-      const elapsed = Date.now() - startTime;
+      const response = await sharedRequest.promise;
+      const elapsed = Date.now() - sharedRequest.startedAt;
       if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
         await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
       }
       tokenStorage.setTokens(response.access_token, response.refresh_token);
       applyAuthSession(response, { isSwitching: false });
     } catch (error) {
-      const elapsed = Date.now() - startTime;
+      const elapsed = Date.now() - sharedRequest.startedAt;
       if (elapsed < MIN_ROLE_SWITCH_DURATION_MS) {
         await sleep(MIN_ROLE_SWITCH_DURATION_MS - elapsed);
       }
       setState((prev) => ({ ...prev, isSwitching: false }));
       throw error;
+    } finally {
+      if (activeRoleSwitchRequest?.promise === sharedRequest.promise) {
+        activeRoleSwitchRequest = null;
+      }
     }
   }, [applyAuthSession]);
 

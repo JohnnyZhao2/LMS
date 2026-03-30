@@ -4,6 +4,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
+import { showApiError } from '@/utils/error-handler';
 
 const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -15,11 +16,19 @@ export const RoleRouteWrapper: React.FC = () => {
   const { role } = useParams<{ role: string }>();
   const location = useLocation();
   const { isAuthenticated, isLoading, availableRoles, currentRole, isSwitching, switchRole } = useAuth();
-  const [pendingRoleSync, setPendingRoleSync] = useState<RoleCode | null>(null);
+  const [failedRoleSync, setFailedRoleSync] = useState<RoleCode | null>(null);
 
   const roleCode = role?.toUpperCase() as RoleCode;
   const isValidRole = VALID_ROLES.includes(roleCode);
   const hasRole = availableRoles.some((item) => item.code === roleCode);
+  const shouldSyncRole = Boolean(
+    isAuthenticated &&
+    !isLoading &&
+    isValidRole &&
+    hasRole &&
+    currentRole &&
+    currentRole !== roleCode,
+  );
   const resolveFallbackRole = (): RoleCode | null => {
     if (currentRole && availableRoles.some((item) => item.code === currentRole)) {
       return currentRole;
@@ -28,43 +37,32 @@ export const RoleRouteWrapper: React.FC = () => {
   };
 
   useEffect(() => {
-    if (
-      !isAuthenticated ||
-      isLoading ||
-      !isValidRole ||
-      !hasRole ||
-      !currentRole ||
-      currentRole === roleCode
-    ) {
-      setPendingRoleSync((current) => (current === roleCode ? null : current));
+    if (!shouldSyncRole || isSwitching || failedRoleSync === roleCode) {
       return;
     }
 
-    if (pendingRoleSync === roleCode) {
-      return;
-    }
-
-    setPendingRoleSync(roleCode);
-    void switchRole(roleCode).catch(() => {
-      setPendingRoleSync(null);
+    void switchRole(roleCode).catch((error) => {
+      showApiError(error, '角色切换失败');
+      setFailedRoleSync(roleCode);
     });
   }, [
-    currentRole,
-    hasRole,
-    isAuthenticated,
-    isLoading,
-    isValidRole,
-    pendingRoleSync,
+    failedRoleSync,
+    isSwitching,
     roleCode,
+    shouldSyncRole,
     switchRole,
   ]);
 
-  if (isLoading || isSwitching || pendingRoleSync === roleCode) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Spinner size="lg" />
       </div>
     );
+  }
+
+  if (shouldSyncRole || isSwitching) {
+    return null;
   }
 
   if (!isAuthenticated) {
@@ -93,6 +91,14 @@ export const RoleRouteWrapper: React.FC = () => {
     }
 
     return <Navigate to={fallbackPath} replace />;
+  }
+
+  if (failedRoleSync === roleCode) {
+    const fallbackRole = resolveFallbackRole();
+    if (!fallbackRole) {
+      return <Navigate to={ROUTES.LOGIN} replace />;
+    }
+    return <Navigate to={`/${fallbackRole.toLowerCase()}/dashboard`} replace />;
   }
 
   return <Outlet />;
