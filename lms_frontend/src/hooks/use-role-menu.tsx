@@ -108,7 +108,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       menu.push({
         key: `${rolePrefix}/spot-checks`,
         icon: <FileSearch className="w-4 h-4" />,
-        label: '抽查中心',
+        label: '抽查管理',
       });
     }
 

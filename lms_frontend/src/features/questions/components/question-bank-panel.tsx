@@ -57,9 +57,9 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
         </div>
         <div className="flex gap-2">
           <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部 space" /></SelectTrigger>
+            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部 space</SelectItem>
+              <SelectItem value="all">全部</SelectItem>
               {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
             </SelectContent>
           </Select>

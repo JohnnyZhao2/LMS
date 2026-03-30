@@ -33,6 +33,24 @@ const QUESTION_TYPES: Array<{
   { value: 'SHORT_ANSWER', label: '简答', icon: AlignLeft },
 ];
 
+const DEFAULT_CHOICE_OPTIONS = [
+  { key: 'A', value: '' },
+  { key: 'B', value: '' },
+  { key: 'C', value: '' },
+  { key: 'D', value: '' },
+];
+
+const ensureChoiceOptions = (options?: Array<{ key: string; value: string }>) => {
+  const existing = options ?? [];
+  if (existing.length >= 4) {
+    return existing;
+  }
+  return [
+    ...existing,
+    ...DEFAULT_CHOICE_OPTIONS.slice(existing.length).map((option) => ({ ...option })),
+  ];
+};
+
 /* ── Props ── */
 interface QuestionEditorPanelProps {
   questionForm: Partial<QuestionCreateRequest>;
@@ -76,7 +94,13 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
                 disabled={typeDisabled}
                 onClick={() =>
                   !typeDisabled &&
-                  setQuestionForm((prev) => ({ ...prev, question_type: value }))
+                  setQuestionForm((prev) => ({
+                    ...prev,
+                    question_type: value,
+                    options: value === 'MULTIPLE_CHOICE'
+                      ? ensureChoiceOptions(prev.options)
+                      : prev.options,
+                  }))
                 }
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 rounded-md py-2',

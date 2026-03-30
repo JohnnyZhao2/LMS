@@ -13,6 +13,7 @@ interface SortableOutlineItemProps {
   index: number;
   isActive: boolean;
   onSelect: () => void;
+  isOverlay?: boolean;
 }
 
 export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
@@ -20,16 +21,60 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
   index,
   isActive,
   onSelect,
+  isOverlay = false,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.key,
+    disabled: isOverlay,
+  });
   const style = getQuestionTypeStyle(item.questionType);
   const cardStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
+    transform: isOverlay ? undefined : CSS.Transform.toString(transform),
+    transition: isOverlay ? undefined : transition,
+    zIndex: isDragging && !isOverlay ? 10 : undefined,
   };
 
   return (
+    <OutlineItemCard
+      item={item}
+      index={index}
+      isActive={isActive}
+      onSelect={onSelect}
+      setNodeRef={isOverlay ? undefined : setNodeRef}
+      cardStyle={cardStyle}
+      dragButtonProps={isOverlay ? undefined : { ...attributes, ...listeners }}
+      isDraggingSource={isDragging && !isOverlay}
+      isOverlay={isOverlay}
+      style={style}
+    />
+  );
+};
+
+interface OutlineItemCardProps {
+  item: InlineQuestionItem;
+  index: number;
+  isActive: boolean;
+  onSelect?: () => void;
+  setNodeRef?: (node: HTMLDivElement | null) => void;
+  cardStyle?: React.CSSProperties;
+  dragButtonProps?: React.ButtonHTMLAttributes<HTMLButtonElement>;
+  isDraggingSource?: boolean;
+  isOverlay?: boolean;
+  style?: ReturnType<typeof getQuestionTypeStyle>;
+}
+
+const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
+  item,
+  index,
+  isActive,
+  onSelect,
+  setNodeRef,
+  cardStyle,
+  dragButtonProps,
+  isDraggingSource = false,
+  isOverlay = false,
+  style = getQuestionTypeStyle(item.questionType),
+}) => (
     <div
       ref={setNodeRef}
       style={cardStyle}
@@ -37,7 +82,8 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
       className={cn(
         'group flex cursor-pointer items-start gap-2 rounded-xl px-3 py-3 transition-all duration-150',
         isActive ? 'bg-muted' : 'hover:bg-muted',
-        isDragging && 'scale-[0.99] opacity-90 shadow-[0_10px_24px_rgba(15,23,42,0.08)]',
+        isDraggingSource && 'opacity-0',
+        isOverlay && 'scale-[0.99] bg-muted shadow-[0_10px_24px_rgba(15,23,42,0.12)]',
       )}
     >
       <div className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-[10px] font-mono text-text-muted">
@@ -45,10 +91,9 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-1.5">
-          <Badge className={cn('h-4 px-1.5 text-[9px] font-medium leading-none', style.bg, style.color)}>
+          <Badge variant="outline" className={cn('h-4 border-transparent px-1.5 text-[9px] font-medium leading-none', style.bg, style.color)}>
             {getQuestionTypeLabel(item.questionType)}
           </Badge>
-          <span className="text-[10px] tabular-nums text-text-muted">{item.score}分</span>
         </div>
         <p className={cn('line-clamp-2 text-[13px] leading-relaxed', isActive ? 'font-medium text-foreground' : 'text-foreground')}>
           {item.content || '未填写题目'}
@@ -59,13 +104,11 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
         aria-label={`拖动排序第${index + 1}题`}
         className={cn(
           'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-text-muted transition hover:bg-background hover:text-foreground',
-          isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
+          isDraggingSource || isOverlay ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
         )}
-        {...attributes}
-        {...listeners}
+        {...dragButtonProps}
       >
         <GripVertical className="h-4 w-4" />
       </button>
     </div>
   );
-};

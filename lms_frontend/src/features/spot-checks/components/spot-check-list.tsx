@@ -215,7 +215,7 @@ export const SpotCheckList: React.FC = () => {
     <>
       <div className="flex flex-1 min-h-0 flex-col animate-fadeIn">
         <PageHeader
-          title="抽查中心"
+          title="抽查管理"
           icon={<Search className="w-5 h-5" />}
           extra={
             canCreateSpotCheck ? (

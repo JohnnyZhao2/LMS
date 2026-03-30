@@ -27,13 +27,13 @@ import { TagFormDialog } from './tag-form-dialog';
 
 
 const typeLabel: Record<TagType, string> = {
-  SPACE: 'space',
+  SPACE: '空间',
   TAG: '普通标签',
 };
 
-/** space / 普通标签 分段选项 */
+/** 空间 / 普通标签 分段选项 */
 const TAG_TYPE_SEGMENT_OPTIONS: { label: string; value: TagType }[] = [
-  { label: 'space', value: 'SPACE' },
+  { label: '空间', value: 'SPACE' },
   { label: '普通标签', value: 'TAG' },
 ];
 
@@ -371,10 +371,10 @@ export const TagManagementPage: React.FC = () => {
 
             <DialogHeader className="relative space-y-3">
               <DialogTitle className="text-[28px] font-semibold tracking-[-0.04em] text-foreground sm:text-[32px]">
-                {activeTab === 'SPACE' ? '合并这组 space' : '合并这组标签'}
+                {activeTab === 'SPACE' ? '合并这组空间' : '合并这组标签'}
               </DialogTitle>
               <DialogDescription className="max-w-[34rem] text-[14px] leading-7 text-text-muted sm:text-[15px]">
-                已选 {selectedTagIds.length} 个{activeTab === 'SPACE' ? ' space' : '普通标签'}，输入一个统一名称后，系统会把引用关系收束到同一个标签上。
+                已选 {selectedTagIds.length} 个{activeTab === 'SPACE' ? '空间' : '普通标签'}，输入一个统一名称后，系统会把引用关系收束到同一个标签上。
               </DialogDescription>
             </DialogHeader>
 

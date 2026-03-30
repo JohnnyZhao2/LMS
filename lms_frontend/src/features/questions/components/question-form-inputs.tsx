@@ -1,6 +1,7 @@
 /**
  * 题目表单输入组件 — 选项输入 + 答案输入
  */
+import * as React from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -32,6 +33,8 @@ interface OptionsInputProps {
 }
 
 const buildOptionKey = (index: number) => String.fromCharCode(65 + index);
+let optionIdCounter = 0;
+const nextOptionId = () => `option_${++optionIdCounter}`;
 
 const reindexOptionsAndAnswer = (
   options: Array<{ key: string; value: string }>,
@@ -68,6 +71,23 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   onAnswerChange,
   disabled = false,
 }) => {
+  const [optionIds, setOptionIds] = React.useState<string[]>(() => value.map(() => nextOptionId()));
+
+  React.useEffect(() => {
+    setOptionIds((current) => {
+      if (current.length === value.length) {
+        return current;
+      }
+      if (current.length < value.length) {
+        return [
+          ...current,
+          ...Array.from({ length: value.length - current.length }, () => nextOptionId()),
+        ];
+      }
+      return current.slice(0, value.length);
+    });
+  }, [value.length]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -83,6 +103,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
     if (disabled) return;
     const nextKey = buildOptionKey(value.length);
     onChange([...value, { key: nextKey, value: '' }]);
+    setOptionIds((current) => [...current, nextOptionId()]);
   };
 
   const handleChange = (index: number, val: string) => {
@@ -96,6 +117,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
     if (disabled) return;
     const remaining = value.filter((_, i) => i !== index);
     const { nextOptions, nextAnswer } = reindexOptionsAndAnswer(remaining, answer, questionType);
+    setOptionIds((current) => current.filter((_, i) => i !== index));
     onChange(nextOptions);
     onAnswerChange(nextAnswer);
   };
@@ -118,12 +140,13 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (disabled || !over || active.id === over.id) return;
 
-    const oldIndex = value.findIndex((option, index) => `${option.key}-${index}` === active.id);
-    const newIndex = value.findIndex((option, index) => `${option.key}-${index}` === over.id);
+    const oldIndex = optionIds.findIndex((id) => id === active.id);
+    const newIndex = optionIds.findIndex((id) => id === over.id);
     if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
 
     const reordered = arrayMove(value, oldIndex, newIndex);
     const { nextOptions, nextAnswer } = reindexOptionsAndAnswer(reordered, answer, questionType);
+    setOptionIds((current) => arrayMove(current, oldIndex, newIndex));
     onChange(nextOptions);
     onAnswerChange(nextAnswer);
   };
@@ -131,11 +154,11 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   return (
     <div className="space-y-1">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={value.map((opt, index) => `${opt.key}-${index}`)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={optionIds} strategy={verticalListSortingStrategy}>
           {value.map((opt, index) => (
             <SortableOptionItem
-              key={`${opt.key}-${index}`}
-              index={index}
+              key={optionIds[index]}
+              id={optionIds[index]}
               optionKey={opt.key}
               optionValue={opt.value}
               selected={isSelected(opt.key)}

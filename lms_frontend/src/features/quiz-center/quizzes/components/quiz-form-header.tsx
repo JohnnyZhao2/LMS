@@ -3,13 +3,14 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { QuizDetail, QuizType } from '@/types/api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import type { QuizType } from '@/types/api';
 
 interface QuizFormHeaderProps {
-  isEdit: boolean;
-  quizData?: QuizDetail;
   title: string;
   quizType: QuizType;
+  onQuizTypeChange: (quizType: QuizType) => void;
   onTitleChange: (title: string) => void;
   onBack: () => void;
   onSubmit: () => void;
@@ -17,10 +18,9 @@ interface QuizFormHeaderProps {
 }
 
 export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
-  isEdit,
-  quizData,
   title,
   quizType,
+  onQuizTypeChange,
   onTitleChange,
   onBack,
   onSubmit,
@@ -39,42 +39,47 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
         </Button>
       </div>
 
-      <div className="relative flex h-12 min-w-0 items-center justify-center rounded-xl border border-border bg-background px-6">
-        <div className="pointer-events-none absolute inset-y-0 left-6 flex items-center gap-2.5">
-          <div className="flex items-center gap-2.5 px-0.5">
-            <span
-              className={
+      <div className="relative flex h-10 min-w-0 items-center justify-center rounded-xl border border-border bg-background px-5">
+        <div className="absolute inset-y-1 left-1 flex items-stretch">
+          <Select
+            value={quizType}
+            onValueChange={(value) => onQuizTypeChange(value as QuizType)}
+          >
+            <SelectTrigger
+              className={cn(
+                'h-full w-[84px] rounded-lg border-none px-3 py-0 text-[12px] font-semibold shadow-none focus-visible:border-transparent focus-visible:ring-0 data-[state=open]:border-transparent data-[state=open]:ring-0',
                 quizType === 'EXAM'
-                  ? 'rounded-md bg-destructive-500/10 px-2 py-0.5 text-[10px] font-bold text-destructive-600'
-                  : 'rounded-md bg-secondary-500/10 px-2 py-0.5 text-[10px] font-bold text-secondary-700'
-              }
+                  ? 'bg-destructive-500/10 text-destructive-600'
+                  : 'bg-secondary-500/10 text-secondary-700',
+              )}
             >
-              {quizType === 'EXAM' ? '考试' : '测验'}
-            </span>
-            {isEdit && quizData && (
-              <span className="text-[11px] font-medium tracking-tight text-text-muted">
-                ID: {quizData.id}
-              </span>
-            )}
-          </div>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="min-w-[84px] rounded-xl border-border p-1">
+              <SelectItem value="PRACTICE" className="rounded-lg py-2 pl-3 pr-7 text-[12px] font-medium">
+                测验
+              </SelectItem>
+              <SelectItem value="EXAM" className="rounded-lg py-2 pl-3 pr-7 text-[12px] font-medium">
+                考试
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex w-full justify-center px-20">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-16">
           <Input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="输入试卷标题..."
-            className="h-8 w-full max-w-[320px] rounded-none border-transparent bg-transparent px-0 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/40 hover:border-transparent focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="pointer-events-auto h-7 w-full max-w-[320px] rounded-none border-transparent bg-transparent px-0 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/40 hover:border-transparent focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
       </div>
 
       <div className="flex min-w-0 items-center justify-end">
-        <div className="flex h-12 items-center rounded-xl border border-border bg-background px-2.5 shadow-sm">
-          <Button onClick={onSubmit} disabled={isSubmitting} className="h-8 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90">
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            保存更改
-          </Button>
-        </div>
+        <Button onClick={onSubmit} disabled={isSubmitting} className="h-10 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90">
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          保存更改
+        </Button>
       </div>
     </div>
   );

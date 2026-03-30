@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 interface SortableOptionItemProps {
-  index: number;
+  id: string;
   optionKey: string;
   optionValue: string;
   selected: boolean;
@@ -19,7 +19,7 @@ interface SortableOptionItemProps {
 }
 
 export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
-  index,
+  id,
   optionKey,
   optionValue,
   selected,
@@ -29,7 +29,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
   onChange,
   onRemove,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `${optionKey}-${index}` });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -41,8 +41,8 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-2.5 transition-all duration-100',
-        isDragging && 'scale-[0.995] opacity-90',
+        'group flex items-center gap-2.5 will-change-transform',
+        isDragging && 'relative z-10',
       )}
     >
       <button

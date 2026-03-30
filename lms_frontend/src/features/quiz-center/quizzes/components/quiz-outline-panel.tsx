@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -11,7 +12,6 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Clock3, FileText, Target } from 'lucide-react';
 
-import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { QuestionType, QuizType } from '@/types/api';
@@ -25,7 +25,6 @@ interface QuizOutlinePanelProps {
   quizType: QuizType;
   duration?: number;
   passScore?: number;
-  onQuizTypeChange: (quizType: QuizType) => void;
   onSelectItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
   onDurationChange: (value?: number) => void;
@@ -38,12 +37,32 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   quizType,
   duration,
   passScore,
-  onQuizTypeChange,
   onSelectItem,
   onReorderItems,
   onDurationChange,
   onPassScoreChange,
 }) => {
+  const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
+  const [draggingItemWidth, setDraggingItemWidth] = useState<number | null>(null);
+  const dragCleanupFrameRef = useRef<number | null>(null);
+
+  const clearDragState = () => {
+    if (dragCleanupFrameRef.current !== null) {
+      cancelAnimationFrame(dragCleanupFrameRef.current);
+      dragCleanupFrameRef.current = null;
+    }
+    setDraggingItemKey(null);
+    setDraggingItemWidth(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (dragCleanupFrameRef.current !== null) {
+        cancelAnimationFrame(dragCleanupFrameRef.current);
+      }
+    };
+  }, []);
+
   const parseIntegerValue = (value: string) => {
     if (!value) return undefined;
     const parsed = Number(value);
@@ -125,9 +144,22 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
       }));
   }, [items.length, stats.multi, stats.short, stats.single, stats.tf]);
 
+  const draggingItem = useMemo(
+    () => items.find((item) => item.key === draggingItemKey) ?? null,
+    [draggingItemKey, items],
+  );
+
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      clearDragState();
+      return;
+    }
+
     onReorderItems(String(active.id), String(over.id));
+
+    dragCleanupFrameRef.current = requestAnimationFrame(() => {
+      clearDragState();
+    });
   };
 
   return (
@@ -137,17 +169,6 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           <FileText className="h-4 w-4 text-primary-600" />
           <span>试卷结构</span>
         </div>
-        <SegmentedControl
-          value={quizType}
-          onChange={(value) => onQuizTypeChange(value as QuizType)}
-          options={[
-            { label: '练习', value: 'PRACTICE' },
-            { label: '考试', value: 'EXAM' },
-          ]}
-          activeColor="white"
-          size="sm"
-          className="w-auto shrink-0"
-        />
       </div>
       {quizType === 'EXAM' && (
         <div className="space-y-3 border-b border-border bg-background px-5 py-4">
@@ -189,15 +210,19 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
       )}
       <div className="flex-1 overflow-y-auto scrollbar-subtle">
         {items.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center py-12 text-text-muted">
-            <FileText className="mb-3 h-10 w-10 opacity-25" />
-            <span className="text-xs">从右侧题库添加题目</span>
-          </div>
+          <div className="h-full" />
         ) : (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={({ active }) => onSelectItem(String(active.id))}
+            onDragStart={({ active }) => {
+              setDraggingItemKey(String(active.id));
+              setDraggingItemWidth(active.rect.current.initial?.width ?? null);
+              onSelectItem(String(active.id));
+            }}
+            onDragCancel={() => {
+              clearDragState();
+            }}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
@@ -213,6 +238,19 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                 ))}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {draggingItem ? (
+                <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
+                  <SortableOutlineItem
+                    item={draggingItem}
+                    index={items.findIndex((item) => item.key === draggingItem.key)}
+                    isActive={draggingItem.key === activeKey}
+                    onSelect={() => undefined}
+                    isOverlay
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </div>

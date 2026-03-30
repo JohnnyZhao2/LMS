@@ -271,10 +271,9 @@ export const QuizForm: React.FC = () => {
   return (
     <div className="flex h-[calc(100vh-48px)] min-h-0 flex-col gap-2 overflow-hidden bg-muted/20 py-2">
       <QuizFormHeader
-        isEdit={isEdit}
-        quizData={quizData}
         title={title}
         quizType={quizType}
+        onQuizTypeChange={setQuizType}
         onTitleChange={setTitle}
         onBack={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}
@@ -290,7 +289,6 @@ export const QuizForm: React.FC = () => {
               quizType={quizType}
               duration={duration}
               passScore={passScore}
-              onQuizTypeChange={setQuizType}
               onSelectItem={(key) => {
                 setActiveKey(key);
               }}

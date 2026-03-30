@@ -43,7 +43,7 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     order: 50,
   },
   spot_check: {
-    label: '抽查中心',
+    label: '抽查管理',
     summary: '导师和室经理的抽查模块，负责抽查记录查询和维护。',
     order: 60,
   },
@@ -172,19 +172,19 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
     detail: '对主观题答案提交评分。',
   },
   'spot_check.view': {
-    pageLabel: '抽查中心 / 抽查列表',
+    pageLabel: '抽查管理 / 抽查列表',
     detail: '查看抽查记录列表和详情。',
   },
   'spot_check.create': {
-    pageLabel: '抽查中心 / 新建抽查',
+    pageLabel: '抽查管理 / 新建抽查',
     detail: '创建抽查记录。',
   },
   'spot_check.update': {
-    pageLabel: '抽查中心 / 编辑抽查',
+    pageLabel: '抽查管理 / 编辑抽查',
     detail: '更新抽查记录。',
   },
   'spot_check.delete': {
-    pageLabel: '抽查中心 / 删除抽查',
+    pageLabel: '抽查管理 / 删除抽查',
     detail: '删除抽查记录。',
   },
   'user.view': {

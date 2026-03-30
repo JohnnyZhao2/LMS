@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
@@ -36,6 +37,23 @@ const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: 'SHORT_ANSWER', label: '简答' },
 ];
 
+const DEFAULT_CHOICE_OPTIONS = [
+  { key: 'A', value: '' },
+  { key: 'B', value: '' },
+  { key: 'C', value: '' },
+  { key: 'D', value: '' },
+];
+
+const ensureChoiceOptions = (options: Array<{ key: string; value: string }>) => {
+  if (options.length >= 4) {
+    return options;
+  }
+  return [
+    ...options,
+    ...DEFAULT_CHOICE_OPTIONS.slice(options.length).map((option) => ({ ...option })),
+  ];
+};
+
 interface QuizDocumentEditorProps {
   items: InlineQuestionItem[];
   activeKey: string | null;
@@ -60,7 +78,10 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragCleanupFrameRef = useRef<number | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
+  const [draggingItemWidth, setDraggingItemWidth] = useState<number | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -86,6 +107,14 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   }, [showAddMenu]);
 
   useEffect(() => {
+    return () => {
+      if (dragCleanupFrameRef.current !== null) {
+        cancelAnimationFrame(dragCleanupFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeKey) return;
 
     const node = itemRefs.current[activeKey];
@@ -99,9 +128,31 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
     setShowAddMenu(false);
   };
 
+  const draggingItem = useMemo(
+    () => items.find((item) => item.key === draggingItemKey) ?? null,
+    [draggingItemKey, items],
+  );
+
+  const clearDragState = () => {
+    if (dragCleanupFrameRef.current !== null) {
+      cancelAnimationFrame(dragCleanupFrameRef.current);
+      dragCleanupFrameRef.current = null;
+    }
+    setDraggingItemKey(null);
+    setDraggingItemWidth(null);
+  };
+
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      clearDragState();
+      return;
+    }
+
     onReorderItems(String(active.id), String(over.id));
+
+    dragCleanupFrameRef.current = requestAnimationFrame(() => {
+      clearDragState();
+    });
   };
 
   return (
@@ -111,7 +162,14 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={({ active }) => onFocusItem(String(active.id))}
+            onDragStart={({ active }) => {
+              setDraggingItemKey(String(active.id));
+              setDraggingItemWidth(active.rect.current.initial?.width ?? null);
+              onFocusItem(String(active.id));
+            }}
+            onDragCancel={() => {
+              clearDragState();
+            }}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
@@ -132,6 +190,25 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
                 ))}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {draggingItem ? (
+                <div
+                  className="pointer-events-none"
+                  style={draggingItemWidth ? { width: draggingItemWidth } : undefined}
+                >
+                  <InlineQuestionCard
+                    item={draggingItem}
+                    index={items.findIndex((item) => item.key === draggingItem.key)}
+                    isActive={draggingItem.key === activeKey}
+                    onUpdate={() => undefined}
+                    onRemove={() => undefined}
+                    onFocus={() => undefined}
+                    onSetRef={() => undefined}
+                    isOverlay
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-text-muted">
@@ -199,6 +276,7 @@ interface InlineQuestionCardProps {
   onRemove: () => void;
   onFocus: () => void;
   onSetRef: (node: HTMLDivElement | null) => void;
+  isOverlay?: boolean;
 }
 
 const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
@@ -209,17 +287,24 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
   onRemove,
   onFocus,
   onSetRef,
+  isOverlay = false,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.key,
+    disabled: isOverlay,
+  });
   const isChoiceType = item.questionType === 'SINGLE_CHOICE' || item.questionType === 'MULTIPLE_CHOICE';
   const style = getQuestionTypeStyle(item.questionType);
   const cardStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
+    transform: isOverlay ? undefined : CSS.Transform.toString(transform),
+    transition: isOverlay ? undefined : transition,
+    zIndex: isDragging && !isOverlay ? 10 : undefined,
   };
 
   const handleSetRef = (node: HTMLDivElement | null) => {
+    if (isOverlay) {
+      return;
+    }
     setNodeRef(node);
     onSetRef(node);
   };
@@ -231,7 +316,8 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
       onClick={onFocus}
       className={cn(
         'overflow-hidden rounded-xl border bg-background shadow-sm transition-all',
-        isDragging && 'scale-[0.995] opacity-90 shadow-[0_18px_40px_rgba(15,23,42,0.14)]',
+        isDragging && !isOverlay && 'opacity-0',
+        isOverlay && 'pointer-events-none scale-[0.995] shadow-[0_18px_40px_rgba(15,23,42,0.18)]',
         isActive
           ? 'border-primary/40 ring-1 ring-primary/10 shadow-[0_10px_24px_rgba(59,130,246,0.08)]'
           : 'border-border hover:border-primary/20 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]',
@@ -244,21 +330,26 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
             aria-label={`拖动排序第${index + 1}题`}
             className={cn(
               'flex h-8 w-8 items-center justify-center rounded-xl text-text-muted transition hover:bg-muted hover:text-foreground',
-              isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
+              isDragging || isOverlay ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
             )}
-            {...attributes}
-            {...listeners}
+            {...(isOverlay ? {} : attributes)}
+            {...(isOverlay ? {} : listeners)}
           >
             <GripVertical className="h-4 w-4" />
           </button>
           {item.questionId ? (
-            <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
+            <Badge variant="outline" className={cn('h-6 rounded-md border-transparent px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
               {getQuestionTypeLabel(item.questionType)}
             </Badge>
           ) : (
             <Select
               value={item.questionType}
-              onValueChange={(value) => onUpdate({ questionType: value as QuestionType })}
+              onValueChange={(value) => onUpdate({
+                questionType: value as QuestionType,
+                options: value === 'MULTIPLE_CHOICE'
+                  ? ensureChoiceOptions(item.options)
+                  : item.options,
+              })}
             >
               <SelectTrigger
                 className="h-7 w-[78px] shrink-0 gap-1 rounded-md border-none bg-muted px-2.5 text-[11px] font-medium shadow-none [&>span]:text-left [&>svg]:border-l [&>svg]:border-foreground/20 [&>svg]:pl-1.5"

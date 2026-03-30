@@ -109,7 +109,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     <SelectValue placeholder="选择标签类型" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SPACE">space</SelectItem>
+                    <SelectItem value="SPACE">空间</SelectItem>
                     <SelectItem value="TAG">普通标签</SelectItem>
                   </SelectContent>
                 </Select>
@@ -123,7 +123,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   id="tag-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder={isSpaceType ? '例如：风控 space' : '例如：高频考点'}
+                  placeholder={isSpaceType ? '例如：风控空间' : '例如：高频考点'}
                   className="h-12 rounded-[14px] border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
                 />
               </div>
