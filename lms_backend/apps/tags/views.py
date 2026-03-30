@@ -39,22 +39,27 @@ class TagListCreateView(APIView):
         tags=['标签管理'],
     )
     def get(self, request):
-        enforce_tag_view_permission(request, '无权查看标签列表')
-        service = TagService(request)
         tag_type = request.query_params.get('tag_type', '').strip() or None
         search = request.query_params.get('search', '').strip() or None
         applicable_to = request.query_params.get('applicable_to', '').strip() or None
+        active_only = parse_bool_query_param(
+            request=request,
+            name='active_only',
+            default=True,
+        )
+        enforce_tag_view_permission(
+            request,
+            '无权查看标签列表',
+            tag_type=tag_type,
+            active_only=active_only,
+        )
+        service = TagService(request)
         limit = parse_int_query_param(
             request=request,
             name='limit',
             default=50,
             minimum=1,
             maximum=200,
-        )
-        active_only = parse_bool_query_param(
-            request=request,
-            name='active_only',
-            default=True,
         )
         queryset = service.list(
             tag_type=tag_type,
@@ -117,4 +122,3 @@ class TagDetailView(APIView):
         except BusinessError as error:
             return _handle_business_error(error)
         return no_content_response()
-

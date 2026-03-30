@@ -153,8 +153,21 @@ class TagService(BaseService):
             tag.save(update_fields=updated_fields)
 
 
-def enforce_tag_view_permission(request, error_message='无权查看标签') -> None:
-    if AuthorizationService(request).can('tag.view'):
+def enforce_tag_view_permission(
+    request,
+    error_message='无权查看标签',
+    *,
+    tag_type: str | None = None,
+    active_only: bool = True,
+) -> None:
+    authorization_service = AuthorizationService(request)
+    if authorization_service.can('tag.view'):
+        return
+    if (
+        tag_type == 'SPACE'
+        and active_only
+        and authorization_service.can('knowledge.view')
+    ):
         return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
 

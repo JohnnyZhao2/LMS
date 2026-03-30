@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { Tag, TagType } from '@/types/api';
 
 interface GetTagsParams {
@@ -27,10 +28,14 @@ export interface TagMutationPayload {
 
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
+  const { hasPermission, isLoading: isAuthLoading } = useAuth();
   const { tag_type, search, limit = 50, active_only = true, applicable_to } = params;
+  const canViewTags = hasPermission('tag.view');
+  const canViewKnowledgeSpaces = tag_type === 'SPACE' && active_only && hasPermission('knowledge.view');
+  const canQueryTags = canViewTags || canViewKnowledgeSpaces;
 
   return useQuery({
-    queryKey: ['tags', currentRole ?? 'UNKNOWN', tag_type, search, limit, active_only, applicable_to],
+    queryKey: ['tags', currentRole ?? 'UNKNOWN', canQueryTags, tag_type, search, limit, active_only, applicable_to],
     queryFn: () => {
       const queryString = buildQueryString({
         tag_type,
@@ -42,7 +47,7 @@ export const useTags = (params: GetTagsParams = {}) => {
       return apiClient.get<Tag[]>(`/tags/${queryString}`);
     },
     staleTime: 2 * 60 * 1000,
-    enabled: currentRole !== null,
+    enabled: currentRole !== null && !isAuthLoading && canQueryTags,
   });
 };
 
@@ -94,4 +99,3 @@ export const useDeleteTag = () => {
     },
   });
 };
-

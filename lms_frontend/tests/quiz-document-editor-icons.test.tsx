@@ -20,7 +20,7 @@ const baseItem: InlineQuestionItem = {
   answer: 'A',
   explanation: '',
   score: '5',
-  lineTagId: null,
+  spaceTagId: null,
   saved: false,
 };
 

@@ -508,6 +508,21 @@ class TestTagApiContracts:
         result_ids = [item['id'] for item in response.data['data']]
         assert space_tag.id in result_ids
 
+    def test_student_can_list_active_space_tags_for_knowledge_filters(self, api_client, student_user, space_tag):
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get('/api/tags/?tag_type=SPACE&active_only=true')
+
+        assert response.status_code == 200, response.data
+        result_ids = [item['id'] for item in response.data['data']]
+        assert space_tag.id in result_ids
+
+    def test_student_cannot_list_all_space_tags_without_tag_view(self, api_client, student_user):
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get('/api/tags/?tag_type=SPACE&active_only=false')
+
+        assert response.status_code == 403
+        assert response.data['code'] == 'PERMISSION_DENIED'
+
     def test_tag_list_rejects_invalid_limit(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/tags/?limit=bad')
