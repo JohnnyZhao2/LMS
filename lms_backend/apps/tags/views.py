@@ -1,4 +1,5 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -6,6 +7,7 @@ from core.exceptions import BusinessError, get_status_code_for_error
 from core.query_params import parse_int_query_param
 from core.responses import created_response, error_response, list_response, no_content_response, success_response
 
+from .models import Tag
 from .serializers import TagSerializer
 from .services import (
     TagService,
@@ -92,7 +94,7 @@ class TagDetailView(APIView):
     )
     def patch(self, request, pk):
         enforce_tag_action_permission(request, 'tag.update', '无权更新标签')
-        serializer = TagSerializer(data=request.data, partial=True)
+        serializer = TagSerializer(instance=Tag.objects.filter(pk=pk).first(), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
         try:
@@ -114,3 +116,35 @@ class TagDetailView(APIView):
         except BusinessError as error:
             return _handle_business_error(error)
         return no_content_response()
+
+
+class TagMergeSerializer(serializers.Serializer):
+    source_tag_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+    )
+    merged_name = serializers.CharField(max_length=100)
+
+
+class TagMergeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='合并标签',
+        request=TagMergeSerializer,
+        responses={200: TagSerializer},
+        tags=['标签管理'],
+    )
+    def post(self, request):
+        enforce_tag_action_permission(request, 'tag.update', '无权合并标签')
+        serializer = TagMergeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        service = TagService(request)
+        try:
+            tag = service.merge(
+                serializer.validated_data['source_tag_ids'],
+                serializer.validated_data['merged_name'],
+            )
+        except BusinessError as error:
+            return _handle_business_error(error)
+        return success_response(TagSerializer(tag).data)

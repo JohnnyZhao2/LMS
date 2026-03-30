@@ -381,7 +381,7 @@ class TestQuestionApiContracts:
         )
 
         assert response.status_code == 400, response.data
-        assert response.data['code'] == 'ERROR'
+        assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'tag_ids' in str(response.data['message'])
 
     def test_question_patch_allows_clearing_space_tag(self, api_client, mentor_user, sample_question):
@@ -433,7 +433,7 @@ class TestAuthApiContracts:
         )
 
         assert response.status_code == 400
-        assert response.data['code'] == 'ERROR'
+        assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'employee_id' in str(response.data['message'])
 
     def test_refresh_response_is_wrapped(self, api_client, student_user):
@@ -536,6 +536,161 @@ class TestTagApiContracts:
         result_ids = {item['id'] for item in response.data['data']}
         assert question_tag.id in result_ids
         assert knowledge_tag.id not in result_ids
+
+    def test_tag_create_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/',
+            {
+                'name': space_tag.name,
+                'tag_type': 'TAG',
+                'allow_knowledge': True,
+                'allow_question': False,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert response.data['message'] == '标签名称不能与其他类型重复'
+
+    def test_tag_patch_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag, knowledge_tag):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/tags/{knowledge_tag.id}/',
+            {'name': space_tag.name},
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert response.data['message'] == '标签名称不能与其他类型重复'
+
+    def test_tag_patch_can_convert_tag_to_space(
+        self,
+        api_client,
+        admin_user,
+        knowledge_tag,
+        sample_knowledge,
+        sample_question,
+    ):
+        sample_knowledge.space_tag = None
+        sample_knowledge.save(update_fields=['space_tag'])
+        sample_question.space_tag = None
+        sample_question.save(update_fields=['space_tag'])
+        sample_knowledge.tags.set([knowledge_tag.id])
+        sample_question.tags.set([knowledge_tag.id])
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/tags/{knowledge_tag.id}/',
+            {
+                'tag_type': 'SPACE',
+                'color': '#123456',
+                'sort_order': 9,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data['data']['tag_type'] == 'SPACE'
+
+        sample_knowledge.refresh_from_db()
+        sample_question.refresh_from_db()
+        knowledge_tag.refresh_from_db()
+        assert sample_knowledge.space_tag_id == knowledge_tag.id
+        assert sample_question.space_tag_id == knowledge_tag.id
+        assert sample_knowledge.tags.count() == 0
+        assert sample_question.tags.count() == 0
+
+    def test_tag_patch_can_convert_space_to_tag(
+        self,
+        api_client,
+        admin_user,
+        space_tag,
+        sample_knowledge,
+        sample_question,
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            f'/api/tags/{space_tag.id}/',
+            {
+                'tag_type': 'TAG',
+                'allow_knowledge': True,
+                'allow_question': True,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data['data']['tag_type'] == 'TAG'
+
+        sample_knowledge.refresh_from_db()
+        sample_question.refresh_from_db()
+        space_tag.refresh_from_db()
+        assert sample_knowledge.space_tag_id is None
+        assert sample_question.space_tag_id is None
+        assert sample_knowledge.tags.filter(id=space_tag.id).exists()
+        assert sample_question.tags.filter(id=space_tag.id).exists()
+        assert space_tag.allow_knowledge is True
+        assert space_tag.allow_question is True
+
+    def test_tag_merge_moves_relations_to_merged_tag(
+        self,
+        api_client,
+        admin_user,
+        knowledge_tag,
+        sample_knowledge,
+        sample_question,
+    ):
+        sibling_tag = Tag.objects.create(
+            name='同义标签',
+            tag_type='TAG',
+            allow_knowledge=False,
+            allow_question=True,
+            sort_order=0,
+        )
+        sample_knowledge.tags.set([knowledge_tag.id])
+        sample_question.tags.set([sibling_tag.id])
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/merge/',
+            {
+                'source_tag_ids': [knowledge_tag.id, sibling_tag.id],
+                'merged_name': '统一标签',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        assert response.data['data']['name'] == '统一标签'
+
+        sample_knowledge.refresh_from_db()
+        sample_question.refresh_from_db()
+        assert not Tag.objects.filter(id=sibling_tag.id).exists()
+
+        merged_tag = Tag.objects.get(name='统一标签')
+        assert merged_tag.id in {knowledge_tag.id, sibling_tag.id}
+        assert sample_knowledge.tags.filter(id=merged_tag.id).exists()
+        assert sample_question.tags.filter(id=merged_tag.id).exists()
+        assert merged_tag.allow_knowledge is True
+        assert merged_tag.allow_question is True
+
+    def test_tag_merge_rejects_cross_type_tags(self, api_client, admin_user, knowledge_tag, space_tag):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/merge/',
+            {
+                'source_tag_ids': [knowledge_tag.id, space_tag.id],
+                'merged_name': '不能合并',
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert response.data['message'] == '仅支持同类型标签合并，请先改类型'
 
     def test_tag_delete_detaches_linked_knowledge_and_question(
         self,
@@ -650,7 +805,7 @@ class TestKnowledgeApiContracts:
         )
 
         assert response.status_code == 400, response.data
-        assert response.data['code'] == 'ERROR'
+        assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'content' in response.data['message']
 
     def test_knowledge_patch_allows_blank_title(self, api_client, admin_user, sample_knowledge):
@@ -1023,7 +1178,7 @@ class TestSubmissionApiContracts:
         )
 
         assert response.status_code == 400
-        assert response.data['code'] == 'ERROR'
+        assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'question_id' in str(response.data['message'])
 
     def test_practice_result_response_is_wrapped(self, api_client, student_user, submitted_practice_submission):

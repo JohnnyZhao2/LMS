@@ -24,6 +24,11 @@ export interface TagMutationPayload {
   extend_scope?: boolean;
 }
 
+interface MergeTagPayload {
+  source_tag_ids: number[];
+  merged_name: string;
+}
+
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
   const { hasPermission, isLoading: isAuthLoading } = useAuth();
@@ -75,6 +80,25 @@ export const useUpdateTag = () => {
       queryClient.invalidateQueries({ queryKey: ['question-detail'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+    },
+  });
+};
+
+export const useMergeTag = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: MergeTagPayload) =>
+      apiClient.post<Tag>('/tags/merge/', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['questions'] });
+      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
     },
   });
 };

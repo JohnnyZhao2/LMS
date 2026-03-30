@@ -14,6 +14,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
@@ -38,26 +39,6 @@ type FocusState =
 interface KnowledgeCenterProps {
     isAdmin?: boolean;
 }
-
-const SPACE_TYPE_THEME_COLORS = [
-    '#FFE45C',
-    '#7A38D6',
-    '#F0444F',
-    '#63EEB1',
-    '#BDC0CF',
-    '#FF86A3',
-    '#0A0A0A',
-    '#28A3D1',
-    '#23BE73',
-    '#F6D4C8',
-    '#2A6CE5',
-    '#C8FF00',
-    '#FF9966',
-    '#B8A9DB',
-    '#9DD3DC',
-    '#C89AAA',
-] as const;
-
 
 export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = false }) => {
     const { roleNavigate } = useRoleNavigate();
@@ -85,7 +66,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const [isCreateSpaceTypeOpen, setIsCreateSpaceTypeOpen] = React.useState(false);
     const [createSpaceTypeStep, setCreateSpaceTypeStep] = React.useState<1 | 2>(1);
     const [newSpaceTypeName, setNewSpaceTypeName] = React.useState('');
-    const [selectedSpaceTypeColor, setSelectedSpaceTypeColor] = React.useState<string>(SPACE_TYPE_THEME_COLORS[0]);
+    const [selectedSpaceTypeColor, setSelectedSpaceTypeColor] = React.useState<string>(SPACE_THEME_COLORS[0]);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -270,13 +251,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             setIsCreateSpaceTypeOpen(false);
             setCreateSpaceTypeStep(1);
             setNewSpaceTypeName('');
-            setSelectedSpaceTypeColor(SPACE_TYPE_THEME_COLORS[0]);
+            setSelectedSpaceTypeColor(SPACE_THEME_COLORS[0]);
         } catch {
             toast.error('添加失败');
         }
     }, [createTag, newSpaceTypeName, selectedSpaceTypeColor]);
 
-    const handleDeleteSpaceType = React.useCallback(async () => {
+            const handleDeleteSpaceType = React.useCallback(async () => {
         if (!deleteSpaceTypeTarget) return;
 
         try {
@@ -579,12 +560,15 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     } else {
                         setCreateSpaceTypeStep(1);
                         setNewSpaceTypeName('');
-                        setSelectedSpaceTypeColor(SPACE_TYPE_THEME_COLORS[0]);
+                        setSelectedSpaceTypeColor(SPACE_THEME_COLORS[0]);
                     }
                 }}
             >
-                <DialogContent className="max-w-[560px] border-0 bg-background p-0 shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
-                    <div className="px-7 py-8 sm:px-10 sm:py-9">
+                <DialogContent className="max-w-[560px] overflow-hidden border border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(232,121,58,0.08),transparent_26%),radial-gradient(circle_at_top_right,rgba(37,99,235,0.06),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(251,251,250,0.99))] p-0 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+                    <div className="relative px-7 py-8 sm:px-10 sm:py-9">
+                        <div className="pointer-events-none absolute -left-10 top-0 h-24 w-24 rounded-full bg-[rgba(232,121,58,0.08)] blur-2xl" />
+                        <div className="pointer-events-none absolute right-0 top-6 h-20 w-20 rounded-full bg-[rgba(37,99,235,0.06)] blur-2xl" />
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,rgba(232,121,58,0),rgba(232,121,58,0.55),rgba(37,99,235,0.32),rgba(37,99,235,0))]" />
                         {createSpaceTypeStep === 1 ? (
                             <div className="flex flex-col items-center text-center">
                                 <div className="relative mb-5 h-12 w-12">
@@ -624,8 +608,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     onClick={() => setCreateSpaceTypeStep(2)}
                                     disabled={!newSpaceTypeName.trim()}
                                     className={cn(
-                                        'mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-70',
-                                        !newSpaceTypeName.trim() ? 'bg-muted' : 'bg-muted-hover',
+                                        'mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-70',
+                                        !newSpaceTypeName.trim()
+                                            ? 'bg-muted text-foreground'
+                                            : 'bg-[#E8793A] text-white hover:bg-[#D96C2F]',
                                     )}
                                 >
                                     下一步
@@ -640,34 +626,19 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     颜色会帮助你更快识别这个类型。先选一个你最顺眼的标记色。
                                 </DialogDescription>
 
-                                <div className="mt-7 grid w-full max-w-[280px] grid-cols-4 justify-items-center gap-x-3 gap-y-3">
-                                    {SPACE_TYPE_THEME_COLORS.map((color) => {
-                                        const isSelected = selectedSpaceTypeColor === color;
-                                        return (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                onClick={() => setSelectedSpaceTypeColor(color)}
-                                                className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.04]"
-                                                aria-label={`选择颜色 ${color}`}
-                                            >
-                                                <span
-                                                    className="block h-7 w-7 rounded-full border-[3px]"
-                                                    style={{
-                                                        borderColor: color,
-                                                        boxShadow: isSelected ? `0 0 0 3px ${color}22` : 'none',
-                                                    }}
-                                                />
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                <SpaceColorRingPicker
+                                    value={selectedSpaceTypeColor}
+                                    onChange={setSelectedSpaceTypeColor}
+                                    className="mt-5"
+                                />
 
-                                <div className="mt-8 flex items-center gap-3">
+                                <div className="mt-5 flex items-center gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setCreateSpaceTypeStep(1)}
-                                        className="rounded-full border border-border px-5 py-2 text-[13px] font-medium text-text-muted transition-colors hover:bg-muted"
+                                        className={cn(
+                                            'w-[110px] rounded-full border border-border px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-text-muted transition-colors hover:bg-muted',
+                                        )}
                                     >
                                         上一步
                                     </button>
@@ -676,8 +647,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         onClick={() => void handleCreateSpaceType()}
                                         disabled={createTag.isPending || !newSpaceTypeName.trim()}
                                         className={cn(
-                                            'rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-70',
-                                            createTag.isPending ? 'bg-muted' : 'bg-muted-hover',
+                                            'w-[110px] rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-70',
+                                            createTag.isPending || !newSpaceTypeName.trim()
+                                                ? 'bg-muted text-foreground'
+                                                : 'bg-[#E8793A] text-white hover:bg-[#D96C2F]',
                                         )}
                                     >
                                         {createTag.isPending ? '保存中' : '保存'}

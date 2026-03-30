@@ -96,6 +96,8 @@ def custom_exception_handler(exc, context):
             elif isinstance(response.data, list):
                 error_data['message'] = str(response.data[0]) if response.data else 'Error'
         # Set appropriate error code based on status
+        if response.status_code == 400:
+            error_data['code'] = ErrorCodes.VALIDATION_ERROR
         if response.status_code == 401:
             error_data['code'] = ErrorCodes.AUTH_INVALID_CREDENTIALS
         elif response.status_code == 403:

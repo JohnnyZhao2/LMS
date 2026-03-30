@@ -34,6 +34,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
     onSelect,
     className,
 }) => {
+    const sidebarWidthClass = 'w-[9.5rem]';
     const viewOptions = [
         { label: '部门', value: 'department' },
         { label: '师徒', value: 'mentorship' },
@@ -57,9 +58,13 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
     const items = viewMode === 'department' ? departmentItems : mentorItems;
 
     return (
-        <div className={cn('w-64 shrink-0 flex flex-col gap-6', className)}>
+        <div className={cn(sidebarWidthClass, 'shrink-0 flex flex-col gap-6', className)}>
             {/* 视图切换 */}
             <SegmentedControl
+                className={cn(
+                    'w-full',
+                    'flex [&>div]:grid [&>div]:w-full [&>div]:grid-cols-2 [&_button]:flex-1'
+                )}
                 options={viewOptions}
                 value={viewMode}
                 onChange={(v) => onViewModeChange(v as ViewMode)}
@@ -73,7 +78,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
             </div>
 
             {/* 层级列表 */}
-            <div className="flex flex-col gap-2 relative">
+            <div className="relative flex flex-col gap-1.5 rounded-2xl bg-muted/70 p-2">
                 {items.map((item) => {
                     const isSelected = selectedId === item.id;
 
@@ -82,23 +87,24 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                             key={item.id}
                             onClick={() => onSelect(item.id)}
                             className={cn(
-                                'group relative flex items-center gap-3 rounded-lg px-4 py-3 text-left outline-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-0',
+                                'w-full',
+                                'group relative flex items-center gap-3 rounded-xl border px-4 py-3 text-left outline-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-0',
                                 isSelected
-                                    ? 'bg-background text-primary-700 shadow-[0_4px_16px_rgba(var(--primary),0.08)]'
-                                    : 'bg-muted text-text-muted'
+                                    ? 'border-border/80 bg-white text-foreground shadow-sm'
+                                    : 'border-transparent bg-transparent text-text-muted hover:bg-white/70 hover:text-foreground'
                             )}
                         >
                             <div className="flex flex-col min-w-0">
                                 <span className={cn(
                                     'text-sm font-semibold truncate',
-                                    isSelected ? 'text-primary-700' : 'text-text-muted'
+                                    isSelected ? 'text-foreground' : 'text-text-muted group-hover:text-foreground'
                                 )}>
                                     {item.name}
                                 </span>
                                 {item.subtitle && (
                                     <span className={cn(
                                         'text-[10px] font-medium uppercase tracking-wider truncate',
-                                        isSelected ? 'text-primary/80' : 'text-text-muted'
+                                        isSelected ? 'text-text-muted' : 'text-text-muted/80'
                                     )}>
                                         {item.subtitle}
                                     </span>
