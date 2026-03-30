@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.users.models import Role, User
 from core.mixins import TimestampMixin
 
-from .constants import EFFECT_CHOICES, SCOPE_CHOICES, SCOPE_ALL
+from .constants import EFFECT_ALLOW, EFFECT_CHOICES, SCOPE_CHOICES, SCOPE_ALL
 
 
 class Permission(TimestampMixin, models.Model):
@@ -29,7 +29,7 @@ class Permission(TimestampMixin, models.Model):
 
 
 class RolePermission(TimestampMixin, models.Model):
-    """Role baseline permissions."""
+    """Role permission overrides relative to code defaults."""
 
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions', verbose_name='角色')
     permission = models.ForeignKey(
@@ -38,16 +38,23 @@ class RolePermission(TimestampMixin, models.Model):
         related_name='role_permissions',
         verbose_name='权限',
     )
+    effect = models.CharField(
+        max_length=10,
+        choices=EFFECT_CHOICES,
+        default=EFFECT_ALLOW,
+        db_index=True,
+        verbose_name='覆盖效果',
+    )
 
     class Meta:
         db_table = 'lms_role_permission'
-        verbose_name = '角色权限'
-        verbose_name_plural = '角色权限'
+        verbose_name = '角色权限覆盖'
+        verbose_name_plural = '角色权限覆盖'
         unique_together = ['role', 'permission']
-        ordering = ['role__code', 'permission__code']
+        ordering = ['role__code', 'effect', 'permission__code']
 
     def __str__(self):
-        return f'{self.role.code}:{self.permission.code}'
+        return f'{self.role.code}:{self.effect}:{self.permission.code}'
 
 
 class UserPermissionOverride(TimestampMixin, models.Model):

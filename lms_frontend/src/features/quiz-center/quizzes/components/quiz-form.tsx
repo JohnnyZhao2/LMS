@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { arrayMove } from '@dnd-kit/sortable';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -179,7 +180,7 @@ export const QuizForm: React.FC = () => {
       questionType,
       spaceTagId: filterSpaceTypeId !== 'all' ? Number(filterSpaceTypeId) : null,
       content: '',
-      options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }] : [],
+      options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }, { key: 'C', value: '' }, { key: 'D', value: '' }] : [],
       answer: '',
       explanation: '',
       score: '1',
@@ -200,22 +201,13 @@ export const QuizForm: React.FC = () => {
   }, [activeKey]);
 
   // 移动题目
-  const handleMoveItem = useCallback((key: string, direction: 'up' | 'down') => {
+  const handleReorderItems = useCallback((activeKey: string, overKey: string) => {
     setItems(prev => {
-      const idx = prev.findIndex(i => i.key === key);
-      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
-      const next = [...prev];
-      [next[idx], next[targetIdx]] = [next[targetIdx], next[idx]];
-      return next;
+      const oldIndex = prev.findIndex((item) => item.key === activeKey);
+      const newIndex = prev.findIndex((item) => item.key === overKey);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
     });
-  }, []);
-
-  // 排序
-  const handleSortQuestions = useCallback(() => {
-    const typeOrder: Record<string, number> = { SINGLE_CHOICE: 1, MULTIPLE_CHOICE: 2, TRUE_FALSE: 3, SHORT_ANSWER: 4 };
-    setItems(prev => [...prev].sort((a, b) => (typeOrder[a.questionType] || 99) - (typeOrder[b.questionType] || 99)));
-    toast.success('已按题型排序');
   }, []);
 
   // 预览题库中的题目（弹窗或其他方式，暂保留简单 toast）
@@ -277,14 +269,13 @@ export const QuizForm: React.FC = () => {
     }
   };
   return (
-    <div className="flex h-[calc(100vh-48px)] flex-col bg-background">
+    <div className="flex h-[calc(100vh-48px)] flex-col bg-background overflow-hidden rounded-2xl border border-border shadow-sm">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}
         title={title}
         quizType={quizType}
         onTitleChange={setTitle}
-        onQuizTypeChange={setQuizType}
         onBack={() => navigate(-1)}
         onSubmit={handleSubmitQuiz}
         isSubmitting={isSubmitting}
@@ -298,12 +289,13 @@ export const QuizForm: React.FC = () => {
           quizType={quizType}
           duration={duration}
           passScore={passScore}
+          onQuizTypeChange={setQuizType}
           onSelectItem={(key) => {
             setActiveKey(key);
           }}
+          onReorderItems={handleReorderItems}
           onDurationChange={setDuration}
           onPassScoreChange={setPassScore}
-          onSortQuestions={handleSortQuestions}
         />
 
         {/* Center: 文档流编辑器 */}
@@ -312,7 +304,7 @@ export const QuizForm: React.FC = () => {
           activeKey={activeKey}
           onUpdateItem={handleUpdateItem}
           onRemoveItem={handleRemoveItem}
-          onMoveItem={handleMoveItem}
+          onReorderItems={handleReorderItems}
           onAddBlank={handleAddBlank}
           onFocusItem={setActiveKey}
         />

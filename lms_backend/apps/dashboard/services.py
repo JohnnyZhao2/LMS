@@ -39,7 +39,7 @@ from .selectors import (
 )
 
 MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE = 'task.analytics.view'
-TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE = 'knowledge.view'
+TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE = 'analytics.view'
 
 
 class StudentDashboardService(BaseService):

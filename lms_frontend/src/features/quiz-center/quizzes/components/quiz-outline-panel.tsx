@@ -1,13 +1,23 @@
 import React, { useMemo } from 'react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Clock3, FileText, Target } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import type { QuestionType, QuizType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
+import { CompactNumberInput } from './compact-number-input';
+import { SortableOutlineItem } from './sortable-outline-item';
 
 interface QuizOutlinePanelProps {
   items: InlineQuestionItem[];
@@ -15,10 +25,11 @@ interface QuizOutlinePanelProps {
   quizType: QuizType;
   duration?: number;
   passScore?: number;
+  onQuizTypeChange: (quizType: QuizType) => void;
   onSelectItem: (key: string) => void;
+  onReorderItems: (activeKey: string, overKey: string) => void;
   onDurationChange: (value?: number) => void;
   onPassScoreChange: (value?: number) => void;
-  onSortQuestions?: () => void;
 }
 
 export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
@@ -27,10 +38,28 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   quizType,
   duration,
   passScore,
+  onQuizTypeChange,
   onSelectItem,
+  onReorderItems,
   onDurationChange,
   onPassScoreChange,
 }) => {
+  const parseIntegerValue = (value: string) => {
+    if (!value) return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   const stats = useMemo(() => {
     let totalScore = 0;
     let single = 0, multi = 0, tf = 0, short = 0;
@@ -96,13 +125,29 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
       }));
   }, [items.length, stats.multi, stats.short, stats.single, stats.tf]);
 
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    onReorderItems(String(active.id), String(over.id));
+  };
+
   return (
     <div className="flex w-64 shrink-0 flex-col border-r border-border bg-background xl:w-72">
-      <div className="flex h-14 items-center border-b border-border px-5">
+      <div className="flex h-14 items-center justify-between gap-3 border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <FileText className="h-4 w-4 text-primary-600" />
           <span>试卷结构</span>
         </div>
+        <SegmentedControl
+          value={quizType}
+          onChange={(value) => onQuizTypeChange(value as QuizType)}
+          options={[
+            { label: '练习', value: 'PRACTICE' },
+            { label: '考试', value: 'EXAM' },
+          ]}
+          activeColor="white"
+          size="sm"
+          className="w-auto shrink-0"
+        />
       </div>
       {quizType === 'EXAM' && (
         <div className="space-y-3 border-b border-border bg-background px-5 py-4">
@@ -111,34 +156,34 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
               <Clock3 className="h-3.5 w-3.5" />
               时间限制
             </div>
-            <div className="flex items-center gap-1 rounded-md bg-background px-1.5 py-0.5">
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                value={duration ?? ''}
-                onChange={(e) => onDurationChange(Number(e.target.value) || undefined)}
-                className="h-6 w-8 border-0 bg-transparent p-0 text-right text-[12px] font-semibold shadow-none focus-visible:ring-0"
-              />
-              <span className="text-[10px] text-text-muted">分钟</span>
-            </div>
+            <CompactNumberInput
+              value={duration ? String(duration) : ''}
+              onChange={(value) => onDurationChange(parseIntegerValue(value))}
+              min={1}
+              step={1}
+              unit="分"
+              dividerBeforeUnit
+              inputWidthClassName="w-10"
+              inputClassName="text-[12px] font-semibold"
+              className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+            />
           </div>
           <div className="flex items-center justify-between text-[12px]">
             <div className="flex items-center gap-1.5 font-medium text-text-muted">
               <Target className="h-3.5 w-3.5" />
               及格分数
             </div>
-            <div className="flex items-center gap-1 rounded-md bg-background px-1.5 py-0.5">
-              <Input
-                type="number"
-                min={1}
-                step={1}
-                value={passScore ?? ''}
-                onChange={(e) => onPassScoreChange(Number(e.target.value) || undefined)}
-                className="h-6 w-8 border-0 bg-transparent p-0 text-right text-[12px] font-semibold shadow-none focus-visible:ring-0"
-              />
-              <span className="text-[10px] text-text-muted">分</span>
-            </div>
+            <CompactNumberInput
+              value={passScore ? String(passScore) : ''}
+              onChange={(value) => onPassScoreChange(parseIntegerValue(value))}
+              min={1}
+              step={1}
+              unit="分"
+              dividerBeforeUnit
+              inputWidthClassName="w-10"
+              inputClassName="text-[12px] font-semibold"
+              className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+            />
           </div>
         </div>
       )}
@@ -149,39 +194,26 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             <span className="text-xs">从右侧题库添加题目</span>
           </div>
         ) : (
-          <div className="space-y-1 p-3">
-            {items.map((item, idx) => {
-              const isActive = item.key === activeKey;
-              const style = getQuestionTypeStyle(item.questionType);
-              return (
-                <div
-                  key={item.key}
-                  onClick={() => onSelectItem(item.key)}
-                  className={cn(
-                    'group flex cursor-pointer items-start gap-3 rounded-lg px-3 py-3 transition-all duration-150',
-                    isActive ? 'bg-muted' : 'hover:bg-muted',
-                  )}
-                >
-                  <div className={cn(
-                    'mt-0.5 flex w-4 shrink-0 items-center justify-center text-[10px] font-mono text-text-muted',
-                  )}>
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="mb-1 flex items-center gap-1.5">
-                      <Badge className={cn('h-4 px-1.5 text-[9px] leading-none font-medium', style.bg, style.color)}>
-                        {getQuestionTypeLabel(item.questionType)}
-                      </Badge>
-                      <span className="text-[10px] text-text-muted tabular-nums">{item.score}分</span>
-                    </div>
-                    <p className={cn('line-clamp-2 text-[13px] leading-relaxed', isActive ? 'font-medium text-foreground' : 'text-foreground')}>
-                      {item.content || '未填写题目'}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={({ active }) => onSelectItem(String(active.id))}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1 p-3">
+                {items.map((item, idx) => (
+                  <SortableOutlineItem
+                    key={item.key}
+                    item={item}
+                    index={idx}
+                    isActive={item.key === activeKey}
+                    onSelect={() => onSelectItem(item.key)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
       <div className="border-t border-border bg-background px-3 py-2.5">

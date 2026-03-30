@@ -6,6 +6,7 @@ Implements:
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
+from apps.authorization.services import AuthorizationService
 from apps.dashboard.services import TeamManagerDashboardService
 from apps.users.permissions import SUPER_ADMIN_ROLE
 from core.base_view import BaseAPIView
@@ -37,5 +38,9 @@ class TeamManagerDashboardView(BaseAPIView):
                 code=ErrorCodes.PERMISSION_DENIED,
                 message='只有团队经理或超管可以访问此仪表盘'
             )
+        AuthorizationService(request).enforce(
+            'analytics.view',
+            error_message='无权查看团队数据看板',
+        )
         data = self.service.get_dashboard_data()
         return success_response(data)

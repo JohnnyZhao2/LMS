@@ -35,7 +35,6 @@ from .selectors import (
     get_permissions_by_codes,
     list_active_user_overrides,
     list_permissions,
-    list_role_permission_codes,
 )
 
 
@@ -65,6 +64,23 @@ class AuthorizationService(BaseService):
     def _get_system_role_permission_code_set(role_code: str) -> Set[str]:
         return set(ROLE_SYSTEM_PERMISSION_DEFAULTS.get(role_code, []))
 
+    @staticmethod
+    def validate_role_code(role_code: str) -> Optional[Role]:
+        if role_code == SUPER_ADMIN_ROLE:
+            return None
+        return Role.objects.filter(code=role_code).first()
+
+    @classmethod
+    def _get_role_default_permission_code_set(cls, role_code: str) -> Set[str]:
+        return cls._normalize_role_permission_codes(
+            role_code,
+            ROLE_PERMISSION_DEFAULTS.get(role_code, []),
+        )
+
+    @classmethod
+    def _get_role_configurable_default_permission_code_set(cls, role_code: str) -> Set[str]:
+        return cls._get_role_default_permission_code_set(role_code) - cls._get_system_role_permission_code_set(role_code)
+
     @classmethod
     def _normalize_role_permission_codes(
         cls,
@@ -78,12 +94,32 @@ class AuthorizationService(BaseService):
         normalized_codes |= cls._get_system_role_permission_code_set(role_code)
         return normalized_codes
 
-    @staticmethod
-    def _get_role_permission_code_set(role_code: str) -> Set[str]:
-        role_codes = set(list_role_permission_codes(role_code))
-        if not role_codes:
-            role_codes = set(ROLE_PERMISSION_DEFAULTS.get(role_code, []))
-        return AuthorizationService._normalize_role_permission_codes(role_code, role_codes)
+    @classmethod
+    def _get_role_permission_override_code_sets(cls, role_code: str) -> tuple[Set[str], Set[str]]:
+        rows = RolePermission.objects.filter(
+            role__code=role_code,
+            permission__is_active=True,
+        ).values_list('permission__code', 'effect')
+        allow_codes = set()
+        deny_codes = set()
+        for permission_code, effect in rows:
+            if effect == EFFECT_DENY:
+                deny_codes.add(permission_code)
+            else:
+                allow_codes.add(permission_code)
+        allow_codes = cls._normalize_role_permission_codes(role_code, allow_codes)
+        deny_codes -= cls._get_system_role_permission_code_set(role_code)
+        deny_codes &= cls._get_role_configurable_default_permission_code_set(role_code) | allow_codes
+        return allow_codes, deny_codes
+
+    @classmethod
+    def _get_role_permission_code_set(cls, role_code: str) -> Set[str]:
+        default_codes = cls._get_role_default_permission_code_set(role_code)
+        allow_codes, deny_codes = cls._get_role_permission_override_code_sets(role_code)
+        return cls._normalize_role_permission_codes(
+            role_code,
+            (default_codes | allow_codes) - deny_codes,
+        )
 
     def _resolve_role(self, role_code: Optional[str] = None) -> Optional[str]:
         return role_code or self.get_current_role()
@@ -317,11 +353,19 @@ class AuthorizationService(BaseService):
             all_codes = set(Permission.objects.filter(is_active=True).values_list('code', flat=True))
             all_codes.update(SYSTEM_MANAGED_PERMISSION_CODES)
             return sorted(all_codes)
+        self.validate_not_none(
+            self.validate_role_code(role_code),
+            f'角色 {role_code} 不存在',
+        )
         return sorted(self._get_role_permission_code_set(role_code))
 
     def get_role_default_scope_types(self, role_code: str) -> List[str]:
         if role_code == SUPER_ADMIN_ROLE:
             return [SCOPE_ALL]
+        self.validate_not_none(
+            self.validate_role_code(role_code),
+            f'角色 {role_code} 不存在',
+        )
         return list(ROLE_DEFAULT_SCOPE_TYPES.get(role_code, [SCOPE_ALL]))
 
     def get_role_scope_options(self, role_code: str) -> List[dict]:
@@ -351,10 +395,7 @@ class AuthorizationService(BaseService):
                     code=ErrorCodes.VALIDATION_ERROR,
                     message=f'配置管理权限仅支持管理员角色，非法权限: {forbidden_codes}',
                 )
-        role = self.validate_not_none(
-            Role.objects.filter(code=role_code).first(),
-            f'角色 {role_code} 不存在',
-        )
+        role = self.validate_not_none(self.validate_role_code(role_code), f'角色 {role_code} 不存在')
 
         normalized_codes = sorted(self._normalize_role_permission_codes(role_code, requested_codes))
         permission_objects = get_permissions_by_codes(normalized_codes)
@@ -366,16 +407,35 @@ class AuthorizationService(BaseService):
                 message=f'存在无效权限编码: {missing_codes}',
             )
 
+        default_codes = self._get_role_configurable_default_permission_code_set(role_code)
+        requested_configurable_codes = resolved_codes - self._get_system_role_permission_code_set(role_code)
+        allow_codes = sorted(requested_configurable_codes - default_codes)
+        deny_codes = sorted(default_codes - requested_configurable_codes)
+        deny_permissions = Permission.objects.filter(code__in=deny_codes, is_active=True)
+
         RolePermission.objects.filter(role=role).delete()
         RolePermission.objects.bulk_create(
             [
-                RolePermission(role=role, permission=permission)
+                RolePermission(
+                    role=role,
+                    permission=permission,
+                    effect=EFFECT_ALLOW,
+                )
                 for permission in permission_objects
+                if permission.code in allow_codes
+            ]
+            + [
+                RolePermission(
+                    role=role,
+                    permission=permission,
+                    effect=EFFECT_DENY,
+                )
+                for permission in deny_permissions
             ],
             batch_size=500,
         )
 
-        return sorted(resolved_codes)
+        return sorted(self._get_role_permission_code_set(role_code))
 
     def list_user_permission_overrides(
         self,
@@ -513,9 +573,8 @@ class AuthorizationService(BaseService):
         return override
 
     @staticmethod
-    @transaction.atomic
-    def ensure_defaults() -> None:
-        """Idempotently seed permission catalog and role baseline."""
+    def sync_permission_catalog() -> dict:
+        """Sync code-defined permissions into DB and prune removed permissions."""
         permissions_by_code = {}
         for item in PERMISSION_CATALOG:
             permission, _ = Permission.objects.update_or_create(
@@ -530,17 +589,36 @@ class AuthorizationService(BaseService):
             permissions_by_code[item['code']] = permission
 
         Permission.objects.exclude(code__in=permissions_by_code.keys()).delete()
+        return permissions_by_code
 
-        for role_code, permission_codes in ROLE_PERMISSION_DEFAULTS.items():
-            role = Role.objects.filter(code=role_code).first()
-            if not role:
-                continue
-            RolePermission.objects.filter(role=role).delete()
-            RolePermission.objects.bulk_create(
-                [
-                    RolePermission(role=role, permission=permissions_by_code[permission_code])
-                    for permission_code in permission_codes
-                    if permission_code in permissions_by_code
-                ],
-                batch_size=500,
+    @staticmethod
+    def sync_role_permission_defaults(
+        permissions_by_code: dict,
+        *,
+        overwrite_existing: bool = False,
+    ) -> None:
+        """Reset DB overrides back to pure code defaults when explicitly requested."""
+        del permissions_by_code
+        if not overwrite_existing:
+            return
+        RolePermission.objects.filter(role__code__in=ROLE_PERMISSION_DEFAULTS.keys()).delete()
+
+    @staticmethod
+    @transaction.atomic
+    def ensure_defaults(
+        *,
+        sync_role_templates: bool = False,
+        overwrite_existing_role_templates: bool = False,
+    ) -> None:
+        """
+        Sync code-defined authorization defaults.
+
+        Normal syncs only manage the permission catalog. Role templates are
+        computed from code defaults plus DB overrides.
+        """
+        permissions_by_code = AuthorizationService.sync_permission_catalog()
+        if sync_role_templates:
+            AuthorizationService.sync_role_permission_defaults(
+                permissions_by_code,
+                overwrite_existing=overwrite_existing_role_templates,
             )

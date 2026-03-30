@@ -12,6 +12,7 @@ from django.db.models import QuerySet
 
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
+from apps.authorization.policies import can_manage_task_resource, can_view_task_resource
 from apps.submissions.models import Submission
 from apps.authorization.services import AuthorizationService
 from apps.users.models import User
@@ -126,16 +127,14 @@ class TaskService(BaseService):
                 message='无权访问此任务'
             )
 
-        current_role = self.get_current_role()
-        if is_admin_like_role(current_role):
-            return True
-        if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by == self.user and task.created_role == current_role:
-                return True
-        elif task.assignments.filter(assignee=self.user).exists():
-            return True
-
-        if authorization_service.has_allow_override('task.view'):
+        if can_view_task_resource(
+            current_role=self.get_current_role(),
+            actor_user_id=getattr(self.user, 'id', None),
+            task_owner_user_id=task.created_by_id,
+            task_created_role=task.created_role,
+            is_assignee=task.assignments.filter(assignee=self.user).exists(),
+            has_allow_override=authorization_service.has_allow_override('task.view'),
+        ):
             return True
 
         raise BusinessError(
@@ -182,13 +181,13 @@ class TaskService(BaseService):
                 message=error_message,
             )
 
-        current_role = self.get_current_role()
-        if is_admin_like_role(current_role):
-            return True
-        if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            if task.created_by == self.user and task.created_role == current_role:
-                return True
-        if authorization_service.has_allow_override(permission_code):
+        if can_manage_task_resource(
+            current_role=self.get_current_role(),
+            actor_user_id=getattr(self.user, 'id', None),
+            task_owner_user_id=task.created_by_id,
+            task_created_role=task.created_role,
+            has_allow_override=authorization_service.has_allow_override(permission_code),
+        ):
             return True
         raise BusinessError(
             code=ErrorCodes.PERMISSION_DENIED,

@@ -17,7 +17,7 @@ class Command(BaseCommand):
             self.create_departments()
             self.create_roles()
             self.create_admin_user()
-            AuthorizationService.ensure_defaults()
+            AuthorizationService.ensure_defaults(sync_role_templates=True)
         self.stdout.write(self.style.SUCCESS('✅ 初始化数据完成！'))
     def create_departments(self):
         """创建部门"""

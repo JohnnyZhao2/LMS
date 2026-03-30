@@ -5,6 +5,7 @@ export interface PermissionCatalogItem {
   name: string;
   module: string;
   description: string;
+  constraint_summary: string;
   is_active: boolean;
 }
 

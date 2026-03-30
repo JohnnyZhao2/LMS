@@ -11,7 +11,6 @@ interface QuizFormHeaderProps {
   title: string;
   quizType: QuizType;
   onTitleChange: (title: string) => void;
-  onQuizTypeChange: (quizType: QuizType) => void;
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
@@ -23,7 +22,6 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
   title,
   quizType,
   onTitleChange,
-  onQuizTypeChange,
   onBack,
   onSubmit,
   isSubmitting,
@@ -67,30 +65,6 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
-        <div className="flex rounded-md bg-muted p-0.5">
-          <button
-            className={
-              quizType === 'PRACTICE'
-                ? 'rounded-[6px] bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-sm'
-                : 'rounded-[6px] px-3 py-1.5 text-[12px] font-semibold text-text-muted transition-all hover:text-foreground'
-            }
-            onClick={() => onQuizTypeChange('PRACTICE')}
-            type="button"
-          >
-            练习
-          </button>
-          <button
-            className={
-              quizType === 'EXAM'
-                ? 'rounded-[6px] bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-sm'
-                : 'rounded-[6px] px-3 py-1.5 text-[12px] font-semibold text-text-muted transition-all hover:text-foreground'
-            }
-            onClick={() => onQuizTypeChange('EXAM')}
-            type="button"
-          >
-            考试
-          </button>
-        </div>
         <Button onClick={onSubmit} disabled={isSubmitting} className="h-8 rounded-md bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90">
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           保存更改

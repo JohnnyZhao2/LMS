@@ -547,8 +547,8 @@ class TestTeamManagerDashboardAPI:
         assert '超级管理员账号' not in all_student_names
 
     def test_dashboard_scope_follows_permission_overrides(self, api_client, team_manager, student):
-        """团队经理看板学员范围应遵循 knowledge.view 的 ALLOW/DENY 覆盖"""
-        permission = Permission.objects.get(code='knowledge.view')
+        """团队经理看板学员范围应遵循 analytics.view 的 ALLOW/DENY 覆盖"""
+        permission = Permission.objects.get(code='analytics.view')
 
         api_client.force_authenticate(user=team_manager)
         response = api_client.get('/api/dashboard/team-manager/', HTTP_X_CURRENT_ROLE='TEAM_MANAGER')

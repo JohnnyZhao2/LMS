@@ -64,6 +64,10 @@ def test_admin_effective_permissions_follow_default_menu_and_system_rules():
     assert 'knowledge.create' in permissions
     assert 'knowledge.update' in permissions
     assert 'knowledge.delete' in permissions
+    assert 'tag.view' in permissions
+    assert 'tag.create' in permissions
+    assert 'tag.update' in permissions
+    assert 'tag.delete' in permissions
     assert 'quiz.view' in permissions
     assert 'quiz.create' in permissions
     assert 'quiz.update' in permissions
@@ -106,6 +110,8 @@ def test_mentor_effective_permissions_follow_default_menu():
     assert 'quiz.create' in permissions
     assert 'quiz.update' in permissions
     assert 'quiz.delete' in permissions
+    assert 'tag.view' in permissions
+    assert 'tag.create' in permissions
     assert 'task.view' in permissions
     assert 'task.create' in permissions
     assert 'task.update' in permissions
@@ -161,7 +167,7 @@ def test_team_manager_effective_permissions_follow_default_menu():
 
 
 @pytest.mark.django_db
-def test_permission_catalog_excludes_system_managed_permissions():
+def test_permission_catalog_excludes_system_managed_permissions_but_includes_configurable_analytics():
     client = APIClient()
     super_user = _create_superuser(employee_id='EMP_AUTH_CAT', username='Catalog Super')
     _authenticate(client, employee_id=super_user.employee_id)
@@ -169,17 +175,33 @@ def test_permission_catalog_excludes_system_managed_permissions():
     response = client.get('/api/authorization/permissions/')
 
     assert response.status_code == 200
-    permission_codes = {item['code'] for item in response.data['data']}
+    permission_map = {item['code']: item for item in response.data['data']}
+    permission_codes = set(permission_map)
     assert 'task.view' in permission_codes
+    assert 'tag.view' in permission_codes
+    assert 'tag.create' in permission_codes
+    assert 'analytics.view' in permission_codes
     assert 'dashboard.student.view' not in permission_codes
     assert 'dashboard.mentor.view' not in permission_codes
     assert 'dashboard.team_manager.view' not in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
-    assert 'analytics.view' not in permission_codes
     assert 'profile.view' not in permission_codes
     assert 'profile.update' not in permission_codes
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
+    assert permission_map['analytics.view']['constraint_summary']
+
+
+@pytest.mark.django_db
+def test_role_permission_template_unknown_role_returns_not_found():
+    client = APIClient()
+    super_user = _create_superuser(employee_id='EMP_AUTH_ROLE_404', username='Role 404 Super')
+    _authenticate(client, employee_id=super_user.employee_id)
+
+    response = client.get('/api/authorization/roles/NOT_A_ROLE/permissions/')
+
+    assert response.status_code == 404
+    assert response.data['code'] == 'RESOURCE_NOT_FOUND'
 
 
 @pytest.mark.django_db
@@ -412,6 +434,7 @@ def test_replace_non_admin_role_permissions_rejects_config_module_requests():
 def test_role_permission_template_response_includes_default_scope_types():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_ADMIN', username='Scope Super')
+    Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
     _authenticate(client, employee_id=admin_user.employee_id)
 
     response = client.get('/api/authorization/roles/MENTOR/permissions/')

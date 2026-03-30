@@ -5,6 +5,7 @@ import type { PermissionCatalogItem } from '@/types/api';
 interface RolePermissionCardProps {
   permission: PermissionCatalogItem;
   detail: string;
+  constraintSummary?: string;
   checked: boolean;
   disabled: boolean;
   onToggle: (checked: boolean) => void;
@@ -13,6 +14,7 @@ interface RolePermissionCardProps {
 export const RolePermissionCard: React.FC<RolePermissionCardProps> = ({
   permission,
   detail,
+  constraintSummary,
   checked,
   disabled,
   onToggle,
@@ -54,6 +56,11 @@ export const RolePermissionCard: React.FC<RolePermissionCardProps> = ({
       <p className="text-[11px] leading-relaxed text-text-muted line-clamp-2">
         {detail}
       </p>
+      {constraintSummary ? (
+        <p className="text-[11px] leading-relaxed text-amber-700/90">
+          生效约束：{constraintSummary}
+        </p>
+      ) : null}
     </div>
   </button>
 );

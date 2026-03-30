@@ -11,6 +11,8 @@ from typing import Optional
 
 from django.db import transaction
 
+from apps.authorization.policies import can_manage_owned_resource
+from apps.authorization.services import AuthorizationService
 from apps.tags.models import Tag
 from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
@@ -82,7 +84,13 @@ class QuestionService(BaseService):
 
         return queryset
 
-    def check_edit_permission(self, question: Question) -> bool:
+    def check_edit_permission(
+        self,
+        question: Question,
+        *,
+        permission_code: str,
+        error_message: str,
+    ) -> bool:
         """
         检查用户是否有编辑/删除权限
         Property 15: 题目所有权编辑控制
@@ -93,16 +101,18 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果权限不足
         """
-        # 管理员可以编辑/删除任何题目
-        if is_admin_like_role(self.get_current_role()):
+        authorization_service = AuthorizationService(self.request)
+        if can_manage_owned_resource(
+            current_role=self.get_current_role(),
+            actor_user_id=getattr(self.user, 'id', None),
+            owner_user_id=question.created_by_id,
+            has_allow_override=authorization_service.has_allow_override(permission_code),
+        ):
             return True
-        # 其他人只能编辑/删除自己创建的题目
-        if question.created_by_id != self.user.id:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有题目创建者或管理员可以操作此题目'
-            )
-        return True
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=error_message,
+        )
 
     @transaction.atomic
     @log_content_action('question', 'create', '{question_type_label}，{score_text} 分')
@@ -160,7 +170,11 @@ class QuestionService(BaseService):
         """
         question = self.get_by_id(pk)
         # 检查编辑权限
-        self.check_edit_permission(question)
+        self.check_edit_permission(
+            question,
+            permission_code='question.update',
+            error_message='只有题目创建者或管理员可以操作此题目',
+        )
         # 当前版本需要创建新版本
         if question.is_current:
             return self._create_new_version(question, data)
@@ -203,7 +217,11 @@ class QuestionService(BaseService):
         question = get_question_by_id(pk)
         self.validate_not_none(question, f'题目 {pk} 不存在')
         # 检查编辑权限
-        self.check_edit_permission(question)
+        self.check_edit_permission(
+            question,
+            permission_code='question.delete',
+            error_message='只有题目创建者或管理员可以操作此题目',
+        )
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):
             raise BusinessError(

@@ -349,7 +349,7 @@ export const roleRoutes = [
     key="analytics"
     path="analytics"
     element={
-      <ProtectedRoute allowedRoles={['TEAM_MANAGER']}>
+      <ProtectedRoute allowedRoles={['TEAM_MANAGER']} requiredPermissions={['analytics.view']}>
         <Analytics />
       </ProtectedRoute>
     }

@@ -22,6 +22,11 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     summary: '知识中心和知识管理共用模块，覆盖知识列表、详情、统计和知识维护。',
     order: 20,
   },
+  tag: {
+    label: '标签管理',
+    summary: '标签管理页，负责标签列表、创建、编辑和删除。',
+    order: 25,
+  },
   quiz: {
     label: '试卷管理',
     summary: '试卷中心主入口，负责试卷列表、组卷和试卷维护。',
@@ -109,6 +114,22 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   'knowledge.delete': {
     pageLabel: '知识管理 / 删除知识',
     detail: '删除知识文档。',
+  },
+  'tag.view': {
+    pageLabel: '标签管理 / 标签列表',
+    detail: '查看标签管理页和标签列表。',
+  },
+  'tag.create': {
+    pageLabel: '标签管理 / 新建标签',
+    detail: '创建新标签。',
+  },
+  'tag.update': {
+    pageLabel: '标签管理 / 编辑标签',
+    detail: '更新标签信息和适用范围。',
+  },
+  'tag.delete': {
+    pageLabel: '标签管理 / 删除标签',
+    detail: '删除标签。',
   },
   'quiz.view': {
     pageLabel: '试卷中心 / 试卷列表',

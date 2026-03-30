@@ -1,9 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Plus, Trash2, X } from 'lucide-react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { FileText, GripVertical, Plus, Trash2, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +27,7 @@ import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions
 import { AnswerInput, OptionsInput } from '@/features/questions/components/question-form-inputs';
 import type { QuestionType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
+import { CompactNumberInput } from './compact-number-input';
 
 const QUESTION_TYPES: Array<{ value: QuestionType; label: string }> = [
   { value: 'SINGLE_CHOICE', label: '单选' },
@@ -25,7 +41,7 @@ interface QuizDocumentEditorProps {
   activeKey: string | null;
   onUpdateItem: (key: string, patch: Partial<InlineQuestionItem>) => void;
   onRemoveItem: (key: string) => void;
-  onMoveItem: (key: string, direction: 'up' | 'down') => void;
+  onReorderItems: (activeKey: string, overKey: string) => void;
   onAddBlank: (questionType?: QuestionType) => void;
   onFocusItem: (key: string) => void;
 }
@@ -38,13 +54,23 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   activeKey,
   onUpdateItem,
   onRemoveItem,
-  onMoveItem,
+  onReorderItems,
   onAddBlank,
   onFocusItem,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   useEffect(() => {
     if (!showAddMenu) return undefined;
@@ -73,31 +99,40 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
     setShowAddMenu(false);
   };
 
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    onReorderItems(String(active.id), String(over.id));
+  };
+
   return (
     <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col border-r border-border bg-background">
       <div className="flex-1 overflow-y-auto scrollbar-subtle px-10 py-10">
         {items.length > 0 ? (
-          <div className="mx-auto flex max-w-[820px] flex-col gap-6 pb-28">
-            {items.map((item, index) => (
-              <div
-                key={item.key}
-                ref={(node) => {
-                  itemRefs.current[item.key] = node;
-                }}
-              >
-                <InlineQuestionCard
-                  item={item}
-                  index={index}
-                  total={items.length}
-                  isActive={item.key === activeKey}
-                  onUpdate={(patch) => onUpdateItem(item.key, patch)}
-                  onRemove={() => onRemoveItem(item.key)}
-                  onMove={(dir) => onMoveItem(item.key, dir)}
-                  onFocus={() => onFocusItem(item.key)}
-                />
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={({ active }) => onFocusItem(String(active.id))}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
+              <div className="mx-auto flex max-w-[820px] flex-col gap-6 pb-28">
+                {items.map((item, index) => (
+                  <InlineQuestionCard
+                    key={item.key}
+                    item={item}
+                    index={index}
+                    isActive={item.key === activeKey}
+                    onUpdate={(patch) => onUpdateItem(item.key, patch)}
+                    onRemove={() => onRemoveItem(item.key)}
+                    onFocus={() => onFocusItem(item.key)}
+                    onSetRef={(node) => {
+                      itemRefs.current[item.key] = node;
+                    }}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-text-muted">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-background">
@@ -159,32 +194,44 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
 interface InlineQuestionCardProps {
   item: InlineQuestionItem;
   index: number;
-  total: number;
   isActive: boolean;
   onUpdate: (patch: Partial<InlineQuestionItem>) => void;
   onRemove: () => void;
-  onMove: (direction: 'up' | 'down') => void;
   onFocus: () => void;
+  onSetRef: (node: HTMLDivElement | null) => void;
 }
 
 const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
   item,
   index,
-  total,
   isActive,
   onUpdate,
   onRemove,
-  onMove,
   onFocus,
+  onSetRef,
 }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.key });
   const isChoiceType = item.questionType === 'SINGLE_CHOICE' || item.questionType === 'MULTIPLE_CHOICE';
   const style = getQuestionTypeStyle(item.questionType);
+  const cardStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const handleSetRef = (node: HTMLDivElement | null) => {
+    setNodeRef(node);
+    onSetRef(node);
+  };
 
   return (
     <div
+      ref={handleSetRef}
+      style={cardStyle}
       onClick={onFocus}
       className={cn(
         'overflow-hidden rounded-2xl border shadow-sm transition-all',
+        isDragging && 'scale-[0.995] opacity-90 shadow-[0_18px_40px_rgba(15,23,42,0.14)]',
         isActive
           ? 'border-border bg-background'
           : 'border-border/70 bg-muted opacity-72 saturate-50 hover:opacity-90 hover:saturate-75',
@@ -192,11 +239,23 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
     >
       <div
         className={cn(
-          'flex items-center justify-between border-b px-8 py-5',
+          'flex items-center justify-between border-b px-8 py-3.5',
           isActive ? 'border-border bg-background' : 'border-border/70 bg-transparent',
         )}
       >
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            aria-label={`拖动排序第${index + 1}题`}
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition hover:bg-muted hover:text-foreground',
+              isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
+            )}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
           {item.questionId ? (
             <Badge className={cn('h-6 rounded-md px-2.5 text-[10px] font-semibold', style.bg, style.color)}>
               {getQuestionTypeLabel(item.questionType)}
@@ -207,42 +266,37 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
               onValueChange={(value) => onUpdate({ questionType: value as QuestionType })}
             >
               <SelectTrigger
-                className="h-7 w-[110px] rounded-md border-border bg-muted text-[11px] font-medium"
+                className="h-7 w-[78px] shrink-0 gap-1 rounded-md border-none bg-muted px-2.5 text-[11px] font-medium shadow-none [&>span]:text-left [&>svg]:border-l [&>svg]:border-foreground/20 [&>svg]:pl-1.5"
                 onClick={(e) => e.stopPropagation()}
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-[88px] min-w-[88px] rounded-xl border-border p-1">
                 {QUESTION_TYPES.map(({ value, label }) => (
-                  <SelectItem key={value} value={value} className="text-[11px]">
+                  <SelectItem key={value} value={value} className="rounded-lg py-2 pl-3.5 pr-7 text-[12px] font-medium">
                     {label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
+          <span className="text-[11px] font-medium text-text-muted">第 {index + 1} 题</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 shadow-sm">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">分值</span>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step={0.5}
-              value={item.score}
-              onChange={(e) => onUpdate({ score: e.target.value })}
-              className="h-6 w-10 border-0 bg-transparent p-0 text-center text-[13px] font-semibold shadow-none focus-visible:ring-0"
-            />
-          </div>
+          <CompactNumberInput
+            prefixLabel="分值"
+            mode="decimal"
+            value={item.score}
+            onChange={(value) => onUpdate({ score: value })}
+            min={0}
+            max={100}
+            step={0.5}
+            inputWidthClassName="w-10"
+            inputClassName="text-[11px] leading-none"
+            className="h-7 gap-1.5 px-2 py-0"
+          />
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:text-foreground" disabled={index === 0} onClick={(e) => { e.stopPropagation(); onMove('up'); }}>
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:text-foreground" disabled={index === total - 1} onClick={(e) => { e.stopPropagation(); onMove('down'); }}>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-text-muted hover:bg-destructive-50 hover:text-destructive-500" onClick={(e) => { e.stopPropagation(); onRemove(); }}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -250,32 +304,34 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
         </div>
       </div>
 
-      <div className="space-y-8 px-8 py-8">
-          <div className="space-y-3">
-            <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">题目内容</Label>
-            <Textarea
+      <div className="space-y-4 px-7 py-4">
+          <div
+            className={cn(
+              'rounded-[20px] px-5 py-3.5',
+              isActive ? 'bg-muted/40' : 'bg-muted/18',
+            )}
+          >
+            <textarea
               placeholder="输入题目描述..."
               value={item.content}
               onChange={(e) => onUpdate({ content: e.target.value })}
-              className="min-h-[64px] resize-none border-0 bg-transparent p-0 text-[15px] font-semibold leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
+              rows={2}
+              className="block min-h-[52px] w-full resize-none border-0 bg-transparent p-0 text-[15px] font-semibold leading-relaxed text-foreground outline-none placeholder:text-text-muted/35"
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-2">
             <Label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-              {isChoiceType ? '选项配置' : '参考答案'}
+              {isChoiceType ? '选项' : '参考答案'}
             </Label>
             {isChoiceType ? (
-              <>
-                <OptionsInput
-                  questionType={item.questionType}
-                  value={item.options}
-                  onChange={(opts) => onUpdate({ options: opts })}
-                  answer={item.answer}
-                  onAnswerChange={(ans) => onUpdate({ answer: ans })}
-                />
-                <p className="pl-0.5 text-[11px] text-text-muted/60">点击字母标签设置正确答案</p>
-              </>
+              <OptionsInput
+                questionType={item.questionType}
+                value={item.options}
+                onChange={(opts) => onUpdate({ options: opts })}
+                answer={item.answer}
+                onAnswerChange={(ans) => onUpdate({ answer: ans })}
+              />
             ) : (
               <AnswerInput
                 questionType={item.questionType}
@@ -286,7 +342,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
             )}
           </div>
 
-          <div className="border-t border-border pt-6 space-y-2">
+          <div className="space-y-2 border-t border-border pt-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
             </div>

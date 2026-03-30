@@ -317,6 +317,11 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
                               <div className="text-[11px] text-slate-400 line-clamp-1">
                                 {permission.description || permission.code}
                               </div>
+                              {permission.constraint_summary ? (
+                                <div className="text-[11px] text-amber-600 line-clamp-2">
+                                  生效约束：{permission.constraint_summary}
+                                </div>
+                              ) : null}
                             </div>
 
                             {/* iOS-style Switch */}

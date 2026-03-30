@@ -109,6 +109,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
     return activeGroup.permissions.map((permission) => ({
       permission,
       detail: getPermissionPresentation(permission).detail,
+      constraintSummary: permission.constraint_summary,
     }));
   }, [activeGroup]);
 
@@ -250,11 +251,12 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
 
             {/* 权限卡片网格 */}
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 2xl:grid-cols-3">
-              {activeItems.map(({ permission, detail }) => (
+              {activeItems.map(({ permission, detail, constraintSummary }) => (
                 <RolePermissionCard
                   key={permission.code}
                   permission={permission}
                   detail={detail}
+                  constraintSummary={constraintSummary}
                   checked={selectedCodes.includes(permission.code)}
                   disabled={!canUpdateRoleTemplate || isPermissionLockedForSelectedRole(permission)}
                   onToggle={(checked) => onToggleCode(permission.code, checked)}

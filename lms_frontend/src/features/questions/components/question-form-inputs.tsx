@@ -1,13 +1,23 @@
 /**
  * 题目表单输入组件 — 选项输入 + 答案输入
  */
-import { Check, Plus, X } from 'lucide-react';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/api';
+import { SortableOptionItem } from './sortable-option-item';
 
 /* ─────────────────────────────────────────────
    选项输入组件
@@ -21,6 +31,35 @@ interface OptionsInputProps {
   disabled?: boolean;
 }
 
+const buildOptionKey = (index: number) => String.fromCharCode(65 + index);
+
+const reindexOptionsAndAnswer = (
+  options: Array<{ key: string; value: string }>,
+  answer: string | string[],
+  questionType: QuestionType,
+) => {
+  const keyMap = new Map(options.map((option, index) => [option.key, buildOptionKey(index)]));
+  const nextOptions = options.map((option, index) => ({
+    ...option,
+    key: buildOptionKey(index),
+  }));
+
+  if (questionType === 'MULTIPLE_CHOICE') {
+    const selected = Array.isArray(answer) ? answer : [];
+    const nextAnswer = selected
+      .map((item) => keyMap.get(item))
+      .filter((item): item is string => Boolean(item))
+      .sort();
+    return { nextOptions, nextAnswer };
+  }
+
+  const current = typeof answer === 'string' ? answer : '';
+  return {
+    nextOptions,
+    nextAnswer: current ? (keyMap.get(current) ?? '') : '',
+  };
+};
+
 export const OptionsInput: React.FC<OptionsInputProps> = ({
   questionType,
   value = [],
@@ -29,9 +68,20 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   onAnswerChange,
   disabled = false,
 }) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   const handleAdd = () => {
     if (disabled) return;
-    const nextKey = String.fromCharCode(65 + value.length);
+    const nextKey = buildOptionKey(value.length);
     onChange([...value, { key: nextKey, value: '' }]);
   };
 
@@ -44,26 +94,10 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
 
   const handleRemove = (index: number) => {
     if (disabled) return;
-    const removedKey = value[index]?.key;
-    const remaining = value
-      .filter((_, i) => i !== index)
-      .map((opt, i) => ({ ...opt, key: String.fromCharCode(65 + i) }));
-    onChange(remaining);
-
-    if (questionType === 'MULTIPLE_CHOICE' && Array.isArray(answer)) {
-      const newAnswer = answer
-        .filter((k) => k !== removedKey)
-        .map((k) => {
-          const oldIndex = value.findIndex((o) => o.key === k);
-          return String.fromCharCode(65 + (oldIndex > index ? oldIndex - 1 : oldIndex));
-        });
-      onAnswerChange(newAnswer);
-    } else if (answer === removedKey) {
-      onAnswerChange('');
-    } else if (typeof answer === 'string' && answer) {
-      const oldIndex = value.findIndex((o) => o.key === answer);
-      if (oldIndex > index) onAnswerChange(String.fromCharCode(65 + oldIndex - 1));
-    }
+    const remaining = value.filter((_, i) => i !== index);
+    const { nextOptions, nextAnswer } = reindexOptionsAndAnswer(remaining, answer, questionType);
+    onChange(nextOptions);
+    onAnswerChange(nextAnswer);
   };
 
   const handleToggleAnswer = (key: string) => {
@@ -81,63 +115,39 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   const isSelected = (key: string) =>
     Array.isArray(answer) ? answer.includes(key) : answer === key;
 
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (disabled || !over || active.id === over.id) return;
+
+    const oldIndex = value.findIndex((option, index) => `${option.key}-${index}` === active.id);
+    const newIndex = value.findIndex((option, index) => `${option.key}-${index}` === over.id);
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+
+    const reordered = arrayMove(value, oldIndex, newIndex);
+    const { nextOptions, nextAnswer } = reindexOptionsAndAnswer(reordered, answer, questionType);
+    onChange(nextOptions);
+    onAnswerChange(nextAnswer);
+  };
+
   return (
     <div className="space-y-1">
-      {value.map((opt, index) => {
-        const selected = isSelected(opt.key);
-        return (
-          <div
-            key={opt.key}
-            className="group flex items-center gap-3 transition-all duration-100"
-          >
-            {/* 答案标签 */}
-            <button
-              type="button"
-              onClick={() => handleToggleAnswer(opt.key)}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={value.map((opt, index) => `${opt.key}-${index}`)} strategy={verticalListSortingStrategy}>
+          {value.map((opt, index) => (
+            <SortableOptionItem
+              key={`${opt.key}-${index}`}
+              index={index}
+              optionKey={opt.key}
+              optionValue={opt.value}
+              selected={isSelected(opt.key)}
               disabled={disabled}
-              className={cn(
-                'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
-                'text-[11px] font-semibold transition-all duration-150',
-                disabled ? 'cursor-default' : 'cursor-pointer',
-                selected
-                  ? 'border-primary-500 bg-primary-500 text-white'
-                  : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
-              )}
-            >
-              {selected ? <Check className="w-3 h-3" strokeWidth={3} /> : opt.key}
-            </button>
-
-            {/* 选项内容 */}
-            <Input
-              value={opt.value}
-              onChange={(e) => handleChange(index, e.target.value)}
-              placeholder={`选项 ${opt.key}`}
-              className={cn(
-                'h-10 flex-1 rounded-xl border px-3 text-[13px] shadow-none focus-visible:ring-0',
-                selected
-                  ? 'border-primary-100 bg-primary-50/40'
-                  : 'border-border bg-white',
-              )}
-              readOnly={disabled}
+              canRemove={value.length > 2}
+              onToggleAnswer={() => handleToggleAnswer(opt.key)}
+              onChange={(nextValue) => handleChange(index, nextValue)}
+              onRemove={() => handleRemove(index)}
             />
-
-            {/* 删除按钮 */}
-            {!disabled && value.length > 2 && (
-              <button
-                type="button"
-                onClick={() => handleRemove(index)}
-                className={cn(
-                  'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-                  'opacity-0 group-hover:opacity-100 transition-opacity',
-                  'text-text-muted/50 hover:text-destructive hover:bg-destructive/10',
-                )}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        );
-      })}
+          ))}
+        </SortableContext>
+      </DndContext>
 
       {!disabled && (
         <Button
@@ -149,8 +159,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
             'h-8 w-fit px-1 text-[12px] font-medium text-primary-600 hover:bg-transparent hover:text-primary-700',
           )}
         >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          增加候选项
+          <Plus className="w-3.5 h-3.5" />
         </Button>
       )}
     </div>

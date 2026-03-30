@@ -15,6 +15,7 @@ interface SegmentedControlProps {
   label?: string;
   className?: string;
   activeColor?: 'white' | 'blue';
+  size?: 'default' | 'sm';
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -24,10 +25,21 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   label,
   className,
   activeColor = 'white',
+  size = 'default',
 }) => {
   const activeStyles = {
     white: 'bg-white text-foreground shadow-sm',
     blue: 'bg-primary text-white shadow-sm',
+  };
+  const sizeStyles = {
+    default: {
+      wrapper: 'h-11 rounded-full p-1',
+      button: 'rounded-full px-4 text-xs font-bold',
+    },
+    sm: {
+      wrapper: 'h-8 rounded-lg p-0.5',
+      button: 'rounded-md px-3 py-1 text-[12px] font-semibold',
+    },
   };
 
   return (
@@ -37,13 +49,14 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {label}
         </span>
       )}
-      <div className="flex h-11 w-full items-stretch rounded-full bg-muted/60 p-1 overflow-x-auto no-scrollbar">
+      <div className={cn('flex w-full items-stretch overflow-x-auto bg-muted/60 no-scrollbar', sizeStyles[size].wrapper)}>
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 rounded-full px-4 text-xs font-bold transition-all duration-200 whitespace-nowrap outline-none',
+              'flex-1 transition-all duration-200 whitespace-nowrap outline-none',
+              sizeStyles[size].button,
               value === opt.value
                 ? activeStyles[activeColor]
                 : 'text-text-muted hover:text-foreground'
