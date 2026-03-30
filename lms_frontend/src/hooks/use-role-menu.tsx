@@ -68,14 +68,14 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
 
     if (hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'])) {
       quizChildren.push({
-        key: `${rolePrefix}/quiz-center?tab=quizzes`,
+        key: `${rolePrefix}/quizzes`,
         label: '试卷管理',
       });
     }
 
     if (hasAnyPermission(['question.view', 'question.create', 'question.update', 'question.delete'])) {
       quizChildren.push({
-        key: `${rolePrefix}/quiz-center?tab=questions`,
+        key: `${rolePrefix}/questions`,
         label: '题目管理',
       });
     }
@@ -89,7 +89,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
 
     if (quizChildren.length > 0) {
       menu.push({
-        key: `${rolePrefix}/quiz-center`,
+        key: `${rolePrefix}/${hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete']) ? 'quizzes' : 'questions'}`,
         icon: <HelpCircle className="w-4 h-4" />,
         label: '测评管理',
         children: quizChildren,

@@ -10,7 +10,6 @@ interface GetTagsParams {
   tag_type?: TagType;
   search?: string;
   limit?: number;
-  active_only?: boolean;
   applicable_to?: 'knowledge' | 'question';
 }
 
@@ -19,7 +18,6 @@ export interface TagMutationPayload {
   tag_type: TagType;
   color?: string;
   sort_order?: number;
-  is_active?: boolean;
   allow_knowledge?: boolean;
   allow_question?: boolean;
   current_module?: 'knowledge' | 'question';
@@ -29,19 +27,18 @@ export interface TagMutationPayload {
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
   const { hasPermission, isLoading: isAuthLoading } = useAuth();
-  const { tag_type, search, limit = 50, active_only = true, applicable_to } = params;
+  const { tag_type, search, limit = 50, applicable_to } = params;
   const canViewTags = hasPermission('tag.view');
-  const canViewKnowledgeSpaces = tag_type === 'SPACE' && active_only && hasPermission('knowledge.view');
+  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasPermission('knowledge.view');
   const canQueryTags = canViewTags || canViewKnowledgeSpaces;
 
   return useQuery({
-    queryKey: ['tags', currentRole ?? 'UNKNOWN', canQueryTags, tag_type, search, limit, active_only, applicable_to],
+    queryKey: ['tags', currentRole ?? 'UNKNOWN', canQueryTags, tag_type, search, limit, applicable_to],
     queryFn: () => {
       const queryString = buildQueryString({
         tag_type,
         search,
         limit,
-        active_only,
         applicable_to,
       });
       return apiClient.get<Tag[]>(`/tags/${queryString}`);

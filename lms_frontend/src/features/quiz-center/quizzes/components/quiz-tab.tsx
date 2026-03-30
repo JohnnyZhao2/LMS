@@ -3,7 +3,7 @@ import { Pencil, Trash2, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
-import { getQuestionTypeLabel } from '@/features/quiz-center/questions/constants';
+import { getQuestionTypeLabel } from '@/features/questions/constants';
 import { ROUTES } from '@/config/routes';
 import type { QuizListItem } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
@@ -179,7 +179,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-primary-600 hover:text-primary-700 hover:bg-primary-50"
-                onClick={() => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${record.id}/edit`)}
+                onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/edit`)}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -228,7 +228,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           },
         }}
         rowClassName="hover:bg-muted transition-colors cursor-pointer group"
-        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZ_CENTER_QUIZZES}/${row.id}/edit`)}
+        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/edit`)}
       />
 
       {/* 删除确认对话框 */}

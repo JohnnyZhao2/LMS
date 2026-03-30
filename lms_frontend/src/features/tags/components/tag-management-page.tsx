@@ -45,7 +45,6 @@ export const TagManagementPage: React.FC = () => {
   const { data: tags = [], isLoading } = useTags({
     tag_type: activeTab,
     search: search || undefined,
-    active_only: false,
   });
   const createTag = useCreateTag();
   const updateTag = useUpdateTag();
@@ -68,7 +67,6 @@ export const TagManagementPage: React.FC = () => {
     name: string;
     color?: string;
     sort_order: number;
-    is_active: boolean;
     allow_knowledge: boolean;
     allow_question: boolean;
   }) => {
@@ -166,15 +164,6 @@ export const TagManagementPage: React.FC = () => {
         id: 'sort_order',
         header: '排序',
         cell: ({ row }) => row.original.sort_order,
-      },
-      {
-        id: 'status',
-        header: '状态',
-        cell: ({ row }) => (
-          <span className={row.original.is_active ? 'text-emerald-600' : 'text-text-muted'}>
-            {row.original.is_active ? '启用' : '停用'}
-          </span>
-        ),
       },
       {
         id: 'actions',

@@ -126,7 +126,7 @@ export const MentorDashboard: React.FC = () => {
               title="新建试卷"
               description="创建新的考试或练习试卷"
               icon={Plus}
-              route={`${ROUTES.QUIZ_CENTER_QUIZZES}/create`}
+              route={`${ROUTES.QUIZZES}/create`}
               actionColor="emerald"
               delay="stagger-delay-3"
             />

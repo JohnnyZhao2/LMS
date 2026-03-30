@@ -14,7 +14,7 @@ def validate_space_tag_id(value):
     if value is None:
         return value
     try:
-        Tag.objects.get(id=value, tag_type='SPACE', is_active=True)
+        Tag.objects.get(id=value, tag_type='SPACE')
         return value
     except Tag.DoesNotExist:
         raise serializers.ValidationError('无效的 space ID')
@@ -27,7 +27,6 @@ def validate_question_tag_ids(value):
         Tag.objects.filter(
             id__in=value,
             tag_type='TAG',
-            is_active=True,
             allow_question=True,
         ).values_list('id', flat=True)
     )

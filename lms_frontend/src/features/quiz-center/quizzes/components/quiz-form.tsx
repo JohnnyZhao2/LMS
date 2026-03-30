@@ -4,8 +4,9 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useCreateQuestion, useUpdateQuestion } from '@/features/quiz-center/questions/api/create-question';
-import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
+import { ROUTES } from '@/config/routes';
+import { useCreateQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
+import { useQuestions } from '@/features/questions/api/get-questions';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
@@ -15,7 +16,7 @@ import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem } from '../types';
 
-import { QuestionBankPanel } from '@/features/quiz-center/questions/components/question-bank-panel';
+import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
 import { QuizFormHeader } from './quiz-form-header';
 import { QuizOutlinePanel } from './quiz-outline-panel';
 import { QuizDocumentEditor } from './quiz-document-editor';
@@ -266,7 +267,7 @@ export const QuizForm: React.FC = () => {
       if (isEdit) {
         await updateQuiz.mutateAsync({ id: Number(id), data });
         toast.success('试卷更新成功');
-        roleNavigate('quiz-center');
+        roleNavigate(ROUTES.QUIZZES);
       } else {
         await createQuiz.mutateAsync(data);
         setSuccessModalOpen(true);
@@ -332,7 +333,7 @@ export const QuizForm: React.FC = () => {
         />
       </div>
 
-      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate('quiz-center'); }}>
+      <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate(ROUTES.QUIZZES); }}>
         <DialogContent className="max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-bold">
@@ -344,7 +345,7 @@ export const QuizForm: React.FC = () => {
             <p className="text-sm text-text-muted leading-relaxed">
               恭喜！试卷 <span className="font-bold text-foreground">「{title}」</span> 已成功保存至系统库。
             </p>
-            <Button variant="outline" onClick={() => roleNavigate('quiz-center')}>返回列表</Button>
+            <Button variant="outline" onClick={() => roleNavigate(ROUTES.QUIZZES)}>返回列表</Button>
           </div>
         </DialogContent>
       </Dialog>

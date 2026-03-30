@@ -28,14 +28,14 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         null=True,
         blank=True,
         verbose_name='space',
-        limit_choices_to={'tag_type': 'SPACE', 'is_active': True}
+        limit_choices_to={'tag_type': 'SPACE'}
     )
     tags = models.ManyToManyField(
         Tag,
         related_name='knowledge_items',
         blank=True,
         verbose_name='知识标签',
-        limit_choices_to={'tag_type': 'TAG', 'is_active': True}
+        limit_choices_to={'tag_type': 'TAG'}
     )
     # 统一正文内容
     content = models.TextField(blank=True, default='', verbose_name='正文内容')

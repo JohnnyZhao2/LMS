@@ -288,7 +288,6 @@ class QuestionService(BaseService):
         space_tag = Tag.objects.filter(
             id=space_tag_id,
             tag_type='SPACE',
-            is_active=True,
         ).first()
         if not space_tag:
             raise BusinessError(
@@ -306,7 +305,6 @@ class QuestionService(BaseService):
             Tag.objects.filter(
                 id__in=tag_ids,
                 tag_type='TAG',
-                is_active=True,
                 allow_question=True,
             ).values_list('id', flat=True)
         )

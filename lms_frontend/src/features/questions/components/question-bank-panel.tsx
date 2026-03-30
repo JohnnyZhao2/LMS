@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { getQuestionTypeLabel, getQuestionTypeStyle, QUESTION_TYPE_LABELS } from '@/features/quiz-center/questions/constants';
+import { getQuestionTypeLabel, getQuestionTypeStyle, QUESTION_TYPE_LABELS } from '@/features/questions/constants';
 import type { PaginatedResponse, Question, QuestionType, Tag } from '@/types/api';
 
 interface QuestionBankPanelProps {

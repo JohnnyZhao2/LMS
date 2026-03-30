@@ -18,7 +18,6 @@ class Tag(TimestampMixin, models.Model):
         verbose_name='标签类型',
     )
     sort_order = models.IntegerField(default=0, verbose_name='排序序号')
-    is_active = models.BooleanField(default=True, verbose_name='是否启用')
     allow_knowledge = models.BooleanField(default=True, verbose_name='适用于知识')
     allow_question = models.BooleanField(default=False, verbose_name='适用于题目')
 
@@ -44,4 +43,3 @@ class Tag(TimestampMixin, models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.get_tag_type_display()})'
-

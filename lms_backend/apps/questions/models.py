@@ -83,14 +83,14 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         null=True,
         blank=True,
         verbose_name='space',
-        limit_choices_to={'tag_type': 'SPACE', 'is_active': True}
+        limit_choices_to={'tag_type': 'SPACE'}
     )
     tags = models.ManyToManyField(
         Tag,
         related_name='question_items',
         blank=True,
         verbose_name='题目标签',
-        limit_choices_to={'tag_type': 'TAG', 'is_active': True},
+        limit_choices_to={'tag_type': 'TAG'},
     )
     class Meta:
         db_table = 'lms_question'

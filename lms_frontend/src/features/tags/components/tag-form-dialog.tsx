@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tag, TagType } from '@/types/api';
 
-
 interface TagFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,7 +24,6 @@ interface TagFormDialogProps {
     name: string;
     color?: string;
     sort_order: number;
-    is_active: boolean;
     allow_knowledge: boolean;
     allow_question: boolean;
   }) => Promise<void> | void;
@@ -44,7 +42,6 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
   const [name, setName] = React.useState('');
   const [color, setColor] = React.useState('#4A90E2');
   const [sortOrder, setSortOrder] = React.useState('0');
-  const [isActive, setIsActive] = React.useState(true);
   const [allowKnowledge, setAllowKnowledge] = React.useState(true);
   const [allowQuestion, setAllowQuestion] = React.useState(false);
 
@@ -53,7 +50,6 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
     setName(tag?.name ?? '');
     setColor(tag?.color ?? '#4A90E2');
     setSortOrder(String(tag?.sort_order ?? 0));
-    setIsActive(tag?.is_active ?? true);
     setAllowKnowledge(tag?.allow_knowledge ?? true);
     setAllowQuestion(tag?.allow_question ?? false);
   }, [open, tag]);
@@ -63,7 +59,6 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
       name: name.trim(),
       color: tagType === 'SPACE' ? color : undefined,
       sort_order: Number(sortOrder) || 0,
-      is_active: isActive,
       allow_knowledge: tagType === 'SPACE' ? true : allowKnowledge,
       allow_question: tagType === 'SPACE' ? true : allowQuestion,
     });
@@ -135,15 +130,6 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
               </div>
             </div>
           )}
-
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted p-4">
-            <Checkbox
-              id="tag-active"
-              checked={isActive}
-              onCheckedChange={(checked) => setIsActive(Boolean(checked))}
-            />
-            <Label htmlFor="tag-active" className="cursor-pointer">启用标签</Label>
-          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:space-x-0">

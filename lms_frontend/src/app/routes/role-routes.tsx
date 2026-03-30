@@ -23,9 +23,10 @@ const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-prev
 const KnowledgeCenter = lazy(() => import('@/features/knowledge/components/knowledge-center').then(m => ({ default: m.KnowledgeCenter })));
 const TagManagementPage = lazy(() => import('@/features/tags/components/tag-management-page').then(m => ({ default: m.TagManagementPage })));
 
-// Quiz Center
-const QuizCenter = lazy(() => import('@/features/quiz-center/components/quiz-center').then(m => ({ default: m.QuizCenter })));
+// Quizzes / Questions
+const QuizManagementPage = lazy(() => import('@/features/quiz-center/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
 const QuizForm = lazy(() => import('@/features/quiz-center/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
+const QuestionManagementPage = lazy(() => import('@/features/questions/components/question-management-page').then(m => ({ default: m.QuestionManagementPage })));
 
 // Spot Checks
 const SpotCheckList = lazy(() => import('@/features/spot-checks/components/spot-check-list').then(m => ({ default: m.SpotCheckList })));
@@ -178,31 +179,22 @@ export const roleRoutes = [
     }
   />,
 
-  // Quiz Center
+  // Quizzes
   <Route
-    key="quiz-center"
-    path="quiz-center"
+    key="quizzes"
+    path="quizzes"
     element={
       <ProtectedRoute
-        requiredPermissions={[
-          'quiz.view',
-          'quiz.create',
-          'quiz.update',
-          'quiz.delete',
-          'question.view',
-          'question.create',
-          'question.update',
-          'question.delete',
-        ]}
+        requiredPermissions={['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete']}
         permissionMode="any"
       >
-        <QuizCenter />
+        <QuizManagementPage />
       </ProtectedRoute>
     }
   />,
   <Route
     key="quiz-create"
-    path="quiz-center/quizzes/create"
+    path="quizzes/create"
     element={
       <ProtectedRoute requiredPermissions={['quiz.create']}>
         <QuizForm />
@@ -211,10 +203,22 @@ export const roleRoutes = [
   />,
   <Route
     key="quiz-edit"
-    path="quiz-center/quizzes/:id/edit"
+    path="quizzes/:id/edit"
     element={
       <ProtectedRoute requiredPermissions={['quiz.update']}>
         <QuizForm />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="questions"
+    path="questions"
+    element={
+      <ProtectedRoute
+        requiredPermissions={['question.view', 'question.create', 'question.update', 'question.delete']}
+        permissionMode="any"
+      >
+        <QuestionManagementPage />
       </ProtectedRoute>
     }
   />,

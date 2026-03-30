@@ -86,7 +86,6 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         allow_knowledge=True,
         allow_question=True,
         sort_order=1,
-        is_active=True,
     )
 
     knowledge = Knowledge.objects.create(

@@ -213,7 +213,6 @@ class KnowledgeService(BaseService):
         space_tag = Tag.objects.filter(
             id=space_tag_id,
             tag_type='SPACE',
-            is_active=True,
         ).first()
         if not space_tag:
             raise BusinessError(
@@ -231,7 +230,6 @@ class KnowledgeService(BaseService):
             Tag.objects.filter(
                 id__in=tag_ids,
                 tag_type='TAG',
-                is_active=True,
                 allow_knowledge=True,
             ).values_list('id', flat=True)
         )

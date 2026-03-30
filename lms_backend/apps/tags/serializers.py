@@ -21,7 +21,6 @@ class TagSerializer(serializers.ModelSerializer):
             'tag_type',
             'tag_type_display',
             'sort_order',
-            'is_active',
             'allow_knowledge',
             'allow_question',
             'current_module',
@@ -34,4 +33,3 @@ class TagSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name', 'color']
-

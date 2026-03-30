@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
-import { AnswerInput, OptionsInput } from '@/features/quiz-center/questions/components/question-form-inputs';
+import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
+import { AnswerInput, OptionsInput } from '@/features/questions/components/question-form-inputs';
 import type { QuestionType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
 

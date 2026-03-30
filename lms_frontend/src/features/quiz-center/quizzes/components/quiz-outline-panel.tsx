@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
+import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import type { QuestionType, QuizType } from '@/types/api';
 import type { InlineQuestionItem } from '../types';
 

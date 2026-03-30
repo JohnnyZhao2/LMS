@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from core.exceptions import BusinessError, get_status_code_for_error
-from core.query_params import parse_bool_query_param, parse_int_query_param
+from core.query_params import parse_int_query_param
 from core.responses import created_response, error_response, list_response, no_content_response, success_response
 
 from .serializers import TagSerializer
@@ -32,7 +32,6 @@ class TagListCreateView(APIView):
             OpenApiParameter(name='tag_type', type=str, description='标签类型（SPACE/TAG）'),
             OpenApiParameter(name='search', type=str, description='搜索关键词'),
             OpenApiParameter(name='limit', type=int, description='返回数量限制（默认50）'),
-            OpenApiParameter(name='active_only', type=bool, description='只返回启用标签'),
             OpenApiParameter(name='applicable_to', type=str, description='适用范围（knowledge/question）'),
         ],
         responses={200: TagSerializer(many=True)},
@@ -42,16 +41,10 @@ class TagListCreateView(APIView):
         tag_type = request.query_params.get('tag_type', '').strip() or None
         search = request.query_params.get('search', '').strip() or None
         applicable_to = request.query_params.get('applicable_to', '').strip() or None
-        active_only = parse_bool_query_param(
-            request=request,
-            name='active_only',
-            default=True,
-        )
         enforce_tag_view_permission(
             request,
             '无权查看标签列表',
             tag_type=tag_type,
-            active_only=active_only,
         )
         service = TagService(request)
         limit = parse_int_query_param(
@@ -64,7 +57,6 @@ class TagListCreateView(APIView):
         queryset = service.list(
             tag_type=tag_type,
             search=search,
-            active_only=active_only,
             applicable_to=applicable_to,
             limit=limit,
         )

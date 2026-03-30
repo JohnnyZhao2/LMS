@@ -361,7 +361,6 @@ class QuizService(BaseService):
         space_tag = Tag.objects.filter(
             id=space_tag_id,
             tag_type='SPACE',
-            is_active=True
         ).first()
         if not space_tag:
             raise BusinessError(

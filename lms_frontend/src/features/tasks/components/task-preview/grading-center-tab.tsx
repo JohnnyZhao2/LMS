@@ -12,6 +12,7 @@ import { UserAvatar } from '@/components/common/user-avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import {
@@ -192,22 +193,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
       <div className="w-full lg:w-[380px] flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
         {/* Header/Filter */}
         <div className="p-4 border-b border-border bg-muted">
-          <div className="flex p-1 bg-muted rounded-lg">
-            {questionFilters.map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setQuestionFilter(filter.value)}
-                className={cn(
-                  'flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-all duration-200',
-                  questionFilter === filter.value
-                    ? 'bg-background text-foreground'
-                    : 'text-text-muted hover:text-foreground hover:bg-muted'
-                )}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={questionFilter}
+            onChange={(value) => setQuestionFilter(value as QuestionFilter)}
+            options={questionFilters}
+            activeColor="white"
+          />
         </div>
 
         {/* List */}

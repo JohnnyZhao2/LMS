@@ -9,12 +9,10 @@ from .models import Tag
 
 
 class TagService(BaseService):
-    def list(self, *, tag_type=None, search=None, active_only=True, applicable_to=None, limit=50):
+    def list(self, *, tag_type=None, search=None, applicable_to=None, limit=50):
         queryset = Tag.objects.all()
         if tag_type:
             queryset = queryset.filter(tag_type=tag_type)
-        if active_only:
-            queryset = queryset.filter(is_active=True)
         if applicable_to == 'knowledge':
             queryset = queryset.filter(allow_knowledge=True)
         elif applicable_to == 'question':
@@ -72,7 +70,7 @@ class TagService(BaseService):
         if current_module:
             self._enable_scope(tag, current_module)
 
-        for field in ['name', 'color', 'sort_order', 'is_active', 'allow_knowledge', 'allow_question']:
+        for field in ['name', 'color', 'sort_order', 'allow_knowledge', 'allow_question']:
             if field in data:
                 setattr(tag, field, data[field])
 
@@ -158,14 +156,12 @@ def enforce_tag_view_permission(
     error_message='无权查看标签',
     *,
     tag_type: str | None = None,
-    active_only: bool = True,
 ) -> None:
     authorization_service = AuthorizationService(request)
     if authorization_service.can('tag.view'):
         return
     if (
         tag_type == 'SPACE'
-        and active_only
         and authorization_service.can('knowledge.view')
     ):
         return

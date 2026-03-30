@@ -130,7 +130,6 @@ def space_tag():
         allow_knowledge=True,
         allow_question=True,
         sort_order=1,
-        is_active=True,
     )
 
 
@@ -142,7 +141,6 @@ def knowledge_tag():
         allow_knowledge=True,
         allow_question=False,
         sort_order=2,
-        is_active=True,
     )
 
 
@@ -154,7 +152,6 @@ def question_tag():
         allow_knowledge=False,
         allow_question=True,
         sort_order=3,
-        is_active=True,
     )
 
 
@@ -508,9 +505,9 @@ class TestTagApiContracts:
         result_ids = [item['id'] for item in response.data['data']]
         assert space_tag.id in result_ids
 
-    def test_student_can_list_active_space_tags_for_knowledge_filters(self, api_client, student_user, space_tag):
+    def test_student_can_list_space_tags_for_knowledge_filters(self, api_client, student_user, space_tag):
         api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tags/?tag_type=SPACE&active_only=true')
+        response = api_client.get('/api/tags/?tag_type=SPACE')
 
         assert response.status_code == 200, response.data
         result_ids = [item['id'] for item in response.data['data']]
@@ -518,7 +515,7 @@ class TestTagApiContracts:
 
     def test_student_cannot_list_all_space_tags_without_tag_view(self, api_client, student_user):
         api_client.force_authenticate(user=student_user)
-        response = api_client.get('/api/tags/?tag_type=SPACE&active_only=false')
+        response = api_client.get('/api/tags/?tag_type=TAG')
 
         assert response.status_code == 403
         assert response.data['code'] == 'PERMISSION_DENIED'
@@ -530,14 +527,6 @@ class TestTagApiContracts:
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'limit' in response.data['message']
-
-    def test_tag_list_rejects_invalid_active_only(self, api_client, mentor_user):
-        api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tags/?active_only=maybe')
-
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'active_only' in response.data['message']
 
     def test_tag_list_supports_scope_filter(self, api_client, mentor_user, knowledge_tag, question_tag):
         api_client.force_authenticate(user=mentor_user)
@@ -689,7 +678,6 @@ class TestKnowledgeApiContracts:
             allow_knowledge=True,
             allow_question=False,
             sort_order=2,
-            is_active=True,
         )
         target_tag = Tag.objects.create(
             name='契约测试标签新',
@@ -697,7 +685,6 @@ class TestKnowledgeApiContracts:
             allow_knowledge=True,
             allow_question=False,
             sort_order=1,
-            is_active=True,
         )
         sample_knowledge.tags.set([source_tag.id])
 
@@ -733,7 +720,6 @@ class TestKnowledgeApiContracts:
             allow_knowledge=True,
             allow_question=False,
             sort_order=1,
-            is_active=True,
         )
         target_space_tag = Tag.objects.create(
             name='契约测试space新',
@@ -741,7 +727,6 @@ class TestKnowledgeApiContracts:
             allow_knowledge=True,
             allow_question=True,
             sort_order=3,
-            is_active=True,
         )
         sample_knowledge.tags.set([source_tag.id])
 

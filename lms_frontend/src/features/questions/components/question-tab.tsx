@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
-import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
-import { useCreateQuestion, useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
+import { useQuestions } from '@/features/questions/api/get-questions';
+import { useCreateQuestion, useDeleteQuestion } from '@/features/questions/api/create-question';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
-import { QuestionEditorPanel } from '@/features/quiz-center/questions/components/question-editor-panel';
+import { QuestionEditorPanel } from '@/features/questions/components/question-editor-panel';
 import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
+import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
