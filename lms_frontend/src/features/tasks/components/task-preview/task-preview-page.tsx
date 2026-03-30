@@ -126,9 +126,9 @@ export const TaskPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10 min-h-full bg-muted/30">
+    <div className="space-y-6 animate-fadeIn pb-10 min-h-full bg-muted">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/60 px-6 py-4">
+      <div className="sticky top-0 z-30 bg-background backdrop-blur-md border-b border-border/60 px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -161,7 +161,7 @@ export const TaskPreviewPage: React.FC = () => {
           </div>
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="bg-muted/80 p-1 rounded-xl border border-border/50">
+            <TabsList className="bg-muted p-1 rounded-xl border border-border/50">
               {canViewProgress && (
                 <TabsTrigger
                   value="progress"

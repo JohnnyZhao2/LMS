@@ -143,7 +143,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
   return (
     <div className="flex flex-col gap-5">
       {/* 顶部控制栏：角色切换 + 操作 */}
-      <section className="sticky top-0 z-10 rounded-lg border border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <section className="sticky top-0 z-10 rounded-lg border border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background">
         <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
           {/* 角色切换 */}
           <div className="flex items-center gap-1 overflow-x-auto rounded-md bg-muted p-0.5">
@@ -191,7 +191,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
       </section>
 
       {isLoadingTemplate ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-6 py-16 text-sm text-text-muted">
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted px-6 py-16 text-sm text-text-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
           正在加载角色配置...
         </div>

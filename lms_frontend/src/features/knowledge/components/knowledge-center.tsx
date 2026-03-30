@@ -454,7 +454,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     <button
                                         onClick={() => void fetchNextPage()}
                                         disabled={isFetchingNextPage}
-                                        className="px-6 py-2.5 rounded-full border border-foreground/15 bg-white/90 text-foreground/70 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                        className="px-6 py-2.5 rounded-full border border-foreground/15 bg-white text-foreground/70 text-sm font-medium hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
                                         {isFetchingNextPage ? '加载中…' : '加载更多'}
                                     </button>

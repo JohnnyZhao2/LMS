@@ -115,7 +115,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
           </div>
 
           {tagType === 'TAG' && (
-            <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4">
+            <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
               <Label>适用范围</Label>
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -136,7 +136,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
             </div>
           )}
 
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted p-4">
             <Checkbox
               id="tag-active"
               checked={isActive}

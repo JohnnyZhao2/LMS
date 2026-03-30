@@ -66,7 +66,7 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
     <div className="flex flex-col h-full">
       {/* ─── 题型选择：分段控件 ─── */}
       <div className="px-5 pt-5 pb-4">
-        <div className="flex rounded-lg border border-border bg-muted/40 p-0.5 gap-0.5">
+        <div className="flex rounded-lg border border-border bg-white p-0.5 gap-0.5">
           {QUESTION_TYPES.map(({ value, label, icon: Icon }) => {
             const active = currentType === value;
             return (

@@ -276,7 +276,7 @@ export const QuizForm: React.FC = () => {
     }
   };
   return (
-    <div className="flex h-[calc(100vh-48px)] flex-col bg-muted/20">
+    <div className="flex h-[calc(100vh-48px)] flex-col bg-background">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}

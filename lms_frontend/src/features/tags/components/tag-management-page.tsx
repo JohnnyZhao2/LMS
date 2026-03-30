@@ -114,7 +114,7 @@ export const TagManagementPage: React.FC = () => {
     <div className="space-y-6 px-6 py-8">
       <div className="flex flex-col gap-4 rounded-3xl border border-border bg-background p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
             <TagsIcon className="h-3.5 w-3.5" />
             标签治理
           </div>
@@ -148,7 +148,7 @@ export const TagManagementPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-border bg-background p-6 shadow-sm">
+      <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TagType)}>
           <TabsList className="grid w-full max-w-sm grid-cols-2">
             <TabsTrigger value="LINE">条线类型</TabsTrigger>
@@ -156,7 +156,7 @@ export const TagManagementPage: React.FC = () => {
           </TabsList>
         </Tabs>
 
-        <div className="mt-6">
+        <div>
           {isLoading ? (
             <div className="flex min-h-72 items-center justify-center">
               <Spinner />

@@ -168,7 +168,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
   if (!quizId) {
     return (
-      <div className="flex flex-col items-center justify-center h-[500px] text-text-muted bg-muted/50 rounded-3xl border border-dashed border-border">
+      <div className="flex flex-col items-center justify-center h-[500px] text-text-muted bg-muted rounded-3xl border border-dashed border-border">
         <BarChart3 className="w-12 h-12 mb-3 text-text-muted" />
         <p>请先从左侧选择试卷以开始阅卷</p>
       </div>
@@ -177,7 +177,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="h-[500px] bg-muted/50 rounded-3xl border border-dashed border-border">
+      <div className="h-[500px] bg-muted rounded-3xl border border-dashed border-border">
         <EmptyState
           icon={Filter}
           description="暂无可分析的题目数据"
@@ -191,8 +191,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
       {/* Left Column: Question List */}
       <div className="w-full lg:w-[380px] flex flex-col bg-background rounded-2xl border border-border  overflow-hidden">
         {/* Header/Filter */}
-        <div className="p-4 border-b border-border bg-muted/50">
-          <div className="flex p-1 bg-muted/50 rounded-lg">
+        <div className="p-4 border-b border-border bg-muted">
+          <div className="flex p-1 bg-muted rounded-lg">
             {questionFilters.map((filter) => (
               <button
                 key={filter.value}
@@ -201,7 +201,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                   'flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-all duration-200',
                   questionFilter === filter.value
                     ? 'bg-background text-foreground'
-                    : 'text-text-muted hover:text-foreground hover:bg-muted/50'
+                    : 'text-text-muted hover:text-foreground hover:bg-muted'
                 )}
               >
                 {filter.label}
@@ -259,7 +259,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                   {question.question_text}
                 </h3>
                 <div className="flex items-center justify-between text-xs text-text-muted">
-                  <span className="font-medium bg-muted/50 px-2 py-1 rounded">分值: {question.max_score}</span>
+                  <span className="font-medium bg-muted px-2 py-1 rounded">分值: {question.max_score}</span>
                   {isActive && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
                 </div>
               </button>
@@ -273,7 +273,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
         {selectedQuestion ? (
           <div className="flex flex-col h-full">
               {/* Detail Header */}
-              <div className="p-6 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+              <div className="p-6 border-b border-border bg-background backdrop-blur sticky top-0 z-20">
                 <div className="flex justify-between items-start gap-4">
                   <div>
                     <div className="flex items-center gap-3 mb-3">
@@ -307,7 +307,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
 
               {/* Content Body */}
-              <div className="flex-1 overflow-y-auto p-6 bg-muted/50">
+              <div className="flex-1 overflow-y-auto p-6 bg-muted">
                 {detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-xl" />
@@ -349,7 +349,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 <div
                                   className={cn(
                                     "absolute left-0 top-0 bottom-0 transition-all duration-1000 mix-blend-multiply",
-                                    isCorrect ? "bg-secondary-50" : "bg-muted/50"
+                                    isCorrect ? "bg-secondary-50" : "bg-muted"
                                   )}
                                   style={{ width: `${percent}%` }}
                                 />
@@ -388,7 +388,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
                               {/* Student List */}
                               {option.students.length > 0 ? (
-                                <div className="p-3 bg-muted/50 border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                <div className="p-3 bg-muted border-t border-border/50 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                   {option.students.map(student => (
                                     <div key={student.student_id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-background border border-transparent hover:border-border transition-colors text-xs">
                                       <UserAvatar
@@ -404,7 +404,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                   ))}
                                 </div>
                               ) : (
-                                <div className="px-4 py-2 bg-muted/30 border-t border-border text-xs text-text-muted italic flex items-center gap-2">
+                                <div className="px-4 py-2 bg-muted border-t border-border text-xs text-text-muted italic flex items-center gap-2">
                                   <Users className="w-3 h-3 text-text-muted" />
                                   <span>无人选择此项</span>
                                 </div>
@@ -429,7 +429,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
                           >
                             {/* Header: Student Info + Score */}
-                            <div className="flex items-center justify-between p-4 bg-muted/50 border-b border-border">
+                            <div className="flex items-center justify-between p-4 bg-muted border-b border-border">
                               <div className="flex items-center gap-3">
                                 <UserAvatar
                                   avatarKey={answer.avatar_key}
@@ -469,7 +469,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
-                                  <div className="text-foreground text-sm leading-relaxed p-4 bg-muted/50 rounded-xl border border-dashed border-border min-h-[80px]">
+                                  <div className="text-foreground text-sm leading-relaxed p-4 bg-muted rounded-xl border border-dashed border-border min-h-[80px]">
                                     {formatAnswerText(answer.answer_text)}
                                   </div>
                                 </div>

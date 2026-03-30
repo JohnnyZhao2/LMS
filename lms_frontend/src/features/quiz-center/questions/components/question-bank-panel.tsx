@@ -45,7 +45,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
         </div>
       </div>
 
-      <div className="space-y-3 border-b border-border bg-muted/20 px-4 py-4">
+      <div className="space-y-3 bg-background px-4 py-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input

@@ -67,7 +67,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
         'flex h-9 w-full items-center justify-between rounded-xl border px-4 text-xs transition-all duration-200',
         open
           ? 'border-primary/40 bg-primary/[0.04] text-primary ring-4 ring-primary/5'
-          : 'border-slate-200/70 bg-white text-slate-700 hover:border-primary/30 hover:bg-slate-50/50',
+          : 'border-slate-200/70 bg-white text-slate-700 hover:border-primary/30 hover:bg-slate-50',
       )}
     >
       <span className="font-bold line-clamp-1 text-left">{summary}</span>

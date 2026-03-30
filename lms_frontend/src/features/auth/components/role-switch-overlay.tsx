@@ -41,7 +41,7 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
 
     return (
         <div
-            className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md transition-opacity duration-200 ease-out ${
+            className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background backdrop-blur-md transition-opacity duration-200 ease-out ${
                 visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
         >

@@ -74,7 +74,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col border-r border-border bg-muted/10">
+    <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col border-r border-border bg-background">
       <div className="flex-1 overflow-y-auto scrollbar-subtle px-10 py-10">
         {items.length > 0 ? (
           <div className="mx-auto flex max-w-[820px] flex-col gap-6 pb-28">
@@ -130,7 +130,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
                   key={type.value}
                   type="button"
                   onClick={() => handleCreateQuestion(type.value)}
-                  className="flex h-11 w-full items-center justify-center rounded-xl px-3 text-[13px] font-semibold text-foreground transition-all hover:bg-muted/60"
+                  className="flex h-11 w-full items-center justify-center rounded-xl px-3 text-[13px] font-semibold text-foreground transition-all hover:bg-muted"
                 >
                   {type.label}
                 </button>
@@ -187,7 +187,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
         'overflow-hidden rounded-2xl border shadow-sm transition-all',
         isActive
           ? 'border-border bg-background'
-          : 'border-border/70 bg-muted/18 opacity-72 saturate-50 hover:opacity-90 hover:saturate-75',
+          : 'border-border/70 bg-muted opacity-72 saturate-50 hover:opacity-90 hover:saturate-75',
       )}
     >
       <div
@@ -287,7 +287,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
           </div>
 
           <div className="border-t border-border pt-6">
-            <div className="rounded-xl bg-muted/30 px-6 py-5">
+            <div className="rounded-xl border border-border bg-background px-6 py-5">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                 答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
               </div>

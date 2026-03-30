@@ -110,7 +110,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
     <div
       className={cn(
         "group relative flex flex-col h-[210px] bg-background rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-border/50 hover:-translate-y-1",
-        isStudentView && studentTask?.status === 'COMPLETED' && "bg-muted/80 border-transparent"
+        isStudentView && studentTask?.status === 'COMPLETED' && "bg-muted border-transparent"
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
@@ -226,7 +226,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                 <CategoryBadge variant="exam" count={managerTask?.exam_count} />
               )}
             </div>
-            <div className="flex gap-4 p-4 bg-muted/50 rounded-xl border border-border">
+            <div className="flex gap-4 p-4 bg-muted rounded-xl border border-border">
               <div className="flex gap-4">
                 <div className="flex flex-col">
                   <span className="text-base font-black text-foreground">{managerTask?.assignee_count ?? 0}</span>

@@ -101,7 +101,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
                 disabled ? 'cursor-default' : 'cursor-pointer',
                 selected
                   ? 'border-primary-500 bg-primary-500 text-white'
-                  : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/40',
+                  : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
               )}
             >
               {selected ? <Check className="w-3 h-3" strokeWidth={3} /> : opt.key}
@@ -116,7 +116,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
                 'h-10 flex-1 rounded-xl border px-3 text-[13px] shadow-none focus-visible:ring-0',
                 selected
                   ? 'border-primary-100 bg-primary-50/40'
-                  : 'border-border bg-muted/20',
+                  : 'border-border bg-white',
               )}
               readOnly={disabled}
             />
@@ -194,7 +194,7 @@ export const AnswerInput: React.FC<AnswerInputProps> = ({
                 ? val === 'TRUE'
                   ? 'border-primary-200 bg-primary-50 text-primary-700'
                   : 'border-destructive/30 bg-destructive/5 text-destructive/80'
-                : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/30',
+                : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
             )}
           >
             {label}

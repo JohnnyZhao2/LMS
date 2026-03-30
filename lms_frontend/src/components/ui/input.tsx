@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
  * 
  * 特性：
  * - 无阴影设计
- * - 默认灰色背景，聚焦时白色背景 + 蓝色边框
+ * - 默认白色背景，聚焦时保持白色 + 蓝色边框
  * - 统一高度 h-14
  * - 平滑过渡动画
  */
@@ -17,11 +17,11 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-md border-none bg-muted px-4 py-3 theme-input",
+          "flex h-12 w-full rounded-md border border-border bg-white px-4 py-3 theme-input",
           "text-base font-medium text-foreground",
           "placeholder:text-text-muted",
-          "focus:bg-background focus:outline-none focus:border-2 focus:border-primary",
-          "disabled:bg-muted disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
+          "focus:bg-white focus:outline-none focus:border-2 focus:border-primary",
+          "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
           "transition-all duration-200",
           className
         )}

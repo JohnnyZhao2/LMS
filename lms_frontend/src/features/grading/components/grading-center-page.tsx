@@ -99,7 +99,7 @@ export const GradingCenterPage: React.FC = () => {
               <button
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all',
-                  'bg-background hover:bg-muted/50 min-w-[200px] max-w-[280px]',
+                  'bg-background hover:bg-muted min-w-[200px] max-w-[280px]',
                   taskPopoverOpen ? 'border-primary-500 ring-2 ring-primary-100' : 'border-border'
                 )}
               >
@@ -134,7 +134,7 @@ export const GradingCenterPage: React.FC = () => {
                         'w-full text-left p-3 rounded-lg transition-all',
                         isActive
                           ? 'bg-primary-50 border border-primary-200'
-                          : 'hover:bg-muted/50 border border-transparent'
+                          : 'hover:bg-muted border border-transparent'
                       )}
                     >
                       <div className="font-medium text-sm text-foreground line-clamp-1">
@@ -169,7 +169,7 @@ export const GradingCenterPage: React.FC = () => {
               <button
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all',
-                  'bg-background hover:bg-muted/50 min-w-[200px] max-w-[280px]',
+                  'bg-background hover:bg-muted min-w-[200px] max-w-[280px]',
                   quizPopoverOpen ? 'border-primary-500 ring-2 ring-primary-100' : 'border-border'
                 )}
               >
@@ -196,7 +196,7 @@ export const GradingCenterPage: React.FC = () => {
             </PopoverTrigger>
             <PopoverContent className="w-[320px] p-0" align="start">
               {/* Filter Tabs */}
-              <div className="flex p-2 border-b border-border bg-muted/30">
+              <div className="flex p-2 border-b border-border bg-muted">
                 {(['all', 'EXAM', 'PRACTICE'] as const).map((type) => (
                   <button
                     key={type}
@@ -235,7 +235,7 @@ export const GradingCenterPage: React.FC = () => {
                             ? isExam
                               ? 'bg-destructive-50 border border-destructive-200'
                               : 'bg-primary-50 border border-primary-200'
-                            : 'hover:bg-muted/50 border border-transparent'
+                            : 'hover:bg-muted border border-transparent'
                         )}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -282,7 +282,7 @@ export const GradingCenterPage: React.FC = () => {
 
       {/* Main Content */}
       {!tasks || tasks.length === 0 ? (
-        <div className="h-[500px] bg-muted/30 rounded-2xl border border-dashed border-border">
+        <div className="h-[500px] bg-muted rounded-2xl border border-dashed border-border">
           <EmptyState
             icon={FileCheck}
             title="暂无待阅卷任务"
@@ -295,7 +295,7 @@ export const GradingCenterPage: React.FC = () => {
           quizId={selectedQuizId}
         />
       ) : (
-        <div className="h-[500px] bg-muted/30 rounded-2xl border border-dashed border-border">
+        <div className="h-[500px] bg-muted rounded-2xl border border-dashed border-border">
           <EmptyState
             icon={FileCheck}
             title="请选择任务和试卷"

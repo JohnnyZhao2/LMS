@@ -110,7 +110,7 @@ export const SpotCheckForm: React.FC = () => {
           <div className="space-y-2">
             <Label>选择学员</Label>
             {isEdit ? (
-              <div className="flex min-h-10 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
+              <div className="flex min-h-10 items-center rounded-md border border-border bg-muted px-3 text-sm text-foreground">
                 {detailLoading ? '加载中...' : spotCheckDetail?.student_name}
               </div>
             ) : (

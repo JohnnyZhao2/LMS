@@ -15,7 +15,7 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
       onClick={() => navigate(`knowledge/${knowledge.id}?from=dashboard`)}
       className={cn(
         "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex flex-col h-[100px] overflow-hidden",
-        "bg-slate-50/40 border border-slate-200/30",
+        "bg-slate-50 border border-slate-200/30",
         "hover:bg-white hover:shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] hover:border-slate-200 hover:-translate-y-0.5 active:scale-[0.98]"
       )}
     >
@@ -67,7 +67,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, isSelected, onSelect, 
           "group relative p-6 rounded-[22px] transition-all duration-500 cursor-pointer flex items-center gap-6",
           isSelected
           ? "bg-white shadow-[0_15px_40px_-15px_rgba(0,0,0,0.06)] border border-slate-200 scale-[1.01]"
-          : "bg-slate-50/40 border border-slate-200/30 hover:bg-slate-50/80"
+          : "bg-slate-50 border border-slate-200/30 hover:bg-slate-50"
       )}
     >
       <div className="flex-1 min-w-0 flex flex-col justify-center">

@@ -7,7 +7,6 @@ import {
     Eye,
     Trash2,
     Clock,
-    Timer,
     Layout,
     Pencil,
     BarChart3,
@@ -32,8 +31,6 @@ import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
 import { PageHeader } from '@/components/ui/page-header';
-import { StatCard } from '@/components/ui/stat-card';
-import { ContentPanel } from '@/components/ui/content-panel';
 import { isAdminLikeRole } from '@/lib/role-utils';
 
 /**
@@ -73,17 +70,6 @@ export const TaskManagement: React.FC = () => {
     React.useEffect(() => {
         setPage(1)
     }, [statusFilter])
-
-    // 统计逻辑
-    const stats = React.useMemo(() => {
-        const allTasks = tasksData?.results || []
-        const now = dayjs()
-        return {
-            total: tasksData?.count || 0,
-            active: allTasks.filter((t: TaskListItem) => dayjs(t.deadline).isAfter(now)).length,
-            completed: allTasks.filter((t: TaskListItem) => !dayjs(t.deadline).isAfter(now)).length
-        }
-    }, [tasksData])
 
     const handleDeleteTask = async () => {
         if (!deleteId) return
@@ -277,31 +263,9 @@ export const TaskManagement: React.FC = () => {
                 />
             </div>
 
-            {/* 统计网格 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard
-                    title="活跃任务"
-                    value={stats.active}
-                    icon={Timer}
-                    accentClassName="bg-primary"
-                />
-                <StatCard
-                    title="总任务数"
-                    value={stats.total}
-                    icon={FileText}
-                    accentClassName="bg-warning"
-                />
-                <StatCard
-                    title="平均及格率"
-                    value={typeof stats.total === 'number' && stats.total > 0 ? '82%' : '-'}
-                    icon={Layout}
-                    accentClassName="bg-secondary"
-                />
-            </div>
-
             {/* 列表主体 */}
             <div>
-                <ContentPanel className="overflow-hidden">
+                <div>
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="relative flex-1 max-w-md group">
@@ -310,7 +274,7 @@ export const TaskManagement: React.FC = () => {
                                 placeholder="搜索任务标题或编号..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-14 h-14 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-base font-medium "
+                                className="pl-14 h-14 rounded-md text-base font-medium"
                             />
                         </div>
 
@@ -377,7 +341,7 @@ export const TaskManagement: React.FC = () => {
                             </div>
                         )}
                     </div>
-                </ContentPanel>
+                </div>
             </div>
 
             {/* 删除确认对话框 */}

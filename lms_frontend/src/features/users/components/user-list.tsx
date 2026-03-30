@@ -30,7 +30,6 @@ import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ContentPanel } from '@/components/ui/content-panel';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -378,13 +377,13 @@ export const UserList: React.FC = () => {
                 placeholder="检索姓名、工号、部位..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 bg-background border-2 border-border rounded-md focus:border-primary text-base font-medium  transition-all"
+                className="pl-14 h-14 border-2 border-border rounded-md text-base font-medium transition-all"
               />
             </div>
           </div>
 
           {/* User List - 使用恢复的分页配置 */}
-          <ContentPanel padding="md" className="overflow-hidden">
+          <div>
             <DataTable
               columns={columns}
               data={filteredUsers}
@@ -404,7 +403,7 @@ export const UserList: React.FC = () => {
                 setFormModalOpen(true)
               }}
             />
-          </ContentPanel>
+          </div>
         </div>
       </div>
 

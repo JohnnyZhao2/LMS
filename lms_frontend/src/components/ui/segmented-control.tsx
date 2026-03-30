@@ -30,7 +30,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   const activeStyles = {
     gray: 'bg-foreground text-background',
     blue: 'bg-primary text-white',
-    white: 'bg-background text-foreground',
+    white: 'border border-border bg-white text-foreground shadow-sm',
   };
 
   return (
@@ -44,7 +44,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
       )}
       <div className={cn(
         'flex w-full p-1 rounded-md overflow-x-auto no-scrollbar',
-        variant === 'premium' ? 'bg-muted' : 'bg-background'
+        variant === 'premium' ? 'border border-border bg-white' : 'border border-border bg-white'
       )}>
         {options.map((opt) => (
           <button
@@ -54,7 +54,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
               'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border-none outline-none ring-0',
               value === opt.value
                 ? activeStyles[activeColor]
-                : 'text-text-muted hover:text-foreground hover:bg-muted'
+                : 'text-text-muted hover:text-foreground hover:bg-muted/60'
             )}
           >
             {opt.label}

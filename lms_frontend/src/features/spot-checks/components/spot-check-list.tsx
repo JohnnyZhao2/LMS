@@ -6,11 +6,9 @@ import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { PageHeader } from '@/components/ui/page-header';
-import { SimplePagination } from '@/components/ui/simple-pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -44,19 +42,22 @@ const StarRating: React.FC<{ value: number; max?: number }> = ({ value, max = 5 
  * 抽查记录列表组件 - ShadCN UI 版本
  */
 export const SpotCheckList: React.FC = () => {
-  const [pageByRole, setPageByRole] = useState<Record<string, number>>({});
+  const [paginationByRole, setPaginationByRole] = useState<Record<string, { page: number; pageSize: number }>>({});
   const [deleteTarget, setDeleteTarget] = useState<SpotCheck | null>(null);
   const currentRole = useCurrentRole();
   const { user, hasPermission } = useAuth();
   const roleKey = currentRole ?? 'UNKNOWN';
-  const page = pageByRole[roleKey] ?? 1;
-  const setPage = (nextPage: number) => {
-    setPageByRole((prev) => ({
+  const { page, pageSize } = paginationByRole[roleKey] ?? { page: 1, pageSize: 20 };
+  const setPagination = (next: { page?: number; pageSize?: number }) => {
+    setPaginationByRole((prev) => ({
       ...prev,
-      [roleKey]: nextPage,
+      [roleKey]: {
+        page: next.page ?? page,
+        pageSize: next.pageSize ?? pageSize,
+      },
     }));
   };
-  const { data, isLoading } = useSpotChecks({ page, role: currentRole });
+  const { data, isLoading } = useSpotChecks({ page, pageSize, role: currentRole });
   const deleteSpotCheck = useDeleteSpotCheck();
   const { roleNavigate } = useRoleNavigate();
   const canCreateSpotCheck = hasPermission('spot_check.create');
@@ -228,42 +229,41 @@ export const SpotCheckList: React.FC = () => {
           }
         />
 
-        <Card>
-          <CardContent className="p-6">
-            <Spinner spinning={isLoading}>
-              {data?.results && data.results.length > 0 ? (
-                <div>
-                  <DataTable
-                    columns={columns}
-                    data={data.results}
-                  />
-                  <SimplePagination
-                    currentPage={page}
-                    hasNext={!!data.next}
-                    totalCount={data.count || 0}
-                    countLabel="条抽查记录"
-                    onPageChange={setPage}
-                  />
-                </div>
-              ) : (
-                <EmptyState
-                  icon={Search}
-                  description="暂无抽查记录"
-                >
-                  {canCreateSpotCheck ? (
-                    <Button
-                      onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
-                      className="bg-primary text-white hover:bg-primary-600 mt-4"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      发起第一次抽查
-                    </Button>
-                  ) : null}
-                </EmptyState>
-              )}
-            </Spinner>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Spinner spinning={isLoading}>
+            {data?.results && data.results.length > 0 ? (
+              <div>
+                <DataTable
+                  columns={columns}
+                  data={data.results}
+                  pagination={{
+                    pageIndex: page - 1,
+                    pageSize,
+                    pageCount: Math.ceil((data.count || 0) / pageSize),
+                    totalCount: data.count || 0,
+                    onPageChange: (nextPage) => setPagination({ page: nextPage + 1 }),
+                    onPageSizeChange: (nextPageSize) => setPagination({ page: 1, pageSize: nextPageSize }),
+                  }}
+                />
+              </div>
+            ) : (
+              <EmptyState
+                icon={Search}
+                description="暂无抽查记录"
+              >
+                {canCreateSpotCheck ? (
+                  <Button
+                    onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
+                    className="bg-primary text-white hover:bg-primary-600 mt-4"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    发起第一次抽查
+                  </Button>
+                ) : null}
+              </EmptyState>
+            )}
+          </Spinner>
+        </div>
       </div>
 
       <ConfirmDialog

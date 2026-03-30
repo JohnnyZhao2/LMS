@@ -95,12 +95,14 @@ export function DataTable<TData, TValue>({
 
   return (
     <div
-      className="flex-1 flex flex-col mt-4"
+      className="mt-4 flex min-h-0 flex-1 flex-col"
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
-      <div className="flex-1 overflow-auto">
-        <div className="rounded-lg bg-background  border-0">
-          <Table className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-white">
+        <Table
+          containerClassName="min-h-0 flex-1"
+          className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
+        >
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
@@ -185,11 +187,9 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               )}
             </TableBody>
-          </Table>
-        </div>
-      </div>
-      {pagination && (
-        <div className="pt-6 mt-4 border-t border-border bg-background sticky bottom-0 z-10">
+        </Table>
+        {pagination && (
+        <div className="mt-auto border-t border-border bg-muted/20 px-6 py-4">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}
@@ -198,10 +198,11 @@ export function DataTable<TData, TValue>({
             showSizeChanger
             onShowSizeChange={(_, size) => pagination.onPageSizeChange(size)}
             showTotal={(total) => `共 ${total} 条记录`}
-            className="px-6"
+            className="min-h-10"
           />
         </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

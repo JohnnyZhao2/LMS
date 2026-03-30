@@ -82,7 +82,7 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
       id: "action",
       size: 140,
       cell: ({ row }) => (
-        <span className="font-semibold text-foreground/80 bg-muted/60 px-2 py-1 rounded text-[12px] border border-border/50 whitespace-nowrap">
+        <span className="font-semibold text-foreground/80 bg-muted px-2 py-1 rounded text-[12px] border border-border/50 whitespace-nowrap">
            {row.original.action}
         </span>
       )
@@ -112,7 +112,7 @@ export const ActivityLogTimeline: React.FC<ActivityLogTimelineProps> = ({
 
   if (items.length === 0 && !isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50 border border-dashed border-border/40 rounded-xl bg-muted/5">
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50 border border-dashed border-border/40 rounded-xl bg-muted">
         <p className="text-[13px] font-medium">{emptyText}</p>
       </div>
     );

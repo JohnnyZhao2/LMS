@@ -2,11 +2,15 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  containerClassName?: string
+}
+
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  TableProps
+>(({ className, containerClassName, ...props }, ref) => (
+  <div className={cn("relative w-full overflow-auto bg-white", containerClassName)}>
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
@@ -20,7 +24,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("bg-background [&_tr]:border-b-0", className)} {...props} />
+  <thead ref={ref} className={cn("bg-white [&_tr]:border-b-0", className)} {...props} />
 ))
 TableHeader.displayName = "TableHeader"
 
@@ -30,7 +34,7 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("bg-background [&_tr:last-child]:border-0", className)}
+    className={cn("bg-white [&_tr:last-child]:border-0", className)}
     {...props}
   />
 ))
@@ -43,7 +47,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      "border-t-0 bg-muted font-semibold [&>tr]:last:border-b-0",
+      "border-t-0 bg-white font-semibold [&>tr]:last:border-b-0",
       className
     )}
     {...props}
@@ -58,7 +62,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-border transition-colors bg-background hover:bg-muted data-[state=selected]:bg-primary-50",
+      "border-b border-border bg-white transition-colors hover:bg-muted/60 data-[state=selected]:bg-primary-50",
       className
     )}
     {...props}
@@ -73,7 +77,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-14 px-6 text-left align-middle text-xs font-bold uppercase tracking-wider text-text-muted bg-muted [&:has([role=checkbox])]:pr-0",
+      "h-14 bg-white px-6 text-left align-middle text-xs font-bold uppercase tracking-wider text-text-muted [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}

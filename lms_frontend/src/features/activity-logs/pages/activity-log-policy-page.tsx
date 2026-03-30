@@ -20,7 +20,7 @@ export const ActivityLogPolicyPage: React.FC = () => {
       />
 
       <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-sm">
-        <div className="border-b border-border/30 bg-background/40 px-6 py-5 backdrop-blur-md">
+        <div className="border-b border-border/30 bg-background px-6 py-5 backdrop-blur-md">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
               <ShieldCheck className="h-4 w-4" />

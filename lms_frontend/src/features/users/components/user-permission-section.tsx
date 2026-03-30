@@ -402,7 +402,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
           </div>
 
           {isLoadingUserOverrides && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-3xl">
+            <div className="absolute inset-0 bg-white backdrop-blur-sm z-20 flex items-center justify-center rounded-3xl">
               <div className="bg-white border border-slate-100 shadow-xl px-6 py-4 rounded-full flex items-center gap-3">
                 <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
                 <span className="text-sm font-bold text-slate-700">正在同步当前权限状态...</span>

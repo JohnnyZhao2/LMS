@@ -15,7 +15,7 @@ const SelectValue = SelectPrimitive.Value
  * 
  * 特性：
  * - 无阴影设计
- * - 默认灰色背景，聚焦时白色背景 + 蓝色边框
+ * - 默认白色背景，聚焦时保持白色 + 蓝色边框
  * - 统一高度 h-14，与 Input 保持一致
  */
 const SelectTrigger = React.forwardRef<
@@ -26,11 +26,11 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-12 w-full items-center justify-between gap-2 whitespace-nowrap",
-      "rounded-md border-none bg-muted px-4 py-3",
+      "rounded-md border border-border bg-white px-4 py-3",
       "text-base font-medium text-foreground",
       "placeholder:text-text-muted",
-      "focus:outline-none focus:bg-background focus:border-2 focus:border-primary",
-      "disabled:cursor-not-allowed disabled:bg-muted disabled:text-text-muted disabled:opacity-50",
+      "focus:outline-none focus:bg-white focus:border-2 focus:border-primary",
+      "disabled:cursor-not-allowed disabled:bg-white disabled:text-text-muted disabled:opacity-50",
       "transition-all duration-200",
       "[&>span]:line-clamp-1",
       className
@@ -97,7 +97,7 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg",
-        "border-2 border-border bg-background text-foreground",
+        "border-2 border-border bg-white text-foreground",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

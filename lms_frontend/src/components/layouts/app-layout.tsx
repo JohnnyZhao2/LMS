@@ -10,7 +10,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
 
   return (
-    <div className="flex min-h-screen bg-muted">
+    <div className="flex min-h-screen bg-[#F6F8FC]">
       {/* Sidebar - 桌面端 */}
       <div className="hidden w-[272px] shrink-0 lg:block" aria-hidden="true" />
       <div className="fixed inset-y-0 left-0 z-30 hidden w-[272px] bg-white lg:block">
@@ -29,7 +29,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* 移动端菜单按钮 */}
       <button
-        className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background/90 text-text-muted shadow-[0_10px_24px_rgba(148,163,184,0.2)] backdrop-blur-sm transition-colors hover:text-foreground"
+        className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background text-text-muted shadow-[0_10px_24px_rgba(148,163,184,0.2)] backdrop-blur-sm transition-colors hover:text-foreground"
         onClick={() => setSidebarOpen(true)}
         aria-label="打开菜单"
       >
@@ -37,8 +37,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       </button>
 
       {/* 主内容区 */}
-      <main className="flex-1 min-w-0">
-        <div className="flex w-full min-w-0 flex-col px-5 py-6 md:px-8 xl:px-10">
+      <main className="flex min-h-screen flex-1 min-w-0 flex-col bg-[#F6F8FC]">
+        <div className="flex w-full min-w-0 flex-1 flex-col px-5 py-6 md:px-8 xl:px-10">
           {children}
         </div>
       </main>

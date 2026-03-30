@@ -59,7 +59,7 @@ function Calendar({
           selected:
             "bg-primary-500 text-white hover:bg-primary-600 hover:text-white focus:bg-primary-500 focus:text-white rounded-md",
           today: "bg-muted text-foreground rounded-md",
-          outside: "text-text-muted aria-selected:bg-muted/50 aria-selected:text-text-muted",
+          outside: "text-text-muted aria-selected:bg-muted aria-selected:text-text-muted",
           disabled: "text-text-muted opacity-50",
           range_middle: "aria-selected:bg-muted aria-selected:text-foreground",
           hidden: "invisible",

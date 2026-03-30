@@ -309,8 +309,6 @@
         font-family: var(--theme-font-sans);
         overflow-x: hidden;
         transition: background-color var(--theme-transition), color var(--theme-transition);
-
-        /* Clean Canvas Background */
         background-color: #F6F8FC;
     }
 

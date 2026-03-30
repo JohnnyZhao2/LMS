@@ -109,8 +109,8 @@ export const TaskDetail: React.FC = () => {
 
   if (!isValidTaskId) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-muted/50">
-        <div className="bg-background/80 backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
+      <div className="flex justify-center items-center min-h-[50vh] bg-muted">
+        <div className="bg-background backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
           <div className="w-16 h-16 bg-destructive-50 text-destructive-500 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
             <AlertCircle className="w-8 h-8" />
           </div>
@@ -126,7 +126,7 @@ export const TaskDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-full bg-muted/50">
+      <div className="flex flex-col min-h-full bg-muted">
         <div className="h-16 border-b bg-background flex items-center px-6">
           <Skeleton className="h-8 w-64" />
         </div>
@@ -149,8 +149,8 @@ export const TaskDetail: React.FC = () => {
 
   if (taskError || !task) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-muted/50">
-        <div className="bg-background/80 backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
+      <div className="flex justify-center items-center min-h-[50vh] bg-muted">
+        <div className="bg-background backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
           <div className="w-16 h-16 bg-muted text-text-muted rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
             <Ghost className="w-8 h-8" />
           </div>
@@ -220,13 +220,13 @@ export const TaskDetail: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-muted font-sans selection:bg-primary-100 selection:text-primary-700">
-      <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
+      <header className="h-16 bg-background backdrop-blur-md border-b border-border/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
         <div className="flex items-center gap-4 min-w-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
-            className="text-text-muted hover:text-foreground hover:bg-muted/80 rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
+            className="text-text-muted hover:text-foreground hover:bg-muted rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -481,14 +481,14 @@ export const TaskDetail: React.FC = () => {
                       className="bg-gradient-to-r from-primary-500 to-primary-600 h-full rounded-full transition-all duration-1000 ease-out relative"
                       style={{ width: `${learningDetail.progress?.percentage ?? 0}%` }}
                     >
-                      <div className="absolute inset-0 bg-background/20 animate-[shimmer_2s_infinite]" />
+                      <div className="absolute inset-0 bg-background animate-[shimmer_2s_infinite]" />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   {Number(learningDetail.progress?.knowledge_total) > 0 && (
-                    <div className="flex justify-between items-center text-sm p-4 bg-muted/50 rounded-xl border border-border">
+                    <div className="flex justify-between items-center text-sm p-4 bg-muted rounded-xl border border-border">
                       <div className="flex items-center gap-3">
                         <IconBox icon={BookOpen} size="sm" bgColor="bg-primary-100" iconColor="text-primary-600" rounded="lg" hoverScale={false} />
                         <span className="text-text-muted font-medium">知识学习</span>
@@ -499,7 +499,7 @@ export const TaskDetail: React.FC = () => {
                     </div>
                   )}
                   {Number(learningDetail.progress?.quiz_total) > 0 && (
-                    <div className="flex justify-between items-center text-sm p-4 bg-muted/50 rounded-xl border border-border">
+                    <div className="flex justify-between items-center text-sm p-4 bg-muted rounded-xl border border-border">
                       <div className="flex items-center gap-3">
                         <IconBox icon={Trophy} size="sm" bgColor="bg-warning-100" iconColor="text-warning-600" rounded="lg" hoverScale={false} />
                         <span className="text-text-muted font-medium">测验进度</span>

@@ -356,7 +356,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
         <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-center px-1">
-            <img src="/logo.svg" alt="LMS" className="h-10 w-10 shrink-0 object-contain" />
+            <img src="/logo.svg" alt="LMS" className="h-14 w-14 shrink-0 object-contain" />
           </div>
 
           <nav className="mt-8 flex-1 overflow-y-auto scrollbar-subtle">

@@ -105,7 +105,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         </div>
       </div>
       {quizType === 'EXAM' && (
-        <div className="space-y-3 border-b border-border bg-muted/20 px-5 py-4">
+        <div className="space-y-3 border-b border-border bg-background px-5 py-4">
           <div className="flex items-center justify-between text-[12px]">
             <div className="flex items-center gap-1.5 font-medium text-text-muted">
               <Clock3 className="h-3.5 w-3.5" />
@@ -159,7 +159,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                   onClick={() => onSelectItem(item.key)}
                   className={cn(
                     'group flex cursor-pointer items-start gap-3 rounded-lg px-3 py-3 transition-all duration-150',
-                    isActive ? 'bg-muted' : 'hover:bg-muted/60',
+                    isActive ? 'bg-muted' : 'hover:bg-muted',
                   )}
                 >
                   <div className={cn(
@@ -184,7 +184,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           </div>
         )}
       </div>
-      <div className="border-t border-border bg-muted/[0.18] px-3 py-2.5">
+      <div className="border-t border-border bg-background px-3 py-2.5">
         <div className="bg-background px-2.5 py-2.5">
           <div className="mb-3.5 flex items-end justify-between">
             <div className="flex items-baseline gap-1">

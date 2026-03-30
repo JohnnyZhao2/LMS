@@ -53,7 +53,7 @@ const LoadingState = () => (
           <div className="h-9 w-9 rounded-full bg-muted" />
           <div className="flex-1 space-y-2 pt-1">
             <div className="h-3.5 w-56 rounded bg-muted" />
-            <div className="h-3 w-20 rounded bg-muted/60" />
+            <div className="h-3 w-20 rounded bg-muted" />
           </div>
         </div>
       ))}
@@ -102,7 +102,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
 
                   <div
                     className={cn(
-                      'group ml-5 flex gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors hover:bg-muted/30',
+                      'group ml-5 flex gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors hover:bg-muted',
                       isLast && 'mb-0'
                     )}
                   >
@@ -130,7 +130,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                       </div>
 
                       {item.description && (
-                        <div className="mt-1.5 rounded-lg border border-border/50 bg-muted/40 px-3 py-2 text-[13px] leading-relaxed text-foreground/80">
+                        <div className="mt-1.5 rounded-lg border border-border/50 bg-muted px-3 py-2 text-[13px] leading-relaxed text-foreground/80">
                           {item.description}
                         </div>
                       )}

@@ -33,7 +33,7 @@ export const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
       return (
         <div ref={ref} className={cn('relative', className)} {...props}>
           {spinning && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
               {spinner}
             </div>
           )}

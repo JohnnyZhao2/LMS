@@ -90,7 +90,7 @@ const ComparisonSection: React.FC<{ comparison: TeamManagerDepartmentComparison 
         </div>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3">
+      <div className="space-y-2 rounded-xl border border-border/70 bg-muted p-3">
         <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] text-[11px] font-semibold text-muted-foreground">
           <span>指标</span>
           <span className="text-center">{left.department_name}</span>
@@ -187,7 +187,7 @@ const HierarchySection: React.FC<{ departments: TeamManagerDepartmentStudentView
 
       <div className="space-y-4">
         {departments.map((department) => (
-          <div key={department.department_id} className="rounded-xl border border-border/70 bg-muted/15 p-4">
+          <div key={department.department_id} className="rounded-xl border border-border/70 bg-muted p-4">
             <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-base font-semibold text-foreground">{department.department_name}</p>
@@ -211,7 +211,7 @@ const HierarchySection: React.FC<{ departments: TeamManagerDepartmentStudentView
             <div className="overflow-x-auto rounded-lg border border-border/60 bg-background">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/60 bg-muted/30">
+                  <tr className="border-b border-border/60 bg-muted">
                     <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">学员</th>
                     <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">导师</th>
                     <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">完成率</th>

@@ -4,7 +4,6 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
 import {
   ChevronLeft,
-  ChevronRight,
   Send,
   CheckCircle,
   FileText,
@@ -40,10 +39,10 @@ export const QuizPlayer: React.FC = () => {
   const quizId = Number(quizIdStr ?? NaN);
 
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, unknown>>({});
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showTimeUpDialog, setShowTimeUpDialog] = useState(false);
+  const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const { mutateAsync: startQuizMutation } = useStartQuiz();
   const { mutateAsync: saveAnswerMutation } = useSaveAnswer();
@@ -146,6 +145,16 @@ export const QuizPlayer: React.FC = () => {
     roleNavigate('tasks');
   };
 
+  const scrollToQuestion = (index: number) => {
+    const questionId = submission?.answers[index]?.question;
+    if (questionId && questionRefs.current[questionId]) {
+      questionRefs.current[questionId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
   if (!submission) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -154,7 +163,6 @@ export const QuizPlayer: React.FC = () => {
     );
   }
 
-  const currentQuestion = submission.answers[currentIndex];
   const answeredCount = Object.keys(answers).length;
   const progressPercent = Math.round((answeredCount / submission.answers.length) * 100);
   const isExam = submission.quiz_type === 'EXAM';
@@ -201,6 +209,20 @@ export const QuizPlayer: React.FC = () => {
           {isExam && submission.remaining_seconds && (
             <Timer remainingSeconds={submission.remaining_seconds} onTimeUp={handleTimeUp} />
           )}
+          <Button
+            size="lg"
+            variant={isExam ? 'destructive' : 'default'}
+            onClick={() => setShowSubmitDialog(true)}
+            disabled={isSubmitPending}
+            className="h-10 px-6 rounded-md font-semibold"
+          >
+            {isSubmitPending ? (
+              <Spinner size="sm" className="mr-2" />
+            ) : (
+              <Send className="w-4 h-4 mr-2" />
+            )}
+            提交答卷
+          </Button>
         </div>
       </div>
 
@@ -235,33 +257,19 @@ export const QuizPlayer: React.FC = () => {
                 <div className="flex flex-wrap gap-2">
                   {submission.answers.map((a, i) => {
                     const isAnswered = !!answers[a.question];
-                    const isCurrent = currentIndex === i;
 
                     return (
                       <button
                         key={a.question}
-                        onClick={() => setCurrentIndex(i)}
+                        onClick={() => scrollToQuestion(i)}
                         className={cn(
-                          'w-10 h-10 rounded-md font-semibold text-sm transition-all duration-200 flex items-center justify-center hover:scale-105',
-                          isCurrent
-                            ? cn(
-                              'text-white',
-                              isExam ? 'bg-destructive' : 'bg-primary'
-                            )
-                            : isAnswered
-                              ? cn(
-                                isExam
-                                  ? 'bg-secondary-800 text-secondary-400'
-                                  : 'bg-secondary-100 text-secondary'
-                              )
-                              : 'bg-muted text-text-muted hover:bg-muted'
+                          'w-10 h-10 rounded-md font-semibold text-sm transition-all duration-200 flex items-center justify-center',
+                          isAnswered
+                            ? 'bg-secondary text-white hover:bg-secondary-600'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                         )}
                       >
-                        {isAnswered && !isCurrent ? (
-                          <CheckCircle className="w-4 h-4" />
-                        ) : (
-                          i + 1
-                        )}
+                        {i + 1}
                       </button>
                     );
                   })}
@@ -272,91 +280,47 @@ export const QuizPlayer: React.FC = () => {
         </div>
 
         {/* 答题区域 */}
-        <div className="lg:col-span-3">
-          <Card className="rounded-lg bg-background">
-            <CardContent className="p-6">
-              {/* 题号指示 */}
-              <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-border">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      'w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg border',
-                      isExam
-                        ? 'bg-destructive-50 text-destructive-600 border-destructive-100'
-                        : 'bg-primary-50 text-primary-600 border-primary-100'
-                    )}
-                  >
-                    {currentIndex + 1}
+        <div className="lg:col-span-3 space-y-6">
+          {submission.answers.map((answer, index) => (
+            <Card
+              key={answer.question}
+              ref={(el) => {
+                questionRefs.current[answer.question] = el;
+              }}
+              className="rounded-lg bg-background scroll-mt-24"
+            >
+              <CardContent className="p-6">
+                {/* 题号指示 */}
+                <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-border">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'w-9 h-9 rounded-md flex items-center justify-center font-bold text-lg border',
+                        isExam
+                          ? 'bg-destructive-50 text-destructive-600 border-destructive-100'
+                          : 'bg-primary-50 text-primary-600 border-primary-100'
+                      )}
+                    >
+                      {index + 1}
+                    </div>
+                    <span className="text-text-muted">
+                      第 {index + 1} 题 / 共 {submission.answers.length} 题
+                    </span>
                   </div>
                   <span className="text-text-muted">
-                    第 {currentIndex + 1} 题 / 共 {submission.answers.length} 题
+                    分值：{answer.question_score ?? '--'} 分
                   </span>
                 </div>
-                {currentQuestion && (
-                  <span className="text-text-muted">
-                    分值：{currentQuestion.question_score ?? '--'} 分
-                  </span>
-                )}
-              </div>
 
-              {/* 题目内容 */}
-              {currentQuestion && (
-                <div>
-                  <QuestionCard
-                    answer={currentQuestion}
-                    userAnswer={answers[currentQuestion.question]}
-                    onAnswerChange={(value) => handleAnswerChange(currentQuestion.question, value)}
-                  />
-                </div>
-              )}
-
-              {/* 底部操作栏 */}
-              <div className="flex justify-between mt-8 pt-5 border-t-2 border-border">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  disabled={currentIndex === 0}
-                  onClick={() => setCurrentIndex((prev) => prev - 1)}
-                  className="h-12 px-5 rounded-md"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  上一题
-                </Button>
-                <div className="flex gap-3">
-                  {currentIndex < submission.answers.length - 1 ? (
-                    <Button
-                      size="lg"
-                      onClick={() => setCurrentIndex((prev) => prev + 1)}
-                      className={cn(
-                        'h-12 px-6 rounded-md font-semibold hover:scale-105',
-                        isExam
-                          ? 'bg-destructive hover:bg-destructive'
-                          : 'bg-primary hover:bg-primary-600'
-                      )}
-                    >
-                      下一题
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      variant={isExam ? 'destructive' : 'default'}
-                      onClick={() => setShowSubmitDialog(true)}
-                      disabled={isSubmitPending}
-                      className="h-12 px-6 rounded-md font-semibold hover:scale-105"
-                    >
-                      {isSubmitPending ? (
-                        <Spinner size="sm" className="mr-2" />
-                      ) : (
-                        <Send className="w-4 h-4 mr-2" />
-                      )}
-                      提交答卷
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                {/* 题目内容 */}
+                <QuestionCard
+                  answer={answer}
+                  userAnswer={answers[answer.question]}
+                  onAnswerChange={(value) => handleAnswerChange(answer.question, value)}
+                />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
 

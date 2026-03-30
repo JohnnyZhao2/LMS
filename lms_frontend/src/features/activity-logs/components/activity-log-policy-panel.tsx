@@ -106,7 +106,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                         className="group flex flex-col rounded-3xl border border-slate-200/60 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden"
                       >
                         {/* Group Title - Clean & Soft */}
-                        <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50/30">
+                        <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                             {group}
                           </span>
@@ -119,7 +119,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                               key={policy.key}
                               className={cn(
                                 "flex items-center justify-between gap-4 py-4 px-6 cursor-pointer transition-all duration-300",
-                                "hover:bg-slate-50/50",
+                                "hover:bg-slate-50",
                                 !policy.enabled && "opacity-60"
                               )}
                             >
@@ -167,7 +167,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
               ))}
           </div>
         ) : (
-          <div className="p-12 text-center rounded-3xl border border-dashed border-border/40 bg-muted/5">
+          <div className="p-12 text-center rounded-3xl border border-dashed border-border/40 bg-muted">
             <ShieldCheck size={32} className="mx-auto text-muted-foreground/20 mb-4" />
             <div className="text-sm font-bold text-muted-foreground/40">暂无可配置的日志策略</div>
           </div>

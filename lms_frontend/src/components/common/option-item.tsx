@@ -25,7 +25,7 @@ const optionItemVariants = cva(
   {
     variants: {
       state: {
-        default: 'bg-muted border-border hover:bg-muted/80 cursor-pointer',
+        default: 'bg-muted border-border hover:bg-muted cursor-pointer',
         selected: 'border-primary bg-primary/10 cursor-pointer',
         disabled: 'cursor-not-allowed opacity-60',
       },

@@ -81,7 +81,7 @@ export const UserPickerPanel = <TUser extends UserPickerUser>({
   return (
     <div className={cn('flex h-[300px]', className)}>
       {hasFilterSidebar && (
-        <div className="w-[72px] shrink-0 border-r border-slate-100 bg-slate-50/80 py-2 px-1.5 flex flex-col gap-0.5">
+        <div className="w-[72px] shrink-0 border-r border-slate-100 bg-slate-50 py-2 px-1.5 flex flex-col gap-0.5">
           {filterOptions.map((option) => {
             const isActive = activeFilter === option.value;
             return (
@@ -94,7 +94,7 @@ export const UserPickerPanel = <TUser extends UserPickerUser>({
                   'w-full py-1.5 rounded-md text-[11px] font-bold text-center transition-all duration-200 active:scale-95',
                   isActive
                     ? 'bg-white text-primary shadow-sm border border-primary/15'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-white/70 border border-transparent',
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-white border border-transparent',
                 )}
               >
                 {option.label}

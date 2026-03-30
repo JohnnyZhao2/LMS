@@ -103,7 +103,7 @@ export const TaskForm: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-muted/50">
+    <div className="flex flex-col min-h-full bg-muted">
       {/* Header */}
       <div className="flex items-center h-16 px-6 bg-background border-b border-border shrink-0 gap-4">
         <div className="flex items-center gap-4 shrink-0">
@@ -211,11 +211,11 @@ export const TaskForm: React.FC = () => {
             <div className="space-y-3 h-[580px] overflow-hidden">
               {isLoading ? (
                 Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className="h-[72px] rounded-xl bg-muted/50 border border-border flex items-center px-4 gap-3 animate-pulse">
+                  <div key={i} className="h-[72px] rounded-xl bg-muted border border-border flex items-center px-4 gap-3 animate-pulse">
                     <div className="w-10 h-10 rounded-xl bg-muted" />
                     <div className="flex-1 space-y-2">
                       <div className="h-3 bg-muted rounded w-3/4" />
-                      <div className="h-2 bg-muted/50 rounded w-1/2" />
+                      <div className="h-2 bg-muted rounded w-1/2" />
                     </div>
                   </div>
                 ))
@@ -298,7 +298,7 @@ export const TaskForm: React.FC = () => {
         </div>
 
         {/* Center - Task Pipeline */}
-        <div className="flex-1 flex flex-col bg-muted/50 min-w-0">
+        <div className="flex-1 flex flex-col bg-muted min-w-0">
           <div className="flex items-center gap-2 px-6 py-4 text-sm font-bold text-foreground bg-background border-b border-border">
             <Send className="w-4 h-4 text-primary-500 -rotate-45" />
             任务流程
@@ -375,7 +375,7 @@ export const TaskForm: React.FC = () => {
               </MicroLabel>
               <Input
                 placeholder="请输入标题..."
-                className="h-12 bg-muted/50 border-border/50 focus:bg-background focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
+                className="h-12 bg-muted border-border/50 focus:bg-background focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -389,7 +389,7 @@ export const TaskForm: React.FC = () => {
                 date={deadline}
                 onDateChange={setDeadline}
                 placeholder="选择截止日期"
-                className="h-12 bg-muted/50 border-border/50 hover:bg-background hover:border-primary-500 transition-all rounded-xl text-sm"
+                className="h-12 bg-muted border-border/50 hover:bg-background hover:border-primary-500 transition-all rounded-xl text-sm"
               />
             </div>
 
@@ -398,7 +398,7 @@ export const TaskForm: React.FC = () => {
                 任务描述
               </MicroLabel>
               <textarea
-                className="w-full p-4 bg-muted/50 border border-border/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-background focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
+                className="w-full p-4 bg-muted border border-border/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-background focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

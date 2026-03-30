@@ -48,7 +48,7 @@ export const StudentTaskList: React.FC = () => {
                     <div className="relative group min-w-[320px]">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-primary transition-colors" />
                         <Input
-                            className="pl-12 h-12 bg-muted border-0 rounded-md focus:bg-background focus:border-2 focus:border-primary text-sm font-medium"
+                            className="pl-12 h-12 rounded-md text-sm font-medium"
                             placeholder="搜索任务..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}

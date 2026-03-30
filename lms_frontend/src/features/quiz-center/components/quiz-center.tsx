@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Layout, FileText, CheckCircle } from 'lucide-react';
+import { Plus, Search, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
-import { ContentPanel } from '@/components/ui/content-panel';
 import { PageHeader } from '@/components/ui/page-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { StatCard } from '@/components/ui/stat-card';
 import { QuestionTab } from '../questions/components/question-tab';
-import { useQuizzes } from '../quizzes/api/get-quizzes';
-import { useQuestions } from '../questions/api/get-questions';
 
 /**
  * 试卷中心 - 扁平设计系统版本
@@ -26,14 +22,6 @@ export const QuizCenter: React.FC = () => {
   const [questionCreateSignal, setQuestionCreateSignal] = useState(0);
   const activeTab = searchParams.get('tab') === 'questions' ? 'questions' : 'quizzes';
 
-  const { data: quizzesData } = useQuizzes({ page: 1, pageSize: 1 });
-  const { data: questionsData } = useQuestions({ page: 1, pageSize: 1 });
-
-  const stats = React.useMemo(() => ({
-    totalQuizzes: quizzesData?.count || 0,
-    totalQuestions: questionsData?.count || 0,
-  }), [quizzesData, questionsData]);
-
   const handleAdd = () => {
     if (activeTab === 'questions') {
       setQuestionCreateSignal(prev => prev + 1);
@@ -44,7 +32,7 @@ export const QuizCenter: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="flex flex-1 min-h-0 flex-col gap-10 pb-10">
       <PageHeader
         title="试卷中心"
         icon={<Layout />}
@@ -61,37 +49,9 @@ export const QuizCenter: React.FC = () => {
         }
       />
 
-      {/* 统计网格 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard
-          title="总试卷数"
-          value={stats.totalQuizzes}
-          icon={Layout}
-          accentClassName="bg-primary"
-          gradient=""
-          delay="stagger-delay-1"
-        />
-        <StatCard
-          title="题库总量"
-          value={stats.totalQuestions}
-          icon={FileText}
-          accentClassName="bg-secondary"
-          gradient=""
-          delay="stagger-delay-2"
-        />
-        <StatCard
-          title="及格标准"
-          value="60%"
-          icon={CheckCircle}
-          accentClassName="bg-warning"
-          gradient=""
-          delay="stagger-delay-3"
-        />
-      </div>
-
       {/* 内容区域 */}
-      <div className="flex-1 flex flex-col min-h-0 reveal-item stagger-delay-2">
-        <ContentPanel className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col reveal-item stagger-delay-2">
+        <div className="flex flex-1 min-h-0 flex-col">
           {/* 选项卡搜索与切换区域 */}
           <div className="flex flex-col gap-6 mb-8">
             {/* 顶层行：搜索框 + 这里的 Tab 切换（试卷/题库） */}
@@ -101,7 +61,7 @@ export const QuizCenter: React.FC = () => {
                 <div className="relative group w-full md:w-80">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary-600 transition-colors" />
                   <Input
-                    className="pl-12 h-12 bg-muted border-0 rounded-lg focus:bg-background focus:ring-2 focus:ring-primary-500 text-sm font-medium  transition-all"
+                    className="pl-12 h-12 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500"
                     placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -146,12 +106,14 @@ export const QuizCenter: React.FC = () => {
             </div>
           </div>
 
-          {activeTab === 'quizzes' ? (
-            <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
-          ) : (
-            <QuestionTab search={search} createSignal={questionCreateSignal} />
-          )}
-        </ContentPanel>
+          <div className="flex flex-1 min-h-0 flex-col">
+            {activeTab === 'quizzes' ? (
+              <QuizTab search={search} quizType={quizType === 'ALL' ? undefined : quizType} />
+            ) : (
+              <QuestionTab search={search} createSignal={questionCreateSignal} />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

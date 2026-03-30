@@ -203,7 +203,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
         </div>
 
         {/* Role Selector */}
-        <div className="border-b border-slate-100 bg-slate-50/30 px-4 py-4">
+        <div className="border-b border-slate-100 bg-slate-50 px-4 py-4">
           <div className="inline-flex items-center gap-3 rounded-xl bg-white p-1.5 shadow-sm border border-slate-200/60">
             {ROLE_ORDER.map((roleCode) => (
               <button
@@ -236,7 +236,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
           ) : (
             <>
               {/* Sidebar */}
-              <aside className="w-52 border-r border-slate-100 bg-slate-50/30 p-4 overflow-y-auto">
+              <aside className="w-52 border-r border-slate-100 bg-slate-50 p-4 overflow-y-auto">
                 <div className="space-y-0.5">
                   {groupedPermissions.map((group) => {
                     const isActive = activeModule === group.module;
@@ -353,7 +353,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
         </div>
 
         {/* Footer with Stats & Save Button */}
-        <div className="border-t border-slate-100 bg-slate-50/30 px-8 py-4">
+        <div className="border-t border-slate-100 bg-slate-50 px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="text-left">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">已选权限</div>

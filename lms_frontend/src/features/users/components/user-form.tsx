@@ -355,7 +355,7 @@ const UserFormContent: React.FC<{
     return (
       <>
         {/* Header */}
-        <div className="px-8 py-5 border-b border-border bg-muted/30 flex items-center justify-between shrink-0">
+        <div className="px-8 py-5 border-b border-border bg-muted flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-primary rounded-full" />
             <h2 className="text-lg font-bold text-foreground">
@@ -467,7 +467,7 @@ const UserFormContent: React.FC<{
                             <div className="px-3 py-4 text-sm text-text-muted">当前没有可选导师</div>
                           ) : (
                             mentors.filter(m => !userId || m.id !== userId).map(m => (
-                              <SelectItem key={m.id} value={m.id.toString()} className="focus:bg-muted/50 cursor-pointer">
+                              <SelectItem key={m.id} value={m.id.toString()} className="focus:bg-muted cursor-pointer">
                                 <div className="flex items-center gap-3 py-1">
                                   <UserAvatar avatarKey={m.avatar_key} name={m.username} size="sm" />
                                   <span className="text-sm font-medium">{m.username}</span>

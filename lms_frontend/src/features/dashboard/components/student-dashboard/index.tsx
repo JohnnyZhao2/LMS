@@ -135,7 +135,7 @@ export const StudentDashboard: React.FC = () => {
                         "group/peer flex items-center gap-5 p-3.5 rounded-[18px] transition-all duration-500",
                         p.is_me
                           ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
-                          : "hover:bg-slate-50/60"
+                          : "hover:bg-slate-50"
                       )}
                     >
                       <div className={cn(
