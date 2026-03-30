@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import {
   useActivityLogs,
@@ -169,23 +170,14 @@ export const ActivityLogsPanel: React.FC = () => {
       {/* 筛选栏 */}
       <div className="flex flex-wrap items-center gap-2.5">
         {/* 类型切换 */}
-        <div className="inline-flex rounded-xl bg-muted p-1">
-          {(['user', 'content', 'operation'] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => handleTypeChange(type)}
-              className={cn(
-                'rounded-lg px-4 py-2 text-[13px] font-medium transition-all',
-                type === activeType
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-text-muted hover:text-foreground'
-              )}
-            >
-              {LOG_TYPE_META[type].label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={(['user', 'content', 'operation'] as const).map((type) => ({
+            label: LOG_TYPE_META[type].label,
+            value: type,
+          }))}
+          value={activeType}
+          onChange={(v) => handleTypeChange(v as ActivityLogType)}
+        />
 
         {/* 搜索 */}
         <div className="relative min-w-[13rem] flex-1">

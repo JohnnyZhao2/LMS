@@ -47,7 +47,8 @@ export const TaskPreviewPage: React.FC = () => {
       return requestedTab;
     }
     return availableTabs[0] ?? 'progress';
-  }, [availableTabs, searchParams]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTabs]);
   const [activeTab, setActiveTab] = React.useState(initialTab);
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
@@ -71,12 +72,6 @@ export const TaskPreviewPage: React.FC = () => {
       setSelectedQuizId(quizzes[0].quiz);
     }
   }, [activeTab, quizzes, selectedQuizId]);
-
-  React.useEffect(() => {
-    if (activeTab !== initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [activeTab, initialTab]);
 
   React.useEffect(() => {
     const currentTab = searchParams.get('tab');
@@ -161,11 +156,11 @@ export const TaskPreviewPage: React.FC = () => {
           </div>
 
           <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="bg-muted p-1 rounded-xl border border-border/50">
+            <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
               {canViewProgress && (
                 <TabsTrigger
                   value="progress"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
                 >
                   <BarChart3 className="h-4 w-4" />
                   进度监控
@@ -174,7 +169,7 @@ export const TaskPreviewPage: React.FC = () => {
               {canViewGrading && (
                 <TabsTrigger
                   value="grading"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary-600  transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
                 >
                   <FileCheck className="h-4 w-4" />
                   阅卷中心

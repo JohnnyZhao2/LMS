@@ -64,7 +64,6 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
                 options={viewOptions}
                 value={viewMode}
                 onChange={(v) => onViewModeChange(v as ViewMode)}
-                activeColor="blue"
             />
 
             {/* 层级列表标题 */}

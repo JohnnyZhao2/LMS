@@ -284,7 +284,6 @@ export const TaskManagement: React.FC = () => {
                                         { label: '管理端', value: 'management' },
                                         { label: '非管理端', value: 'non_management' },
                                     ]}
-                                    variant="premium"
                                     activeColor="white"
                                     className="w-full md:w-auto"
                                 />
@@ -297,7 +296,6 @@ export const TaskManagement: React.FC = () => {
                                     { label: '已结束', value: 'closed' },
                                     { label: '全部', value: 'all' },
                                 ]}
-                                variant="premium"
                                 activeColor="white"
                                 className="w-full md:w-auto"
                             />

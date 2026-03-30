@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QuestionTab } from '../questions/components/question-tab';
 import { SearchInput } from '@/components/ui/search-input';
 
@@ -75,7 +76,6 @@ export const QuizCenter: React.FC = () => {
                       { label: '考试', value: 'EXAM' },
                       { label: '练习', value: 'PRACTICE' },
                     ]}
-                    variant="premium"
                     activeColor="white"
                     className="w-full md:w-auto"
                   />
@@ -83,23 +83,18 @@ export const QuizCenter: React.FC = () => {
               </div>
 
               {/* 右侧：主维度切换 */}
-              <SegmentedControl
-                value={activeTab}
-                onChange={(v: string) => {
-                  const nextTab = v as 'quizzes' | 'questions';
-                  setSearch('');
-                  const nextParams = new URLSearchParams(searchParams);
-                  nextParams.set('tab', nextTab);
-                  setSearchParams(nextParams, { replace: true });
-                }}
-                options={[
-                  { label: '试卷列表', value: 'quizzes' },
-                  { label: '题库管理', value: 'questions' },
-                ]}
-                variant="premium"
-                activeColor="white"
-                className="w-full md:w-auto"
-              />
+              <Tabs value={activeTab} onValueChange={(v) => {
+                const nextTab = v as 'quizzes' | 'questions';
+                setSearch('');
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.set('tab', nextTab);
+                setSearchParams(nextParams, { replace: true });
+              }}>
+                <TabsList>
+                  <TabsTrigger value="quizzes">试卷列表</TabsTrigger>
+                  <TabsTrigger value="questions">题库管理</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 

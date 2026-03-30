@@ -61,7 +61,6 @@ export const StudentTaskList: React.FC = () => {
                         value={statusFilter}
                         onChange={(val: string) => setStatusFilter(val)}
                         options={statusOptions}
-                        variant="premium"
                         activeColor="white"
                         className="w-full md:w-auto"
                     />

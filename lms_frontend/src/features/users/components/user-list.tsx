@@ -6,7 +6,6 @@ import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
   Plus,
-  Search,
   MoreVertical,
   Pencil,
   Lock,
@@ -28,8 +27,8 @@ import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
+import { SearchInput } from "@/components/ui/search-input"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -371,15 +370,12 @@ export const UserList: React.FC = () => {
           {/* Header */}
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
-            <div className="relative flex-1 max-w-lg group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
-              <Input
-                placeholder="检索姓名、工号、部位..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 border-2 border-border rounded-md text-base font-medium transition-all"
-              />
-            </div>
+            <SearchInput
+              className="flex-1 max-w-lg"
+              placeholder="检索姓名、工号、部位..."
+              value={search}
+              onChange={setSearch}
+            />
           </div>
 
           {/* User List - 使用恢复的分页配置 */}

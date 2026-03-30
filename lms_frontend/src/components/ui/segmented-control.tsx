@@ -14,8 +14,7 @@ interface SegmentedControlProps {
   onChange: (value: string) => void;
   label?: string;
   className?: string;
-  activeColor?: 'gray' | 'blue' | 'white';
-  variant?: 'default' | 'premium';
+  activeColor?: 'white' | 'blue';
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -24,37 +23,30 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   label,
   className,
-  activeColor = 'gray',
-  variant = 'default',
+  activeColor = 'white',
 }) => {
   const activeStyles = {
-    gray: 'bg-foreground text-background',
-    blue: 'bg-primary text-white',
-    white: 'border border-border bg-white text-foreground shadow-sm',
+    white: 'bg-white text-foreground shadow-sm',
+    blue: 'bg-primary text-white shadow-sm',
   };
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {label && (
-        <span
-          className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1"
-        >
+        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1">
           {label}
         </span>
       )}
-      <div className={cn(
-        'flex w-full p-1 rounded-md overflow-x-auto no-scrollbar',
-        variant === 'premium' ? 'border border-border bg-white' : 'border border-border bg-white'
-      )}>
+      <div className="flex w-full p-1 rounded-lg overflow-x-auto no-scrollbar bg-muted/60 border border-border/30">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 px-6 py-2.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border-none outline-none ring-0',
+              'flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap outline-none',
               value === opt.value
                 ? activeStyles[activeColor]
-                : 'text-text-muted hover:text-foreground hover:bg-muted/60'
+                : 'text-text-muted hover:text-foreground'
             )}
           >
             {opt.label}

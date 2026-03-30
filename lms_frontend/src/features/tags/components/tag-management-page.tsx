@@ -212,7 +212,6 @@ export const TagManagementPage: React.FC = () => {
           options={TAG_TYPE_SEGMENT_OPTIONS}
           value={activeTab}
           onChange={(v) => setActiveTab(v as TagType)}
-          activeColor="blue"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <SearchInput
