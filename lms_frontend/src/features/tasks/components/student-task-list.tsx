@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Inbox, Activity, Search } from 'lucide-react';
+import { Inbox, Activity } from 'lucide-react';
 import { useStudentTasks } from '../api/get-tasks';
 import { TaskCard } from './task-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PageHeader } from '@/components/ui/page-header';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import type { TaskStatus } from '@/types/api';
 
 const statusOptions = [
@@ -45,15 +45,12 @@ export const StudentTaskList: React.FC = () => {
                 title="任务治理中心"
                 icon={<Activity />}
                 extra={
-                    <div className="relative group min-w-[320px]">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-primary transition-colors" />
-                        <Input
-                            className="pl-12 h-12 rounded-md text-sm font-medium"
-                            placeholder="搜索任务..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+                    <SearchInput
+                        className="min-w-[320px]"
+                        placeholder="搜索任务..."
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                    />
                 }
             />
 

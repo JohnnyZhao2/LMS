@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Layout } from 'lucide-react';
+import { Plus, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { QuestionTab } from '../questions/components/question-tab';
+import { SearchInput } from '@/components/ui/search-input';
 
 /**
  * 试卷中心 - 扁平设计系统版本
@@ -58,15 +58,12 @@ export const QuizCenter: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex-1 max-w-2xl flex flex-col md:flex-row items-start md:items-center gap-4">
                 {/* 搜索框 */}
-                <div className="relative group w-full md:w-80">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary-600 transition-colors" />
-                  <Input
-                    className="pl-12 h-12 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500"
-                    placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
+                <SearchInput
+                  className="w-full md:w-80"
+                  placeholder={activeTab === 'quizzes' ? "搜索试卷标题..." : "搜索题目内容..."}
+                  value={search}
+                  onChange={setSearch}
+                />
 
                 {/* 类型筛选（仅试卷列表显示）- 现在与搜索框并排 */}
                 {activeTab === 'quizzes' && (

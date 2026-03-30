@@ -457,7 +457,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                     value={scoresByStudent[answer.student_id] ?? ''}
                                     onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
                                     onBlur={(e) => commitScore(answer.student_id, e.target.value)}
-                                    className="w-20 h-9 font-mono text-base font-bold border-border focus:ring-primary-500/20 text-right pr-2 bg-background"
+                                    className="w-20 h-9 font-mono text-base font-bold border-border focus:border-primary focus:ring-1 focus:ring-primary/20 text-right pr-2 bg-background"
                                   />
                                   <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {selectedQuestion?.max_score}</span>
                                 </div>

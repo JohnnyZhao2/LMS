@@ -212,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return React.cloneElement(icon, {
       className: cn(
         'h-5 w-5',
-        isActive ? 'text-black' : 'text-[#757575]'
+        isActive ? 'text-black' : 'text-text-muted'
       ),
     })
   }
@@ -220,26 +220,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navItemClassName = (isActive: boolean, destructive = false) => cn(
     'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
     destructive
-      ? 'text-[#D55F5A] hover:bg-[#F6F6F6]'
+      ? 'text-destructive hover:bg-muted'
       : isActive
-        ? 'bg-[#F6F6F6] text-black'
-        : 'text-[#757575] hover:bg-[#F6F6F6]'
+        ? 'bg-muted text-black'
+        : 'text-text-muted hover:bg-muted'
   )
 
   const labelClassName = (isActive: boolean, destructive = false) => cn(
     'min-w-0 flex-1 truncate text-[15px] leading-[22px] tracking-[-0.02em]',
     destructive
-      ? 'text-[#D55F5A]'
+      ? 'text-destructive'
       : isActive
         ? 'font-semibold text-black'
-        : 'font-medium text-[#757575]'
+        : 'font-medium text-text-muted'
   )
 
   const renderSubMenuTree = (
     items: { key?: string; label: string; isActive: boolean; onClick: () => void }[]
   ) => (
     <div className="relative ml-[26px] space-y-0.5 pt-1.5">
-      <div className="absolute left-0 top-[10px] bottom-[22px] w-[1.5px] bg-[#E8E8E8]" />
+      <div className="absolute left-0 top-[10px] bottom-[22px] w-[1.5px] bg-border" />
       {items.map((child) => (
         <button
           key={child.key ?? child.label}
@@ -248,14 +248,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           className={cn(
             'group relative ml-[14px] flex h-10 w-[calc(100%-14px)] items-center rounded-xl px-3 text-left transition-colors',
             child.isActive
-              ? 'bg-[#F6F6F6] text-black'
-              : 'text-[#757575] hover:bg-[#F6F6F6]'
+              ? 'bg-muted text-black'
+              : 'text-text-muted hover:bg-muted'
           )}
         >
-          <span className="absolute -left-[14px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-bl-[10px] border-b-[1.5px] border-l-[1.5px] border-[#E8E8E8]" />
+          <span className="absolute -left-[14px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-bl-[10px] border-b-[1.5px] border-l-[1.5px] border-border" />
           <span className={cn(
             'min-w-0 flex-1 truncate text-[13px] tracking-[-0.02em]',
-            child.isActive ? 'font-semibold text-black' : 'font-medium text-[#757575]'
+            child.isActive ? 'font-semibold text-black' : 'font-medium text-text-muted'
           )}>
             {child.label}
           </span>
@@ -300,7 +300,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
             isActive
               ? 'text-black'
-              : 'text-[#757575] hover:bg-[#F6F6F6]'
+              : 'text-text-muted hover:bg-muted'
           )}
         >
           <span className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -313,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             className={cn(
               'h-4 w-4 shrink-0 transition-transform duration-300',
               isExpanded ? 'rotate-180' : '',
-              isActive ? 'text-black' : 'text-[#757575]'
+              isActive ? 'text-black' : 'text-text-muted'
             )}
           />
         </button>
@@ -347,7 +347,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-[-15px] top-8 z-20 flex h-8 w-8 items-center justify-center rounded-[10px] border border-[#F6F6F6] bg-white text-black transition-colors hover:bg-[#F6F6F6]"
+            className="absolute right-[-15px] top-8 z-20 flex h-8 w-8 items-center justify-center rounded-[10px] border border-muted bg-white text-black transition-colors hover:bg-muted"
             aria-label="关闭侧边栏"
           >
             <ChevronLeft className="h-[18px] w-[18px]" />
@@ -379,7 +379,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
                         hasActiveSettingsItem
                           ? 'text-black'
-                          : 'text-[#757575] hover:bg-[#F6F6F6]'
+                          : 'text-text-muted hover:bg-muted'
                       )}
                     >
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -392,8 +392,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         className={cn(
                           'h-4 w-4 shrink-0 transition-transform duration-300',
                           isSettingsExpanded
-                            ? `rotate-180 ${hasActiveSettingsItem ? 'text-black' : 'text-[#757575]'}`
-                            : `${hasActiveSettingsItem ? 'text-black' : 'text-[#757575]'}`
+                            ? `rotate-180 ${hasActiveSettingsItem ? 'text-black' : 'text-text-muted'}`
+                            : `${hasActiveSettingsItem ? 'text-black' : 'text-text-muted'}`
                         )}
                       />
                     </button>
@@ -440,10 +440,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="mt-0.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-[12px] font-medium leading-4 text-[#757575] outline-none transition-colors hover:bg-[#F6F6F6]"
+                        className="mt-0.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-[12px] font-medium leading-4 text-text-muted outline-none transition-colors hover:bg-muted"
                         aria-label="切换角色"
                       >
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#757575]" />
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                         <span className="truncate">{roleLabel}</span>
                         <span className="relative inline-flex h-2 w-2 shrink-0 items-center justify-center">
                           <span className={cn('absolute h-2 w-2 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
@@ -454,7 +454,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                     <DropdownMenuContent
                       align="start"
                       sideOffset={6}
-                      className="min-w-[132px] rounded-xl border border-[#F0F0F0] bg-white p-1 shadow-sm"
+                      className="min-w-[132px] rounded-xl border border-border bg-white p-1 shadow-sm"
                     >
                       {roleOptions.map((option) => {
                         const isActive = option.value === currentRole
@@ -464,8 +464,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                             key={option.value}
                             onClick={() => handleRoleChange(option.value)}
                             className={cn(
-                              'mb-1 cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-[#757575] focus:bg-[#F8F8F8] focus:text-black last:mb-0',
-                              isActive && 'bg-[#F8F8F8] text-black'
+                              'mb-1 cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted focus:text-black last:mb-0',
+                              isActive && 'bg-muted text-black'
                             )}
                           >
                             {option.label}
@@ -475,7 +475,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <div className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-medium leading-4 text-[#757575]">
+                  <div className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-medium leading-4 text-text-muted">
                     <span className="truncate">{roleLabel}</span>
                     <span className="relative inline-flex h-2 w-2 shrink-0 items-center justify-center">
                       <span className={cn('absolute h-2 w-2 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
@@ -490,7 +490,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                   onClick={handleLogout}
                   aria-label="退出登录"
                   title="退出登录"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#D55F5A] transition-colors hover:bg-[#FCEAE9]"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive-50"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>

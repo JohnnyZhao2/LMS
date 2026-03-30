@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -132,9 +133,8 @@ export const SpotCheckForm: React.FC = () => {
 
           <div className="space-y-2">
             <Label>抽查内容/主题</Label>
-            <textarea
-              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              rows={3}
+            <Textarea
+              className="rounded-md text-sm min-h-[80px]"
               placeholder="请输入抽查内容或主题"
               value={content}
               onChange={(e) => setDraftContent(e.target.value)}
@@ -156,9 +156,8 @@ export const SpotCheckForm: React.FC = () => {
 
           <div className="space-y-2">
             <Label>评语（可选）</Label>
-            <textarea
-              className="w-full p-3 border border-border rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              rows={3}
+            <Textarea
+              className="rounded-md text-sm min-h-[80px]"
               placeholder="请输入评语（可选）"
               value={comment}
               onChange={(e) => setDraftComment(e.target.value)}

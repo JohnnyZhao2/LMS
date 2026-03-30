@@ -29,7 +29,7 @@ const SelectTrigger = React.forwardRef<
       "rounded-md border border-border bg-white px-4 py-3",
       "text-base font-medium text-foreground",
       "placeholder:text-text-muted",
-      "focus:outline-none focus:bg-white focus:border-2 focus:border-primary",
+      "focus:outline-none focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary/20",
       "disabled:cursor-not-allowed disabled:bg-white disabled:text-text-muted disabled:opacity-50",
       "transition-all duration-200",
       "[&>span]:line-clamp-1",

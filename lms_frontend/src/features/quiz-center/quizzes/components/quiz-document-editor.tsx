@@ -286,18 +286,16 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
             )}
           </div>
 
-          <div className="border-t border-border pt-6">
-            <div className="rounded-xl border border-border bg-background px-6 py-5">
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-                答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
-              </div>
-              <Textarea
-                placeholder="提供给学员的解析说明..."
-                value={item.explanation}
-                onChange={(e) => onUpdate({ explanation: e.target.value })}
-                className="min-h-[56px] resize-none border-0 bg-transparent p-0 text-[13px] leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
-              />
+          <div className="border-t border-border pt-6 space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              答案解析 <span className="normal-case font-normal text-text-muted/50">选填</span>
             </div>
+            <Textarea
+              placeholder="提供给学员的解析说明..."
+              value={item.explanation}
+              onChange={(e) => onUpdate({ explanation: e.target.value })}
+              className="min-h-[56px] resize-none border-0 bg-transparent p-0 text-[13px] leading-relaxed shadow-none placeholder:text-text-muted/35 focus-visible:ring-0"
+            />
           </div>
       </div>
     </div>

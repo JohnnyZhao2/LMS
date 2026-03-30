@@ -7,6 +7,14 @@
 - 避免冗余与重复代码，优先简化与抽象；能删除就删除
 - 组件拆分：超过 200 行或嵌套渲染函数时提取子组件
 
+## 组件复用原则
+
+- 写新 UI 前，**先检查项目中是否已有可复用的组件**（如 `components/` 目录）
+- 优先使用现有组件，**禁止重复造轮子**——不要为相似功能新建组件
+- 如果现有组件不完全满足需求，**扩展或修改它**，而不是新建一个
+- 引用组件时使用项目已有的 import 路径，保持风格统一
+- 新增组件前需说明：为什么现有组件无法满足需求
+
 <frontend_aesthetics>
 You tend to converge toward generic, "on distribution" outputs. In frontend design,this creates what users call the "AI slop" aesthetic. Avoid this: make creative,distinctive frontends that surprise and delight. 
 

@@ -19,7 +19,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"tex
           "flex min-h-[120px] w-full rounded-md border border-border bg-white px-4 py-3",
           "text-base font-normal text-foreground leading-relaxed",
           "placeholder:text-text-muted",
-          "focus:outline-none focus:bg-white focus:border-2 focus:border-primary",
+          "focus:outline-none focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary/20",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
           "transition-all duration-200 resize-y",
           className

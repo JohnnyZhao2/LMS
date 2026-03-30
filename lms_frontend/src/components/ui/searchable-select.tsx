@@ -109,7 +109,7 @@ export function SearchableSelect<T>({
                                 value={searchValue}
                                 onChange={(e) => setSearchValue(e.target.value)}
                                 placeholder={searchPlaceholder}
-                                className="h-10 pl-9 text-sm border-none bg-background focus:ring-2 focus:ring-primary-500/10 transition-all placeholder:text-text-muted"
+                                className="h-10 pl-9 text-sm border-none bg-background transition-all placeholder:text-text-muted"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !exactMatch && searchValue.trim() && onCreate) {
                                         handleCreate();

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
@@ -215,9 +215,9 @@ export const TagManagementPage: React.FC = () => {
           activeColor="blue"
         />
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <Input
+          <SearchInput
             value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            onChange={setSearchInput}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 setSearch(searchInput.trim());

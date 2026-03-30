@@ -29,6 +29,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { UserPickerPanel } from '@/components/common/user-picker-panel';
 import { MicroLabel } from '@/components/common/micro-label';
@@ -123,7 +124,7 @@ export const TaskForm: React.FC = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="输入任务标题..."
-            className="text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4 hover:border-border focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+            className="text-lg font-semibold h-10 border border-border bg-background rounded-lg px-4 hover:border-border transition-all duration-200"
           />
         </div>
 
@@ -164,7 +165,7 @@ export const TaskForm: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted group-focus-within:text-primary-500 transition-colors" />
               <Input
                 placeholder="搜索文档/测验..."
-                className="pl-9 h-11 bg-muted border-transparent focus:bg-background focus:border-primary-100 transition-all rounded-xl"
+                className="pl-9 h-11 bg-muted border-transparent transition-all rounded-xl"
                 value={resourceSearch}
                 onChange={e => {
                   setResourceSearch(e.target.value);
@@ -375,7 +376,7 @@ export const TaskForm: React.FC = () => {
               </MicroLabel>
               <Input
                 placeholder="请输入标题..."
-                className="h-12 bg-muted border-border/50 focus:bg-background focus:border-primary-500 focus:ring-0 transition-all text-sm px-4 rounded-xl"
+                className="h-12 bg-muted border-border/50 transition-all text-sm px-4 rounded-xl"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -397,8 +398,8 @@ export const TaskForm: React.FC = () => {
               <MicroLabel icon={<BookOpen className="w-3.5 h-3.5" />} asLabel>
                 任务描述
               </MicroLabel>
-              <textarea
-                className="w-full p-4 bg-muted border border-border/50 rounded-2xl text-xs resize-none focus:outline-none focus:bg-background focus:border-primary-500 transition-all min-h-[120px] leading-relaxed"
+              <Textarea
+                className="bg-muted border-border/50 rounded-2xl text-xs"
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

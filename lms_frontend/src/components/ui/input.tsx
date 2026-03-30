@@ -20,7 +20,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           "flex h-12 w-full rounded-md border border-border bg-white px-4 py-3 theme-input",
           "text-base font-medium text-foreground",
           "placeholder:text-text-muted",
-          "focus:bg-white focus:outline-none focus:border-2 focus:border-primary",
+          "focus:bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
           "transition-all duration-200",
           className

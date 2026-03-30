@@ -1,5 +1,7 @@
 import { AppLayout } from '@/components/layouts/app-layout';
+import { StudentLayout } from '@/components/layouts/student-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';
@@ -9,6 +11,7 @@ import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overla
  */
 export const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading, isSwitching } = useAuth();
+  const currentRole = useCurrentRole();
   const location = useLocation();
 
   // 只有在既没有登录信息，又正在加载时，才显示全屏加载
@@ -23,13 +26,13 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // 登录页不需要布局
   const isLoginPage = location.pathname === ROUTES.LOGIN;
+  const Layout = currentRole === 'STUDENT' ? StudentLayout : AppLayout;
 
   const content = (isAuthenticated && !isLoginPage) ? (
-    <AppLayout>
+    <Layout>
       <Outlet />
-    </AppLayout>
+    </Layout>
   ) : (
     <Outlet />
   );

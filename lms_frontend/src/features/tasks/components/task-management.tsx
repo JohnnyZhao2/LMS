@@ -3,7 +3,6 @@ import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
     Plus,
-    Search,
     Eye,
     Trash2,
     Clock,
@@ -17,7 +16,7 @@ import { useDeleteTask } from "../api/delete-task"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -268,15 +267,12 @@ export const TaskManagement: React.FC = () => {
                 <div>
                     {/* 搜索和筛选 */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                        <div className="relative flex-1 max-w-md group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted group-focus-within:text-primary transition-colors" />
-                            <Input
-                                placeholder="搜索任务标题或编号..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-14 h-14 rounded-md text-base font-medium"
-                            />
-                        </div>
+                        <SearchInput
+                            className="flex-1 max-w-md"
+                            placeholder="搜索任务标题或编号..."
+                            value={searchTerm}
+                            onChange={setSearchTerm}
+                        />
 
                         <div className="flex flex-wrap items-center gap-4">
                             {isAdmin && (
