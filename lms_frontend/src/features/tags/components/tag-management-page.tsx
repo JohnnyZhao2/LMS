@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   Table,
   TableBody,
@@ -14,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import type { Tag, TagType } from '@/types/api';
@@ -27,6 +27,12 @@ const typeLabel: Record<TagType, string> = {
   SPACE: 'space',
   TAG: '普通标签',
 };
+
+/** space / 普通标签 分段选项 */
+const TAG_TYPE_SEGMENT_OPTIONS: { label: string; value: TagType }[] = [
+  { label: 'space', value: 'SPACE' },
+  { label: '普通标签', value: 'TAG' },
+];
 
 export const TagManagementPage: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -149,12 +155,13 @@ export const TagManagementPage: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TagType)}>
-          <TabsList className="grid w-full max-w-sm grid-cols-2">
-            <TabsTrigger value="SPACE">space</TabsTrigger>
-            <TabsTrigger value="TAG">普通标签</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <SegmentedControl
+          className="max-w-sm w-full"
+          options={TAG_TYPE_SEGMENT_OPTIONS}
+          value={activeTab}
+          onChange={(v) => setActiveTab(v as TagType)}
+          activeColor="blue"
+        />
 
         <div>
           {isLoading ? (

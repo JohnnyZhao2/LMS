@@ -396,7 +396,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     style={{ borderColor: '#e8793a' }}
                                 />
                             )}
-                            {isDeleteSpaceTypeMode ? '删除此类型' : '添加类型'}
+                            {isDeleteSpaceTypeMode ? '删除此类型' : '添加空间'}
                         </button>
                     )}
                 </div>
