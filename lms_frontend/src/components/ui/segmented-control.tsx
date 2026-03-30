@@ -37,13 +37,13 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {label}
         </span>
       )}
-      <div className="flex w-full p-1 rounded-lg overflow-x-auto no-scrollbar bg-muted/60 border border-border/30">
+      <div className="flex h-11 w-full items-stretch rounded-full bg-muted/60 p-1 overflow-x-auto no-scrollbar">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap outline-none',
+              'flex-1 rounded-full px-4 text-xs font-bold transition-all duration-200 whitespace-nowrap outline-none',
               value === opt.value
                 ? activeStyles[activeColor]
                 : 'text-text-muted hover:text-foreground'

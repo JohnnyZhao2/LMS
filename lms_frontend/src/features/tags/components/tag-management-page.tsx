@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { CircleButton } from '@/components/ui/circle-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { SearchInput } from '@/components/ui/search-input';
@@ -205,7 +206,7 @@ export const TagManagementPage: React.FC = () => {
   }, [activeTab, canUpdate, canDelete, openEditDialog]);
 
   return (
-    <div className="space-y-6 px-6 py-8">
+    <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <SegmentedControl
           className="w-full max-w-sm shrink-0 sm:w-auto"
@@ -225,24 +226,23 @@ export const TagManagementPage: React.FC = () => {
             placeholder="搜索标签名称"
             className="w-full min-w-64 sm:max-w-sm sm:flex-1"
           />
-          <Button variant="outline" onClick={() => setSearch(searchInput.trim())}>
-            搜索
-          </Button>
           {canCreate && (
-            <Button onClick={openCreateDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              新建{typeLabel[activeTab]}
-            </Button>
+            <CircleButton
+              onClick={openCreateDialog}
+              label={`新建${typeLabel[activeTab]}`}
+            />
           )}
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={tags}
-        isLoading={isLoading}
-        minHeight="288px"
-      />
+      <div className="flex flex-1 min-h-0 flex-col">
+        <DataTable
+          columns={columns}
+          data={tags}
+          isLoading={isLoading}
+          minHeight={0}
+        />
+      </div>
 
       <TagFormDialog
         open={isDialogOpen}

@@ -6,6 +6,7 @@ import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
+import { CircleButton } from '@/components/ui/circle-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { PageHeader } from '@/components/ui/page-header';
@@ -212,27 +213,24 @@ export const SpotCheckList: React.FC = () => {
 
   return (
     <>
-      <div className="animate-fadeIn">
+      <div className="flex flex-1 min-h-0 flex-col animate-fadeIn">
         <PageHeader
           title="抽查中心"
           icon={<Search className="w-5 h-5" />}
           extra={
             canCreateSpotCheck ? (
-              <Button
+              <CircleButton
                 onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)}
-                className="h-14 px-8 rounded-md bg-primary hover:bg-primary-600 text-white font-semibold hover:scale-105 transition-all duration-200"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                发起抽查
-              </Button>
+                label="发起抽查"
+              />
             ) : null
           }
         />
 
-        <div className="space-y-4">
-          <Spinner spinning={isLoading}>
+        <div className="flex flex-1 min-h-0 flex-col gap-4">
+          <Spinner spinning={isLoading} className="flex flex-1 min-h-0 flex-col">
             {data?.results && data.results.length > 0 ? (
-              <div>
+              <div className="flex flex-1 min-h-0 flex-col">
                 <DataTable
                   columns={columns}
                   data={data.results}

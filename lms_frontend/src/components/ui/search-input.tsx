@@ -15,7 +15,7 @@ export function SearchInput({ value, onChange, placeholder = '搜索...', classN
     <div className={cn('relative group', className)}>
       <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted group-focus-within:text-primary transition-colors" />
       <Input
-        className="pl-12 h-12 rounded-lg text-sm font-medium"
+        className="h-11 rounded-full border-border/60 pl-11 pr-4 text-sm font-medium shadow-sm"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

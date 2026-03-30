@@ -1,28 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <defs>
-    <linearGradient id="mainGradient" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#6366f1"/>
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <!-- Three horizontal bars (icon) -->
+  <rect x="0" y="8" width="64" height="18" rx="6" fill="#5B5BD6"/>
+  <rect x="0" y="30" width="48" height="18" rx="6" fill="#2DD4BF"/>
+  <rect x="0" y="52" width="56" height="18" rx="6" fill="#A855F7"/>
 
-  <!-- 左侧卷起（单个竖直圆柱） -->
-  <rect x="7" y="10" width="18" height="100" rx="9" fill="url(#mainGradient)" opacity="0.96"/>
-  <circle cx="16" cy="103" r="7.4" fill="none" stroke="white" stroke-width="1.5" opacity="0.95"/>
-  <circle cx="16" cy="103" r="5.0" fill="none" stroke="#d8e4ff" stroke-width="2.2" opacity="0.9"/>
-  <circle cx="16" cy="103" r="2.8" fill="none" stroke="#5d7dff" stroke-width="1.8" opacity="0.85"/>
-
-  <!-- 展开的竹简竹片（从左到右透明度递增） -->
-  <rect x="26" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.23"/>
-  <rect x="38" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.35"/>
-  <rect x="50" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.47"/>
-  <rect x="62" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.59"/>
-  <rect x="74" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.71"/>
-  <rect x="86" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.83"/>
-  <rect x="98" y="12" width="10" height="96" rx="2" fill="url(#mainGradient)" opacity="0.95"/>
-
-  <!-- 书法「学」字 -->
-  <g transform="translate(56,62) scale(0.095,-0.095) translate(-458,-397)" fill="white" opacity="0.85">
-    <path d="M584 455Q599 434 585.0 394.0Q571 354 538 328Q515 309 509.0 297.5Q503 286 511.0 276.5Q519 267 585 271Q685 278 742 241Q768 225 753 189Q748 177 723.0 178.0Q698 179 667 193Q644 204 634.0 204.5Q624 205 604 198L576 189L571 137Q565 63 541.0 29.0Q517 -5 463 -15Q402 -26 387.0 -25.0Q372 -24 334 -5Q286 20 270.0 41.5Q254 63 225 93Q204 113 200.0 122.5Q196 132 197 152L200 182L233 185Q257 189 303.0 203.0Q349 217 383 233Q394 238 397.5 245.0Q401 252 401 268Q401 291 409.5 314.5Q418 338 430.5 348.5Q443 359 441.5 363.5Q440 368 424 366Q402 361 381.0 376.0Q360 391 360 411Q360 431 372.0 431.5Q384 432 442.0 458.0Q500 484 507 485Q521 486 549.0 475.5Q577 465 584 455ZM470 185H447Q429 184 370.0 161.0Q311 138 299 126Q293 120 294.5 114.0Q296 108 312 92Q345 59 381.5 57.5Q418 56 450 87Q463 99 466.5 109.5Q470 120 470 145ZM238 530Q251 468 225 421Q208 386 203 343Q201 314 197.5 306.0Q194 298 186 298Q172 298 156.5 326.0Q141 354 141 381Q141 422 208 536Q228 570 238 530ZM307 772Q312 769 335 759Q366 746 384.5 720.5Q403 695 394 677Q387 664 376 666Q368 667 333.5 713.0Q299 759 299 768Q299 774 307 772ZM623 720Q599 691 602.5 687.5Q606 684 633.5 691.0Q661 698 683 689L725 672Q775 652 698 604Q692 600 685 596Q660 582 611.5 564.5Q563 547 547.0 547.0Q531 547 510 537Q486 524 487 532Q488 543 523 565Q590 606 603 626Q606 629 602 630Q586 630 516.0 595.0Q446 560 417 537Q374 503 344.5 500.5Q315 498 292 527Q269 555 276 566Q278 569 286 565Q293 560 338 575Q414 599 488 642Q510 654 506 655Q496 659 478 651Q465 646 450.0 642.5Q435 639 425.5 638.0Q416 637 415 639Q415 644 462 674Q499 697 525.5 724.5Q552 752 556 772Q563 798 544 799Q519 798 507 769Q495 743 483.0 742.0Q471 741 452 764Q429 791 429 803Q429 812 434.5 814.0Q440 816 446 808Q450 800 464.5 799.0Q479 798 493 805Q510 814 539.5 817.0Q569 820 574.5 820.5Q580 821 614 805Q646 788 647.5 769.5Q649 751 623 720Z"/>
-  </g>
+  <!-- OPWiki text -->
+  <text x="84" y="58" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="700" fill="#1E2157" letter-spacing="1">OPWiki</text>
 </svg>

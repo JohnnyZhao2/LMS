@@ -146,7 +146,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
     <div className="flex min-h-screen flex-col bg-[#F6F8FC]">
       <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-white/90 backdrop-blur-md">
         <div className="flex h-full items-center gap-4 px-5 md:px-8">
-          <img src="/logo.svg" alt="LMS" className="h-9 w-9 shrink-0 object-contain" />
+          <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
 
           <nav className="hidden md:flex items-center gap-0.5 flex-1 overflow-x-auto">
             {menuItems.map((item) => renderNavItem(item))}

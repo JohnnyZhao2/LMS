@@ -2,7 +2,6 @@ import * as React from "react"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import {
     FileText,
-    Plus,
     Eye,
     Trash2,
     Clock,
@@ -16,6 +15,7 @@ import { useDeleteTask } from "../api/delete-task"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
+import { CircleButton } from '@/components/ui/circle-button';
 import { SearchInput } from '@/components/ui/search-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -243,38 +243,20 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <div className="space-y-10 pb-10">
+        <div className="flex flex-1 min-h-0 flex-col gap-10 pb-10">
             <div>
                 <PageHeader
                     title="任务中心"
                     icon={<FileText />}
-                    extra={
-                        <div className="flex items-center gap-3">
-                            <Button
-                                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
-                                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 shadow-sm soft-press"
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                发布新任务
-                            </Button>
-                        </div>
-                    }
                 />
             </div>
 
             {/* 列表主体 */}
-            <div>
-                <div>
+            <div className="flex flex-1 min-h-0 flex-col">
+                <div className="flex flex-1 min-h-0 flex-col">
                     {/* 搜索和筛选 */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                        <SearchInput
-                            className="flex-1 max-w-md"
-                            placeholder="搜索任务标题或编号..."
-                            value={searchTerm}
-                            onChange={setSearchTerm}
-                        />
-
-                        <div className="flex flex-wrap items-center gap-4">
+                    <div className="mb-10 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
                             {isAdmin && (
                                 <SegmentedControl
                                     value={creatorSideFilter}
@@ -285,7 +267,7 @@ export const TaskManagement: React.FC = () => {
                                         { label: '非管理端', value: 'non_management' },
                                     ]}
                                     activeColor="white"
-                                    className="w-full md:w-auto"
+                                    className="w-full xl:w-auto xl:shrink-0"
                                 />
                             )}
                             <SegmentedControl
@@ -297,21 +279,34 @@ export const TaskManagement: React.FC = () => {
                                     { label: '全部', value: 'all' },
                                 ]}
                                 activeColor="white"
-                                className="w-full md:w-auto"
+                                className="w-full xl:w-auto xl:shrink-0"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+                            <SearchInput
+                                className="w-full xl:w-80"
+                                placeholder="搜索任务标题或编号..."
+                                value={searchTerm}
+                                onChange={setSearchTerm}
+                            />
+                            <CircleButton
+                                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
+                                label="发布新任务"
+                                className="self-end xl:self-auto"
                             />
                         </div>
                     </div>
 
                     {/* 表格 */}
-                    <div className="overflow-hidden rounded-lg border-0">
+                    <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border-0">
                         {isLoading ? (
-                            <div className="p-10 space-y-5">
+                            <div className="flex flex-1 flex-col p-10 space-y-5">
                                 {[1, 2, 3, 4, 5].map((i) => (
                                     <Skeleton key={i} className="h-16 w-full rounded-lg" />
                                 ))}
                             </div>
                         ) : (
-                            <div>
+                            <div className="flex flex-1 min-h-0 flex-col">
                                 <DataTable
                                     columns={columns}
                                     data={tasksData?.results?.filter((t: TaskListItem) => {

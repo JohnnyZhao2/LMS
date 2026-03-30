@@ -44,31 +44,28 @@ export const StudentTaskList: React.FC = () => {
             <PageHeader
                 title="任务治理中心"
                 icon={<Activity />}
-                extra={
+            />
+
+            {/* 分段筛选器 - Flat Design */}
+            <div className="flex flex-col gap-4 border-b-2 border-border pb-6 xl:flex-row xl:items-center xl:justify-between">
+                <SegmentedControl
+                    value={statusFilter}
+                    onChange={(val: string) => setStatusFilter(val)}
+                    options={statusOptions}
+                    activeColor="white"
+                    className="w-full xl:w-auto xl:shrink-0"
+                />
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
                     <SearchInput
-                        className="min-w-[320px]"
+                        className="w-full xl:w-80"
                         placeholder="搜索任务..."
                         value={searchTerm}
                         onChange={setSearchTerm}
                     />
-                }
-            />
-
-            {/* 分段筛选器 - Flat Design */}
-            <div className="flex flex-wrap items-center justify-between gap-6 pb-6 border-b-2 border-border">
-                <div className="flex items-center gap-4">
-                    <SegmentedControl
-                        value={statusFilter}
-                        onChange={(val: string) => setStatusFilter(val)}
-                        options={statusOptions}
-                        activeColor="white"
-                        className="w-full md:w-auto"
-                    />
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
+                        共找到 <span className="text-primary text-base ml-1">{filteredTasks.length}</span> 个任务
+                    </span>
                 </div>
-
-                <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
-                    共找到 <span className="text-primary text-base ml-1">{filteredTasks.length}</span> 个任务
-                </span>
             </div>
 
             {/* 任务列表网格 */}

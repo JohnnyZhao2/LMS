@@ -5,7 +5,6 @@
 import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import {
-  Plus,
   MoreVertical,
   Pencil,
   Lock,
@@ -28,6 +27,7 @@ import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { SearchInput } from "@/components/ui/search-input"
+import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -336,22 +336,6 @@ export const UserList: React.FC = () => {
       <PageHeader
         title="用户中心"
         icon={<UsersIcon />}
-        extra={
-          <div className="flex items-center gap-3">
-            {canCreateUser && (
-              <Button
-                onClick={() => {
-                  setEditingUserId(undefined)
-                  setFormModalOpen(true)
-                }}
-                className="h-10 px-4 rounded-md bg-primary text-white font-semibold hover:bg-primary-600 hover:scale-105 transition-all duration-200 shadow-sm"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                快速录入
-              </Button>
-            )}
-          </div>
-        }
       />
 
       <div className="flex items-start gap-8">
@@ -368,14 +352,23 @@ export const UserList: React.FC = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col gap-6 min-w-0">
           {/* Header */}
-          <div className="flex items-center justify-between gap-4">
-            {/* Search */}
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
             <SearchInput
-              className="flex-1 max-w-lg"
+              className="w-full xl:w-80"
               placeholder="检索姓名、工号、部位..."
               value={search}
               onChange={setSearch}
             />
+            {canCreateUser && (
+              <CircleButton
+                onClick={() => {
+                  setEditingUserId(undefined)
+                  setFormModalOpen(true)
+                }}
+                label="快速录入"
+                className="self-end xl:self-auto"
+              />
+            )}
           </div>
 
           {/* User List - 使用恢复的分页配置 */}
