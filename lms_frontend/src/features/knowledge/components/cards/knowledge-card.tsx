@@ -46,7 +46,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
     >
       <div
         onClick={() => onClick(item.id)}
-        className="relative cursor-pointer overflow-hidden rounded-[7px] border-[2.5px] border-transparent bg-white transition-[box-shadow,border-color] duration-[220ms] hover:border-[#a8b8cc] hover:[box-shadow:0_4px_20px_rgba(0,0,0,0.08)] [box-shadow:0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)]"
+        className="relative cursor-pointer overflow-hidden rounded-[7px] border-[2.5px] border-transparent bg-card transition-[box-shadow,border-color] duration-[220ms] hover:border-gray-300 hover:[box-shadow:0_4px_20px_rgba(0,0,0,0.08)] [box-shadow:0_2px_8px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.05)]"
         style={{
           padding: short ? '28px 26px 24px' : '24px 26px 22px',
         }}
@@ -87,11 +87,11 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
           />
         ) : (
           <p
+            className="text-foreground"
             style={{
               margin: 0,
               fontSize: short ? 18 : 14.5,
               lineHeight: short ? 1.48 : 1.68,
-              color: '#1a1a1a',
               letterSpacing: short ? '-0.015em' : '-0.008em',
             }}
             dangerouslySetInnerHTML={{ __html: bionicHtml(text) }}
@@ -104,7 +104,7 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="pointer-events-none absolute right-0 bottom-0 inline-flex max-w-[62%] translate-y-1 items-center gap-1 overflow-hidden rounded-tl-[7px] border border-[#d9e0ea] bg-white px-[9px] py-[5px] text-[10.5px] whitespace-nowrap text-[#1f2937] opacity-0 text-ellipsis no-underline transition-[opacity,transform] duration-160 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+            className="pointer-events-none absolute right-0 bottom-0 inline-flex max-w-[62%] translate-y-1 items-center gap-1 overflow-hidden rounded-tl-[7px] border border-gray-200 bg-card px-[9px] py-[5px] text-[10.5px] whitespace-nowrap text-foreground opacity-0 text-ellipsis no-underline transition-[opacity,transform] duration-160 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
           >
             <LinkGlyph size={10} />
             {sourceHost}
@@ -116,10 +116,10 @@ export const KnowledgeCardMymind: React.FC<KnowledgeCardMymindProps> = ({
       {/* 标题显示在卡片底部中间 */}
       {item.title && (
         <p
+          className="text-text-muted"
           style={{
             margin: '5px 6px 0',
             fontSize: 12.5,
-            color: '#8ea0b5',
             lineHeight: 1.3,
             textAlign: 'center',
           }}

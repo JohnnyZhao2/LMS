@@ -336,8 +336,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <span
                                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
                                     style={{
-                                        borderColor: tag.color || '#4A90E2',
-                                        backgroundColor: selectedSpaceTypeId === tag.id ? (tag.color || '#4A90E2') : 'transparent',
+                                        borderColor: tag.color || 'var(--theme-primary)',
+                                        backgroundColor: selectedSpaceTypeId === tag.id ? (tag.color || 'var(--theme-primary)') : 'transparent',
                                     }}
                                 >
                                     {selectedSpaceTypeId === tag.id && (
@@ -391,10 +391,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             }}
                         >
                             {!isDeleteSpaceTypeMode && (
-                                <span
-                                    className="h-4 w-4 rounded-full border-2"
-                                    style={{ borderColor: '#e8793a' }}
-                                />
+                                <span className="h-4 w-4 rounded-full border-2 border-accent" />
                             )}
                             {isDeleteSpaceTypeMode ? '删除此类型' : '添加空间'}
                         </button>
@@ -586,21 +583,21 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     }
                 }}
             >
-                <DialogContent className="max-w-[560px] border-0 bg-[#fcfbf8] p-0 shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
+                <DialogContent className="max-w-[560px] border-0 bg-background p-0 shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
                     <div className="px-7 py-8 sm:px-10 sm:py-9">
                         {createSpaceTypeStep === 1 ? (
                             <div className="flex flex-col items-center text-center">
                                 <div className="relative mb-5 h-12 w-12">
-                                    <span className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-[#9bd1d8]" />
-                                    <span className="absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-[#c8ff00]" />
-                                    <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-[#ff8aa0]" />
-                                    <span className="absolute bottom-0 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-[#2a6ce5]" />
+                                    <span className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-primary-300" />
+                                    <span className="absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-secondary-300" />
+                                    <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-destructive-300" />
+                                    <span className="absolute bottom-0 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-primary-600" />
                                 </div>
 
-                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-[#44526d] sm:text-[34px]">
+                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-foreground sm:text-[34px]">
                                     创建新类型
                                 </DialogTitle>
-                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-[#6f81a0] sm:text-[15px]">
+                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-text-muted sm:text-[15px]">
                                     空间是你脑海中卡片的集合。你可以直接上传卡片到空间中，也可以从概览中选择一张卡片。
                                 </DialogDescription>
 
@@ -618,7 +615,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         placeholder="输入类型名称"
                                         maxLength={20}
                                         autoFocus
-                                        className="h-14 w-full rounded-[12px] border border-[#d8e1ee] bg-transparent px-5 text-center text-[16px] text-[#667999] outline-none transition-colors placeholder:text-[#8da0be] focus:border-[#c5d3e7]"
+                                        className="h-14 w-full rounded-[12px] border border-border bg-transparent px-5 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-text-muted focus:border-primary"
                                     />
                                 </div>
 
@@ -626,20 +623,20 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     type="button"
                                     onClick={() => setCreateSpaceTypeStep(2)}
                                     disabled={!newSpaceTypeName.trim()}
-                                    className="mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
-                                    style={{
-                                        background: !newSpaceTypeName.trim() ? '#d4d4d4' : '#cfcfcf',
-                                    }}
+                                    className={cn(
+                                        'mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-70',
+                                        !newSpaceTypeName.trim() ? 'bg-muted' : 'bg-muted-hover',
+                                    )}
                                 >
                                     下一步
                                 </button>
                             </div>
                         ) : (
                             <div className="flex flex-col items-center text-center">
-                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-[#44526d] sm:text-[34px]">
+                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-foreground sm:text-[34px]">
                                     选择主题色
                                 </DialogTitle>
-                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-[#6f81a0] sm:text-[15px]">
+                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-text-muted sm:text-[15px]">
                                     颜色会帮助你更快识别这个类型。先选一个你最顺眼的标记色。
                                 </DialogDescription>
 
@@ -670,7 +667,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     <button
                                         type="button"
                                         onClick={() => setCreateSpaceTypeStep(1)}
-                                        className="rounded-full border border-[#d7deea] px-5 py-2 text-[13px] font-medium text-[#70809e] transition-colors hover:bg-[#f1f4f9]"
+                                        className="rounded-full border border-border px-5 py-2 text-[13px] font-medium text-text-muted transition-colors hover:bg-muted"
                                     >
                                         上一步
                                     </button>
@@ -678,10 +675,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         type="button"
                                         onClick={() => void handleCreateSpaceType()}
                                         disabled={createTag.isPending || !newSpaceTypeName.trim()}
-                                        className="rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
-                                        style={{
-                                            background: createTag.isPending ? '#d4d4d4' : '#cfcfcf',
-                                        }}
+                                        className={cn(
+                                            'rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-70',
+                                            createTag.isPending ? 'bg-muted' : 'bg-muted-hover',
+                                        )}
                                     >
                                         {createTag.isPending ? '保存中' : '保存'}
                                     </button>
