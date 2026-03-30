@@ -19,7 +19,7 @@ export const QuestionManagementPage: React.FC = () => {
       <div className="flex flex-1 min-h-0 flex-col reveal-item stagger-delay-2">
         <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <SearchInput
-            className="w-full xl:w-80"
+            className="w-full xl:w-[22rem] xl:min-w-[22rem]"
             placeholder="搜索题目内容..."
             value={search}
             onChange={setSearch}

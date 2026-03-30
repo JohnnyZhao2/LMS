@@ -29,33 +29,33 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
 }) => {
   const activeStyles = {
     white: 'bg-white text-foreground shadow-sm',
-    blue: 'bg-primary text-white shadow-sm',
+    blue: 'bg-white text-foreground shadow-sm',
   };
   const sizeStyles = {
     default: {
       wrapper: 'h-11 rounded-full p-1',
-      button: 'rounded-full px-4 text-xs font-bold',
+      button: 'rounded-full px-6 text-xs font-bold',
     },
     sm: {
       wrapper: 'h-8 rounded-lg p-0.5',
-      button: 'rounded-md px-3 py-1 text-[12px] font-semibold',
+      button: 'rounded-md px-4 py-1 text-[12px] font-semibold',
     },
   };
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('inline-flex max-w-full flex-col gap-2', className)}>
       {label && (
         <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-1">
           {label}
         </span>
       )}
-      <div className={cn('flex w-full items-stretch overflow-x-auto bg-muted/60 no-scrollbar', sizeStyles[size].wrapper)}>
+      <div className={cn('inline-flex w-fit max-w-full items-stretch overflow-x-auto bg-muted/60 no-scrollbar', sizeStyles[size].wrapper)}>
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-1 transition-all duration-200 whitespace-nowrap outline-none',
+              'flex-none transition-all duration-200 whitespace-nowrap outline-none',
               sizeStyles[size].button,
               value === opt.value
                 ? activeStyles[activeColor]

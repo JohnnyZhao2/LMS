@@ -37,7 +37,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   onAddQuestion,
 }) => {
   return (
-    <div className="flex w-72 shrink-0 flex-col border-l border-border bg-background xl:w-80">
+    <div className="flex h-full w-full min-w-0 flex-col bg-background">
       <div className="flex h-14 items-center border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <LayoutGrid className="h-4 w-4 text-text-muted" />
@@ -50,21 +50,21 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
             placeholder="检索题目内容..."
-            className="h-9 rounded-lg border-border bg-background pl-9 text-[12px]"
+            className="h-9 rounded-xl border-border bg-background pl-9 text-[12px]"
             value={resourceSearch}
             onChange={e => onResourceSearchChange(e.target.value)}
           />
         </div>
         <div className="flex gap-2">
           <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-md border-border bg-background text-[12px]"><SelectValue placeholder="全部 space" /></SelectTrigger>
+            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部 space" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部 space</SelectItem>
               {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterQuestionType} onValueChange={onFilterQuestionTypeChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-md border-border bg-background text-[12px]"><SelectValue placeholder="全部题型" /></SelectTrigger>
+            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部题型" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部题型</SelectItem>
               {Object.entries(QUESTION_TYPE_LABELS).map(([k, v]) => (

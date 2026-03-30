@@ -3,7 +3,6 @@
  * 支持部门视图和师徒视图切换
  */
 import { cn } from '@/lib/utils';
-import { Building2, Users, UserCircle } from 'lucide-react';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import type { Department, Mentor } from '@/types/api';
 
@@ -77,37 +76,22 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
             <div className="flex flex-col gap-2 relative">
                 {items.map((item) => {
                     const isSelected = selectedId === item.id;
-                    const Icon = viewMode === 'department'
-                        ? (item.id === 'all' ? Building2 : Users)
-                        : UserCircle;
 
                     return (
                         <button
                             key={item.id}
                             onClick={() => onSelect(item.id)}
                             className={cn(
-                                'group relative flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200',
+                                'group relative flex items-center gap-3 rounded-lg px-4 py-3 text-left outline-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-0',
                                 isSelected
-                                    ? 'text-primary-700'
-                                    : 'bg-background hover:bg-muted text-foreground'
+                                    ? 'bg-background text-primary-700 shadow-[0_4px_16px_rgba(var(--primary),0.08)]'
+                                    : 'bg-muted text-text-muted'
                             )}
                         >
-                            {isSelected && (
-                                <div className="absolute inset-0 bg-primary-50 rounded-lg -z-10" />
-                            )}
-
-                            <div className={cn(
-                                'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors',
-                                isSelected
-                                    ? 'bg-primary-100 text-primary-700'
-                                    : 'bg-muted text-text-muted group-hover:bg-muted'
-                            )}>
-                                <Icon className="w-5 h-5" />
-                            </div>
                             <div className="flex flex-col min-w-0">
                                 <span className={cn(
                                     'text-sm font-semibold truncate',
-                                    isSelected ? 'text-primary-700' : 'text-foreground'
+                                    isSelected ? 'text-primary-700' : 'text-text-muted'
                                 )}>
                                     {item.name}
                                 </span>

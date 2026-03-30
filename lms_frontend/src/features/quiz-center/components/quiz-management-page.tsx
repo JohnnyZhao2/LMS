@@ -38,7 +38,7 @@ export const QuizManagementPage: React.FC = () => {
 
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end">
             <SearchInput
-              className="w-full xl:w-80"
+              className="w-full xl:w-[22rem] xl:min-w-[22rem]"
               placeholder="搜索试卷标题..."
               value={search}
               onChange={setSearch}

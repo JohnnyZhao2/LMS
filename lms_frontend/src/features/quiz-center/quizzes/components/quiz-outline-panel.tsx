@@ -131,7 +131,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   };
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-border bg-background xl:w-72">
+    <div className="flex h-full w-full min-w-0 flex-col bg-background">
       <div className="flex h-14 items-center justify-between gap-3 border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <FileText className="h-4 w-4 text-primary-600" />

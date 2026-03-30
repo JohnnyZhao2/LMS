@@ -35,7 +35,7 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
       style={cardStyle}
       onClick={onSelect}
       className={cn(
-        'group flex cursor-pointer items-start gap-2 rounded-lg px-3 py-3 transition-all duration-150',
+        'group flex cursor-pointer items-start gap-2 rounded-xl px-3 py-3 transition-all duration-150',
         isActive ? 'bg-muted' : 'hover:bg-muted',
         isDragging && 'scale-[0.99] opacity-90 shadow-[0_10px_24px_rgba(15,23,42,0.08)]',
       )}
@@ -58,7 +58,7 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
         type="button"
         aria-label={`拖动排序第${index + 1}题`}
         className={cn(
-          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-background hover:text-foreground',
+          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-text-muted transition hover:bg-background hover:text-foreground',
           isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
         )}
         {...attributes}

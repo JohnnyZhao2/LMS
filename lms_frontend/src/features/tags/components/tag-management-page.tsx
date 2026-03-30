@@ -213,7 +213,7 @@ export const TagManagementPage: React.FC = () => {
               }
             }}
             placeholder="搜索标签名称"
-            className="w-full min-w-64 sm:max-w-sm sm:flex-1"
+            className="w-full sm:w-[22rem] sm:min-w-[22rem] sm:max-w-none sm:flex-none"
           />
           {canCreate && (
             <CircleButton

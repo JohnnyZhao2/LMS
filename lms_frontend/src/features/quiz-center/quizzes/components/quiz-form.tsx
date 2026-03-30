@@ -269,7 +269,7 @@ export const QuizForm: React.FC = () => {
     }
   };
   return (
-    <div className="flex h-[calc(100vh-48px)] flex-col bg-background overflow-hidden rounded-2xl border border-border shadow-sm">
+    <div className="flex h-[calc(100vh-48px)] min-h-0 flex-col gap-2 overflow-hidden bg-muted/20 py-2">
       <QuizFormHeader
         isEdit={isEdit}
         quizData={quizData}
@@ -281,48 +281,53 @@ export const QuizForm: React.FC = () => {
         isSubmitting={isSubmitting}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: 试卷大纲 */}
-        <QuizOutlinePanel
-          items={items}
-          activeKey={activeKey}
-          quizType={quizType}
-          duration={duration}
-          passScore={passScore}
-          onQuizTypeChange={setQuizType}
-          onSelectItem={(key) => {
-            setActiveKey(key);
-          }}
-          onReorderItems={handleReorderItems}
-          onDurationChange={setDuration}
-          onPassScoreChange={setPassScore}
-        />
+      <div className="flex-1 overflow-auto">
+        <div className="grid h-full min-w-[1360px] grid-cols-[16rem_minmax(0,1fr)_18rem] gap-3 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
+            <QuizOutlinePanel
+              items={items}
+              activeKey={activeKey}
+              quizType={quizType}
+              duration={duration}
+              passScore={passScore}
+              onQuizTypeChange={setQuizType}
+              onSelectItem={(key) => {
+                setActiveKey(key);
+              }}
+              onReorderItems={handleReorderItems}
+              onDurationChange={setDuration}
+              onPassScoreChange={setPassScore}
+            />
+          </div>
 
-        {/* Center: 文档流编辑器 */}
-        <QuizDocumentEditor
-          items={items}
-          activeKey={activeKey}
-          onUpdateItem={handleUpdateItem}
-          onRemoveItem={handleRemoveItem}
-          onReorderItems={handleReorderItems}
-          onAddBlank={handleAddBlank}
-          onFocusItem={setActiveKey}
-        />
+          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
+            <QuizDocumentEditor
+              items={items}
+              activeKey={activeKey}
+              onUpdateItem={handleUpdateItem}
+              onRemoveItem={handleRemoveItem}
+              onReorderItems={handleReorderItems}
+              onAddBlank={handleAddBlank}
+              onFocusItem={setActiveKey}
+            />
+          </div>
 
-        {/* Right: 公共题库 */}
-        <QuestionBankPanel
-          resourceSearch={resourceSearch}
-          onResourceSearchChange={setResourceSearch}
-          filterSpaceTypeId={filterSpaceTypeId}
-          onFilterSpaceTypeIdChange={setFilterSpaceTypeId}
-          filterQuestionType={filterQuestionType}
-          onFilterQuestionTypeChange={setFilterQuestionType}
-          spaceTypes={spaceTypes}
-          questionsData={filteredQuestionsData}
-          questionsLoading={questionsLoading}
-          onPreview={handlePreviewQuestion}
-          onAddQuestion={handleAddQuestion}
-        />
+          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
+            <QuestionBankPanel
+              resourceSearch={resourceSearch}
+              onResourceSearchChange={setResourceSearch}
+              filterSpaceTypeId={filterSpaceTypeId}
+              onFilterSpaceTypeIdChange={setFilterSpaceTypeId}
+              filterQuestionType={filterQuestionType}
+              onFilterQuestionTypeChange={setFilterQuestionType}
+              spaceTypes={spaceTypes}
+              questionsData={filteredQuestionsData}
+              questionsLoading={questionsLoading}
+              onPreview={handlePreviewQuestion}
+              onAddQuestion={handleAddQuestion}
+            />
+          </div>
+        </div>
       </div>
 
       <Dialog open={successModalOpen} onOpenChange={(open) => { if (!open) roleNavigate(ROUTES.QUIZZES); }}>

@@ -284,7 +284,7 @@ export const TaskManagement: React.FC = () => {
                         </div>
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
                             <SearchInput
-                                className="w-full xl:w-80"
+                                className="w-full xl:w-[22rem] xl:min-w-[22rem]"
                                 placeholder="搜索任务标题或编号..."
                                 value={searchTerm}
                                 onChange={setSearchTerm}

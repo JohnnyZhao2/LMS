@@ -354,7 +354,7 @@ export const UserList: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
             <SearchInput
-              className="w-full xl:w-80"
+              className="w-full xl:w-[22rem] xl:min-w-[22rem]"
               placeholder="检索姓名、工号、部位..."
               value={search}
               onChange={setSearch}

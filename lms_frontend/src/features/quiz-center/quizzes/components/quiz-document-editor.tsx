@@ -105,7 +105,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative flex min-w-0 flex-1 flex-col border-r border-border bg-background">
+    <div ref={containerRef} className="relative flex h-full min-w-0 flex-1 flex-col bg-background">
       <div className="flex-1 overflow-y-auto scrollbar-subtle px-10 py-10">
         {items.length > 0 ? (
           <DndContext
@@ -135,14 +135,14 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
           </DndContext>
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-text-muted">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-background">
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-background">
               <FileText className="h-8 w-8 opacity-30" />
             </div>
             <div className="space-y-1 text-center">
               <p className="text-[13px] font-medium text-foreground/60">暂无题目</p>
               <p className="text-[12px] text-text-muted">从右侧题库添加，或创建空白题目</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setShowAddMenu(true)} className="mt-1 gap-1.5 rounded-full border-border bg-background px-4 text-[12px] font-medium">
+            <Button variant="outline" size="sm" onClick={() => setShowAddMenu(true)} className="mt-1 gap-1.5 rounded-xl border-border bg-background px-4 text-[12px] font-medium">
               <Plus className="h-3.5 w-3.5" />
               新建题目
             </Button>
@@ -152,7 +152,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
 
       {showAddMenu && (
         <div className="pointer-events-none absolute inset-x-0 bottom-8 z-20 flex flex-col items-center">
-          <div className="pointer-events-auto mb-3 w-[184px] rounded-[22px] border border-border bg-background px-4 pt-4 pb-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+          <div className="pointer-events-auto mb-3 w-[184px] rounded-xl border border-border bg-background px-4 pt-4 pb-3 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <div className="mb-2 text-center text-[11px] font-semibold text-text-muted">选择题型</div>
             <div className="space-y-0.5">
               {[
@@ -172,7 +172,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
               ))}
             </div>
           </div>
-          <Button onClick={() => setShowAddMenu(false)} className="pointer-events-auto h-11 rounded-full bg-foreground px-6 text-[13px] font-semibold text-background shadow-[0_10px_22px_rgba(15,23,42,0.14)] hover:bg-foreground/92">
+          <Button onClick={() => setShowAddMenu(false)} className="pointer-events-auto h-11 rounded-xl bg-foreground px-6 text-[13px] font-semibold text-background shadow-[0_10px_22px_rgba(15,23,42,0.14)] hover:bg-foreground/92">
             <X className="mr-2 h-4 w-4" />
             取消添加
           </Button>
@@ -181,7 +181,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
 
       {!showAddMenu && items.length > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-8 z-20 flex justify-center">
-          <Button onClick={() => setShowAddMenu(true)} className="pointer-events-auto h-[42px] rounded-full border border-border bg-background px-5 text-[12px] font-semibold text-foreground shadow-[0_8px_24px_rgba(15,23,42,0.12)] hover:bg-muted">
+          <Button onClick={() => setShowAddMenu(true)} className="pointer-events-auto h-[42px] rounded-xl border border-border bg-background px-5 text-[12px] font-semibold text-foreground shadow-[0_8px_24px_rgba(15,23,42,0.12)] hover:bg-muted">
             <Plus className="mr-1.5 h-4 w-4" />
             添加新题
           </Button>
@@ -230,25 +230,20 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
       style={cardStyle}
       onClick={onFocus}
       className={cn(
-        'overflow-hidden rounded-2xl border shadow-sm transition-all',
+        'overflow-hidden rounded-xl border bg-background shadow-sm transition-all',
         isDragging && 'scale-[0.995] opacity-90 shadow-[0_18px_40px_rgba(15,23,42,0.14)]',
         isActive
-          ? 'border-border bg-background'
-          : 'border-border/70 bg-muted opacity-72 saturate-50 hover:opacity-90 hover:saturate-75',
+          ? 'border-primary/40 ring-1 ring-primary/10 shadow-[0_10px_24px_rgba(59,130,246,0.08)]'
+          : 'border-border hover:border-primary/20 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]',
       )}
     >
-      <div
-        className={cn(
-          'flex items-center justify-between border-b px-8 py-3.5',
-          isActive ? 'border-border bg-background' : 'border-border/70 bg-transparent',
-        )}
-      >
+      <div className="flex items-center justify-between border-b border-border bg-transparent px-8 py-3.5">
         <div className="flex items-center gap-3">
           <button
             type="button"
             aria-label={`拖动排序第${index + 1}题`}
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition hover:bg-muted hover:text-foreground',
+              'flex h-8 w-8 items-center justify-center rounded-xl text-text-muted transition hover:bg-muted hover:text-foreground',
               isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
             )}
             {...attributes}
@@ -305,12 +300,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
       </div>
 
       <div className="space-y-4 px-7 py-4">
-          <div
-            className={cn(
-              'rounded-[20px] px-5 py-3.5',
-              isActive ? 'bg-muted/40' : 'bg-muted/18',
-            )}
-          >
+          <div className="rounded-lg bg-muted/32 px-4 py-2.5">
             <textarea
               placeholder="输入题目描述..."
               value={item.content}
