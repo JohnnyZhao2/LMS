@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/quiz-center/questions/api/create-question';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
-import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
+import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import type { Question, QuestionCreateRequest, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
@@ -38,7 +38,7 @@ const questionToInline = (q: Question): InlineQuestionItem => ({
   resourceUuid: q.resource_uuid,
   isCurrent: q.is_current,
   questionType: q.question_type,
-  lineTagId: q.line_tag?.id ?? null,
+  spaceTagId: q.space_tag?.id ?? null,
   content: q.content,
   options: q.options || [],
   answer: q.answer || '',
@@ -63,7 +63,7 @@ export const QuizForm: React.FC = () => {
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const [resourceSearch, setResourceSearch] = useState('');
-  const [filterLineTypeId, setFilterLineTypeId] = useState<string>('all');
+  const [filterSpaceTypeId, setFilterSpaceTypeId] = useState<string>('all');
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
 
   const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -75,11 +75,11 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   const { data: quizData } = useQuizDetail(Number(id));
-  const { data: lineTypes } = useLineTypeTags();
+  const { data: spaceTypes } = useSpaceTypeTags();
   const { data: questionsData, isLoading: questionsLoading } = useQuestions({
     pageSize: 1000,
     search: resourceSearch || undefined,
-    lineTypeId: filterLineTypeId === 'all' ? undefined : Number(filterLineTypeId),
+    spaceTypeId: filterSpaceTypeId === 'all' ? undefined : Number(filterSpaceTypeId),
     questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType,
   });
 
@@ -176,7 +176,7 @@ export const QuizForm: React.FC = () => {
       resourceUuid: null,
       isCurrent: true,
       questionType,
-      lineTagId: filterLineTypeId !== 'all' ? Number(filterLineTypeId) : null,
+      spaceTagId: filterSpaceTypeId !== 'all' ? Number(filterSpaceTypeId) : null,
       content: '',
       options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }] : [],
       answer: '',
@@ -185,7 +185,7 @@ export const QuizForm: React.FC = () => {
       saved: false,
     };
     appendItemPreservingFocus(item);
-  }, [appendItemPreservingFocus, filterLineTypeId]);
+  }, [appendItemPreservingFocus, filterSpaceTypeId]);
 
   // 更新某题的字段
   const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
@@ -239,7 +239,7 @@ export const QuizForm: React.FC = () => {
       const savedItems = await Promise.all(items.map(async (item) => {
         if (item.questionId && item.saved) return item;
         const formData: QuestionCreateRequest = {
-          line_tag_id: item.lineTagId ?? null,
+          space_tag_id: item.spaceTagId ?? null,
           question_type: item.questionType,
           content: item.content,
           options: item.options,
@@ -320,11 +320,11 @@ export const QuizForm: React.FC = () => {
         <QuestionBankPanel
           resourceSearch={resourceSearch}
           onResourceSearchChange={setResourceSearch}
-          filterLineTypeId={filterLineTypeId}
-          onFilterLineTypeIdChange={setFilterLineTypeId}
+          filterSpaceTypeId={filterSpaceTypeId}
+          onFilterSpaceTypeIdChange={setFilterSpaceTypeId}
           filterQuestionType={filterQuestionType}
           onFilterQuestionTypeChange={setFilterQuestionType}
-          lineTypes={lineTypes}
+          spaceTypes={spaceTypes}
           questionsData={filteredQuestionsData}
           questionsLoading={questionsLoading}
           onPreview={handlePreviewQuestion}

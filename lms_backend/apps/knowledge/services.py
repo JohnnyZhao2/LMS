@@ -93,7 +93,7 @@ class KnowledgeService(BaseService):
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
         # 提取标签数据
-        line_tag_id = data.pop('line_tag_id', None)
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', [])
         # 3. 创建知识
         knowledge = Knowledge.objects.create(**data)
@@ -101,7 +101,7 @@ class KnowledgeService(BaseService):
             resource_uuid=knowledge.resource_uuid
         ).exclude(pk=knowledge.pk).update(is_current=False)
         # 4. 设置标签
-        self._set_tags(knowledge, line_tag_id, tag_ids)
+        self._set_tags(knowledge, space_tag_id, tag_ids)
         return knowledge
 
     @transaction.atomic
@@ -128,7 +128,7 @@ class KnowledgeService(BaseService):
             fallback_content=knowledge.content,
         )
         # 提取标签数据
-        line_tag_id = data.pop('line_tag_id', None)
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', None)
         data['updated_by'] = self.user
         if data:
@@ -136,8 +136,8 @@ class KnowledgeService(BaseService):
                 setattr(knowledge, key, value)
             knowledge.save(update_fields=list(data.keys()))
         # 更新标签
-        if line_tag_id is not None or tag_ids is not None:
-            self._set_tags(knowledge, line_tag_id, tag_ids)
+        if space_tag_id is not None or tag_ids is not None:
+            self._set_tags(knowledge, space_tag_id, tag_ids)
         return knowledge
 
     @transaction.atomic
@@ -198,29 +198,29 @@ class KnowledgeService(BaseService):
     def _set_tags(
         self,
         knowledge: Knowledge,
-        line_tag_id: Optional[int],
+        space_tag_id: Optional[int],
         tag_ids: Optional[List[int]],
     ) -> None:
         """设置标签"""
-        if line_tag_id is not None:
-            knowledge.line_tag = self._get_line_tag_or_error(line_tag_id)
-            knowledge.save(update_fields=['line_tag'])
+        if space_tag_id is not None:
+            knowledge.space_tag = self._get_space_tag_or_error(space_tag_id)
+            knowledge.save(update_fields=['space_tag'])
         if tag_ids is not None:
             knowledge.tags.set(self._get_tag_ids_or_error(tag_ids))
 
-    def _get_line_tag_or_error(self, line_tag_id: int) -> Tag:
-        """获取并校验条线标签。"""
-        line_tag = Tag.objects.filter(
-            id=line_tag_id,
-            tag_type='LINE',
+    def _get_space_tag_or_error(self, space_tag_id: int) -> Tag:
+        """获取并校验 space。"""
+        space_tag = Tag.objects.filter(
+            id=space_tag_id,
+            tag_type='SPACE',
             is_active=True,
         ).first()
-        if not line_tag:
+        if not space_tag:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的条线标签ID'
+                message='无效的 space ID'
             )
-        return line_tag
+        return space_tag
 
     def _get_tag_ids_or_error(self, tag_ids: List[int]) -> List[int]:
         """获取并校验知识标签 ID 列表。"""
@@ -269,7 +269,7 @@ class KnowledgeService(BaseService):
         # 获取下一个版本号
         next_version = Knowledge.next_version_number(source.resource_uuid)
         # 提取标签数据
-        line_tag_id = data.pop('line_tag_id', None)
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', None)
         # 准备新版本数据：自动复制所有内容字段
         new_version_data = {
@@ -291,7 +291,7 @@ class KnowledgeService(BaseService):
         # 创建新版本
         new_version = Knowledge.objects.create(**new_version_data)
         # 设置标签：按字段粒度处理，未传字段继承 source
-        inherited_line_tag_id = line_tag_id if line_tag_id is not None else source.line_tag_id
+        inherited_space_tag_id = space_tag_id if space_tag_id is not None else source.space_tag_id
         inherited_tag_ids = (
             tag_ids
             if tag_ids is not None
@@ -299,7 +299,7 @@ class KnowledgeService(BaseService):
         )
         self._set_tags(
             new_version,
-            inherited_line_tag_id,
+            inherited_space_tag_id,
             inherited_tag_ids,
         )
         return new_version

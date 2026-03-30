@@ -124,18 +124,18 @@ class QuestionService(BaseService):
         data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_version_data(data)
-        # 提取条线类型数据
-        line_tag_provided = 'line_tag_id' in data
-        line_tag_id = data.pop('line_tag_id', None)
+        # 提取space数据
+        space_tag_provided = 'space_tag_id' in data
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', [])
         # 3. 创建题目
         question = Question.objects.create(**data)
         Question.objects.filter(
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
-        # 4. 设置条线类型
-        if line_tag_id is not None:
-            self._set_line_tag(question, line_tag_id)
+        # 4. 设置space
+        if space_tag_id is not None:
+            self._set_space_tag(question, space_tag_id)
         if tag_ids is not None:
             question.tags.set(self._get_tag_ids_or_error(tag_ids))
 
@@ -172,9 +172,9 @@ class QuestionService(BaseService):
             'answer': data.get('answer', question.answer),
         }
         self._validate_question_data(merged_data)
-        # 提取条线类型数据
-        line_tag_provided = 'line_tag_id' in data
-        line_tag_id = data.pop('line_tag_id', None)
+        # 提取space数据
+        space_tag_provided = 'space_tag_id' in data
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids_provided = 'tag_ids' in data
         tag_ids = data.pop('tag_ids', None)
         # 更新题目
@@ -183,8 +183,8 @@ class QuestionService(BaseService):
             for key, value in data.items():
                 setattr(question, key, value)
             question.save(update_fields=list(data.keys()))
-        # 更新条线类型
-        self._apply_line_tag_change(question, line_tag_id, line_tag_provided)
+        # 更新space
+        self._apply_space_tag_change(question, space_tag_id, space_tag_provided)
         self._apply_tag_change(question, tag_ids, tag_ids_provided)
         return question
 
@@ -276,27 +276,27 @@ class QuestionService(BaseService):
                     message='简答题答案必须是字符串'
                 )
 
-    def _set_line_tag(self, question: Question, line_tag_id: int) -> None:
+    def _set_space_tag(self, question: Question, space_tag_id: int) -> None:
         """
-        设置条线类型
+        设置space
         Args:
             question: 题目对象
-            line_tag_id: 条线标签ID
+            space_tag_id: space ID
         Raises:
-            BusinessError: 如果条线类型无效
+            BusinessError: 如果space无效
         """
-        line_tag = Tag.objects.filter(
-            id=line_tag_id,
-            tag_type='LINE',
+        space_tag = Tag.objects.filter(
+            id=space_tag_id,
+            tag_type='SPACE',
             is_active=True,
         ).first()
-        if not line_tag:
+        if not space_tag:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的条线标签ID'
+                message='无效的 space ID'
             )
-        question.line_tag = line_tag
-        question.save(update_fields=['line_tag'])
+        question.space_tag = space_tag
+        question.save(update_fields=['space_tag'])
 
     def _get_tag_ids_or_error(self, tag_ids: list[int]) -> list[int]:
         if not tag_ids:
@@ -327,22 +327,22 @@ class QuestionService(BaseService):
             deduped_tag_ids.append(tag_id)
         return deduped_tag_ids
 
-    def _apply_line_tag_change(
+    def _apply_space_tag_change(
         self,
         question: Question,
-        line_tag_id: Optional[int],
-        line_tag_provided: bool,
+        space_tag_id: Optional[int],
+        space_tag_provided: bool,
     ) -> None:
-        """根据请求显式设置或清空条线。"""
-        if not line_tag_provided:
+        """根据请求显式设置或清空space。"""
+        if not space_tag_provided:
             return
-        if line_tag_id is None:
-            if question.line_tag_id is None:
+        if space_tag_id is None:
+            if question.space_tag_id is None:
                 return
-            question.line_tag = None
-            question.save(update_fields=['line_tag'])
+            question.space_tag = None
+            question.save(update_fields=['space_tag'])
             return
-        self._set_line_tag(question, line_tag_id)
+        self._set_space_tag(question, space_tag_id)
 
     def _apply_tag_change(
         self,
@@ -378,9 +378,9 @@ class QuestionService(BaseService):
             ).values_list('version_number', flat=True)
         )
         new_version_number = max(existing_versions) + 1 if existing_versions else 1
-        # 提取条线类型数据
-        line_tag_provided = 'line_tag_id' in data
-        line_tag_id = data.pop('line_tag_id', None)
+        # 提取space数据
+        space_tag_provided = 'space_tag_id' in data
+        space_tag_id = data.pop('space_tag_id', None)
         tag_ids_provided = 'tag_ids' in data
         tag_ids = data.pop('tag_ids', None)
         # 准备新版本数据：自动复制所有内容字段
@@ -395,12 +395,12 @@ class QuestionService(BaseService):
         for field in self.VERSION_COPY_FIELDS:
             new_question_data[field] = data.get(field, getattr(source, field, None))
         new_question = Question.objects.create(**new_question_data)
-        # 设置条线类型
-        if line_tag_provided:
-            self._apply_line_tag_change(new_question, line_tag_id, True)
-        elif source.line_tag:
-            new_question.line_tag = source.line_tag
-            new_question.save(update_fields=['line_tag'])
+        # 设置space
+        if space_tag_provided:
+            self._apply_space_tag_change(new_question, space_tag_id, True)
+        elif source.space_tag:
+            new_question.space_tag = source.space_tag
+            new_question.save(update_fields=['space_tag'])
         inherited_tag_ids = (
             tag_ids
             if tag_ids_provided

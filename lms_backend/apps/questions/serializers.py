@@ -9,15 +9,15 @@ from apps.tags.serializers import TagSimpleSerializer
 from .models import Question
 
 
-def validate_line_tag_id(value):
-    """校验条线标签ID是否有效（共享验证函数）"""
+def validate_space_tag_id(value):
+    """校验 space ID 是否有效（共享验证函数）"""
     if value is None:
         return value
     try:
-        Tag.objects.get(id=value, tag_type='LINE', is_active=True)
+        Tag.objects.get(id=value, tag_type='SPACE', is_active=True)
         return value
     except Tag.DoesNotExist:
-        raise serializers.ValidationError('无效的条线标签ID')
+        raise serializers.ValidationError('无效的 space ID')
 
 
 def validate_question_tag_ids(value):
@@ -45,7 +45,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
-    line_tag = TagSimpleSerializer(read_only=True)
+    space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     class Meta:
         model = Question
@@ -54,7 +54,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation',
             'score',
-            'is_objective', 'line_tag', 'tags',
+            'is_objective', 'space_tag', 'tags',
             'is_current',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
@@ -69,7 +69,7 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
     is_objective = serializers.ReadOnlyField()
     is_subjective = serializers.ReadOnlyField()
-    line_tag = TagSimpleSerializer(read_only=True)
+    space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     class Meta:
         model = Question
@@ -77,7 +77,7 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation', 'score',
-            'is_objective', 'is_subjective', 'line_tag', 'tags',
+            'is_objective', 'is_subjective', 'space_tag', 'tags',
             'is_current',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
             'created_at', 'updated_at'
@@ -89,17 +89,17 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     Serializer for creating questions.
     业务验证（选项/答案格式）由 Service._validate_question_data 统一处理。
     """
-    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
     class Meta:
         model = Question
         fields = [
             'content', 'question_type', 'options', 'answer',
-            'explanation', 'score', 'line_tag_id', 'tag_ids'
+            'explanation', 'score', 'space_tag_id', 'tag_ids'
         ]
 
-    def validate_line_tag_id(self, value):
-        return validate_line_tag_id(value)
+    def validate_space_tag_id(self, value):
+        return validate_space_tag_id(value)
 
     def validate_tag_ids(self, value):
         return validate_question_tag_ids(value)
@@ -110,17 +110,17 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
     Serializer for updating questions.
     业务验证（选项/答案格式）由 Service._validate_question_data 统一处理。
     """
-    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
     class Meta:
         model = Question
         fields = [
             'content', 'options', 'answer', 'explanation',
-            'score', 'line_tag_id', 'tag_ids'
+            'score', 'space_tag_id', 'tag_ids'
         ]
 
-    def validate_line_tag_id(self, value):
-        return validate_line_tag_id(value)
+    def validate_space_tag_id(self, value):
+        return validate_space_tag_id(value)
 
     def validate_tag_ids(self, value):
         return validate_question_tag_ids(value)

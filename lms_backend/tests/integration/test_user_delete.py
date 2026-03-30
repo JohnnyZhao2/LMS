@@ -80,9 +80,9 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         department=department,
     )
 
-    line_tag = Tag.objects.create(
-        name='条线A',
-        tag_type='LINE',
+    space_tag = Tag.objects.create(
+        name='spaceA',
+        tag_type='SPACE',
         allow_knowledge=True,
         allow_question=True,
         sort_order=1,
@@ -94,7 +94,7 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         content='knowledge content',
         created_by=inactive_user,
         updated_by=inactive_user,
-        line_tag=line_tag,
+        space_tag=space_tag,
     )
     question = Question.objects.create(
         content='测试题目',
@@ -103,7 +103,7 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         answer='A',
         created_by=inactive_user,
         updated_by=inactive_user,
-        line_tag=line_tag,
+        space_tag=space_tag,
     )
     quiz = Quiz.objects.create(
         title='离职用户试卷',

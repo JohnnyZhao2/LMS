@@ -46,7 +46,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     Serializer for knowledge list view.
     Returns full content for mymind-style card rendering.
     """
-    line_tag = TagSimpleSerializer(read_only=True)
+    space_tag = TagSimpleSerializer(read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     content_preview = serializers.CharField(read_only=True)
@@ -58,7 +58,7 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title',
             'is_current',
-            'line_tag',
+            'space_tag',
             'content', 'related_links',
             'view_count', 'content_preview', 'table_of_contents',
             'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
@@ -70,7 +70,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     Serializer for knowledge detail view.
     Returns full knowledge document details.
     """
-    line_tag = TagSimpleSerializer(read_only=True)
+    space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
@@ -82,7 +82,7 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'title',
             'is_current',
-            'line_tag', 'tags',
+            'space_tag', 'tags',
             'content', 'related_links',
             # 元数据
             'view_count', 'table_of_contents',
@@ -102,7 +102,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         default='',
     )
     # 前端传入标签ID
-    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -115,7 +115,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title',
-            'line_tag_id',
+            'space_tag_id',
             'tag_ids',
             'related_links',
             'content',
@@ -145,7 +145,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         allow_blank=True,
         allow_null=True,
     )
-    line_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(
         child=serializers.IntegerField(),
         write_only=True,
@@ -157,7 +157,7 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         model = Knowledge
         fields = [
             'title',
-            'line_tag_id',
+            'space_tag_id',
             'tag_ids',
             'related_links',
             'content',

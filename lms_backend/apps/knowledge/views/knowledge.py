@@ -58,13 +58,13 @@ def _build_knowledge_filters(request):
     """构建并校验知识筛选参数。"""
     filters = {}
 
-    line_tag_id = parse_int_query_param(
+    space_tag_id = parse_int_query_param(
         request=request,
-        name='line_tag_id',
+        name='space_tag_id',
         minimum=1,
     )
-    if line_tag_id is not None:
-        filters['line_tag_id'] = line_tag_id
+    if space_tag_id is not None:
+        filters['space_tag_id'] = space_tag_id
 
     tag_id = parse_int_query_param(
         request=request,
@@ -114,12 +114,12 @@ class KnowledgeListCreateView(BaseAPIView):
         return list_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
-        description='''获取知识文档列表，支持条线类型和知识标签筛选。
+        description='''获取知识文档列表，支持按 space 和知识标签筛选。
 所有用户只能看到当前版本的知识。
 **注意：** 保存即发布，所有显示的知识都是当前版本（is_current=True）。
 ''',
         parameters=[
-            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
+            OpenApiParameter(name='space_tag_id', type=int, description='space ID'),
             OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
             OpenApiParameter(name='page', type=int, description='页码（默认1）'),
@@ -250,7 +250,7 @@ class KnowledgeStatsView(BaseAPIView):
         summary='获取知识统计',
         description='获取知识文档的统计数据，统计维度已统一到正文内容。',
         parameters=[
-            OpenApiParameter(name='line_tag_id', type=int, description='条线标签ID'),
+            OpenApiParameter(name='space_tag_id', type=int, description='space ID'),
             OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
         ],

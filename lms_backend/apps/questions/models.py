@@ -76,14 +76,14 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
         related_name='question_updated',
         verbose_name='最后更新者'
     )
-    line_tag = models.ForeignKey(
+    space_tag = models.ForeignKey(
         Tag,
         on_delete=models.PROTECT,
-        related_name='question_by_line',
+        related_name='question_by_space',
         null=True,
         blank=True,
-        verbose_name='条线类型',
-        limit_choices_to={'tag_type': 'LINE', 'is_active': True}
+        verbose_name='space',
+        limit_choices_to={'tag_type': 'SPACE', 'is_active': True}
     )
     tags = models.ManyToManyField(
         Tag,

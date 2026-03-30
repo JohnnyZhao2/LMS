@@ -1,10 +1,10 @@
 import { useTags, useCreateTag, useDeleteTag, useUpdateTag } from '@/features/tags/api/tags';
 
 /**
- * 获取条线类型标签列表
+ * 获取 space 列表
  */
-export const useLineTypeTags = (search?: string) => {
-  return useTags({ tag_type: 'LINE', search });
+export const useSpaceTypeTags = (search?: string) => {
+  return useTags({ tag_type: 'SPACE', search });
 };
 
 /**

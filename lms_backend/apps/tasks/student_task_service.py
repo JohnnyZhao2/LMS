@@ -148,7 +148,7 @@ class StudentTaskService(BaseService):
                 'id': tk.id,
                 'knowledge_id': tk.knowledge_id,
                 'title': knowledge.title,
-                'line_tag_name': knowledge.line_tag.name if knowledge.line_tag else None,
+                'space_tag_name': knowledge.space_tag.name if knowledge.space_tag else None,
                 'content_preview': extract_knowledge_preview(knowledge),
                 'order': tk.order,
                 'is_completed': progress.is_completed if progress else False,

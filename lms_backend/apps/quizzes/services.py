@@ -301,11 +301,11 @@ class QuizService(BaseService):
         创建题目并添加到试卷
         Args:
             quiz: 试卷对象
-            question_data: 题目数据字典（会被修改，line_tag_id 会被弹出）
+            question_data: 题目数据字典（会被修改，space_tag_id 会被弹出）
         Returns:
             创建的题目对象
         """
-        line_tag_id = question_data.pop('line_tag_id', None)
+        space_tag_id = question_data.pop('space_tag_id', None)
         # 准备版本数据
         self._prepare_question_version_data(question_data)
         # 准备题目属性
@@ -319,9 +319,9 @@ class QuizService(BaseService):
         Question.objects.filter(
             resource_uuid=question.resource_uuid
         ).exclude(pk=question.pk).update(is_current=False)
-        # 设置条线类型
-        if line_tag_id is not None:
-            self._set_question_line_tag(question, line_tag_id)
+        # 设置space
+        if space_tag_id is not None:
+            self._set_question_space_tag(question, space_tag_id)
         # 添加到试卷
         self._add_question(
             quiz_id=quiz.id,
@@ -349,27 +349,27 @@ class QuizService(BaseService):
         data['resource_uuid'] = uuid.uuid4()
         data['version_number'] = 1
 
-    def _set_question_line_tag(self, question: Question, line_tag_id: int) -> None:
+    def _set_question_space_tag(self, question: Question, space_tag_id: int) -> None:
         """
-        设置题目的条线类型
+        设置题目的space
         Args:
             question: 题目对象
-            line_tag_id: 条线标签ID
+            space_tag_id: space ID
         Raises:
-            BusinessError: 如果条线类型无效
+            BusinessError: 如果space无效
         """
-        line_tag = Tag.objects.filter(
-            id=line_tag_id,
-            tag_type='LINE',
+        space_tag = Tag.objects.filter(
+            id=space_tag_id,
+            tag_type='SPACE',
             is_active=True
         ).first()
-        if not line_tag:
+        if not space_tag:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的条线标签ID'
+                message='无效的 space ID'
             )
-        question.line_tag = line_tag
-        question.save(update_fields=['line_tag'])
+        question.space_tag = space_tag
+        question.save(update_fields=['space_tag'])
 
     def _validate_quiz_data(self, data: dict) -> None:
         """验证试卷数据"""

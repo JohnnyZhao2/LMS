@@ -17,18 +17,18 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
     统一知识文档模型
     所有知识都使用富文本正文 content，不再区分知识类型或结构化子字段。
     标签关系:
-    - line_tag: 条线类型（单选）
+    - space_tag: space（单选）
     - tags: 知识标签（多对多，多选）
     """
     title = models.CharField(max_length=200, verbose_name='标题')
-    line_tag = models.ForeignKey(
+    space_tag = models.ForeignKey(
         Tag,
         on_delete=models.PROTECT,
-        related_name='knowledge_by_line',
+        related_name='knowledge_by_space',
         null=True,
         blank=True,
-        verbose_name='条线类型',
-        limit_choices_to={'tag_type': 'LINE', 'is_active': True}
+        verbose_name='space',
+        limit_choices_to={'tag_type': 'SPACE', 'is_active': True}
     )
     tags = models.ManyToManyField(
         Tag,

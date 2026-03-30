@@ -10,7 +10,7 @@ from .models import Question
 
 
 def question_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Question.objects.select_related('created_by', 'updated_by', 'line_tag').prefetch_related('tags')
+    qs = Question.objects.select_related('created_by', 'updated_by', 'space_tag').prefetch_related('tags')
     if not include_deleted:
         qs = qs.filter(is_deleted=False)
     return qs
@@ -32,8 +32,8 @@ def apply_question_filters(
             qs = qs.filter(created_by_id=filters['created_by_id'])
         if filters.get('is_current') is not None:
             qs = qs.filter(is_current=filters['is_current'])
-        if filters.get('line_tag_id') is not None:
-            qs = qs.filter(line_tag_id=filters['line_tag_id'])
+        if filters.get('space_tag_id') is not None:
+            qs = qs.filter(space_tag_id=filters['space_tag_id'])
         if filters.get('tag_id') is not None:
             qs = qs.filter(tags__id=filters['tag_id'])
     if search:

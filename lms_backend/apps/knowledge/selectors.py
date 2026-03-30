@@ -13,7 +13,7 @@ def knowledge_base_queryset(include_deleted: bool = False) -> QuerySet:
     qs = Knowledge.objects.select_related(
         'created_by',
         'updated_by',
-        'line_tag',
+        'space_tag',
     ).prefetch_related(
         'tags'
     )
@@ -33,8 +33,8 @@ def get_knowledge_queryset(
 ) -> QuerySet:
     qs = knowledge_base_queryset(include_deleted=False).filter(is_current=True)
     if filters:
-        if filters.get('line_tag_id') is not None:
-            qs = qs.filter(line_tag_id=filters['line_tag_id'])
+        if filters.get('space_tag_id') is not None:
+            qs = qs.filter(space_tag_id=filters['space_tag_id'])
         if filters.get('tag_id'):
             qs = qs.filter(tags__id=filters['tag_id'])
     if search:

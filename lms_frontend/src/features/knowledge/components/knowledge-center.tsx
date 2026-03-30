@@ -20,7 +20,7 @@ import type { Tag as TagType } from '@/types/api';
 
 import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
-import { useCreateTag, useDeleteTag, useLineTypeTags } from '../api/get-tags';
+import { useCreateTag, useDeleteTag, useSpaceTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
@@ -32,14 +32,14 @@ import { KnowledgeFocusModal } from './modals/knowledge-focus-modal';
 import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
 
 type FocusState =
-    | { mode: 'create'; initialContent: string; initialLineTagId?: number }
+    | { mode: 'create'; initialContent: string; initialSpaceTagId?: number }
     | { mode: 'detail'; knowledgeId: number; closeOnExitFocus: boolean };
 
 interface KnowledgeCenterProps {
     isAdmin?: boolean;
 }
 
-const LINE_TYPE_THEME_COLORS = [
+const SPACE_TYPE_THEME_COLORS = [
     '#FFE45C',
     '#7A38D6',
     '#F0444F',
@@ -76,16 +76,16 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const createTag = useCreateTag();
     const deleteTag = useDeleteTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
-    const [deleteLineTypeTarget, setDeleteLineTypeTarget] = React.useState<number | null>(null);
+    const [deleteSpaceTypeTarget, setDeleteSpaceTypeTarget] = React.useState<number | null>(null);
     const [focusState, setFocusState] = React.useState<FocusState | null>(null);
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
-    const [hoveredLineTypeId, setHoveredLineTypeId] = React.useState<number | null>(null);
+    const [hoveredSpaceTypeId, setHoveredSpaceTypeId] = React.useState<number | null>(null);
     const [isTypeActionHovered, setIsTypeActionHovered] = React.useState(false);
-    const [isCreateLineTypeOpen, setIsCreateLineTypeOpen] = React.useState(false);
-    const [createLineTypeStep, setCreateLineTypeStep] = React.useState<1 | 2>(1);
-    const [newLineTypeName, setNewLineTypeName] = React.useState('');
-    const [selectedLineTypeColor, setSelectedLineTypeColor] = React.useState<string>(LINE_TYPE_THEME_COLORS[0]);
+    const [isCreateSpaceTypeOpen, setIsCreateSpaceTypeOpen] = React.useState(false);
+    const [createSpaceTypeStep, setCreateSpaceTypeStep] = React.useState<1 | 2>(1);
+    const [newSpaceTypeName, setNewSpaceTypeName] = React.useState('');
+    const [selectedSpaceTypeColor, setSelectedSpaceTypeColor] = React.useState<string>(SPACE_TYPE_THEME_COLORS[0]);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -106,17 +106,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         searchValue,
         setSearchValue,
         submitSearch,
-        selectedLineTypeId,
-        handleLineTypeSelect,
+        selectedSpaceTypeId,
+        handleSpaceTypeSelect,
         pageSize,
     } = useKnowledgeFilters({ defaultPageSize: 24 });
 
-    const { data: lineTypeTags = [] } = useLineTypeTags();
-    const selectedLineType = React.useMemo(
-        () => lineTypeTags.find((tag) => tag.id === selectedLineTypeId),
-        [lineTypeTags, selectedLineTypeId],
+    const { data: spaceTypeTags = [] } = useSpaceTypeTags();
+    const selectedSpaceType = React.useMemo(
+        () => spaceTypeTags.find((tag) => tag.id === selectedSpaceTypeId),
+        [spaceTypeTags, selectedSpaceTypeId],
     );
-    const isDeleteLineTypeMode = canDeleteKnowledge && !!selectedLineType;
+    const isDeleteSpaceTypeMode = canDeleteKnowledge && !!selectedSpaceType;
 
     const {
         data,
@@ -127,7 +127,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         isFetchingNextPage,
     } = useInfiniteKnowledgeList({
         search: search || undefined,
-        line_tag_id: selectedLineTypeId,
+        space_tag_id: selectedSpaceTypeId,
         pageSize,
     });
     const knowledgeItems = React.useMemo(
@@ -162,7 +162,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             setFocusState((prev) => (
                 prev?.mode === 'create'
                     ? prev
-                    : { mode: 'create', initialContent: '', initialLineTagId: selectedLineTypeId }
+                    : { mode: 'create', initialContent: '', initialSpaceTagId: selectedSpaceTypeId }
             ));
             return;
         }
@@ -181,7 +181,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         setFocusState(null);
         setDetailId(null);
         setDetailStartEditing(false);
-    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId, selectedLineTypeId]);
+    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId, selectedSpaceTypeId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
@@ -242,7 +242,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             await createKnowledge.mutateAsync({
                 content,
                 ...(derivedTitle && { title: derivedTitle }),
-                ...(selectedLineTypeId !== undefined && { line_tag_id: selectedLineTypeId }),
+                ...(selectedSpaceTypeId !== undefined && { space_tag_id: selectedSpaceTypeId }),
             });
 
             toast.success('知识创建成功');
@@ -251,10 +251,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             toast.error('创建失败');
             throw error;
         }
-    }, [createKnowledge, selectedLineTypeId, refetch]);
+    }, [createKnowledge, selectedSpaceTypeId, refetch]);
 
-    const handleCreateLineType = React.useCallback(async () => {
-        const name = newLineTypeName.trim();
+    const handleCreateSpaceType = React.useCallback(async () => {
+        const name = newSpaceTypeName.trim();
         if (!name) {
             toast.error('请输入类型名称');
             return;
@@ -263,32 +263,32 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         try {
             await createTag.mutateAsync({
                 name,
-                tag_type: 'LINE',
-                color: selectedLineTypeColor,
+                tag_type: 'SPACE',
+                color: selectedSpaceTypeColor,
             });
-            toast.success('条线类型已添加');
-            setIsCreateLineTypeOpen(false);
-            setCreateLineTypeStep(1);
-            setNewLineTypeName('');
-            setSelectedLineTypeColor(LINE_TYPE_THEME_COLORS[0]);
+            toast.success('space 已添加');
+            setIsCreateSpaceTypeOpen(false);
+            setCreateSpaceTypeStep(1);
+            setNewSpaceTypeName('');
+            setSelectedSpaceTypeColor(SPACE_TYPE_THEME_COLORS[0]);
         } catch {
             toast.error('添加失败');
         }
-    }, [createTag, newLineTypeName, selectedLineTypeColor]);
+    }, [createTag, newSpaceTypeName, selectedSpaceTypeColor]);
 
-    const handleDeleteLineType = React.useCallback(async () => {
-        if (!deleteLineTypeTarget) return;
+    const handleDeleteSpaceType = React.useCallback(async () => {
+        if (!deleteSpaceTypeTarget) return;
 
         try {
-            await deleteTag.mutateAsync(deleteLineTypeTarget);
-            handleLineTypeSelect(undefined);
-            toast.success('条线类型已删除');
+            await deleteTag.mutateAsync(deleteSpaceTypeTarget);
+            handleSpaceTypeSelect(undefined);
+            toast.success('space 已删除');
         } catch {
             toast.error('删除失败');
         } finally {
-            setDeleteLineTypeTarget(null);
+            setDeleteSpaceTypeTarget(null);
         }
-    }, [deleteLineTypeTarget, deleteTag, handleLineTypeSelect]);
+    }, [deleteSpaceTypeTarget, deleteTag, handleSpaceTypeSelect]);
 
     return (
         <div
@@ -313,22 +313,22 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 />
             </div>
 
-            {/* 条线筛选标签 — 白色卡片 */}
-            {(lineTypeTags.length > 0 || isManagementView) && (
+            {/* space筛选标签 — 白色卡片 */}
+            {(spaceTypeTags.length > 0 || isManagementView) && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-2">
-                        {lineTypeTags.map((tag: TagType) => (
+                        {spaceTypeTags.map((tag: TagType) => (
                             <button
                                 key={tag.id}
-                                onClick={() => handleLineTypeSelect(
-                                    selectedLineTypeId === tag.id ? undefined : tag.id
+                                onClick={() => handleSpaceTypeSelect(
+                                    selectedSpaceTypeId === tag.id ? undefined : tag.id
                                 )}
-                                onMouseEnter={() => setHoveredLineTypeId(tag.id)}
-                                onMouseLeave={() => setHoveredLineTypeId((current) => (current === tag.id ? null : current))}
+                                onMouseEnter={() => setHoveredSpaceTypeId(tag.id)}
+                                onMouseLeave={() => setHoveredSpaceTypeId((current) => (current === tag.id ? null : current))}
                                 className="inline-flex items-center gap-3 rounded-[6px] bg-white px-3 py-2 font-medium transition-[box-shadow] duration-200"
                                 style={{
                                     fontSize: 12.5,
-                                    boxShadow: hoveredLineTypeId === tag.id
+                                    boxShadow: hoveredSpaceTypeId === tag.id
                                         ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
                                         : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
                                 }}
@@ -337,10 +337,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
                                     style={{
                                         borderColor: tag.color || '#4A90E2',
-                                        backgroundColor: selectedLineTypeId === tag.id ? (tag.color || '#4A90E2') : 'transparent',
+                                        backgroundColor: selectedSpaceTypeId === tag.id ? (tag.color || '#4A90E2') : 'transparent',
                                     }}
                                 >
-                                    {selectedLineTypeId === tag.id && (
+                                    {selectedSpaceTypeId === tag.id && (
                                         <span className="w-1.5 h-1.5 rounded-full bg-white" />
                                     )}
                                 </span>
@@ -350,9 +350,9 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             </button>
                         ))}
 
-                        {lineTypeTags.length === 0 && isManagementView && (
+                        {spaceTypeTags.length === 0 && isManagementView && (
                             <span className="px-4 py-2 text-sm text-text-muted">
-                                暂无条线类型
+                                暂无space
                             </span>
                         )}
                     </div>
@@ -361,17 +361,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         <button
                             type="button"
                             onClick={() => {
-                                if (isDeleteLineTypeMode && selectedLineType) {
-                                    setDeleteLineTypeTarget(selectedLineType.id);
+                                if (isDeleteSpaceTypeMode && selectedSpaceType) {
+                                    setDeleteSpaceTypeTarget(selectedSpaceType.id);
                                     return;
                                 }
-                                setIsCreateLineTypeOpen(true);
+                                setIsCreateSpaceTypeOpen(true);
                             }}
                             onMouseEnter={() => setIsTypeActionHovered(true)}
                             onMouseLeave={() => setIsTypeActionHovered(false)}
                             className={cn(
                                 'inline-flex items-center rounded-full px-4 py-2 font-medium transition-[background-color,box-shadow,color] duration-200',
-                                isDeleteLineTypeMode
+                                isDeleteSpaceTypeMode
                                     ? 'bg-destructive text-white'
                                     : 'gap-3 bg-white text-foreground',
                             )}
@@ -379,24 +379,24 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 fontSize: 12.5,
                                 boxShadow: isTypeActionHovered
                                     ? (
-                                        isDeleteLineTypeMode
+                                        isDeleteSpaceTypeMode
                                             ? '0 14px 28px rgba(220,38,38,0.26)'
                                             : '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
                                     )
                                     : (
-                                        isDeleteLineTypeMode
+                                        isDeleteSpaceTypeMode
                                             ? '0 10px 24px rgba(220,38,38,0.18)'
                                             : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)'
                                     ),
                             }}
                         >
-                            {!isDeleteLineTypeMode && (
+                            {!isDeleteSpaceTypeMode && (
                                 <span
                                     className="h-4 w-4 rounded-full border-2"
                                     style={{ borderColor: '#e8793a' }}
                                 />
                             )}
-                            {isDeleteLineTypeMode ? '删除此类型' : '添加类型'}
+                            {isDeleteSpaceTypeMode ? '删除此类型' : '添加类型'}
                         </button>
                     )}
                 </div>
@@ -431,7 +431,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         setFocusState({
                                             mode: 'create',
                                             initialContent: content,
-                                            initialLineTagId: selectedLineTypeId,
+                                            initialSpaceTagId: selectedSpaceTypeId,
                                         });
                                     }}
                                     isSaving={createKnowledge.isPending}
@@ -485,16 +485,16 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             />
 
             <ConfirmDialog
-                open={deleteLineTypeTarget !== null}
-                onOpenChange={(open) => { if (!open) setDeleteLineTypeTarget(null); }}
+                open={deleteSpaceTypeTarget !== null}
+                onOpenChange={(open) => { if (!open) setDeleteSpaceTypeTarget(null); }}
                 title="确认删除此类型吗？"
-                description={selectedLineType
-                    ? `删除“${selectedLineType.name}”不会删除知识卡片，只会删除此类型。`
+                description={selectedSpaceType
+                    ? `删除“${selectedSpaceType.name}”不会删除知识卡片，只会删除此类型。`
                     : '删除此类型不会删除知识卡片，只会删除此类型。'}
                 confirmText="删除此类型"
                 confirmVariant="destructive"
                 isConfirming={deleteTag.isPending}
-                onConfirm={handleDeleteLineType}
+                onConfirm={handleDeleteSpaceType}
             />
 
             {detailId !== null && (
@@ -535,7 +535,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     knowledgeId={focusState.mode === 'detail' ? focusState.knowledgeId : undefined}
                     closeOnExitFocus={focusState.mode === 'detail' ? focusState.closeOnExitFocus : undefined}
                     initialContent={focusState.mode === 'create' ? focusState.initialContent : undefined}
-                    initialLineTagId={focusState.mode === 'create' ? focusState.initialLineTagId : undefined}
+                    initialSpaceTagId={focusState.mode === 'create' ? focusState.initialSpaceTagId : undefined}
                     taskId={taskId || undefined}
                     taskKnowledgeId={taskKnowledgeId || undefined}
                     onClose={() => {
@@ -574,21 +574,21 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             )}
 
             <Dialog
-                open={isCreateLineTypeOpen}
+                open={isCreateSpaceTypeOpen}
                 onOpenChange={(open) => {
-                    setIsCreateLineTypeOpen(open);
+                    setIsCreateSpaceTypeOpen(open);
                     if (open) {
-                        setCreateLineTypeStep(1);
+                        setCreateSpaceTypeStep(1);
                     } else {
-                        setCreateLineTypeStep(1);
-                        setNewLineTypeName('');
-                        setSelectedLineTypeColor(LINE_TYPE_THEME_COLORS[0]);
+                        setCreateSpaceTypeStep(1);
+                        setNewSpaceTypeName('');
+                        setSelectedSpaceTypeColor(SPACE_TYPE_THEME_COLORS[0]);
                     }
                 }}
             >
                 <DialogContent className="max-w-[560px] border-0 bg-[#fcfbf8] p-0 shadow-[0_18px_48px_rgba(0,0,0,0.16)]">
                     <div className="px-7 py-8 sm:px-10 sm:py-9">
-                        {createLineTypeStep === 1 ? (
+                        {createSpaceTypeStep === 1 ? (
                             <div className="flex flex-col items-center text-center">
                                 <div className="relative mb-5 h-12 w-12">
                                     <span className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-[#9bd1d8]" />
@@ -607,12 +607,12 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <div className="mt-7 w-full max-w-[360px]">
                                     <input
                                         id="line-type-name"
-                                        value={newLineTypeName}
-                                        onChange={(e) => setNewLineTypeName(e.target.value)}
+                                        value={newSpaceTypeName}
+                                        onChange={(e) => setNewSpaceTypeName(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && newLineTypeName.trim()) {
+                                            if (e.key === 'Enter' && newSpaceTypeName.trim()) {
                                                 e.preventDefault();
-                                                setCreateLineTypeStep(2);
+                                                setCreateSpaceTypeStep(2);
                                             }
                                         }}
                                         placeholder="输入类型名称"
@@ -624,11 +624,11 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
                                 <button
                                     type="button"
-                                    onClick={() => setCreateLineTypeStep(2)}
-                                    disabled={!newLineTypeName.trim()}
+                                    onClick={() => setCreateSpaceTypeStep(2)}
+                                    disabled={!newSpaceTypeName.trim()}
                                     className="mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
                                     style={{
-                                        background: !newLineTypeName.trim() ? '#d4d4d4' : '#cfcfcf',
+                                        background: !newSpaceTypeName.trim() ? '#d4d4d4' : '#cfcfcf',
                                     }}
                                 >
                                     下一步
@@ -644,13 +644,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 </DialogDescription>
 
                                 <div className="mt-7 grid w-full max-w-[280px] grid-cols-4 justify-items-center gap-x-3 gap-y-3">
-                                    {LINE_TYPE_THEME_COLORS.map((color) => {
-                                        const isSelected = selectedLineTypeColor === color;
+                                    {SPACE_TYPE_THEME_COLORS.map((color) => {
+                                        const isSelected = selectedSpaceTypeColor === color;
                                         return (
                                             <button
                                                 key={color}
                                                 type="button"
-                                                onClick={() => setSelectedLineTypeColor(color)}
+                                                onClick={() => setSelectedSpaceTypeColor(color)}
                                                 className="flex h-9 w-9 items-center justify-center rounded-full transition-transform hover:scale-[1.04]"
                                                 aria-label={`选择颜色 ${color}`}
                                             >
@@ -669,15 +669,15 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <div className="mt-8 flex items-center gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setCreateLineTypeStep(1)}
+                                        onClick={() => setCreateSpaceTypeStep(1)}
                                         className="rounded-full border border-[#d7deea] px-5 py-2 text-[13px] font-medium text-[#70809e] transition-colors hover:bg-[#f1f4f9]"
                                     >
                                         上一步
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => void handleCreateLineType()}
-                                        disabled={createTag.isPending || !newLineTypeName.trim()}
+                                        onClick={() => void handleCreateSpaceType()}
+                                        disabled={createTag.isPending || !newSpaceTypeName.trim()}
                                         className="rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-70"
                                         style={{
                                             background: createTag.isPending ? '#d4d4d4' : '#cfcfcf',

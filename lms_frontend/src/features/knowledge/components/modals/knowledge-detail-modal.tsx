@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useKnowledgeDetail } from '../../api/knowledge';
 import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowledge';
-import { useLineTypeTags } from '../../api/get-tags';
+import { useSpaceTypeTags } from '../../api/get-tags';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -77,7 +77,7 @@ interface KnowledgeDetailModalProps {
   closeOnExitFocus?: boolean;
   forceFocus?: boolean;
   draftInitialContent?: string;
-  draftInitialLineTagId?: number;
+  draftInitialSpaceTagId?: number;
   taskId?: number;
   taskKnowledgeId?: number;
   onClose: () => void;
@@ -94,7 +94,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   closeOnExitFocus = false,
   forceFocus = false,
   draftInitialContent,
-  draftInitialLineTagId,
+  draftInitialSpaceTagId,
   taskId,
   taskKnowledgeId,
   onClose,
@@ -133,21 +133,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     : knowledgeFromQuery;
   const knowledge = isDraftMode ? undefined : fetchedKnowledge;
 
-  // 条线列表
-  const { data: allLineTypes = [] } = useLineTypeTags();
+  // space列表
+  const { data: allSpaceTypes = [] } = useSpaceTypeTags();
 
   // 编辑状态
   const [editing, setEditing] = useState(startEditing);
   const [editContent, setEditContent] = useState<string | undefined>(undefined);
   const [editTitle, setEditTitle] = useState<string | undefined>(undefined);
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
-  const [editLineTagId, setEditLineTagId] = useState<number | undefined | null>(undefined);
+  const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
 
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
-  // 条线选择
-  const [showLineTypes, setShowLineTypes] = useState(false);
+  // space选择
+  const [showSpaceTypes, setShowSpaceTypes] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
   const canEditInFocus = isFocusMode && canUpdateKnowledge;
@@ -159,9 +159,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const activeTitle = editTitle ?? knowledge?.title ?? '';
   const activeTags = editTags ?? knowledge?.tags ?? [];
   const shouldShowSystemTagsSection = !isStudent || activeTags.length > 0;
-  const activeLineTagId = editLineTagId === undefined
-    ? knowledge?.line_tag?.id ?? null
-    : editLineTagId;
+  const activeSpaceTagId = editSpaceTagId === undefined
+    ? knowledge?.space_tag?.id ?? null
+    : editSpaceTagId;
   const activeRelatedLinks = editRelatedLinks ?? knowledge?.related_links ?? [];
   const taskKnowledgeItem = useMemo(() => {
     if (!learningDetail) return undefined;
@@ -177,11 +177,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditContent(isDraftMode ? normalizedDraftContent : undefined);
     setEditTitle(isDraftMode ? getKnowledgeTitleFromHtml(normalizedDraftContent) : undefined);
     setEditTags(isDraftMode ? [] : undefined);
-    setEditLineTagId(isDraftMode ? (draftInitialLineTagId ?? null) : undefined);
+    setEditSpaceTagId(isDraftMode ? (draftInitialSpaceTagId ?? null) : undefined);
     setEditRelatedLinks(isDraftMode ? [] : undefined);
     setShowTagInput(false);
-    setShowLineTypes(false);
-  }, [draftInitialLineTagId, forceFocus, isDraftMode, knowledgeId, normalizedDraftContent, startEditing, startInFocus]);
+    setShowSpaceTypes(false);
+  }, [draftInitialSpaceTagId, forceFocus, isDraftMode, knowledgeId, normalizedDraftContent, startEditing, startInFocus]);
 
   // 判断是否有改动
   const hasChanges = isDraftMode
@@ -190,7 +190,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       (editContent !== undefined && editContent !== knowledge.content) ||
       (editTitle !== undefined && editTitle !== knowledge.title) ||
       (editTags !== undefined) ||
-      (editLineTagId !== undefined) ||
+      (editSpaceTagId !== undefined) ||
       (editRelatedLinks !== undefined)
     ));
   const canSubmit = Boolean(hasChanges);
@@ -253,8 +253,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       if (e.key === 'Escape') {
         if (isFocusMode) {
           handleExitFocusMode();
-        } else if (showLineTypes) {
-          setShowLineTypes(false);
+        } else if (showSpaceTypes) {
+          setShowSpaceTypes(false);
         } else if (editing) {
           setEditing(false);
         } else {
@@ -278,7 +278,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
       bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [onClose, editing, showLineTypes, isFocusMode, handleExitFocusMode]);
+  }, [onClose, editing, showSpaceTypes, isFocusMode, handleExitFocusMode]);
 
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
@@ -296,7 +296,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       if (isDraftMode) {
         const created = await createKnowledge.mutateAsync({
           ...(createTitle && { title: createTitle }),
-          ...(activeLineTagId ? { line_tag_id: activeLineTagId } : {}),
+          ...(activeSpaceTagId ? { space_tag_id: activeSpaceTagId } : {}),
           content: activeContent,
           ...(sanitizedRelatedLinks.length > 0 ? { related_links: sanitizedRelatedLinks } : {}),
           ...(activeTags.length > 0 ? { tag_ids: activeTags.map((item) => item.id) } : {}),
@@ -321,7 +321,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           title: updateTitle,
           ...(editContent !== undefined && { content: editContent }),
           ...(editTags !== undefined && { tag_ids: editTags.map(t => t.id) }),
-          ...(editLineTagId !== undefined && { line_tag_id: editLineTagId ?? undefined }),
+          ...(editSpaceTagId !== undefined && { space_tag_id: editSpaceTagId ?? undefined }),
           ...(editRelatedLinks !== undefined && { related_links: detailRelatedLinks }),
         },
       });
@@ -338,13 +338,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditContent(undefined);
       setEditTitle(undefined);
       setEditTags(undefined);
-      setEditLineTagId(undefined);
+      setEditSpaceTagId(undefined);
       setEditRelatedLinks(undefined);
       onUpdated?.();
     } catch {
       toast.error(isDraftMode ? '创建失败' : '保存失败');
     }
-  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeLineTagId, activeTags, onCreated, onUpdated, editContent, editLineTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge]);
+  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeSpaceTagId, activeTags, onCreated, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge]);
 
   const handleContentChange = useCallback((nextContent: string) => {
     setEditContent(nextContent);
@@ -366,10 +366,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditContent(undefined);
     setEditTitle(undefined);
     setEditTags(undefined);
-    setEditLineTagId(undefined);
+    setEditSpaceTagId(undefined);
     setEditRelatedLinks(undefined);
     setShowTagInput(false);
-    setShowLineTypes(false);
+    setShowSpaceTypes(false);
   }, []);
 
   const handleComplete = useCallback(async () => {
@@ -678,23 +678,23 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
               {/* 底部操作 */}
               <div className="kd-bottom" style={{ position: 'relative' }}>
-                {/* 条线选择弹窗 */}
-                {showLineTypes && (
+                {/* space选择弹窗 */}
+                {showSpaceTypes && (
                   <div className="kd-linetype-popover">
-                    {allLineTypes.map(lt => (
+                    {allSpaceTypes.map(lt => (
                       <button
                         key={lt.id}
-                        onClick={() => { setEditLineTagId(lt.id); setShowLineTypes(false); }}
+                        onClick={() => { setEditSpaceTagId(lt.id); setShowSpaceTypes(false); }}
                         className="kd-linetype-item"
-                        style={{ background: activeLineTagId === lt.id ? '#f0f4ff' : 'none' }}
+                        style={{ background: activeSpaceTagId === lt.id ? '#f0f4ff' : 'none' }}
                       >
                         <span
                           className="kd-linetype-dot"
                           style={{
-                            borderColor: activeLineTagId === lt.id ? '#e8793a' : '#ccc',
+                            borderColor: activeSpaceTagId === lt.id ? '#e8793a' : '#ccc',
                           }}
                         >
-                          {activeLineTagId === lt.id && (
+                          {activeSpaceTagId === lt.id && (
                             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#e8793a' }} />
                           )}
                         </span>
@@ -739,9 +739,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   <div className="kd-action-group">
                     {canUpdateKnowledge && (
                       <button
-                        onClick={() => setShowLineTypes(!showLineTypes)}
+                        onClick={() => setShowSpaceTypes(!showSpaceTypes)}
                         className="kd-action-btn"
-                        title="切换条线"
+                        title="切换 space"
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                             <circle cx="12" cy="12" r="9" />
@@ -1070,7 +1070,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           cursor: not-allowed;
         }
 
-        /* Line type popover */
+        /* Space popover */
         .kd-linetype-popover {
           position: absolute; bottom: calc(100% + 8px);
           left: 20px; right: 20px; background: #fff;

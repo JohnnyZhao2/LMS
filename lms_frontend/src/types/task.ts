@@ -27,7 +27,7 @@ export interface TaskKnowledge {
   id: number;
   knowledge: number;
   knowledge_title: string;
-  line_tag_name?: string | null;
+  space_tag_name?: string | null;
   content_preview?: string;
   order: number;
   resource_uuid: string;
@@ -97,7 +97,7 @@ export interface LearningTaskKnowledgeItem {
   id: number;
   knowledge_id: number;
   title: string;
-  line_tag_name?: string | null;
+  space_tag_name?: string | null;
   content_preview: string;
   order: number;
   is_completed: boolean;

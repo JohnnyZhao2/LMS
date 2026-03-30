@@ -37,7 +37,7 @@ const QUESTION_TYPES: Array<{
 interface QuestionEditorPanelProps {
   questionForm: Partial<QuestionCreateRequest>;
   setQuestionForm: React.Dispatch<React.SetStateAction<Partial<QuestionCreateRequest>>>;
-  lineTypes?: Tag[];
+  spaceTypes?: Tag[];
   editingQuestionId: number | null;
   onCancel: () => void;
   onSave: () => void;
@@ -50,7 +50,7 @@ interface QuestionEditorPanelProps {
 export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
   questionForm,
   setQuestionForm,
-  lineTypes,
+  spaceTypes,
   editingQuestionId,
   onCancel,
   onSave,
@@ -103,19 +103,19 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
       {/* ─── 元信息行 ─── */}
       <div className="px-5 pb-4 flex items-end gap-3">
         <div className="flex-1 space-y-1.5">
-          <Label className="text-[11px] text-text-muted font-medium">所属条线</Label>
+          <Label className="text-[11px] text-text-muted font-medium">所属 space</Label>
           <Select
-            value={questionForm.line_tag_id?.toString()}
+            value={questionForm.space_tag_id?.toString()}
             onValueChange={(val) => {
               if (readOnly) return;
-              setQuestionForm((prev) => ({ ...prev, line_tag_id: Number(val) }));
+              setQuestionForm((prev) => ({ ...prev, space_tag_id: Number(val) }));
             }}
           >
             <SelectTrigger disabled={readOnly} className="h-8 text-sm">
-              <SelectValue placeholder="选择条线" />
+              <SelectValue placeholder="选择 space" />
             </SelectTrigger>
             <SelectContent>
-              {lineTypes?.map((t) => (
+              {spaceTypes?.map((t) => (
                 <SelectItem key={t.id} value={t.id.toString()}>
                   {t.name}
                 </SelectItem>

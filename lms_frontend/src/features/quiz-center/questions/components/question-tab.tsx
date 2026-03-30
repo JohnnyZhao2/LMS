@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
 import { useQuestions } from '@/features/quiz-center/questions/api/get-questions';
 import { useCreateQuestion, useDeleteQuestion } from '@/features/quiz-center/questions/api/create-question';
-import { useLineTypeTags } from '@/features/knowledge/api/get-tags';
+import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { QuestionEditorPanel } from '@/features/quiz-center/questions/components/question-editor-panel';
 import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/quiz-center/questions/constants';
@@ -55,7 +55,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
     const isCreateDialogOpen = createSignal > handledCreateSignal;
 
     const { data, isLoading, refetch } = useQuestions({ page, pageSize, search: search || undefined });
-    const { data: lineTypes } = useLineTypeTags();
+    const { data: spaceTypes } = useSpaceTypeTags();
     const createQuestion = useCreateQuestion();
     const deleteQuestion = useDeleteQuestion();
 
@@ -67,7 +67,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
     };
 
     const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
-        line_tag_id: previewQuestion.line_tag?.id,
+        space_tag_id: previewQuestion.space_tag?.id,
         tag_ids: previewQuestion.tags?.map((tag) => tag.id) ?? [],
         question_type: previewQuestion.question_type,
         content: previewQuestion.content,
@@ -90,7 +90,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
     };
 
     const handleCreateQuestion = async () => {
-        if (!questionForm.line_tag_id) return toast.error('请选择条线类型');
+        if (!questionForm.space_tag_id) return toast.error('请选择 space');
         if (!questionForm.content?.trim()) return toast.error('请输入内容');
         if (!questionForm.answer) return toast.error('请设置答案');
 
@@ -135,11 +135,11 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
             }
         },
         {
-            id: 'line_tag',
-            header: '所属条线',
+            id: 'space_tag',
+            header: '所属 space',
             cell: ({ row }) => (
                 <span className="text-sm font-medium text-text-muted">
-                    {row.original.line_tag?.name || '—'}
+                    {row.original.space_tag?.name || '—'}
                 </span>
             )
         },
@@ -254,7 +254,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                         <QuestionEditorPanel
                             questionForm={questionForm}
                             setQuestionForm={setQuestionForm}
-                            lineTypes={lineTypes}
+                            spaceTypes={spaceTypes}
                             editingQuestionId={null}
                             onCancel={closeCreateDialog}
                             onSave={handleCreateQuestion}
@@ -277,7 +277,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                         <QuestionEditorPanel
                             questionForm={previewForm}
                             setQuestionForm={() => { }}
-                            lineTypes={lineTypes}
+                            spaceTypes={spaceTypes}
                             editingQuestionId={previewQuestion?.id || null}
                             onCancel={() => setPreviewQuestion(null)}
                             onSave={() => setPreviewQuestion(null)}

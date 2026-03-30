@@ -50,20 +50,20 @@ class TaskAssignmentSerializer(serializers.ModelSerializer):
 class TaskKnowledgeSerializer(serializers.ModelSerializer):
     """Serializer for TaskKnowledge model."""
     knowledge_title = serializers.CharField(source='knowledge.title', read_only=True)
-    line_tag_name = serializers.SerializerMethodField()
+    space_tag_name = serializers.SerializerMethodField()
     content_preview = serializers.SerializerMethodField()
     resource_uuid = serializers.UUIDField(source='knowledge.resource_uuid', read_only=True)
     is_current = serializers.BooleanField(source='knowledge.is_current', read_only=True)
     class Meta:
         model = TaskKnowledge
         fields = [
-            'id', 'knowledge', 'knowledge_title', 'line_tag_name',
+            'id', 'knowledge', 'knowledge_title', 'space_tag_name',
             'content_preview', 'order', 'resource_uuid', 'is_current'
         ]
         read_only_fields = ['order']
 
-    def get_line_tag_name(self, obj):
-        return obj.knowledge.line_tag.name if obj.knowledge.line_tag else None
+    def get_space_tag_name(self, obj):
+        return obj.knowledge.space_tag.name if obj.knowledge.space_tag else None
 
     def get_content_preview(self, obj):
         return extract_knowledge_preview(obj.knowledge)

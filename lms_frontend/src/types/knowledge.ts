@@ -16,7 +16,7 @@ export interface StudentKnowledgeList {
   id: number;
   title: string;
   content_preview?: string;
-  line_tag_name?: string;
+  space_tag_name?: string;
   updated_by_name?: string;
   created_by_name?: string;
   updated_at: string;
@@ -32,7 +32,7 @@ export interface StudentKnowledgeDetail {
   content?: string;
   content_preview?: string;
   table_of_contents?: TableOfContentsItem[];
-  line_tag?: SimpleTag | null;
+  space_tag?: SimpleTag | null;
   tags?: SimpleTag[];
   created_by_name?: string;
   updated_by_name?: string;
@@ -69,7 +69,7 @@ export interface KnowledgeListItem {
   version_number: number;
   title: string;
   is_current: boolean;
-  line_tag?: SimpleTag | null;
+  space_tag?: SimpleTag | null;
   content: string;
   content_preview?: string;
   table_of_contents?: TableOfContentsItem[];
@@ -92,7 +92,7 @@ export interface KnowledgeDetail {
   version_number: number;
   title: string;
   is_current: boolean;
-  line_tag?: SimpleTag | null;
+  space_tag?: SimpleTag | null;
   content: string;
   table_of_contents?: TableOfContentsItem[];
   tags: SimpleTag[];
@@ -111,8 +111,8 @@ export interface KnowledgeDetail {
  */
 export interface KnowledgeCreateRequest {
   title?: string;
-  line_tag_id?: number;
-  line_tag_name?: string;
+  space_tag_id?: number;
+  space_tag_name?: string;
   content: string;
   related_links?: RelatedLink[];
   tag_ids?: number[];
@@ -123,7 +123,7 @@ export interface KnowledgeCreateRequest {
  */
 export interface KnowledgeUpdateRequest {
   title?: string;
-  line_tag_id?: number;
+  space_tag_id?: number;
   content?: string;
   related_links?: RelatedLink[];
   tag_ids?: number[];

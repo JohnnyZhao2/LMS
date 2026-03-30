@@ -30,7 +30,7 @@ class TagService(BaseService):
         data['name'] = data['name'].strip()
         tag_type = data['tag_type']
 
-        if tag_type == 'LINE':
+        if tag_type == 'SPACE':
             data['allow_knowledge'] = True
             data['allow_question'] = True
         else:
@@ -40,10 +40,10 @@ class TagService(BaseService):
         if not existing:
             return Tag.objects.create(**data)
 
-        if tag_type == 'LINE':
+        if tag_type == 'SPACE':
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message='同名条线类型已存在',
+                message='同名 space 已存在',
             )
 
         if current_module and not self._is_scope_enabled(existing, current_module):
@@ -85,7 +85,7 @@ class TagService(BaseService):
                     message='同类型下标签名称不能重复',
                 )
 
-        if tag.tag_type == 'LINE':
+        if tag.tag_type == 'SPACE':
             tag.allow_knowledge = True
             tag.allow_question = True
         elif not tag.allow_knowledge and not tag.allow_question:
@@ -102,11 +102,11 @@ class TagService(BaseService):
         tag = Tag.objects.filter(pk=pk).first()
         self.validate_not_none(tag, f'标签 {pk} 不存在')
 
-        if tag.tag_type == 'LINE':
+        if tag.tag_type == 'SPACE':
             from apps.knowledge.models import Knowledge
 
-            Knowledge.objects.filter(line_tag_id=tag.id).update(line_tag=None)
-            Question.objects.filter(line_tag_id=tag.id).update(line_tag=None)
+            Knowledge.objects.filter(space_tag_id=tag.id).update(space_tag=None)
+            Question.objects.filter(space_tag_id=tag.id).update(space_tag=None)
         else:
             tag.knowledge_items.clear()
             if hasattr(tag, 'question_items'):
@@ -161,4 +161,3 @@ def enforce_tag_view_permission(request, error_message='无权查看标签') -> 
 
 def enforce_tag_action_permission(request, permission_code: str, error_message: str) -> None:
     AuthorizationService(request).enforce(permission_code, error_message=error_message)
-

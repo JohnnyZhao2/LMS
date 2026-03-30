@@ -123,10 +123,10 @@ def student_user(department, mentor_user):
 
 
 @pytest.fixture
-def line_tag():
+def space_tag():
     return Tag.objects.create(
-        name='契约测试条线',
-        tag_type='LINE',
+        name='契约测试space',
+        tag_type='SPACE',
         allow_knowledge=True,
         allow_question=True,
         sort_order=1,
@@ -159,7 +159,7 @@ def question_tag():
 
 
 @pytest.fixture
-def sample_question(mentor_user, line_tag):
+def sample_question(mentor_user, space_tag):
     question = Question.objects.create(
         content='契约测试题目',
         question_type='SINGLE_CHOICE',
@@ -171,7 +171,7 @@ def sample_question(mentor_user, line_tag):
         score=1,
         created_by=mentor_user,
         updated_by=mentor_user,
-        line_tag=line_tag,
+        space_tag=space_tag,
     )
     return question
 
@@ -197,14 +197,14 @@ def sample_exam_quiz(mentor_user):
 
 
 @pytest.fixture
-def sample_knowledge(mentor_user, line_tag):
+def sample_knowledge(mentor_user, space_tag):
     return Knowledge.objects.create(
         title='契约测试知识',
         content='契约测试正文内容',
         created_by=mentor_user,
         updated_by=mentor_user,
         is_current=True,
-        line_tag=line_tag,
+        space_tag=space_tag,
     )
 
 
@@ -310,20 +310,20 @@ class TestQuestionApiContracts:
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'created_by' in response.data['message']
 
-    def test_question_list_rejects_invalid_line_tag_id(self, api_client, mentor_user):
+    def test_question_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/questions/?line_tag_id=0')
+        response = api_client.get('/api/questions/?space_tag_id=0')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'line_tag_id' in response.data['message']
+        assert 'space_tag_id' in response.data['message']
 
-    def test_question_create_allows_missing_line_tag(self, api_client, mentor_user):
+    def test_question_create_allows_missing_space_tag(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.post(
             '/api/questions/',
             {
-                'content': '无条线题目',
+                'content': '无space题目',
                 'question_type': 'SINGLE_CHOICE',
                 'options': [
                     {'key': 'A', 'value': '选项A'},
@@ -337,7 +337,7 @@ class TestQuestionApiContracts:
 
         assert response.status_code == 201, response.data
         assert response.data['code'] == 'SUCCESS'
-        assert response.data['data']['line_tag'] is None
+        assert response.data['data']['space_tag'] is None
 
     def test_question_create_accepts_question_tags(self, api_client, mentor_user, question_tag):
         api_client.force_authenticate(user=mentor_user)
@@ -387,17 +387,17 @@ class TestQuestionApiContracts:
         assert response.data['code'] == 'ERROR'
         assert 'tag_ids' in str(response.data['message'])
 
-    def test_question_patch_allows_clearing_line_tag(self, api_client, mentor_user, sample_question):
+    def test_question_patch_allows_clearing_space_tag(self, api_client, mentor_user, sample_question):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.patch(
             f'/api/questions/{sample_question.id}/',
-            {'line_tag_id': None},
+            {'space_tag_id': None},
             format='json',
         )
 
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
-        assert response.data['data']['line_tag'] is None
+        assert response.data['data']['space_tag'] is None
 
         sample_question.refresh_from_db()
         assert sample_question.is_current is False
@@ -406,7 +406,7 @@ class TestQuestionApiContracts:
             resource_uuid=sample_question.resource_uuid,
             is_current=True,
         )
-        assert current_question.line_tag_id is None
+        assert current_question.space_tag_id is None
 
 
 @pytest.mark.django_db
@@ -497,16 +497,16 @@ class TestQuizApiContracts:
 
 @pytest.mark.django_db
 class TestTagApiContracts:
-    def test_tag_list_response_is_wrapped(self, api_client, mentor_user, line_tag):
+    def test_tag_list_response_is_wrapped(self, api_client, mentor_user, space_tag):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/tags/?tag_type=LINE')
+        response = api_client.get('/api/tags/?tag_type=SPACE')
 
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert isinstance(response.data['data'], list)
         result_ids = [item['id'] for item in response.data['data']]
-        assert line_tag.id in result_ids
+        assert space_tag.id in result_ids
 
     def test_tag_list_rejects_invalid_limit(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -537,22 +537,22 @@ class TestTagApiContracts:
         self,
         api_client,
         admin_user,
-        line_tag,
+        space_tag,
         sample_knowledge,
         sample_question,
     ):
         api_client.force_authenticate(user=admin_user)
 
-        response = api_client.delete(f'/api/tags/{line_tag.id}/')
+        response = api_client.delete(f'/api/tags/{space_tag.id}/')
 
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
-        assert not Tag.objects.filter(id=line_tag.id).exists()
+        assert not Tag.objects.filter(id=space_tag.id).exists()
 
         sample_knowledge.refresh_from_db()
         sample_question.refresh_from_db()
-        assert sample_knowledge.line_tag_id is None
-        assert sample_question.line_tag_id is None
+        assert sample_knowledge.space_tag_id is None
+        assert sample_question.space_tag_id is None
 
 
 @pytest.mark.django_db
@@ -569,13 +569,13 @@ class TestKnowledgeApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_knowledge.id in result_ids
 
-    def test_knowledge_list_rejects_invalid_line_tag_id(self, api_client, mentor_user):
+    def test_knowledge_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
-        response = api_client.get('/api/knowledge/?line_tag_id=bad')
+        response = api_client.get('/api/knowledge/?space_tag_id=bad')
 
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'line_tag_id' in response.data['message']
+        assert 'space_tag_id' in response.data['message']
 
     def test_knowledge_detail_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
         api_client.force_authenticate(user=mentor_user)
@@ -603,12 +603,12 @@ class TestKnowledgeApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert not Knowledge.objects.filter(id=sample_knowledge.id).exists()
 
-    def test_knowledge_create_allows_missing_title(self, api_client, admin_user, line_tag):
+    def test_knowledge_create_allows_missing_title(self, api_client, admin_user, space_tag):
         api_client.force_authenticate(user=admin_user)
         response = api_client.post(
             '/api/knowledge/',
             {
-                'line_tag_id': line_tag.id,
+                'space_tag_id': space_tag.id,
                 'content': '<p>无标题正文内容</p>',
             },
             format='json',
@@ -619,12 +619,12 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == '创建成功'
         assert response.data['data']['title'] == ''
 
-    def test_knowledge_create_allows_missing_line_tag(self, api_client, admin_user):
+    def test_knowledge_create_allows_missing_space_tag(self, api_client, admin_user):
         api_client.force_authenticate(user=admin_user)
         response = api_client.post(
             '/api/knowledge/',
             {
-                'content': '<p>无条线正文内容</p>',
+                'content': '<p>无space正文内容</p>',
             },
             format='json',
         )
@@ -632,7 +632,7 @@ class TestKnowledgeApiContracts:
         assert response.status_code == 201, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == '创建成功'
-        assert response.data['data']['line_tag'] is None
+        assert response.data['data']['space_tag'] is None
 
     def test_knowledge_create_rejects_empty_content(self, api_client, admin_user):
         api_client.force_authenticate(user=admin_user)
@@ -640,7 +640,7 @@ class TestKnowledgeApiContracts:
             '/api/knowledge/',
             {
                 'title': '仅标题',
-                'line_tag_id': None,
+                'space_tag_id': None,
             },
             format='json',
         )
@@ -662,7 +662,7 @@ class TestKnowledgeApiContracts:
         assert response.data['message'] == 'success'
         assert response.data['data']['title'] == ''
 
-    def test_knowledge_patch_only_tags_inherits_unprovided_line_tag(
+    def test_knowledge_patch_only_tags_inherits_unprovided_space_tag(
         self,
         api_client,
         admin_user,
@@ -695,7 +695,7 @@ class TestKnowledgeApiContracts:
 
         assert response.status_code == 200, response.data
         data = response.data['data']
-        assert data['line_tag']['id'] == sample_knowledge.line_tag_id
+        assert data['space_tag']['id'] == sample_knowledge.space_tag_id
         assert {item['id'] for item in data['tags']} == {target_tag.id}
 
         sample_knowledge.refresh_from_db()
@@ -705,12 +705,12 @@ class TestKnowledgeApiContracts:
             is_current=True
         ).count() == 1
 
-    def test_knowledge_patch_only_line_tag_inherits_unprovided_tags(
+    def test_knowledge_patch_only_space_tag_inherits_unprovided_tags(
         self,
         api_client,
         admin_user,
         sample_knowledge,
-        line_tag,
+        space_tag,
     ):
         source_tag = Tag.objects.create(
             name='契约测试标签保留',
@@ -720,9 +720,9 @@ class TestKnowledgeApiContracts:
             sort_order=1,
             is_active=True,
         )
-        target_line_tag = Tag.objects.create(
-            name='契约测试条线新',
-            tag_type='LINE',
+        target_space_tag = Tag.objects.create(
+            name='契约测试space新',
+            tag_type='SPACE',
             allow_knowledge=True,
             allow_question=True,
             sort_order=3,
@@ -733,13 +733,13 @@ class TestKnowledgeApiContracts:
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(
             f'/api/knowledge/{sample_knowledge.id}/',
-            {'line_tag_id': target_line_tag.id},
+            {'space_tag_id': target_space_tag.id},
             format='json'
         )
 
         assert response.status_code == 200, response.data
         data = response.data['data']
-        assert data['line_tag']['id'] == target_line_tag.id
+        assert data['space_tag']['id'] == target_space_tag.id
         assert {item['id'] for item in data['tags']} == {source_tag.id}
 
         sample_knowledge.refresh_from_db()

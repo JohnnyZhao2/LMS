@@ -12,11 +12,11 @@ import type { PaginatedResponse, Question, QuestionType, Tag } from '@/types/api
 interface QuestionBankPanelProps {
   resourceSearch: string;
   onResourceSearchChange: (value: string) => void;
-  filterLineTypeId: string;
-  onFilterLineTypeIdChange: (value: string) => void;
+  filterSpaceTypeId: string;
+  onFilterSpaceTypeIdChange: (value: string) => void;
   filterQuestionType: string;
   onFilterQuestionTypeChange: (value: string) => void;
-  lineTypes?: Tag[];
+  spaceTypes?: Tag[];
   questionsData?: PaginatedResponse<Question>;
   questionsLoading: boolean;
   onPreview: (question: Question) => void;
@@ -26,11 +26,11 @@ interface QuestionBankPanelProps {
 export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   resourceSearch,
   onResourceSearchChange,
-  filterLineTypeId,
-  onFilterLineTypeIdChange,
+  filterSpaceTypeId,
+  onFilterSpaceTypeIdChange,
   filterQuestionType,
   onFilterQuestionTypeChange,
-  lineTypes,
+  spaceTypes,
   questionsData,
   questionsLoading,
   onPreview,
@@ -56,11 +56,11 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           />
         </div>
         <div className="flex gap-2">
-          <Select value={filterLineTypeId} onValueChange={onFilterLineTypeIdChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-md border-border bg-background text-[12px]"><SelectValue placeholder="全部条线" /></SelectTrigger>
+          <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
+            <SelectTrigger className="h-8 flex-1 rounded-md border-border bg-background text-[12px]"><SelectValue placeholder="全部 space" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全部条线</SelectItem>
-              {lineTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+              <SelectItem value="all">全部 space</SelectItem>
+              {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterQuestionType} onValueChange={onFilterQuestionTypeChange}>

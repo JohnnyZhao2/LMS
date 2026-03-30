@@ -5,7 +5,7 @@ import { useCurrentRole } from '@/hooks/use-current-role';
 import type { KnowledgeListItem, KnowledgeDetail, PaginatedResponse } from '@/types/api';
 
 interface GetKnowledgeListParams {
-  line_tag_id?: number;
+  space_tag_id?: number;
   tag_id?: number;
   search?: string;
   page?: number;
@@ -14,13 +14,13 @@ interface GetKnowledgeListParams {
 
 export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
   const currentRole = useCurrentRole();
-  const { line_tag_id, tag_id, search, page = 1, pageSize = 20 } = params;
+  const { space_tag_id, tag_id, search, page = 1, pageSize = 20 } = params;
 
   return useQuery({
     queryKey: [
       'knowledge-list',
       currentRole ?? 'UNKNOWN',
-      line_tag_id,
+      space_tag_id,
       tag_id,
       search,
       page,
@@ -29,7 +29,7 @@ export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
-        ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
+        ...(space_tag_id && { space_tag_id: String(space_tag_id) }),
         ...(tag_id && { tag_id: String(tag_id) }),
         ...(search && { search }),
       };
@@ -42,14 +42,14 @@ export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
 
 export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) => {
   const currentRole = useCurrentRole();
-  const { line_tag_id, tag_id, search, pageSize = 20 } = params;
+  const { space_tag_id, tag_id, search, pageSize = 20 } = params;
 
   return useInfiniteQuery({
     queryKey: [
       'knowledge-list',
       'infinite',
       currentRole ?? 'UNKNOWN',
-      line_tag_id,
+      space_tag_id,
       tag_id,
       search,
       pageSize,
@@ -59,7 +59,7 @@ export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) =>
       const page = Number(pageParam) || 1;
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
-        ...(line_tag_id && { line_tag_id: String(line_tag_id) }),
+        ...(space_tag_id && { space_tag_id: String(space_tag_id) }),
         ...(tag_id && { tag_id: String(tag_id) }),
         ...(search && { search }),
       };

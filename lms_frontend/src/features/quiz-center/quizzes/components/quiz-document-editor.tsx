@@ -31,7 +31,7 @@ interface QuizDocumentEditorProps {
 }
 
 /**
- * 试卷文档流内联编辑：题目内容、分值、选项与解析。不展示条线标签编辑，条线归属在题库中心维护。
+ * 试卷文档流内联编辑：题目内容、分值、选项与解析。不展示 space 编辑，space 归属在题库中心维护。
  */
 export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   items,

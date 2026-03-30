@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import {
   ChevronLeft,
   Send,
-  CheckCircle,
   FileText,
 } from 'lucide-react';
 import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';

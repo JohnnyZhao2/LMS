@@ -33,7 +33,7 @@ export type NotificationType = 'TASK_ASSIGNED' | 'DEADLINE_REMINDER' | 'GRADING_
 /**
  * 标签类型
  */
-export type TagType = 'LINE' | 'TAG';
+export type TagType = 'SPACE' | 'TAG';
 
 // ==================== 标签相关 ====================
 

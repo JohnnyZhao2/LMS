@@ -5,7 +5,7 @@ import { Upload, Plus, X } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
 import type { RelatedLink } from '@/types/knowledge';
 
-import { useLineTypeTags } from '../../api/get-tags';
+import { useSpaceTypeTags } from '../../api/get-tags';
 import { useCreateKnowledge } from '../../api/manage-knowledge';
 import { useParseDocument } from '../../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
@@ -24,7 +24,7 @@ interface KnowledgeFocusModalProps {
   mode: KnowledgeFocusMode;
   knowledgeId?: number;
   initialContent?: string;
-  initialLineTagId?: number;
+  initialSpaceTagId?: number;
   closeOnExitFocus?: boolean;
   taskId?: number;
   taskKnowledgeId?: number;
@@ -41,17 +41,17 @@ const createEmptyRelatedLink = (): RelatedLink => ({
 
 const CreateKnowledgeFocus: React.FC<{
   initialContent?: string;
-  initialLineTagId?: number;
+  initialSpaceTagId?: number;
   onClose: () => void;
   onCreated?: (id: number) => void;
 }> = ({
   initialContent = '',
-  initialLineTagId,
+  initialSpaceTagId,
   onClose,
   onCreated,
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [lineTagId, setLineTagId] = React.useState<number | undefined>();
+  const [spaceTagId, setSpaceTagId] = React.useState<number | undefined>();
   const [selectedTags, setSelectedTags] = React.useState<{ id: number; name: string }[]>([]);
   const [content, setContent] = React.useState(initialContent);
   const [title, setTitle] = React.useState('');
@@ -59,7 +59,7 @@ const CreateKnowledgeFocus: React.FC<{
   const [showTagPanel, setShowTagPanel] = React.useState(false);
   const [showRelatedLinksPanel, setShowRelatedLinksPanel] = React.useState(false);
 
-  const { data: lineTypeTags = [] } = useLineTypeTags();
+  const { data: spaceTypeTags = [] } = useSpaceTypeTags();
   const createKnowledge = useCreateKnowledge();
   const parseDocument = useParseDocument();
 
@@ -74,9 +74,9 @@ const CreateKnowledgeFocus: React.FC<{
     setSelectedTags([]);
     setShowTagPanel(false);
     setShowRelatedLinksPanel(false);
-    const hasPreferredLineTag = typeof initialLineTagId === 'number' && lineTypeTags.some((tag) => tag.id === initialLineTagId);
-    setLineTagId(hasPreferredLineTag ? initialLineTagId : undefined);
-  }, [initialContent, initialLineTagId, lineTypeTags]);
+    const hasPreferredSpaceTag = typeof initialSpaceTagId === 'number' && spaceTypeTags.some((tag) => tag.id === initialSpaceTagId);
+    setSpaceTagId(hasPreferredSpaceTag ? initialSpaceTagId : undefined);
+  }, [initialContent, initialSpaceTagId, spaceTypeTags]);
 
   React.useEffect(() => {
     const htmlStyle = document.documentElement.style;
@@ -113,7 +113,7 @@ const CreateKnowledgeFocus: React.FC<{
       htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
       bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [onClose, content, title, lineTagId, selectedTags]);
+  }, [onClose, content, title, spaceTagId, selectedTags]);
 
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
@@ -154,7 +154,7 @@ const CreateKnowledgeFocus: React.FC<{
       const trimmedTitle = getKnowledgeTitleFromHtml(content) || title.trim();
       const result = await createKnowledge.mutateAsync({
         ...(trimmedTitle && { title: trimmedTitle }),
-        line_tag_id: lineTagId,
+        space_tag_id: spaceTagId,
         content,
         related_links: sanitizedRelatedLinks.length > 0 ? sanitizedRelatedLinks : undefined,
         tag_ids: selectedTags.map((t) => t.id),
@@ -218,12 +218,12 @@ const CreateKnowledgeFocus: React.FC<{
 
           <div className="akm-bottom-tools">
             <select
-              value={lineTagId ?? ''}
-              onChange={(e) => setLineTagId(e.target.value ? Number(e.target.value) : undefined)}
+              value={spaceTagId ?? ''}
+              onChange={(e) => setSpaceTagId(e.target.value ? Number(e.target.value) : undefined)}
               className="akm-select"
             >
-              <option value="">条线</option>
-              {lineTypeTags.map((tag: TagType) => (
+              <option value="">space</option>
+              {spaceTypeTags.map((tag: TagType) => (
                 <option key={tag.id} value={tag.id}>{tag.name}</option>
               ))}
             </select>
@@ -635,7 +635,7 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
   mode,
   knowledgeId,
   initialContent,
-  initialLineTagId,
+  initialSpaceTagId,
   closeOnExitFocus = true,
   taskId,
   taskKnowledgeId,
@@ -648,7 +648,7 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
     return (
       <CreateKnowledgeFocus
         initialContent={initialContent}
-        initialLineTagId={initialLineTagId}
+        initialSpaceTagId={initialSpaceTagId}
         onClose={onClose}
         onCreated={onCreated}
       />

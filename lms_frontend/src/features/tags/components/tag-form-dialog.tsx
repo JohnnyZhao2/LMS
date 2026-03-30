@@ -61,11 +61,11 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
   const handleSubmit = async () => {
     await onSubmit({
       name: name.trim(),
-      color: tagType === 'LINE' ? color : undefined,
+      color: tagType === 'SPACE' ? color : undefined,
       sort_order: Number(sortOrder) || 0,
       is_active: isActive,
-      allow_knowledge: tagType === 'LINE' ? true : allowKnowledge,
-      allow_question: tagType === 'LINE' ? true : allowQuestion,
+      allow_knowledge: tagType === 'SPACE' ? true : allowKnowledge,
+      allow_question: tagType === 'SPACE' ? true : allowQuestion,
     });
   };
 
@@ -75,7 +75,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? '新建标签' : '编辑标签'}</DialogTitle>
           <DialogDescription>
-            {tagType === 'LINE' ? '条线类型会同时适用于知识与题目。' : '普通标签可按知识/题目控制适用范围。'}
+            {tagType === 'SPACE' ? 'space 会同时适用于知识与题目。' : '普通标签可按知识/题目控制适用范围。'}
           </DialogDescription>
         </DialogHeader>
 
@@ -86,12 +86,12 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
               id="tag-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder={tagType === 'LINE' ? '例如：风控条线' : '例如：高频考点'}
+              placeholder={tagType === 'SPACE' ? '例如：风控 space' : '例如：高频考点'}
             />
           </div>
 
-          <div className={`grid gap-3 ${tagType === 'LINE' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {tagType === 'LINE' && (
+          <div className={`grid gap-3 ${tagType === 'SPACE' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {tagType === 'SPACE' && (
               <div className="space-y-2">
                 <Label htmlFor="tag-color">颜色</Label>
                 <Input

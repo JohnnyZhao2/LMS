@@ -1,5 +1,5 @@
 // Knowledge feature utilities
-export { LINE_TYPE_ICONS, getLineTypeIcon } from './icons';
+export { SPACE_TYPE_ICONS, getSpaceTypeIcon } from './icons';
 export {
     type OutlineItem,
     parseOutlineFromHtml,

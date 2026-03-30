@@ -24,7 +24,7 @@ import { TagFormDialog } from './tag-form-dialog';
 
 
 const typeLabel: Record<TagType, string> = {
-  LINE: '条线类型',
+  SPACE: 'space',
   TAG: '普通标签',
 };
 
@@ -34,7 +34,7 @@ export const TagManagementPage: React.FC = () => {
   const canUpdate = hasPermission('tag.update');
   const canDelete = hasPermission('tag.delete');
 
-  const [activeTab, setActiveTab] = React.useState<TagType>('LINE');
+  const [activeTab, setActiveTab] = React.useState<TagType>('SPACE');
   const [searchInput, setSearchInput] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [dialogMode, setDialogMode] = React.useState<'create' | 'edit'>('create');
@@ -120,7 +120,7 @@ export const TagManagementPage: React.FC = () => {
           </div>
           <h1 className="text-3xl font-black tracking-tight text-foreground">标签管理</h1>
           <p className="max-w-2xl text-sm leading-6 text-text-muted">
-            统一管理知识与题目的条线类型和普通标签。条线类型全局共享，普通标签按知识/题目控制适用范围。
+            统一管理知识与题目的 space 和普通标签。space 全局共享，普通标签按知识/题目控制适用范围。
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export const TagManagementPage: React.FC = () => {
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TagType)}>
           <TabsList className="grid w-full max-w-sm grid-cols-2">
-            <TabsTrigger value="LINE">条线类型</TabsTrigger>
+            <TabsTrigger value="SPACE">space</TabsTrigger>
             <TabsTrigger value="TAG">普通标签</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -167,7 +167,7 @@ export const TagManagementPage: React.FC = () => {
                 <TableRow>
                   <TableHead>名称</TableHead>
                   <TableHead>适用范围</TableHead>
-                  {activeTab === 'LINE' && <TableHead>颜色</TableHead>}
+                  {activeTab === 'SPACE' && <TableHead>颜色</TableHead>}
                   <TableHead>排序</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="w-40">操作</TableHead>
@@ -178,7 +178,7 @@ export const TagManagementPage: React.FC = () => {
                   <TableRow key={tag.id}>
                     <TableCell className="font-semibold">{tag.name}</TableCell>
                     <TableCell>
-                      {tag.tag_type === 'LINE' ? (
+                      {tag.tag_type === 'SPACE' ? (
                         <span className="text-sm text-text-muted">知识 / 题目</span>
                       ) : (
                         <div className="flex flex-wrap gap-2">
@@ -195,7 +195,7 @@ export const TagManagementPage: React.FC = () => {
                         </div>
                       )}
                     </TableCell>
-                    {activeTab === 'LINE' && (
+                    {activeTab === 'SPACE' && (
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="h-4 w-4 rounded-full border border-border" style={{ backgroundColor: tag.color }} />
@@ -229,7 +229,7 @@ export const TagManagementPage: React.FC = () => {
                 ))}
                 {tags.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={activeTab === 'LINE' ? 6 : 5} className="py-12 text-center text-sm text-text-muted">
+                    <TableCell colSpan={activeTab === 'SPACE' ? 6 : 5} className="py-12 text-center text-sm text-text-muted">
                       当前没有匹配的标签
                     </TableCell>
                   </TableRow>

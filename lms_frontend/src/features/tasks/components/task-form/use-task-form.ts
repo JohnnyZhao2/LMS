@@ -99,7 +99,7 @@ export const useTaskForm = () => {
         is_current: item.is_current,
         title: item.knowledge_title || `文档 ${item.knowledge}`,
         resourceType: 'DOCUMENT' as ResourceType,
-        category: item.line_tag_name || '文档',
+        category: item.space_tag_name || '文档',
       }));
 
       const quizResources: SelectedResource[] = (task.quizzes || []).map((item, idx) => ({
@@ -241,7 +241,7 @@ export const useTaskForm = () => {
           id: latestResource.id,
           is_current: latestResource.is_current,
           title: latestResource.title,
-          category: latestResource.line_tag?.name || '未分类',
+          category: latestResource.space_tag?.name || '未分类',
         };
       }));
     } else {

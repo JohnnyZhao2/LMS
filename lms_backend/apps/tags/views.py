@@ -29,7 +29,7 @@ class TagListCreateView(APIView):
     @extend_schema(
         summary='获取标签列表',
         parameters=[
-            OpenApiParameter(name='tag_type', type=str, description='标签类型（LINE/TAG）'),
+            OpenApiParameter(name='tag_type', type=str, description='标签类型（SPACE/TAG）'),
             OpenApiParameter(name='search', type=str, description='搜索关键词'),
             OpenApiParameter(name='limit', type=int, description='返回数量限制（默认50）'),
             OpenApiParameter(name='active_only', type=bool, description='只返回启用标签'),

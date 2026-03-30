@@ -46,7 +46,7 @@ interface KnowledgeListViewItem {
   id: number;
   knowledgeId: number;
   title: string;
-  lineTagName?: string | null;
+  spaceTagName?: string | null;
   contentPreview?: string;
   isCompleted?: boolean;
   completedAt?: string | null;
@@ -90,7 +90,7 @@ export const TaskDetail: React.FC = () => {
         id: item.id,
         knowledgeId: item.knowledge_id,
         title: item.title || '无标题',
-        lineTagName: item.line_tag_name,
+        spaceTagName: item.space_tag_name,
         contentPreview: item.content_preview,
         isCompleted: item.is_completed,
         completedAt: item.completed_at,
@@ -101,7 +101,7 @@ export const TaskDetail: React.FC = () => {
       id: item.id,
       knowledgeId: item.knowledge,
       title: item.knowledge_title || '无标题',
-      lineTagName: item.line_tag_name,
+      spaceTagName: item.space_tag_name,
       contentPreview: item.content_preview,
       isCompleted: false,
     }));
@@ -330,7 +330,7 @@ export const TaskDetail: React.FC = () => {
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <Badge variant="outline" className="text-[11px] font-bold px-2 py-0.5 h-5 bg-muted text-text-muted border-border uppercase tracking-wide rounded-full">
-                              {item.lineTagName || '知识文档'}
+                              {item.spaceTagName || '知识文档'}
                             </Badge>
                             <h4 className={cn(
                               "font-bold text-foreground truncate text-lg transition-colors",

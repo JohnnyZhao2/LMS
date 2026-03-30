@@ -6,7 +6,7 @@ from core.mixins import TimestampMixin
 
 class Tag(TimestampMixin, models.Model):
     TAG_TYPE_CHOICES = [
-        ('LINE', '条线类型'),
+        ('SPACE', 'space'),
         ('TAG', '知识标签'),
     ]
 
@@ -31,7 +31,7 @@ class Tag(TimestampMixin, models.Model):
 
     def clean(self):
         super().clean()
-        if self.tag_type == 'LINE':
+        if self.tag_type == 'SPACE':
             self.allow_knowledge = True
             self.allow_question = True
             return
