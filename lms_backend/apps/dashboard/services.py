@@ -6,7 +6,7 @@ Dashboard 应用服务
 - 部门/团队分析
 - 知识热度统计
 """
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 from django.db.models import Avg, Case, Count, IntegerField, QuerySet, Sum, Value, When
 
@@ -308,7 +308,7 @@ class TeamManagerDashboardService(BaseService):
             'weekly_active_rate': weekly_active_rate,
         }
 
-    def _get_department_mentor_count(self, department_id: int | None) -> int:
+    def _get_department_mentor_count(self, department_id: Optional[int]) -> int:
         """获取部门导师数量"""
         if department_id is None:
             return 0
@@ -325,7 +325,7 @@ class TeamManagerDashboardService(BaseService):
     def _build_department_metric(
         self,
         students: QuerySet,
-        department: Department | None
+        department: Optional[Department]
     ) -> Dict[str, Any]:
         """构建单个部门指标"""
         if not department:

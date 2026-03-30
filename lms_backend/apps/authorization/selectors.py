@@ -1,6 +1,6 @@
 """Authorization selectors."""
 
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 from django.db.models import Q
 from django.utils import timezone
@@ -9,7 +9,7 @@ from .constants import SYSTEM_MANAGED_PERMISSION_CODES
 from .models import Permission, RolePermission, UserPermissionOverride
 
 
-def list_permissions(module: str | None = None, include_system_managed: bool = False) -> List[Permission]:
+def list_permissions(module: Optional[str] = None, include_system_managed: bool = False) -> List[Permission]:
     queryset = Permission.objects.filter(is_active=True)
     if module:
         queryset = queryset.filter(module=module)
@@ -30,8 +30,8 @@ def list_role_permission_codes(role_code: str) -> List[str]:
 def list_active_user_overrides(
     *,
     user_id: int,
-    current_role: str | None,
-    permission_code: str | None = None,
+    current_role: Optional[str],
+    permission_code: Optional[str] = None,
 ) -> List[UserPermissionOverride]:
     if current_role in {'STUDENT', 'SUPER_ADMIN'}:
         return []

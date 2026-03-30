@@ -2,7 +2,7 @@
 Task selectors.
 集中管理任务相关查询，统一预加载与过滤逻辑。
 """
-from typing import Any
+from typing import Any, Optional
 
 from django.db.models import Count, Max, Prefetch, QuerySet, Sum
 from django.utils import timezone
@@ -317,7 +317,7 @@ def task_score_distribution(task_id: int) -> list[dict[str, int]]:
     return [{'range': label, 'count': count} for label, count in distribution.items()]
 
 
-def task_exam_pass_rate(task_id: int) -> float | None:
+def task_exam_pass_rate(task_id: int) -> Optional[float]:
     has_exam = task_quiz_queryset(task_id).filter(quiz__quiz_type='EXAM').exists()
     if not has_exam:
         return None

@@ -1,13 +1,14 @@
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
+from typing import Optional
 
 from apps.authorization.models import Permission, UserPermissionOverride
 from apps.spot_checks.models import SpotCheck
 from apps.users.models import Department, Role, User, UserRole
 
 
-def _create_user(*, employee_id: str, username: str, department: Department, role_codes: list[str] | None = None) -> User:
+def _create_user(*, employee_id: str, username: str, department: Department, role_codes: Optional[list[str]] = None) -> User:
     user = User.objects.create_user(
         employee_id=employee_id,
         username=username,

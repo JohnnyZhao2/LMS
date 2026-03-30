@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.db import transaction
 
 from apps.authorization.services import AuthorizationService
@@ -114,7 +116,7 @@ class TagService(BaseService):
         return tag
 
     @staticmethod
-    def _apply_scope_defaults(data: dict, current_module: str | None) -> None:
+    def _apply_scope_defaults(data: dict, current_module: Optional[str]) -> None:
         allow_knowledge = data.get('allow_knowledge')
         allow_question = data.get('allow_question')
 
@@ -155,7 +157,7 @@ def enforce_tag_view_permission(
     request,
     error_message='无权查看标签',
     *,
-    tag_type: str | None = None,
+    tag_type: Optional[str] = None,
 ) -> None:
     authorization_service = AuthorizationService(request)
     if authorization_service.can('tag.view'):
