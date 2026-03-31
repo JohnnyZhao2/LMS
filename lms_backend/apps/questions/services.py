@@ -155,7 +155,7 @@ class QuestionService(BaseService):
     @log_content_action(
         'question',
         'update',
-        'v{version_number}，{question_type_label}，{score_text} 分',
+        '{question_identity}，{question_update_summary}',
     )
     def update(self, pk: int, data: dict) -> Question:
         """

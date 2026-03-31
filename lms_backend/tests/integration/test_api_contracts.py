@@ -405,6 +405,30 @@ class TestQuestionApiContracts:
         )
         assert current_question.space_tag_id is None
 
+    def test_question_patch_logs_tag_update_with_question_identity(
+        self,
+        api_client,
+        mentor_user,
+        sample_question,
+        question_tag,
+    ):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.patch(
+            f'/api/questions/{sample_question.id}/',
+            {'tag_ids': [question_tag.id]},
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        log = ContentLog.objects.filter(
+            content_type='question',
+            action='update',
+            operator=mentor_user,
+        ).latest('id')
+        updated_question_id = response.data['data']['id']
+        assert f'题目#{updated_question_id}' in log.description
+        assert '更新了标签（1 个）' in log.description
+
 
 @pytest.mark.django_db
 class TestAuthApiContracts:

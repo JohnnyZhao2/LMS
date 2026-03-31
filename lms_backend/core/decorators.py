@@ -4,6 +4,7 @@
 """
 import inspect
 import time
+from copy import deepcopy
 from functools import wraps
 from typing import Any, Callable, Optional
 
@@ -71,6 +72,41 @@ def _build_task_update_summary(template_vars: dict[str, Any]) -> str:
     return '；'.join(parts) if parts else '任务配置已调整'
 
 
+def _snapshot_for_logging(value: Any) -> Any:
+    """尽量保留调用入参原貌，避免业务函数内部修改影响日志模板变量。"""
+    try:
+        return deepcopy(value)
+    except Exception:
+        return value
+
+
+def _build_question_update_summary(template_vars: dict[str, Any]) -> str:
+    payload = template_vars.get('data')
+    if not isinstance(payload, dict):
+        return '更新了题目信息'
+
+    field_labels = {
+        'content': '题干',
+        'question_type': '题型',
+        'options': '选项',
+        'answer': '答案',
+        'explanation': '解析',
+        'score': '分值',
+        'space_tag_id': '所属空间',
+    }
+
+    changed_fields = [field_labels[key] for key in field_labels if key in payload]
+
+    if 'tag_ids' in payload:
+        tag_count = len(payload.get('tag_ids') or [])
+        changed_fields.append(f'标签（{tag_count} 个）')
+
+    if not changed_fields:
+        return '更新了题目信息'
+
+    return f'更新了{"、".join(changed_fields)}'
+
+
 def _augment_template_vars(template_vars: dict[str, Any]) -> None:
     deadline = template_vars.get('deadline')
     if deadline is not None:
@@ -132,6 +168,14 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         template_vars['checker_label'] = _build_user_label(result.checker)
     if hasattr(result, 'get_question_type_display'):
         template_vars['question_type_label'] = result.get_question_type_display()
+        question_id = getattr(result, 'id', None)
+        content_preview = template_vars.get('content_preview', '')
+        if question_id:
+            if content_preview:
+                template_vars['question_identity'] = f'题目#{question_id}（{content_preview}）'
+            else:
+                template_vars['question_identity'] = f'题目#{question_id}'
+        template_vars['question_update_summary'] = _build_question_update_summary(template_vars)
     if hasattr(result, 'get_quiz_type_display'):
         template_vars['quiz_type_label'] = result.get_quiz_type_display()
     if hasattr(result, 'quiz') and result.quiz is not None:
@@ -259,6 +303,9 @@ def log_content_action(
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            template_args = _snapshot_for_logging(args)
+            template_kwargs = _snapshot_for_logging(kwargs)
+
             # 执行原方法
             result = func(self, *args, **kwargs)
 
@@ -268,7 +315,7 @@ def log_content_action(
 
                 # 构建描述
                 if description_template:
-                    template_vars = _build_template_vars(func, self, args, kwargs, result)
+                    template_vars = _build_template_vars(func, self, template_args, template_kwargs, result)
                     description = description_template.format(**template_vars)
                 else:
                     description = f'{action} {content_type}'
