@@ -6,8 +6,6 @@
 /.agent/
 /.codex/
 /.shared/
-/.playwright-mcp/
-/.mcp.json
 
 # IDE 与系统文件
 .vscode/

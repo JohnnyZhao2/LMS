@@ -11,7 +11,6 @@ import { authRoutes } from './routes/auth';
 import { AppContent } from './app-content';
 import { AppProvider } from './provider';
 import { tokenStorage } from '@/lib/token-storage';
-import { AgentationToolbar } from '@/components/dev/agentation-toolbar';
 
 /**
  * 获取默认角色路径
@@ -37,7 +36,6 @@ const AppRoot: React.FC = () => {
       <Suspense fallback={<RouteSkeleton />}>
         <AppContent />
       </Suspense>
-      <AgentationToolbar />
     </AppProvider>
   );
 };
