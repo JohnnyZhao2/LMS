@@ -554,6 +554,60 @@ class TestTagApiContracts:
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert response.data['message'] == '标签名称不能与其他类型重复'
 
+    def test_tag_create_can_auto_extend_scope_and_reuse_existing_tag(
+        self,
+        api_client,
+        admin_user,
+        knowledge_tag,
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/',
+            {
+                'name': knowledge_tag.name,
+                'tag_type': 'TAG',
+                'current_module': 'question',
+                'extend_scope': True,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert response.data['data']['id'] == knowledge_tag.id
+        assert response.data['data']['allow_knowledge'] is True
+        assert response.data['data']['allow_question'] is True
+
+        knowledge_tag.refresh_from_db()
+        assert knowledge_tag.allow_knowledge is True
+        assert knowledge_tag.allow_question is True
+
+    def test_tag_create_without_extend_scope_returns_reuse_hint(
+        self,
+        api_client,
+        admin_user,
+        knowledge_tag,
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/tags/',
+            {
+                'name': knowledge_tag.name,
+                'tag_type': 'TAG',
+                'current_module': 'question',
+                'extend_scope': False,
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert response.data['message'] == '已存在同名标签，可扩展适用范围后复用'
+        assert response.data['details']['existing_tag_id'] == knowledge_tag.id
+        assert response.data['details']['requires_scope_extension'] is True
+
+        knowledge_tag.refresh_from_db()
+        assert knowledge_tag.allow_question is False
+
     def test_tag_patch_rejects_name_duplicated_with_other_type(self, api_client, admin_user, space_tag, knowledge_tag):
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(

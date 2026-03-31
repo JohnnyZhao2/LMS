@@ -27,6 +27,7 @@ class TagSerializer(serializers.ModelSerializer):
             'extend_scope',
         ]
         read_only_fields = ['id']
+        validators = []
 
 
 class TagSimpleSerializer(serializers.ModelSerializer):

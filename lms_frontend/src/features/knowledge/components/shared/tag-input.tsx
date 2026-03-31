@@ -2,9 +2,8 @@ import * as React from 'react';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { ApiError } from '@/lib/api-client';
 import { showApiError } from '@/utils/error-handler';
-import { useCreateTag, useScopedTags, useUpdateTag } from '../../api/get-tags';
+import { useCreateTag, useScopedTags } from '../../api/get-tags';
 
 interface TagInputProps {
   applicableTo: 'knowledge' | 'question';
@@ -23,9 +22,9 @@ export const TagInput: React.FC<TagInputProps> = ({
   hideChips = false,
 }) => {
   const [input, setInput] = React.useState('');
-  const { data: allTags = [] } = useScopedTags(applicableTo);
+  const { data: scopedTags = [] } = useScopedTags(applicableTo);
   const createTag = useCreateTag();
-  const updateTag = useUpdateTag();
+  const allTags = scopedTags;
 
   // 输入时匹配的已有标签（排除已选）
   const matchedTags = input.trim()
@@ -42,10 +41,6 @@ export const TagInput: React.FC<TagInputProps> = ({
         .filter((t) => !selectedTags.some((s) => s.id === t.id))
         .slice(0, 5)
     : [];
-
-  // 是否可以新建（输入内容不完全匹配已有标签）
-  const canCreate = input.trim().length > 0 &&
-    !allTags.some((t) => t.name.toLowerCase() === input.trim().toLowerCase());
 
   const handleAdd = async () => {
     const name = input.trim();
@@ -65,53 +60,32 @@ export const TagInput: React.FC<TagInputProps> = ({
       return;
     }
 
-    // 新建
+    // 统一入口：新建 / 同名复用 / 扩展范围
     try {
-      const newTag = await createTag.mutateAsync({
+      const resolvedTag = await createTag.mutateAsync({
         name,
         tag_type: 'TAG',
         current_module: applicableTo,
+        extend_scope: true,
       });
-      onAdd({ id: newTag.id, name: newTag.name });
+      if (selectedTags.some((s) => s.id === resolvedTag.id)) {
+        toast.info('标签已添加');
+      } else {
+        onAdd({ id: resolvedTag.id, name: resolvedTag.name });
+      }
       setInput('');
     } catch (error) {
-      if (
-        error instanceof ApiError &&
-        typeof error.data === 'object' &&
-        error.data !== null &&
-        'details' in error.data
-      ) {
-        const details = (error.data as {
-          details?: {
-            existing_tag_id?: number;
-            requires_scope_extension?: boolean;
-          };
-        }).details;
-        if (details?.existing_tag_id && details.requires_scope_extension) {
-          const shouldExtend = window.confirm(`已存在同名标签「${name}」，是否扩展到当前模块并复用？`);
-          if (!shouldExtend) {
-            return;
-          }
-          try {
-            const reusedTag = await updateTag.mutateAsync({
-              id: details.existing_tag_id,
-              data: { current_module: applicableTo },
-            });
-            onAdd({ id: reusedTag.id, name: reusedTag.name });
-            setInput('');
-            return;
-          } catch (updateError) {
-            showApiError(updateError, '扩展标签范围失败');
-            return;
-          }
-        }
-      }
       showApiError(error, '创建标签失败');
     }
   };
 
-  const handleSelectSuggestion = (tag: { id: number; name: string }) => {
-    onAdd(tag);
+  const handleSelectSuggestion = (tag: (typeof allTags)[number]) => {
+    if (selectedTags.some((s) => s.id === tag.id)) {
+      toast.info('标签已添加');
+      setInput('');
+      return;
+    }
+    onAdd({ id: tag.id, name: tag.name });
     setInput('');
   };
 
@@ -143,7 +117,7 @@ export const TagInput: React.FC<TagInputProps> = ({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              handleAdd();
+              void handleAdd();
             }
           }}
           placeholder="输入标签名…"
@@ -151,7 +125,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         />
         <button
           type="button"
-          onClick={handleAdd}
+          onClick={() => void handleAdd()}
           disabled={!input.trim() || createTag.isPending}
           className="taginput-add-btn"
         >
@@ -166,23 +140,12 @@ export const TagInput: React.FC<TagInputProps> = ({
             <button
               key={t.id}
               type="button"
-              onClick={() => handleSelectSuggestion({ id: t.id, name: t.name })}
+              onClick={() => void handleSelectSuggestion(t)}
               className="taginput-suggestion-item"
             >
               {t.name}
             </button>
           ))}
-          {canCreate && (
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={createTag.isPending}
-              className="taginput-suggestion-item taginput-suggestion-create"
-            >
-              <Plus style={{ width: 12, height: 12 }} />
-              新建「{input.trim()}」
-            </button>
-          )}
         </div>
       )}
 
@@ -194,7 +157,7 @@ export const TagInput: React.FC<TagInputProps> = ({
             <button
               key={t.id}
               type="button"
-              onClick={() => handleSelectSuggestion({ id: t.id, name: t.name })}
+              onClick={() => void handleSelectSuggestion(t)}
               className="taginput-recent-item"
             >
               {t.name}

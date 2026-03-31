@@ -167,6 +167,21 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       ),
     },
     {
+      id: 'created_timestamp',
+      header: '创建时间',
+      size: 100,
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-bold text-foreground">
+            {dayjs(row.original.created_at).format('YYYY.MM.DD')}
+          </span>
+          <span className="text-[11px] font-medium text-text-muted">
+            {dayjs(row.original.created_at).format('HH:mm')}
+          </span>
+        </div>
+      ),
+    },
+    {
       id: 'actions',
       header: '操作',
       size: 50,

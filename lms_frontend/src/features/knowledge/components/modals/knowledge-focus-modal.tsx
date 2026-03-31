@@ -206,7 +206,9 @@ const CreateKnowledgeFocus: React.FC<{
           <TagInput
             applicableTo="knowledge"
             selectedTags={selectedTags}
-            onAdd={(tag) => setSelectedTags((prev) => [...prev, tag])}
+            onAdd={(tag) => setSelectedTags((prev) => (
+              prev.some((item) => item.id === tag.id) ? prev : [...prev, tag]
+            ))}
             onRemove={(id) => setSelectedTags((prev) => prev.filter((t) => t.id !== id))}
           />
         </div>

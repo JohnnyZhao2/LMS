@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from apps.authorization.services import AuthorizationService
 from apps.knowledge.models import Knowledge
@@ -48,34 +48,27 @@ class TagService(BaseService):
             data['sort_order'] = 0
 
         existing = Tag.objects.filter(name=data['name'], tag_type=tag_type).first()
-        if not existing:
-            try:
-                return Tag.objects.create(**data)
-            except ValidationError as error:
-                self._raise_validation_error(error)
-
-        if tag_type == 'SPACE':
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='同名 space 已存在',
+        if existing:
+            return self._reuse_existing_tag(
+                existing=existing,
+                tag_type=tag_type,
+                current_module=current_module,
+                extend_scope=extend_scope,
             )
 
-        if current_module and not self._is_scope_enabled(existing, current_module):
-            if not extend_scope:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='已存在同名标签，可扩展适用范围后复用',
-                    details={
-                        'existing_tag_id': existing.id,
-                        'requires_scope_extension': True,
-                        'allow_knowledge': existing.allow_knowledge,
-                        'allow_question': existing.allow_question,
-                    },
+        try:
+            return Tag.objects.create(**data)
+        except (ValidationError, IntegrityError) as error:
+            # 并发下可能在查询后到创建前被同名插入，此处回查并走统一复用逻辑。
+            existing_after_conflict = Tag.objects.filter(name=data['name'], tag_type=tag_type).first()
+            if existing_after_conflict:
+                return self._reuse_existing_tag(
+                    existing=existing_after_conflict,
+                    tag_type=tag_type,
+                    current_module=current_module,
+                    extend_scope=extend_scope,
                 )
-            self._enable_scope(existing, current_module)
-            return existing
-
-        return existing
+            self._raise_validation_error(error if isinstance(error, ValidationError) else ValidationError(str(error)))
 
     @transaction.atomic
     def update(self, pk: int, data: dict) -> Tag:
@@ -257,6 +250,36 @@ class TagService(BaseService):
             updated_fields.append('allow_question')
         if updated_fields:
             tag.save(update_fields=updated_fields)
+
+    def _reuse_existing_tag(
+        self,
+        *,
+        existing: Tag,
+        tag_type: str,
+        current_module: Optional[str],
+        extend_scope: bool,
+    ) -> Tag:
+        if tag_type == 'SPACE':
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='同名 space 已存在',
+            )
+
+        if current_module and not self._is_scope_enabled(existing, current_module):
+            if not extend_scope:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='已存在同名标签，可扩展适用范围后复用',
+                    details={
+                        'existing_tag_id': existing.id,
+                        'requires_scope_extension': True,
+                        'allow_knowledge': existing.allow_knowledge,
+                        'allow_question': existing.allow_question,
+                    },
+                )
+            self._enable_scope(existing, current_module)
+
+        return existing
 
     def _apply_space_fields(self, tag: Tag, data: dict) -> None:
         if 'name' in data:

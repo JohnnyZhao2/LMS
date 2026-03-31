@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Trash2, MoreHorizontal, FileText, Eye } from 'lucide-react';
+import { Trash2, MoreHorizontal, FileText, Eye, PencilLine } from 'lucide-react';
 import { useQuestions } from '@/features/questions/api/get-questions';
-import { useCreateQuestion, useDeleteQuestion } from '@/features/questions/api/create-question';
+import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { QuestionEditorPanel } from '@/features/questions/components/question-editor-panel';
-import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
+import type { Question, QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
@@ -26,6 +26,9 @@ import { type ColumnDef } from '@tanstack/react-table';
 interface QuestionTabProps {
     search?: string;
     createSignal?: number;
+    filterQuestionType?: QuestionType | 'all';
+    filterSpaceTypeId?: string;
+    spaceTypes?: Tag[];
 }
 
 const DEFAULT_QUESTION_FORM: Partial<QuestionCreateRequest> = {
@@ -38,7 +41,24 @@ const DEFAULT_QUESTION_FORM: Partial<QuestionCreateRequest> = {
     tag_ids: [],
 };
 
-export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSignal = 0 }) => {
+const buildQuestionForm = (question: Question): Partial<QuestionCreateRequest> => ({
+    question_type: question.question_type,
+    content: question.content,
+    options: question.options || [],
+    answer: question.answer || '',
+    explanation: question.explanation || '',
+    score: question.score || '1',
+    space_tag_id: question.space_tag?.id,
+    tag_ids: question.tags?.map((tag) => tag.id) ?? [],
+});
+
+export const QuestionTab: React.FC<QuestionTabProps> = ({
+    search = '',
+    createSignal = 0,
+    filterQuestionType = 'all',
+    filterSpaceTypeId = 'all',
+    spaceTypes: externalSpaceTypes,
+}) => {
     const [pagination, setPagination] = useState({
         page: 1,
         pageSize: 10,
@@ -46,17 +66,27 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
     });
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+    const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [handledCreateSignal, setHandledCreateSignal] = useState(0);
     const [questionForm, setQuestionForm] = useState<Partial<QuestionCreateRequest>>(DEFAULT_QUESTION_FORM);
+    const [editingForm, setEditingForm] = useState<Partial<QuestionCreateRequest>>(DEFAULT_QUESTION_FORM);
 
-    const currentScopeKey = search;
+    const currentScopeKey = `${search}|${filterQuestionType}|${filterSpaceTypeId}`;
     const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
     const pageSize = pagination.pageSize;
     const isCreateDialogOpen = createSignal > handledCreateSignal;
 
-    const { data, isLoading, refetch } = useQuestions({ page, pageSize, search: search || undefined });
-    const { data: spaceTypes } = useSpaceTypeTags();
+    const { data, isLoading, refetch } = useQuestions({
+        page,
+        pageSize,
+        search: search || undefined,
+        questionType: filterQuestionType === 'all' ? undefined : filterQuestionType,
+        spaceTypeId: filterSpaceTypeId === 'all' ? undefined : Number(filterSpaceTypeId),
+    });
+    const { data: internalSpaceTypes } = useSpaceTypeTags();
+    const spaceTypes = externalSpaceTypes ?? internalSpaceTypes;
     const createQuestion = useCreateQuestion();
+    const updateQuestion = useUpdateQuestion();
     const deleteQuestion = useDeleteQuestion();
 
     const closeCreateDialog = () => {
@@ -66,16 +96,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         });
     };
 
-    const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? {
-        space_tag_id: previewQuestion.space_tag?.id,
-        tag_ids: previewQuestion.tags?.map((tag) => tag.id) ?? [],
-        question_type: previewQuestion.question_type,
-        content: previewQuestion.content,
-        options: previewQuestion.options || [],
-        answer: previewQuestion.answer || '',
-        explanation: previewQuestion.explanation || '',
-        score: previewQuestion.score || '1',
-    } : {};
+    const previewForm: Partial<QuestionCreateRequest> = previewQuestion ? buildQuestionForm(previewQuestion) : {};
 
     const handleDelete = async () => {
         if (!deleteId) return;
@@ -103,10 +124,43 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         }
     };
 
+    const openEditDialog = (question: Question) => {
+        setEditingQuestion(question);
+        setEditingForm(buildQuestionForm(question));
+    };
+
+    const closeEditDialog = () => {
+        setEditingQuestion(null);
+        setEditingForm({ ...DEFAULT_QUESTION_FORM });
+    };
+
+    const handleUpdateQuestion = async () => {
+        if (!editingQuestion) return;
+        if (!editingForm.space_tag_id) return toast.error('请选择 space');
+        if (!editingForm.content?.trim()) return toast.error('请输入内容');
+        if (!editingForm.answer) return toast.error('请设置答案');
+
+        const payload: Partial<QuestionCreateRequest> = { ...editingForm };
+        delete payload.question_type;
+        try {
+            await updateQuestion.mutateAsync({
+                id: editingQuestion.id,
+                data: payload,
+            });
+            toast.success('题目更新成功');
+            closeEditDialog();
+            refetch();
+        } catch (error) {
+            showApiError(error);
+        }
+    };
+
     const columns: ColumnDef<Question>[] = [
         {
             id: 'content',
             header: '题目内容',
+            size: 620,
+            minSize: 520,
             cell: ({ row }) => (
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
@@ -120,6 +174,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         {
             id: 'type',
             header: '题型',
+            size: 120,
+            minSize: 110,
+            maxSize: 140,
             cell: ({ row }) => {
                 const typeStyle = getQuestionTypeStyle(row.original.question_type);
                 return (
@@ -135,17 +192,10 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
             }
         },
         {
-            id: 'space_tag',
-            header: '所属 space',
-            cell: ({ row }) => (
-                <span className="text-sm font-medium text-text-muted">
-                    {row.original.space_tag?.name || '—'}
-                </span>
-            )
-        },
-        {
             id: 'tags',
             header: '标签',
+            size: 260,
+            minSize: 220,
             cell: ({ row }) => (
                 <CellTags
                     tags={(row.original.tags ?? []).map((tag) => ({
@@ -160,6 +210,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         {
             id: 'timestamp',
             header: '更新时间',
+            size: 150,
+            minSize: 140,
+            maxSize: 170,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-sm font-bold text-foreground">
@@ -174,6 +227,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
         {
             id: 'actions',
             header: '操作',
+            size: 100,
+            minSize: 88,
+            maxSize: 120,
             cell: ({ row }) => {
                 const record = row.original;
                 return (
@@ -190,6 +246,12 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                                     onClick={() => setPreviewQuestion(record)}
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-muted transition-colors text-xs"
+                                    onClick={() => openEditDialog(record)}
+                                >
+                                    <PencilLine className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑题目
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-muted mx-2" />
                                 <DropdownMenuItem
@@ -294,6 +356,29 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({ search = '', createSig
                         >
                             关闭
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* 编辑对话框 */}
+            <Dialog open={!!editingQuestion} onOpenChange={(open) => !open && closeEditDialog()}>
+                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                    <DialogHeader className="px-6 pt-5 pb-0">
+                        <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                            <PencilLine className="w-4 h-4 text-primary-500" />
+                            编辑题目
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
+                        <QuestionEditorPanel
+                            questionForm={editingForm}
+                            setQuestionForm={setEditingForm}
+                            spaceTypes={spaceTypes}
+                            editingQuestionId={editingQuestion?.id ?? null}
+                            onCancel={closeEditDialog}
+                            onSave={handleUpdateQuestion}
+                            isSaving={updateQuestion.isPending}
+                        />
                     </div>
                 </DialogContent>
             </Dialog>
