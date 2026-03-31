@@ -52,3 +52,18 @@ def build_next_version_data(
     if extra_fields:
         new_data.update(extra_fields)
     return new_data
+
+
+def is_referenced(resource_id: int, relation_model: type[models.Model], fk_field: str) -> bool:
+    """
+    检查资源是否被引用。
+
+    Args:
+        resource_id: 资源 ID
+        relation_model: 关联模型类（如 TaskQuiz, QuizQuestion）
+        fk_field: 外键字段名（如 'quiz_id', 'question_id'）
+
+    Returns:
+        bool: 是否被引用
+    """
+    return relation_model.objects.filter(**{fk_field: resource_id}).exists()

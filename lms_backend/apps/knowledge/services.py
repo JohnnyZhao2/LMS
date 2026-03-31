@@ -21,6 +21,7 @@ from core.versioning import (
     build_next_version_data,
     deactivate_current_version,
     initialize_new_resource_version,
+    is_referenced,
 )
 
 from .models import Knowledge
@@ -291,7 +292,7 @@ class KnowledgeService(BaseService):
         """检查知识文档是否被任务引用"""
         try:
             from apps.tasks.models import TaskKnowledge
-            return TaskKnowledge.objects.filter(knowledge_id=knowledge_id).exists()
+            return is_referenced(knowledge_id, TaskKnowledge, 'knowledge_id')
         except ImportError:
             return False
 

@@ -21,6 +21,7 @@ from core.versioning import (
     build_next_version_data,
     deactivate_current_version,
     initialize_new_resource_version,
+    is_referenced,
 )
 
 from .models import Quiz, QuizQuestion
@@ -505,6 +506,6 @@ class QuizService(BaseService):
         """检查试卷是否被任务引用"""
         try:
             from apps.tasks.models import TaskQuiz
-            return TaskQuiz.objects.filter(quiz_id=quiz_id).exists()
+            return is_referenced(quiz_id, TaskQuiz, 'quiz_id')
         except ImportError:
             return False
