@@ -27,6 +27,15 @@ export interface InlineQuestionItem {
   answer: string | string[];
   explanation: string;
   score: string;
+  /** 用于 PATCH 脏字段比较的初始快照（仅已有题目） */
+  original?: {
+    spaceTagId?: number | null;
+    content: string;
+    options: Array<{ key: string; value: string }>;
+    answer: string | string[];
+    explanation: string;
+    score: string;
+  };
   /** 是否已保存到后端 */
   saved: boolean;
 }

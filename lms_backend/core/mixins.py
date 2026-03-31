@@ -75,18 +75,11 @@ class VersionedResourceMixin(models.Model):
             return 1
         aggregate = cls.objects.filter(
             resource_uuid=resource_uuid,
-            is_deleted=False
         ).aggregate(
             max_version=models.Max('version_number')
         )
         max_version = aggregate['max_version'] or 0
         return max_version + 1
-    def clone_new_version(self):
-        """
-        创建当前资源的新版本，保持历史版本只读。
-        子类需要重写此方法以复制特定字段。
-        """
-        raise NotImplementedError("Subclasses must implement clone_new_version()")
 class DataScopeMixin:
     """
     Mixin for views that provides automatic data scope filtering based on user role.

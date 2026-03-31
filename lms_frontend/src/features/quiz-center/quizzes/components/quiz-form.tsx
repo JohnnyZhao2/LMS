@@ -33,6 +33,63 @@ const syncKeyCounter = (items: InlineQuestionItem[]) => {
   _keyCounter = Math.max(_keyCounter, maxKey);
 };
 
+const normalizeScore = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined || value === '') return '1';
+  const num = Number(value);
+  return Number.isNaN(num) ? String(value) : String(num);
+};
+
+const buildInlineQuestionPatch = (item: InlineQuestionItem): Partial<QuestionCreateRequest> => {
+  const baseline = item.original;
+  if (!baseline) {
+    return {
+      space_tag_id: item.spaceTagId ?? null,
+      question_type: item.questionType,
+      content: item.content,
+      options: item.options,
+      answer: item.answer as string,
+      explanation: item.explanation,
+      score: item.score,
+    };
+  }
+  const patch: Partial<QuestionCreateRequest> = {};
+  const fieldPairs: Array<[keyof QuestionCreateRequest, unknown, unknown]> = [
+    ['space_tag_id', baseline.spaceTagId ?? null, item.spaceTagId ?? null],
+    ['content', baseline.content, item.content],
+    ['options', baseline.options, item.options],
+    ['answer', baseline.answer, item.answer],
+    ['explanation', baseline.explanation, item.explanation],
+    ['score', normalizeScore(baseline.score), normalizeScore(item.score)],
+  ];
+  fieldPairs.forEach(([field, before, after]) => {
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      switch (field) {
+        case 'space_tag_id':
+          patch.space_tag_id = item.spaceTagId ?? null;
+          break;
+        case 'content':
+          patch.content = item.content;
+          break;
+        case 'options':
+          patch.options = item.options;
+          break;
+        case 'answer':
+          patch.answer = item.answer as string;
+          break;
+        case 'explanation':
+          patch.explanation = item.explanation;
+          break;
+        case 'score':
+          patch.score = item.score;
+          break;
+        default:
+          break;
+      }
+    }
+  });
+  return patch;
+};
+
 /** 从 Question API 对象创建 InlineQuestionItem */
 const questionToInline = (q: Question): InlineQuestionItem => ({
   key: nextKey(),
@@ -45,7 +102,15 @@ const questionToInline = (q: Question): InlineQuestionItem => ({
   options: q.options || [],
   answer: q.answer || '',
   explanation: q.explanation || '',
-  score: q.score || '1',
+  score: normalizeScore(q.score || '1'),
+  original: {
+    spaceTagId: q.space_tag?.id ?? null,
+    content: q.content,
+    options: q.options || [],
+    answer: q.answer || '',
+    explanation: q.explanation || '',
+    score: normalizeScore(q.score || '1'),
+  },
   saved: true,
 });
 export const QuizForm: React.FC = () => {
@@ -105,7 +170,10 @@ export const QuizForm: React.FC = () => {
         const loadedItems = await Promise.all(
           sorted.map((qq) => apiClient.get<Question>(`/questions/${qq.question}/`).then((q) => {
             const item = questionToInline(q);
-            item.score = qq.score;
+            item.score = normalizeScore(qq.score);
+            if (item.original) {
+              item.original.score = normalizeScore(qq.score);
+            }
             return item;
           })),
         );
@@ -241,11 +309,55 @@ export const QuizForm: React.FC = () => {
           score: item.score,
         };
         if (item.questionId) {
-          const updated = await updateQuestion.mutateAsync({ id: item.questionId, data: formData });
-          return { ...item, questionId: updated.id, resourceUuid: updated.resource_uuid, saved: true };
+          const patchData = buildInlineQuestionPatch(item);
+          if (Object.keys(patchData).length === 0) {
+            return {
+              ...item,
+              score: normalizeScore(item.score),
+              original: {
+                spaceTagId: item.spaceTagId ?? null,
+                content: item.content,
+                options: item.options,
+                answer: item.answer,
+                explanation: item.explanation,
+                score: normalizeScore(item.score),
+              },
+              saved: true,
+            };
+          }
+          const updated = await updateQuestion.mutateAsync({ id: item.questionId, data: patchData });
+          return {
+            ...item,
+            questionId: updated.id,
+            resourceUuid: updated.resource_uuid,
+            score: normalizeScore(item.score),
+            original: {
+              spaceTagId: item.spaceTagId ?? null,
+              content: item.content,
+              options: item.options,
+              answer: item.answer,
+              explanation: item.explanation,
+              score: normalizeScore(item.score),
+            },
+            saved: true,
+          };
         }
         const created = await createQuestion.mutateAsync(formData);
-        return { ...item, questionId: created.id, resourceUuid: created.resource_uuid, saved: true };
+        return {
+          ...item,
+          questionId: created.id,
+          resourceUuid: created.resource_uuid,
+          score: normalizeScore(item.score),
+          original: {
+            spaceTagId: item.spaceTagId ?? null,
+            content: item.content,
+            options: item.options,
+            answer: item.answer,
+            explanation: item.explanation,
+            score: normalizeScore(item.score),
+          },
+          saved: true,
+        };
       }));
 
       const data: QuizCreateRequest = {

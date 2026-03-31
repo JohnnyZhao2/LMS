@@ -22,7 +22,6 @@ export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
     queryKey: ['task-knowledge-options', currentRole ?? 'UNKNOWN', search, page, page_size],
     queryFn: () => {
       const queryParams = {
-        is_current: 'true',
         page: String(page),
         page_size: String(page_size),
         ...(search && { search }),
@@ -46,7 +45,6 @@ export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
     queryKey: ['task-quiz-options', currentRole ?? 'UNKNOWN', search, page, page_size],
     queryFn: () => {
       const queryParams = {
-        is_current: 'true',
         page: String(page),
         page_size: String(page_size),
         ...(search && { search }),

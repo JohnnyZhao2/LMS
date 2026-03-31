@@ -6,7 +6,6 @@
     service = QuestionService(request)
     question = service.get_by_id(pk=123)
 """
-import uuid
 from typing import Optional
 
 from django.db import transaction
@@ -18,6 +17,11 @@ from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
+from core.versioning import (
+    build_next_version_data,
+    deactivate_current_version,
+    initialize_new_resource_version,
+)
 
 from .models import Question
 from .selectors import (
@@ -75,7 +79,7 @@ class QuestionService(BaseService):
             if 'is_current' not in filters:
                 filters['is_current'] = True
 
-        queryset = question_base_queryset(include_deleted=False).filter(is_current=True)
+        queryset = question_base_queryset(include_deleted=False)
         queryset = apply_question_filters(queryset, filters, search)
 
         # 排序
@@ -131,18 +135,13 @@ class QuestionService(BaseService):
         # 2. 准备数据
         data['created_by'] = self.user
         data['updated_by'] = self.user
-        data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_version_data(data)
         # 提取space数据
-        space_tag_provided = 'space_tag_id' in data
         space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', [])
         # 3. 创建题目
         question = Question.objects.create(**data)
-        Question.objects.filter(
-            resource_uuid=question.resource_uuid
-        ).exclude(pk=question.pk).update(is_current=False)
         # 4. 设置space
         if space_tag_id is not None:
             self._set_space_tag(question, space_tag_id)
@@ -175,10 +174,11 @@ class QuestionService(BaseService):
             permission_code='question.update',
             error_message='只有题目创建者或管理员可以操作此题目',
         )
-        # 当前版本需要创建新版本
-        if question.is_current:
-            return self._create_new_version(question, data)
-        # 非当前版本直接更新
+        if not question.is_current:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='历史版本不可修改'
+            )
         # 合并现有数据以进行验证
         merged_data = {
             'question_type': question.question_type,
@@ -188,18 +188,45 @@ class QuestionService(BaseService):
         self._validate_question_data(merged_data)
         # 提取space数据
         space_tag_provided = 'space_tag_id' in data
-        space_tag_id = data.pop('space_tag_id', None)
+        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
         tag_ids_provided = 'tag_ids' in data
-        tag_ids = data.pop('tag_ids', None)
-        # 更新题目
-        data['updated_by'] = self.user
-        if data:
-            for key, value in data.items():
-                setattr(question, key, value)
-            question.save(update_fields=list(data.keys()))
-        # 更新space
-        self._apply_space_tag_change(question, space_tag_id, space_tag_provided)
-        self._apply_tag_change(question, tag_ids, tag_ids_provided)
+        tag_ids = data.pop('tag_ids', None) if tag_ids_provided else None
+
+        changed_fields = {
+            key: value
+            for key, value in data.items()
+            if getattr(question, key, None) != value
+        }
+        normalized_tag_ids = (
+            self._get_tag_ids_or_error(tag_ids or [])
+            if tag_ids_provided
+            else list(question.tags.values_list('id', flat=True))
+        )
+        space_changed = space_tag_provided and space_tag_id != question.space_tag_id
+        tags_changed = (
+            tag_ids_provided
+            and set(normalized_tag_ids) != set(question.tags.values_list('id', flat=True))
+        )
+        has_changes = bool(changed_fields or space_changed or tags_changed)
+        if not has_changes:
+            return question
+
+        # 当前版本且已被试卷引用时，分叉新版本；否则原地更新
+        if question.is_current and self._is_referenced_by_quiz(question.id):
+            new_version_data = dict(changed_fields)
+            if space_tag_provided:
+                new_version_data['space_tag_id'] = space_tag_id
+            if tag_ids_provided:
+                new_version_data['tag_ids'] = normalized_tag_ids
+            return self._create_new_version(question, new_version_data)
+
+        changed_fields['updated_by'] = self.user
+        for key, value in changed_fields.items():
+            setattr(question, key, value)
+        question.save(update_fields=list(changed_fields.keys()))
+        self._apply_space_tag_change(question, space_tag_id, space_changed)
+        if tags_changed:
+            question.tags.set(normalized_tag_ids)
         return question
 
     @transaction.atomic
@@ -360,25 +387,13 @@ class QuestionService(BaseService):
             return
         self._set_space_tag(question, space_tag_id)
 
-    def _apply_tag_change(
-        self,
-        question: Question,
-        tag_ids: Optional[list[int]],
-        tag_ids_provided: bool,
-    ) -> None:
-        if not tag_ids_provided:
-            return
-        question.tags.set(self._get_tag_ids_or_error(tag_ids or []))
-
     def _prepare_version_data(self, data: dict) -> None:
         """
         准备版本号相关数据
         Args:
             data: 题目数据字典（会被修改）
         """
-        data.pop('resource_uuid', None)
-        data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = 1
+        initialize_new_resource_version(data)
 
     def _create_new_version(
         self,
@@ -386,30 +401,18 @@ class QuestionService(BaseService):
         data: dict
     ) -> Question:
         """基于已发布版本创建新版本"""
-        # 计算新版本号
-        existing_versions = list(
-            Question.objects.filter(
-                resource_uuid=source.resource_uuid,
-                is_deleted=False
-            ).values_list('version_number', flat=True)
-        )
-        new_version_number = max(existing_versions) + 1 if existing_versions else 1
         # 提取space数据
         space_tag_provided = 'space_tag_id' in data
         space_tag_id = data.pop('space_tag_id', None)
         tag_ids_provided = 'tag_ids' in data
         tag_ids = data.pop('tag_ids', None)
-        # 准备新版本数据：自动复制所有内容字段
-        new_question_data = {
-            'resource_uuid': source.resource_uuid,
-            'version_number': new_version_number,
-            'is_current': True,
-            'created_by': self.user,
-            'updated_by': self.user,
-        }
-        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
-        for field in self.VERSION_COPY_FIELDS:
-            new_question_data[field] = data.get(field, getattr(source, field, None))
+        new_question_data = build_next_version_data(
+            source,
+            actor=self.user,
+            copy_fields=self.VERSION_COPY_FIELDS,
+            overrides=data,
+        )
+        deactivate_current_version(Question, source.resource_uuid)
         new_question = Question.objects.create(**new_question_data)
         # 设置space
         if space_tag_provided:
@@ -423,11 +426,6 @@ class QuestionService(BaseService):
             else list(source.tags.values_list('id', flat=True))
         )
         new_question.tags.set(self._get_tag_ids_or_error(inherited_tag_ids))
-        # 取消其他版本的 is_current 标志
-        Question.objects.filter(
-            resource_uuid=source.resource_uuid
-        ).exclude(pk=new_question.pk).update(is_current=False)
-
         return new_question
 
     def _is_referenced_by_quiz(self, question_id: int) -> bool:

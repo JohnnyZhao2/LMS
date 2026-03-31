@@ -6,7 +6,6 @@
     service = QuizService(request)
     quiz = service.get_by_id(pk=123)
 """
-import uuid
 from typing import List, Optional
 
 from django.db import transaction
@@ -18,6 +17,11 @@ from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
+from core.versioning import (
+    build_next_version_data,
+    deactivate_current_version,
+    initialize_new_resource_version,
+)
 
 from .models import Quiz, QuizQuestion
 from .selectors import get_question_ids, get_quiz_by_id, list_quiz_questions
@@ -151,14 +155,10 @@ class QuizService(BaseService):
         # 2. 准备数据
         data['created_by'] = self.user
         data['updated_by'] = self.user
-        data.setdefault('is_current', True)
         # 处理版本号
         self._prepare_quiz_version_data(data)
         # 3. 创建试卷
         quiz = Quiz.objects.create(**data)
-        Quiz.objects.filter(
-            resource_uuid=quiz.resource_uuid
-        ).exclude(pk=quiz.pk).update(is_current=False)
         # 4. 添加题目
         existing_question_ids = existing_question_ids or []
         new_questions_data = new_questions_data or []
@@ -212,22 +212,45 @@ class QuizService(BaseService):
             self.check_edit_permission(quiz),
             '只有试卷创建者或管理员可以编辑此试卷'
         )
-        # 当前版本需要创建新版本
-        if quiz.is_current:
-            quiz = self._create_new_version(quiz, data)
-        else:
-            # 草稿直接更新
-            self._validate_quiz_data(data)
-            data['updated_by'] = self.user
-            if data:
-                for key, value in data.items():
-                    setattr(quiz, key, value)
-                quiz.save(update_fields=list(data.keys()))
-
+        if not quiz.is_current:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='历史版本不可修改'
+            )
         # 处理题目操作（在同一个事务中）
         add_question_ids = add_question_ids or []
         new_questions_data = new_questions_data or []
         remove_question_ids = remove_question_ids or []
+        has_question_changes = (
+            question_ids is not None
+            or bool(add_question_ids)
+            or bool(new_questions_data)
+            or bool(remove_question_ids)
+        )
+        changed_fields = {
+            field: value
+            for field, value in data.items()
+            if field in self.VERSION_COPY_FIELDS and getattr(quiz, field, None) != value
+        }
+        has_base_changes = bool(changed_fields)
+        if not has_base_changes and not has_question_changes:
+            return quiz
+        if has_base_changes:
+            merged_quiz_data = {
+                'quiz_type': changed_fields.get('quiz_type', quiz.quiz_type),
+                'duration': changed_fields.get('duration', quiz.duration),
+                'pass_score': changed_fields.get('pass_score', quiz.pass_score),
+            }
+            self._validate_quiz_data(merged_quiz_data)
+
+        should_create_new_version = quiz.is_current and self._is_referenced_by_task(quiz.id)
+        if should_create_new_version:
+            quiz = self._create_new_version(quiz, dict(changed_fields))
+        elif has_base_changes:
+            changed_fields['updated_by'] = self.user
+            for key, value in changed_fields.items():
+                setattr(quiz, key, value)
+            quiz.save(update_fields=list(changed_fields.keys()))
 
         # 1. 先移除题目
         if remove_question_ids:
@@ -253,8 +276,9 @@ class QuizService(BaseService):
         if question_ids is not None:
             self._sync_question_order(quiz, question_ids)
 
-        quiz.updated_by = self.user
-        quiz.save(update_fields=['updated_by'])
+        if has_question_changes and not should_create_new_version and not has_base_changes:
+            quiz.updated_by = self.user
+            quiz.save(update_fields=['updated_by'])
         return quiz
 
     @transaction.atomic
@@ -311,14 +335,10 @@ class QuizService(BaseService):
         # 准备题目属性
         question_attrs = {
             'created_by': self.user,
-            'is_current': True,
             **question_data,
         }
         # 创建题目
         question = Question.objects.create(**question_attrs)
-        Question.objects.filter(
-            resource_uuid=question.resource_uuid
-        ).exclude(pk=question.pk).update(is_current=False)
         # 设置space
         if space_tag_id is not None:
             self._set_question_space_tag(question, space_tag_id)
@@ -335,9 +355,7 @@ class QuizService(BaseService):
         Args:
             data: 试卷数据字典（会被修改）
         """
-        data.pop('resource_uuid', None)
-        data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = 1
+        initialize_new_resource_version(data)
 
     def _prepare_question_version_data(self, data: dict) -> None:
         """
@@ -345,9 +363,7 @@ class QuizService(BaseService):
         Args:
             data: 题目数据字典（会被修改）
         """
-        data.pop('resource_uuid', None)
-        data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = 1
+        initialize_new_resource_version(data)
 
     def _set_question_space_tag(self, question: Question, space_tag_id: int) -> None:
         """
@@ -399,25 +415,13 @@ class QuizService(BaseService):
         Returns:
             新版本的试卷对象
         """
-        # 计算新版本号
-        existing_versions = list(
-            Quiz.objects.filter(
-                resource_uuid=source.resource_uuid,
-                is_deleted=False
-            ).values_list('version_number', flat=True)
+        new_quiz_data = build_next_version_data(
+            source,
+            actor=self.user,
+            copy_fields=self.VERSION_COPY_FIELDS,
+            overrides=data,
         )
-        new_version_number = max(existing_versions) + 1 if existing_versions else 1
-        # 准备新版本数据：自动复制所有内容字段
-        new_quiz_data = {
-            'resource_uuid': source.resource_uuid,
-            'version_number': new_version_number,
-            'is_current': True,
-            'created_by': self.user,
-            'updated_by': self.user,
-        }
-        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
-        for field in self.VERSION_COPY_FIELDS:
-            new_quiz_data[field] = data.get(field, getattr(source, field, None))
+        deactivate_current_version(Quiz, source.resource_uuid)
         new_quiz = Quiz.objects.create(**new_quiz_data)
         # 复制题目顺序
         if question_ids is None:
@@ -435,11 +439,6 @@ class QuizService(BaseService):
                     question_id=question_id,
                     order=order
                 )
-        # 取消其他版本的 is_current 标志
-        Quiz.objects.filter(
-            resource_uuid=source.resource_uuid
-        ).exclude(pk=new_quiz.pk).update(is_current=False)
-
         return new_quiz
 
     def _sync_question_order(

@@ -52,6 +52,61 @@ const buildQuestionForm = (question: Question): Partial<QuestionCreateRequest> =
     tag_ids: question.tags?.map((tag) => tag.id) ?? [],
 });
 
+const normalizeCompareValue = (value: unknown, field: keyof QuestionCreateRequest) => {
+    if (field === 'tag_ids' && Array.isArray(value)) {
+        return [...value].sort((a, b) => Number(a) - Number(b));
+    }
+    return value ?? null;
+};
+
+const buildQuestionPatchPayload = (
+    baseline: Partial<QuestionCreateRequest>,
+    current: Partial<QuestionCreateRequest>,
+): Partial<QuestionCreateRequest> => {
+    const fields: Array<keyof QuestionCreateRequest> = [
+        'space_tag_id',
+        'content',
+        'options',
+        'answer',
+        'explanation',
+        'score',
+        'tag_ids',
+    ];
+    const patch: Partial<QuestionCreateRequest> = {};
+    fields.forEach((field) => {
+        const before = normalizeCompareValue(baseline[field], field);
+        const after = normalizeCompareValue(current[field], field);
+        if (JSON.stringify(before) !== JSON.stringify(after)) {
+            switch (field) {
+                case 'space_tag_id':
+                    patch.space_tag_id = current.space_tag_id;
+                    break;
+                case 'content':
+                    patch.content = current.content;
+                    break;
+                case 'options':
+                    patch.options = current.options;
+                    break;
+                case 'answer':
+                    patch.answer = current.answer;
+                    break;
+                case 'explanation':
+                    patch.explanation = current.explanation;
+                    break;
+                case 'score':
+                    patch.score = current.score;
+                    break;
+                case 'tag_ids':
+                    patch.tag_ids = current.tag_ids;
+                    break;
+                default:
+                    break;
+            }
+        }
+    });
+    return patch;
+};
+
 export const QuestionTab: React.FC<QuestionTabProps> = ({
     search = '',
     createSignal = 0,
@@ -140,8 +195,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         if (!editingForm.content?.trim()) return toast.error('请输入内容');
         if (!editingForm.answer) return toast.error('请设置答案');
 
-        const payload: Partial<QuestionCreateRequest> = { ...editingForm };
-        delete payload.question_type;
+        const baseline = buildQuestionForm(editingQuestion);
+        const payload = buildQuestionPatchPayload(baseline, editingForm);
+        if (Object.keys(payload).length === 0) {
+            toast.info('未检测到改动');
+            closeEditDialog();
+            return;
+        }
         try {
             await updateQuestion.mutateAsync({
                 id: editingQuestion.id,

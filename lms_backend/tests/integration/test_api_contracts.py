@@ -395,15 +395,12 @@ class TestQuestionApiContracts:
         assert response.status_code == 200, response.data
         assert response.data['code'] == 'SUCCESS'
         assert response.data['data']['space_tag'] is None
+        assert response.data['data']['id'] == sample_question.id
 
         sample_question.refresh_from_db()
-        assert sample_question.is_current is False
-
-        current_question = Question.objects.get(
-            resource_uuid=sample_question.resource_uuid,
-            is_current=True,
-        )
-        assert current_question.space_tag_id is None
+        assert sample_question.is_current is True
+        assert sample_question.space_tag_id is None
+        assert Question.objects.filter(resource_uuid=sample_question.resource_uuid).count() == 1
 
     def test_question_patch_logs_tag_update_with_question_identity(
         self,
@@ -932,13 +929,15 @@ class TestKnowledgeApiContracts:
         data = response.data['data']
         assert data['space_tag']['id'] == sample_knowledge.space_tag_id
         assert {item['id'] for item in data['tags']} == {target_tag.id}
+        assert data['id'] == sample_knowledge.id
 
         sample_knowledge.refresh_from_db()
-        assert sample_knowledge.is_current is False
+        assert sample_knowledge.is_current is True
         assert Knowledge.objects.filter(
             resource_uuid=sample_knowledge.resource_uuid,
             is_current=True
         ).count() == 1
+        assert Knowledge.objects.filter(resource_uuid=sample_knowledge.resource_uuid).count() == 1
 
     def test_knowledge_patch_only_space_tag_inherits_unprovided_tags(
         self,
@@ -974,13 +973,15 @@ class TestKnowledgeApiContracts:
         data = response.data['data']
         assert data['space_tag']['id'] == target_space_tag.id
         assert {item['id'] for item in data['tags']} == {source_tag.id}
+        assert data['id'] == sample_knowledge.id
 
         sample_knowledge.refresh_from_db()
-        assert sample_knowledge.is_current is False
+        assert sample_knowledge.is_current is True
         assert Knowledge.objects.filter(
             resource_uuid=sample_knowledge.resource_uuid,
             is_current=True
         ).count() == 1
+        assert Knowledge.objects.filter(resource_uuid=sample_knowledge.resource_uuid).count() == 1
 
     def test_knowledge_patch_only_related_links_inherits_existing_content(
         self,

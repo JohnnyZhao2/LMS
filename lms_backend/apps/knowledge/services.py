@@ -7,7 +7,6 @@
 """
 import os
 import re
-import uuid
 from typing import List, Optional, Tuple
 
 from django.db import transaction
@@ -18,6 +17,11 @@ from apps.tags.models import Tag
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
+from core.versioning import (
+    build_next_version_data,
+    deactivate_current_version,
+    initialize_new_resource_version,
+)
 
 from .models import Knowledge
 from .selectors import get_knowledge_by_id, get_knowledge_queryset
@@ -87,19 +91,12 @@ class KnowledgeService(BaseService):
         # 2. 准备数据
         data['created_by'] = self.user
         data['updated_by'] = self.user
-        data['is_current'] = True
-        # 处理版本号（创建只允许新资源）
-        data.pop('resource_uuid', None)
-        data['resource_uuid'] = uuid.uuid4()
-        data['version_number'] = 1
+        initialize_new_resource_version(data)
         # 提取标签数据
         space_tag_id = data.pop('space_tag_id', None)
         tag_ids = data.pop('tag_ids', [])
         # 3. 创建知识
         knowledge = Knowledge.objects.create(**data)
-        Knowledge.objects.filter(
-            resource_uuid=knowledge.resource_uuid
-        ).exclude(pk=knowledge.pk).update(is_current=False)
         # 4. 设置标签
         self._set_tags(knowledge, space_tag_id, tag_ids)
         return knowledge
@@ -109,7 +106,10 @@ class KnowledgeService(BaseService):
     def update(self, pk: int, data: dict) -> Knowledge:
         """
         更新知识文档
-        版本管理：每次更新都创建新版本，旧版本保持不变
+        版本管理：
+        - 被任务引用的当前版本：创建新版本
+        - 未被任务引用的当前版本：原地更新
+        - 历史版本：禁止修改，确保快照不可变
         Args:
             pk: 主键
             data: 更新数据
@@ -119,25 +119,62 @@ class KnowledgeService(BaseService):
             BusinessError: 如果验证失败或无法更新
         """
         knowledge = self.get_by_id(pk)
-        # 当前版本需要创建新版本
-        if knowledge.is_current:
-            return self._create_new_version(knowledge, data)
-        # 非当前版本直接更新（历史版本的修正）
+        if not knowledge.is_current:
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='历史版本不可修改'
+            )
         self._validate_knowledge_data(
             data=data,
             fallback_content=knowledge.content,
         )
-        # 提取标签数据
-        space_tag_id = data.pop('space_tag_id', None)
-        tag_ids = data.pop('tag_ids', None)
-        data['updated_by'] = self.user
-        if data:
-            for key, value in data.items():
-                setattr(knowledge, key, value)
-            knowledge.save(update_fields=list(data.keys()))
-        # 更新标签
-        if space_tag_id is not None or tag_ids is not None:
-            self._set_tags(knowledge, space_tag_id, tag_ids)
+        space_tag_provided = 'space_tag_id' in data
+        tag_ids_provided = 'tag_ids' in data
+        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
+        tag_ids = data.pop('tag_ids', None) if tag_ids_provided else None
+
+        changed_fields = {
+            key: value
+            for key, value in data.items()
+            if getattr(knowledge, key, None) != value
+        }
+        normalized_tag_ids = (
+            self._get_tag_ids_or_error(tag_ids or [])
+            if tag_ids_provided
+            else list(knowledge.tags.values_list('id', flat=True))
+        )
+        space_changed = space_tag_provided and space_tag_id != knowledge.space_tag_id
+        tags_changed = (
+            tag_ids_provided
+            and set(normalized_tag_ids) != set(knowledge.tags.values_list('id', flat=True))
+        )
+        has_changes = bool(changed_fields or space_changed or tags_changed)
+        if not has_changes:
+            return knowledge
+
+        # 当前版本且被任务引用时，分叉新版本；否则原地更新
+        if knowledge.is_current and self._is_referenced_by_task(knowledge.id):
+            new_version_data = dict(changed_fields)
+            if space_tag_provided:
+                new_version_data['space_tag_id'] = space_tag_id
+            if tag_ids_provided:
+                new_version_data['tag_ids'] = normalized_tag_ids
+            return self._create_new_version(knowledge, new_version_data)
+
+        changed_fields['updated_by'] = self.user
+        for key, value in changed_fields.items():
+            setattr(knowledge, key, value)
+        knowledge.save(update_fields=list(changed_fields.keys()))
+
+        if space_changed:
+            if space_tag_id is None:
+                knowledge.space_tag = None
+                knowledge.save(update_fields=['space_tag'])
+            else:
+                knowledge.space_tag = self._get_space_tag_or_error(space_tag_id)
+                knowledge.save(update_fields=['space_tag'])
+        if tags_changed:
+            knowledge.tags.set(normalized_tag_ids)
         return knowledge
 
     @transaction.atomic
@@ -264,41 +301,30 @@ class KnowledgeService(BaseService):
         data: dict
     ) -> Knowledge:
         """基于当前版本创建新版本"""
-        # 获取下一个版本号
-        next_version = Knowledge.next_version_number(source.resource_uuid)
         # 提取标签数据
-        space_tag_id = data.pop('space_tag_id', None)
-        tag_ids = data.pop('tag_ids', None)
-        # 准备新版本数据：自动复制所有内容字段
-        new_version_data = {
-            'resource_uuid': source.resource_uuid,
-            'version_number': next_version,
-            'is_current': True,
-            'created_by': self.user,
-            'updated_by': self.user,
-            'view_count': source.view_count,
-        }
-        # 从 VERSION_COPY_FIELDS 自动复制字段，优先使用更新数据
-        for field in self.VERSION_COPY_FIELDS:
-            new_version_data[field] = data.get(field, getattr(source, field, None))
-        # 先取消旧版本的 is_current，避免唯一约束冲突
-        Knowledge.objects.filter(
-            resource_uuid=source.resource_uuid,
-            is_current=True
-        ).update(is_current=False)
-        # 创建新版本
-        new_version = Knowledge.objects.create(**new_version_data)
-        # 设置标签：按字段粒度处理，未传字段继承 source
-        inherited_space_tag_id = space_tag_id if space_tag_id is not None else source.space_tag_id
-        inherited_tag_ids = (
-            tag_ids
-            if tag_ids is not None
+        space_tag_provided = 'space_tag_id' in data
+        tag_ids_provided = 'tag_ids' in data
+        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else source.space_tag_id
+        tag_ids = (
+            data.pop('tag_ids', None)
+            if tag_ids_provided
             else list(source.tags.values_list('id', flat=True))
         )
+        new_version_data = build_next_version_data(
+            source,
+            actor=self.user,
+            copy_fields=self.VERSION_COPY_FIELDS,
+            overrides=data,
+            extra_fields={
+                'view_count': source.view_count,
+            },
+        )
+        deactivate_current_version(Knowledge, source.resource_uuid)
+        new_version = Knowledge.objects.create(**new_version_data)
         self._set_tags(
             new_version,
-            inherited_space_tag_id,
-            inherited_tag_ids,
+            space_tag_id,
+            tag_ids,
         )
         return new_version
 
