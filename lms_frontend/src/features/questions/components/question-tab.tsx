@@ -166,7 +166,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
     };
 
     const handleCreateQuestion = async () => {
-        if (!questionForm.space_tag_id) return toast.error('请选择 space');
         if (!questionForm.content?.trim()) return toast.error('请输入内容');
         if (!questionForm.answer) return toast.error('请设置答案');
 
@@ -191,7 +190,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
 
     const handleUpdateQuestion = async () => {
         if (!editingQuestion) return;
-        if (!editingForm.space_tag_id) return toast.error('请选择 space');
         if (!editingForm.content?.trim()) return toast.error('请输入内容');
         if (!editingForm.answer) return toast.error('请设置答案');
 

@@ -10,10 +10,8 @@ from typing import Optional
 
 from django.db import transaction
 
-from apps.authorization.policies import can_manage_owned_resource
 from apps.authorization.services import AuthorizationService
 from apps.tags.models import Tag
-from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -73,12 +71,9 @@ class QuestionService(BaseService):
         Returns:
             QuerySet
         """
-        # 非管理员默认只显示当前版本的题目
-        if self.user and not is_admin_like_role(self.get_current_role()):
-            if not filters:
-                filters = {}
-            if 'is_current' not in filters:
-                filters['is_current'] = True
+        # 题目管理默认只显示当前版本
+        filters = dict(filters or {})
+        filters.setdefault('is_current', True)
 
         queryset = question_base_queryset(include_deleted=False)
         queryset = apply_question_filters(queryset, filters, search)
@@ -91,7 +86,7 @@ class QuestionService(BaseService):
 
     def check_edit_permission(
         self,
-        question: Question,
+        _question: Question,
         *,
         permission_code: str,
         error_message: str,
@@ -107,12 +102,12 @@ class QuestionService(BaseService):
             BusinessError: 如果权限不足
         """
         authorization_service = AuthorizationService(self.request)
-        if can_manage_owned_resource(
-            current_role=self.get_current_role(),
-            actor_user_id=getattr(self.user, 'id', None),
-            owner_user_id=question.created_by_id,
-            has_allow_override=authorization_service.has_allow_override(permission_code),
-        ):
+        if authorization_service.has_deny_override(permission_code):
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权操作此题目',
+            )
+        if authorization_service.can(permission_code):
             return True
         raise BusinessError(
             code=ErrorCodes.PERMISSION_DENIED,
@@ -173,7 +168,7 @@ class QuestionService(BaseService):
         self.check_edit_permission(
             question,
             permission_code='question.update',
-            error_message='只有题目创建者或管理员可以操作此题目',
+            error_message='无权编辑此题目',
         )
         if not question.is_current:
             raise BusinessError(
@@ -248,7 +243,7 @@ class QuestionService(BaseService):
         self.check_edit_permission(
             question,
             permission_code='question.delete',
-            error_message='只有题目创建者或管理员可以操作此题目',
+            error_message='无权删除此题目',
         )
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):

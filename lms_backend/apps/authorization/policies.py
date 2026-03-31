@@ -6,8 +6,8 @@ from apps.users.permissions import is_admin_like_role
 
 
 PERMISSION_CONSTRAINT_SUMMARIES = {
-    'question.update': '非管理员仅可编辑自己创建的题目。',
-    'question.delete': '非管理员仅可删除自己创建的题目。',
+    'question.update': '具备题目编辑权限即可编辑题目。',
+    'question.delete': '具备题目删除权限即可删除题目。',
     'task.view': '非管理员仅可查看自己创建或已分配给自己的任务。',
     'task.update': '非管理员仅可编辑自己创建的任务。',
     'task.delete': '非管理员仅可删除自己创建的任务。',

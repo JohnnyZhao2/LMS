@@ -127,9 +127,12 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
       {/* ─── 元信息行 ─── */}
       <div className="px-5 pb-4 flex items-end gap-3">
         <div className="flex-1 space-y-1.5">
-          <Label className="text-[11px] text-text-muted font-medium">所属 space</Label>
+          <Label className="text-[11px] text-text-muted font-medium">
+            所属 space
+            <span className="ml-1.5 text-[10px] font-normal text-text-muted/50">选填</span>
+          </Label>
           <Select
-            value={questionForm.space_tag_id?.toString()}
+            value={questionForm.space_tag_id == null ? undefined : questionForm.space_tag_id.toString()}
             onValueChange={(val) => {
               if (readOnly) return;
               setQuestionForm((prev) => ({ ...prev, space_tag_id: Number(val) }));
@@ -137,6 +140,20 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
           >
             <SelectTrigger disabled={readOnly} className="h-8 text-sm">
               <SelectValue placeholder="选择 space" />
+              {!readOnly && questionForm.space_tag_id != null && (
+                <span
+                  role="button"
+                  aria-label="清空 space"
+                  className="inline-flex h-4 w-4 items-center justify-center rounded text-[14px] leading-none text-text-muted transition-colors hover:text-foreground"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setQuestionForm((prev) => ({ ...prev, space_tag_id: null }));
+                  }}
+                >
+                  ×
+                </span>
+              )}
             </SelectTrigger>
             <SelectContent>
               {spaceTypes?.map((t) => (

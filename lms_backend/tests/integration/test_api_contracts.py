@@ -299,6 +299,31 @@ class TestQuestionApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_question.id in result_ids
 
+    def test_question_list_hides_history_versions(self, api_client, mentor_user, sample_question):
+        historical_version = Question.objects.create(
+            content='旧版本题目',
+            question_type='SINGLE_CHOICE',
+            options=[
+                {'key': 'A', 'value': '选项A'},
+                {'key': 'B', 'value': '选项B'},
+            ],
+            answer='A',
+            score=1,
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            resource_uuid=sample_question.resource_uuid,
+            version_number=2,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/questions/?page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert sample_question.id in result_ids
+        assert historical_version.id not in result_ids
+
     def test_question_list_rejects_invalid_created_by(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/questions/?created_by=not-an-int')

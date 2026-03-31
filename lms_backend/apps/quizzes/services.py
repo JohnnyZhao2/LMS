@@ -11,9 +11,9 @@ from typing import List, Optional
 from django.db import transaction
 from django.db.models import Max
 
+from apps.authorization.services import AuthorizationService
 from apps.questions.models import Question
 from apps.tags.models import Tag
-from apps.users.permissions import is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -113,20 +113,32 @@ class QuizService(BaseService):
             qs = qs[offset:offset+limit] if offset else qs[:limit]
         return list(qs)
 
-    def check_edit_permission(self, quiz: Quiz) -> bool:
+    def check_edit_permission(
+        self,
+        *,
+        permission_code: str,
+        error_message: str,
+    ) -> bool:
         """
-        检查用户是否有编辑权限
+        检查用户是否有编辑/删除权限
         Property 16: 试卷所有权编辑控制
-        Args:
-            quiz: 试卷对象
         Returns:
             True 如果有权限
+        Raises:
+            BusinessError: 如果权限不足
         """
-        # Admin can edit/delete any quiz
-        if is_admin_like_role(self.get_current_role()):
+        authorization_service = AuthorizationService(self.request)
+        if authorization_service.has_deny_override(permission_code):
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权操作此试卷',
+            )
+        if authorization_service.can(permission_code):
             return True
-        # Others can only edit/delete their own quizzes
-        return quiz.created_by_id == self.user.id
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=error_message,
+        )
 
     @transaction.atomic
     @log_content_action(
@@ -209,9 +221,9 @@ class QuizService(BaseService):
         """
         quiz = self.get_by_id(pk)
         # 检查权限
-        self.validate_permission(
-            self.check_edit_permission(quiz),
-            '只有试卷创建者或管理员可以编辑此试卷'
+        self.check_edit_permission(
+            permission_code='quiz.update',
+            error_message='无权编辑此试卷',
         )
         if not quiz.is_current:
             raise BusinessError(
@@ -302,9 +314,9 @@ class QuizService(BaseService):
         """
         quiz = self.get_by_id(pk)
         # 检查权限
-        self.validate_permission(
-            self.check_edit_permission(quiz),
-            '只有试卷创建者或管理员可以删除此试卷'
+        self.check_edit_permission(
+            permission_code='quiz.delete',
+            error_message='无权删除此试卷',
         )
         # 检查是否被引用
         if self._is_referenced_by_task(quiz.id):
