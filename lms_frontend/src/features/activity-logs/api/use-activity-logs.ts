@@ -4,6 +4,7 @@ import type {
   ActivityLogListResponse,
   ActivityLogPolicy,
   ActivityLogsQuery,
+  ActivityLogUser,
 } from '../types';
 
 const buildActivityLogsQueryString = (params: ActivityLogsQuery) => {
@@ -42,6 +43,16 @@ export const useActivityLogs = (params: ActivityLogsQuery, enabled: boolean = tr
     enabled,
     staleTime: 0,
     refetchOnMount: 'always',
+  });
+};
+
+export const useActivityLogUsers = (enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['activity-log-users'],
+    queryFn: async () => {
+      return await apiClient.get<ActivityLogUser[]>(`/logs/users/`);
+    },
+    enabled,
   });
 };
 

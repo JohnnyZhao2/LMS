@@ -1,10 +1,10 @@
-import { Check, Users } from 'lucide-react';
-import { UserAvatar } from '@/components/common/user-avatar';
-import { cn } from '@/lib/utils';
-import type { ActivityLogMember, ActivityLogType } from '../types';
+import { useMemo, useState } from 'react';
+import { MemberSelectPanel } from '@/components/common/member-select-panel';
+import type { ActivityLogType, ActivityLogUser } from '../types';
 
 interface ActivityLogMemberListProps {
-  members: ActivityLogMember[];
+  users: ActivityLogUser[];
+  memberActivityCountMap: Record<number, number>;
   selectedMemberIds: number[];
   activeType: ActivityLogType;
   onToggleMember: (memberId: number) => void;
@@ -16,85 +16,76 @@ const TYPE_LABELS: Record<ActivityLogType, string> = {
   operation: '行为记录',
 };
 
+type ActivityLogDepartmentFilter = 'all' | 'room1' | 'room2';
+
+const matchesDepartmentFilter = (user: ActivityLogUser, filter: ActivityLogDepartmentFilter) => {
+  if (filter === 'all') {
+    return true;
+  }
+
+  const departmentCode = user.department_code?.trim().toUpperCase() ?? '';
+  if (filter === 'room1') {
+    return departmentCode === 'DEPT1';
+  }
+  return departmentCode === 'DEPT2';
+};
+
 export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
-  members,
+  users,
+  memberActivityCountMap,
   selectedMemberIds,
   activeType,
   onToggleMember,
 }) => {
+  const [departmentFilter, setDepartmentFilter] = useState<ActivityLogDepartmentFilter>('all');
+
+  const filteredMembers = useMemo(
+    () => users.filter((user) => matchesDepartmentFilter(user, departmentFilter)),
+    [departmentFilter, users],
+  );
+
+  const panelItems = filteredMembers.map((user) => {
+    const activityCount = memberActivityCountMap[user.id] ?? 0;
+    const isSelected = selectedMemberIds.includes(user.id);
+    return {
+      id: user.id,
+      name: user.username,
+      employeeId: user.employee_id,
+      avatarKey: user.avatar_key,
+      meta: `${user.employee_id} · ${
+        user.department_code === 'DEPT1'
+          ? '一室'
+          : user.department_code === 'DEPT2'
+            ? '二室'
+            : (user.department_name ?? '未分组')
+      }`,
+      count: activityCount,
+      disabled: activityCount === 0 && !isSelected,
+    };
+  });
+
+  const resolvedEmptyText = filteredMembers.length === 0
+    ? (departmentFilter === 'all'
+      ? '暂无可筛选成员'
+      : '当前分组下没有成员')
+    : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
+
   return (
-    <aside className="overflow-hidden rounded-2xl border border-border/60 bg-background">
-      {/* 头部 */}
-      <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-text-muted" />
-          <span className="text-[13px] font-semibold text-foreground">成员</span>
-          <span className="text-[12px] text-text-muted">({members.length})</span>
-        </div>
-      </div>
-
-      {/* 成员列表 */}
-      <div className="scrollbar-subtle max-h-[38rem] overflow-y-auto p-2">
-        {members.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-[13px] text-text-muted">
-            当前"{TYPE_LABELS[activeType]}"下没有成员记录
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            {members.map((member) => {
-              const checked = selectedMemberIds.includes(member.user.id);
-              return (
-                <button
-                  key={member.user.id}
-                  type="button"
-                  onClick={() => onToggleMember(member.user.id)}
-                  className={cn(
-                    'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150',
-                    checked
-                      ? 'bg-primary-50/70'
-                      : 'hover:bg-muted'
-                  )}
-                >
-                  {/* Checkbox */}
-                  <div
-                    className={cn(
-                      'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition-colors',
-                      checked
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-border bg-background group-hover:border-primary/40'
-                    )}
-                  >
-                    {checked && <Check className="h-3 w-3" strokeWidth={3} />}
-                  </div>
-
-                  {/* Avatar */}
-                  <UserAvatar
-                    avatarKey={member.user.avatar_key}
-                    name={member.user.username}
-                    size="md"
-                    className="h-9 w-9 shrink-0"
-                  />
-
-                  {/* Info */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-medium leading-tight text-foreground">
-                      {member.user.username}
-                    </p>
-                    <p className="truncate text-[11px] leading-tight text-text-muted">
-                      {member.user.employee_id}
-                    </p>
-                  </div>
-
-                  {/* Count */}
-                  <span className="shrink-0 text-[14px] font-semibold tabular-nums text-text-muted">
-                    {member.activity_count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </aside>
+    <MemberSelectPanel
+      title="成员"
+      items={panelItems}
+      selectedIds={selectedMemberIds}
+      onSelect={onToggleMember}
+      selectionMode="multiple"
+      emptyText={resolvedEmptyText}
+      segments={[
+        { label: '全部', value: 'all' },
+        { label: '一室', value: 'room1' },
+        { label: '二室', value: 'room2' },
+      ]}
+      activeSegment={departmentFilter}
+      onSegmentChange={(value) => setDepartmentFilter(value as ActivityLogDepartmentFilter)}
+      listClassName="max-h-[38rem]"
+    />
   );
 };

@@ -9,7 +9,7 @@ from apps.activity_logs.models import ContentLog, OperationLog, UserLog
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
-from apps.spot_checks.models import SpotCheck
+from apps.spot_checks.models import SpotCheck, SpotCheckItem
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
@@ -24,6 +24,19 @@ def api_client():
 @pytest.fixture
 def department():
     return Department.objects.create(name='契约测试部门', code='CONTRACT_DEPT')
+
+
+def _create_spot_check(student, checker, *, topic='契约测试抽查', content='', score='88.00', comment='表现稳定'):
+    spot_check = SpotCheck.objects.create(student=student, checker=checker)
+    SpotCheckItem.objects.create(
+        spot_check=spot_check,
+        topic=topic,
+        content=content,
+        score=score,
+        comment=comment,
+        order=0,
+    )
+    return spot_check
 
 
 def _grant_role_permissions(role, permission_codes):
@@ -275,14 +288,7 @@ def submitted_exam_submission(student_assignment, exam_task_quiz):
 
 @pytest.fixture
 def sample_spot_check(student_user, mentor_user):
-    return SpotCheck.objects.create(
-        student=student_user,
-        checker=mentor_user,
-        content='契约测试抽查',
-        score=88,
-        comment='表现稳定',
-        checked_at=timezone.now(),
-    )
+    return _create_spot_check(student_user, mentor_user)
 
 
 @pytest.mark.django_db
@@ -1178,10 +1184,14 @@ class TestSpotCheckApiContracts:
             '/api/spot-checks/',
             {
                 'student': student_user.id,
-                'content': '新建抽查',
-                'score': '91.5',
-                'comment': '创建成功',
-                'checked_at': timezone.now().isoformat(),
+                'items': [
+                    {
+                        'topic': '新建抽查',
+                        'content': '闭包和事件循环',
+                        'score': '91.5',
+                        'comment': '创建成功',
+                    }
+                ],
             },
             format='json',
         )
@@ -1191,6 +1201,7 @@ class TestSpotCheckApiContracts:
         assert response.data['message'] == '创建成功'
         assert 'data' in response.data
         assert response.data['data']['student'] == student_user.id
+        assert response.data['data']['topic_count'] == 1
 
     def test_spot_check_list_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
         api_client.force_authenticate(user=mentor_user)
@@ -1206,6 +1217,7 @@ class TestSpotCheckApiContracts:
         result = next(item for item in response.data['data']['results'] if item['id'] == sample_spot_check.id)
         assert result['student_avatar_key'] == sample_spot_check.student.avatar_key
         assert result['checker_avatar_key'] == sample_spot_check.checker.avatar_key
+        assert result['topic_summary'] == sample_spot_check.topic_summary
 
     def test_spot_check_list_rejects_invalid_student_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -1225,19 +1237,56 @@ class TestSpotCheckApiContracts:
         assert response.data['data']['id'] == sample_spot_check.id
         assert response.data['data']['student_avatar_key'] == sample_spot_check.student.avatar_key
         assert response.data['data']['checker_avatar_key'] == sample_spot_check.checker.avatar_key
+        assert response.data['data']['items'][0]['topic'] == '契约测试抽查'
 
     def test_spot_check_patch_response_is_wrapped(self, api_client, mentor_user, sample_spot_check):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.patch(
             f'/api/spot-checks/{sample_spot_check.id}/',
-            {'comment': '已更新评语'},
+            {
+                'items': [
+                    {
+                        'topic': '契约测试抽查',
+                        'content': '补充追问',
+                        'score': '88.0',
+                        'comment': '已更新评语',
+                    }
+                ]
+            },
             format='json',
         )
 
         assert response.status_code == 200
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
-        assert response.data['data']['comment'] == '已更新评语'
+        assert response.data['data']['items'][0]['comment'] == '已更新评语'
+
+    def test_spot_check_student_list_includes_students_without_records(
+        self,
+        api_client,
+        mentor_user,
+        student_user,
+        department,
+    ):
+        student_without_record = User.objects.create_user(
+            employee_id='CONTRACT_STUDENT_002',
+            username='契约测试学员2',
+            password='password123',
+            department=department,
+            mentor=mentor_user,
+        )
+        _create_spot_check(student_user, mentor_user)
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/spot-checks/students/')
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert isinstance(response.data['data'], list)
+        result_ids = [item['id'] for item in response.data['data']]
+        assert student_user.id in result_ids
+        assert student_without_record.id in result_ids
 
 
 @pytest.mark.django_db
@@ -1412,6 +1461,31 @@ class TestGradingApiContracts:
 
 @pytest.mark.django_db
 class TestActivityLogApiContracts:
+    def test_activity_log_user_pool_response_includes_users_without_logs(
+        self,
+        api_client,
+        admin_user,
+        department,
+    ):
+        user_without_logs = User.objects.create_user(
+            employee_id='CONTRACT_NO_LOG_001',
+            username='无日志用户',
+            password='password123',
+            department=department,
+        )
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get('/api/logs/users/')
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert isinstance(response.data['data'], list)
+        result_ids = {item['id'] for item in response.data['data']}
+        assert admin_user.id in result_ids
+        assert user_without_logs.id in result_ids
+        target = next(item for item in response.data['data'] if item['id'] == user_without_logs.id)
+        assert target['department_name'] == department.name
+
     def test_activity_log_list_response_is_wrapped(self, api_client, admin_user, student_user):
         log = UserLog.objects.create(
             user=student_user,

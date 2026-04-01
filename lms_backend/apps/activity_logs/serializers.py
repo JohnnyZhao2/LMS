@@ -93,6 +93,37 @@ class SimpleUserSerializer(serializers.Serializer):
     employee_id = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
     avatar_key = serializers.CharField(read_only=True)
+    department_name = serializers.SerializerMethodField()
+    department_code = serializers.SerializerMethodField()
+
+    def get_department_name(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('department_name')
+        department = getattr(obj, 'department', None)
+        return getattr(department, 'name', None)
+
+    def get_department_code(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('department_code')
+        department = getattr(obj, 'department', None)
+        return getattr(department, 'code', None)
+
+
+class ActivityLogUserOptionSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    employee_id = serializers.CharField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    avatar_key = serializers.CharField(read_only=True)
+    department_name = serializers.SerializerMethodField()
+    department_code = serializers.SerializerMethodField()
+
+    def get_department_name(self, obj):
+        department = getattr(obj, 'department', None)
+        return getattr(department, 'name', None)
+
+    def get_department_code(self, obj):
+        department = getattr(obj, 'department', None)
+        return getattr(department, 'code', None)
 
 
 class ActivityLogItemSerializer(serializers.Serializer):

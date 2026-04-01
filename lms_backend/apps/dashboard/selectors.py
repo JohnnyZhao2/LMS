@@ -364,42 +364,42 @@ def get_pending_grading_count(student_ids: List[int]) -> int:
 
 
 def get_monthly_spot_check_stats(student_ids: List[int]) -> Dict[str, Any]:
-    """获取本月抽查统计（名下学员）"""
+    """获取本月抽查统计（名下学员）。"""
     if not student_ids:
         return {'count': 0, 'avg_score': None}
     start_dt = get_month_start_datetime()
     result = SpotCheck.objects.filter(
         student_id__in=student_ids,
-        checked_at__gte=start_dt
+        created_at__gte=start_dt,
     ).aggregate(
-        count=Count('id'),
-        avg_score=Avg('score')
+        count=Count('id', distinct=True),
+        avg_score=Avg('items__score'),
     )
     avg_score = float(result['avg_score']) if result['avg_score'] is not None else None
     return {
         'count': result['count'],
-        'avg_score': round(avg_score, 1) if avg_score is not None else None
+        'avg_score': round(avg_score, 1) if avg_score is not None else None,
     }
 
 
 def get_monthly_spot_check_stats_by_student(student_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-    """获取本月抽查统计（按学员分组）"""
+    """获取本月抽查统计（按学员分组）。"""
     if not student_ids:
         return {}
     start_dt = get_month_start_datetime()
     stats = SpotCheck.objects.filter(
         student_id__in=student_ids,
-        checked_at__gte=start_dt
+        created_at__gte=start_dt,
     ).values('student_id').annotate(
-        count=Count('id'),
-        avg_score=Avg('score')
+        count=Count('id', distinct=True),
+        avg_score=Avg('items__score'),
     )
     result: Dict[int, Dict[str, Any]] = {}
     for item in stats:
         avg_score = float(item['avg_score']) if item['avg_score'] is not None else None
         result[item['student_id']] = {
             'count': item['count'],
-            'avg_score': round(avg_score, 1) if avg_score is not None else None
+            'avg_score': round(avg_score, 1) if avg_score is not None else None,
         }
     return result
 

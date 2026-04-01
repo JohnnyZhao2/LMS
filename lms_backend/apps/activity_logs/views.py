@@ -5,10 +5,12 @@ Activity logs views.
 from typing import Any
 
 from django.db import transaction
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.services import AuthorizationService
+from apps.users.models import User
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
@@ -27,6 +29,7 @@ from .serializers import (
     ActivityLogPolicySerializer,
     ActivityLogPolicyUpdateSerializer,
     ActivityLogQuerySerializer,
+    ActivityLogUserOptionSerializer,
 )
 from .services import ActivityLogService
 
@@ -121,6 +124,40 @@ class ActivityLogListView(BaseAPIView):
             message=_extract_validation_message(serializer.errors),
             details=serializer.errors,
         )
+
+
+class ActivityLogUserListView(BaseAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='获取日志成员用户池',
+        description='返回可用于日志筛选的用户列表（不依赖是否有日志记录）',
+        parameters=[
+            OpenApiParameter(name='search', type=str, description='按姓名、工号或部门搜索'),
+        ],
+        responses={200: ActivityLogUserOptionSerializer(many=True), 403: OpenApiResponse(description='无权限')},
+        tags=['活动日志']
+    )
+    def get(self, request):
+        enforce_activity_log_view_permission(request, '无权查看活动日志成员列表')
+
+        queryset = (
+            User.objects.filter(is_active=True)
+            .select_related('department')
+            .only('id', 'employee_id', 'username', 'avatar_key', 'department__name', 'department__code')
+        )
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search)
+                | Q(employee_id__icontains=search)
+                | Q(department__name__icontains=search)
+            )
+
+        queryset = queryset.order_by('department__code', 'employee_id', 'id')
+        serializer = ActivityLogUserOptionSerializer(queryset, many=True)
+        return success_response(serializer.data)
 
 
 class ActivityLogPolicyView(BaseAPIView):

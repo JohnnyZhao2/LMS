@@ -9,7 +9,7 @@ from apps.authorization.models import Permission, RolePermission
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz, QuizQuestion
-from apps.spot_checks.models import SpotCheck
+from apps.spot_checks.models import SpotCheck, SpotCheckItem
 from apps.submissions.models import Answer, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
@@ -67,6 +67,19 @@ def active_user(department):
         department=department,
         is_active=True,
     )
+
+
+def _create_spot_check(student, checker, *, topic: str, score: str) -> SpotCheck:
+    spot_check = SpotCheck.objects.create(student=student, checker=checker)
+    SpotCheckItem.objects.create(
+        spot_check=spot_check,
+        topic=topic,
+        score=score,
+        comment='',
+        content='',
+        order=0,
+    )
+    return spot_check
 
 
 @pytest.mark.django_db
@@ -155,19 +168,17 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         status='IN_PROGRESS',
     )
 
-    spot_check_as_student = SpotCheck.objects.create(
+    spot_check_as_student = _create_spot_check(
         student=inactive_user,
         checker=admin_user,
-        content='抽查A',
-        score=90,
-        checked_at=timezone.now(),
+        topic='抽查A',
+        score='90',
     )
-    spot_check_as_checker = SpotCheck.objects.create(
+    spot_check_as_checker = _create_spot_check(
         student=other_user,
         checker=inactive_user,
-        content='抽查B',
-        score=80,
-        checked_at=timezone.now(),
+        topic='抽查B',
+        score='80',
     )
 
     response = api_client.delete(f'/api/users/{inactive_user.id}/')

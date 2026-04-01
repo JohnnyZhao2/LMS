@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import {
   useActivityLogs,
   useBulkDeleteActivityLogs,
+  useActivityLogUsers,
 } from '../api/use-activity-logs';
 import { ActivityLogFeed } from './activity-log-feed';
 import { ActivityLogMemberList } from './activity-log-member-list';
@@ -61,6 +62,7 @@ export const ActivityLogsPanel: React.FC = () => {
   );
 
   const { data, isLoading } = useActivityLogs(query, canViewActivityLogs);
+  const { data: activityLogUsers = [] } = useActivityLogUsers(canViewActivityLogs);
   const bulkDeleteActivityLogs = useBulkDeleteActivityLogs();
 
   const normalizedItems = useMemo<ActivityLogItem[]>(
@@ -68,9 +70,17 @@ export const ActivityLogsPanel: React.FC = () => {
     [data?.results]
   );
 
+  const memberActivityCountMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const member of data?.members ?? []) {
+      map[member.user.id] = member.activity_count;
+    }
+    return map;
+  }, [data?.members]);
+
   const selectedMembers = useMemo(
-    () => (data?.members ?? []).filter((m) => selectedMemberIds.includes(m.user.id)),
-    [data?.members, selectedMemberIds]
+    () => activityLogUsers.filter((member) => selectedMemberIds.includes(member.id)),
+    [activityLogUsers, selectedMemberIds]
   );
   const selectedLogs = useMemo(
     () => normalizedItems.filter((item) => selectedLogIds.includes(item.id)),
@@ -220,7 +230,8 @@ export const ActivityLogsPanel: React.FC = () => {
       <div className={PANEL_GRID_CLASS}>
         {/* 左侧成员列表 */}
         <ActivityLogMemberList
-          members={data?.members ?? []}
+          users={activityLogUsers}
+          memberActivityCountMap={memberActivityCountMap}
           selectedMemberIds={selectedMemberIds}
           activeType={activeType}
           onToggleMember={handleToggleMember}
@@ -237,12 +248,12 @@ export const ActivityLogsPanel: React.FC = () => {
                     <div className="scrollbar-subtle flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
                       {selectedMembers.map((member) => (
                         <button
-                          key={member.user.id}
+                          key={member.id}
                           type="button"
-                          onClick={() => handleToggleMember(member.user.id)}
+                          onClick={() => handleToggleMember(member.id)}
                           className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-50/70 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-100"
                         >
-                          <span>{member.user.username}</span>
+                          <span>{member.username}</span>
                           <X className="h-3 w-3 opacity-70" />
                         </button>
                       ))}

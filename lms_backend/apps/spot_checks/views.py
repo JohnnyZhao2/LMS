@@ -3,10 +3,12 @@
 只处理 HTTP 请求/响应，所有业务逻辑在 Service 层。
 Properties: 35, 36
 """
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.services import AuthorizationService
+from apps.users.permissions import get_accessible_students
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, get_status_code_for_error
 from core.pagination import StandardResultsSetPagination
@@ -23,6 +25,7 @@ from .serializers import (
     SpotCheckCreateSerializer,
     SpotCheckDetailSerializer,
     SpotCheckListSerializer,
+    SpotCheckStudentSerializer,
     SpotCheckUpdateSerializer,
 )
 from .services import SpotCheckService
@@ -43,38 +46,24 @@ class SpotCheckListCreateView(BaseAPIView):
     抽查记录列表和创建端点
     Properties: 35, 36
     """
+
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
-    service_class = SpotCheckService  # 声明 Service 类
+    service_class = SpotCheckService
 
     @extend_schema(
         summary='获取抽查记录列表',
-        description='获取所辖范围内的抽查记录列表，按时间倒序排列',
+        description='获取所辖范围内的抽查记录列表，按创建时间倒序排列',
         parameters=[
-            OpenApiParameter(
-                name='student_id', 
-                type=int, 
-                description='按学员ID筛选'
-            ),
-            OpenApiParameter(
-                name='page',
-                type=int,
-                description='页码'
-            ),
-            OpenApiParameter(
-                name='page_size',
-                type=int,
-                description='每页数量'
-            ),
+            OpenApiParameter(name='student_id', type=int, description='按学员ID筛选'),
+            OpenApiParameter(name='page', type=int, description='页码'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
         responses={200: SpotCheckListSerializer(many=True)},
-        tags=['抽查管理']
+        tags=['抽查管理'],
     )
     def get(self, request):
-        """
-        获取抽查记录列表
-        Property 36: 抽查记录时间排序
-        """
+        """获取抽查记录列表。"""
         AuthorizationService(request).enforce(
             'spot_check.view',
             error_message='无权查看抽查记录',
@@ -85,23 +74,20 @@ class SpotCheckListCreateView(BaseAPIView):
             minimum=1,
         )
 
-        # 调用 Service（直接用 self.service，不用传 user/request）
         try:
             spot_checks = self.service.get_list(
                 student_id=student_id,
-                ordering='-checked_at'
+                ordering='-created_at',
             )
-        except BusinessError as e:
-            return _handle_business_error(e)
+        except BusinessError as error:
+            return _handle_business_error(error)
 
-        # 分页处理
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(spot_checks, request)
         if page is not None:
             serializer = SpotCheckListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
-        # 序列化输出（如果不分页）
         serializer = SpotCheckListSerializer(spot_checks, many=True)
         return list_response(serializer.data)
 
@@ -114,38 +100,68 @@ class SpotCheckListCreateView(BaseAPIView):
             400: OpenApiResponse(description='参数错误或学员不在权限范围内'),
             403: OpenApiResponse(description='无权限'),
         },
-        tags=['抽查管理']
+        tags=['抽查管理'],
     )
     def post(self, request):
-        """
-        创建抽查记录
-        Property 35: 抽查学员范围限制
-        """
+        """创建抽查记录。"""
         AuthorizationService(request).enforce(
             'spot_check.create',
             error_message='无权创建抽查记录',
         )
-        # 反序列化输入
         serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        # 调用 Service（直接用 self.service）
+
         try:
             spot_check = self.service.create(data=serializer.validated_data)
-        except BusinessError as e:
-            return _handle_business_error(e)
-        
-        # 序列化输出
+        except BusinessError as error:
+            return _handle_business_error(error)
+
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return created_response(response_serializer.data)
 
 
-class SpotCheckDetailView(BaseAPIView):
-    """
-    抽查记录详情、更新、删除端点
-    """
+class SpotCheckStudentListView(BaseAPIView):
+    """抽查学员筛选列表。"""
+
     permission_classes = [IsAuthenticated]
-    service_class = SpotCheckService  # 声明 Service 类
+
+    @extend_schema(
+        summary='获取可查看抽查的学员列表',
+        description='返回当前角色在抽查查看权限范围内的全部学员（不要求已有抽查记录），可按姓名或工号搜索',
+        parameters=[
+            OpenApiParameter(name='search', type=str, description='按学员姓名或工号搜索'),
+        ],
+        responses={200: SpotCheckStudentSerializer(many=True)},
+        tags=['抽查管理'],
+    )
+    def get(self, request):
+        AuthorizationService(request).enforce(
+            'spot_check.view',
+            error_message='无权查看抽查学员列表',
+        )
+
+        queryset = get_accessible_students(
+            request.user,
+            request=request,
+            permission_code='spot_check.view',
+        ).filter(roles__code='STUDENT').select_related('department').distinct()
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(username__icontains=search) | Q(employee_id__icontains=search)
+            )
+
+        queryset = queryset.order_by('username', 'employee_id')
+        serializer = SpotCheckStudentSerializer(queryset, many=True)
+        return list_response(serializer.data)
+
+
+class SpotCheckDetailView(BaseAPIView):
+    """抽查记录详情、更新、删除端点。"""
+
+    permission_classes = [IsAuthenticated]
+    service_class = SpotCheckService
 
     @extend_schema(
         summary='获取抽查记录详情',
@@ -155,18 +171,18 @@ class SpotCheckDetailView(BaseAPIView):
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='抽查记录不存在'),
         },
-        tags=['抽查管理']
+        tags=['抽查管理'],
     )
     def get(self, request, pk):
-        """获取抽查记录详情"""
+        """获取抽查记录详情。"""
         AuthorizationService(request).enforce(
             'spot_check.view',
             error_message='无权查看抽查记录详情',
         )
         try:
             spot_check = self.service.get_by_id(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
+        except BusinessError as error:
+            return _handle_business_error(error)
         serializer = SpotCheckDetailSerializer(spot_check)
         return success_response(serializer.data)
 
@@ -180,28 +196,22 @@ class SpotCheckDetailView(BaseAPIView):
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='抽查记录不存在'),
         },
-        tags=['抽查管理']
+        tags=['抽查管理'],
     )
     def patch(self, request, pk):
-        """
-        更新抽查记录
-        只能更新自己创建的记录（管理员除外）
-        """
+        """更新抽查记录。"""
         AuthorizationService(request).enforce(
             'spot_check.update',
             error_message='无权更新抽查记录',
         )
-        # 反序列化输入
         serializer = SpotCheckUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        
-        # 调用 Service
+
         try:
             spot_check = self.service.update(pk=pk, data=serializer.validated_data)
-        except BusinessError as e:
-            return _handle_business_error(e)
-        
-        # 序列化输出
+        except BusinessError as error:
+            return _handle_business_error(error)
+
         response_serializer = SpotCheckDetailSerializer(spot_check)
         return success_response(response_serializer.data)
 
@@ -213,19 +223,16 @@ class SpotCheckDetailView(BaseAPIView):
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='抽查记录不存在'),
         },
-        tags=['抽查管理']
+        tags=['抽查管理'],
     )
     def delete(self, request, pk):
-        """
-        删除抽查记录
-        只能删除自己创建的记录（管理员除外）
-        """
+        """删除抽查记录。"""
         AuthorizationService(request).enforce(
             'spot_check.delete',
             error_message='无权删除抽查记录',
         )
         try:
             self.service.delete(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
+        except BusinessError as error:
+            return _handle_business_error(error)
         return no_content_response()

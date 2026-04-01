@@ -1,10 +1,9 @@
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from typing import Optional
 
 from apps.authorization.models import Permission, UserPermissionOverride
-from apps.spot_checks.models import SpotCheck
+from apps.spot_checks.models import SpotCheck, SpotCheckItem
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -34,6 +33,19 @@ def _create_superuser(*, employee_id: str, username: str, department: Department
 
 def _extract_list_items(response):
     return response.data['data']['results']
+
+
+def _create_spot_check(student, checker, *, topic: str, score: str, comment: str = 'ok', content: str = '') -> SpotCheck:
+    spot_check = SpotCheck.objects.create(student=student, checker=checker)
+    SpotCheckItem.objects.create(
+        spot_check=spot_check,
+        topic=topic,
+        content=content,
+        score=score,
+        comment=comment,
+        order=0,
+    )
+    return spot_check
 
 
 @pytest.mark.django_db
@@ -172,22 +184,8 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides():
             granted_by=super_admin,
         )
 
-    SpotCheck.objects.create(
-        student=mentee,
-        checker=super_admin,
-        content='超管范围记录1',
-        score='88.00',
-        comment='ok',
-        checked_at=timezone.now(),
-    )
-    SpotCheck.objects.create(
-        student=extra_student,
-        checker=super_admin,
-        content='超管范围记录2',
-        score='86.00',
-        comment='ok',
-        checked_at=timezone.now(),
-    )
+    _create_spot_check(student=mentee, checker=super_admin, topic='超管范围记录1', score='88.00')
+    _create_spot_check(student=extra_student, checker=super_admin, topic='超管范围记录2', score='86.00')
 
     client.force_authenticate(user=super_admin)
 
@@ -235,22 +233,8 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
     mentee.mentor = mentor
     mentee.save(update_fields=['mentor'])
 
-    SpotCheck.objects.create(
-        student=mentee,
-        checker=mentor,
-        content='默认范围可见',
-        score='88.00',
-        comment='ok',
-        checked_at=timezone.now(),
-    )
-    SpotCheck.objects.create(
-        student=extra_student,
-        checker=mentor,
-        content='默认范围不可见',
-        score='86.00',
-        comment='ok',
-        checked_at=timezone.now(),
-    )
+    _create_spot_check(student=mentee, checker=mentor, topic='默认范围可见', score='88.00')
+    _create_spot_check(student=extra_student, checker=mentor, topic='默认范围不可见', score='86.00')
 
     client.force_authenticate(user=mentor)
 
@@ -301,10 +285,13 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
         '/api/spot-checks/',
         {
             'student': extra_student.id,
-            'content': '覆盖后可创建',
-            'score': '90',
-            'comment': 'ok',
-            'checked_at': timezone.now().isoformat(),
+            'items': [
+                {
+                    'topic': '覆盖后可创建',
+                    'score': '90',
+                    'comment': 'ok',
+                }
+            ],
         },
         format='json',
     )
@@ -324,10 +311,13 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
         '/api/spot-checks/',
         {
             'student': mentee.id,
-            'content': '覆盖后禁止创建',
-            'score': '91',
-            'comment': 'deny',
-            'checked_at': timezone.now().isoformat(),
+            'items': [
+                {
+                    'topic': '覆盖后禁止创建',
+                    'score': '91',
+                    'comment': 'deny',
+                }
+            ],
         },
         format='json',
     )

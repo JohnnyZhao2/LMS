@@ -100,9 +100,14 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
             .order_by('-activity_count', '-last_activity_at')
         )
         # 批量查用户信息
+        users = (
+            User.objects.filter(id__in=actor_ids)
+            .select_related('department')
+            .only('id', 'employee_id', 'username', 'avatar_key', 'department__name')
+        )
         user_map = {
             u.id: u
-            for u in User.objects.filter(id__in=actor_ids).only('id', 'employee_id', 'username', 'avatar_key')
+            for u in users
         }
         return [
             {
@@ -111,6 +116,8 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
                     'employee_id': user_map[item['effective_actor_id']].employee_id,
                     'username': user_map[item['effective_actor_id']].username,
                     'avatar_key': user_map[item['effective_actor_id']].avatar_key,
+                    'department_name': getattr(user_map[item['effective_actor_id']].department, 'name', None),
+                    'department_code': getattr(user_map[item['effective_actor_id']].department, 'code', None),
                 },
                 'activity_count': item['activity_count'],
                 'last_activity_at': item['last_activity_at'],
@@ -125,6 +132,8 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
         f'{actor_field}__employee_id',
         f'{actor_field}__username',
         f'{actor_field}__avatar_key',
+        f'{actor_field}__department__name',
+        f'{actor_field}__department__code',
     ).annotate(
         activity_count=Count('id'),
         last_activity_at=Max('created_at'),
@@ -141,6 +150,8 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
                 'employee_id': item[f'{actor_field}__employee_id'],
                 'username': item[f'{actor_field}__username'],
                 'avatar_key': item[f'{actor_field}__avatar_key'],
+                'department_name': item[f'{actor_field}__department__name'],
+                'department_code': item[f'{actor_field}__department__code'],
             },
             'activity_count': item['activity_count'],
             'last_activity_at': item['last_activity_at'],

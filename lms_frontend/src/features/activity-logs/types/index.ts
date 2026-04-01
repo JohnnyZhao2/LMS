@@ -6,6 +6,17 @@ export interface ActivityLogActor {
   employee_id: string;
   username: string;
   avatar_key: string;
+  department_name?: string | null;
+  department_code?: string | null;
+}
+
+export interface ActivityLogUser {
+  id: number;
+  employee_id: string;
+  username: string;
+  avatar_key: string;
+  department_name?: string | null;
+  department_code?: string | null;
 }
 
 export interface ActivityLogItem {
