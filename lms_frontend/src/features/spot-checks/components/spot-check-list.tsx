@@ -1,19 +1,19 @@
 import { startTransition, useDeferredValue, useMemo, useState } from 'react';
-import { ListChecks, Trash2 } from 'lucide-react';
+import { ListChecks, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { CircleButton } from '@/components/ui/circle-button';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
-import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { isAdminLikeRole } from '@/lib/role-utils';
 import type { SpotCheck, SpotCheckStudent } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
 import { useSpotChecks, useSpotCheckStudents } from '../api/get-spot-checks';
+import { SpotCheckForm } from './spot-check-form';
 import { SpotCheckRecordList } from './spot-check-record-list';
 import { SpotCheckStudentPanel, type SpotCheckDepartmentFilter } from './spot-check-student-panel';
 
@@ -35,12 +35,13 @@ export const SpotCheckList: React.FC = () => {
   const [paginationByStudent, setPaginationByStudent] = useState<Record<number, { page: number; pageSize: number }>>(
     {},
   );
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<SpotCheck | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SpotCheck | null>(null);
 
   const currentRole = useCurrentRole();
   const deferredStudentSearch = useDeferredValue(studentSearch.trim());
   const { user, hasPermission } = useAuth();
-  const { roleNavigate } = useRoleNavigate();
   const deleteSpotCheck = useDeleteSpotCheck();
 
   const { data: students = [], isLoading: studentsLoading } = useSpotCheckStudents({
@@ -128,7 +129,10 @@ export const SpotCheckList: React.FC = () => {
           icon={<ListChecks className="h-5 w-5" />}
           extra={
             canCreateSpotCheck ? (
-              <CircleButton onClick={() => roleNavigate(`${ROUTES.SPOT_CHECKS}/create`)} label="发起抽查" />
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="h-10 rounded-lg px-4">
+                <Plus className="h-4 w-4" />
+                新建抽查
+              </Button>
             ) : null
           }
         />
@@ -159,7 +163,7 @@ export const SpotCheckList: React.FC = () => {
             canUpdateSpotCheck={canUpdateSpotCheck}
             canDeleteSpotCheck={canDeleteSpotCheck}
             canManageRecord={canManageRecord}
-            onEditRecord={(record) => roleNavigate(`${ROUTES.SPOT_CHECKS}/${record.id}/edit`)}
+            onEditRecord={setEditingRecord}
             onDeleteRecord={setDeleteTarget}
             onPageChange={(nextPage) => updatePagination({ page: nextPage })}
             onPageSizeChange={(nextPageSize) => {
@@ -168,6 +172,42 @@ export const SpotCheckList: React.FC = () => {
           />
         </div>
       </div>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-h-[92vh] w-[95vw] max-w-[1060px] overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <DialogHeader className="px-5 py-5">
+            <DialogTitle className="text-lg font-semibold text-foreground">新建抽查</DialogTitle>
+          </DialogHeader>
+          {isCreateDialogOpen ? (
+            <div className="max-h-[calc(92vh-69px)] overflow-y-auto px-5 py-4">
+              <SpotCheckForm
+                initialStudentId={resolvedSelectedStudentId}
+                hidePageHeader
+                onCancel={() => setIsCreateDialogOpen(false)}
+                onSuccess={() => setIsCreateDialogOpen(false)}
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
+        <DialogContent className="max-h-[92vh] w-[95vw] max-w-[1060px] overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <DialogHeader className="px-5 py-5">
+            <DialogTitle className="text-lg font-semibold text-foreground">编辑抽查</DialogTitle>
+          </DialogHeader>
+          {editingRecord ? (
+            <div className="max-h-[calc(92vh-69px)] overflow-y-auto px-5 py-4">
+              <SpotCheckForm
+                spotCheckId={editingRecord.id}
+                hidePageHeader
+                onCancel={() => setEditingRecord(null)}
+                onSuccess={() => setEditingRecord(null)}
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteTarget}

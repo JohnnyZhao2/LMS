@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Layers3, ListChecks, Loader2, Plus, Sparkles, UserRound } from 'lucide-react';
+import { ListChecks, Loader2, Plus, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
 
 import { UserAvatar } from '@/components/common/user-avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Textarea } from '@/components/ui/textarea';
 import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -21,19 +20,17 @@ import { SpotCheckItemEditor } from './spot-check-item-editor';
 
 const createEmptyItem = (): SpotCheckItem => ({
   topic: '',
-  content: '',
   score: '80',
   comment: '',
 });
 
-const normalizeItems = (items?: SpotCheckItem[]) => {
-  if (!items || items.length === 0) {
+const normalizeItems = (items: SpotCheckItem[]) => {
+  if (items.length === 0) {
     return [createEmptyItem()];
   }
 
   return items.map((item) => ({
     topic: item.topic ?? '',
-    content: item.content ?? '',
     score: item.score ?? '80',
     comment: item.comment ?? '',
   }));
@@ -51,18 +48,66 @@ const calculateAverageScore = (items: SpotCheckItem[]) => {
   return (validScores.reduce((sum, score) => sum + score, 0) / validScores.length).toFixed(1);
 };
 
-export const SpotCheckForm: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+interface SelectedStudentInfo {
+  id: number;
+  username: string;
+  employee_id?: string | null;
+  avatar_key?: string | null;
+  department?: { name: string };
+}
+
+interface SpotCheckFormProps {
+  spotCheckId?: number;
+  initialStudentId?: number | null;
+  hidePageHeader?: boolean;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+}
+
+const StudentCard: React.FC<{ student: SelectedStudentInfo }> = ({ student }) => (
+  <div className="rounded-lg bg-white/72 p-4">
+    <div className="flex items-center gap-3">
+      <UserAvatar avatarKey={student.avatar_key} name={student.username} size="md" />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-foreground">{student.username}</p>
+        <p className="truncate text-xs text-text-muted">
+          {student.employee_id || '未填写工号'}
+          {student.department?.name ? ` · ${student.department.name}` : ''}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const StatBlock: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
+  <div className="rounded-lg bg-white/68 px-4 py-3">
+    <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">{label}</p>
+    <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</p>
+  </div>
+);
+
+export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
+  spotCheckId,
+  initialStudentId = null,
+  hidePageHeader = false,
+  onCancel,
+  onSuccess,
+}) => {
+  const { id: routeId } = useParams<{ id: string }>();
   const { roleNavigate } = useRoleNavigate();
-  const isEdit = Boolean(id);
-  const spotCheckId = Number(id);
+  const routeSpotCheckId = routeId ? Number(routeId) : Number.NaN;
+  const resolvedSpotCheckId =
+    typeof spotCheckId === 'number' ? spotCheckId : Number.isNaN(routeSpotCheckId) ? null : routeSpotCheckId;
+  const isEdit = resolvedSpotCheckId !== null;
+
   const createSpotCheck = useCreateSpotCheck();
   const updateSpotCheck = useUpdateSpotCheck();
-  const { data: spotCheckDetail, isLoading: detailLoading } = useSpotCheckDetail(spotCheckId);
+  const { data: spotCheckDetail, isLoading: detailLoading } = useSpotCheckDetail(resolvedSpotCheckId ?? 0);
   const { data: users, isLoading: usersLoading } = useAssignableUsers();
 
-  const [studentId, setStudentId] = useState('');
+  const [studentId, setStudentId] = useState(() => (!isEdit && initialStudentId ? String(initialStudentId) : ''));
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
+  const [draftOverallComment, setDraftOverallComment] = useState<string | null>(isEdit ? null : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const baseItems = useMemo(() => {
@@ -73,9 +118,10 @@ export const SpotCheckForm: React.FC = () => {
   }, [isEdit, spotCheckDetail]);
 
   const items = draftItems ?? baseItems;
+  const overallComment = draftOverallComment ?? spotCheckDetail?.overall_comment ?? '';
 
   const isSubmitting = createSpotCheck.isPending || updateSpotCheck.isPending;
-  const selectedStudent = useMemo(() => {
+  const selectedStudent = useMemo<SelectedStudentInfo | null>(() => {
     if (isEdit) {
       return spotCheckDetail
         ? {
@@ -140,10 +186,17 @@ export const SpotCheckForm: React.FC = () => {
 
   const buildPayloadItems = () => items.map((item) => ({
     topic: item.topic.trim(),
-    content: item.content?.trim() ?? '',
     score: item.score,
-    comment: item.comment?.trim() ?? '',
+    comment: item.comment.trim(),
   }));
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    roleNavigate(ROUTES.SPOT_CHECKS);
+  };
 
   const handleSubmit = async () => {
     if (!validate()) {
@@ -151,12 +204,18 @@ export const SpotCheckForm: React.FC = () => {
       return;
     }
 
-    const payload = { items: buildPayloadItems() };
+    const payload = {
+      items: buildPayloadItems(),
+      overall_comment: overallComment.trim(),
+    };
 
     try {
       if (isEdit) {
+        if (!resolvedSpotCheckId) {
+          return;
+        }
         await updateSpotCheck.mutateAsync({
-          id: spotCheckId,
+          id: resolvedSpotCheckId,
           data: payload,
         });
         toast.success('抽查记录修改成功');
@@ -167,6 +226,11 @@ export const SpotCheckForm: React.FC = () => {
         });
         toast.success('抽查记录创建成功');
       }
+
+      if (onSuccess) {
+        onSuccess();
+        return;
+      }
       roleNavigate(ROUTES.SPOT_CHECKS);
     } catch (error) {
       showApiError(error, isEdit ? '修改失败' : '创建失败');
@@ -174,46 +238,36 @@ export const SpotCheckForm: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col animate-fadeIn">
-      <PageHeader
-        title={isEdit ? '修改抽查' : '发起抽查'}
-        icon={<ListChecks className="h-5 w-5" />}
-      />
+    <div className={`flex min-h-0 flex-1 flex-col ${hidePageHeader ? '' : 'animate-fadeIn'}`}>
+      {!hidePageHeader ? (
+        <PageHeader
+          title={isEdit ? '编辑抽查' : '新建抽查'}
+          icon={<ListChecks className="h-5 w-5" />}
+        />
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className="border border-border/70 bg-[radial-gradient(circle_at_top,#f5f9ff,transparent_55%),linear-gradient(180deg,#ffffff,#f7f9fc)] shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-          <CardHeader className="space-y-3 pb-4">
-            <Badge variant="info" className="w-fit">抽查对象</Badge>
-            <CardTitle className="text-lg">先锁定本次抽查学员</CardTitle>
-            <p className="text-sm text-text-muted">系统会自动记录创建时间，前端只负责录入主题表现。</p>
-          </CardHeader>
-          <CardContent className="space-y-5">
+      <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="space-y-5 rounded-lg bg-[#f6f7fb] p-5">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">学员</p>
             {isEdit ? (
-              <div className="rounded-2xl border border-border/70 bg-white/90 p-4">
-                {detailLoading && !selectedStudent ? (
-                  <p className="text-sm text-text-muted">加载学员信息中...</p>
-                ) : selectedStudent ? (
-                  <div className="flex items-center gap-3">
-                    <UserAvatar avatarKey={selectedStudent.avatar_key} name={selectedStudent.username} size="lg" />
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">{selectedStudent.username}</p>
-                      <p className="text-sm text-text-muted">
-                        {selectedStudent.employee_id || '未填写工号'}
-                        {selectedStudent.department?.name ? ` · ${selectedStudent.department.name}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+              detailLoading && !selectedStudent ? (
+                <div className="rounded-lg bg-white/70 px-4 py-3 text-sm text-text-muted">
+                  加载中...
+                </div>
+              ) : selectedStudent ? (
+                <StudentCard student={selectedStudent} />
+              ) : null
             ) : (
               <div className="space-y-2">
                 <SearchableSelect
                   items={users || []}
                   value={studentId}
                   onSelect={(value) => setStudentId(String(value))}
-                  placeholder={usersLoading ? '加载学员中...' : '搜索并选择学员'}
-                  searchPlaceholder="搜索姓名或工号"
+                  placeholder={usersLoading ? '加载学员中...' : '搜索学员'}
+                  searchPlaceholder="姓名或工号"
                   icon={<UserRound className="h-4 w-4" />}
+                  className="h-10 rounded-lg bg-white/74 [&_span]:text-[13px]"
                   getLabel={(user) => `${user.username} · ${user.employee_id || '未填写工号'}`}
                   getValue={(user) => String(user.id)}
                   emptyMessage="没有匹配的学员"
@@ -221,59 +275,30 @@ export const SpotCheckForm: React.FC = () => {
                 {errors.student ? <p className="text-sm text-destructive-500">{errors.student}</p> : null}
               </div>
             )}
+          </div>
 
-            {selectedStudent ? (
-              <div className="rounded-2xl border border-primary/10 bg-primary/[0.04] p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary-600">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  当前录入对象
-                </div>
-                <div className="flex items-center gap-3">
-                  <UserAvatar avatarKey={selectedStudent.avatar_key} name={selectedStudent.username} size="md" />
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{selectedStudent.username}</p>
-                    <p className="text-sm text-text-muted">{selectedStudent.employee_id || '未填写工号'}</p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+          {!isEdit && selectedStudent ? <StudentCard student={selectedStudent} /> : null}
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl border border-border/60 bg-white/90 p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-text-muted">主题数量</p>
-                <p className="mt-2 text-3xl font-black text-foreground">{items.length}</p>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-white/90 p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-text-muted">预估均分</p>
-                <p className="mt-2 text-3xl font-black text-foreground">{averageScore}</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatBlock label="主题" value={items.length} />
+            <StatBlock label="均分" value={averageScore} />
+          </div>
 
-            <div className="rounded-2xl border border-dashed border-border/80 bg-white/70 p-4 text-sm text-text-muted">
-              {isEdit && spotCheckDetail
-                ? `该记录创建于 ${dayjs(spotCheckDetail.created_at).format('YYYY-MM-DD HH:mm')}`
-                : '提交后会以系统创建时间作为抽查时间，无需手动填写。'}
-            </div>
-          </CardContent>
-        </Card>
+          {isEdit && spotCheckDetail ? (
+            <p className="text-xs text-text-muted">
+              创建于 {dayjs(spotCheckDetail.created_at).format('YYYY-MM-DD HH:mm')}
+            </p>
+          ) : null}
+        </aside>
 
-        <div className="space-y-5">
-          <Card className="border border-border/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,247,251,0.95))] shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-            <CardContent className="grid gap-4 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-600">
-                  <Layers3 className="h-4 w-4" />
-                  多主题抽查
-                </div>
-                <h2 className="text-2xl font-semibold text-foreground">按主题逐条记录表现，不再压缩成一条总评</h2>
-                <p className="mt-2 text-sm text-text-muted">每个主题都可以单独写抽查内容、评分和评语，便于复盘和追踪问题。</p>
-              </div>
-              <Button variant="outline" onClick={handleAddItem} className="h-11">
-                <Plus className="h-4 w-4" />
-                新增主题
-              </Button>
-            </CardContent>
-          </Card>
+        <section className="space-y-0">
+          <div className="flex items-center justify-between pb-3">
+            <h2 className="text-base font-semibold text-foreground">抽查项</h2>
+            <Button variant="outline" onClick={handleAddItem} className="h-9 rounded-[16px] border-transparent bg-muted/55 px-3 hover:bg-muted">
+              <Plus className="h-4 w-4" />
+              添加
+            </Button>
+          </div>
 
           <div className="space-y-4">
             {items.map((item, index) => (
@@ -287,26 +312,28 @@ export const SpotCheckForm: React.FC = () => {
                 onRemove={handleRemoveItem}
               />
             ))}
-          </div>
 
-          <Card className="border border-border/70 bg-white/95 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-            <CardContent className="flex flex-col gap-3 p-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-base font-semibold text-foreground">{isEdit ? '确认更新这次抽查记录' : '确认提交这次抽查记录'}</p>
-                <p className="text-sm text-text-muted">保存后会回到抽查列表，系统自动记录创建时间。</p>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => roleNavigate(ROUTES.SPOT_CHECKS)}>
-                  取消
-                </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting || (isEdit && detailLoading && !spotCheckDetail)}>
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {isEdit ? '保存修改' : '提交抽查'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <section className="space-y-2 pt-5">
+              <p className="text-sm font-semibold text-foreground">综合评语</p>
+              <Textarea
+                value={overallComment}
+                onChange={(event) => setDraftOverallComment(event.target.value)}
+                placeholder="可选"
+                className="min-h-[56px] rounded-lg border-transparent bg-muted/45 px-3.5 py-2.5 text-[13px] leading-5 placeholder:text-[13px] focus:border-primary/20 focus:bg-background focus:ring-0"
+              />
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-border/70 pt-4">
+        <Button variant="outline" onClick={handleCancel}>
+          取消
+        </Button>
+        <Button onClick={handleSubmit} disabled={isSubmitting || (isEdit && detailLoading && !spotCheckDetail)}>
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {isEdit ? '保存修改' : '保存'}
+        </Button>
       </div>
     </div>
   );

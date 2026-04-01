@@ -31,6 +31,7 @@ class SpotCheck(TimestampMixin, models.Model):
         related_name='spot_checks_created',
         verbose_name='抽查人',
     )
+    overall_comment = models.TextField(blank=True, default='', verbose_name='综合评语')
 
     class Meta:
         db_table = 'lms_spot_check'
