@@ -217,8 +217,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'content',
             header: '题目内容',
-            size: 620,
-            minSize: 520,
             cell: ({ row }) => (
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
@@ -232,9 +230,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'type',
             header: '题型',
-            size: 120,
-            minSize: 110,
-            maxSize: 140,
+            size: 108,
+            minSize: 96,
+            maxSize: 120,
             cell: ({ row }) => {
                 const typeStyle = getQuestionTypeStyle(row.original.question_type);
                 return (
@@ -252,8 +250,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'tags',
             header: '标签',
-            size: 260,
-            minSize: 220,
+            size: 220,
+            minSize: 180,
+            maxSize: 280,
             cell: ({ row }) => (
                 <CellTags
                     tags={(row.original.tags ?? []).map((tag) => ({
@@ -268,9 +267,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'timestamp',
             header: '更新时间',
-            size: 150,
-            minSize: 140,
-            maxSize: 170,
+            size: 132,
+            minSize: 120,
+            maxSize: 150,
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-sm font-bold text-foreground">
@@ -285,9 +284,9 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         {
             id: 'actions',
             header: '操作',
-            size: 100,
-            minSize: 88,
-            maxSize: 120,
+            size: 76,
+            minSize: 68,
+            maxSize: 88,
             cell: ({ row }) => {
                 const record = row.original;
                 return (
@@ -336,6 +335,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 pagination={{
                     pageIndex: page - 1,
                     pageSize: pageSize,
+                    defaultPageSize: 10,
                     pageCount: Math.ceil((data?.count || 0) / pageSize),
                     totalCount: data?.count || 0,
                     onPageChange: (p: number) =>

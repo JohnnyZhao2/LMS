@@ -226,6 +226,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         pagination={{
           pageIndex: page - 1,
           pageSize: pageSize,
+          defaultPageSize: 10,
           pageCount: Math.ceil((data?.count || 0) / pageSize),
           totalCount: data?.count || 0,
           onPageChange: (p: number) =>

@@ -22,8 +22,8 @@ export const QuizManagementPage: React.FC = () => {
       />
 
       <PageViewport className="flex flex-col reveal-item stagger-delay-2">
-        <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+        <div className="mb-1 flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <SegmentedControl
               value={quizType}
               onChange={(value: string) => setQuizType(value as 'ALL' | 'EXAM' | 'PRACTICE')}
@@ -33,13 +33,13 @@ export const QuizManagementPage: React.FC = () => {
                 { label: '练习', value: 'PRACTICE' },
               ]}
               activeColor="white"
-              className="w-full xl:w-auto xl:shrink-0"
+              className="shrink-0"
             />
           </div>
 
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-end">
+          <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
             <SearchInput
-              className="w-full xl:w-[22rem] xl:min-w-[22rem]"
+              className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
               placeholder="搜索试卷标题..."
               value={search}
               onChange={setSearch}
@@ -48,7 +48,7 @@ export const QuizManagementPage: React.FC = () => {
             <CircleButton
               onClick={() => roleNavigate(`${ROUTES.QUIZZES}/create`)}
               label="构建全新试卷"
-              className="self-end xl:self-auto"
+              className="shrink-0"
             />
           </div>
         </div>

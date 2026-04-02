@@ -14,6 +14,7 @@ export interface PaginationProps {
   current: number;
   total: number;
   pageSize: number;
+  defaultPageSize?: number;
   onChange?: (page: number, pageSize: number) => void;
   onShowSizeChange?: (current: number, size: number) => void;
   showSizeChanger?: boolean;
@@ -30,6 +31,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   current,
   total,
   pageSize,
+  defaultPageSize,
   onChange,
   onShowSizeChange,
   showSizeChanger = false,
@@ -39,6 +41,9 @@ export const Pagination: React.FC<PaginationProps> = ({
   disabled = false,
 }) => {
   const totalPages = Math.ceil(total / pageSize);
+  const shouldShowPager = totalPages > 1;
+  const resolvedDefaultPageSize = defaultPageSize ?? pageSize;
+  const shouldRenderPagination = shouldShowPager || (showSizeChanger && pageSize !== resolvedDefaultPageSize);
   const startItem = (current - 1) * pageSize + 1;
   const endItem = Math.min(current * pageSize, total);
 
@@ -92,7 +97,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     return pages;
   };
 
-  if (total === 0) return null;
+  if (total === 0 || !shouldRenderPagination) return null;
 
   return (
     <div className={cn('flex items-center justify-between gap-4', className)}>
@@ -104,62 +109,62 @@ export const Pagination: React.FC<PaginationProps> = ({
       )}
 
       <div className="flex items-center gap-1">
-        {/* Previous button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => handlePageChange(current - 1)}
-          disabled={current === 1 || disabled}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        {/* Page numbers */}
-        {getPageNumbers().map((page, index) =>
-          page === 'ellipsis' ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="flex h-8 w-8 items-center justify-center"
-            >
-              <MoreHorizontal className="h-4 w-4 text-text-muted" />
-            </span>
-          ) : (
+        {shouldShowPager && (
+          <>
             <Button
-              key={page}
-              variant={current === page ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
-              className={cn(
-                'h-8 w-8 p-0',
-                current === page && 'bg-primary text-white hover:bg-primary-hover'
-              )}
-              onClick={() => handlePageChange(page)}
-              disabled={disabled}
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(current - 1)}
+              disabled={current === 1 || disabled}
             >
-              {page}
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )
+
+            {getPageNumbers().map((page, index) =>
+              page === 'ellipsis' ? (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="flex h-8 w-8 items-center justify-center"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-text-muted" />
+                </span>
+              ) : (
+                <Button
+                  key={page}
+                  variant={current === page ? 'default' : 'outline'}
+                  size="sm"
+                  className={cn(
+                    'h-8 w-8 p-0',
+                    current === page && 'bg-primary text-white hover:bg-primary-hover'
+                  )}
+                  onClick={() => handlePageChange(page)}
+                  disabled={disabled}
+                >
+                  {page}
+                </Button>
+              )
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(current + 1)}
+              disabled={current === totalPages || disabled}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </>
         )}
 
-        {/* Next button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => handlePageChange(current + 1)}
-          disabled={current === totalPages || disabled}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-
-        {/* Page size selector */}
         {showSizeChanger && (
           <Select
             value={pageSize.toString()}
             onValueChange={handlePageSizeChange}
             disabled={disabled}
           >
-            <SelectTrigger className="h-8 w-[110px] ml-2 font-bold text-xs  border-border">
+            <SelectTrigger className={cn('h-8 w-[110px] font-bold text-xs border-border', shouldShowPager && 'ml-2')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

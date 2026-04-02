@@ -202,6 +202,7 @@ export const UserList: React.FC = () => {
               avatarKey={row.original.avatar_key}
               name={row.original.username}
               size="md"
+               className="h-10 w-10"
               canEdit={canAdminEditAvatar}
               isUpdating={updateUserAvatar.isPending}
               align="start"
@@ -356,9 +357,9 @@ export const UserList: React.FC = () => {
             {/* Main Content */}
             <div className="flex min-w-0 flex-1 flex-col self-stretch">
               {/* Header */}
-              <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+              <div className="mb-1 flex flex-wrap items-center justify-end gap-3">
                 <SearchInput
-                  className="w-full xl:w-[22rem] xl:min-w-[22rem]"
+                  className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
                   placeholder="检索姓名、工号、部位..."
                   value={search}
                   onChange={setSearch}
@@ -370,7 +371,7 @@ export const UserList: React.FC = () => {
                       setFormModalOpen(true)
                     }}
                     label="快速录入"
-                    className="self-end xl:self-auto"
+                    className="shrink-0"
                   />
                 )}
               </div>
@@ -385,6 +386,7 @@ export const UserList: React.FC = () => {
                   pagination={{
                     pageIndex: pagination.pageIndex,
                     pageSize: pagination.pageSize,
+                    defaultPageSize: 10,
                     pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
                     totalCount: filteredUsers.length,
                     onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),

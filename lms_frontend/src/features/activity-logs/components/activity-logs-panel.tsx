@@ -95,6 +95,8 @@ export const ActivityLogsPanel: React.FC = () => {
     search.trim().length > 0 ||
     dateFrom !== '' ||
     dateTo !== '';
+  const totalCount = data?.count ?? 0;
+  const shouldShowPagination = totalCount > 0 && (totalCount > pageSize || pageSize !== 10);
 
   const handleConfirmBulkDelete = async () => {
     if (selectedLogs.length === 0) return;
@@ -322,17 +324,20 @@ export const ActivityLogsPanel: React.FC = () => {
                 />
               </div>
 
+              {shouldShowPagination && (
               <div className="border-t border-border/40 px-5 py-3">
                 <Pagination
                   current={page}
-                  total={data?.count ?? 0}
+                  total={totalCount}
                   pageSize={pageSize}
+                  defaultPageSize={10}
                   showSizeChanger
                   showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
                   onChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
                   onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
                 />
               </div>
+              )}
             </div>
           </div>
         </div>

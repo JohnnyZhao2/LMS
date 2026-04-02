@@ -33,6 +33,7 @@ interface DataTableProps<TData, TValue> {
   pagination?: {
     pageIndex: number
     pageSize: number
+    defaultPageSize?: number
     pageCount: number
     totalCount?: number  // Actual total number of records
     onPageChange: (page: number) => void
@@ -75,6 +76,12 @@ export function DataTable<TData, TValue>({
   )
   const resolvedTotalCount = pagination?.totalCount ?? data.length
   const isServerPagination = !!pagination && resolvedTotalCount > data.length
+  const shouldShowPagination = !!pagination
+    && resolvedTotalCount > 0
+    && (
+      resolvedTotalCount > pagination.pageSize
+      || pagination.pageSize !== (pagination.defaultPageSize ?? pagination.pageSize)
+    )
 
   // Sync row selection with parent
   React.useEffect(() => {
@@ -209,12 +216,13 @@ export function DataTable<TData, TValue>({
               )}
             </TableBody>
         </Table>
-        {pagination && (
+        {shouldShowPagination && (
         <div className="mt-auto border-t border-border bg-muted/20 px-4 py-3">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}
             pageSize={pagination.pageSize}
+            defaultPageSize={pagination.defaultPageSize}
             onChange={(page) => pagination.onPageChange(page - 1)}
             showSizeChanger
             onShowSizeChange={(_, size) => pagination.onPageSizeChange(size)}

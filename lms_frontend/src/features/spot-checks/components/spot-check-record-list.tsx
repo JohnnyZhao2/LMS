@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { CalendarDays, ListChecks, Pencil, Star, Trash2, UserRound, UserRoundSearch } from 'lucide-react';
 
 import { UserAvatar } from '@/components/common/user-avatar';
@@ -130,7 +129,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
   onPageChange,
   onPageSizeChange,
 }) => {
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize]);
+  const shouldShowPagination = totalCount > 0 && (totalCount > pageSize || pageSize !== 20);
 
   if (!selectedStudent) {
     return (
@@ -235,12 +234,13 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
               </div>
             </div>
 
-            {totalPages > 1 || totalCount > 10 ? (
+            {shouldShowPagination ? (
               <div className="border-t border-border/60 px-4 py-3">
                 <Pagination
                   current={page}
                   total={totalCount}
                   pageSize={pageSize}
+                  defaultPageSize={20}
                   onChange={(nextPage) => onPageChange(nextPage)}
                   onShowSizeChange={(_, nextPageSize) => onPageSizeChange(nextPageSize)}
                   showSizeChanger

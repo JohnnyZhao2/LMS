@@ -253,8 +253,8 @@ export const TaskManagement: React.FC = () => {
             {/* 列表主体 */}
             <PageViewport className="flex flex-col">
                 {/* 搜索和筛选 */}
-                <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+                <div className="mb-1 flex flex-wrap items-center gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-3">
                         {isAdmin && (
                             <SegmentedControl
                                 value={creatorSideFilter}
@@ -265,7 +265,7 @@ export const TaskManagement: React.FC = () => {
                                     { label: '非管理端', value: 'non_management' },
                                 ]}
                                 activeColor="white"
-                                className="w-full xl:w-auto xl:shrink-0"
+                                className="shrink-0"
                             />
                         )}
                         <SegmentedControl
@@ -277,12 +277,12 @@ export const TaskManagement: React.FC = () => {
                                 { label: '全部', value: 'all' },
                             ]}
                             activeColor="white"
-                            className="w-full xl:w-auto xl:shrink-0"
+                            className="shrink-0"
                         />
                     </div>
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+                    <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
                         <SearchInput
-                            className="w-full xl:w-[22rem] xl:min-w-[22rem]"
+                            className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
                             placeholder="搜索任务标题或编号..."
                             value={searchTerm}
                             onChange={setSearchTerm}
@@ -290,7 +290,7 @@ export const TaskManagement: React.FC = () => {
                         <CircleButton
                             onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                             label="发布新任务"
-                            className="self-end xl:self-auto"
+                            className="shrink-0"
                         />
                     </div>
                 </div>
@@ -315,6 +315,7 @@ export const TaskManagement: React.FC = () => {
                                 pagination={{
                                     pageIndex: page - 1,
                                     pageSize: pageSize,
+                                    defaultPageSize: 10,
                                     pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
                                     totalCount: tasksData?.count || 0,
                                     onPageChange: (p: number) => setPage(p + 1),

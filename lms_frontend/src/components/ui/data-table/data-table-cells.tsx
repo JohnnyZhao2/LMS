@@ -28,7 +28,7 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
     iconColorClass = 'text-primary',
     className,
 }) => (
-    <div className={cn('flex items-center gap-4 py-1', className)}>
+    <div className={cn('flex min-w-0 items-center gap-4 py-1', className)}>
         <div
             className={cn(
                 'w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform',
@@ -38,12 +38,12 @@ export const CellWithIcon: React.FC<CellWithIconProps> = ({
         >
             {icon}
         </div>
-        <div className="flex flex-col">
-            <span className="font-bold text-foreground hover:text-primary cursor-pointer transition-colors">
+        <div className="flex min-w-0 flex-col">
+            <span className="truncate font-bold text-foreground hover:text-primary cursor-pointer transition-colors">
                 {title}
             </span>
             {subtitle && (
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                <span className="truncate text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                     {subtitle}
                 </span>
             )}
@@ -80,7 +80,7 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
     const s = sizeStyles[size];
 
     return (
-        <div className={cn('flex items-center gap-3 py-1', s.wrap, className)}>
+        <div className={cn('flex min-w-0 items-center gap-3 py-1', s.wrap, className)}>
             {avatar ? avatar : (
                 <div
                     className={cn(
@@ -92,12 +92,12 @@ export const CellWithAvatar: React.FC<CellWithAvatarProps> = ({
                     {name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
             )}
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
                 <span className={cn('font-bold text-foreground line-clamp-1', s.text)}>
                     {name}
                 </span>
                 {subtitle && (
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                    <span className="truncate text-[10px] font-bold text-text-muted uppercase tracking-tighter">
                         {subtitle}
                     </span>
                 )}
