@@ -16,7 +16,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -253,8 +253,8 @@ export const TaskManagement: React.FC = () => {
             {/* 列表主体 */}
             <PageViewport className="flex flex-col">
                 {/* 搜索和筛选 */}
-                <div className="mb-1 flex flex-wrap items-center gap-3">
-                    <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <div className="mb-1 flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                         {isAdmin && (
                             <SegmentedControl
                                 value={creatorSideFilter}
@@ -280,9 +280,9 @@ export const TaskManagement: React.FC = () => {
                             className="shrink-0"
                         />
                     </div>
-                    <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
+                    <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
                         <SearchInput
-                            className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
+                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
                             placeholder="搜索任务标题或编号..."
                             value={searchTerm}
                             onChange={setSearchTerm}

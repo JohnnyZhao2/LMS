@@ -5,7 +5,7 @@ import { ROUTES } from '@/config/routes';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { QuizTab } from '../quizzes/components/quiz-tab';
 
@@ -22,24 +22,22 @@ export const QuizManagementPage: React.FC = () => {
       />
 
       <PageViewport className="flex flex-col reveal-item stagger-delay-2">
-        <div className="mb-1 flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <SegmentedControl
-              value={quizType}
-              onChange={(value: string) => setQuizType(value as 'ALL' | 'EXAM' | 'PRACTICE')}
-              options={[
-                { label: '全部', value: 'ALL' },
-                { label: '考试', value: 'EXAM' },
-                { label: '练习', value: 'PRACTICE' },
-              ]}
-              activeColor="white"
-              className="shrink-0"
-            />
-          </div>
+        <div className="mb-1 flex items-center gap-3">
+          <SegmentedControl
+            value={quizType}
+            onChange={(value: string) => setQuizType(value as 'ALL' | 'EXAM' | 'PRACTICE')}
+            options={[
+              { label: '全部', value: 'ALL' },
+              { label: '考试', value: 'EXAM' },
+              { label: '练习', value: 'PRACTICE' },
+            ]}
+            activeColor="white"
+            className="shrink-0"
+          />
 
-          <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
             <SearchInput
-              className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
+              className={DESKTOP_SEARCH_INPUT_CLASSNAME}
               placeholder="搜索试卷标题..."
               value={search}
               onChange={setSearch}

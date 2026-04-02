@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPE_LABELS } from '@/features/questions/constants';
@@ -25,16 +25,10 @@ export const QuestionManagementPage: React.FC = () => {
       />
 
       <PageViewport className="flex flex-col reveal-item stagger-delay-2">
-        <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-end">
-          <div className="flex flex-wrap items-center gap-3">
-            <SearchInput
-              className="w-[22rem] max-w-full"
-              placeholder="搜索题目内容..."
-              value={search}
-              onChange={setSearch}
-            />
+        <div className="mb-1 flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Select value={filterQuestionType} onValueChange={(value) => setFilterQuestionType(value as QuestionType | 'all')}>
-              <SelectTrigger className="h-10 w-[10rem]">
+              <SelectTrigger className="h-10 w-[10rem] shrink-0">
                 <SelectValue placeholder="全部题型" />
               </SelectTrigger>
               <SelectContent>
@@ -47,7 +41,7 @@ export const QuestionManagementPage: React.FC = () => {
               </SelectContent>
             </Select>
             <Select value={filterSpaceTypeId} onValueChange={setFilterSpaceTypeId}>
-              <SelectTrigger className="h-10 w-[10rem]">
+              <SelectTrigger className="h-10 w-[10rem] shrink-0">
                 <SelectValue placeholder="全部空间" />
               </SelectTrigger>
               <SelectContent>
@@ -61,11 +55,19 @@ export const QuestionManagementPage: React.FC = () => {
             </Select>
           </div>
 
-          <CircleButton
-            onClick={() => setQuestionCreateSignal((prev) => prev + 1)}
-            label="新建题目"
-            className="self-end xl:ml-auto"
-          />
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+            <SearchInput
+              className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+              placeholder="搜索题目内容..."
+              value={search}
+              onChange={setSearch}
+            />
+            <CircleButton
+              onClick={() => setQuestionCreateSignal((prev) => prev + 1)}
+              label="新建题目"
+              className="shrink-0"
+            />
+          </div>
         </div>
 
         <div className="flex flex-1 min-h-0 flex-col">

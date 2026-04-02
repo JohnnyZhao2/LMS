@@ -355,7 +355,7 @@ const UserFormContent: React.FC<{
     return (
       <>
         {/* Header */}
-        <div className="px-8 py-5 border-b border-border bg-muted flex items-center justify-between shrink-0">
+        <div className="px-8 py-5 border-b border-border bg-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-1 h-6 bg-primary rounded-full" />
             <h2 className="text-lg font-bold text-foreground">

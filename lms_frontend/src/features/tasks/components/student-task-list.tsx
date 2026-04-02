@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import type { TaskStatus } from '@/types/api';
 
 const statusOptions = [
@@ -57,7 +57,7 @@ export const StudentTaskList: React.FC = () => {
                     />
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
                         <SearchInput
-                            className="w-full xl:w-80"
+                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
                             placeholder="搜索任务..."
                             value={searchTerm}
                             onChange={setSearchTerm}

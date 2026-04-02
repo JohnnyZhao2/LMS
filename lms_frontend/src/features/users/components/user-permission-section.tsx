@@ -288,6 +288,11 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     normalizedSelectedPermissionRole,
     activePermissionModule,
   );
+  const shouldDisplayPermissionSection = canViewOverride && hasConfigurablePermissionRoles;
+
+  if (!shouldDisplayPermissionSection) {
+    return null;
+  }
 
   return (
     <div className="mt-6 border-t border-slate-100 pt-6">
@@ -297,120 +302,104 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
           <h3 className="text-base font-bold text-slate-800">用户权限自定义</h3>
         </div>
 
-        {hasConfigurablePermissionRoles ? (
-          <div className="flex items-center gap-3 flex-1 justify-end max-w-[320px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
-            <UserPermissionScopePopover
-              open={showScopeAdjustPanel}
-              onOpenChange={setShowScopeAdjustPanel}
-              summary={formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)}
-              scopeFilterOptions={scopeFilterOptions}
-              scopeUserFilter={scopeUserFilter}
-              onScopeFilterChange={handleScopeFilterChange}
-              onFilterDoubleClick={handleFilterDoubleClick}
-              showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
-              onReset={() => {
-                applyDefaultScopePreset();
-                setScopeUserFilter('all');
-              }}
-              scopeUserSearch={scopeUserSearch}
-              onScopeUserSearchChange={setScopeUserSearch}
-              isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
-              hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
-              onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
-              selectedFilteredScopeCount={selectedFilteredScopeCount}
-              filteredScopeUsers={filteredScopeUsers}
-              selectedScopeUserIds={selectedScopeUserIds}
-              onToggleScopeUser={toggleScopeUser}
-              isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
-              onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
-              isScopeUsersLoading={isScopeUsersLoading}
-              dialogContentElement={dialogContentElement}
-            />
+        <div className="flex items-center gap-3 flex-1 justify-end max-w-[320px]">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
+          <UserPermissionScopePopover
+            open={showScopeAdjustPanel}
+            onOpenChange={setShowScopeAdjustPanel}
+            summary={formatScopeSummaryForDisplay(selectedPermissionScopes, selectedScopeUserIds)}
+            scopeFilterOptions={scopeFilterOptions}
+            scopeUserFilter={scopeUserFilter}
+            onScopeFilterChange={handleScopeFilterChange}
+            onFilterDoubleClick={handleFilterDoubleClick}
+            showReset={!sameScopeTypes(selectedPermissionScopes, selectedRoleDefaultScopeTypes)}
+            onReset={() => {
+              applyDefaultScopePreset();
+              setScopeUserFilter('all');
+            }}
+            scopeUserSearch={scopeUserSearch}
+            onScopeUserSearchChange={setScopeUserSearch}
+            isAllFilteredScopeUsersSelected={isAllFilteredScopeUsersSelected}
+            hasPartialFilteredScopeSelection={hasPartialFilteredScopeSelection}
+            onToggleSelectAllFilteredScopeUsers={toggleSelectAllFilteredScopeUsers}
+            selectedFilteredScopeCount={selectedFilteredScopeCount}
+            filteredScopeUsers={filteredScopeUsers}
+            selectedScopeUserIds={selectedScopeUserIds}
+            onToggleScopeUser={toggleScopeUser}
+            isExplicitUsersScopeSelected={selectedPermissionScopes.includes('EXPLICIT_USERS')}
+            onEnsureExplicitUsersScopeSelected={ensureExplicitUsersScopeSelected}
+            isScopeUsersLoading={isScopeUsersLoading}
+            dialogContentElement={dialogContentElement}
+          />
+        </div>
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 xl:grid-cols-[200px_1fr] gap-8 items-start relative">
+        <UserPermissionModuleSidebar
+          permissionModules={permissionModules}
+          activePermissionModule={activePermissionModule}
+          moduleCounts={modulePermissionCounts}
+          onSelectModule={setSelectedPermissionModule}
+        />
+
+        <div className="relative space-y-4">
+          {!canViewRoleTemplate && (
+            <div className="px-2">
+              <p className="text-[11px] text-slate-400">
+                当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
+              </p>
+            </div>
+          )}
+
+          <div>
+            {isActiveModuleLockedForRole && (
+              <div className="mb-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-500">
+                配置管理模块仅支持在管理员角色下配置，当前角色仅可查看。
+              </div>
+            )}
+            {activeModulePermissions.length === 0 ? (
+              <div className="py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
+                {activeModulePermissions.map((permission) => {
+                  const permissionState = getPermissionState(permission.code);
+                  const isPermissionLocked = isPermissionLockedForSelectedRole(permission.code);
+                  return (
+                    <UserPermissionCard
+                      key={permission.code}
+                      permission={permission}
+                      permissionState={permissionState}
+                      loading={false}
+                      forcedDisabled={isPermissionLocked}
+                      canCreateOverride={canCreateOverride}
+                      canRevokeOverride={canRevokeOverride}
+                      hasValidScopeSelection={
+                        selectedPermissionScopes.length > 0
+                        && (
+                          !selectedPermissionScopes.includes('EXPLICIT_USERS')
+                          || selectedScopeUserIds.length > 0
+                        )
+                      }
+                      selectedPermissionScopes={selectedPermissionScopes}
+                      selectedScopeUserIds={selectedScopeUserIds}
+                      onToggle={(nextChecked) => handlePermissionToggle(permission.code, nextChecked)}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex-1 text-right text-xs font-semibold text-slate-400">
-            学员是固定工作台角色，不参与用户赋权生效
+        </div>
+
+        {isLoadingUserOverrides && (
+          <div className="absolute inset-0 bg-white backdrop-blur-sm z-20 flex items-center justify-center rounded-3xl">
+            <div className="bg-white border border-slate-100 shadow-xl px-6 py-4 rounded-full flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+              <span className="text-sm font-bold text-slate-700">正在同步当前权限状态...</span>
+            </div>
           </div>
         )}
       </div>
-
-      {!canViewOverride ? (
-        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
-          您没有“用户权限自定义配置”权限，仅可查看上方默认角色包信息。
-        </div>
-      ) : !hasConfigurablePermissionRoles ? (
-        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
-          当前账号仅包含学员工作台角色，请先分配导师/室经理/团队经理/管理员角色后再配置用户权限覆盖。
-        </div>
-      ) : (
-        <div className="mt-8 grid grid-cols-1 xl:grid-cols-[200px_1fr] gap-8 items-start relative">
-          <UserPermissionModuleSidebar
-            permissionModules={permissionModules}
-            activePermissionModule={activePermissionModule}
-            moduleCounts={modulePermissionCounts}
-            onSelectModule={setSelectedPermissionModule}
-          />
-
-          <div className="relative space-y-4">
-            {!canViewRoleTemplate && (
-              <div className="px-2">
-                <p className="text-[11px] text-slate-400">
-                  当前账号没有角色模板查看权限，下面仅准确展示用户自定义覆盖。
-                </p>
-              </div>
-            )}
-
-            <div>
-              {isActiveModuleLockedForRole && (
-                <div className="mb-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-500">
-                  配置管理模块仅支持在管理员角色下配置，当前角色仅可查看。
-                </div>
-              )}
-              {activeModulePermissions.length === 0 ? (
-                <div className="py-12 text-center text-sm font-medium text-slate-400">当前模块暂无可配置权限</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
-                  {activeModulePermissions.map((permission) => {
-                    const permissionState = getPermissionState(permission.code);
-                    const isPermissionLocked = isPermissionLockedForSelectedRole(permission.code);
-                    return (
-                      <UserPermissionCard
-                        key={permission.code}
-                        permission={permission}
-                        permissionState={permissionState}
-                        loading={false}
-                        forcedDisabled={isPermissionLocked}
-                        canCreateOverride={canCreateOverride}
-                        canRevokeOverride={canRevokeOverride}
-                        hasValidScopeSelection={
-                          selectedPermissionScopes.length > 0
-                          && (
-                            !selectedPermissionScopes.includes('EXPLICIT_USERS')
-                            || selectedScopeUserIds.length > 0
-                          )
-                        }
-                        selectedPermissionScopes={selectedPermissionScopes}
-                        selectedScopeUserIds={selectedScopeUserIds}
-                        onToggle={(nextChecked) => handlePermissionToggle(permission.code, nextChecked)}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {isLoadingUserOverrides && (
-            <div className="absolute inset-0 bg-white backdrop-blur-sm z-20 flex items-center justify-center rounded-3xl">
-              <div className="bg-white border border-slate-100 shadow-xl px-6 py-4 rounded-full flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                <span className="text-sm font-bold text-slate-700">正在同步当前权限状态...</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 });

@@ -39,6 +39,9 @@ const normalizeScore = (value: string | number | null | undefined): string => {
   return Number.isNaN(num) ? String(value) : String(num);
 };
 
+const QUIZ_FORM_WORKBENCH_CLASSNAME =
+  'grid h-full min-w-0 gap-3 [grid-template-columns:minmax(14rem,15rem)_minmax(0,1fr)_minmax(15rem,16rem)] 2xl:[grid-template-columns:minmax(18rem,18rem)_minmax(0,1fr)_minmax(20rem,20rem)]';
+
 const buildInlineQuestionPatch = (item: InlineQuestionItem): Partial<QuestionCreateRequest> => {
   const baseline = item.original;
   if (!baseline) {
@@ -392,8 +395,8 @@ export const QuizForm: React.FC = () => {
         isSubmitting={isSubmitting}
       />
 
-      <div className="flex-1 overflow-auto">
-        <div className="grid h-full min-w-[1360px] grid-cols-[16rem_minmax(0,1fr)_18rem] gap-3 xl:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className={QUIZ_FORM_WORKBENCH_CLASSNAME}>
           <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
             <QuizOutlinePanel
               items={items}

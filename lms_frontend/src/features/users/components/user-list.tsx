@@ -26,7 +26,7 @@ import { useAuth } from "@/features/auth/hooks/use-auth"
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
-import { SearchInput } from "@/components/ui/search-input"
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from "@/components/ui/search-input"
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -357,9 +357,9 @@ export const UserList: React.FC = () => {
             {/* Main Content */}
             <div className="flex min-w-0 flex-1 flex-col self-stretch">
               {/* Header */}
-              <div className="mb-1 flex flex-wrap items-center justify-end gap-3">
+              <div className="mb-1 flex min-w-0 items-center justify-end gap-3">
                 <SearchInput
-                  className="min-w-[14rem] max-w-[22rem] flex-[1_1_18rem]"
+                  className={DESKTOP_SEARCH_INPUT_CLASSNAME}
                   placeholder="检索姓名、工号、部位..."
                   value={search}
                   onChange={setSearch}

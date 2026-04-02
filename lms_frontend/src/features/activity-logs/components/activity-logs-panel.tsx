@@ -9,7 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
@@ -191,16 +191,13 @@ export const ActivityLogsPanel: React.FC = () => {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 xl:min-w-0">
-          {/* 搜索 */}
+        <div className="flex min-w-0 items-center gap-2.5">
           <SearchInput
-            className="flex-1"
+            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
             value={search}
             onChange={(value) => { setSearch(value); setPage(1); setSelectedLogIds([]); }}
             placeholder="搜索日志"
           />
-
-          {/* 日期 */}
           <Input
             type="date"
             value={dateFrom}
@@ -213,7 +210,6 @@ export const ActivityLogsPanel: React.FC = () => {
             onChange={(e) => { setDateTo(e.target.value); setPage(1); setSelectedLogIds([]); }}
             className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
           />
-
           {hasActiveFilters && (
             <button
               type="button"
@@ -221,7 +217,7 @@ export const ActivityLogsPanel: React.FC = () => {
                 setSearch(''); setDateFrom(''); setDateTo('');
                 setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
               }}
-              className="h-10 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:bg-muted hover:text-foreground"
+              className="h-10 shrink-0 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:bg-muted hover:text-foreground"
             >
               清空
             </button>

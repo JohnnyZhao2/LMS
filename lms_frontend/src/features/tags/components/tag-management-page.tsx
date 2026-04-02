@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { SearchInput } from '@/components/ui/search-input';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -197,7 +197,7 @@ export const TagManagementPage: React.FC = () => {
         icon={<Hash />}
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
         <div className="flex w-full flex-col gap-3 sm:w-auto">
           <SegmentedControl
             className="w-full max-w-sm shrink-0 sm:w-auto"
@@ -214,7 +214,7 @@ export const TagManagementPage: React.FC = () => {
             />
           )}
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
           <SearchInput
             value={searchInput}
             onChange={setSearchInput}
@@ -224,13 +224,13 @@ export const TagManagementPage: React.FC = () => {
               }
             }}
             placeholder="搜索标签名称"
-            className="w-full sm:w-[22rem] sm:min-w-[22rem] sm:max-w-none sm:flex-none"
+            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
           />
           {canUpdate && selectedTagIds.length >= 2 && (
             <Button
               variant="outline"
               size="sm"
-              className="h-10 rounded-full border-white/80 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+              className="h-10 shrink-0 rounded-full border-white/80 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
               onClick={() => {
                 setMergedName('');
                 setIsMergeDialogOpen(true);
@@ -247,6 +247,7 @@ export const TagManagementPage: React.FC = () => {
             <CircleButton
               onClick={openCreateDialog}
               label={`新建${typeLabel[activeTab]}`}
+              className="shrink-0"
             />
           )}
         </div>
