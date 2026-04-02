@@ -85,7 +85,8 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
       ]}
       activeSegment={departmentFilter}
       onSegmentChange={(value) => setDepartmentFilter(value as ActivityLogDepartmentFilter)}
-      listClassName="max-h-[38rem]"
+      className="h-full min-h-[38rem] xl:max-h-full"
+      listClassName="max-h-none"
     />
   );
 };

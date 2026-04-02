@@ -39,7 +39,6 @@ interface UseUsersOptions {
 
 /**
  * 获取用户列表
- * 后端返回简单数组，不支持分页
  */
 export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions = {}) => {
   const currentRole = useCurrentRole();

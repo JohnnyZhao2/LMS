@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
 import { cn } from '@/lib/utils';
@@ -267,7 +268,7 @@ export const TeamManagerDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-10 animate-pulse">
+      <PageShell className="animate-pulse">
         <Skeleton className="h-20 w-1/3 rounded-2xl" />
         <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -276,47 +277,49 @@ export const TeamManagerDashboard: React.FC = () => {
         </div>
         <Skeleton className="h-72 rounded-2xl" />
         <Skeleton className="h-96 rounded-2xl" />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="space-y-8 pb-10">
+    <PageShell>
       <PageHeader
         title="团队经理看板"
         icon={<UserRoundCheck />}
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          title="学员数量"
-          value={summary.total_students}
-          icon={Users}
-          accentClassName="bg-primary"
-          subtitle="平台学习成员"
-          delay="stagger-delay-1"
-        />
-        <StatCard
-          title="导师数量"
-          value={summary.total_mentors}
-          icon={UserRoundCheck}
-          accentClassName="bg-secondary"
-          subtitle="平台在岗导师"
-          delay="stagger-delay-2"
-        />
-        <StatCard
-          title="平台知识数量"
-          value={summary.total_knowledge}
-          icon={BookOpen}
-          accentClassName="bg-success-500"
-          subtitle="当前有效知识"
-          delay="stagger-delay-3"
-        />
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            title="学员数量"
+            value={summary.total_students}
+            icon={Users}
+            accentClassName="bg-primary"
+            subtitle="平台学习成员"
+            delay="stagger-delay-1"
+          />
+          <StatCard
+            title="导师数量"
+            value={summary.total_mentors}
+            icon={UserRoundCheck}
+            accentClassName="bg-secondary"
+            subtitle="平台在岗导师"
+            delay="stagger-delay-2"
+          />
+          <StatCard
+            title="平台知识数量"
+            value={summary.total_knowledge}
+            icon={BookOpen}
+            accentClassName="bg-success-500"
+            subtitle="当前有效知识"
+            delay="stagger-delay-3"
+          />
+        </div>
+
+        <ComparisonSection comparison={comparison} />
+
+        <HierarchySection departments={hierarchyView} />
       </div>
-
-      <ComparisonSection comparison={comparison} />
-
-      <HierarchySection departments={hierarchyView} />
-    </div>
+    </PageShell>
   );
 };

@@ -26,7 +26,6 @@ export interface SpotCheck {
   topic_count: number;
   topic_summary: string;
   average_score: string | null;
-  overall_comment: string;
   items: SpotCheckItem[];
   created_at: string;
   updated_at: string;
@@ -46,5 +45,4 @@ export interface SpotCheckStudent {
 export interface SpotCheckCreateRequest {
   student: number;
   items: SpotCheckItem[];
-  overall_comment?: string;
 }

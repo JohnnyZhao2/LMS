@@ -49,8 +49,11 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
       emptyText={searchValue.trim() ? '没有匹配的学员' : '暂无可查看学员'}
       isLoading={isLoading}
       loadingText="加载学员中..."
-      className="h-full"
-      listClassName="max-h-[calc(100vh-19rem)]"
+      className="min-h-[36rem] xl:max-h-full"
+      controlsClassName="py-3"
+      controlsInnerClassName="space-y-3"
+      listClassName="max-h-none px-2 pb-2 pt-3"
+      itemsClassName="space-y-2"
       segments={[
         { label: '全部', value: 'all' },
         { label: '一室', value: 'room1' },

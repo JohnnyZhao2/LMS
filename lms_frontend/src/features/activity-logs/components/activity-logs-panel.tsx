@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchInput } from '@/components/ui/search-input';
+import { PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -29,7 +30,7 @@ const LOG_TYPE_META = {
   operation: { label: '行为记录' },
 } as const;
 
-const PANEL_GRID_CLASS = 'grid gap-5 xl:grid-cols-[17rem_minmax(0,1fr)]';
+const PANEL_GRID_CLASS = 'grid min-h-0 items-stretch gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]';
 
 export const ActivityLogsPanel: React.FC = () => {
   const { hasPermission } = useAuth();
@@ -174,7 +175,7 @@ export const ActivityLogsPanel: React.FC = () => {
   }
 
   return (
-    <section className="space-y-5">
+    <PageWorkbench className="gap-4">
       {/* 筛选栏 */}
       <div className={PANEL_GRID_CLASS}>
         <div className="flex items-center">
@@ -227,107 +228,111 @@ export const ActivityLogsPanel: React.FC = () => {
       </div>
 
       {/* 主体 */}
-      <div className={PANEL_GRID_CLASS}>
-        {/* 左侧成员列表 */}
-        <ActivityLogMemberList
-          users={activityLogUsers}
-          memberActivityCountMap={memberActivityCountMap}
-          selectedMemberIds={selectedMemberIds}
-          activeType={activeType}
-          onToggleMember={handleToggleMember}
-        />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className={`${PANEL_GRID_CLASS} min-h-0 flex-1`}>
+          {/* 左侧成员列表 */}
+          <ActivityLogMemberList
+            users={activityLogUsers}
+            memberActivityCountMap={memberActivityCountMap}
+            selectedMemberIds={selectedMemberIds}
+            activeType={activeType}
+            onToggleMember={handleToggleMember}
+          />
 
-        {/* 右侧日志流 */}
-        <div>
-          <div className="overflow-hidden rounded-2xl border border-border/60 bg-background">
-            {/* 选中成员标签 + Tab */}
-            <div className="border-b border-border/60 px-5">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                {selectedMembers.length > 0 ? (
-                  <div className="relative flex h-14 min-w-0 items-center gap-2 text-[13px] font-semibold text-primary">
-                    <div className="scrollbar-subtle flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
-                      {selectedMembers.map((member) => (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => handleToggleMember(member.id)}
-                          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-50/70 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-100"
-                        >
-                          <span>{member.username}</span>
-                          <X className="h-3 w-3 opacity-70" />
-                        </button>
-                      ))}
-                    </div>
-                    <span className="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
-                      {data?.count ?? 0}
-                    </span>
-                    <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="relative inline-flex h-14 items-center text-[13px] font-semibold text-primary"
-                  >
-                    全部
-                    <span className="ml-1.5 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
-                      {data?.count ?? 0}
-                    </span>
-                    <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
-                  </button>
-                )}
-
-                {canDeleteActivityLogs && normalizedItems.length > 0 && (
-                  <div className="flex h-14 flex-wrap items-center gap-3">
-                    <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
-                      <Checkbox
-                        checked={isAllLogsSelected ? true : hasPartialLogSelection ? 'indeterminate' : false}
-                        onCheckedChange={handleToggleAllLogs}
-                        disabled={isDeleting}
-                      />
-                      <span>本页全选</span>
-                      <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-text-muted">
-                        {selectedLogIds.length}/{normalizedItems.length}
+          {/* 右侧日志流 */}
+          <div className="min-h-0 h-full">
+            <div className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background">
+              {/* 选中成员标签 + Tab */}
+              <div className="border-b border-border/60 px-5">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  {selectedMembers.length > 0 ? (
+                    <div className="relative flex h-14 min-w-0 items-center gap-2 text-[13px] font-semibold text-primary">
+                      <div className="scrollbar-subtle flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+                        {selectedMembers.map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => handleToggleMember(member.id)}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary-50/70 px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-100"
+                          >
+                            <span>{member.username}</span>
+                            <X className="h-3 w-3 opacity-70" />
+                          </button>
+                        ))}
+                      </div>
+                      <span className="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                        {data?.count ?? 0}
                       </span>
-                    </label>
-
+                      <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => setBulkDeleteOpen(true)}
-                      disabled={selectedLogIds.length === 0 || isDeleting}
-                      className={cn(
-                        'inline-flex h-8 items-center rounded-lg border px-3 text-[12px] font-medium transition-colors',
-                        selectedLogIds.length > 0 && !isDeleting
-                          ? 'border-destructive/20 bg-error-50 text-destructive hover:bg-error-100'
-                          : 'cursor-not-allowed border-border/60 bg-background text-text-muted opacity-60'
-                      )}
+                      className="relative inline-flex h-14 items-center text-[13px] font-semibold text-primary"
                     >
-                      删除选中
+                      全部
+                      <span className="ml-1.5 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                        {data?.count ?? 0}
+                      </span>
+                      <span className="absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-primary" />
                     </button>
-                  </div>
-                )}
+                  )}
+
+                  {canDeleteActivityLogs && normalizedItems.length > 0 && (
+                    <div className="flex h-14 flex-wrap items-center gap-3">
+                      <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
+                        <Checkbox
+                          checked={isAllLogsSelected ? true : hasPartialLogSelection ? 'indeterminate' : false}
+                          onCheckedChange={handleToggleAllLogs}
+                          disabled={isDeleting}
+                        />
+                        <span>本页全选</span>
+                        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-text-muted">
+                          {selectedLogIds.length}/{normalizedItems.length}
+                        </span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => setBulkDeleteOpen(true)}
+                        disabled={selectedLogIds.length === 0 || isDeleting}
+                        className={cn(
+                          'inline-flex h-8 items-center rounded-lg border px-3 text-[12px] font-medium transition-colors',
+                          selectedLogIds.length > 0 && !isDeleting
+                            ? 'border-destructive/20 bg-error-50 text-destructive hover:bg-error-100'
+                            : 'cursor-not-allowed border-border/60 bg-background text-text-muted opacity-60'
+                        )}
+                      >
+                        删除选中
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* 日志列表 */}
-            <ActivityLogFeed
-              items={normalizedItems}
-              isLoading={isLoading}
-              canDelete={canDeleteActivityLogs}
-              selectedLogIds={selectedLogIds}
-              selectionDisabled={isDeleting}
-              onToggleSelect={handleToggleLog}
-            />
+              {/* 日志列表 */}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <ActivityLogFeed
+                  items={normalizedItems}
+                  isLoading={isLoading}
+                  canDelete={canDeleteActivityLogs}
+                  selectedLogIds={selectedLogIds}
+                  selectionDisabled={isDeleting}
+                  onToggleSelect={handleToggleLog}
+                />
+              </div>
 
-            <div className="border-t border-border/40 px-5 py-3">
-              <Pagination
-                current={page}
-                total={data?.count ?? 0}
-                pageSize={pageSize}
-                showSizeChanger
-                showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-                onChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
-                onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
-              />
+              <div className="border-t border-border/40 px-5 py-3">
+                <Pagination
+                  current={page}
+                  total={data?.count ?? 0}
+                  pageSize={pageSize}
+                  showSizeChanger
+                  showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                  onChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
+                  onShowSizeChange={(p, s) => { setPage(p); setPageSize(s); setSelectedLogIds([]); }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -345,6 +350,6 @@ export const ActivityLogsPanel: React.FC = () => {
         isConfirming={bulkDeleteActivityLogs.isPending}
         onConfirm={handleConfirmBulkDelete}
       />
-    </section>
+    </PageWorkbench>
   );
 };

@@ -6,8 +6,8 @@ import { useParams } from 'react-router-dom';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageSplit } from '@/components/ui/page-shell';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { Textarea } from '@/components/ui/textarea';
 import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
@@ -107,7 +107,6 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
 
   const [studentId, setStudentId] = useState(() => (!isEdit && initialStudentId ? String(initialStudentId) : ''));
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
-  const [draftOverallComment, setDraftOverallComment] = useState<string | null>(isEdit ? null : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const baseItems = useMemo(() => {
@@ -118,7 +117,6 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
   }, [isEdit, spotCheckDetail]);
 
   const items = draftItems ?? baseItems;
-  const overallComment = draftOverallComment ?? spotCheckDetail?.overall_comment ?? '';
 
   const isSubmitting = createSpotCheck.isPending || updateSpotCheck.isPending;
   const selectedStudent = useMemo<SelectedStudentInfo | null>(() => {
@@ -204,10 +202,7 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
       return;
     }
 
-    const payload = {
-      items: buildPayloadItems(),
-      overall_comment: overallComment.trim(),
-    };
+    const payload = { items: buildPayloadItems() };
 
     try {
       if (isEdit) {
@@ -246,8 +241,8 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
         />
       ) : null}
 
-      <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="space-y-5 rounded-lg bg-[#f6f7fb] p-5">
+      <PageSplit className="gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="flex h-full flex-col gap-5 rounded-lg bg-[#f6f7fb] p-5">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">学员</p>
             {isEdit ? (
@@ -291,7 +286,7 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
           ) : null}
         </aside>
 
-        <section className="space-y-0">
+        <section className="h-full space-y-0">
           <div className="flex items-center justify-between pb-3">
             <h2 className="text-base font-semibold text-foreground">抽查项</h2>
             <Button variant="outline" onClick={handleAddItem} className="h-9 rounded-[16px] border-transparent bg-muted/55 px-3 hover:bg-muted">
@@ -312,19 +307,9 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
                 onRemove={handleRemoveItem}
               />
             ))}
-
-            <section className="space-y-2 pt-5">
-              <p className="text-sm font-semibold text-foreground">综合评语</p>
-              <Textarea
-                value={overallComment}
-                onChange={(event) => setDraftOverallComment(event.target.value)}
-                placeholder="可选"
-                className="min-h-[56px] rounded-lg border-transparent bg-muted/45 px-3.5 py-2.5 text-[13px] leading-5 placeholder:text-[13px] focus:border-primary/20 focus:bg-background focus:ring-0"
-              />
-            </section>
           </div>
         </section>
-      </div>
+      </PageSplit>
 
       <div className="mt-4 flex flex-wrap justify-end gap-3 border-t border-border/70 pt-4">
         <Button variant="outline" onClick={handleCancel}>

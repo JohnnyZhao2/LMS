@@ -10,6 +10,7 @@ import { useMentorDashboard } from '../api/mentor-dashboard';
 
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
@@ -27,54 +28,47 @@ export const AdminDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-10 space-y-6">
+      <PageShell>
         <Skeleton className="h-20 w-1/3 rounded-lg" />
         <div className="grid grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-40 rounded-lg" />
           ))}
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="space-y-8 pb-10">
+    <PageShell>
       <PageHeader
         title="系统概览"
         icon={<Settings />}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* 右侧主要区域 - 占据全部列 */}
-          <div className="lg:col-span-12 space-y-8">
-          {/* 统计指标网格 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <StatCard
-              title="本月任务"
-              value={data?.summary?.monthly_tasks ?? 0}
-              icon={ClipboardCheck}
-              accentClassName="bg-warning"
-              size="sm"
-            />
-            <StatCard
-              title="周活跃用户"
-              value={data?.summary?.weekly_active_users ?? 0}
-              icon={Users}
-              accentClassName="bg-primary"
-              size="sm"
-            />
-            <StatCard
-              title="运行时间"
-              value="99.9%"
-              icon={Cloud}
-              accentClassName="bg-cyan-500"
-              size="sm"
-            />
-          </div>
-
-        </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          title="本月任务"
+          value={data?.summary?.monthly_tasks ?? 0}
+          icon={ClipboardCheck}
+          accentClassName="bg-warning"
+          size="sm"
+        />
+        <StatCard
+          title="周活跃用户"
+          value={data?.summary?.weekly_active_users ?? 0}
+          icon={Users}
+          accentClassName="bg-primary"
+          size="sm"
+        />
+        <StatCard
+          title="运行时间"
+          value="99.9%"
+          icon={Cloud}
+          accentClassName="bg-cyan-500"
+          size="sm"
+        />
       </div>
-    </div>
+    </PageShell>
   );
 };

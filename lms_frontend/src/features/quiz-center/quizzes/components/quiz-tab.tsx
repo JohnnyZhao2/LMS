@@ -222,6 +222,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         columns={columns}
         data={data?.results || []}
         isLoading={isLoading}
+        fillHeight
         pagination={{
           pageIndex: page - 1,
           pageSize: pageSize,

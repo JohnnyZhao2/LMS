@@ -121,10 +121,10 @@ export const TaskPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10 min-h-full bg-muted">
+    <div className="space-y-5 animate-fadeIn pb-8 min-h-full bg-muted">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background backdrop-blur-md border-b border-border/60 px-6 py-4">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -180,7 +180,7 @@ export const TaskPreviewPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-6">
+      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6">
         {/* PROGRESS TAB */}
         {activeTab === 'progress' && (
           <div>

@@ -1,6 +1,7 @@
 import { Settings, ShieldCheck } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { ROUTES } from '@/config/routes';
 import { ActivityLogPolicyPanel } from '../components/activity-log-policy-panel';
 
@@ -9,7 +10,7 @@ export const ActivityLogPolicyPage: React.FC = () => {
   const auditLogsPath = role ? `/${role}${ROUTES.AUDIT_LOGS}` : ROUTES.AUDIT_LOGS;
 
   return (
-    <div className="space-y-6 pb-10">
+    <PageShell>
       <PageHeader
         title="日志策略"
         icon={<Settings />}
@@ -38,6 +39,6 @@ export const ActivityLogPolicyPage: React.FC = () => {
           <ActivityLogPolicyPanel />
         </div>
       </section>
-    </div>
+    </PageShell>
   );
 };

@@ -14,6 +14,8 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { toast } from 'sonner';
@@ -272,27 +274,31 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     }, [deleteSpaceTypeTarget, deleteTag, handleSpaceTypeSelect]);
 
     return (
-        <div
-            className="space-y-3"
+        <PageShell
             style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
         >
-            {/* 搜索栏 — 底部横线样式 */}
-            <div className="relative">
-                <Search
-                    className="pointer-events-none absolute left-0 bottom-[14px] h-4 w-4 text-foreground/28"
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                />
-                <input
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    placeholder=""
-                    aria-label="搜索知识"
-                    className="w-full bg-transparent border-0 border-b border-foreground/15 focus:border-foreground/40 outline-none pl-12 text-2xl font-light text-foreground/60 py-3 transition-colors"
-                    style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
-                />
-            </div>
+            <PageHeader
+                title="知识中心"
+                icon={<Inbox />}
+                extra={(
+                    <div className="relative w-full md:w-[22rem] lg:w-[28rem]">
+                        <Search
+                            className="pointer-events-none absolute bottom-[14px] left-0 h-4 w-4 text-foreground/28"
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                        />
+                        <input
+                            value={searchValue}
+                            onChange={(e) => setSearchValue(e.target.value)}
+                            onKeyDown={handleSearchKeyDown}
+                            placeholder=""
+                            aria-label="搜索知识"
+                            className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-12 text-2xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40"
+                            style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
+                        />
+                    </div>
+                )}
+            />
 
             {/* space筛选标签 — 白色卡片 */}
             {(spaceTypeTags.length > 0 || isManagementView) && (
@@ -661,6 +667,6 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </PageShell>
     );
 };

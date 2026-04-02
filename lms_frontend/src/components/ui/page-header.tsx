@@ -42,13 +42,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 
   return (
     <div className={cn(
-      "flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8",
+      'flex flex-col justify-between gap-4 md:flex-row md:items-end',
       className
     )}>
-      <div className="flex flex-col gap-1">
+      <div className="flex min-w-0 flex-col gap-2.5">
         {/* 面包屑导航 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-2">
+          <nav className="mb-1 flex items-center gap-1.5 text-xs text-text-muted">
             <Link
               to={getDashboardPath()}
               className="hover:text-foreground transition-colors"
@@ -74,28 +74,28 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
 
         {/* 标题区域 */}
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3.5">
           {icon && (
-            <div className="flex items-center justify-center text-text-muted">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-white/86 text-[#6C7B91] shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
               {React.isValidElement<{ className?: string }>(icon) ? React.cloneElement(icon, {
-                className: cn(icon.props.className, "w-6 h-6")
+                className: cn(icon.props.className, "h-5 w-5")
               }) : icon}
             </div>
           )}
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            {title}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-[28px] font-semibold leading-none tracking-[-0.045em] text-foreground md:text-[30px]">
+              {title}
+            </h1>
+          </div>
         </div>
       </div>
 
       {/* 操作区 */}
       {extra && (
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end md:self-end">
           {extra}
         </div>
       )}
     </div>
   );
 };
-
-

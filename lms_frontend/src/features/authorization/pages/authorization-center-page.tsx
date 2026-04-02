@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Layers3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
@@ -73,17 +74,17 @@ export const AuthorizationCenterPage: React.FC = () => {
 
   if (!canViewRoleTemplate) {
     return (
-      <div className="space-y-6 pb-10">
+      <PageShell>
         <PageHeader title="角色模板配置" icon={<Layers3 />} />
         <div className="rounded-2xl border border-border bg-muted p-8 text-sm text-text-muted">
           当前账号没有角色模板配置权限，请联系管理员开通。
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <PageShell>
       <PageHeader title="角色模板配置" icon={<Layers3 />} />
 
       <RolePermissionTemplatePanel
@@ -99,6 +100,6 @@ export const AuthorizationCenterPage: React.FC = () => {
         isLoadingTemplate={roleTemplateQuery.isLoading}
         isSaving={replaceRoleTemplateMutation.isPending}
       />
-    </div>
+    </PageShell>
   );
 };

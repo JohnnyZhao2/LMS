@@ -37,7 +37,6 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
     topic_count = serializers.IntegerField(read_only=True)
     topic_summary = serializers.CharField(read_only=True)
     average_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True, allow_null=True)
-    overall_comment = serializers.CharField(read_only=True)
     items = SpotCheckItemSerializer(many=True, read_only=True)
 
     class Meta:
@@ -54,7 +53,6 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
             'topic_count',
             'topic_summary',
             'average_score',
-            'overall_comment',
             'items',
             'created_at',
             'updated_at',
@@ -85,7 +83,6 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
     topic_count = serializers.IntegerField(read_only=True)
     topic_summary = serializers.CharField(read_only=True)
     average_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True, allow_null=True)
-    overall_comment = serializers.CharField(read_only=True)
 
     class Meta:
         model = SpotCheck
@@ -102,7 +99,6 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
             'topic_count',
             'topic_summary',
             'average_score',
-            'overall_comment',
             'items',
             'created_at',
             'updated_at',
@@ -115,11 +111,9 @@ class SpotCheckCreateSerializer(serializers.Serializer):
 
     student = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     items = SpotCheckItemWriteSerializer(many=True, allow_empty=False)
-    overall_comment = serializers.CharField(required=False, allow_blank=True, default='', trim_whitespace=True)
 
 
 class SpotCheckUpdateSerializer(serializers.Serializer):
     """更新抽查记录序列化器。"""
 
     items = SpotCheckItemWriteSerializer(many=True, allow_empty=False, required=False)
-    overall_comment = serializers.CharField(required=False, allow_blank=True, trim_whitespace=True)

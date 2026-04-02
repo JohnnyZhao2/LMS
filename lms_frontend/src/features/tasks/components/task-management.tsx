@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
 import { PageHeader } from '@/components/ui/page-header';
+import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 import { isAdminLikeRole } from '@/lib/role-utils';
 
 /**
@@ -243,95 +244,92 @@ export const TaskManagement: React.FC = () => {
     ]
 
     return (
-        <div className="flex flex-1 min-h-0 flex-col gap-10 pb-10">
-            <div>
-                <PageHeader
-                    title="任务中心"
-                    icon={<FileText />}
-                />
-            </div>
+        <PageFillShell>
+            <PageHeader
+                title="任务中心"
+                icon={<FileText />}
+            />
 
             {/* 列表主体 */}
-            <div className="flex flex-1 min-h-0 flex-col">
-                <div className="flex flex-1 min-h-0 flex-col">
-                    {/* 搜索和筛选 */}
-                    <div className="mb-10 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
-                            {isAdmin && (
-                                <SegmentedControl
-                                    value={creatorSideFilter}
-                                    onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}
-                                    options={[
-                                        { label: '全部来源', value: 'all' },
-                                        { label: '管理端', value: 'management' },
-                                        { label: '非管理端', value: 'non_management' },
-                                    ]}
-                                    activeColor="white"
-                                    className="w-full xl:w-auto xl:shrink-0"
-                                />
-                            )}
+            <PageViewport className="flex flex-col">
+                {/* 搜索和筛选 */}
+                <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+                        {isAdmin && (
                             <SegmentedControl
-                                value={statusFilter}
-                                onChange={(val: string) => setStatusFilter(val)}
+                                value={creatorSideFilter}
+                                onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}
                                 options={[
-                                    { label: '进行中', value: 'open' },
-                                    { label: '已结束', value: 'closed' },
-                                    { label: '全部', value: 'all' },
+                                    { label: '全部来源', value: 'all' },
+                                    { label: '管理端', value: 'management' },
+                                    { label: '非管理端', value: 'non_management' },
                                 ]}
                                 activeColor="white"
                                 className="w-full xl:w-auto xl:shrink-0"
                             />
-                        </div>
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
-                            <SearchInput
-                                className="w-full xl:w-[22rem] xl:min-w-[22rem]"
-                                placeholder="搜索任务标题或编号..."
-                                value={searchTerm}
-                                onChange={setSearchTerm}
-                            />
-                            <CircleButton
-                                onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
-                                label="发布新任务"
-                                className="self-end xl:self-auto"
-                            />
-                        </div>
-                    </div>
-
-                    {/* 表格 */}
-                    <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border-0">
-                        {isLoading ? (
-                            <div className="flex flex-1 flex-col p-10 space-y-5">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="flex flex-1 min-h-0 flex-col">
-                                <DataTable
-                                    columns={columns}
-                                    data={tasksData?.results?.filter((t: TaskListItem) => {
-                                        const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                        return matchesSearch;
-                                    }) || []}
-                                    pagination={{
-                                        pageIndex: page - 1,
-                                        pageSize: pageSize,
-                                        pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
-                                        totalCount: tasksData?.count || 0,
-                                        onPageChange: (p: number) => setPage(p + 1),
-                                        onPageSizeChange: (size: number) => {
-                                            setPageSize(size);
-                                            setPage(1);
-                                        },
-                                    }}
-                                    rowClassName="hover:bg-muted transition-colors cursor-pointer group"
-                                    onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
-                                />
-                            </div>
                         )}
+                        <SegmentedControl
+                            value={statusFilter}
+                            onChange={(val: string) => setStatusFilter(val)}
+                            options={[
+                                { label: '进行中', value: 'open' },
+                                { label: '已结束', value: 'closed' },
+                                { label: '全部', value: 'all' },
+                            ]}
+                            activeColor="white"
+                            className="w-full xl:w-auto xl:shrink-0"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+                        <SearchInput
+                            className="w-full xl:w-[22rem] xl:min-w-[22rem]"
+                            placeholder="搜索任务标题或编号..."
+                            value={searchTerm}
+                            onChange={setSearchTerm}
+                        />
+                        <CircleButton
+                            onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
+                            label="发布新任务"
+                            className="self-end xl:self-auto"
+                        />
                     </div>
                 </div>
-            </div>
+
+                {/* 表格 */}
+                <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border-0">
+                    {isLoading ? (
+                        <div className="flex flex-1 flex-col space-y-5 p-10">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-1 min-h-0 flex-col">
+                            <DataTable
+                                columns={columns}
+                                data={tasksData?.results?.filter((t: TaskListItem) => {
+                                    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
+                                    return matchesSearch;
+                                }) || []}
+                                fillHeight
+                                pagination={{
+                                    pageIndex: page - 1,
+                                    pageSize: pageSize,
+                                    pageCount: Math.ceil((tasksData?.count || 0) / pageSize),
+                                    totalCount: tasksData?.count || 0,
+                                    onPageChange: (p: number) => setPage(p + 1),
+                                    onPageSizeChange: (size: number) => {
+                                        setPageSize(size);
+                                        setPage(1);
+                                    },
+                                }}
+                                rowClassName="hover:bg-muted transition-colors cursor-pointer group"
+                                onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
+                            />
+                        </div>
+                    )}
+                </div>
+            </PageViewport>
 
             {/* 删除确认对话框 */}
             <ConfirmDialog
@@ -348,6 +346,6 @@ export const TaskManagement: React.FC = () => {
                 onConfirm={handleDeleteTask}
                 isConfirming={isDeleting}
             />
-        </div>
+        </PageFillShell>
     )
 }

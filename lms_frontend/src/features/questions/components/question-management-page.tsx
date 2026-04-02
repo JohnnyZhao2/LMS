@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,14 +18,14 @@ export const QuestionManagementPage: React.FC = () => {
   const { data: spaceTypes } = useSpaceTypeTags();
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-10 pb-10">
+    <PageFillShell>
       <PageHeader
         title="题目管理"
         icon={<FileText />}
       />
 
-      <div className="flex flex-1 min-h-0 flex-col reveal-item stagger-delay-2">
-        <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end">
+      <PageViewport className="flex flex-col reveal-item stagger-delay-2">
+        <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-end">
           <div className="flex flex-wrap items-center gap-3">
             <SearchInput
               className="w-[22rem] max-w-full"
@@ -76,8 +77,8 @@ export const QuestionManagementPage: React.FC = () => {
             spaceTypes={spaceTypes}
           />
         </div>
-      </div>
-    </div>
+      </PageViewport>
+    </PageFillShell>
   );
 };
 

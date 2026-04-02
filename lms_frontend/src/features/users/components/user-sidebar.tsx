@@ -58,7 +58,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
     const items = viewMode === 'department' ? departmentItems : mentorItems;
 
     return (
-        <div className={cn(sidebarWidthClass, 'shrink-0 flex flex-col gap-6', className)}>
+        <div className={cn(sidebarWidthClass, 'shrink-0 flex min-h-0 flex-col gap-6', className)}>
             {/* 视图切换 */}
             <SegmentedControl
                 className={cn(
@@ -78,41 +78,43 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({
             </div>
 
             {/* 层级列表 */}
-            <div className="relative flex flex-col gap-1.5 rounded-2xl bg-muted/70 p-2">
-                {items.map((item) => {
-                    const isSelected = selectedId === item.id;
+            <div className="min-h-0 flex-1 overflow-hidden">
+                <div className="scrollbar-subtle relative flex max-h-full flex-col gap-1.5 overflow-y-auto rounded-2xl bg-muted/70 p-2">
+                    {items.map((item) => {
+                        const isSelected = selectedId === item.id;
 
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onSelect(item.id)}
-                            className={cn(
-                                'w-full',
-                                'group relative flex items-center gap-3 rounded-xl border px-4 py-3 text-left outline-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-0',
-                                isSelected
-                                    ? 'border-border/80 bg-white text-foreground shadow-sm'
-                                    : 'border-transparent bg-transparent text-text-muted hover:bg-white/70 hover:text-foreground'
-                            )}
-                        >
-                            <div className="flex flex-col min-w-0">
-                                <span className={cn(
-                                    'text-sm font-semibold truncate',
-                                    isSelected ? 'text-foreground' : 'text-text-muted group-hover:text-foreground'
-                                )}>
-                                    {item.name}
-                                </span>
-                                {item.subtitle && (
-                                    <span className={cn(
-                                        'text-[10px] font-medium uppercase tracking-wider truncate',
-                                        isSelected ? 'text-text-muted' : 'text-text-muted/80'
-                                    )}>
-                                        {item.subtitle}
-                                    </span>
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onSelect(item.id)}
+                                className={cn(
+                                    'w-full',
+                                    'group relative flex items-center gap-3 rounded-xl border px-4 py-3 text-left outline-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-0',
+                                    isSelected
+                                        ? 'border-border/80 bg-white text-foreground shadow-sm'
+                                        : 'border-transparent bg-transparent text-text-muted hover:bg-white/70 hover:text-foreground'
                                 )}
-                            </div>
-                        </button>
-                    );
-                })}
+                            >
+                                <div className="flex min-w-0 flex-col">
+                                    <span className={cn(
+                                        'truncate text-sm font-semibold',
+                                        isSelected ? 'text-foreground' : 'text-text-muted group-hover:text-foreground'
+                                    )}>
+                                        {item.name}
+                                    </span>
+                                    {item.subtitle && (
+                                        <span className={cn(
+                                            'truncate text-[10px] font-medium uppercase tracking-wider',
+                                            isSelected ? 'text-text-muted' : 'text-text-muted/80'
+                                        )}>
+                                            {item.subtitle}
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

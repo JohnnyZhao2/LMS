@@ -9,6 +9,7 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type PaginationState,
   type VisibilityState,
   type RowSelectionState,
 } from "@tanstack/react-table"
@@ -42,6 +43,7 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   rowClassName?: string
   minHeight?: string | number
+  fillHeight?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -53,12 +55,26 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   onRowClick,
   rowClassName,
-  minHeight = "400px",
+  minHeight = "320px",
+  fillHeight = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const paginationState = React.useMemo<PaginationState | undefined>(
+    () => (
+      pagination
+        ? {
+            pageIndex: pagination.pageIndex,
+            pageSize: pagination.pageSize,
+          }
+        : undefined
+    ),
+    [pagination],
+  )
+  const resolvedTotalCount = pagination?.totalCount ?? data.length
+  const isServerPagination = !!pagination && resolvedTotalCount > data.length
 
   // Sync row selection with parent
   React.useEffect(() => {
@@ -81,26 +97,31 @@ export function DataTable<TData, TValue>({
     onRowSelectionChange: enableRowSelection ? setRowSelection : undefined,
     enableRowSelection,
     state: {
+      ...(paginationState ? { pagination: paginationState } : {}),
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
     },
-    manualPagination: !!pagination,
+    manualPagination: isServerPagination,
     pageCount: pagination?.pageCount ?? -1,
   })
 
   const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
-  const resolvedTotalCount = pagination?.totalCount ?? data.length
 
   return (
     <div
-      className="mt-4 flex min-h-0 flex-1 flex-col"
+      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "max-h-full")}
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-white">
+      <div
+        className={cn(
+          "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-white",
+          fillHeight && "max-h-full",
+        )}
+      >
         <Table
-          containerClassName="min-h-0 flex-1"
+          containerClassName={cn("min-h-0", fillHeight && "flex-1")}
           className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
         >
             <TableHeader>
@@ -189,7 +210,7 @@ export function DataTable<TData, TValue>({
             </TableBody>
         </Table>
         {pagination && (
-        <div className="mt-auto border-t border-border bg-muted/20 px-6 py-4">
+        <div className="mt-auto border-t border-border bg-muted/20 px-4 py-3">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}

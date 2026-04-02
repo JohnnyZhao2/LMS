@@ -33,6 +33,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
@@ -331,70 +332,76 @@ export const UserList: React.FC = () => {
     },
   ]
 
-  return (
-    <div className="space-y-10 pb-20">
-      <PageHeader
-        title="用户中心"
-        icon={<UsersIcon />}
-      />
-
-      <div className="flex items-start gap-8">
-        {/* Left Sidebar */}
-        <UserSidebar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          departments={departments}
-          mentors={mentors}
-          selectedId={selectedHierarchyId}
-          onSelect={setSelectedHierarchyId}
+    return (
+    <>
+      <PageFillShell>
+        <PageHeader
+          title="用户中心"
+          icon={<UsersIcon />}
         />
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col gap-6 min-w-0">
-          {/* Header */}
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
-            <SearchInput
-              className="w-full xl:w-[22rem] xl:min-w-[22rem]"
-              placeholder="检索姓名、工号、部位..."
-              value={search}
-              onChange={setSearch}
+        <PageWorkbench>
+          <div className="flex min-h-0 flex-1 items-stretch gap-8">
+            {/* Left Sidebar */}
+            <UserSidebar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              departments={departments}
+              mentors={mentors}
+              selectedId={selectedHierarchyId}
+              onSelect={setSelectedHierarchyId}
+              className="self-stretch"
             />
-            {canCreateUser && (
-              <CircleButton
-                onClick={() => {
-                  setEditingUserId(undefined)
-                  setFormModalOpen(true)
-                }}
-                label="快速录入"
-                className="self-end xl:self-auto"
-              />
-            )}
-          </div>
 
-          {/* User List - 使用恢复的分页配置 */}
-          <div>
-            <DataTable
-              columns={columns}
-              data={filteredUsers}
-              isLoading={isLoading}
-              pagination={{
-                pageIndex: pagination.pageIndex,
-                pageSize: pagination.pageSize,
-                pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
-                totalCount: filteredUsers.length,
-                onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
-                onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
-              }}
-              rowClassName="group cursor-pointer hover:bg-muted transition-colors"
-              onRowClick={(row) => {
-                if (!canOpenUserEditor) return
-                setEditingUserId(row.id)
-                setFormModalOpen(true)
-              }}
-            />
+            {/* Main Content */}
+            <div className="flex min-w-0 flex-1 flex-col self-stretch">
+              {/* Header */}
+              <div className="mb-1 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+                <SearchInput
+                  className="w-full xl:w-[22rem] xl:min-w-[22rem]"
+                  placeholder="检索姓名、工号、部位..."
+                  value={search}
+                  onChange={setSearch}
+                />
+                {canCreateUser && (
+                  <CircleButton
+                    onClick={() => {
+                      setEditingUserId(undefined)
+                      setFormModalOpen(true)
+                    }}
+                    label="快速录入"
+                    className="self-end xl:self-auto"
+                  />
+                )}
+              </div>
+
+              {/* User List */}
+              <div className="flex min-h-0 flex-1 flex-col">
+                <DataTable
+                  columns={columns}
+                  data={filteredUsers}
+                  isLoading={isLoading}
+                  fillHeight
+                  pagination={{
+                    pageIndex: pagination.pageIndex,
+                    pageSize: pagination.pageSize,
+                    pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+                    totalCount: filteredUsers.length,
+                    onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
+                    onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
+                  }}
+                  rowClassName="group cursor-pointer hover:bg-muted transition-colors"
+                  onRowClick={(row) => {
+                    if (!canOpenUserEditor) return
+                    setEditingUserId(row.id)
+                    setFormModalOpen(true)
+                  }}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </PageWorkbench>
+      </PageFillShell>
 
       {/* User Form Modal */}
       <UserForm
@@ -491,6 +498,6 @@ export const UserList: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

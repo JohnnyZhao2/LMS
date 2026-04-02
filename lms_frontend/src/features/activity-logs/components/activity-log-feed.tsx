@@ -46,7 +46,7 @@ const groupItemsByDay = (items: ActivityLogItem[]) => {
 };
 
 const LoadingState = () => (
-  <div className="px-5 py-4">
+  <div className="scrollbar-subtle h-full overflow-y-auto px-5 py-4">
     <div className="relative ml-[18px] border-l-2 border-border/40 pl-8">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex animate-pulse items-start gap-3 py-3">
@@ -73,7 +73,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
 
   if (items.length === 0) {
     return (
-      <div className="px-5 py-16 text-center">
+      <div className="flex h-full items-center justify-center px-5 py-16 text-center">
         <p className="text-[13px] text-text-muted">暂无命中日志</p>
       </div>
     );
@@ -82,7 +82,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
   const groups = groupItemsByDay(items);
 
   return (
-    <div className="px-5 py-4">
+    <div className="scrollbar-subtle h-full overflow-y-auto px-5 py-4">
       <div className="relative ml-[18px]">
         <div className="absolute bottom-0 left-0 top-0 w-px bg-border/60" />
 

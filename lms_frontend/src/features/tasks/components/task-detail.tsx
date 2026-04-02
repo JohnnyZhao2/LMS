@@ -130,7 +130,7 @@ export const TaskDetail: React.FC = () => {
         <div className="h-16 border-b bg-background flex items-center px-6">
           <Skeleton className="h-8 w-64" />
         </div>
-        <div className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-8 px-4 py-8 lg:grid-cols-12 lg:px-6">
           <div className="lg:col-span-8 space-y-6">
             <Skeleton className="h-40 w-full rounded-xl" />
             <div className="space-y-4">
@@ -267,10 +267,10 @@ export const TaskDetail: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8 lg:py-10 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <main className="mx-auto flex w-full max-w-[1600px] flex-1 px-4 py-6 lg:px-6 lg:py-8">
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
 
-          <div className="lg:col-span-8 space-y-10">
+          <div className="lg:col-span-8 space-y-8">
 
             {task.description && (
               <section className="bg-background rounded-2xl border border-border p-8   transition-all duration-300">
@@ -464,7 +464,7 @@ export const TaskDetail: React.FC = () => {
             </section>
           </div>
 
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4 flex h-full flex-col gap-6">
 
             {isStudent && learningDetail && (
               <div className="bg-background rounded-2xl border border-border  p-6 sticky top-24">

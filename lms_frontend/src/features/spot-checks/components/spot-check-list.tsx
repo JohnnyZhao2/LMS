@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
+import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { isAdminLikeRole } from '@/lib/role-utils';
@@ -123,7 +124,7 @@ export const SpotCheckList: React.FC = () => {
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col animate-fadeIn">
+      <PageFillShell className="animate-fadeIn">
         <PageHeader
           title="抽查管理"
           icon={<ListChecks className="h-5 w-5" />}
@@ -137,41 +138,43 @@ export const SpotCheckList: React.FC = () => {
           }
         />
 
-        <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
-          <SpotCheckStudentPanel
-            students={filteredStudents}
-            selectedStudentId={resolvedSelectedStudentId}
-            searchValue={studentSearch}
-            onSearchChange={setStudentSearch}
-            onSelectStudent={handleSelectStudent}
-            departmentFilter={departmentFilter}
-            onDepartmentFilterChange={(value) => {
-              startTransition(() => {
-                setDepartmentFilter(value);
-              });
-            }}
-            isLoading={studentsLoading}
-          />
+        <PageWorkbench>
+          <PageSplit className="min-h-0 flex-1 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
+            <SpotCheckStudentPanel
+              students={filteredStudents}
+              selectedStudentId={resolvedSelectedStudentId}
+              searchValue={studentSearch}
+              onSearchChange={setStudentSearch}
+              onSelectStudent={handleSelectStudent}
+              departmentFilter={departmentFilter}
+              onDepartmentFilterChange={(value) => {
+                startTransition(() => {
+                  setDepartmentFilter(value);
+                });
+              }}
+              isLoading={studentsLoading}
+            />
 
-          <SpotCheckRecordList
-            selectedStudent={selectedStudent}
-            records={records}
-            totalCount={recordsData?.count ?? 0}
-            page={page}
-            pageSize={pageSize}
-            isLoading={recordsLoading}
-            canUpdateSpotCheck={canUpdateSpotCheck}
-            canDeleteSpotCheck={canDeleteSpotCheck}
-            canManageRecord={canManageRecord}
-            onEditRecord={setEditingRecord}
-            onDeleteRecord={setDeleteTarget}
-            onPageChange={(nextPage) => updatePagination({ page: nextPage })}
-            onPageSizeChange={(nextPageSize) => {
-              updatePagination({ page: 1, pageSize: nextPageSize });
-            }}
-          />
-        </div>
-      </div>
+            <SpotCheckRecordList
+              selectedStudent={selectedStudent}
+              records={records}
+              totalCount={recordsData?.count ?? 0}
+              page={page}
+              pageSize={pageSize}
+              isLoading={recordsLoading}
+              canUpdateSpotCheck={canUpdateSpotCheck}
+              canDeleteSpotCheck={canDeleteSpotCheck}
+              canManageRecord={canManageRecord}
+              onEditRecord={setEditingRecord}
+              onDeleteRecord={setDeleteTarget}
+              onPageChange={(nextPage) => updatePagination({ page: nextPage })}
+              onPageSizeChange={(nextPageSize) => {
+                updatePagination({ page: 1, pageSize: nextPageSize });
+              }}
+            />
+          </PageSplit>
+        </PageWorkbench>
+      </PageFillShell>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-h-[92vh] w-[95vw] max-w-[1060px] overflow-hidden border-transparent bg-[#fcfcfe] p-0 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">

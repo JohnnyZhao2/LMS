@@ -81,12 +81,10 @@ class SpotCheckService(BaseService):
 
         self._validate_student_scope(student)
         items = self._normalize_items(data.get('items'))
-        overall_comment = str(data.get('overall_comment') or '').strip()
 
         spot_check = SpotCheck.objects.create(
             student=student,
             checker=self.user,
-            overall_comment=overall_comment,
         )
         self._replace_items(spot_check, items)
         return spot_check
@@ -112,9 +110,6 @@ class SpotCheckService(BaseService):
         if 'items' in data:
             items = self._normalize_items(data.get('items'))
             self._replace_items(spot_check, items)
-        if 'overall_comment' in data:
-            spot_check.overall_comment = str(data.get('overall_comment') or '').strip()
-            spot_check.save(update_fields=['overall_comment', 'updated_at'])
 
         return spot_check
 

@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { PageShell } from '@/components/ui/page-shell';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -189,7 +191,12 @@ export const TagManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-8">
+    <PageShell>
+      <PageHeader
+        title="标签管理"
+        icon={<Hash />}
+      />
+
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <div className="flex w-full flex-col gap-3 sm:w-auto">
           <SegmentedControl
@@ -444,6 +451,6 @@ export const TagManagementPage: React.FC = () => {
         onConfirm={handleDelete}
         isConfirming={deleteTag.isPending}
       />
-    </div>
+    </PageShell>
   );
 };

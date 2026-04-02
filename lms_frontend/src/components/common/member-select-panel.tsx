@@ -33,7 +33,10 @@ interface MemberSelectPanelProps {
   isLoading?: boolean;
   loadingText?: string;
   className?: string;
+  controlsClassName?: string;
+  controlsInnerClassName?: string;
   listClassName?: string;
+  itemsClassName?: string;
   segments?: MemberSelectPanelSegment[];
   activeSegment?: string;
   onSegmentChange?: (value: string) => void;
@@ -52,7 +55,10 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
   isLoading = false,
   loadingText = '加载中...',
   className,
+  controlsClassName,
+  controlsInnerClassName,
   listClassName,
+  itemsClassName,
   segments = [],
   activeSegment,
   onSegmentChange,
@@ -70,7 +76,7 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
           : '';
 
   return (
-    <aside className={cn('overflow-hidden rounded-2xl border border-border/60 bg-background', className)}>
+    <aside className={cn('flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-background', className)}>
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />
@@ -80,8 +86,8 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
       </div>
 
       {showControls ? (
-        <div className="border-b border-border/60 px-3 py-2.5">
-          <div className="space-y-2">
+        <div className={cn('border-b border-border/60 px-3 py-2.5', controlsClassName)}>
+          <div className={cn('space-y-2', controlsInnerClassName)}>
             {showSegments ? (
               <SegmentedControl
                 options={segments}
@@ -107,7 +113,7 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
         </div>
       ) : null}
 
-      <div className={cn('scrollbar-subtle max-h-[40rem] overflow-y-auto p-2', listClassName)}>
+      <div className={cn('scrollbar-subtle min-h-0 flex-1 overflow-y-auto p-2 max-h-[40rem]', listClassName)}>
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-9 text-[12px] text-text-muted">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -118,7 +124,7 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
             {emptyText}
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div className={cn('space-y-0.5', itemsClassName)}>
             {items.map((item) => {
               const checked = selectedIds.includes(item.id);
               const disabled = item.disabled ?? false;
