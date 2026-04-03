@@ -272,18 +272,18 @@ export const useTaskForm = () => {
     setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   };
 
-  const toggleAllUsers = (checked: boolean) => {
+  const toggleUsers = (userIds: number[], checked: boolean) => {
     if (checked) {
-      const allIds = filteredUsers.map(u => u.id);
-      setSelectedUserIds(prev => Array.from(new Set([...prev, ...allIds])));
-    } else {
-      const currentIds = filteredUsers.map(u => u.id);
-      if (canRemoveAssignee) {
-        setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id)));
-      } else {
-        setSelectedUserIds(prev => prev.filter(id => !currentIds.includes(id) || originalAssigneeIds.includes(id)));
-      }
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...userIds])));
+      return;
     }
+
+    if (canRemoveAssignee) {
+      setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id)));
+      return;
+    }
+
+    setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id) || originalAssigneeIds.includes(id)));
   };
 
   const clearUsers = () => {
@@ -341,7 +341,7 @@ export const useTaskForm = () => {
   // Computed values
   const isLoading = knowledgeQuery.isLoading || quizQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
-  const canSubmit = title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0;
+  const canSubmit = Boolean(title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0);
 
   return {
     // State
@@ -383,7 +383,7 @@ export const useTaskForm = () => {
     removeResource,
     upgradeResource,
     toggleUser,
-    toggleAllUsers,
+    toggleUsers,
     clearUsers,
     handleDragEnd,
     handleSubmit,

@@ -49,7 +49,7 @@ export const SpaceColorRingPicker: React.FC<SpaceColorRingPickerProps> = ({
     [orbit.radius],
   );
   const positionMap = React.useMemo(
-    () => new Map(positions.map((item) => [item.color, item])),
+    () => new Map<string, (typeof positions)[number]>(positions.map((item) => [item.color, item])),
     [positions],
   );
   const floatingStartScale = orbit.ring / orbit.center;

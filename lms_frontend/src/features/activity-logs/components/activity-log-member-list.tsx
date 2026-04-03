@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
-import { UserSelectPanel } from '@/components/common/user-select-panel';
+import { Users } from 'lucide-react';
+
+import { UserSelectList } from '@/components/common/user-select-list';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import type { ActivityLogType, ActivityLogUser } from '../types';
 
 interface ActivityLogMemberListProps {
@@ -71,22 +74,38 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
     : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
 
   return (
-    <UserSelectPanel
-      title="成员"
-      items={panelItems}
-      selectedIds={selectedMemberIds}
-      onSelect={onToggleMember}
-      selectionMode="multiple"
-      emptyText={resolvedEmptyText}
-      segments={[
-        { label: '全部', value: 'all' },
-        { label: '一室', value: 'room1' },
-        { label: '二室', value: 'room2' },
-      ]}
-      activeSegment={departmentFilter}
-      onSegmentChange={(value) => setDepartmentFilter(value as ActivityLogDepartmentFilter)}
-      className="h-full min-h-[38rem] xl:max-h-full"
-      listClassName="max-h-none"
-    />
+    <aside className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background xl:max-h-full">
+      <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-text-muted" />
+          <span className="text-[13px] font-semibold text-foreground">成员</span>
+          <span className="text-[12px] text-text-muted">({panelItems.length})</span>
+        </div>
+      </div>
+
+      <div className="border-b border-border/60 px-3 py-2.5">
+        <SegmentedControl
+          options={[
+            { label: '全部', value: 'all' },
+            { label: '一室', value: 'room1' },
+            { label: '二室', value: 'room2' },
+          ]}
+          value={departmentFilter}
+          onChange={(value) => setDepartmentFilter(value as ActivityLogDepartmentFilter)}
+          size="sm"
+          className="w-full [&>div]:w-full [&>div]:grid [&>div]:grid-cols-3 [&_button]:px-0"
+        />
+      </div>
+
+      <UserSelectList
+        items={panelItems}
+        selectedIds={selectedMemberIds}
+        onSelect={onToggleMember}
+        selectionMode="multiple"
+        appearance="panel"
+        emptyText={resolvedEmptyText}
+        className="max-h-none"
+      />
+    </aside>
   );
 };

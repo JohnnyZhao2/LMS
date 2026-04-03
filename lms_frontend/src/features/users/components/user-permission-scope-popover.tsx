@@ -1,6 +1,8 @@
 import { Settings2 } from 'lucide-react';
 
-import { UserSelectPanel } from '@/components/common/user-select-panel';
+import { UserSelectList } from '@/components/common/user-select-list';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
@@ -84,38 +86,78 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
       container={dialogContentElement}
       sideOffset={8}
     >
-      <UserSelectPanel
-        variant="plain"
-        items={filteredScopeUsers.map((user) => ({
-          id: user.id,
-          name: user.username,
-          avatarKey: user.avatar_key,
-          meta: user.department?.name ?? '未分组',
-        }))}
-        selectedIds={selectedScopeUserIds}
-        searchValue={scopeUserSearch}
-        onSearchChange={onScopeUserSearchChange}
-        onSelect={onToggleScopeUser}
-        onToggleAll={onToggleSelectAllFilteredScopeUsers}
-        isLoading={isScopeUsersLoading}
-        sidebarFilters={scopeFilterOptions}
-        activeSidebarFilter={scopeUserFilter}
-        onSidebarFilterChange={onScopeFilterChange}
-        onSidebarFilterDoubleClick={onFilterDoubleClick}
-        showSidebarReset={showReset}
-        onSidebarReset={onReset}
-        isAllSelected={isAllFilteredScopeUsersSelected}
-        hasPartialSelection={hasPartialFilteredScopeSelection}
-        selectedCount={selectedFilteredScopeCount}
-        searchPlaceholder="搜索用户..."
-        emptyText="无匹配用户"
-        loadingText="加载用户列表..."
-        onBeforeSelect={() => {
-          if (!isExplicitUsersScopeSelected) {
-            onEnsureExplicitUsersScopeSelected();
-          }
-        }}
-      />
+      <div className="flex h-[300px]">
+        <div className="flex w-[72px] shrink-0 flex-col gap-0.5 border-r border-slate-100 bg-slate-50 px-1.5 py-2">
+          {scopeFilterOptions.map((option) => {
+            const isActive = scopeUserFilter === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onScopeFilterChange(option.value)}
+                onDoubleClick={() => onFilterDoubleClick(option.value)}
+                className={cn(
+                  'w-full rounded-md border py-1.5 text-center text-[11px] font-bold transition-all duration-200 active:scale-95',
+                  isActive
+                    ? 'border-primary/15 bg-white text-primary shadow-sm'
+                    : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700',
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+          {showReset ? (
+            <button
+              type="button"
+              onClick={onReset}
+              className="mt-auto w-full py-1.5 text-center text-[10px] font-bold text-slate-400 transition-colors duration-200 hover:text-primary"
+            >
+              重置
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2.5">
+            <Input
+              value={scopeUserSearch}
+              onChange={(event) => onScopeUserSearchChange(event.target.value)}
+              placeholder="搜索用户..."
+              className="h-8 flex-1 min-w-0 rounded-lg border-slate-200/60 bg-white pl-3 text-[11px] shadow-none placeholder:text-slate-300 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
+            />
+            <label className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50">
+              <Checkbox
+                checked={isAllFilteredScopeUsersSelected ? true : hasPartialFilteredScopeSelection ? 'indeterminate' : false}
+                onCheckedChange={onToggleSelectAllFilteredScopeUsers}
+                className="rounded-[3px]"
+              />
+              <span className="whitespace-nowrap text-[10px] font-bold tabular-nums text-slate-500">
+                {selectedFilteredScopeCount}/{filteredScopeUsers.length}
+              </span>
+            </label>
+          </div>
+
+          <UserSelectList
+            items={filteredScopeUsers.map((user) => ({
+              id: user.id,
+              name: user.username,
+              avatarKey: user.avatar_key,
+              meta: user.department?.name ?? '未分组',
+            }))}
+            selectedIds={selectedScopeUserIds}
+            onSelect={onToggleScopeUser}
+            isLoading={isScopeUsersLoading}
+            emptyText="无匹配用户"
+            loadingText="加载用户列表..."
+            onBeforeSelect={() => {
+              if (!isExplicitUsersScopeSelected) {
+                onEnsureExplicitUsersScopeSelected();
+              }
+            }}
+          />
+        </div>
+      </div>
     </PopoverContent>
   </Popover>
 );
