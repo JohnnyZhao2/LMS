@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-export const DESKTOP_SEARCH_INPUT_CLASSNAME = 'min-w-0 w-full max-w-[20rem] flex-[1_1_16rem]';
+export const DESKTOP_SEARCH_INPUT_CLASSNAME = 'min-w-0 w-[20rem] max-w-full shrink-0';
 
 interface SearchInputProps {
   value: string;
