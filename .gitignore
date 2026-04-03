@@ -71,6 +71,8 @@ lms_backend/openapi-schema.yaml
 /inspector.json
 /skills-lock.json
 /package-lock.json
+/.agents/
+/plugins/
 /*.png
 /*.jpg
 /*.jpeg

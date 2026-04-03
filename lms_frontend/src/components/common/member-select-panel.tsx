@@ -147,18 +147,6 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
                     disabled ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : '',
                   )}
                 >
-                  <div
-                    className={cn(
-                      'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-colors',
-                      selectionMode === 'single' ? 'rounded-full' : 'rounded-md',
-                      checked
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-border bg-background group-hover:border-primary/40',
-                    )}
-                  >
-                    {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-                  </div>
-
                   <UserAvatar
                     avatarKey={item.avatarKey}
                     name={item.name}
@@ -176,6 +164,19 @@ export const MemberSelectPanel: React.FC<MemberSelectPanelProps> = ({
                       {item.count}
                     </span>
                   ) : null}
+
+                  <div
+                    aria-hidden="true"
+                    className={cn(
+                      'flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-all duration-150',
+                      selectionMode === 'single' ? 'rounded-full' : 'rounded-md',
+                      checked
+                        ? 'border-primary bg-primary text-white opacity-100 translate-x-0'
+                        : 'border-border bg-background opacity-0 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 group-hover:border-primary/40 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:border-primary/40',
+                    )}
+                  >
+                    {checked ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+                  </div>
                 </button>
               );
             })}

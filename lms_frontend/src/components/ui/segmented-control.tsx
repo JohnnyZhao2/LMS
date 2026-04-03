@@ -33,8 +33,8 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   };
   const sizeStyles = {
     default: {
-      wrapper: 'h-11 rounded-full p-1',
-      button: 'rounded-full px-6 text-xs font-bold',
+      wrapper: 'h-10 rounded-[12px] p-[2px]',
+      button: 'rounded-[10px] px-5 text-xs font-bold',
     },
     sm: {
       wrapper: 'h-8 rounded-lg p-0.5',
@@ -49,7 +49,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {label}
         </span>
       )}
-      <div className={cn('inline-flex w-fit max-w-full items-stretch overflow-x-auto bg-muted/60 no-scrollbar', sizeStyles[size].wrapper)}>
+      <div className={cn('inline-flex w-fit max-w-full items-stretch overflow-x-auto bg-black/[0.04] no-scrollbar', sizeStyles[size].wrapper)}>
         {options.map((opt) => (
           <button
             key={opt.value}

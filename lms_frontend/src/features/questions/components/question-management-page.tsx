@@ -5,7 +5,7 @@ import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import type { QuestionType } from '@/types/api';
@@ -43,7 +43,7 @@ export const QuestionManagementPage: React.FC = () => {
               className="w-full md:w-auto md:shrink-0"
             />
 
-            <div className="w-[9.5rem] max-w-full shrink-0">
+            <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
               <Select value={filterSpaceTypeId} onValueChange={setFilterSpaceTypeId}>
                 <SelectTrigger>
                   <SelectValue placeholder="全部空间" />

@@ -10,6 +10,8 @@ const SelectGroup = SelectPrimitive.Group
 
 const SelectValue = SelectPrimitive.Value
 
+const COMPACT_FILTER_SELECT_CLASSNAME = "w-[8rem] max-w-full shrink-0"
+
 /**
  * SelectTrigger 组件
  *
@@ -185,6 +187,7 @@ const SelectSeparator = React.forwardRef<
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
+  COMPACT_FILTER_SELECT_CLASSNAME,
   Select,
   SelectGroup,
   SelectValue,

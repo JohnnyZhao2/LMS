@@ -160,20 +160,12 @@ export const UserPickerPanel = <TUser extends UserPickerUser>({
                 <label
                   key={user.id}
                   className={cn(
-                    'flex items-center gap-3 py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-150',
+                    'group flex items-center gap-3 py-2 px-2.5 rounded-lg cursor-pointer transition-all duration-150',
                     selected
                       ? 'bg-primary/[0.06] border border-primary/10'
                       : 'hover:bg-white border border-transparent hover:border-slate-100 hover:shadow-sm',
                   )}
                 >
-                  <Checkbox
-                    checked={selected}
-                    onCheckedChange={() => {
-                      onBeforeToggleUser?.();
-                      onToggleUser(user.id);
-                    }}
-                    className="rounded-[3px] shrink-0"
-                  />
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <UserAvatar
                       avatarKey={user.avatar_key}
@@ -193,6 +185,19 @@ export const UserPickerPanel = <TUser extends UserPickerUser>({
                       <span className="text-[10px] text-slate-400 block truncate">{userMeta}</span>
                     </div>
                   </div>
+                  <Checkbox
+                    checked={selected}
+                    onCheckedChange={() => {
+                      onBeforeToggleUser?.();
+                      onToggleUser(user.id);
+                    }}
+                    className={cn(
+                      'rounded-[3px] shrink-0 transition-all duration-150',
+                      selected
+                        ? 'opacity-100 translate-x-0'
+                        : 'opacity-0 translate-x-1 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100',
+                    )}
+                  />
                 </label>
               );
             })

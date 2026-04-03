@@ -29,7 +29,7 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from "@/components/ui/sea
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
 import { SegmentedControl } from "@/components/ui/segmented-control"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -357,7 +357,7 @@ export const UserList: React.FC = () => {
                   className="w-full md:w-auto md:shrink-0"
                 />
 
-                <div className="w-[9.5rem] max-w-full shrink-0">
+                <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
                   <Select value={selectedMentorId} onValueChange={setSelectedMentorId}>
                     <SelectTrigger>
                       <SelectValue placeholder="全部导师" />
