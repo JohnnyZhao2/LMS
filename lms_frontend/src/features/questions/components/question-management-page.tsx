@@ -34,7 +34,7 @@ export const QuestionManagementPage: React.FC = () => {
       />
 
       <PageViewport className="flex flex-col reveal-item stagger-delay-2">
-        <div className="mb-1 flex flex-col gap-3 border-b border-border/70 pb-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mb-1 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:gap-3">
             <SegmentedControl
               value={filterQuestionType}
@@ -46,13 +46,7 @@ export const QuestionManagementPage: React.FC = () => {
             <div className="w-[9.5rem] max-w-full shrink-0">
               <Select value={filterSpaceTypeId} onValueChange={setFilterSpaceTypeId}>
                 <SelectTrigger>
-                  <div className="flex min-w-0 items-center gap-2 pr-2">
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.18em] text-text-muted">
-                      空间
-                    </span>
-                    <span className="h-3.5 w-px bg-border/70" aria-hidden="true" />
-                    <SelectValue placeholder="全部" />
-                  </div>
+                  <SelectValue placeholder="全部空间" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部</SelectItem>

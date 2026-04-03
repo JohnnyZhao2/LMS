@@ -50,25 +50,25 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         onClick={onToggleAnswer}
         disabled={disabled}
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-md border',
-          'text-[11px] font-semibold transition-all duration-150',
+          'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] border',
+          'text-[10.5px] font-semibold transition-all duration-150',
           disabled ? 'cursor-default' : 'cursor-pointer',
           selected
-            ? 'border-primary-500 bg-primary-500 text-white'
+            ? 'border-primary-200 bg-primary-50 text-primary-600 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.08)]'
             : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
         )}
       >
-        {selected ? <Check className="h-3 w-3" strokeWidth={3} /> : optionKey}
+        {selected ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : optionKey}
       </button>
 
       <Input
         value={optionValue}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={`选项 ${optionKey}`}
+        placeholder=""
         className={cn(
-          'h-9 flex-1 rounded-xl border px-3 text-[13px] shadow-none placeholder:text-text-muted/35 focus-visible:ring-0',
+          'h-7 flex-1 rounded-lg border px-3 text-[13px] shadow-none placeholder:text-text-muted/35 focus-visible:ring-0',
           selected
-            ? 'border-primary-100 bg-primary-50/40'
+            ? 'border-primary-200 bg-white'
             : 'border-border bg-white',
         )}
         readOnly={disabled}

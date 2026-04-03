@@ -195,7 +195,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-secondary-100 hover:text-secondary text-text-muted  soft-press"
-                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview`)}
+                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=progress&entry=task-management`)}
                                     >
                                         <BarChart3 className="h-4 w-4" />
                                     </Button>
@@ -205,7 +205,7 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted  soft-press"
-                                        onClick={() => roleNavigate(`/tasks/${row.original.id}/preview?tab=grading`)}
+                                        onClick={() => roleNavigate(`${ROUTES.GRADING_CENTER}?task=${row.original.id}`)}
                                     >
                                         <FileCheck className="h-4 w-4" />
                                     </Button>

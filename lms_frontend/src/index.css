@@ -154,8 +154,8 @@
     --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 
     /* 字体 */
-    --theme-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-    --theme-font-heading: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    --theme-font-sans: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    --theme-font-heading: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
 
     /* 圆角 - 扁平风格使用较小圆角 */
     --theme-radius-sm: 4px;
@@ -307,6 +307,7 @@
     body {
         @apply bg-background text-foreground antialiased;
         font-family: var(--theme-font-sans);
+        font-kerning: normal;
         overflow-x: hidden;
         transition: background-color var(--theme-transition), color var(--theme-transition);
         background-color: #F6F8FC;

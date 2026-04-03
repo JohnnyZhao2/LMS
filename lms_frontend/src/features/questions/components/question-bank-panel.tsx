@@ -94,8 +94,12 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
             {questionsData?.results.map(q => (
               <div
                 key={q.id}
-                className="group flex items-start gap-3 rounded-xl border border-border bg-background p-4 transition-all hover:border-border/80 hover:shadow-sm"
+                className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color] duration-150 hover:border-foreground/10"
               >
+                <div className={cn(
+                  'absolute left-0 top-1/2 h-5 w-px -translate-y-1/2 rounded-r-full opacity-0 transition-opacity duration-150 group-hover:opacity-100',
+                  getQuestionTypeStyle(q.question_type).accent,
+                )} />
                 <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge
@@ -109,7 +113,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-primary-50 hover:text-primary-600"
+                  className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAddQuestion(q);

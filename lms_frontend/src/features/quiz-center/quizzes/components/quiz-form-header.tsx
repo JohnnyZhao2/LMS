@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { QuizType } from '@/types/api';
 
 interface QuizFormHeaderProps {
@@ -39,12 +40,19 @@ export const QuizFormHeader: React.FC<QuizFormHeaderProps> = ({
       </div>
 
       <div className="relative flex h-10 min-w-0 items-center justify-center rounded-xl border border-border bg-background px-5">
-        <div className="absolute left-1 top-1/2 w-[84px] -translate-y-1/2">
+        <div className="absolute inset-y-1 left-1 flex items-stretch">
           <Select
             value={quizType}
             onValueChange={(value) => onQuizTypeChange(value as QuizType)}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              className={cn(
+                'h-full w-[84px] rounded-lg border-none px-3 py-0 text-[12px] font-semibold shadow-none focus-visible:ring-0 data-[state=open]:ring-0',
+                quizType === 'EXAM'
+                  ? 'bg-destructive-500/10 text-destructive-600'
+                  : 'bg-secondary-500/10 text-secondary-700',
+              )}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

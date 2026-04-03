@@ -28,6 +28,7 @@ export const TaskPreviewPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useAuth();
   const taskId = Number(id);
+  const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
 
   const canViewProgress = hasPermission('task.update') || hasPermission('task.analytics.view');
   const canViewGrading = hasPermission('grading.view');
@@ -74,9 +75,17 @@ export const TaskPreviewPage: React.FC = () => {
   }, [activeTab, quizzes, selectedQuizId]);
 
   React.useEffect(() => {
+    if (!availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0] ?? 'progress');
+    }
+  }, [activeTab, availableTabs]);
+
+  React.useEffect(() => {
     const currentTab = searchParams.get('tab');
     if (currentTab !== activeTab) {
-      setSearchParams({ tab: activeTab }, { replace: true });
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.set('tab', activeTab);
+      setSearchParams(nextSearchParams, { replace: true });
     }
   }, [activeTab, searchParams, setSearchParams]);
 
@@ -85,7 +94,9 @@ export const TaskPreviewPage: React.FC = () => {
       return;
     }
     setActiveTab(value);
-    setSearchParams({ tab: value });
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('tab', value);
+    setSearchParams(nextSearchParams);
   };
 
   if (isLoading) {
@@ -121,7 +132,7 @@ export const TaskPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-5 animate-fadeIn pb-8 min-h-full bg-muted">
+    <div className="space-y-5 animate-fadeIn pb-8 min-h-full">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background backdrop-blur-md border-b border-border/60 px-6 py-4">
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6">
@@ -155,32 +166,34 @@ export const TaskPreviewPage: React.FC = () => {
             </div>
           </div>
 
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
-              {canViewProgress && (
-                <TabsTrigger
-                  value="progress"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  进度监控
-                </TabsTrigger>
-              )}
-              {canViewGrading && (
-                <TabsTrigger
-                  value="grading"
-                  className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                >
-                  <FileCheck className="h-4 w-4" />
-                  阅卷中心
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
+          {!isTaskManagementEntry && availableTabs.length > 1 && (
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
+              <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
+                {canViewProgress && (
+                  <TabsTrigger
+                    value="progress"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    进度监控
+                  </TabsTrigger>
+                )}
+                {canViewGrading && (
+                  <TabsTrigger
+                    value="grading"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md after:hidden data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                  >
+                    <FileCheck className="h-4 w-4" />
+                    阅卷中心
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </Tabs>
+          )}
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[1600px] px-4 lg:px-6">
+      <main className="mx-auto w-full max-w-[1600px]">
         {/* PROGRESS TAB */}
         {activeTab === 'progress' && (
           <div>
@@ -292,7 +305,7 @@ export const TaskPreviewPage: React.FC = () => {
             <GradingCenterTab taskId={taskId} quizId={activeQuizId} />
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

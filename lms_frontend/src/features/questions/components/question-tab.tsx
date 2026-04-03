@@ -367,13 +367,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                     }
                 }}
             >
-                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                <DialogContent className="flex h-[min(820px,86vh)] max-w-[1120px] flex-col gap-0 overflow-hidden rounded-xl border border-border bg-background p-0">
                     <DialogHeader className="px-6 pt-5 pb-0">
                         <DialogTitle className="text-base font-bold text-foreground">
                             新建题目
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
+                    <div className="min-h-0 flex-1">
                         <QuestionEditorPanel
                             questionForm={questionForm}
                             setQuestionForm={setQuestionForm}
@@ -389,14 +389,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
 
             {/* 预览对话框 */}
             <Dialog open={!!previewQuestion} onOpenChange={(open) => !open && setPreviewQuestion(null)}>
-                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                <DialogContent className="flex h-[min(820px,86vh)] max-w-[1120px] flex-col gap-0 overflow-hidden rounded-xl border border-border bg-background p-0">
                     <DialogHeader className="px-6 pt-5 pb-0">
                         <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
                             <FileText className="w-4 h-4 text-primary-500" />
                             题目详情
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
+                    <div className="min-h-0 flex-1">
                         <QuestionEditorPanel
                             questionForm={previewForm}
                             setQuestionForm={() => { }}
@@ -409,7 +409,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                             showActions={false}
                         />
                     </div>
-                    <div className="px-6 py-3 border-t border-border flex justify-end">
+                    <div className="flex justify-end border-t border-border px-6 py-3">
                         <Button
                             variant="ghost"
                             onClick={() => setPreviewQuestion(null)}
@@ -423,14 +423,14 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
 
             {/* 编辑对话框 */}
             <Dialog open={!!editingQuestion} onOpenChange={(open) => !open && closeEditDialog()}>
-                <DialogContent className="max-w-xl p-0 overflow-hidden border border-border bg-background rounded-xl">
+                <DialogContent className="flex h-[min(820px,86vh)] max-w-[1120px] flex-col gap-0 overflow-hidden rounded-xl border border-border bg-background p-0">
                     <DialogHeader className="px-6 pt-5 pb-0">
                         <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
                             <PencilLine className="w-4 h-4 text-primary-500" />
                             编辑题目
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="max-h-[75vh] overflow-y-auto scrollbar-subtle">
+                    <div className="min-h-0 flex-1">
                         <QuestionEditorPanel
                             questionForm={editingForm}
                             setQuestionForm={setEditingForm}

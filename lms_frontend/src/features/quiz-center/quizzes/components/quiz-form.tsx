@@ -105,6 +105,7 @@ const questionToInline = (q: Question): InlineQuestionItem => ({
   options: q.options || [],
   answer: q.answer || '',
   explanation: q.explanation || '',
+  showExplanation: Boolean(q.explanation?.trim()),
   score: normalizeScore(q.score || '1'),
   original: {
     spaceTagId: q.space_tag?.id ?? null,
@@ -254,6 +255,7 @@ export const QuizForm: React.FC = () => {
       options: isChoiceType ? [{ key: 'A', value: '' }, { key: 'B', value: '' }, { key: 'C', value: '' }, { key: 'D', value: '' }] : [],
       answer: '',
       explanation: '',
+      showExplanation: false,
       score: '1',
       saved: false,
     };

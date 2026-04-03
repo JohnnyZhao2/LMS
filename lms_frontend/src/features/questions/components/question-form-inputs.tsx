@@ -152,7 +152,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={optionIds} strategy={verticalListSortingStrategy}>
           {value.map((opt, index) => (

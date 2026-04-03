@@ -26,6 +26,7 @@ export interface InlineQuestionItem {
   options: Array<{ key: string; value: string }>;
   answer: string | string[];
   explanation: string;
+  showExplanation: boolean;
   score: string;
   /** 用于 PATCH 脏字段比较的初始快照（仅已有题目） */
   original?: {

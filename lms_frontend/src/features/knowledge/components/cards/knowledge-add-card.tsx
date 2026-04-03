@@ -19,10 +19,30 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
   onExpand,
   isSaving = false,
 }) => {
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
   const [focused, setFocused] = React.useState(false);
   const [hovered, setHovered] = React.useState(false);
   const [value, setValue] = React.useState('');
   const hasContent = hasMeaningfulKnowledgeHtml(value);
+
+  const focusEditor = React.useCallback(() => {
+    const editor = cardRef.current?.querySelector<HTMLElement>('.ql-editor');
+    editor?.focus();
+  }, []);
+
+  const handleCardMouseDown = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest('button, .ql-editor, .sqe-menu, .sqe-toolbar, .sqe-toolbar-popover')) {
+      return;
+    }
+
+    event.preventDefault();
+    setFocused(true);
+    window.requestAnimationFrame(() => {
+      focusEditor();
+    });
+  }, [focusEditor]);
 
   const saveDraft = React.useCallback(async () => {
     if (isSaving || !hasContent) return;
@@ -52,6 +72,8 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
       }}
     >
       <div
+        ref={cardRef}
+        onMouseDown={handleCardMouseDown}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
