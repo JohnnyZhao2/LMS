@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { MemberSelectPanel } from '@/components/common/member-select-panel';
+import { UserSelectPanel } from '@/components/common/user-select-panel';
 import type { ActivityLogType, ActivityLogUser } from '../types';
 
 interface ActivityLogMemberListProps {
@@ -71,7 +71,7 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
     : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
 
   return (
-    <MemberSelectPanel
+    <UserSelectPanel
       title="成员"
       items={panelItems}
       selectedIds={selectedMemberIds}

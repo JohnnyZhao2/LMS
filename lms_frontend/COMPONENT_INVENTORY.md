@@ -74,7 +74,7 @@
 | Avatar Circle | `common/avatar-circle.tsx` | 圆形头像 | 中 |
 | Avatar Picker Popover | `users/components/avatar-picker-popover.tsx` | 头像选择器 | 低 |
 | User Info Row | `common/user-info-row.tsx` | 用户信息行 | 高 |
-| User Picker Panel | `common/user-picker-panel.tsx` | 用户选择面板 | 中 |
+| User Select Panel | `common/user-select-panel.tsx` | 用户选择面板 | 高 |
 | Status Dot | `common/status-dot.tsx` | 状态点 | 高 |
 | Category Badge | `common/category-badge.tsx` | 分类徽章 | 中 |
 | Metric Badge | `common/metric-badge.tsx` | 指标徽章 | 中 |

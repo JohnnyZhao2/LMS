@@ -1,4 +1,4 @@
-import { MemberSelectPanel } from '@/components/common/member-select-panel';
+import { UserSelectPanel } from '@/components/common/user-select-panel';
 import type { SpotCheckStudent } from '@/types/api';
 
 export type SpotCheckDepartmentFilter = 'all' | 'room1' | 'room2';
@@ -37,7 +37,7 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   }));
 
   return (
-    <MemberSelectPanel
+    <UserSelectPanel
       title="学员"
       items={panelItems}
       selectedIds={selectedStudentId ? [selectedStudentId] : []}

@@ -1,6 +1,6 @@
 import { Settings2 } from 'lucide-react';
 
-import { UserPickerPanel } from '@/components/common/user-picker-panel';
+import { UserSelectPanel } from '@/components/common/user-select-panel';
 import {
   Popover,
   PopoverContent,
@@ -84,32 +84,37 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
       container={dialogContentElement}
       sideOffset={8}
     >
-      <UserPickerPanel
-        users={filteredScopeUsers}
-        selectedUserIds={selectedScopeUserIds}
+      <UserSelectPanel
+        variant="plain"
+        items={filteredScopeUsers.map((user) => ({
+          id: user.id,
+          name: user.username,
+          avatarKey: user.avatar_key,
+          meta: user.department?.name ?? '未分组',
+        }))}
+        selectedIds={selectedScopeUserIds}
         searchValue={scopeUserSearch}
         onSearchChange={onScopeUserSearchChange}
-        onToggleUser={onToggleScopeUser}
-        onToggleAllUsers={onToggleSelectAllFilteredScopeUsers}
+        onSelect={onToggleScopeUser}
+        onToggleAll={onToggleSelectAllFilteredScopeUsers}
         isLoading={isScopeUsersLoading}
-        filterOptions={scopeFilterOptions}
-        activeFilter={scopeUserFilter}
-        onFilterChange={onScopeFilterChange}
-        onFilterDoubleClick={onFilterDoubleClick}
-        showReset={showReset}
-        onReset={onReset}
+        sidebarFilters={scopeFilterOptions}
+        activeSidebarFilter={scopeUserFilter}
+        onSidebarFilterChange={onScopeFilterChange}
+        onSidebarFilterDoubleClick={onFilterDoubleClick}
+        showSidebarReset={showReset}
+        onSidebarReset={onReset}
         isAllSelected={isAllFilteredScopeUsersSelected}
         hasPartialSelection={hasPartialFilteredScopeSelection}
         selectedCount={selectedFilteredScopeCount}
         searchPlaceholder="搜索用户..."
         emptyText="无匹配用户"
         loadingText="加载用户列表..."
-        onBeforeToggleUser={() => {
+        onBeforeSelect={() => {
           if (!isExplicitUsersScopeSelected) {
             onEnsureExplicitUsersScopeSelected();
           }
         }}
-        getUserMeta={(user) => user.department?.name ?? '未分组'}
       />
     </PopoverContent>
   </Popover>

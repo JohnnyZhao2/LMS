@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { UserPickerPanel } from '@/components/common/user-picker-panel';
+import { UserSelectPanel } from '@/components/common/user-select-panel';
 import { MicroLabel } from '@/components/common/micro-label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -92,6 +92,12 @@ export const TaskForm: React.FC = () => {
 
   const selectedFilteredUserCount = filteredUsers.filter((user) => selectedUserIds.includes(user.id)).length;
   const isAllFilteredUsersSelected = filteredUsers.length > 0 && selectedFilteredUserCount === filteredUsers.length;
+  const userPanelItems = filteredUsers.map((user) => ({
+    id: user.id,
+    name: user.username,
+    avatarKey: user.avatar_key,
+    meta: `${user.employee_id || '-'} | ${user.department?.name || '无部门'}`,
+  }));
 
   if (taskError) {
     return (
@@ -438,13 +444,14 @@ export const TaskForm: React.FC = () => {
             )}
 
             <div className="px-6 pb-6 flex-1 min-h-0">
-              <UserPickerPanel
-                users={filteredUsers}
-                selectedUserIds={selectedUserIds}
+              <UserSelectPanel
+                variant="plain"
+                items={userPanelItems}
+                selectedIds={selectedUserIds}
                 searchValue={userSearch}
                 onSearchChange={setUserSearch}
-                onToggleUser={toggleUser}
-                onToggleAllUsers={() => toggleAllUsers(!isAllFilteredUsersSelected)}
+                onSelect={toggleUser}
+                onToggleAll={() => toggleAllUsers(!isAllFilteredUsersSelected)}
                 selectedCount={selectedFilteredUserCount}
                 isAllSelected={isAllFilteredUsersSelected}
                 isLoading={isUsersLoading}
@@ -452,7 +459,6 @@ export const TaskForm: React.FC = () => {
                 emptyText="暂无可分配学员"
                 loadingText="加载学员列表..."
                 className="h-full rounded-xl border border-border bg-background"
-                getUserMeta={(user) => `${user.employee_id || '-'} | ${user.department?.name || '无部门'}`}
               />
             </div>
           </div>
