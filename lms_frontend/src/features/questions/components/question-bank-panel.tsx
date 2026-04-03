@@ -56,22 +56,26 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           />
         </div>
         <div className="flex gap-2">
-          <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部</SelectItem>
-              {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterQuestionType} onValueChange={onFilterQuestionTypeChange}>
-            <SelectTrigger className="h-8 flex-1 rounded-xl border-border bg-background text-[12px]"><SelectValue placeholder="全部题型" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部题型</SelectItem>
-              {Object.entries(QUESTION_TYPE_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex-1">
+            <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
+              <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部</SelectItem>
+                {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Select value={filterQuestionType} onValueChange={onFilterQuestionTypeChange}>
+              <SelectTrigger><SelectValue placeholder="全部题型" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部题型</SelectItem>
+                {Object.entries(QUESTION_TYPE_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

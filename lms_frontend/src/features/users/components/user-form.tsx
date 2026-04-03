@@ -442,7 +442,7 @@ const UserFormContent: React.FC<{
                       <Users className="w-4 h-4" />
                       <h3 className="text-sm font-bold text-slate-800">带教导师 (可选)</h3>
                     </div>
-                    <div className="relative border-b border-slate-100 focus-within:border-primary/50 transition-all">
+                    <div className="relative">
                       <Select
                         value={formData.mentor_id?.toString() || ''}
                         disabled={!canUpdateUser}
@@ -452,13 +452,10 @@ const UserFormContent: React.FC<{
                           setFormData({ ...formData, mentor_id: v ? Number(v) : null });
                         }}
                       >
-                        <SelectTrigger className={cn(
-                          "h-10 bg-transparent border-none rounded-none px-0 pr-12 text-sm font-medium text-slate-700 data-[placeholder]:text-slate-200 shadow-none focus:ring-0",
-                          formData.mentor_id && "[&>svg]:hidden"
-                        )}>
+                        <SelectTrigger>
                           <SelectValue placeholder={isMentorsLoading ? "正在加载导师列表" : "点击选择导师档案"} />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60 z-[9999] rounded-xl border-border">
+                        <SelectContent className="max-h-60 z-[9999]">
                           {isMentorsLoading ? (
                             <div className="px-3 py-4 text-sm text-text-muted">正在加载导师列表...</div>
                           ) : isMentorsError ? (
@@ -467,7 +464,7 @@ const UserFormContent: React.FC<{
                             <div className="px-3 py-4 text-sm text-text-muted">当前没有可选导师</div>
                           ) : (
                             mentors.filter(m => !userId || m.id !== userId).map(m => (
-                              <SelectItem key={m.id} value={m.id.toString()} className="focus:bg-muted cursor-pointer">
+                              <SelectItem key={m.id} value={m.id.toString()}>
                                 <div className="flex items-center gap-3 py-1">
                                   <UserAvatar avatarKey={m.avatar_key} name={m.username} size="sm" />
                                   <span className="text-sm font-medium">{m.username}</span>

@@ -178,7 +178,7 @@ export const StudentRadarCard: React.FC<StudentRadarCardProps> = ({ students }) 
         </div>
         <div className="min-w-[160px]">
           <Select value={selectedId?.toString() ?? ''} onValueChange={(value) => setSelectedId(Number(value))}>
-            <SelectTrigger className="h-10">
+            <SelectTrigger>
               <SelectValue placeholder="选择学员" />
             </SelectTrigger>
             <SelectContent>

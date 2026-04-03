@@ -63,6 +63,11 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const frameRef = React.useRef<number | null>(null)
+  const shellRef = React.useRef<HTMLDivElement | null>(null)
+  const headerRef = React.useRef<HTMLTableSectionElement | null>(null)
+  const footerRef = React.useRef<HTMLDivElement | null>(null)
+  const [stretchedRowHeight, setStretchedRowHeight] = React.useState<number | null>(null)
   const paginationState = React.useMemo<PaginationState | undefined>(
     () => (
       pagination
@@ -114,24 +119,83 @@ export function DataTable<TData, TValue>({
     pageCount: pagination?.pageCount ?? -1,
   })
 
+  const visibleRowCount = table.getRowModel().rows.length
+  const targetRowCount = pagination?.pageSize
   const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
+  const shouldStretchRows = fillHeight
+    && !isLoading
+    && !!targetRowCount
+    && visibleRowCount === targetRowCount
+
+  React.useLayoutEffect(() => {
+    if (!shouldStretchRows) {
+      setStretchedRowHeight(null)
+      return
+    }
+
+    const updateRowHeight = () => {
+      const shellHeight = shellRef.current?.clientHeight ?? 0
+      const headerHeight = headerRef.current?.offsetHeight ?? 0
+      const footerHeight = footerRef.current?.offsetHeight ?? 0
+      const availableHeight = shellHeight - headerHeight - footerHeight
+
+      if (availableHeight <= 0 || !targetRowCount) {
+        setStretchedRowHeight(null)
+        return
+      }
+
+      const nextHeight = Math.max(68, Math.floor(availableHeight / targetRowCount))
+      setStretchedRowHeight((prev) => (prev === nextHeight ? prev : nextHeight))
+    }
+
+    const scheduleUpdate = () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+      }
+      frameRef.current = window.requestAnimationFrame(updateRowHeight)
+    }
+
+    scheduleUpdate()
+
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(scheduleUpdate)
+
+    if (resizeObserver) {
+      if (shellRef.current) resizeObserver.observe(shellRef.current)
+      if (headerRef.current) resizeObserver.observe(headerRef.current)
+      if (footerRef.current) resizeObserver.observe(footerRef.current)
+    }
+
+    window.addEventListener("resize", scheduleUpdate)
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+      resizeObserver?.disconnect()
+      window.removeEventListener("resize", scheduleUpdate)
+    }
+  }, [shouldStretchRows, targetRowCount, shouldShowPagination])
 
   return (
     <div
-      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "max-h-full")}
+      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "flex-1 max-h-full")}
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
       <div
+        ref={shellRef}
         className={cn(
           "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-white",
-          fillHeight && "max-h-full",
+          fillHeight && "flex-1 max-h-full",
         )}
       >
         <Table
           containerClassName={cn("min-h-0", fillHeight && "flex-1")}
           className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
         >
-            <TableHeader>
+            <TableHeader ref={headerRef}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-0 hover:bg-transparent">
                   {headerGroup.headers.map((header, index) => (
@@ -186,6 +250,7 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => onRowClick?.(row.original)}
                     className={onRowClick ? `cursor-pointer hover:bg-muted ${rowClassName || ''}` : rowClassName}
+                    style={stretchedRowHeight ? { height: `${stretchedRowHeight}px` } : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
@@ -217,7 +282,7 @@ export function DataTable<TData, TValue>({
             </TableBody>
         </Table>
         {shouldShowPagination && (
-        <div className="mt-auto border-t border-border bg-muted/20 px-4 py-3">
+        <div ref={footerRef} className="mt-auto border-t border-border bg-muted/20 px-4 py-3">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}

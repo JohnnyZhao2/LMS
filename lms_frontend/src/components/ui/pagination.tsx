@@ -159,22 +159,24 @@ export const Pagination: React.FC<PaginationProps> = ({
         )}
 
         {showSizeChanger && (
-          <Select
-            value={pageSize.toString()}
-            onValueChange={handlePageSizeChange}
-            disabled={disabled}
-          >
-            <SelectTrigger className={cn('h-8 w-[110px] font-bold text-xs border-border', shouldShowPager && 'ml-2')}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {pageSizeOptions.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size} 条/页
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className={cn('w-[110px]', shouldShowPager && 'ml-2')}>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={handlePageSizeChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size} 条/页
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
     </div>

@@ -342,29 +342,28 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
               {getQuestionTypeLabel(item.questionType)}
             </Badge>
           ) : (
-            <Select
-              value={item.questionType}
-              onValueChange={(value) => onUpdate({
-                questionType: value as QuestionType,
-                options: value === 'MULTIPLE_CHOICE'
-                  ? ensureChoiceOptions(item.options)
-                  : item.options,
-              })}
-            >
-              <SelectTrigger
-                className="h-7 w-[78px] shrink-0 gap-1 rounded-md border-none bg-muted px-2.5 text-[11px] font-medium shadow-none [&>span]:text-left [&>svg]:border-l [&>svg]:border-foreground/20 [&>svg]:pl-1.5"
-                onClick={(e) => e.stopPropagation()}
+            <div className="w-[84px] shrink-0">
+              <Select
+                value={item.questionType}
+                onValueChange={(value) => onUpdate({
+                  questionType: value as QuestionType,
+                  options: value === 'MULTIPLE_CHOICE'
+                    ? ensureChoiceOptions(item.options)
+                    : item.options,
+                })}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="w-[88px] min-w-[88px] rounded-xl border-border p-1">
-                {QUESTION_TYPES.map(({ value, label }) => (
-                  <SelectItem key={value} value={value} className="rounded-lg py-2 pl-3.5 pr-7 text-[12px] font-medium">
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger onClick={(e) => e.stopPropagation()}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {QUESTION_TYPES.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
           <span className="text-[11px] font-medium text-text-muted">第 {index + 1} 题</span>
         </div>

@@ -1,6 +1,6 @@
 /**
- * 用户管理页面 - 三栏布局
- * Sidebar（视图切换 + 筛选）| 用户列表（DataTable）| 详情面板
+ * 用户管理页面
+ * 顶部筛选工具带 | 用户列表（DataTable）| 详情面板
  */
 import * as React from "react"
 import { type ColumnDef } from "@tanstack/react-table"
@@ -18,7 +18,6 @@ import { useSearchParams } from "react-router-dom"
 import { useUsers, useDepartments, useMentors } from "../api/get-users"
 import { useActivateUser, useDeactivateUser, useDeleteUser, useResetPassword, useUpdateUserAvatar } from "../api/manage-users"
 import { UserForm } from "./user-form"
-import { UserSidebar, type ViewMode } from "./user-sidebar"
 import { AvatarPickerPopover } from "./avatar-picker-popover"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
@@ -29,6 +28,8 @@ import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } f
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from "@/components/ui/search-input"
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
+import { SegmentedControl } from "@/components/ui/segmented-control"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -53,9 +54,9 @@ export const UserList: React.FC = () => {
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
-  // 视图模式和筛选状态
-  const [viewMode, setViewMode] = React.useState<ViewMode>('department')
-  const [selectedHierarchyId, setSelectedHierarchyId] = React.useState<number | 'all'>('all')
+  // 筛选状态
+  const [selectedDepartmentId, setSelectedDepartmentId] = React.useState<string>('all')
+  const [selectedMentorId, setSelectedMentorId] = React.useState<string>('all')
   const [search, setSearch] = React.useState("")
 
   // 分页状态
@@ -83,18 +84,32 @@ export const UserList: React.FC = () => {
   // API Hooks
   const { data: departments = [] } = useDepartments()
   const { data: mentors = [] } = useMentors()
-  const createInitialDepartmentId = viewMode === 'department' && selectedHierarchyId !== 'all'
-    ? selectedHierarchyId as number
+  const departmentSegmentOptions = React.useMemo(
+    () => [
+      { label: '全部', value: 'all' },
+      ...departments.map((department) => ({
+        label: department.name,
+        value: department.id.toString(),
+      })),
+    ],
+    [departments]
+  )
+  const createInitialDepartmentId = selectedDepartmentId !== 'all'
+    ? Number(selectedDepartmentId)
     : undefined
-  const createInitialMentorId = viewMode === 'mentorship' && selectedHierarchyId !== 'all'
-    ? selectedHierarchyId as number
+  const createInitialMentorId = selectedMentorId !== 'all'
+    ? Number(selectedMentorId)
     : undefined
-  const departmentFilter = viewMode === 'department' && selectedHierarchyId !== 'all'
-    ? selectedHierarchyId as number
+  const departmentFilter = selectedDepartmentId !== 'all'
+    ? Number(selectedDepartmentId)
+    : undefined
+  const mentorFilter = selectedMentorId !== 'all'
+    ? Number(selectedMentorId)
     : undefined
   const { data, isLoading, refetch } = useUsers({
     search,
     departmentId: departmentFilter,
+    mentorId: mentorFilter,
   })
   const activateUser = useActivateUser()
   const deactivateUser = useDeactivateUser()
@@ -105,7 +120,7 @@ export const UserList: React.FC = () => {
   // 筛选变化时重置页码
   React.useEffect(() => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }))
-  }, [search, viewMode, selectedHierarchyId])
+  }, [search, selectedDepartmentId, selectedMentorId])
 
   React.useEffect(() => {
     if (!userIdFromParam || Number.isNaN(userIdFromParam)) return
@@ -113,17 +128,7 @@ export const UserList: React.FC = () => {
     setFormModalOpen(true)
   }, [userIdFromParam])
 
-  // 根据视图模式过滤用户列表
-  const filteredUsers = React.useMemo(() => {
-    let users = data || []
-
-    // 师徒模式：按导师筛选
-    if (viewMode === 'mentorship' && selectedHierarchyId !== 'all') {
-      users = users.filter(u => u.mentor?.id === selectedHierarchyId)
-    }
-
-    return users
-  }, [data, viewMode, selectedHierarchyId])
+  const filteredUsers = data || []
 
   const handleToggleActive = async (user: UserListType) => {
     try {
@@ -342,22 +347,34 @@ export const UserList: React.FC = () => {
         />
 
         <PageWorkbench>
-          <div className="flex min-h-0 flex-1 items-stretch gap-8">
-            {/* Left Sidebar */}
-            <UserSidebar
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              departments={departments}
-              mentors={mentors}
-              selectedId={selectedHierarchyId}
-              onSelect={setSelectedHierarchyId}
-              className="self-stretch"
-            />
+          <div className="flex min-h-0 flex-1 flex-col self-stretch">
+            <div className="mb-1 flex min-w-0 flex-col gap-3 pb-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center">
+                <SegmentedControl
+                  options={departmentSegmentOptions}
+                  value={selectedDepartmentId}
+                  onChange={setSelectedDepartmentId}
+                  className="w-full md:w-auto md:shrink-0"
+                />
 
-            {/* Main Content */}
-            <div className="flex min-w-0 flex-1 flex-col self-stretch">
-              {/* Header */}
-              <div className="mb-1 flex min-w-0 items-center justify-end gap-3">
+                <div className="w-[9.5rem] max-w-full shrink-0">
+                  <Select value={selectedMentorId} onValueChange={setSelectedMentorId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="全部导师" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">全部导师</SelectItem>
+                      {mentors.map((mentor) => (
+                        <SelectItem key={mentor.id} value={mentor.id.toString()}>
+                          {mentor.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <SearchInput
                   className={DESKTOP_SEARCH_INPUT_CLASSNAME}
                   placeholder="检索姓名、工号、部位..."
@@ -375,31 +392,30 @@ export const UserList: React.FC = () => {
                   />
                 )}
               </div>
+            </div>
 
-              {/* User List */}
-              <div className="flex min-h-0 flex-1 flex-col">
-                <DataTable
-                  columns={columns}
-                  data={filteredUsers}
-                  isLoading={isLoading}
-                  fillHeight
-                  pagination={{
-                    pageIndex: pagination.pageIndex,
-                    pageSize: pagination.pageSize,
-                    defaultPageSize: 10,
-                    pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
-                    totalCount: filteredUsers.length,
-                    onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
-                    onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
-                  }}
-                  rowClassName="group cursor-pointer hover:bg-muted transition-colors"
-                  onRowClick={(row) => {
-                    if (!canOpenUserEditor) return
-                    setEditingUserId(row.id)
-                    setFormModalOpen(true)
-                  }}
-                />
-              </div>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <DataTable
+                columns={columns}
+                data={filteredUsers}
+                isLoading={isLoading}
+                fillHeight
+                pagination={{
+                  pageIndex: pagination.pageIndex,
+                  pageSize: pagination.pageSize,
+                  defaultPageSize: 10,
+                  pageCount: Math.ceil(filteredUsers.length / pagination.pageSize),
+                  totalCount: filteredUsers.length,
+                  onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
+                  onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
+                }}
+                rowClassName="group cursor-pointer hover:bg-muted transition-colors"
+                onRowClick={(row) => {
+                  if (!canOpenUserEditor) return
+                  setEditingUserId(row.id)
+                  setFormModalOpen(true)
+                }}
+              />
             </div>
           </div>
         </PageWorkbench>

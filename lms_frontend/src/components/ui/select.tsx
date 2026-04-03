@@ -11,12 +11,9 @@ const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
 /**
- * SelectTrigger 组件 - 平面设计系统
- * 
- * 特性：
- * - 无阴影设计
- * - 默认白色背景，聚焦时保持白色 + 蓝色边框
- * - 统一高度 h-14，与 Input 保持一致
+ * SelectTrigger 组件
+ *
+ * 统一使用紧凑的白色圆角方形样式，控制在业务后台可接受的密度内。
  */
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -25,15 +22,15 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-12 w-full items-center justify-between gap-2 whitespace-nowrap",
-      "rounded-md border border-border bg-white px-4 py-3",
-      "text-base font-medium text-foreground",
-      "placeholder:text-text-muted",
+      "flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap",
+      "rounded-[12px] bg-white px-4",
+      "text-[13px] font-medium text-foreground data-[placeholder]:text-text-muted/58",
       "focus:outline-none",
-      "focus-visible:bg-white focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/20",
-      "data-[state=open]:border-primary data-[state=open]:ring-1 data-[state=open]:ring-primary/20",
-      "disabled:cursor-not-allowed disabled:bg-white disabled:text-text-muted disabled:opacity-50",
-      "transition-all duration-200",
+      "shadow-[0_5px_16px_rgba(15,23,42,0.05)]",
+      "focus-visible:ring-2 focus-visible:ring-primary/8",
+      "data-[state=open]:ring-2 data-[state=open]:ring-primary/8",
+      "disabled:cursor-not-allowed disabled:bg-muted/30 disabled:text-text-muted disabled:opacity-60",
+      "transition-[border-color,box-shadow,background-color,color] duration-200",
       "[&>span]:line-clamp-1",
       className
     )}
@@ -41,7 +38,7 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <ChevronDown className="h-4 w-4 shrink-0 text-text-muted/80" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -83,12 +80,9 @@ SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
 /**
- * SelectContent 组件 - 平面设计系统
- * 
- * 特性：
- * - 
- * - 使用 border-2 定义边界
- * - 白色背景
+ * SelectContent 组件
+ *
+ * 与触发器保持同一套圆角语言，但菜单本身保持紧凑，不做夸张放大。
  */
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
@@ -98,8 +92,8 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg",
-        "border-2 border-border bg-white text-foreground",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[16px]",
+        "bg-white text-foreground shadow-[0_10px_28px_rgba(15,23,42,0.08)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -117,7 +111,7 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
+          "flex flex-col gap-1 p-1.5",
           position === "popper" &&
           "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
@@ -131,11 +125,7 @@ const SelectContent = React.forwardRef<
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 /**
- * SelectLabel 组件 - 平面设计系统
- * 
- * 特性：
- * - 用于选择框分组标签
- * - semibold 字重
+ * SelectLabel 组件
  */
 const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
@@ -143,19 +133,14 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("px-2 py-1.5 text-sm font-semibold text-foreground", className)}
+    className={cn("px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-text-muted", className)}
     {...props}
   />
 ))
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
 /**
- * SelectItem 组件 - 平面设计系统
- * 
- * 特性：
- * - 悬停时灰色背景
- * - 无阴影
- * - 平滑过渡
+ * SelectItem 组件
  */
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
@@ -165,9 +150,10 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-pointer select-none items-center",
-      "rounded-md py-2 pl-3 pr-8 text-sm font-medium",
+      "rounded-[10px] py-2 pl-4 pr-8 text-[13px] font-medium",
       "outline-none transition-colors duration-200",
-      "focus:bg-muted focus:text-foreground",
+      "focus:bg-muted/68 focus:text-foreground",
+      "data-[state=checked]:bg-muted/74 data-[state=checked]:font-semibold",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
@@ -184,11 +170,7 @@ const SelectItem = React.forwardRef<
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
 /**
- * SelectSeparator 组件 - 平面设计系统
- * 
- * 特性：
- * - 使用灰色分隔线
- * - 无阴影
+ * SelectSeparator 组件
  */
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
@@ -196,7 +178,7 @@ const SelectSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-[2px] bg-border", className)}
+    className={cn("-mx-1 my-1 h-px bg-border/70", className)}
     {...props}
   />
 ))

@@ -138,7 +138,7 @@ export const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
               setQuestionForm((prev) => ({ ...prev, space_tag_id: Number(val) }));
             }}
           >
-            <SelectTrigger disabled={readOnly} className="h-8 text-sm">
+            <SelectTrigger disabled={readOnly}>
               <SelectValue placeholder="选择 space" />
               {!readOnly && questionForm.space_tag_id != null && (
                 <span

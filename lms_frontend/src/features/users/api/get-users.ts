@@ -29,6 +29,7 @@ const normalizeDepartments = (departments: Department[]) =>
 
 interface GetUsersParams {
   departmentId?: number;
+  mentorId?: number;
   isActive?: boolean;
   search?: string;
 }
@@ -42,14 +43,15 @@ interface UseUsersOptions {
  */
 export const useUsers = (params: GetUsersParams = {}, options: UseUsersOptions = {}) => {
   const currentRole = useCurrentRole();
-  const { departmentId, isActive, search } = params;
+  const { departmentId, mentorId, isActive, search } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, isActive, search],
+    queryKey: ['users', currentRole ?? 'UNKNOWN', departmentId, mentorId, isActive, search],
     queryFn: () => {
       const queryParams = {
         ...(departmentId && { department_id: String(departmentId) }),
+        ...(mentorId && { mentor_id: String(mentorId) }),
         ...(isActive !== undefined && { is_active: String(isActive) }),
         ...(search && { search }),
       };

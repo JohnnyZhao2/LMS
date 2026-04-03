@@ -73,6 +73,7 @@ class UserListCreateView(APIView):
         parameters=[
             OpenApiParameter(name='is_active', type=bool, description='按激活状态筛选'),
             OpenApiParameter(name='department_id', type=int, description='按部门筛选'),
+            OpenApiParameter(name='mentor_id', type=int, description='按导师筛选'),
             OpenApiParameter(name='search', type=str, description='搜索姓名或工号'),
         ],
         responses={
@@ -93,10 +94,16 @@ class UserListCreateView(APIView):
             name='department_id',
             minimum=1,
         )
+        mentor_id = parse_int_query_param(
+            request=request,
+            name='mentor_id',
+            minimum=1,
+        )
         search = request.query_params.get('search')
         queryset = list_users(
             is_active=is_active_bool,
             department_id=department_id,
+            mentor_id=mentor_id,
             search=search,
         )
         serializer = UserListSerializer(queryset, many=True)

@@ -35,6 +35,7 @@ def get_user_by_id(pk: int) -> Optional[User]:
 def list_users(
     is_active: Optional[bool] = None,
     department_id: Optional[int] = None,
+    mentor_id: Optional[int] = None,
     search: Optional[str] = None,
 ) -> QuerySet:
     """
@@ -42,6 +43,7 @@ def list_users(
     Args:
         is_active: Filter by active status
         department_id: Filter by department
+        mentor_id: Filter by mentor
         search: Search in username or employee_id
     Returns:
         Filtered QuerySet of users, with dept_manager at top when filtering by department
@@ -51,6 +53,8 @@ def list_users(
         qs = qs.filter(is_active=is_active)
     if department_id:
         qs = qs.filter(department_id=department_id)
+    if mentor_id:
+        qs = qs.filter(mentor_id=mentor_id)
     if search:
         qs = qs.filter(
             Q(username__icontains=search) |
