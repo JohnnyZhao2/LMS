@@ -9,6 +9,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -245,7 +246,7 @@ export const ActivityLogsPanel: React.FC = () => {
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   {selectedMembers.length > 0 ? (
                     <div className="relative flex h-14 min-w-0 items-center gap-2 text-[13px] font-semibold text-primary">
-                      <div className="scrollbar-subtle flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+                      <ScrollContainer className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
                         {selectedMembers.map((member) => (
                           <button
                             key={member.id}
@@ -257,7 +258,7 @@ export const ActivityLogsPanel: React.FC = () => {
                             <X className="h-3 w-3 opacity-70" />
                           </button>
                         ))}
-                      </div>
+                      </ScrollContainer>
                       <span className="shrink-0 rounded-md bg-primary-50 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
                         {data?.count ?? 0}
                       </span>

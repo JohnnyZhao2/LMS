@@ -168,7 +168,7 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = submission.answers.length - answeredCount;
 
   return (
-    <div className="-m-6 min-h-[calc(100vh-var(--header-height))] p-6 bg-muted">
+    <div className="-m-6 flex min-h-0 flex-1 flex-col overflow-auto bg-muted p-6">
       {/* 顶部信息栏 - Flat Design */}
       <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-background">
         <div className="flex items-center gap-4">

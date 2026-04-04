@@ -14,6 +14,8 @@ import {
 } from '@dnd-kit/sortable';
 import { Send } from 'lucide-react';
 
+import { ScrollContainer } from '@/components/ui/scroll-container';
+import { cn } from '@/lib/utils';
 import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
 import { SortableResourceItem } from './sortable-resource-item';
 import type { SelectedResource } from './task-form.types';
@@ -25,6 +27,7 @@ interface TaskPipelinePanelProps {
   onMoveResource: (index: number, direction: 'up' | 'down') => void;
   onRemoveResource: (index: number) => void;
   onUpgradeResource: (index: number) => void;
+  embedded?: boolean;
 }
 
 export function TaskPipelinePanel({
@@ -34,6 +37,7 @@ export function TaskPipelinePanel({
   onMoveResource,
   onRemoveResource,
   onUpgradeResource,
+  embedded = false,
 }: TaskPipelinePanelProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -43,13 +47,15 @@ export function TaskPipelinePanel({
   );
 
   return (
-    <div className={TASK_FORM_PANEL_CLASSNAME}>
-      <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
-        <Send className="h-4 w-4 -rotate-45 text-primary-500" />
-        <span>任务流程</span>
-      </div>
+    <div className={cn(embedded ? 'flex min-h-0 flex-1 flex-col overflow-hidden bg-background' : TASK_FORM_PANEL_CLASSNAME)}>
+      {embedded ? null : (
+        <div className={TASK_FORM_PANEL_HEADER_CLASSNAME}>
+          <Send className="h-4 w-4 -rotate-45 text-primary-500" />
+          <span>任务流程</span>
+        </div>
+      )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-muted/35 p-6">
+      <ScrollContainer className="min-h-0 flex-1 overflow-y-auto bg-muted/35 p-6">
         {selectedResources.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-border/60 bg-background shadow-sm">
@@ -99,7 +105,7 @@ export function TaskPipelinePanel({
             </DndContext>
           </div>
         )}
-      </div>
+      </ScrollContainer>
     </div>
   );
 }

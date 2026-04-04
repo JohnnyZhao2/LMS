@@ -105,7 +105,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   标签类型
                 </Label>
                 <Select value={tagType} onValueChange={(value) => setTagType(value as TagType)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 rounded-[14px] border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80">
                     <SelectValue placeholder="选择标签类型" />
                   </SelectTrigger>
                   <SelectContent>

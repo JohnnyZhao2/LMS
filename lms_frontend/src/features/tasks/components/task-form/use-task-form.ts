@@ -367,6 +367,8 @@ export const useTaskForm = () => {
 
     // Computed
     availableResources,
+    totalResourceCount: totalCount,
+    resourcePageSize: PAGE_SIZE,
     totalPages,
     safeCurrentPage,
     filteredUsers,

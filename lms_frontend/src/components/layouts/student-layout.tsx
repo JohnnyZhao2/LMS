@@ -18,6 +18,7 @@ import {
 import { ROLE_FULL_LABELS, ROLE_INDICATOR_CLASSES, ROLE_ORDER } from '@/config/role-constants'
 import type { RoleCode } from '@/types/api'
 import { toast } from 'sonner'
+import { GlobalBreadcrumb } from './global-breadcrumb'
 
 interface StudentLayoutProps {
   children: React.ReactNode
@@ -143,7 +144,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F6F8FC]">
+    <div className="flex h-dvh overflow-hidden flex-col bg-[#F6F8FC]">
       <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-white/90 backdrop-blur-md">
         <div className="flex h-full items-center gap-4 px-5 md:px-8">
           <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
@@ -286,9 +287,12 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         )}
       </header>
 
-      <main className="flex flex-1 flex-col min-w-0">
-        <div className="flex w-full min-w-0 flex-1 flex-col px-5 py-6 md:px-8 xl:px-10">
-          {children}
+      <main className="flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden">
+        <div className="flex h-full w-full min-w-0 min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 xl:px-10">
+          <GlobalBreadcrumb />
+          <div className="scrollbar-subtle -mx-8 -mt-4 flex min-h-0 flex-1 flex-col overflow-auto px-8 pt-4">
+            {children}
+          </div>
         </div>
       </main>
     </div>

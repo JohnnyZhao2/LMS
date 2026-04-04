@@ -1,11 +1,12 @@
-import { FileText } from 'lucide-react';
+import { FileText, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
+import { Input } from '@/components/ui/input';
+import { EditorPageShell } from '@/components/ui/page-shell';
 
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
-import { TaskFormHeader } from './task-form-header';
 import { TASK_FORM_WORKBENCH_CLASSNAME } from './task-form.constants';
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
@@ -13,7 +14,6 @@ import { TaskResourceLibraryPanel } from './task-resource-library-panel';
 export const TaskForm: React.FC = () => {
   const {
     isEdit,
-    task,
     taskError,
     title,
     setTitle,
@@ -31,7 +31,8 @@ export const TaskForm: React.FC = () => {
     setUserSearch,
     setCurrentPage,
     availableResources,
-    totalPages,
+    totalResourceCount,
+    resourcePageSize,
     safeCurrentPage,
     filteredUsers,
     isUsersLoading,
@@ -46,7 +47,6 @@ export const TaskForm: React.FC = () => {
     upgradeResource,
     toggleUser,
     toggleUsers,
-    clearUsers,
     handleDragEnd,
     handleSubmit,
     roleNavigate,
@@ -70,18 +70,7 @@ export const TaskForm: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-48px)] min-h-0 flex-col gap-2 overflow-hidden bg-muted/20 py-2">
-      <TaskFormHeader
-        isEdit={isEdit}
-        task={task}
-        title={title}
-        onTitleChange={setTitle}
-        onBack={() => roleNavigate('tasks')}
-        onSubmit={handleSubmit}
-        canSubmit={canSubmit}
-        isSubmitting={isSubmitting}
-      />
-
+    <EditorPageShell>
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className={TASK_FORM_WORKBENCH_CLASSNAME}>
           <TaskResourceLibraryPanel
@@ -99,23 +88,42 @@ export const TaskForm: React.FC = () => {
             }}
             onResourceAdd={addResource}
             resourcesDisabled={resourcesDisabled}
-            totalPages={totalPages}
+            totalResourceCount={totalResourceCount}
+            pageSize={resourcePageSize}
             safeCurrentPage={safeCurrentPage}
             onPageChange={setCurrentPage}
           />
 
-          <TaskPipelinePanel
-            selectedResources={selectedResources}
-            resourcesDisabled={resourcesDisabled}
-            onDragEnd={handleDragEnd}
-            onMoveResource={moveResource}
-            onRemoveResource={removeResource}
-            onUpgradeResource={upgradeResource}
-          />
+          <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
+            <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="输入任务标题..."
+                className="h-9 flex-1 rounded-xl border-transparent bg-muted/70 px-4 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/45 focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+                className="h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {isEdit ? '保存修改' : '发布任务'}
+              </Button>
+            </div>
+
+            <TaskPipelinePanel
+              selectedResources={selectedResources}
+              resourcesDisabled={resourcesDisabled}
+              onDragEnd={handleDragEnd}
+              onMoveResource={moveResource}
+              onRemoveResource={removeResource}
+              onUpgradeResource={upgradeResource}
+              embedded
+            />
+          </div>
 
           <TaskConfigurationPanel
-            title={title}
-            onTitleChange={setTitle}
             deadline={deadline}
             onDeadlineChange={setDeadline}
             description={description}
@@ -128,11 +136,10 @@ export const TaskForm: React.FC = () => {
             onToggleUsers={toggleUsers}
             isUsersLoading={isUsersLoading}
             canRemoveAssignee={canRemoveAssignee}
-            onClearUsers={clearUsers}
           />
         </div>
       </div>
-    </div>
+    </EditorPageShell>
   );
 };
 

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { PageFillShell, PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { cn } from '@/lib/utils';
 import { useTaskDetail } from '../../api/get-task-detail';
 import { ProgressMonitoringTab } from './progress-monitoring-tab';
@@ -101,47 +102,52 @@ export const TaskPreviewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <PageShell className="animate-pulse">
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
-      </div>
+      </PageShell>
     );
   }
 
   if (!task) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 text-text-muted">
-        <p>任务不存在</p>
-        <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
-          返回任务列表
-        </Button>
-      </div>
+      <PageShell>
+        <div className="flex h-96 flex-col items-center justify-center text-text-muted">
+          <p>任务不存在</p>
+          <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
+            返回任务列表
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
   if (availableTabs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 text-text-muted">
-        <p>无权访问任务预览</p>
-        <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
-          返回任务列表
-        </Button>
-      </div>
+      <PageShell>
+        <div className="flex h-96 flex-col items-center justify-center text-text-muted">
+          <p>无权访问任务预览</p>
+          <Button variant="outline" onClick={() => navigate(`/${role}/tasks`)} className="mt-4">
+            返回任务列表
+          </Button>
+        </div>
+      </PageShell>
     );
   }
 
+  const Shell = PageFillShell;
+
   return (
-    <div className="space-y-5 animate-fadeIn pb-8 min-h-full">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-background backdrop-blur-md border-b border-border/60 px-6 py-4">
-        <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-4 lg:px-6">
+    <Shell className="animate-fadeIn">
+      <div className="flex min-w-0 flex-col gap-4 border-b border-border/60 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/${role}/tasks`)}
-              className="h-10 w-10 rounded-xl hover:bg-muted transition-colors duration-150"
+              className="mt-0.5 h-10 w-10 rounded-xl transition-colors duration-150 hover:bg-muted"
             >
               <ArrowLeft className="h-5 w-5 text-text-muted" />
             </Button>
@@ -165,8 +171,10 @@ export const TaskPreviewPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
 
-          {!isTaskManagementEntry && availableTabs.length > 1 && (
+        {!isTaskManagementEntry && availableTabs.length > 1 && (
+          <div className="flex w-full justify-start lg:w-auto lg:justify-end">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList className="border-0 bg-muted/60 p-1 rounded-lg">
                 {canViewProgress && (
@@ -189,78 +197,70 @@ export const TaskPreviewPage: React.FC = () => {
                 )}
               </TabsList>
             </Tabs>
-          )}
-        </div>
-      </div>
-
-      <main className="mx-auto w-full max-w-[1600px]">
-        {/* PROGRESS TAB */}
-        {activeTab === 'progress' && (
-          <div>
-            <ProgressMonitoringTab taskId={taskId} />
           </div>
         )}
+      </div>
 
-        {/* GRADING TAB */}
-        {activeTab === 'grading' && (
+      {activeTab === 'progress' ? (
+        <PageWorkbench className="gap-4">
+          <ProgressMonitoringTab taskId={taskId} />
+        </PageWorkbench>
+      ) : (
+        <PageWorkbench className="gap-6">
           <div className="space-y-6">
-            {/* Prominent Quiz Selector */}
             {hasMultipleQuizzes ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {quizzes.map((quiz) => {
                   const isActive = quiz.quiz === activeQuizId;
-                  const isExam = quiz.quiz_type === 'EXAM'; // Verify exact value from backend if needed, assuming generic check or use display text
+                  const isExam = quiz.quiz_type === 'EXAM';
 
                   return (
                     <button
                       key={quiz.id}
                       onClick={() => setSelectedQuizId(quiz.quiz)}
                       className={cn(
-                        "relative flex flex-col items-start text-left p-4 rounded-2xl border-2 transition-all duration-200 group overflow-hidden",
+                        'group relative flex flex-col items-start overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200',
                         isActive
                           ? isExam
-                            ? "border-destructive-500 bg-destructive-50/30 ring-4 ring-destructive-100" // Active Exam
-                            : "border-primary-500 bg-primary-50/30 ring-4 ring-primary-100" // Active Quiz
-                          : "border-white bg-background hover:border-border" // Inactive
+                            ? 'border-destructive-500 bg-destructive-50/30 ring-4 ring-destructive-100'
+                            : 'border-primary-500 bg-primary-50/30 ring-4 ring-primary-100'
+                          : 'border-white bg-background hover:border-border'
                       )}
                     >
-                      {/* Selection Indicator */}
                       {isActive && (
-                        <div className={cn(
-                          "absolute top-0 right-0 p-1.5 rounded-bl-xl text-white",
-                          isExam ? "bg-destructive-500" : "bg-primary-500"
-                        )}>
+                        <div
+                          className={cn(
+                            'absolute top-0 right-0 rounded-bl-xl p-1.5 text-white',
+                            isExam ? 'bg-destructive-500' : 'bg-primary-500'
+                          )}
+                        >
                           <CheckCircle2 className="w-4 h-4" />
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="mb-3 flex items-center gap-2">
                         <Badge
                           className={cn(
-                            "border-none px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider",
+                            'rounded-md border-none px-2 py-0.5 text-[10px] font-bold tracking-wider',
                             isExam
-                              ? "bg-destructive-100 text-destructive-700 group-hover:bg-destructive-200"
-                              : "bg-primary-100 text-primary-700 group-hover:bg-primary-200"
+                              ? 'bg-destructive-100 text-destructive-700 group-hover:bg-destructive-200'
+                              : 'bg-primary-100 text-primary-700 group-hover:bg-primary-200'
                           )}
                         >
                           {isExam ? <GraduationCap className="w-3 h-3 mr-1" /> : <BookOpen className="w-3 h-3 mr-1" />}
                           {quiz.quiz_type_display || (isExam ? '考试' : '练习')}
                         </Badge>
-                        {/* Duration or Score Tag */}
-                        <div className="flex items-center text-[10px] text-text-muted font-medium bg-muted px-1.5 py-0.5 rounded">
+                        <div className="flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
                           <Clock className="w-3 h-3 mr-1" />
                           {quiz.duration ? `${quiz.duration}分` : '不限时'}
                         </div>
                       </div>
 
-                      <h3 className={cn(
-                        "font-bold text-lg leading-tight mb-2 line-clamp-2",
-                        isActive ? "text-foreground" : "text-foreground"
-                      )}>
+                      <h3 className="mb-2 line-clamp-2 text-lg font-bold leading-tight text-foreground">
                         {quiz.quiz_title}
                       </h3>
 
-                      <div className="mt-auto pt-2 w-full flex items-center justify-between text-xs text-text-muted border-t border-border/50">
+                      <div className="mt-auto flex w-full items-center justify-between border-t border-border/50 pt-2 text-xs text-text-muted">
                         <span>{quiz.question_count} 道题目</span>
                         <span className="font-mono font-medium">总分: {quiz.total_score}</span>
                       </div>
@@ -269,43 +269,49 @@ export const TaskPreviewPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              // Only one quiz - show a simple banner context
-              <div className="flex items-center gap-3 p-4 bg-background border border-border rounded-2xl">
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center",
-                  quizzes[0]?.quiz_type === 'EXAM' ? "bg-destructive-100 text-destructive-600" : "bg-primary-100 text-primary-600"
-                )}>
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4">
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-full',
+                    quizzes[0]?.quiz_type === 'EXAM'
+                      ? 'bg-destructive-100 text-destructive-600'
+                      : 'bg-primary-100 text-primary-600'
+                  )}
+                >
                   {quizzes[0]?.quiz_type === 'EXAM' ? <GraduationCap className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold text-foreground">{quizzes[0]?.quiz_title || '试卷详情'}</h2>
-                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
                       {quizzes[0]?.quiz_type_display}
                     </Badge>
                   </div>
-                  <div className="text-xs text-text-muted mt-0.5">
+                  <div className="mt-0.5 text-xs text-text-muted">
                     共 {quizzes[0]?.question_count} 道题目 · 总分 {quizzes[0]?.total_score}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Alert for Auto-Grading Quizzes */}
-            {quizzes.find(q => q.quiz === activeQuizId)?.quiz_type !== 'EXAM' && (
-              <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-100 rounded-xl text-primary-700 text-sm">
-                <div className="mt-0.5"><BookOpen className="w-4 h-4" /></div>
+            {quizzes.find((q) => q.quiz === activeQuizId)?.quiz_type !== 'EXAM' && (
+              <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50 p-3 text-sm text-primary-700">
+                <div className="mt-0.5">
+                  <BookOpen className="w-4 h-4" />
+                </div>
                 <div>
                   <span className="font-bold">提示：</span>
                   当前选择的是练习/测验试卷。通常此类试卷主要用于学员自测，题目多为客观题（系统自动评分）。请重点关注“考试”类型的试卷进行人工批阅。
                 </div>
               </div>
             )}
+          </div>
 
+          <div className="flex min-h-0 flex-1 flex-col">
             <GradingCenterTab taskId={taskId} quizId={activeQuizId} />
           </div>
-        )}
-      </main>
-    </div>
+        </PageWorkbench>
+      )}
+    </Shell>
   );
 };

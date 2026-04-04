@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
+import { richTextToPreviewText } from '@/lib/rich-text';
 import type { LatestKnowledge, StudentDashboardTask } from '@/types/api';
 
 interface KnowledgeItemProps {
@@ -25,7 +26,7 @@ export const KnowledgeItem: React.FC<KnowledgeItemProps> = ({ knowledge, navigat
             {knowledge.title}
           </h5>
           <p className="text-[12px] text-slate-400/80 line-clamp-1 break-all font-medium leading-none tracking-tight">
-            {knowledge.content_preview || '点击进入深度学习...'}
+            {richTextToPreviewText(knowledge.content_preview || '') || '点击进入深度学习...'}
           </p>
         </div>
 

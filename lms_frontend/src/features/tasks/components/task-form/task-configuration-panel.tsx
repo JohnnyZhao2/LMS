@@ -5,7 +5,6 @@ import { MicroLabel } from '@/components/common/micro-label';
 import { UserSelectList, type UserSelectPanelItem } from '@/components/common/user-select-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
@@ -15,8 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
 
 interface TaskConfigurationPanelProps {
-  title: string;
-  onTitleChange: (value: string) => void;
   deadline: Date | undefined;
   onDeadlineChange: (value: Date | undefined) => void;
   description: string;
@@ -29,7 +26,6 @@ interface TaskConfigurationPanelProps {
   onToggleUsers: (userIds: number[], checked: boolean) => void;
   isUsersLoading: boolean;
   canRemoveAssignee: boolean;
-  onClearUsers: () => void;
 }
 
 type TaskAssigneeDepartmentFilter = 'all' | 'room1' | 'room2';
@@ -49,8 +45,6 @@ function matchesDepartmentFilter(
 }
 
 export function TaskConfigurationPanel({
-  title,
-  onTitleChange,
   deadline,
   onDeadlineChange,
   description,
@@ -63,7 +57,6 @@ export function TaskConfigurationPanel({
   onToggleUsers,
   isUsersLoading,
   canRemoveAssignee,
-  onClearUsers,
 }: TaskConfigurationPanelProps) {
   const [departmentFilter, setDepartmentFilter] = useState<TaskAssigneeDepartmentFilter>('all');
   const filteredUserPanelItems = useMemo(
@@ -83,20 +76,8 @@ export function TaskConfigurationPanel({
             <span>任务配置</span>
           </div>
 
-          <div className="space-y-5 px-5 py-5">
-            <div className="space-y-3">
-              <MicroLabel icon={<FileText className="h-3.5 w-3.5" />} asLabel>
-                任务标题
-              </MicroLabel>
-              <Input
-                placeholder="请输入标题..."
-                className="h-11 rounded-xl border-border/60 bg-muted px-4 text-sm shadow-none"
-                value={title}
-                onChange={(event) => onTitleChange(event.target.value)}
-              />
-            </div>
-
-            <div className="space-y-3">
+          <div className="space-y-4 px-5 py-4">
+            <div className="space-y-2.5">
               <MicroLabel icon={<Plus className="h-3.5 w-3.5" />} asLabel>
                 截止时间
               </MicroLabel>
@@ -108,7 +89,7 @@ export function TaskConfigurationPanel({
               />
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <MicroLabel icon={<BookOpen className="h-3.5 w-3.5" />} asLabel>
                 任务描述
               </MicroLabel>
@@ -131,18 +112,6 @@ export function TaskConfigurationPanel({
             </Badge>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-4">
-            <span className="text-xs font-semibold text-text-muted">可分配学员</span>
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto px-0 text-destructive-500 hover:text-destructive-600"
-              onClick={onClearUsers}
-            >
-              清空
-            </Button>
-          </div>
-
           {!canRemoveAssignee ? (
             <div className="px-5 pb-4">
               <Alert variant="warning">
@@ -154,9 +123,9 @@ export function TaskConfigurationPanel({
             </div>
           ) : null}
 
-          <div className="min-h-0 flex-1 px-5 pb-5">
+          <div className="min-h-0 flex-1 pb-4">
             <div className="flex h-full min-h-0 flex-col">
-              <div className="space-y-3 border-b border-border/60 pb-3">
+              <div className="space-y-3 px-5 pb-2 pt-4">
                 <SegmentedControl
                   options={[
                     { label: '全部', value: 'all' },
@@ -174,7 +143,7 @@ export function TaskConfigurationPanel({
                     value={userSearch}
                     onChange={(event) => onUserSearchChange(event.target.value)}
                     placeholder="搜索姓名或工号..."
-                    className="h-8 flex-1 min-w-0 rounded-lg border-slate-200/60 bg-white pl-3 text-[11px] shadow-none placeholder:text-slate-300 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
+                    className="h-8 flex-1 min-w-0 rounded-lg border-slate-200/60 bg-white pl-3 text-[11px] shadow-none placeholder:text-text-muted/45 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
                   />
                   <label className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50">
                     <Checkbox
@@ -182,7 +151,7 @@ export function TaskConfigurationPanel({
                       onCheckedChange={() => onToggleUsers(filteredUserPanelItems.map((item) => item.id), !isAllFilteredUsersSelected)}
                       className="rounded-[3px]"
                     />
-                    <span className="whitespace-nowrap text-[10px] font-bold tabular-nums text-slate-500">
+                    <span className="whitespace-nowrap text-[10px] font-bold tabular-nums text-text-muted">
                       {selectedFilteredUserCount}/{filteredUserPanelItems.length}
                     </span>
                   </label>
@@ -193,11 +162,13 @@ export function TaskConfigurationPanel({
                 items={filteredUserPanelItems}
                 selectedIds={selectedUserIds}
                 onSelect={onToggleUser}
+                appearance="panel"
+                layout="grid"
                 isLoading={isUsersLoading}
                 emptyText="暂无可分配学员"
                 loadingText="加载学员列表..."
-                className="px-0 pb-0 pt-3"
-                itemsClassName="space-y-2"
+                className="pb-4 pt-2"
+                listClassName="px-5"
               />
             </div>
           </div>

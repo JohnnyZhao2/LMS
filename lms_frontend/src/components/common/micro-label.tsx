@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  */
 
 const microLabelVariants = cva(
-  'text-xs font-bold uppercase tracking-widest',
+  'text-[11px] font-semibold uppercase tracking-[0.12em]',
   {
     variants: {
       variant: {

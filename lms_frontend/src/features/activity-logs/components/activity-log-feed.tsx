@@ -1,4 +1,5 @@
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import type { ActivityLogItem } from '../types';
@@ -46,7 +47,7 @@ const groupItemsByDay = (items: ActivityLogItem[]) => {
 };
 
 const LoadingState = () => (
-  <div className="scrollbar-subtle h-full overflow-y-auto px-5 py-4">
+  <ScrollContainer className="h-full overflow-y-auto px-5 py-4">
     <div className="relative ml-[18px] border-l-2 border-border/40 pl-8">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex animate-pulse items-start gap-3 py-3">
@@ -58,7 +59,7 @@ const LoadingState = () => (
         </div>
       ))}
     </div>
-  </div>
+  </ScrollContainer>
 );
 
 export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
@@ -82,7 +83,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
   const groups = groupItemsByDay(items);
 
   return (
-    <div className="scrollbar-subtle h-full overflow-y-auto px-5 py-4">
+    <ScrollContainer className="h-full overflow-y-auto px-5 py-4">
       <div className="relative ml-[18px]">
         <div className="absolute bottom-0 left-0 top-0 w-px bg-border/60" />
 
@@ -157,6 +158,6 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
           </div>
         ))}
       </div>
-    </div>
+    </ScrollContainer>
   );
 };

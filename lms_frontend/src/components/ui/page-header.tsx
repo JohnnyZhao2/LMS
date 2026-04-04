@@ -1,14 +1,8 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Home, ChevronRight } from 'lucide-react';
+import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { cn } from '@/lib/utils';
 import { tokenStorage } from '@/lib/token-storage';
-
-export interface BreadcrumbItem {
-  title: string;
-  path?: string;
-  icon?: React.ReactNode;
-}
+import { useParams } from 'react-router-dom';
 
 export interface PageHeaderProps {
   /** 页面标题 */
@@ -48,29 +42,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       <div className="flex min-w-0 flex-col gap-2.5">
         {/* 面包屑导航 */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="mb-1 flex items-center gap-1.5 text-xs text-text-muted">
-            <Link
-              to={getDashboardPath()}
-              className="hover:text-foreground transition-colors"
-            >
-              <Home className="w-3.5 h-3.5" />
-            </Link>
-            {breadcrumbs.map((item, index) => (
-              <React.Fragment key={index}>
-                <ChevronRight className="w-3 h-3 text-border" />
-                {item.path ? (
-                  <Link
-                    to={item.path}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    {item.title}
-                  </Link>
-                ) : (
-                  <span className="text-foreground font-medium">{item.title}</span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
+          <BreadcrumbNav
+            items={breadcrumbs}
+            homePath={getDashboardPath()}
+            className="mb-1"
+          />
         )}
 
         {/* 标题区域 */}

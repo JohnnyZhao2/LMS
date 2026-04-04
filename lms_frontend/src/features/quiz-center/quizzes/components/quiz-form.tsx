@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
+import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
+import { Input } from '@/components/ui/input';
+import { EditorPageShell } from '@/components/ui/page-shell';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useQuestions } from '@/features/questions/api/get-questions';
@@ -18,7 +23,6 @@ import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem } from '../types';
 
 import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
-import { QuizFormHeader } from './quiz-form-header';
 import { QuizOutlinePanel } from './quiz-outline-panel';
 import { QuizDocumentEditor } from './quiz-document-editor';
 
@@ -38,9 +42,6 @@ const normalizeScore = (value: string | number | null | undefined): string => {
   const num = Number(value);
   return Number.isNaN(num) ? String(value) : String(num);
 };
-
-const QUIZ_FORM_WORKBENCH_CLASSNAME =
-  'grid h-full min-w-0 gap-3 [grid-template-columns:minmax(14rem,15rem)_minmax(0,1fr)_minmax(15rem,16rem)] 2xl:[grid-template-columns:minmax(18rem,18rem)_minmax(0,1fr)_minmax(20rem,20rem)]';
 
 const buildInlineQuestionPatch = (item: InlineQuestionItem): Partial<QuestionCreateRequest> => {
   const baseline = item.original;
@@ -120,7 +121,6 @@ const questionToInline = (q: Question): InlineQuestionItem => ({
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { roleNavigate } = useRoleNavigate();
   const isEdit = !!id;
 
@@ -386,19 +386,9 @@ export const QuizForm: React.FC = () => {
     }
   };
   return (
-    <div className="flex h-[calc(100vh-48px)] min-h-0 flex-col gap-2 overflow-hidden bg-muted/20 py-2">
-      <QuizFormHeader
-        title={title}
-        quizType={quizType}
-        onQuizTypeChange={setQuizType}
-        onTitleChange={setTitle}
-        onBack={() => navigate(-1)}
-        onSubmit={handleSubmitQuiz}
-        isSubmitting={isSubmitting}
-      />
-
+    <EditorPageShell>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className={QUIZ_FORM_WORKBENCH_CLASSNAME}>
+        <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
           <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
             <QuizOutlinePanel
               items={items}
@@ -415,16 +405,55 @@ export const QuizForm: React.FC = () => {
             />
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
-            <QuizDocumentEditor
-              items={items}
-              activeKey={activeKey}
-              onUpdateItem={handleUpdateItem}
-              onRemoveItem={handleRemoveItem}
-              onReorderItems={handleReorderItems}
-              onAddBlank={handleAddBlank}
-              onFocusItem={setActiveKey}
-            />
+          <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
+            <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
+              <Select
+                value={quizType}
+                onValueChange={(value) => setQuizType(value as QuizType)}
+              >
+                <SelectTrigger
+                  className={
+                    quizType === 'EXAM'
+                      ? 'h-9 w-[88px] shrink-0 rounded-xl border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
+                      : 'h-9 w-[88px] shrink-0 rounded-xl border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
+                  }
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PRACTICE">测验</SelectItem>
+                  <SelectItem value="EXAM">考试</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="输入试卷标题..."
+                className="h-9 flex-1 rounded-xl border-transparent bg-muted/70 px-4 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/45 focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+
+              <Button
+                onClick={handleSubmitQuiz}
+                disabled={isSubmitting}
+                className="h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                保存试卷
+              </Button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden bg-background">
+              <QuizDocumentEditor
+                items={items}
+                activeKey={activeKey}
+                onUpdateItem={handleUpdateItem}
+                onRemoveItem={handleRemoveItem}
+                onReorderItems={handleReorderItems}
+                onAddBlank={handleAddBlank}
+                onFocusItem={setActiveKey}
+              />
+            </div>
           </div>
 
           <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-background">
@@ -461,6 +490,6 @@ export const QuizForm: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </EditorPageShell>
   );
 };

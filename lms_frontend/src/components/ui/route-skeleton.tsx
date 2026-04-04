@@ -4,7 +4,7 @@ import { Skeleton } from "./skeleton"
 
 export const RouteSkeleton: React.FC = () => {
   return (
-    <div className="w-full space-y-6 min-h-[calc(100vh-11rem)]">
+    <div className="flex min-h-screen w-full flex-col space-y-6 bg-[#F6F8FC] px-5 py-6 md:px-8 xl:px-10">
       <div className="flex items-center justify-between gap-4">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-10 w-44" />

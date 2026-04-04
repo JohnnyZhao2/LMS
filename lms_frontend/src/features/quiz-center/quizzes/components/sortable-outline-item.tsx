@@ -5,6 +5,7 @@ import { GripVertical } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { richTextToPreviewText } from '@/lib/rich-text';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import type { InlineQuestionItem } from '../types';
 
@@ -103,7 +104,7 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
           </Badge>
         </div>
         <p className={cn('line-clamp-2 text-[13px] leading-relaxed', isActive ? 'font-medium text-foreground' : 'text-foreground')}>
-          {item.content || '未填写题目'}
+          {richTextToPreviewText(item.content || '') || '未填写题目'}
         </p>
       </div>
       <button

@@ -3,6 +3,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { richTextToPlainText } from '@/lib/rich-text';
 import { OptionItem } from '@/components/common/option-item';
 import type { Answer } from '@/types/api';
 
@@ -253,9 +254,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     <div>
       {/* 题目内容 */}
       <div className="mb-5">
-        <h5 className="text-base font-medium leading-relaxed m-0 text-foreground">
-          {answer.question_content}
-        </h5>
+        <div className="text-base font-medium leading-relaxed m-0 text-foreground whitespace-pre-wrap break-words">
+          {richTextToPlainText(answer.question_content)}
+        </div>
       </div>
 
       {/* 答题区 */}
@@ -291,9 +292,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           </div>
           {answer.explanation && (
             <div className="mt-2">
-              <span className="text-text-muted">
-                💡 解析: {answer.explanation}
-              </span>
+              <div className="text-text-muted whitespace-pre-wrap break-words">
+                {'💡 解析: '}
+                {richTextToPlainText(answer.explanation)}
+              </div>
             </div>
           )}
         </div>

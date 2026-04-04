@@ -9,7 +9,7 @@ export const PageShell = React.forwardRef<HTMLDivElement, PageContainerProps>(
   ({ children, className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('mx-auto flex w-full min-h-0 max-w-[1600px] flex-col gap-8', className)}
+      className={cn('flex w-full min-h-0 flex-col gap-8', className)}
       {...props}
     >
       {children}
@@ -24,7 +24,7 @@ export const PageFillShell = React.forwardRef<HTMLDivElement, PageContainerProps
     <div
       ref={ref}
       className={cn(
-        'mx-auto grid w-full min-h-0 max-w-[1600px] flex-1 grid-rows-[auto_minmax(0,1fr)] gap-8 pb-4',
+        'grid w-full min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-8 pb-4',
         className,
       )}
       {...props}
@@ -116,6 +116,18 @@ const useViewportConstraint = ({
 };
 
 interface PageViewportProps extends React.HTMLAttributes<HTMLDivElement>, ViewportConstraintOptions {}
+
+export const EditorPageShell = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn('flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-muted/20 py-2', className)}
+      {...props}
+    />
+  ),
+);
+
+EditorPageShell.displayName = 'EditorPageShell';
 
 export const PageViewport = React.forwardRef<HTMLDivElement, PageViewportProps>(
   ({ className, style, bottomGap, minHeight, desktopBreakpoint, ...props }, ref) => {

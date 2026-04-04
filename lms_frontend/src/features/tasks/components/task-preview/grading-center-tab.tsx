@@ -12,6 +12,7 @@ import { UserAvatar } from '@/components/common/user-avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
 import type { GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
@@ -202,7 +203,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
         </div>
 
         {/* List */}
-        <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
+        <ScrollContainer className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
           {filteredQuestions.length === 0 && (
             <div className="flex flex-col items-center justify-center h-40 text-text-muted text-sm">
               <p>没有找到相关题目</p>
@@ -256,7 +257,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </button>
             );
           })}
-        </div>
+        </ScrollContainer>
       </div>
 
       {/* Right Column: Content */}
@@ -298,7 +299,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
 
               {/* Content Body */}
-              <div className="flex-1 overflow-y-auto bg-muted p-6">
+              <ScrollContainer className="flex-1 overflow-y-auto bg-muted p-6">
                 {detailLoading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-xl" />
@@ -487,7 +488,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     )}
                   </>
                 )}
-              </div>
+              </ScrollContainer>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-text-muted">

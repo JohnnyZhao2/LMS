@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { useKnowledgeDetail } from '../../api/knowledge';
 import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowledge';
 import { useSpaceTypeTags } from '../../api/get-tags';
@@ -499,7 +500,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         ) : (
           <>
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
-            <div className="kd-left scrollbar-subtle">
+            <ScrollContainer className="kd-left">
               <div
                 onClick={() => {
                   if (!editing && canUpdateKnowledge) {
@@ -518,10 +519,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   readOnly={!editing}
                 />
               </div>
-            </div>
+            </ScrollContainer>
 
             {/* ── 右侧 meta 面板 ── */}
-            <div className="kd-right scrollbar-subtle">
+            <div className="kd-right">
               {/* 顶部渐变 header — 标题可编辑 */}
               <div className="kd-right-header">
                 {canUpdateKnowledge ? (
@@ -538,7 +539,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               </div>
 
               {/* body */}
-              <div className="kd-right-body">
+              <ScrollContainer className="kd-right-body">
 
                 {/* ── 系统标签 ── */}
                 {shouldShowSystemTagsSection && (
@@ -674,7 +675,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 )}
 
                 <div style={{ flex: 1 }} />
-              </div>
+              </ScrollContainer>
 
               {/* 底部操作 */}
               <div className="kd-bottom" style={{ position: 'relative' }}>

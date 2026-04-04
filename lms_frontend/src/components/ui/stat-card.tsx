@@ -12,7 +12,7 @@ interface StatCardProps {
     /** Icon color class (default: text-white) */
     iconClassName?: string;
     /** Card size variant */
-    size?: 'sm' | 'lg';
+    size?: 'xs' | 'sm' | 'lg';
     /** Optional subtitle text */
     subtitle?: string;
     gradient?: string;
@@ -43,6 +43,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     trend,
 }) => {
     const isLarge = size === 'lg';
+    const isCompact = size === 'xs';
 
     // Heuristic: Try to convert 'bg-blue-500' to 'text-blue-500' 
     const inferredTextColor = accentClassName.replace('bg-', 'text-');
@@ -56,38 +57,48 @@ export const StatCard: React.FC<StatCardProps> = ({
             className={cn(
                 "relative overflow-hidden border-border/50 bg-card transition-all duration-500 group hover:shadow-[0_12px_40px_rgb(0,0,0,0.04)]",
                 "hover:border-primary/20",
-                isLarge ? "h-36" : "h-28",
+                isLarge ? "h-36" : isCompact ? "h-24" : "h-28",
                 delay,
                 className
             )}
         >
             <div className="flex h-full relative z-10">
                 {/* Content Zone */}
-                <div className="flex-1 flex flex-col justify-between py-5 px-6 relative z-10">
+                <div className={cn(
+                    "relative z-10 flex flex-1 flex-col justify-between",
+                    isCompact ? "px-4 py-4" : "px-6 py-5",
+                )}>
                     {/* Header */}
-                    <div className="flex items-center gap-3">
+                    <div className={cn("flex items-center", isCompact ? "gap-2" : "gap-3")}>
                         {/* Glowing LED Indicator */}
                         <div className={cn(
-                            "w-1 h-3 rounded-full transition-all duration-500 ease-out group-hover:h-5",
+                            "w-1 rounded-full transition-all duration-500 ease-out",
+                            isCompact ? "h-2.5 group-hover:h-4" : "h-3 group-hover:h-5",
                             accentClassName,
                             "shadow-[0_0_12px_rgba(0,0,0,0.3)]"
                         )}
                         />
-                        <p className="font-semibold text-muted-foreground/80 uppercase tracking-widest leading-none text-[10px] truncate group-hover:text-foreground transition-colors duration-300">
+                        <p className={cn(
+                            "truncate font-semibold uppercase leading-none text-muted-foreground/80 transition-colors duration-300 group-hover:text-foreground",
+                            isCompact ? "text-[9px] tracking-[0.22em]" : "text-[10px] tracking-widest",
+                        )}>
                             {title}
                         </p>
                     </div>
 
                     {/* Value Area */}
-                    <div className="flex items-end gap-3 mt-auto transform transition-transform duration-500 group-hover:translate-x-0.5">
+                    <div className={cn(
+                        "mt-auto flex items-end transform gap-3 transition-transform duration-500 group-hover:translate-x-0.5",
+                        isCompact && "gap-2",
+                    )}>
                         <h3 className={cn(
                             "font-bold text-foreground tabular-nums leading-none tracking-tight",
-                            isLarge ? "text-4xl" : "text-3xl"
+                            isLarge ? "text-4xl" : isCompact ? "text-[1.75rem]" : "text-3xl"
                         )}>
                             {value}
                         </h3>
 
-                        <div className="flex flex-col justify-end mb-1">
+                        <div className={cn("flex flex-col justify-end", isCompact ? "mb-0.5" : "mb-1")}>
                             {/* Trend/Subtitle */}
                             {trend ? (
                                 <div className={cn(
@@ -100,7 +111,10 @@ export const StatCard: React.FC<StatCardProps> = ({
                                     {trend.value}
                                 </div>
                             ) : subtitle && (
-                                <span className="text-xs font-medium text-muted-foreground/60 lowercase mb-0.5 whitespace-nowrap">
+                                <span className={cn(
+                                    "whitespace-nowrap font-medium lowercase text-muted-foreground/60",
+                                    isCompact ? "text-[11px]" : "mb-0.5 text-xs",
+                                )}>
                                     {subtitle}
                                 </span>
                             )}
@@ -110,11 +124,13 @@ export const StatCard: React.FC<StatCardProps> = ({
 
                 {/* Right Visual Zone */}
                 <div className={cn(
-                    "relative h-full flex items-center justify-center overflow-hidden w-32 shrink-0"
+                    "relative flex h-full shrink-0 items-center justify-center overflow-hidden",
+                    isCompact ? "w-20" : "w-32",
                 )}>
                     {/* The Icon: Watermark Style - Tinted Lines */}
                     <div className={cn(
-                        "absolute -right-6 -bottom-6 w-32 h-32 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] origin-bottom-right",
+                        "absolute origin-bottom-right transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]",
+                        isCompact ? "-bottom-5 -right-5 h-24 w-24" : "-bottom-6 -right-6 h-32 w-32",
                         "group-hover:scale-110 group-hover:-rotate-6 group-hover:-translate-y-2",
                     )}>
                         <Icon

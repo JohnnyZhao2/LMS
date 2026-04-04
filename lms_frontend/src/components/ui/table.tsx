@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { ScrollContainer } from "@/components/ui/scroll-container"
 
 interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
   containerClassName?: string
@@ -10,13 +11,13 @@ const Table = React.forwardRef<
   HTMLTableElement,
   TableProps
 >(({ className, containerClassName, ...props }, ref) => (
-  <div className={cn("relative w-full overflow-auto bg-white", containerClassName)}>
+  <ScrollContainer className={cn("relative w-full overflow-auto bg-white", containerClassName)}>
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
       {...props}
     />
-  </div>
+  </ScrollContainer>
 ))
 Table.displayName = "Table"
 
@@ -77,7 +78,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 bg-white px-4 text-left align-middle text-xs font-bold uppercase tracking-wider text-text-muted [&:has([role=checkbox])]:pr-0",
+      "sticky top-0 z-10 h-10 bg-white px-4 text-left align-middle text-xs font-bold uppercase tracking-wider text-text-muted [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}

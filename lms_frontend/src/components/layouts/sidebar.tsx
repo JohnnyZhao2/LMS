@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ScrollContainer } from '@/components/ui/scroll-container'
 import {
   ROLE_FULL_LABELS,
   ROLE_INDICATOR_CLASSES,
@@ -359,7 +360,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
           </div>
 
-          <nav className="mt-8 flex-1 overflow-y-auto scrollbar-subtle">
+          <ScrollContainer as="nav" className="mt-8 flex-1 overflow-y-auto">
             <div className="space-y-1">
               {navSections.map((section) => (
                 <section key={section.title} className="space-y-1">
@@ -419,7 +420,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 </section>
               )}
             </div>
-          </nav>
+          </ScrollContainer>
           <div className="mt-5">
             <div className="flex items-center justify-between gap-3">
               <AvatarPickerPopover

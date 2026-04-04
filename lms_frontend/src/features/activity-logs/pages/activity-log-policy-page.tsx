@@ -1,24 +1,12 @@
 import { Settings, ShieldCheck } from 'lucide-react';
-import { useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { ROUTES } from '@/config/routes';
 import { ActivityLogPolicyPanel } from '../components/activity-log-policy-panel';
 
 export const ActivityLogPolicyPage: React.FC = () => {
-  const { role } = useParams<{ role: string }>();
-  const auditLogsPath = role ? `/${role}${ROUTES.AUDIT_LOGS}` : ROUTES.AUDIT_LOGS;
-
   return (
     <PageShell>
-      <PageHeader
-        title="日志策略"
-        icon={<Settings />}
-        breadcrumbs={[
-          { title: '日志审计', path: auditLogsPath },
-          { title: '日志策略' },
-        ]}
-      />
+      <PageHeader title="日志策略" icon={<Settings />} />
 
       <section className="relative overflow-hidden rounded-3xl border border-border/50 bg-card shadow-sm">
         <div className="border-b border-border/30 bg-background px-6 py-5 backdrop-blur-md">

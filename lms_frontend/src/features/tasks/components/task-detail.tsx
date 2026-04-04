@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { PageShell } from '@/components/ui/page-shell';
 import { MetricBadge } from '@/components/common/metric-badge';
 import { MicroLabel } from '@/components/common/micro-label';
 import { IconBox } from '@/components/common/icon-box';
@@ -33,6 +34,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import { isAdminLikeRole } from '@/lib/role-utils';
+import { richTextToPreviewText } from '@/lib/rich-text';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
 const assignmentStatusLabelMap: Record<string, string> = {
@@ -109,29 +111,31 @@ export const TaskDetail: React.FC = () => {
 
   if (!isValidTaskId) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-muted">
-        <div className="bg-background backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-destructive-50 text-destructive-500 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
-            <AlertCircle className="w-8 h-8" />
+      <PageShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="w-full max-w-md rounded-xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 rotate-3 items-center justify-center rounded-2xl bg-destructive-50 text-destructive-500">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Invalid Task ID</h3>
+            <p className="mb-8 text-sm leading-relaxed text-text-muted">无法找到指定的任务编号，请检查后重试。</p>
+            <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
+              返回上一页
+            </Button>
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">Invalid Task ID</h3>
-          <p className="text-text-muted text-sm mb-8 leading-relaxed">无法找到指定的任务编号，请检查后重试。</p>
-          <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
-            返回上一页
-          </Button>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-full bg-muted">
-        <div className="h-16 border-b bg-background flex items-center px-6">
+      <PageShell className="animate-pulse">
+        <div className="flex min-h-16 items-center rounded-2xl border border-border/60 bg-background px-4 lg:px-6">
           <Skeleton className="h-8 w-64" />
         </div>
-        <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-8 px-4 py-8 lg:grid-cols-12 lg:px-6">
-          <div className="lg:col-span-8 space-y-6">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-8">
             <Skeleton className="h-40 w-full rounded-xl" />
             <div className="space-y-4">
               <Skeleton className="h-24 w-full rounded-xl" />
@@ -139,28 +143,30 @@ export const TaskDetail: React.FC = () => {
               <Skeleton className="h-24 w-full rounded-xl" />
             </div>
           </div>
-          <div className="lg:col-span-4 space-y-6">
+          <div className="space-y-6 lg:col-span-4">
             <Skeleton className="h-64 w-full rounded-xl" />
           </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (taskError || !task) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh] bg-muted">
-        <div className="bg-background backdrop-blur-sm rounded-xl border border-border/60 p-12 text-center max-w-md w-full">
-          <div className="w-16 h-16 bg-muted text-text-muted rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
-            <Ghost className="w-8 h-8" />
+      <PageShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="w-full max-w-md rounded-xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 -rotate-3 items-center justify-center rounded-2xl bg-muted text-text-muted">
+              <Ghost className="w-8 h-8" />
+            </div>
+            <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Task Not Found</h3>
+            <p className="mb-8 text-sm leading-relaxed text-text-muted">任务不存在或您没有权限查看，请联系管理员。</p>
+            <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
+              返回任务中心
+            </Button>
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">Task Not Found</h3>
-          <p className="text-text-muted text-sm mb-8 leading-relaxed">任务不存在或您没有权限查看，请联系管理员。</p>
-          <Button variant="outline" onClick={() => roleNavigate('tasks')} className="w-full">
-            返回任务中心
-          </Button>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -219,18 +225,18 @@ export const TaskDetail: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-muted font-sans selection:bg-primary-100 selection:text-primary-700">
-      <header className="h-16 bg-background backdrop-blur-md border-b border-border/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 transition-all duration-300">
-        <div className="flex items-center gap-4 min-w-0">
+    <PageShell className="selection:bg-primary-100 selection:text-primary-700">
+      <header className="sticky top-0 z-20 flex flex-col gap-4 rounded-2xl border border-border/60 bg-background px-4 py-4 backdrop-blur-md transition-all duration-300 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+        <div className="flex min-w-0 items-center gap-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => roleNavigate(fromDashboard ? 'dashboard' : 'tasks')}
-            className="text-text-muted hover:text-foreground hover:bg-muted rounded-full h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full p-0 text-text-muted hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="h-4 w-px bg-muted flex-shrink-0" />
+          <div className="h-4 w-px flex-shrink-0 bg-muted" />
           <h1 className="text-base lg:text-lg font-bold text-foreground truncate tracking-tight" title={task.title}>
             {task.title}
           </h1>
@@ -239,7 +245,7 @@ export const TaskDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 lg:gap-6 text-sm flex-shrink-0">
+        <div className="flex w-full flex-wrap items-center gap-4 text-sm lg:w-auto lg:flex-shrink-0 lg:justify-end lg:gap-6">
           <div className="hidden md:flex items-center gap-6 text-text-muted">
             <MetricBadge
               icon={<User className="w-3.5 h-3.5" />}
@@ -267,8 +273,7 @@ export const TaskDetail: React.FC = () => {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-1 px-4 py-6 lg:px-6 lg:py-8">
-        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
 
           <div className="lg:col-span-8 space-y-8">
 
@@ -342,7 +347,7 @@ export const TaskDetail: React.FC = () => {
                           <div className="h-10">
                             {item.contentPreview && (
                               <p className="text-sm text-text-muted line-clamp-2 leading-relaxed group-hover:text-text-muted">
-                                {item.contentPreview.replace(/<[^>]*>/g, '')}
+                                {richTextToPreviewText(item.contentPreview)}
                               </p>
                             )}
                           </div>
@@ -575,8 +580,7 @@ export const TaskDetail: React.FC = () => {
               </div>
             )}
           </div>
-        </div >
-      </main >
-    </div >
+      </div>
+    </PageShell>
   );
 };

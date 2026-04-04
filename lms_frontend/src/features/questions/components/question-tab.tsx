@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
+import { richTextToPreviewText } from '@/lib/rich-text';
 import { type ColumnDef } from '@tanstack/react-table';
 
 interface QuestionTabProps {
@@ -222,7 +223,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
             cell: ({ row }) => (
                 <CellWithIcon
                     icon={<FileText className="w-5 h-5" />}
-                    title={row.original.content}
+                    title={richTextToPreviewText(row.original.content)}
                     subtitle={row.original.updated_by_name || row.original.created_by_name || '系统'}
                     iconBgClass="bg-secondary-50"
                     iconColorClass="text-secondary-600"

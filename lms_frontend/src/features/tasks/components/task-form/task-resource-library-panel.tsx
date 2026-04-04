@@ -1,15 +1,14 @@
 import {
   AlertCircle,
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   LayoutGrid,
   Plus,
 } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/pagination';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
@@ -26,7 +25,8 @@ interface TaskResourceLibraryPanelProps {
   onResourceTypeChange: (value: 'ALL' | ResourceType) => void;
   onResourceAdd: (resource: ResourceItem) => void;
   resourcesDisabled: boolean;
-  totalPages: number;
+  totalResourceCount: number;
+  pageSize: number;
   safeCurrentPage: number;
   onPageChange: (page: number) => void;
 }
@@ -40,7 +40,8 @@ export function TaskResourceLibraryPanel({
   onResourceTypeChange,
   onResourceAdd,
   resourcesDisabled,
-  totalPages,
+  totalResourceCount,
+  pageSize,
   safeCurrentPage,
   onPageChange,
 }: TaskResourceLibraryPanelProps) {
@@ -57,7 +58,7 @@ export function TaskResourceLibraryPanel({
             placeholder="搜索文档/测验..."
             value={resourceSearch}
             onChange={onResourceSearchChange}
-            inputClassName="border-transparent bg-muted"
+            inputClassName="h-9 text-[12px]"
           />
 
           <SegmentedControl
@@ -84,7 +85,7 @@ export function TaskResourceLibraryPanel({
         </div>
 
         <div className="min-h-0 flex-1 px-5 pb-4">
-          <div className="scrollbar-subtle h-full overflow-y-auto pr-1">
+          <ScrollContainer className="h-full overflow-y-auto">
             {isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 7 }).map((_, index) => (
@@ -144,20 +145,12 @@ export function TaskResourceLibraryPanel({
 
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 truncate text-sm font-bold text-foreground">{resource.title}</div>
-                      <div className="flex items-center gap-2 text-[11px] font-semibold text-text-muted">
-                        <span
-                          className={
-                            resource.resourceType === 'DOCUMENT'
-                              ? 'text-secondary-600'
-                              : resource.quizType === 'EXAM'
-                                ? 'text-destructive-500'
-                                : 'text-primary-500'
-                          }
-                        >
+                      <div className="flex items-center gap-2 text-[11px] font-medium text-text-muted">
+                        <span className="text-text-muted">
                           {resource.resourceType === 'DOCUMENT' ? '文档' : resource.quizType === 'EXAM' ? '考试' : '练习'}
                         </span>
                         <span className="h-0.5 w-0.5 rounded-full bg-border" />
-                        <span className="truncate">{resource.category}</span>
+                        <span className="truncate text-text-muted">{resource.category}</span>
                       </div>
                     </div>
 
@@ -168,34 +161,21 @@ export function TaskResourceLibraryPanel({
                 ))}
               </div>
             )}
-          </div>
+          </ScrollContainer>
         </div>
 
-        <div className="flex items-center justify-between border-t border-border px-5 py-4">
-          <div className="text-[11px] font-bold tracking-tight text-text-muted">
-            第 {safeCurrentPage} 页 <span className="mx-1 text-border">/</span> 共 {totalPages} 页
+        {totalResourceCount > pageSize ? (
+          <div className="border-t border-border px-5 py-4">
+            <Pagination
+              current={safeCurrentPage}
+              total={totalResourceCount}
+              pageSize={pageSize}
+              onChange={(page) => onPageChange(page)}
+              showTotal={(total, [start, end]) => `第 ${start}-${end} 条 / 共 ${total} 条`}
+              className="text-[11px]"
+            />
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg hover:bg-muted"
-              disabled={safeCurrentPage === 1}
-              onClick={() => onPageChange(Math.max(1, safeCurrentPage - 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg hover:bg-muted"
-              disabled={safeCurrentPage >= totalPages}
-              onClick={() => onPageChange(Math.min(totalPages, safeCurrentPage + 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

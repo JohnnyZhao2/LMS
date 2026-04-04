@@ -313,6 +313,12 @@
         background-color: #F6F8FC;
     }
 
+    html,
+    body,
+    #root {
+        height: 100%;
+    }
+
     h1,
     h2,
     h3,
@@ -327,7 +333,7 @@
     /* Smooth Scrolling */
     html {
         scroll-behavior: smooth;
-        overflow-y: scroll;
+        overflow-y: auto;
         scrollbar-gutter: stable;
     }
 

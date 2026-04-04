@@ -12,6 +12,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Clock3, FileText, Target } from 'lucide-react';
 
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { QuestionType, QuizType } from '@/types/api';
@@ -164,7 +165,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-background">
-      <div className="flex h-14 items-center justify-between gap-3 border-b border-border px-5">
+      <div className="flex h-12 items-center justify-between gap-3 border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <FileText className="h-4 w-4 text-primary-600" />
           <span>试卷结构</span>
@@ -208,7 +209,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           </div>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto scrollbar-subtle">
+      <ScrollContainer className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="h-full" />
         ) : (
@@ -226,7 +227,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-1 p-3">
+              <div className="space-y-2.5 px-5 py-4">
                 {items.map((item, idx) => (
                   <SortableOutlineItem
                     key={item.key}
@@ -253,54 +254,52 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             </DragOverlay>
           </DndContext>
         )}
-      </div>
-      <div className="border-t border-border bg-background px-3 py-2.5">
-        <div className="bg-background px-2.5 py-2.5">
-          <div className="mb-3.5 flex items-end justify-between">
-            <div className="flex items-baseline gap-1">
-              <span className="text-[15px] font-bold tabular-nums leading-none text-foreground">{totalScoreText}</span>
-              <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">分</span>
+      </ScrollContainer>
+      <div className="border-t border-border bg-background px-5 py-4">
+        <div className="mb-3.5 flex items-end justify-between">
+          <div className="flex items-baseline gap-1">
+            <span className="text-[15px] font-bold tabular-nums leading-none text-foreground">{totalScoreText}</span>
+            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">分</span>
+          </div>
+          <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
+        </div>
+
+        <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-muted">
+          {distribution.length > 0 ? (
+            <div className="flex h-full w-full">
+              {distribution.map((item, index) => (
+                <React.Fragment key={item.type}>
+                  {index > 0 && <div className="w-px bg-background" />}
+                  <Tooltip
+                    title={`${item.label} ${item.percentText}`}
+                  >
+                    <div
+                      className={cn('h-full transition-[width] duration-200', item.barClassName)}
+                      style={{ width: `${item.percent}%` }}
+                    />
+                  </Tooltip>
+                </React.Fragment>
+              ))}
             </div>
-            <span className="text-[11px] font-semibold tracking-wide text-text-muted/50">{items.length} 题</span>
-          </div>
+          ) : (
+            <div className="h-full w-full bg-muted" />
+          )}
+        </div>
 
-          <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-muted">
-            {distribution.length > 0 ? (
-              <div className="flex h-full w-full">
-                {distribution.map((item, index) => (
-                  <React.Fragment key={item.type}>
-                    {index > 0 && <div className="w-px bg-background" />}
-                    <Tooltip
-                      title={`${item.label} ${item.percentText}`}
-                    >
-                      <div
-                        className={cn('h-full transition-[width] duration-200', item.barClassName)}
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </Tooltip>
-                  </React.Fragment>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full w-full bg-muted" />
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
-            {distribution.length > 0 ? (
-              distribution.map((item) => (
-                <div key={item.type} className="flex items-center justify-between">
-                  <div className="flex min-w-0 items-center gap-1">
-                    <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', item.dotClassName)} />
-                    <span className="truncate text-[10px] font-medium text-text-muted">{item.label}</span>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-text-muted">
-                    {item.count}
-                  </span>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+          {distribution.length > 0 ? (
+            distribution.map((item) => (
+              <div key={item.type} className="flex items-center justify-between">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', item.dotClassName)} />
+                  <span className="truncate text-[10px] font-medium text-text-muted">{item.label}</span>
                 </div>
-              ))
-            ) : null}
-          </div>
+                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-text-muted">
+                  {item.count}
+                </span>
+              </div>
+            ))
+          ) : null}
         </div>
       </div>
     </div>

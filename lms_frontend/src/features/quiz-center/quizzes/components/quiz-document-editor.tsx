@@ -20,6 +20,7 @@ import { ChevronDown, FileText, GripVertical, Plus, Trash2, X } from 'lucide-rea
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -56,12 +57,12 @@ const QuestionTypeCompactContent: React.FC<{
   const { icon: Icon, label, color, bg } = getQuestionTypePresentation(type);
 
   return (
-    <span className="inline-flex items-center justify-center gap-2">
-      <span className={cn('inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px]', bg, color)}>
-        <Icon className="h-2.5 w-2.5" strokeWidth={2.3} />
+    <span className="inline-flex items-center justify-center gap-1.5">
+      <span className={cn('inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px]', bg, color)}>
+        <Icon className="h-2.25 w-2.25" strokeWidth={2.3} />
       </span>
-      {withDivider && <div className="h-3.5 w-px shrink-0 bg-foreground/20" />}
-      <span className="text-[11.5px] font-semibold tracking-[-0.01em] text-foreground/88">
+      {withDivider && <div className="h-3 w-px shrink-0 bg-foreground/16" />}
+      <span className="text-[10.5px] font-medium tracking-[-0.01em] text-foreground/82">
         {label}
       </span>
     </span>
@@ -202,7 +203,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
 
   return (
     <div ref={containerRef} className="relative flex h-full min-w-0 flex-1 flex-col bg-background">
-      <div className="flex-1 overflow-y-auto scrollbar-subtle px-10 py-10">
+      <ScrollContainer className="flex-1 overflow-y-auto px-8 py-8">
         {items.length > 0 ? (
           <DndContext
             sensors={sensors}
@@ -218,7 +219,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
-              <div className="mx-auto flex max-w-[820px] flex-col gap-6 pb-28">
+              <div className="mx-auto flex max-w-[780px] flex-col gap-6 pb-28">
                 {items.map((item, index) => (
                   <InlineQuestionCard
                     key={item.key}
@@ -265,7 +266,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
             </div>
           </div>
         )}
-      </div>
+      </ScrollContainer>
 
       {showAddMenu && (
         <div className="pointer-events-none absolute inset-x-0 bottom-8 z-20 flex flex-col items-center">
@@ -346,7 +347,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
       ref={handleSetRef}
       style={cardStyle}
       className={cn(
-        'group flex items-start gap-3 transition-all',
+        'group flex items-start gap-2.5 transition-all',
         isDragging && !isOverlay && 'opacity-0',
         isOverlay && 'pointer-events-none scale-[0.995]',
       )}
@@ -375,7 +376,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
             : 'hover:border-border/80 hover:shadow-sm',
         )}
       >
-        <div className="flex items-center gap-3 border-b border-border bg-transparent px-8 py-3">
+        <div className="flex items-center gap-3 border-b border-border bg-transparent px-6 py-3">
           <div className="flex flex-1 items-center gap-3">
             <span className="text-[11px] font-medium text-text-muted">第 {index + 1} 题</span>
             {item.questionId ? (
@@ -428,7 +429,7 @@ const InlineQuestionCard: React.FC<InlineQuestionCardProps> = ({
           </Button>
         </div>
 
-        <div className="space-y-2.5 px-7 pt-3 pb-2.5">
+        <div className="space-y-2.5 px-6 pt-3 pb-2.5">
             <div className="rounded-lg bg-muted/32 px-4 py-0.5">
               <Textarea
                 autoResize

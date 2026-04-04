@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 
 interface KnowledgeFocusShellProps {
@@ -84,7 +85,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
         </svg>
       </button>
 
-      <div className="kfs-editor-area scrollbar-subtle">
+      <ScrollContainer className="kfs-editor-area">
         <div className="kfs-editor-inner">
           <SlashQuillEditor
             value={content}
@@ -96,7 +97,7 @@ export const KnowledgeFocusShell: React.FC<KnowledgeFocusShellProps> = ({
             readOnly={readOnly}
           />
         </div>
-      </div>
+      </ScrollContainer>
 
       {children}
 

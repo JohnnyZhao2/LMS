@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { richTextToPreviewText } from '@/lib/rich-text';
 import { getQuestionTypeLabel, getQuestionTypeStyle, QUESTION_TYPE_LABELS } from '@/features/questions/constants';
 import type { PaginatedResponse, Question, QuestionType, Tag } from '@/types/api';
 
@@ -38,14 +39,14 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
 }) => {
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-background">
-      <div className="flex h-14 items-center border-b border-border px-5">
+      <div className="flex h-12 items-center border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <LayoutGrid className="h-4 w-4 text-text-muted" />
           公共题库
         </div>
       </div>
 
-      <div className="space-y-3 bg-background px-4 py-4">
+      <div className="space-y-3 bg-background px-5 pb-2 pt-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
@@ -79,7 +80,7 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-background px-4 py-4">
+      <div className="flex-1 overflow-y-auto bg-background px-5 pb-4 pt-2">
         {questionsLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-text-muted" />
@@ -108,7 +109,9 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
                       {getQuestionTypeLabel(q.question_type as QuestionType)}
                     </Badge>
                   </div>
-                  <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">{q.content}</p>
+                  <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">
+                    {richTextToPreviewText(q.content)}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"

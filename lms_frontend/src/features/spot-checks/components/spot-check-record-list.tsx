@@ -4,6 +4,7 @@ import { UserAvatar } from '@/components/common/user-avatar';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import dayjs from '@/lib/dayjs';
@@ -168,7 +169,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
       <Spinner spinning={isLoading} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {records.length > 0 ? (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto px-4 py-6">
+            <ScrollContainer className="min-h-0 flex-1 overflow-y-auto px-4 py-6">
               <div className="space-y-5">
                 {records.map((record) => {
                   const score = record.average_score === null ? null : Number(record.average_score);
@@ -196,6 +197,11 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                             <UserRound className="h-3.5 w-3.5 text-text-muted" />
                             <span className="text-text-muted">抽查人:</span>
                             <span className="font-semibold text-foreground">{record.checker_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <ListChecks className="h-3.5 w-3.5 text-text-muted" />
+                            <span className="text-text-muted">抽查项:</span>
+                            <span className="font-semibold text-foreground">{record.items.length} 项</span>
                           </div>
                         </div>
 
@@ -232,7 +238,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                   );
                 })}
               </div>
-            </div>
+            </ScrollContainer>
 
             {shouldShowPagination ? (
               <div className="border-t border-border/60 px-4 py-3">

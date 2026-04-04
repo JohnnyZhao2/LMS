@@ -41,7 +41,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-2.5 will-change-transform',
+        'group flex items-center gap-2 will-change-transform',
         isDragging && 'relative z-10',
       )}
     >
@@ -74,15 +74,14 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         readOnly={disabled}
       />
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         {canRemove && !disabled && (
           <button
             type="button"
             onClick={onRemove}
             className={cn(
-              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-              'opacity-0 transition-opacity group-hover:opacity-100',
-              'text-text-muted/50 hover:bg-destructive/10 hover:text-destructive',
+              'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md',
+              'text-text-muted/45 transition-colors hover:bg-destructive/10 hover:text-destructive',
             )}
           >
             <X className="h-3 w-3" />
@@ -93,13 +92,13 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
             type="button"
             aria-label={`拖动排序选项 ${optionKey}`}
             className={cn(
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-muted hover:text-foreground',
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-muted hover:text-foreground',
               isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
             )}
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="h-4 w-4" />
+            <GripVertical className="h-3.5 w-3.5" />
           </button>
         )}
       </div>

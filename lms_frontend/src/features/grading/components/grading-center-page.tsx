@@ -34,6 +34,8 @@ export const GradingCenterPage: React.FC = () => {
   const [quizPopoverOpen, setQuizPopoverOpen] = React.useState(false);
   const [quizTypeFilter, setQuizTypeFilter] = React.useState<QuizTypeFilter>('all');
   const preferredTaskId = Number(searchParams.get('task') || 0);
+  const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
+  const lockedTaskTitle = searchParams.get('taskTitle')?.trim() || '';
 
   const { data: tasks, isLoading } = usePendingQuizzes();
   const selectedTask = React.useMemo(
@@ -47,6 +49,17 @@ export const GradingCenterPage: React.FC = () => {
       return;
     }
 
+    if (isTaskManagementEntry && preferredTaskId > 0) {
+      const nextTaskId = tasks.some((task) => task.task_id === preferredTaskId)
+        ? preferredTaskId
+        : null;
+
+      if (nextTaskId !== selectedTaskId) {
+        setSelectedTaskId(nextTaskId);
+      }
+      return;
+    }
+
     const nextTaskId =
       preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)
         ? preferredTaskId
@@ -57,7 +70,7 @@ export const GradingCenterPage: React.FC = () => {
     if (nextTaskId !== selectedTaskId) {
       setSelectedTaskId(nextTaskId);
     }
-  }, [preferredTaskId, selectedTaskId, tasks]);
+  }, [isTaskManagementEntry, preferredTaskId, selectedTaskId, tasks]);
 
   React.useEffect(() => {
     if (!selectedTask) {
@@ -108,71 +121,86 @@ export const GradingCenterPage: React.FC = () => {
     return selectedTask.quizzes.filter(q => q.quiz_type === quizTypeFilter);
   }, [selectedTask, quizTypeFilter]);
 
-  const headerControls = tasks && tasks.length > 0 ? (
+  const taskDisplayTitle = selectedTask?.task_title || lockedTaskTitle || '当前任务';
+  const showHeaderControls = isTaskManagementEntry ? preferredTaskId > 0 : Boolean(tasks && tasks.length > 0);
+
+  const headerControls = showHeaderControls ? (
     <div className="flex flex-wrap items-end justify-end gap-3">
       <div className="min-w-[220px] flex-1 sm:flex-none">
-        <Popover open={taskPopoverOpen} onOpenChange={setTaskPopoverOpen}>
-          <PopoverTrigger asChild>
-            <button
-              className={cn(
-                'flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left transition-colors',
-                taskPopoverOpen
-                  ? 'border-primary-500 bg-primary-50/70'
-                  : 'border-border bg-background hover:bg-muted/70'
-              )}
-            >
-              <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                {selectedTask?.task_title || '选择任务'}
-              </span>
-              {selectedTask && (
-                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-text-muted">
-                  {selectedTask.quizzes.length} 试卷
+        {isTaskManagementEntry ? (
+          <div className="flex h-10 w-full items-center gap-2 rounded-lg border border-primary-100 bg-primary-50/70 px-3">
+            <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+              {taskDisplayTitle}
+            </span>
+            <span className="shrink-0 rounded bg-white/90 px-1.5 py-0.5 text-[10px] text-primary-700">
+              当前任务
+            </span>
+          </div>
+        ) : (
+          <Popover open={taskPopoverOpen} onOpenChange={setTaskPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  'flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left transition-colors',
+                  taskPopoverOpen
+                    ? 'border-primary-500 bg-primary-50/70'
+                    : 'border-border bg-background hover:bg-muted/70'
+                )}
+              >
+                <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                  {selectedTask?.task_title || '选择任务'}
                 </span>
-              )}
-              <ChevronDown className={cn(
-                'h-4 w-4 shrink-0 text-text-muted transition-transform',
-                taskPopoverOpen && 'rotate-180'
-              )} />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[340px] p-1.5" align="end">
-            <div className="max-h-[400px] space-y-1 overflow-y-auto">
-              {tasks.map((task) => {
-                const isActive = selectedTask?.task_id === task.task_id;
-                const totalPending = task.quizzes.reduce((sum, quiz) => sum + quiz.pending_count, 0);
+                {selectedTask && (
+                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-text-muted">
+                    {selectedTask.quizzes.length} 试卷
+                  </span>
+                )}
+                <ChevronDown className={cn(
+                  'h-4 w-4 shrink-0 text-text-muted transition-transform',
+                  taskPopoverOpen && 'rotate-180'
+                )} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[340px] p-1.5" align="end">
+              <div className="max-h-[400px] space-y-1 overflow-y-auto">
+                {tasks?.map((task) => {
+                  const isActive = selectedTask?.task_id === task.task_id;
+                  const totalPending = task.quizzes.reduce((sum, quiz) => sum + quiz.pending_count, 0);
 
-                return (
-                  <button
-                    key={task.task_id}
-                    onClick={() => handleTaskSelect(task)}
-                    className={cn(
-                      'w-full rounded-md px-3 py-2.5 text-left transition-colors',
-                      isActive ? 'bg-primary-50 text-primary-700' : 'hover:bg-muted'
-                    )}
-                  >
-                    <div className="line-clamp-1 text-sm font-medium text-foreground">
-                      {task.task_title}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-[11px] text-text-muted">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(task.deadline), 'MM/dd HH:mm', { locale: zhCN })}
-                      </span>
-                      <span>{task.quizzes.length} 份试卷</span>
-                      {totalPending > 0 && (
-                        <span className="flex items-center gap-1 text-warning-600">
-                          <AlertCircle className="h-3 w-3" />
-                          {totalPending} 待批阅
-                        </span>
+                  return (
+                    <button
+                      key={task.task_id}
+                      onClick={() => handleTaskSelect(task)}
+                      className={cn(
+                        'w-full rounded-md px-3 py-2.5 text-left transition-colors',
+                        isActive ? 'bg-primary-50 text-primary-700' : 'hover:bg-muted'
                       )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
+                    >
+                      <div className="line-clamp-1 text-sm font-medium text-foreground">
+                        {task.task_title}
+                      </div>
+                      <div className="mt-1 flex items-center gap-2 text-[11px] text-text-muted">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(task.deadline), 'MM/dd HH:mm', { locale: zhCN })}
+                        </span>
+                        <span>{task.quizzes.length} 份试卷</span>
+                        {totalPending > 0 && (
+                          <span className="flex items-center gap-1 text-warning-600">
+                            <AlertCircle className="h-3 w-3" />
+                            {totalPending} 待批阅
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
 
       {selectedTask && selectedTask.quizzes.length > 0 && (
@@ -303,7 +331,22 @@ export const GradingCenterPage: React.FC = () => {
 
       {/* Main Content */}
       <PageWorkbench>
-        {!tasks || tasks.length === 0 ? (
+        {isTaskManagementEntry ? (
+          selectedTask && selectedQuizId ? (
+            <GradingCenterTab
+              taskId={selectedTask.task_id}
+              quizId={selectedQuizId}
+            />
+          ) : (
+            <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
+              <EmptyState
+                icon={FileCheck}
+                title="当前任务暂无待阅卷试卷"
+                description="当前入口已锁定任务，如需切换任务，请从阅卷中心主页进入"
+              />
+            </div>
+          )
+        ) : !tasks || tasks.length === 0 ? (
           <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
             <EmptyState
               icon={FileCheck}

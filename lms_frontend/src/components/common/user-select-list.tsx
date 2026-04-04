@@ -1,6 +1,7 @@
 import { Check, Loader2, Users } from 'lucide-react';
 
 import { UserAvatar } from '@/components/common/user-avatar';
+import { ScrollContainer } from '@/components/ui/scroll-container';
 import { cn } from '@/lib/utils';
 
 export interface UserSelectPanelItem {
@@ -19,6 +20,7 @@ interface UserSelectListProps {
   onBeforeSelect?: () => void;
   selectionMode?: 'single' | 'multiple';
   appearance?: 'panel' | 'plain';
+  layout?: 'list' | 'grid';
   emptyText?: string;
   isLoading?: boolean;
   loadingText?: string;
@@ -93,6 +95,7 @@ export function UserSelectList({
   onBeforeSelect,
   selectionMode = 'multiple',
   appearance = 'plain',
+  layout = 'list',
   emptyText = '暂无成员',
   isLoading = false,
   loadingText = '加载中...',
@@ -101,10 +104,14 @@ export function UserSelectList({
   itemsClassName,
 }: UserSelectListProps) {
   return (
-    <div
+    <ScrollContainer
       className={cn(
-        'min-h-0 flex-1 overflow-y-auto scrollbar-subtle',
-        appearance === 'panel' ? 'p-2' : 'overscroll-contain px-2.5 py-2',
+        'min-h-0 flex-1 overflow-y-auto',
+        appearance === 'panel'
+          ? layout === 'grid'
+            ? 'px-0 py-0'
+            : 'p-2'
+          : 'overscroll-contain px-2.5 py-2',
         className,
       )}
       onWheel={appearance === 'plain' ? (event) => event.stopPropagation() : undefined}
@@ -135,7 +142,15 @@ export function UserSelectList({
           </div>
         )
       ) : (
-        <div className={cn('space-y-0.5', itemsClassName, listClassName)}>
+        <div
+          className={cn(
+            layout === 'grid'
+              ? 'grid grid-cols-2 gap-2'
+              : 'space-y-0.5',
+            itemsClassName,
+            listClassName,
+          )}
+        >
           {items.map((item) => {
             const checked = selectedIds.includes(item.id);
             const disabled = item.disabled ?? false;
@@ -153,10 +168,20 @@ export function UserSelectList({
                   onSelect(item.id);
                 }}
                 className={cn(
-                  'group flex w-full items-center gap-3 text-left transition-colors duration-150',
-                  appearance === 'panel' ? 'rounded-xl px-3 py-2.5' : 'rounded-lg border px-2.5 py-2',
+                  'group relative flex w-full items-center gap-3 text-left transition-all duration-150',
+                  layout === 'grid'
+                    ? 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
+                    : appearance === 'panel'
+                      ? 'rounded-xl px-3 py-2.5'
+                      : 'rounded-lg border px-2.5 py-2',
                   appearance === 'panel'
-                    ? (checked ? 'bg-primary-50/70' : 'hover:bg-muted')
+                    ? layout === 'grid'
+                      ? (
+                        checked
+                          ? 'border-primary/20 bg-primary-50/55 shadow-[0_10px_24px_rgba(37,99,235,0.08)]'
+                          : 'bg-background hover:-translate-y-0.5 hover:border-primary/20 hover:bg-muted/20'
+                      )
+                      : (checked ? 'bg-primary-50/70' : 'hover:bg-muted')
                     : (
                       checked
                         ? 'border-primary/10 bg-primary/[0.06]'
@@ -165,39 +190,75 @@ export function UserSelectList({
                   disabled ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : '',
                 )}
               >
-                <UserAvatar
-                  avatarKey={item.avatarKey}
-                  name={item.name}
-                  size={appearance === 'panel' ? 'md' : 'sm'}
-                  className={cn('shrink-0', appearance === 'panel' && 'h-9 w-9')}
-                />
+                {layout === 'grid' ? (
+                  <>
+                    <UserAvatar
+                      avatarKey={item.avatarKey}
+                      name={item.name}
+                      size="sm"
+                      className="mt-0.5 h-8 w-8 shrink-0 ring-1 ring-border/60"
+                    />
 
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={cn(
-                      'truncate font-medium leading-tight',
-                      appearance === 'panel' ? 'text-[13px] text-foreground' : 'text-[12px]',
-                      checked && appearance === 'plain' ? 'text-primary' : '',
-                    )}
-                  >
-                    {item.name}
-                  </p>
-                  <p
-                    className={cn(
-                      'truncate leading-tight',
-                      appearance === 'panel' ? 'text-[11px] text-text-muted' : 'text-[10px] text-slate-400',
-                    )}
-                  >
-                    {item.meta ?? '未填写工号'}
-                  </p>
-                </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-semibold leading-tight text-foreground">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 truncate text-[10px] leading-tight text-text-muted">
+                        {item.meta ?? '未填写工号'}
+                      </p>
+                    </div>
 
-                {renderTrailing(item, checked, selectionMode)}
+                    <div
+                      aria-hidden="true"
+                      className={cn(
+                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150',
+                        disabled
+                          ? 'opacity-0'
+                          : checked
+                            ? 'border-primary bg-primary text-white opacity-100'
+                            : 'border-border bg-background text-transparent opacity-70 group-hover:border-primary/40 group-hover:bg-primary-50/80 group-hover:text-primary',
+                      )}
+                    >
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <UserAvatar
+                      avatarKey={item.avatarKey}
+                      name={item.name}
+                      size={appearance === 'panel' ? 'md' : 'sm'}
+                      className={cn('shrink-0', appearance === 'panel' && 'h-9 w-9')}
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          'truncate font-medium leading-tight',
+                          appearance === 'panel' ? 'text-[13px] text-foreground' : 'text-[12px]',
+                          checked && appearance === 'plain' ? 'text-primary' : '',
+                        )}
+                      >
+                        {item.name}
+                      </p>
+                      <p
+                        className={cn(
+                          'truncate leading-tight',
+                          appearance === 'panel' ? 'text-[11px] text-text-muted' : 'text-[10px] text-slate-400',
+                        )}
+                      >
+                        {item.meta ?? '未填写工号'}
+                      </p>
+                    </div>
+
+                    {renderTrailing(item, checked, selectionMode)}
+                  </>
+                )}
               </button>
             );
           })}
         </div>
       )}
-    </div>
+    </ScrollContainer>
   );
 }

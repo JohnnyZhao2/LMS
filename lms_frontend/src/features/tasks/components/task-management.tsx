@@ -205,7 +205,14 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary-600 text-text-muted  soft-press"
-                                        onClick={() => roleNavigate(`${ROUTES.GRADING_CENTER}?task=${row.original.id}`)}
+                                        onClick={() => {
+                                            const searchParams = new URLSearchParams({
+                                                task: String(row.original.id),
+                                                entry: 'task-management',
+                                                taskTitle: row.original.title,
+                                            })
+                                            roleNavigate(`${ROUTES.GRADING_CENTER}?${searchParams.toString()}`)
+                                        }}
                                     >
                                         <FileCheck className="h-4 w-4" />
                                     </Button>

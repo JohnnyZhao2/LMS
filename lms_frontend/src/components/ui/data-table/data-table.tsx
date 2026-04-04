@@ -30,6 +30,11 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   isLoading?: boolean
+  header?: React.ReactNode
+  headerClassName?: string
+  className?: string
+  shellClassName?: string
+  tableContainerClassName?: string
   pagination?: {
     pageIndex: number
     pageSize: number
@@ -51,6 +56,11 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   isLoading,
+  header,
+  headerClassName,
+  className,
+  shellClassName,
+  tableContainerClassName,
   pagination,
   enableRowSelection = false,
   onRowSelectionChange,
@@ -65,6 +75,7 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
   const frameRef = React.useRef<number | null>(null)
   const shellRef = React.useRef<HTMLDivElement | null>(null)
+  const topBarRef = React.useRef<HTMLDivElement | null>(null)
   const headerRef = React.useRef<HTMLTableSectionElement | null>(null)
   const footerRef = React.useRef<HTMLDivElement | null>(null)
   const [stretchedRowHeight, setStretchedRowHeight] = React.useState<number | null>(null)
@@ -122,10 +133,24 @@ export function DataTable<TData, TValue>({
   const visibleRowCount = table.getRowModel().rows.length
   const targetRowCount = pagination?.pageSize
   const hasColumnSizes = columns.some(col => col.size || col.minSize || col.maxSize)
+  const hasTopBar = Boolean(header)
   const shouldStretchRows = fillHeight
     && !isLoading
     && !!targetRowCount
     && visibleRowCount === targetRowCount
+
+  const getColumnSpacingClass = React.useCallback((index: number, total: number) => {
+    if (total <= 1) {
+      return 'px-5'
+    }
+    if (index === 0) {
+      return 'pl-5 pr-3'
+    }
+    if (index === total - 1) {
+      return 'pl-3 pr-5'
+    }
+    return 'px-3'
+  }, [])
 
   React.useLayoutEffect(() => {
     if (!shouldStretchRows) {
@@ -135,9 +160,10 @@ export function DataTable<TData, TValue>({
 
     const updateRowHeight = () => {
       const shellHeight = shellRef.current?.clientHeight ?? 0
+      const topBarHeight = topBarRef.current?.offsetHeight ?? 0
       const headerHeight = headerRef.current?.offsetHeight ?? 0
       const footerHeight = footerRef.current?.offsetHeight ?? 0
-      const availableHeight = shellHeight - headerHeight - footerHeight
+      const availableHeight = shellHeight - topBarHeight - headerHeight - footerHeight
 
       if (availableHeight <= 0 || !targetRowCount) {
         setStretchedRowHeight(null)
@@ -163,6 +189,7 @@ export function DataTable<TData, TValue>({
 
     if (resizeObserver) {
       if (shellRef.current) resizeObserver.observe(shellRef.current)
+      if (topBarRef.current) resizeObserver.observe(topBarRef.current)
       if (headerRef.current) resizeObserver.observe(headerRef.current)
       if (footerRef.current) resizeObserver.observe(footerRef.current)
     }
@@ -181,7 +208,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div
-      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "flex-1 max-h-full")}
+      className={cn("mt-4 flex min-h-0 flex-col", fillHeight && "flex-1 max-h-full", className)}
       style={{ minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }}
     >
       <div
@@ -189,10 +216,22 @@ export function DataTable<TData, TValue>({
         className={cn(
           "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-white",
           fillHeight && "flex-1 max-h-full",
+          shellClassName,
         )}
       >
+        {header && (
+          <div
+            ref={topBarRef}
+            className={cn(
+              "flex items-center justify-between gap-3 border-b border-border/60 bg-white px-5 py-3",
+              headerClassName,
+            )}
+          >
+            {header}
+          </div>
+        )}
         <Table
-          containerClassName={cn("min-h-0", fillHeight && "flex-1")}
+          containerClassName={cn("min-h-0", fillHeight && "flex-1", tableContainerClassName)}
           className={cn(hasColumnSizes ? "table-fixed" : "table-auto")}
         >
             <TableHeader ref={headerRef}>
@@ -207,9 +246,10 @@ export function DataTable<TData, TValue>({
                         maxWidth: header.column.columnDef.maxSize ? `${header.column.columnDef.maxSize}px` : undefined,
                       }}
                       className={cn(
-                        index === 0
+                        getColumnSpacingClass(index, headerGroup.headers.length),
+                        !hasTopBar && index === 0
                           ? 'rounded-tl-lg'
-                          : index === headerGroup.headers.length - 1
+                          : !hasTopBar && index === headerGroup.headers.length - 1
                             ? 'rounded-tr-lg'
                             : ''
                       )}
@@ -237,6 +277,7 @@ export function DataTable<TData, TValue>({
                           minWidth: column.minSize ? `${column.minSize}px` : undefined,
                           maxWidth: column.maxSize ? `${column.maxSize}px` : undefined,
                         }}
+                        className={getColumnSpacingClass(index, columns.length)}
                       >
                         <Skeleton className="h-6 w-full opacity-50" />
                       </TableCell>
@@ -252,7 +293,7 @@ export function DataTable<TData, TValue>({
                     className={onRowClick ? `cursor-pointer hover:bg-muted ${rowClassName || ''}` : rowClassName}
                     style={stretchedRowHeight ? { height: `${stretchedRowHeight}px` } : undefined}
                   >
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell, index, cells) => (
                       <TableCell
                         key={cell.id}
                         style={{
@@ -260,6 +301,7 @@ export function DataTable<TData, TValue>({
                           minWidth: cell.column.columnDef.minSize ? `${cell.column.columnDef.minSize}px` : undefined,
                           maxWidth: cell.column.columnDef.maxSize ? `${cell.column.columnDef.maxSize}px` : undefined,
                         }}
+                        className={getColumnSpacingClass(index, cells.length)}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -282,7 +324,7 @@ export function DataTable<TData, TValue>({
             </TableBody>
         </Table>
         {shouldShowPagination && (
-        <div ref={footerRef} className="mt-auto border-t border-border bg-muted/20 px-4 py-3">
+        <div ref={footerRef} className="mt-auto border-t border-border bg-muted/20 px-5 py-2">
           <Pagination
             current={pagination.pageIndex + 1}
             total={resolvedTotalCount}
@@ -292,7 +334,7 @@ export function DataTable<TData, TValue>({
             showSizeChanger
             onShowSizeChange={(_, size) => pagination.onPageSizeChange(size)}
             showTotal={(total) => `共 ${total} 条记录`}
-            className="min-h-10"
+            className="min-h-8"
           />
         </div>
         )}
