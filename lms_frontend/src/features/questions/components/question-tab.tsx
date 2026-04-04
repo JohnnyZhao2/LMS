@@ -302,13 +302,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border  bg-background">
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-muted transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer text-xs"
                                     onClick={() => setPreviewQuestion(record)}
                                 >
                                     <Eye className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 查看详情
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer hover:bg-muted transition-colors text-xs"
+                                    className="rounded-md px-3 py-2.5 font-semibold cursor-pointer text-xs"
                                     onClick={() => openEditDialog(record)}
                                 >
                                     <PencilLine className="w-3.5 h-3.5 mr-2" strokeWidth={2} /> 编辑题目
@@ -356,7 +356,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                         }));
                     },
                 }}
-                rowClassName="hover:bg-muted transition-colors group cursor-pointer"
+                rowClassName="group"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}
             />
 

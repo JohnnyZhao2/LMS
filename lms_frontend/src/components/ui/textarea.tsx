@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { FIELD_CHROME_CLASSNAME } from "@/components/ui/interactive-styles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -46,12 +47,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[120px] w-full rounded-md border border-border bg-white px-4 py-3",
+          "flex min-h-[120px] w-full rounded-md px-4 py-3",
+          FIELD_CHROME_CLASSNAME,
           "text-base font-normal text-foreground leading-relaxed",
           "placeholder:text-text-muted",
-          "focus:outline-none focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary/20",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-all duration-200 resize-y",
+          "resize-y",
           autoResize && "overflow-hidden",
           className
         )}

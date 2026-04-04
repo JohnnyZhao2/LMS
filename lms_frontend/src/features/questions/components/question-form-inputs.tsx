@@ -226,7 +226,7 @@ export const AnswerInput: React.FC<AnswerInputProps> = ({
                 ? val === 'TRUE'
                   ? 'border-primary-200 bg-primary-50 text-primary-700'
                   : 'border-destructive/30 bg-destructive/5 text-destructive/80'
-                : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
+                : 'border-border bg-background text-text-muted hover:border-primary-200 hover:bg-primary-50/40',
             )}
           >
             {label}

@@ -331,7 +331,7 @@ export const TaskManagement: React.FC = () => {
                                         setPage(1);
                                     },
                                 }}
-                                rowClassName="hover:bg-muted transition-colors cursor-pointer group"
+                                rowClassName="group"
                                 onRowClick={(row: TaskListItem) => roleNavigate(`/tasks/${row.id}`)}
                             />
                         </div>

@@ -2,8 +2,10 @@ import { FileText, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
+import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { EditorPageShell } from '@/components/ui/page-shell';
+import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
@@ -95,17 +97,22 @@ export const TaskForm: React.FC = () => {
           />
 
           <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="输入任务标题..."
-                className="h-9 flex-1 rounded-xl border-transparent bg-muted/70 px-4 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/45 focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
+            <div className="relative flex h-12 shrink-0 items-center justify-end border-b border-border px-5">
+              <div className="absolute left-1/2 top-1/2 w-[clamp(13rem,48%,22rem)] -translate-x-1/2 -translate-y-1/2">
+                <Input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="输入任务标题..."
+                  className={cn(
+                    'h-10 rounded-xl px-5 text-center text-[14px] font-semibold placeholder:text-text-muted/50',
+                    SOFT_ACCENT_FIELD_CLASSNAME,
+                  )}
+                />
+              </div>
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                className="h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                className="relative z-10 h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                 {isEdit ? '保存修改' : '发布任务'}

@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { FIELD_CHROME_CLASSNAME } from "@/components/ui/interactive-styles"
 import { cn } from "@/lib/utils"
 
 /**
@@ -17,12 +18,11 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-md border border-border bg-white px-4 py-3 theme-input",
+          "flex h-12 w-full rounded-md px-4 py-3 theme-input",
+          FIELD_CHROME_CLASSNAME,
           "text-base font-medium text-foreground",
           "placeholder:text-text-muted",
-          "focus:bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-all duration-200",
           type === "number" && "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0",
           className
         )}

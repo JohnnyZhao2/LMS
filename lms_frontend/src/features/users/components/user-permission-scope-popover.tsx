@@ -3,6 +3,7 @@ import { Settings2 } from 'lucide-react';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import {
   Popover,
   PopoverContent,
@@ -69,7 +70,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
         'flex h-9 w-full items-center justify-between rounded-xl border px-4 text-xs transition-all duration-200',
         open
           ? 'border-primary/40 bg-primary/[0.04] text-primary ring-4 ring-primary/5'
-          : 'border-slate-200/70 bg-white text-slate-700 hover:border-primary/30 hover:bg-slate-50',
+          : 'border-border/70 bg-white text-slate-700 hover:border-primary-200 hover:bg-primary-50/30',
       )}
     >
       <span className="font-bold line-clamp-1 text-left">{summary}</span>
@@ -100,7 +101,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
                   'w-full rounded-md border py-1.5 text-center text-[11px] font-bold transition-all duration-200 active:scale-95',
                   isActive
                     ? 'border-primary/15 bg-white text-primary shadow-sm'
-                    : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700',
+                    : 'border-transparent text-slate-500 hover:bg-primary-50/70 hover:text-slate-700',
                 )}
               >
                 {option.label}
@@ -126,7 +127,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
               placeholder="搜索用户..."
               className="h-8 flex-1 min-w-0 rounded-lg border-slate-200/60 bg-white pl-3 text-[11px] shadow-none placeholder:text-slate-300 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
             />
-            <label className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50">
+            <label className={cn('inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5', GHOST_ACCENT_HOVER_CLASSNAME)}>
               <Checkbox
                 checked={isAllFilteredScopeUsersSelected ? true : hasPartialFilteredScopeSelection ? 'indeterminate' : false}
                 onCheckedChange={onToggleSelectAllFilteredScopeUsers}

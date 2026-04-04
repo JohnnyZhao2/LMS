@@ -409,7 +409,7 @@ export const UserList: React.FC = () => {
                   onPageChange: (page) => setPagination(prev => ({ ...prev, pageIndex: page })),
                   onPageSizeChange: (size) => setPagination(prev => ({ ...prev, pageSize: size, pageIndex: 0 })),
                 }}
-                rowClassName="group cursor-pointer hover:bg-muted transition-colors"
+                rowClassName="group"
                 onRowClick={(row) => {
                   if (!canOpenUserEditor) return
                   setEditingUserId(row.id)

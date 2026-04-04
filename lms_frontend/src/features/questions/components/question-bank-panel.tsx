@@ -3,6 +3,7 @@ import { FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -51,7 +52,10 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
           <Input
             placeholder="检索题目内容..."
-            className="h-9 rounded-xl border-border bg-background pl-9 text-[12px]"
+            className={cn(
+              'h-10 rounded-xl pl-9 text-[12px] placeholder:text-text-muted/50',
+              SOFT_ACCENT_FIELD_CLASSNAME,
+            )}
             value={resourceSearch}
             onChange={e => onResourceSearchChange(e.target.value)}
           />
@@ -95,12 +99,8 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
             {questionsData?.results.map(q => (
               <div
                 key={q.id}
-                className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color] duration-150 hover:border-foreground/10"
+                className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-primary-300"
               >
-                <div className={cn(
-                  'absolute left-0 top-1/2 h-5 w-px -translate-y-1/2 rounded-r-full opacity-0 transition-opacity duration-150 group-hover:opacity-100',
-                  getQuestionTypeStyle(q.question_type).accent,
-                )} />
                 <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge

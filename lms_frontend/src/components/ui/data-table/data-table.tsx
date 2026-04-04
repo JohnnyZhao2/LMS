@@ -290,7 +290,7 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     onClick={() => onRowClick?.(row.original)}
-                    className={onRowClick ? `cursor-pointer hover:bg-muted ${rowClassName || ''}` : rowClassName}
+                    className={cn(onRowClick && "cursor-pointer", rowClassName)}
                     style={stretchedRowHeight ? { height: `${stretchedRowHeight}px` } : undefined}
                   >
                     {row.getVisibleCells().map((cell, index, cells) => (

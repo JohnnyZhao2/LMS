@@ -64,7 +64,7 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
         forcedDisabled && 'cursor-not-allowed opacity-55 hover:translate-y-0 hover:shadow-none',
         checked
           ? 'border-primary/20 bg-primary/[0.03] shadow-[0_2px_10px_-4px_rgba(var(--primary),0.05)] hover:border-primary/30'
-          : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:-translate-y-0.5',
+          : 'border-border/70 bg-white hover:border-primary-200 hover:bg-primary-50/25 hover:shadow-[0_2px_10px_-4px_rgba(37,99,235,0.08)] hover:-translate-y-0.5',
       )}
     >
       <div className="flex items-start justify-between gap-3 min-w-0">

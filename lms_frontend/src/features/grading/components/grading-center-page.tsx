@@ -145,7 +145,7 @@ export const GradingCenterPage: React.FC = () => {
                   'flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left transition-colors',
                   taskPopoverOpen
                     ? 'border-primary-500 bg-primary-50/70'
-                    : 'border-border bg-background hover:bg-muted/70'
+                    : 'border-border bg-background hover:border-primary-200 hover:bg-primary-50/40'
                 )}
               >
                 <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
@@ -175,7 +175,7 @@ export const GradingCenterPage: React.FC = () => {
                       onClick={() => handleTaskSelect(task)}
                       className={cn(
                         'w-full rounded-md px-3 py-2.5 text-left transition-colors',
-                        isActive ? 'bg-primary-50 text-primary-700' : 'hover:bg-muted'
+                        isActive ? 'bg-primary-50 text-primary-700' : 'hover:bg-primary-50/70'
                       )}
                     >
                       <div className="line-clamp-1 text-sm font-medium text-foreground">
@@ -212,7 +212,7 @@ export const GradingCenterPage: React.FC = () => {
                   'flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left transition-colors',
                   quizPopoverOpen
                     ? 'border-primary-500 bg-primary-50/70'
-                    : 'border-border bg-background hover:bg-muted/70'
+                    : 'border-border bg-background hover:border-primary-200 hover:bg-primary-50/40'
                 )}
               >
                 {selectedQuiz?.quiz_type === 'EXAM' ? (
@@ -273,7 +273,7 @@ export const GradingCenterPage: React.FC = () => {
                             ? isExam
                               ? 'bg-destructive-50 text-destructive-700'
                               : 'bg-primary-50 text-primary-700'
-                            : 'hover:bg-muted'
+                            : 'hover:bg-primary-50/70'
                         )}
                       >
                         <div className="flex items-center gap-2">

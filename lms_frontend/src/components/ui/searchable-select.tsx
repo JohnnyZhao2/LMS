@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useMemo } from "react";
 import { Search, ChevronDown, Plus, Loader2, Check } from "lucide-react";
+import { FIELD_CHROME_CLASSNAME, GHOST_ACCENT_HOVER_CLASSNAME } from "@/components/ui/interactive-styles";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -71,7 +72,8 @@ export function SearchableSelect<T>({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "w-full h-12 flex items-center justify-between px-4 rounded-md bg-muted hover:bg-muted active:scale-[0.98] transition-all duration-200 group",
+                        "group flex h-12 w-full items-center justify-between rounded-md px-4 active:scale-[0.98]",
+                        FIELD_CHROME_CLASSNAME,
                         className
                     )}
                 >
@@ -124,7 +126,7 @@ export function SearchableSelect<T>({
                             <button
                                 onClick={handleCreate}
                                 disabled={isAdding}
-                                className="w-full flex items-center justify-between px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 bg-primary-50 hover:bg-primary-50 rounded-md mb-1.5 transition-all group overflow-hidden"
+                                className="group mb-1.5 flex w-full items-center justify-between overflow-hidden rounded-md bg-primary-50 px-3 py-3 text-xs font-black uppercase tracking-wider text-primary-600 transition-all"
                             >
                                 <div className="flex items-center gap-2">
                                     <Plus className="w-4 h-4 transform group-hover:rotate-90 transition-transform" />
@@ -150,7 +152,7 @@ export function SearchableSelect<T>({
                                                 "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-md transition-all text-left group/item",
                                                 isSelected
                                                     ? "bg-primary-100 text-primary-700 font-bold"
-                                                    : "text-text-muted hover:bg-muted hover:text-foreground"
+                                                    : cn("text-text-muted", GHOST_ACCENT_HOVER_CLASSNAME)
                                             )}
                                         >
                                             <span className="truncate group-hover/item:translate-x-0.5 transition-transform duration-200">

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
+import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { EditorPageShell } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -16,6 +17,7 @@ import { useQuestions } from '@/features/questions/api/get-questions';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
+import { cn } from '@/lib/utils';
 import type { Question, QuestionCreateRequest, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
@@ -406,7 +408,7 @@ export const QuizForm: React.FC = () => {
           </div>
 
           <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-border bg-background">
-            <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-5">
+            <div className="relative flex h-12 shrink-0 items-center justify-between border-b border-border px-5">
               <Select
                 value={quizType}
                 onValueChange={(value) => setQuizType(value as QuizType)}
@@ -414,8 +416,8 @@ export const QuizForm: React.FC = () => {
                 <SelectTrigger
                   className={
                     quizType === 'EXAM'
-                      ? 'h-9 w-[88px] shrink-0 rounded-xl border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
-                      : 'h-9 w-[88px] shrink-0 rounded-xl border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
+                      ? 'relative z-10 h-9 w-[88px] shrink-0 rounded-xl border-none bg-destructive-500/10 px-3 text-[12px] font-semibold text-destructive-600 shadow-none focus-visible:ring-0'
+                      : 'relative z-10 h-9 w-[88px] shrink-0 rounded-xl border-none bg-secondary-500/10 px-3 text-[12px] font-semibold text-secondary-700 shadow-none focus-visible:ring-0'
                   }
                 >
                   <SelectValue />
@@ -426,17 +428,22 @@ export const QuizForm: React.FC = () => {
                 </SelectContent>
               </Select>
 
-              <Input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="输入试卷标题..."
-                className="h-9 flex-1 rounded-xl border-transparent bg-muted/70 px-4 text-center text-[14px] font-semibold shadow-none placeholder:text-text-muted/45 focus-visible:border-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
+              <div className="absolute left-1/2 top-1/2 w-[clamp(13rem,44%,22rem)] -translate-x-1/2 -translate-y-1/2">
+                <Input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="输入试卷标题..."
+                  className={cn(
+                    'h-10 rounded-xl px-5 text-center text-[14px] font-semibold placeholder:text-text-muted/50',
+                    SOFT_ACCENT_FIELD_CLASSNAME,
+                  )}
+                />
+              </div>
 
               <Button
                 onClick={handleSubmitQuiz}
                 disabled={isSubmitting}
-                className="h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                className="relative z-10 h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 保存试卷

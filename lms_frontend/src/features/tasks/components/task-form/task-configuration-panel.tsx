@@ -6,10 +6,12 @@ import { UserSelectList, type UserSelectPanelItem } from '@/components/common/us
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { GHOST_ACCENT_HOVER_CLASSNAME, SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 import { TASK_FORM_PANEL_CLASSNAME, TASK_FORM_PANEL_HEADER_CLASSNAME } from './task-form.constants';
 
@@ -94,7 +96,7 @@ export function TaskConfigurationPanel({
                 任务描述
               </MicroLabel>
               <Textarea
-                className="min-h-[120px] rounded-2xl border-border/60 bg-muted text-sm shadow-none"
+                className="min-h-[120px] rounded-2xl border-border/60 bg-white text-sm shadow-none"
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(event) => onDescriptionChange(event.target.value)}
@@ -143,9 +145,12 @@ export function TaskConfigurationPanel({
                     value={userSearch}
                     onChange={(event) => onUserSearchChange(event.target.value)}
                     placeholder="搜索姓名或工号..."
-                    className="h-8 flex-1 min-w-0 rounded-lg border-slate-200/60 bg-white pl-3 text-[11px] shadow-none placeholder:text-text-muted/45 focus-visible:border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/20"
+                    className={cn(
+                      'h-10 min-w-0 flex-1 rounded-xl pl-3.5 text-[12px] placeholder:text-text-muted/50',
+                      SOFT_ACCENT_FIELD_CLASSNAME,
+                    )}
                   />
-                  <label className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50">
+                  <label className={cn('inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5', GHOST_ACCENT_HOVER_CLASSNAME)}>
                     <Checkbox
                       checked={isAllFilteredUsersSelected ? true : selectedFilteredUserCount > 0 ? 'indeterminate' : false}
                       onCheckedChange={() => onToggleUsers(filteredUserPanelItems.map((item) => item.id), !isAllFilteredUsersSelected)}

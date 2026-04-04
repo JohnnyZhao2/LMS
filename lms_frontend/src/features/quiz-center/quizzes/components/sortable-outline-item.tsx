@@ -81,19 +81,12 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
       style={cardStyle}
       onClick={onSelect}
       className={cn(
-        'group relative flex cursor-pointer items-start gap-2 overflow-hidden rounded-xl border border-border bg-background px-3 py-3 transition-[border-color,background-color,color] duration-150',
-        isActive ? 'border-foreground/15' : 'hover:border-foreground/10',
+        'group relative flex cursor-pointer items-start gap-2 overflow-hidden rounded-xl border border-border bg-background px-3 py-3 transition-[border-color,background-color,color,box-shadow] duration-150',
+        isActive ? 'border-foreground/15 hover:border-primary-300' : 'hover:border-primary-300',
         isDraggingSource && 'opacity-0',
         isOverlay && 'scale-[0.99] border-foreground/12 shadow-[0_10px_24px_rgba(15,23,42,0.12)]',
       )}
     >
-      <div
-        className={cn(
-          'absolute left-0 top-1/2 h-5 w-px -translate-y-1/2 rounded-r-full transition-opacity duration-150',
-          style.accent,
-          'opacity-0 group-hover:opacity-100',
-        )}
-      />
       <div className="mt-0.5 flex w-4 shrink-0 items-center justify-center text-[10px] font-mono text-text-muted">
         {index + 1}
       </div>

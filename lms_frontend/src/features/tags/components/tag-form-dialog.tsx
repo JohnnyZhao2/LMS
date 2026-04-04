@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
+import { SUBTLE_SURFACE_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { Tag, TagType } from '@/types/api';
 
 interface TagFormDialogProps {
@@ -158,7 +160,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition-all duration-200 hover:border-foreground/15 hover:-translate-y-0.5">
+                <label className={cn("flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
                   <Checkbox
                     id="tag-knowledge"
                     checked={allowKnowledge}
@@ -169,7 +171,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   </div>
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] transition-all duration-200 hover:border-foreground/15 hover:-translate-y-0.5">
+                <label className={cn("flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
                   <Checkbox
                     id="tag-question"
                     checked={allowQuestion}

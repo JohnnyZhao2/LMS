@@ -512,7 +512,7 @@ const UserFormContent: React.FC<{
                               canUpdateUser ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                               active
                                 ? "border-primary text-primary bg-white shadow-sm"
-                                : "bg-white border-slate-100 hover:border-slate-200 text-slate-500 hover:text-slate-700"
+                                : "border-border/70 bg-white text-slate-500 hover:border-primary-200 hover:bg-primary-50/30 hover:text-slate-700"
                             )}
                           >
                             <span className="text-sm font-bold">{dept.name}</span>
@@ -549,7 +549,7 @@ const UserFormContent: React.FC<{
                         disabled ? "opacity-20 grayscale cursor-not-allowed" : "active:scale-[0.98]",
                         active
                           ? "border-slate-200/60"
-                          : "border-slate-100/50 hover:border-slate-200"
+                          : "border-border/60 hover:border-primary-200 hover:bg-primary-50/25"
                       )}
                     >
                       {/* Background Minimal Icon */}

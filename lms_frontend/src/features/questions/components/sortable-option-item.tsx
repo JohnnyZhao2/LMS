@@ -55,7 +55,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
           disabled ? 'cursor-default' : 'cursor-pointer',
           selected
             ? 'border-primary-200 bg-primary-50 text-primary-600 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.08)]'
-            : 'border-border bg-background text-text-muted hover:border-border/80 hover:bg-muted/20',
+            : 'border-border bg-background text-text-muted hover:border-primary-200 hover:bg-primary-50/40',
         )}
       >
         {selected ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : optionKey}
@@ -92,7 +92,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
             type="button"
             aria-label={`拖动排序选项 ${optionKey}`}
             className={cn(
-              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-muted hover:text-foreground',
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-primary-50/70 hover:text-foreground',
               isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
             )}
             {...attributes}

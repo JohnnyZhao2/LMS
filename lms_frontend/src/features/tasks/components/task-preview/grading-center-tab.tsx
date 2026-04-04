@@ -221,7 +221,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                   'w-full text-left p-4 rounded-xl transition-all duration-200 border group relative mb-3',
                   isActive
                     ? 'border-primary-200 bg-primary-50/60  ring-1 ring-primary-100'
-                    : 'border-transparent bg-background hover:bg-muted hover:border-border'
+                    : 'border-transparent bg-background hover:border-primary-200 hover:bg-primary-50/40'
                 )}
               >
                 <div className="flex justify-between items-start mb-2 gap-2">

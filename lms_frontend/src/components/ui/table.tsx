@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { LIST_ROW_HOVER_CLASSNAME } from "@/components/ui/interactive-styles"
 import { cn } from "@/lib/utils"
 import { ScrollContainer } from "@/components/ui/scroll-container"
 
@@ -63,7 +64,8 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "bg-white transition-colors hover:bg-muted/60 data-[state=selected]:bg-primary-50",
+      "bg-white",
+      LIST_ROW_HOVER_CLASSNAME,
       className
     )}
     {...props}

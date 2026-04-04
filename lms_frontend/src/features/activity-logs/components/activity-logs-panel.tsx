@@ -218,7 +218,7 @@ export const ActivityLogsPanel: React.FC = () => {
                 setSearch(''); setDateFrom(''); setDateTo('');
                 setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
               }}
-              className="h-10 shrink-0 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:bg-muted hover:text-foreground"
+              className="h-10 shrink-0 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:border-primary-200 hover:bg-primary-50/40 hover:text-foreground"
             >
               清空
             </button>

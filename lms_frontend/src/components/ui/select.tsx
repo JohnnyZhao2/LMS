@@ -2,6 +2,7 @@ import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
+import { FIELD_CHROME_CLASSNAME } from "@/components/ui/interactive-styles"
 import { cn } from "@/lib/utils"
 
 const Select = SelectPrimitive.Root
@@ -25,14 +26,12 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap",
-      "rounded-[12px] bg-white px-4",
+      "rounded-[12px] px-4",
+      FIELD_CHROME_CLASSNAME,
       "text-[13px] font-medium text-foreground data-[placeholder]:text-text-muted/58",
-      "focus:outline-none",
-      "shadow-[0_5px_16px_rgba(15,23,42,0.05)]",
-      "focus-visible:ring-2 focus-visible:ring-primary/8",
-      "data-[state=open]:ring-2 data-[state=open]:ring-primary/8",
+      "shadow-none",
+      "data-[state=open]:border-primary-300 data-[state=open]:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]",
       "disabled:cursor-not-allowed disabled:bg-muted/30 disabled:text-text-muted disabled:opacity-60",
-      "transition-[border-color,box-shadow,background-color,color] duration-200",
       "[&>span]:line-clamp-1",
       className
     )}
@@ -154,8 +153,8 @@ const SelectItem = React.forwardRef<
       "relative flex w-full cursor-pointer select-none items-center",
       "rounded-[10px] py-2 pl-4 pr-8 text-[13px] font-medium",
       "outline-none transition-colors duration-200",
-      "focus:bg-muted/68 focus:text-foreground",
-      "data-[state=checked]:bg-muted/74 data-[state=checked]:font-semibold",
+      "focus:bg-primary-50/70 focus:text-foreground",
+      "data-[state=checked]:bg-primary-50/85 data-[state=checked]:font-semibold",
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}

@@ -9,6 +9,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
+import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
@@ -58,7 +59,10 @@ export function TaskResourceLibraryPanel({
             placeholder="搜索文档/测验..."
             value={resourceSearch}
             onChange={onResourceSearchChange}
-            inputClassName="h-9 text-[12px]"
+            inputClassName={cn(
+              'h-10 rounded-xl text-[12px] placeholder:text-text-muted/50',
+              SOFT_ACCENT_FIELD_CLASSNAME,
+            )}
           />
 
           <SegmentedControl

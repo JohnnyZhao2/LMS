@@ -244,7 +244,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             }));
           },
         }}
-        rowClassName="hover:bg-muted transition-colors cursor-pointer group"
+        rowClassName="group"
         onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/edit`)}
       />
 

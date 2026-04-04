@@ -221,7 +221,6 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         className="mt-0"
         fillHeight
         minHeight={0}
-        rowClassName="transition-colors duration-150 hover:bg-muted/80"
       />
     </div>
   );
