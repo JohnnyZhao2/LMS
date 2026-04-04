@@ -33,18 +33,18 @@ export const StudentDashboard: React.FC = () => {
   const tasks = data?.tasks || [];
 
   return (
-    <div className="space-y-12 pb-14 animate-in fade-in slide-in-from-bottom-4 duration-1000 pt-2 font-sans">
+    <div className="space-y-6 pb-8 pt-1 font-sans animate-in fade-in slide-in-from-bottom-4 duration-1000 2xl:space-y-5">
       {/* 统计横栏 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="进行中" value={stats?.in_progress_count ?? 0} icon={Activity} accentClassName="bg-primary-500" />
-        <StatCard title="即将截止" value={stats?.urgent_count ?? 0} icon={AlertCircle} accentClassName="bg-rose-500" />
-        <StatCard title="完成率" value={`${stats?.completion_rate ?? 0}%`} icon={CheckCircle2} accentClassName="bg-emerald-500" />
-        <StatCard title="考试均分" value={stats?.exam_avg_score ?? '-'} icon={GraduationCap} accentClassName="bg-amber-500" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-5">
+        <StatCard title="进行中" value={stats?.in_progress_count ?? 0} icon={Activity} accentClassName="bg-primary-500" size="sm" />
+        <StatCard title="即将截止" value={stats?.urgent_count ?? 0} icon={AlertCircle} accentClassName="bg-rose-500" size="sm" />
+        <StatCard title="完成率" value={`${stats?.completion_rate ?? 0}%`} icon={CheckCircle2} accentClassName="bg-emerald-500" size="sm" />
+        <StatCard title="考试均分" value={stats?.exam_avg_score ?? '-'} icon={GraduationCap} accentClassName="bg-amber-500" size="sm" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12 2xl:gap-6">
         {/* 知识速递 */}
-        <div className="lg:col-span-8">
+        <div className="min-w-0 xl:col-span-8">
           <EditorialCard
             title="知识速递"
             icon={BookOpen}
@@ -60,8 +60,8 @@ export const StudentDashboard: React.FC = () => {
               </button>
             }
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
-              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[96px] rounded-xl" />) :
+            <div className="grid h-full grid-cols-[repeat(auto-fit,minmax(17.5rem,1fr))] gap-3">
+              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[88px] rounded-xl" />) :
                 data?.latest_knowledge?.slice(0, 6).map((k) => (
                   <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
                 ))}
@@ -70,18 +70,20 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         {/* 迷你日历 */}
-        <div className="lg:col-span-4"><MiniCalendar selectedTask={selectedTask} /></div>
+        <div className="min-w-0 xl:col-span-4">
+          <MiniCalendar selectedTask={selectedTask} />
+        </div>
 
         {/* 任务中心 */}
-        <div className="lg:col-span-8">
+        <div className="min-w-0 xl:col-span-8">
           <EditorialCard
             title="任务中心"
             icon={CalendarIcon}
             accentColor="text-sky-500"
             className="h-full"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-28 rounded-xl" />) :
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(19rem,1fr))] gap-3">
+              {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24 rounded-xl" />) :
                 tasks.map(t => (
                   <TaskItem
                     key={t.id}
@@ -96,14 +98,14 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         {/* 同伴进度 */}
-        <div className="lg:col-span-4">
+        <div className="min-w-0 xl:col-span-4">
           <EditorialCard
             title="同伴进度"
             icon={TrendingUp}
             accentColor="text-violet-500"
             className="h-full"
           >
-            <div className="space-y-1 flex flex-col pt-2">
+            <div className="flex flex-col space-y-1 pt-1">
               {!selectedTask ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-300 gap-4">
                   <div className="p-4 rounded-full bg-slate-50 overflow-hidden relative group/icon">
@@ -132,7 +134,7 @@ export const StudentDashboard: React.FC = () => {
                     <div
                       key={p.id}
                       className={cn(
-                        "group/peer flex items-center gap-5 p-3.5 rounded-[18px] transition-all duration-500",
+                        "group/peer flex items-center gap-5 p-3.5 rounded-xl transition-all duration-500",
                         p.is_me
                           ? "bg-primary/[0.03] shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.05)]"
                           : "hover:bg-slate-50"

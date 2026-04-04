@@ -83,7 +83,7 @@ export const StudentTaskList: React.FC = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center rounded-lg bg-muted py-32">
+                        <div className="flex flex-col items-center justify-center rounded-2xl bg-muted py-32">
                             <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-md bg-muted">
                                 <Inbox className="h-10 w-10 text-text-muted" />
                             </div>

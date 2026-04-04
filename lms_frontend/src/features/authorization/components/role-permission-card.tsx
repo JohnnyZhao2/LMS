@@ -24,7 +24,7 @@ export const RolePermissionCard: React.FC<RolePermissionCardProps> = ({
     disabled={disabled}
     onClick={() => onToggle(!checked)}
     className={cn(
-      'group relative flex items-start gap-3 rounded-lg border px-4 py-3.5 text-left transition-all duration-200',
+      'group relative flex items-start gap-3 rounded-xl border px-4 py-3.5 text-left transition-all duration-200',
       checked
         ? 'border-primary/25 bg-primary-50/60'
         : 'border-border bg-background hover:border-gray-300',

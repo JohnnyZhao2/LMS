@@ -9,7 +9,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
+import { QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
@@ -60,8 +60,8 @@ export function TaskResourceLibraryPanel({
             value={resourceSearch}
             onChange={onResourceSearchChange}
             inputClassName={cn(
-              'h-10 rounded-xl text-[12px] placeholder:text-text-muted/50',
-              SOFT_ACCENT_FIELD_CLASSNAME,
+              'h-10 rounded-lg text-[12px] placeholder:text-text-muted/50',
+              QUIET_OUTLINE_FIELD_CLASSNAME,
             )}
           />
 
@@ -97,7 +97,7 @@ export function TaskResourceLibraryPanel({
                     key={index}
                     className="flex h-[72px] items-center gap-3 rounded-xl border border-border bg-muted/70 px-4 animate-pulse"
                   >
-                    <div className="h-10 w-10 rounded-xl bg-background" />
+                    <div className="h-10 w-10 rounded-lg bg-background" />
                     <div className="flex-1 space-y-2">
                       <div className="h-3 w-3/4 rounded bg-background" />
                       <div className="h-2 w-1/2 rounded bg-background" />
@@ -132,7 +132,7 @@ export function TaskResourceLibraryPanel({
                   >
                     <div
                       className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105',
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105',
                         resource.resourceType === 'DOCUMENT'
                           ? 'bg-secondary-50 text-secondary'
                           : resource.quizType === 'EXAM'

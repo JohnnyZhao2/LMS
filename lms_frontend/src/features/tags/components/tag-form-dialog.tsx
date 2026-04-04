@@ -107,7 +107,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   标签类型
                 </Label>
                 <Select value={tagType} onValueChange={(value) => setTagType(value as TagType)}>
-                  <SelectTrigger className="h-12 rounded-[14px] border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80">
+                  <SelectTrigger className="h-12 rounded-lg border border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] data-[placeholder]:text-text-muted/80">
                     <SelectValue placeholder="选择标签类型" />
                   </SelectTrigger>
                   <SelectContent>
@@ -126,7 +126,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={isSpaceType ? '例如：风控空间' : '例如：高频考点'}
-                  className="h-12 rounded-[14px] border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
+                  className="h-12 rounded-lg border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
                 />
               </div>
 
@@ -140,7 +140,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                     type="number"
                     value={sortOrder}
                     onChange={(event) => setSortOrder(event.target.value)}
-                    className="h-12 rounded-[14px] border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                    className="h-12 rounded-lg border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                   />
                 </div>
               ) : null}
@@ -160,7 +160,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
               </div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                <label className={cn("flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
+                <label className={cn("flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
                   <Checkbox
                     id="tag-knowledge"
                     checked={allowKnowledge}
@@ -171,7 +171,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   </div>
                 </label>
 
-                <label className={cn("flex cursor-pointer items-center gap-4 rounded-[16px] border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
+                <label className={cn("flex cursor-pointer items-center gap-4 rounded-xl border border-border/70 bg-white/90 px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.04)] hover:-translate-y-0.5", SUBTLE_SURFACE_HOVER_CLASSNAME)}>
                   <Checkbox
                     id="tag-question"
                     checked={allowQuestion}

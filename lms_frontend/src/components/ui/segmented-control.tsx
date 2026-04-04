@@ -33,12 +33,12 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   };
   const sizeStyles = {
     default: {
-      wrapper: 'h-10 rounded-[12px] p-[2px]',
+      wrapper: 'h-10 rounded-xl p-[2px]',
       button: 'rounded-[10px] px-5 text-xs font-bold',
     },
     sm: {
-      wrapper: 'h-8 rounded-lg p-0.5',
-      button: 'rounded-md px-4 py-1 text-[12px] font-semibold',
+      wrapper: 'h-8 rounded-xl p-0.5',
+      button: 'rounded-[9px] px-4 py-1 text-[12px] font-semibold',
     },
   };
 

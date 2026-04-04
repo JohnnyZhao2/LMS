@@ -52,10 +52,10 @@ export const MentorDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <PageShell className="animate-pulse">
-        <Skeleton className="h-20 w-1/3 rounded-2xl" />
+        <Skeleton className="h-20 w-1/3 rounded-lg" />
         <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-3xl" />
+            <Skeleton key={i} className="h-40 rounded-lg" />
           ))}
         </div>
       </PageShell>

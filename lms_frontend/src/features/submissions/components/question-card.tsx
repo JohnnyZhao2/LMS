@@ -201,7 +201,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
           >
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
                 trueFalseValue === 'TRUE' && 'border-secondary-500 bg-secondary-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
@@ -216,7 +216,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             </label>
             <label
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
+                'flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border transition-all cursor-pointer bg-muted border-border hover:bg-muted',
                 trueFalseValue === 'FALSE' && 'border-destructive-500 bg-destructive-50',
                 disabled && 'cursor-not-allowed opacity-60'
               )}
@@ -266,7 +266,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       {showResult && (
         <div
           className={cn(
-            'mt-5 p-4 rounded-lg border',
+            'mt-5 p-4 rounded-xl border',
             answer.is_correct
               ? 'bg-secondary-50 border-secondary-300'
               : 'bg-destructive-50 border-destructive-300'

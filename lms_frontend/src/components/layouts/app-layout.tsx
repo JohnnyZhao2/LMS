@@ -30,7 +30,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* 移动端菜单按钮 */}
       <button
-        className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-border/70 bg-background text-text-muted shadow-[0_10px_24px_rgba(148,163,184,0.2)] backdrop-blur-sm transition-colors hover:text-foreground"
+        className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-lg border border-border/70 bg-background text-text-muted shadow-[0_10px_24px_rgba(148,163,184,0.2)] backdrop-blur-sm transition-colors hover:text-foreground"
         onClick={() => setSidebarOpen(true)}
         aria-label="打开菜单"
       >

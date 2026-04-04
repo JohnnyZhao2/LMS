@@ -6,7 +6,7 @@ import { UserSelectList, type UserSelectPanelItem } from '@/components/common/us
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { GHOST_ACCENT_HOVER_CLASSNAME, SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
+import { GHOST_ACCENT_HOVER_CLASSNAME, QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -87,7 +87,7 @@ export function TaskConfigurationPanel({
                 date={deadline}
                 onDateChange={onDeadlineChange}
                 placeholder="选择截止日期"
-                className="h-11 rounded-xl border-border/60 bg-muted text-sm"
+                className="h-11 rounded-lg border-border/60 bg-muted text-sm"
               />
             </div>
 
@@ -96,7 +96,7 @@ export function TaskConfigurationPanel({
                 任务描述
               </MicroLabel>
               <Textarea
-                className="min-h-[120px] rounded-2xl border-border/60 bg-white text-sm shadow-none"
+                className="min-h-[120px] rounded-lg border-border/60 bg-white text-sm shadow-none"
                 placeholder="输入任务指引..."
                 value={description}
                 onChange={(event) => onDescriptionChange(event.target.value)}
@@ -146,8 +146,8 @@ export function TaskConfigurationPanel({
                     onChange={(event) => onUserSearchChange(event.target.value)}
                     placeholder="搜索姓名或工号..."
                     className={cn(
-                      'h-10 min-w-0 flex-1 rounded-xl pl-3.5 text-[12px] placeholder:text-text-muted/50',
-                      SOFT_ACCENT_FIELD_CLASSNAME,
+                      'h-10 min-w-0 flex-1 rounded-lg pl-3.5 text-[12px] placeholder:text-text-muted/50',
+                      QUIET_OUTLINE_FIELD_CLASSNAME,
                     )}
                   />
                   <label className={cn('inline-flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-lg px-2 py-1.5', GHOST_ACCENT_HOVER_CLASSNAME)}>

@@ -27,6 +27,7 @@ const TagManagementPage = lazy(() => import('@/features/tags/components/tag-mana
 const QuizManagementPage = lazy(() => import('@/features/quiz-center/components/quiz-management-page').then(m => ({ default: m.QuizManagementPage })));
 const QuizForm = lazy(() => import('@/features/quiz-center/quizzes/components/quiz-form').then(m => ({ default: m.QuizForm })));
 const QuestionManagementPage = lazy(() => import('@/features/questions/components/question-management-page').then(m => ({ default: m.QuestionManagementPage })));
+const QuestionFormPage = lazy(() => import('@/features/questions/components/question-form-page').then(m => ({ default: m.QuestionFormPage })));
 
 // Spot Checks
 const SpotCheckList = lazy(() => import('@/features/spot-checks/components/spot-check-list').then(m => ({ default: m.SpotCheckList })));
@@ -219,6 +220,24 @@ export const roleRoutes = [
         permissionMode="any"
       >
         <QuestionManagementPage />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="question-create"
+    path="questions/create"
+    element={
+      <ProtectedRoute requiredPermissions={['question.create']}>
+        <QuestionFormPage />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
+    key="question-edit"
+    path="questions/:id/edit"
+    element={
+      <ProtectedRoute requiredPermissions={['question.update']}>
+        <QuestionFormPage />
       </ProtectedRoute>
     }
   />,

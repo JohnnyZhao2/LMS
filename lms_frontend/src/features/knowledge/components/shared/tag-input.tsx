@@ -12,6 +12,7 @@ interface TagInputProps {
   onRemove: (tagId: number) => void;
   /** 不显示已选标签 chips（由外部渲染） */
   hideChips?: boolean;
+  extendScope?: boolean;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -20,6 +21,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   onAdd,
   onRemove,
   hideChips = false,
+  extendScope = true,
 }) => {
   const [input, setInput] = React.useState('');
   const { data: scopedTags = [] } = useScopedTags(applicableTo);
@@ -66,7 +68,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         name,
         tag_type: 'TAG',
         current_module: applicableTo,
-        extend_scope: true,
+        extend_scope: extendScope,
       });
       if (selectedTags.some((s) => s.id === resolvedTag.id)) {
         toast.info('标签已添加');

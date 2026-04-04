@@ -134,7 +134,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
 
   if (!selectedStudent) {
     return (
-      <div className="min-h-[36rem] overflow-hidden rounded-2xl border border-border/60 bg-background xl:max-h-full">
+      <div className="min-h-[36rem] overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
         <EmptyState
           icon={UserRoundSearch}
           description="请先在左侧选择一个学员，再查看该学员的抽查记录。"
@@ -144,7 +144,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
   }
 
   return (
-    <div className="flex min-h-[36rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background xl:max-h-full">
+    <div className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
       <div className="flex min-h-16 items-center justify-between border-b border-border/60 px-5 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar
@@ -180,7 +180,7 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                   return (
                     <article
                       key={record.id}
-                      className="mx-auto w-full max-w-[1240px] overflow-hidden rounded-2xl border border-border/70 bg-background shadow-[0_2px_8px_rgba(15,23,42,0.03)]"
+                      className="mx-auto w-full max-w-[1240px] overflow-hidden rounded-xl border border-border/70 bg-background shadow-[0_2px_8px_rgba(15,23,42,0.03)]"
                     >
                       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-foreground">

@@ -41,7 +41,7 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   }));
 
   return (
-    <aside className="flex min-h-[36rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background xl:max-h-full">
+    <aside className="flex min-h-[36rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />
@@ -70,7 +70,7 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
               value={searchValue}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="搜索姓名或工号"
-              className="h-9 rounded-xl border-border/60 bg-background pl-9 pr-3 text-[12px] shadow-none placeholder:text-text-muted/80"
+              className="h-9 rounded-lg border-border/60 bg-background pl-9 pr-3 text-[12px] shadow-none placeholder:text-text-muted/80"
             />
           </div>
         </div>

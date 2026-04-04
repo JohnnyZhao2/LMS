@@ -159,6 +159,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
             <SortableOptionItem
               key={optionIds[index]}
               id={optionIds[index]}
+              questionType={questionType}
               optionKey={opt.key}
               optionValue={opt.value}
               selected={isSelected(opt.key)}
@@ -243,7 +244,6 @@ export const AnswerInput: React.FC<AnswerInputProps> = ({
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
           if (!disabled) onChange(e.target.value);
         }}
-        placeholder="输入参考答案..."
         readOnly={disabled}
         rows={3}
         className="resize-none text-[13px]"

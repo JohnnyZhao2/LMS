@@ -113,8 +113,8 @@ export const TaskDetail: React.FC = () => {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="w-full max-w-md rounded-xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
-            <div className="mx-auto mb-6 flex h-16 w-16 rotate-3 items-center justify-center rounded-2xl bg-destructive-50 text-destructive-500">
+          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 rotate-3 items-center justify-center rounded-lg bg-destructive-50 text-destructive-500">
               <AlertCircle className="w-8 h-8" />
             </div>
             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Invalid Task ID</h3>
@@ -136,15 +136,15 @@ export const TaskDetail: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
-            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-lg" />
             <div className="space-y-4">
-              <Skeleton className="h-24 w-full rounded-xl" />
-              <Skeleton className="h-24 w-full rounded-xl" />
-              <Skeleton className="h-24 w-full rounded-xl" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
             </div>
           </div>
           <div className="space-y-6 lg:col-span-4">
-            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-lg" />
           </div>
         </div>
       </PageShell>
@@ -155,8 +155,8 @@ export const TaskDetail: React.FC = () => {
     return (
       <PageShell>
         <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="w-full max-w-md rounded-xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
-            <div className="mx-auto mb-6 flex h-16 w-16 -rotate-3 items-center justify-center rounded-2xl bg-muted text-text-muted">
+          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-background p-12 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-6 flex h-16 w-16 -rotate-3 items-center justify-center rounded-lg bg-muted text-text-muted">
               <Ghost className="w-8 h-8" />
             </div>
             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">Task Not Found</h3>
@@ -302,7 +302,7 @@ export const TaskDetail: React.FC = () => {
               </div>
 
               {!hasKnowledge ? (
-                <div className="bg-background rounded-2xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
+                <div className="bg-background rounded-xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                     <Layers className="w-8 h-8 text-text-muted" />
                   </div>
@@ -324,7 +324,7 @@ export const TaskDetail: React.FC = () => {
                     >
                       <div className="flex items-center gap-6 h-full">
                         <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold  transition-colors",
+                          "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-bold  transition-colors",
                           item.isCompleted
                             ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
                             : "bg-background text-text-muted border border-border group-hover:bg-primary-50 group-hover:text-primary-600 group-hover:border-primary-100"
@@ -375,7 +375,7 @@ export const TaskDetail: React.FC = () => {
               </div>
 
               {!hasQuizzes ? (
-                <div className="bg-background rounded-2xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
+                <div className="bg-background rounded-xl border border-dashed border-border p-12 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                     <GraduationCap className="w-8 h-8 text-text-muted" />
                   </div>
@@ -408,7 +408,7 @@ export const TaskDetail: React.FC = () => {
                         <div className="flex items-center gap-6 h-full">
                           <div
                             className={cn(
-                              "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+                              "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors",
                               isCompleted
                                 ? "bg-secondary-100 text-secondary-600 ring-4 ring-secondary-50"
                                 : cn("bg-muted", isExam ? "text-warning-600" : "text-primary-600")
@@ -472,7 +472,7 @@ export const TaskDetail: React.FC = () => {
           <div className="lg:col-span-4 flex h-full flex-col gap-6">
 
             {isStudent && learningDetail && (
-              <div className="bg-background rounded-2xl border border-border  p-6 sticky top-24">
+              <div className="bg-background rounded-xl border border-border  p-6 sticky top-24">
                 <MicroLabel icon={<Activity className="w-4 h-4 text-primary-500" />} className="mb-6">
                   总体进度
                 </MicroLabel>
@@ -531,7 +531,7 @@ export const TaskDetail: React.FC = () => {
             )}
 
             {!isStudent && (
-              <div className="bg-background rounded-2xl border border-border  p-6 sticky top-24">
+              <div className="bg-background rounded-xl border border-border  p-6 sticky top-24">
                 <MicroLabel icon={<Info className="w-4 h-4 text-text-muted" />} className="mb-6">
                   任务信息
                 </MicroLabel>
@@ -570,7 +570,7 @@ export const TaskDetail: React.FC = () => {
                 {canEditTask && (
                   <Button
                     variant="outline"
-                    className="w-full mt-8 border-border text-foreground hover:bg-muted hover:text-foreground rounded-xl h-11"
+                    className="w-full mt-8 border-border text-foreground hover:bg-muted hover:text-foreground rounded-lg h-11"
                     onClick={() => navigate(getRolePath(`tasks/${taskId}/edit`))}
                   >
                     <Edit className="w-4 h-4 mr-2" />

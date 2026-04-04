@@ -24,6 +24,9 @@ interface StudentLayoutProps {
   children: React.ReactNode
 }
 
+const STUDENT_SHELL_WIDTH_CLASS = 'mx-auto w-full max-w-[1880px]'
+const STUDENT_SHELL_PADDING_CLASS = 'px-6 md:px-10 xl:px-14 2xl:px-16'
+
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   const { user, availableRoles, logout, switchRole, refreshUser } = useAuth()
   const currentRole = useCurrentRole()
@@ -102,7 +105,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           type="button"
           onClick={() => item.key && handleNavClick(item.key)}
           className={cn(
-            'relative flex items-center px-3 py-1.5 text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap',
+            'relative inline-flex items-center rounded-lg px-3 py-1.5 text-[14px] font-medium transition-colors whitespace-nowrap',
             isActive ? 'text-black bg-black/5' : 'text-text-muted hover:text-black hover:bg-black/5'
           )}
         >
@@ -117,7 +120,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           <button
             type="button"
             className={cn(
-              'flex items-center gap-1 px-3 py-1.5 text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap',
+              'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[14px] font-medium transition-colors whitespace-nowrap',
               isActive ? 'text-black bg-black/5' : 'text-text-muted hover:text-black hover:bg-black/5'
             )}
           >
@@ -125,7 +128,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
             <ChevronDown className="h-3.5 w-3.5 shrink-0" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[140px] rounded-xl border border-border bg-white p-1 shadow-sm">
+        <DropdownMenuContent align="start" className="min-w-[140px] rounded-lg border border-border bg-white p-1 shadow-sm">
           {item.children.map((child) => (
             <DropdownMenuItem
               key={child.key ?? child.label}
@@ -144,12 +147,16 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden flex-col bg-[#F6F8FC]">
+    <div className="min-h-dvh bg-[#F6F8FC]">
       <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-white/90 backdrop-blur-md">
-        <div className="flex h-full items-center gap-4 px-5 md:px-8">
+        <div className={cn(
+          STUDENT_SHELL_WIDTH_CLASS,
+          STUDENT_SHELL_PADDING_CLASS,
+          'grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4'
+        )}>
           <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
 
-          <nav className="hidden md:flex items-center gap-0.5 flex-1 overflow-x-auto">
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1.5 px-4 md:flex xl:gap-2">
             {menuItems.map((item) => renderNavItem(item))}
           </nav>
 
@@ -175,7 +182,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                         <ChevronDown className="h-3 w-3 shrink-0" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={6} className="min-w-[132px] rounded-xl border border-border bg-white p-1 shadow-sm">
+                    <DropdownMenuContent align="end" sideOffset={6} className="min-w-[132px] rounded-lg border border-border bg-white p-1 shadow-sm">
                       {roleOptions.map((option) => (
                         <DropdownMenuItem
                           key={option.value}
@@ -213,7 +220,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
 
             <button
               type="button"
-              className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background text-text-muted"
+              className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-border/70 bg-background text-text-muted"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="菜单"
             >
@@ -287,10 +294,14 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         )}
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col min-w-0 overflow-hidden">
-        <div className="flex h-full w-full min-w-0 min-h-0 flex-1 flex-col overflow-hidden px-5 py-6 md:px-8 xl:px-10">
+      <main className="min-w-0">
+        <div className={cn(
+          STUDENT_SHELL_WIDTH_CLASS,
+          STUDENT_SHELL_PADDING_CLASS,
+          'flex w-full min-w-0 flex-col py-5 md:py-6 xl:py-7'
+        )}>
           <GlobalBreadcrumb />
-          <div className="scrollbar-subtle -mx-8 -mt-4 flex min-h-0 flex-1 flex-col overflow-auto px-8 pt-4">
+          <div className="flex flex-col pb-8">
             {children}
           </div>
         </div>

@@ -67,7 +67,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
     <PopoverTrigger
       type="button"
       className={cn(
-        'flex h-9 w-full items-center justify-between rounded-xl border px-4 text-xs transition-all duration-200',
+        'flex h-9 w-full items-center justify-between rounded-lg border px-4 text-xs transition-all duration-200',
         open
           ? 'border-primary/40 bg-primary/[0.04] text-primary ring-4 ring-primary/5'
           : 'border-border/70 bg-white text-slate-700 hover:border-primary-200 hover:bg-primary-50/30',
@@ -83,7 +83,7 @@ export const UserPermissionScopePopover: React.FC<UserPermissionScopePopoverProp
     </PopoverTrigger>
     <PopoverContent
       align="end"
-      className="w-[400px] p-0 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden bg-white"
+      className="w-[400px] p-0 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden bg-white"
       container={dialogContentElement}
       sideOffset={8}
     >

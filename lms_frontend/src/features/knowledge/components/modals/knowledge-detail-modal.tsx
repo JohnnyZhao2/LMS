@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import {
   Eye,
   Calendar,
@@ -69,6 +69,43 @@ function getRelatedLinkDisplayText(link: RelatedLink): string {
   }
 
   return truncateRelatedLinkText(normalizeRelatedLinkUrl(link.url) || '相关链接');
+}
+
+function placeCaretAtPoint(container: HTMLElement, clientX: number, clientY: number) {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const docWithCaret = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+
+  if (docWithCaret.caretPositionFromPoint) {
+    const position = docWithCaret.caretPositionFromPoint(clientX, clientY);
+    if (position && container.contains(position.offsetNode)) {
+      const range = document.createRange();
+      range.setStart(position.offsetNode, position.offset);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+  }
+
+  if (docWithCaret.caretRangeFromPoint) {
+    const range = docWithCaret.caretRangeFromPoint(clientX, clientY);
+    if (range && container.contains(range.startContainer)) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+  }
+
+  const fallbackRange = document.createRange();
+  fallbackRange.selectNodeContents(container);
+  fallbackRange.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(fallbackRange);
 }
 
 interface KnowledgeDetailModalProps {
@@ -144,6 +181,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [editTags, setEditTags] = useState<SimpleTag[] | undefined>(undefined);
   const [editSpaceTagId, setEditSpaceTagId] = useState<number | undefined | null>(undefined);
   const [editRelatedLinks, setEditRelatedLinks] = useState<RelatedLink[] | undefined>(undefined);
+  const knowledgeContentShellRef = useRef<HTMLDivElement | null>(null);
 
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
@@ -281,6 +319,14 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     };
   }, [onClose, editing, showSpaceTypes, isFocusMode, handleExitFocusMode]);
 
+  const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
+    if (!knowledgeId) return;
+    setLocalKnowledgeSnapshot({
+      knowledgeId,
+      detail: updatedKnowledge,
+    });
+  }, [knowledgeId]);
+
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
     if (!isDraftMode && !knowledge) return;
@@ -326,12 +372,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           ...(editRelatedLinks !== undefined && { related_links: detailRelatedLinks }),
         },
       });
-      if (knowledgeId) {
-        setLocalKnowledgeSnapshot({
-          knowledgeId,
-          detail: updatedKnowledge,
-        });
-      }
+      applyKnowledgeSnapshot(updatedKnowledge);
       toast.success('已保存');
       if (!canEditInFocus) {
         setEditing(false);
@@ -345,7 +386,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     } catch {
       toast.error(isDraftMode ? '创建失败' : '保存失败');
     }
-  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeSpaceTagId, activeTags, onCreated, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge]);
+  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeSpaceTagId, activeTags, onCreated, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
 
   const handleContentChange = useCallback((nextContent: string) => {
     setEditContent(nextContent);
@@ -372,6 +413,32 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setShowTagInput(false);
     setShowSpaceTypes(false);
   }, []);
+
+  const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
+    setShowSpaceTypes(false);
+
+    if (activeSpaceTagId === nextSpaceTagId) {
+      return;
+    }
+
+    if (isDraftMode || !knowledgeId) {
+      setEditSpaceTagId(nextSpaceTagId);
+      return;
+    }
+
+    try {
+      const updatedKnowledge = await updateKnowledge.mutateAsync({
+        id: knowledgeId,
+        data: { space_tag_id: nextSpaceTagId },
+      });
+      applyKnowledgeSnapshot(updatedKnowledge);
+      setEditSpaceTagId(undefined);
+      toast.success('空间已更新');
+      onUpdated?.();
+    } catch {
+      toast.error('空间更新失败');
+    }
+  }, [activeSpaceTagId, applyKnowledgeSnapshot, isDraftMode, knowledgeId, onUpdated, updateKnowledge]);
 
   const handleComplete = useCallback(async () => {
     if (!taskId || !taskKnowledgeId) return;
@@ -502,9 +569,24 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             {/* ── 左侧：点击进入编辑 / 查看内容 ── */}
             <ScrollContainer className="kd-left">
               <div
-                onClick={() => {
+                ref={(node) => {
+                  knowledgeContentShellRef.current = node;
+                }}
+                onMouseDownCapture={() => {
                   if (!editing && canUpdateKnowledge) {
-                    setEditing(true);
+                    const event = window.event as MouseEvent | undefined;
+                    const point = event ? { x: event.clientX, y: event.clientY } : null;
+                    flushSync(() => {
+                      setEditing(true);
+                    });
+                    window.requestAnimationFrame(() => {
+                      const editorRoot = knowledgeContentShellRef.current?.querySelector('.ql-editor') as HTMLElement | null;
+                      if (!editorRoot) return;
+                      editorRoot.focus();
+                      if (point) {
+                        placeCaretAtPoint(editorRoot, point.x, point.y);
+                      }
+                    });
                   }
                 }}
                 style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
@@ -515,7 +597,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   placeholder="键入 / 调出快捷指令"
                   className={`kd-content kd-content-shell${editing ? ' kd-content-editable' : ''}`}
                   minHeight={300}
-                  autoFocus={editing}
+                  autoFocus={false}
                   readOnly={!editing}
                 />
               </div>
@@ -685,7 +767,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                     {allSpaceTypes.map(lt => (
                       <button
                         key={lt.id}
-                        onClick={() => { setEditSpaceTagId(lt.id); setShowSpaceTypes(false); }}
+                        onClick={() => { void handleSpaceTagSelect(lt.id); }}
+                        disabled={isSaving}
                         className="kd-linetype-item"
                         style={{ background: activeSpaceTagId === lt.id ? '#f0f4ff' : 'none' }}
                       >

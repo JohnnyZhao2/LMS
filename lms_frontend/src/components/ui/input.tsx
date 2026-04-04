@@ -12,14 +12,18 @@ import { cn } from "@/lib/utils"
  * - 统一高度 h-14
  * - 平滑过渡动画
  */
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+export type InputProps = React.ComponentProps<"input"> & {
+  interactionStyle?: "default" | "minimal"
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, interactionStyle = "default", ...props }, ref) => {
     return (
       <input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-md px-4 py-3 theme-input",
-          FIELD_CHROME_CLASSNAME,
+          "flex h-12 w-full rounded-lg px-4 py-3 theme-input",
+          interactionStyle === "default" ? FIELD_CHROME_CLASSNAME : "focus:outline-none",
           "text-base font-medium text-foreground",
           "placeholder:text-text-muted",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",

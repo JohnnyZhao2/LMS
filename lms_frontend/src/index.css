@@ -163,7 +163,7 @@
     /* 圆角 - 扁平风格使用较小圆角 */
     --theme-radius-sm: 4px;
     --theme-radius-md: 6px;
-    --theme-radius-lg: 8px;
+    --theme-radius-lg: 7px;
     --theme-radius-xl: 12px;
 
     /* 主色调 - Trust Blue */

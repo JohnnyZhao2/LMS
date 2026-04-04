@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { QuestionType } from '@/types/api';
+import type { QuestionCreateRequest, QuestionType } from '@/types/api';
 
 type QuestionTypePresentation = {
   value: QuestionType;
@@ -64,6 +64,55 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, QuestionTypePresentation
 };
 
 export const QUESTION_TYPE_PICKER_OPTIONS = Object.values(QUESTION_TYPE_CONFIG) as QuestionTypePresentation[];
+
+const DEFAULT_CHOICE_OPTIONS = [
+  { key: 'A', value: '' },
+  { key: 'B', value: '' },
+  { key: 'C', value: '' },
+  { key: 'D', value: '' },
+];
+
+export const ensureChoiceOptions = (options?: Array<{ key: string; value: string }>) => {
+  const existing = options ?? [];
+  if (existing.length >= 4) {
+    return existing;
+  }
+  return [
+    ...existing,
+    ...DEFAULT_CHOICE_OPTIONS.slice(existing.length).map((option) => ({ ...option })),
+  ];
+};
+
+export const normalizeQuestionTypeFields = (
+  prev: Partial<QuestionCreateRequest>,
+  nextType: QuestionType,
+) => {
+  if (nextType === 'SINGLE_CHOICE') {
+    return {
+      options: ensureChoiceOptions(prev.options),
+      answer: typeof prev.answer === 'string' ? prev.answer : '',
+    };
+  }
+
+  if (nextType === 'MULTIPLE_CHOICE') {
+    return {
+      options: ensureChoiceOptions(prev.options),
+      answer: Array.isArray(prev.answer) ? prev.answer : [],
+    };
+  }
+
+  if (nextType === 'TRUE_FALSE') {
+    return {
+      options: [],
+      answer: prev.answer === 'TRUE' || prev.answer === 'FALSE' ? prev.answer : '',
+    };
+  }
+
+  return {
+    options: [],
+    answer: typeof prev.answer === 'string' ? prev.answer : '',
+  };
+};
 
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   SINGLE_CHOICE: QUESTION_TYPE_CONFIG.SINGLE_CHOICE.fullLabel,

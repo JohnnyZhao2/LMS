@@ -109,7 +109,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-[210px] bg-background rounded-[1.5rem] p-6 transition-all duration-300 cursor-pointer border border-border/50 hover:-translate-y-1",
+        "group relative flex flex-col h-[210px] bg-background rounded-2xl p-6 transition-all duration-300 cursor-pointer border border-border/50 hover:-translate-y-1",
         isStudentView && studentTask?.status === 'COMPLETED' && "bg-muted border-transparent"
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
@@ -256,7 +256,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
         confirmVariant="destructive"
         onConfirm={handleDelete}
         isConfirming={deleteTask.isPending}
-        contentClassName="rounded-lg max-w-md p-8 border-2 border-border"
+        contentClassName="rounded-xl max-w-md p-8 border-2 border-border"
       />
     </div>
   );

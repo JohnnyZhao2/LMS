@@ -393,6 +393,7 @@ const UserFormContent: React.FC<{
                           onChange={e => setFormData({ ...formData, username: e.target.value })}
                           placeholder="输入姓名"
                           disabled={!canUpdateUser}
+                          interactionStyle="minimal"
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                         />
                       </div>
@@ -407,6 +408,7 @@ const UserFormContent: React.FC<{
                           value={formData.employee_id}
                           onChange={e => setFormData({ ...formData, employee_id: e.target.value })}
                           disabled={!canUpdateUser}
+                          interactionStyle="minimal"
                           className="h-10 font-mono bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="例如：EMP001"
                         />
@@ -425,6 +427,7 @@ const UserFormContent: React.FC<{
                           value={formData.password}
                           onChange={e => setFormData({ ...formData, password: e.target.value })}
                           disabled={!canUpdateUser}
+                          interactionStyle="minimal"
                           className="h-10 bg-transparent border-none rounded-none px-0 text-sm font-medium text-slate-700 placeholder:text-slate-200 focus-visible:ring-0 shadow-none ring-0 w-full"
                           placeholder="设置 6 位以上密码"
                         />

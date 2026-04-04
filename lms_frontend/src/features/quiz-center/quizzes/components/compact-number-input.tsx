@@ -7,10 +7,12 @@ type NumberMode = 'integer' | 'decimal';
 interface CompactNumberInputProps {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   unit?: string;
   dividerBeforeUnit?: boolean;
   prefixLabel?: string;
   className?: string;
+  prefixClassName?: string;
   inputClassName?: string;
   inputWidthClassName?: string;
   mode?: NumberMode;
@@ -28,10 +30,12 @@ const INPUT_PATTERN: Record<NumberMode, RegExp> = {
 export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
   value,
   onChange,
+  onBlur,
   unit,
   dividerBeforeUnit = false,
   prefixLabel,
   className,
+  prefixClassName,
   inputClassName,
   inputWidthClassName = 'w-12',
   mode = 'integer',
@@ -76,7 +80,7 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
     <div className={cn('flex items-center gap-2 rounded-md bg-muted px-2.5 py-1', className)}>
       {prefixLabel && (
         <>
-          <span className="text-[11px] font-medium text-foreground/60">{prefixLabel}</span>
+          <span className={cn('text-[11px] font-medium text-foreground/60', prefixClassName)}>{prefixLabel}</span>
           <div className="h-3.5 w-px bg-foreground/20" />
         </>
       )}
@@ -86,6 +90,7 @@ export const CompactNumberInput: React.FC<CompactNumberInputProps> = ({
         value={value}
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}
+        onBlur={onBlur}
         onKeyDown={handleKeyDown}
         className={cn(
           'border-0 bg-transparent p-0 text-center font-medium tabular-nums text-foreground outline-none placeholder:text-text-muted/40',

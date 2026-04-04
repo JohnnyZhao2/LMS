@@ -24,6 +24,7 @@ interface QuizOutlinePanelProps {
   items: InlineQuestionItem[];
   activeKey: string | null;
   quizType: QuizType;
+  title?: string;
   duration?: number;
   passScore?: number;
   onSelectItem: (key: string) => void;
@@ -36,6 +37,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   items,
   activeKey,
   quizType,
+  title = '试卷结构',
   duration,
   passScore,
   onSelectItem,
@@ -168,7 +170,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
       <div className="flex h-12 items-center justify-between gap-3 border-b border-border px-5">
         <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
           <FileText className="h-4 w-4 text-primary-600" />
-          <span>试卷结构</span>
+          <span>{title}</span>
         </div>
       </div>
       {quizType === 'EXAM' && (

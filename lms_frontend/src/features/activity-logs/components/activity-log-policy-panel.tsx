@@ -52,7 +52,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canViewPolicies) {
     return (
-      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
+      <div className="p-8 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
         <ShieldCheck size={18} />
         无权查看日志策略。
       </div>
@@ -61,7 +61,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canUpdatePolicies) {
     return (
-      <div className="p-8 rounded-3xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
+      <div className="p-8 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
         <ShieldCheck size={18} />
         无权配置日志策略。
       </div>
@@ -103,7 +103,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                     {Object.entries(groupedPolicies[category]).map(([group, items]) => (
                       <div
                         key={group}
-                        className="group flex flex-col rounded-3xl border border-slate-200/60 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden"
+                        className="group flex flex-col rounded-xl border border-slate-200/60 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden"
                       >
                         {/* Group Title - Clean & Soft */}
                         <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50">
@@ -167,7 +167,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
               ))}
           </div>
         ) : (
-          <div className="p-12 text-center rounded-3xl border border-dashed border-border/40 bg-muted">
+          <div className="p-12 text-center rounded-2xl border border-dashed border-border/40 bg-muted">
             <ShieldCheck size={32} className="mx-auto text-muted-foreground/20 mb-4" />
             <div className="text-sm font-bold text-muted-foreground/40">暂无可配置的日志策略</div>
           </div>

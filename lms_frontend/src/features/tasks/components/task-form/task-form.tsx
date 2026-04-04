@@ -2,7 +2,7 @@ import { FileText, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import type { UserSelectPanelItem } from '@/components/common/user-select-list';
-import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
+import { FILLED_PLAIN_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { EditorPageShell } from '@/components/ui/page-shell';
 import { cn } from '@/lib/utils';
@@ -63,7 +63,7 @@ export const TaskForm: React.FC = () => {
 
   if (taskError) {
     return (
-      <div className="flex h-full min-h-[32rem] flex-col items-center justify-center rounded-xl border border-border bg-background py-16">
+      <div className="flex h-full min-h-[32rem] flex-col items-center justify-center rounded-2xl border border-border bg-background py-16">
         <FileText className="mb-4 h-12 w-12 text-text-muted" />
         <span className="mb-4 text-sm font-medium text-text-muted">加载任务失败</span>
         <Button onClick={() => roleNavigate('tasks')}>返回</Button>
@@ -104,15 +104,15 @@ export const TaskForm: React.FC = () => {
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="输入任务标题..."
                   className={cn(
-                    'h-10 rounded-xl px-5 text-center text-[14px] font-semibold placeholder:text-text-muted/50',
-                    SOFT_ACCENT_FIELD_CLASSNAME,
+                    'h-10 rounded-lg px-5 text-center text-[14px] font-semibold placeholder:text-text-muted/50',
+                    FILLED_PLAIN_FIELD_CLASSNAME,
                   )}
                 />
               </div>
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                className="relative z-10 h-9 shrink-0 rounded-xl bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                 {isEdit ? '保存修改' : '发布任务'}

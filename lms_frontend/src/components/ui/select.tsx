@@ -26,7 +26,7 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap",
-      "rounded-[12px] px-4",
+      "rounded-xl px-4",
       FIELD_CHROME_CLASSNAME,
       "text-[13px] font-medium text-foreground data-[placeholder]:text-text-muted/58",
       "shadow-none",
@@ -93,7 +93,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[16px]",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg",
         "bg-white text-foreground shadow-[0_10px_28px_rgba(15,23,42,0.08)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -151,7 +151,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-pointer select-none items-center",
-      "rounded-[10px] py-2 pl-4 pr-8 text-[13px] font-medium",
+      "rounded-md py-2 pl-4 pr-8 text-[13px] font-medium",
       "outline-none transition-colors duration-200",
       "focus:bg-primary-50/70 focus:text-foreground",
       "data-[state=checked]:bg-primary-50/85 data-[state=checked]:font-semibold",

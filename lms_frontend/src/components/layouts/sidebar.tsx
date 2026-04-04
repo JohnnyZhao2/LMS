@@ -219,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }
 
   const navItemClassName = (isActive: boolean, destructive = false) => cn(
-    'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
+    'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
     destructive
       ? 'text-destructive hover:bg-muted'
       : isActive
@@ -247,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           type="button"
           onClick={child.onClick}
           className={cn(
-            'group relative ml-[14px] flex h-10 w-[calc(100%-14px)] items-center rounded-xl px-3 text-left transition-colors',
+            'group relative ml-[14px] flex h-10 w-[calc(100%-14px)] items-center rounded-lg px-3 text-left transition-colors',
             child.isActive
               ? 'bg-muted text-black'
               : 'text-text-muted hover:bg-muted'
@@ -298,7 +298,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             [itemIdentity]: !isExpanded,
           }))}
           className={cn(
-            'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
+            'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
             isActive
               ? 'text-black'
               : 'text-text-muted hover:bg-muted'
@@ -348,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-[-15px] top-8 z-20 flex h-8 w-8 items-center justify-center rounded-[10px] border border-muted bg-white text-black transition-colors hover:bg-muted"
+            className="absolute right-[-15px] top-8 z-20 flex h-8 w-8 items-center justify-center rounded-lg border border-muted bg-white text-black transition-colors hover:bg-muted"
             aria-label="关闭侧边栏"
           >
             <ChevronLeft className="h-[18px] w-[18px]" />
@@ -377,7 +377,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       type="button"
                       onClick={() => setIsSettingsExpanded((current) => !current)}
                       className={cn(
-                        'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors',
+                        'flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
                         hasActiveSettingsItem
                           ? 'text-black'
                           : 'text-text-muted hover:bg-muted'
@@ -455,7 +455,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                     <DropdownMenuContent
                       align="start"
                       sideOffset={6}
-                      className="min-w-[132px] rounded-xl border border-border bg-white p-1 shadow-sm"
+                      className="min-w-[132px] rounded-lg border border-border bg-white p-1 shadow-sm"
                     >
                       {roleOptions.map((option) => {
                         const isActive = option.value === currentRole

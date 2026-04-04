@@ -99,6 +99,7 @@ export const LoginForm: React.FC = () => {
                       <div className="relative">
                         <Input
                           placeholder="请输入工号"
+                          interactionStyle="minimal"
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
@@ -132,6 +133,7 @@ export const LoginForm: React.FC = () => {
                         <Input
                           type="password"
                           placeholder="请输入密码"
+                          interactionStyle="minimal"
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />

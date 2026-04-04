@@ -44,13 +44,13 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
 
-      <div className="relative z-10 px-6 pt-2 pb-0">
-        <div className="relative flex items-center justify-between h-14">
+      <div className="relative z-10 px-5 pt-3 pb-0 xl:px-6">
+        <div className="relative flex items-center justify-between h-12">
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-foreground" onClick={prevMonth}>
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-4xl font-black text-foreground tracking-tighter leading-none">
+            <span className="text-[2rem] font-black text-foreground tracking-tighter leading-none">
               {monthNum}
             </span>
             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-foreground" onClick={nextMonth}>
@@ -62,14 +62,14 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
               </Button>
             )}
           </div>
-          <span className="text-[60px] font-black text-foreground/[0.04] tracking-tighter leading-none italic select-none">
+          <span className="select-none text-[52px] font-black italic leading-none tracking-tighter text-foreground/[0.04] xl:text-[56px]">
             {year}
           </span>
         </div>
       </div>
 
-      <div className="relative z-10 px-6 pb-5 flex-1 flex flex-col">
-        <div className="grid grid-cols-7 gap-x-0.5 mb-2 border-t border-dashed border-border/40 pt-3 pb-1">
+      <div className="relative z-10 flex flex-1 flex-col px-5 pb-4 xl:px-6 xl:pb-5">
+        <div className="mb-2 grid grid-cols-7 gap-x-0.5 border-t border-dashed border-border/40 pb-1 pt-2.5">
           {['日', '一', '二', '三', '四', '五', '六'].map((d, i) => (
             <span key={d} className={cn(
               "text-[8px] font-black text-center tracking-[0.2em]",
@@ -78,8 +78,8 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-y-0 gap-x-0.5">
-          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="aspect-square" />)}
+        <div className="grid grid-cols-7 auto-rows-[clamp(2.6rem,2.4vw,3.5rem)] gap-x-0.5 gap-y-1">
+          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="h-full min-h-[42px]" />)}
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
@@ -87,16 +87,16 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
             const isDeadline = isDeadlineMonth && day === deadlineDay;
 
             return (
-              <div key={day} className="aspect-square relative flex items-center justify-center">
+              <div key={day} className="relative flex h-full min-h-[42px] items-center justify-center">
                 {isToday && (
-                  <div className="absolute inset-1 pointer-events-none transition-all duration-500">
+                  <div className="absolute inset-1.5 pointer-events-none transition-all duration-500">
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-[1.5px] border-l-[1.5px] border-slate-400/60" />
                     <div className="absolute bottom-0 right-0 w-3 h-3 border-b-[1.5px] border-r-[1.5px] border-slate-400/60" />
                   </div>
                 )}
 
                 {isDeadline && (
-                  <div className="absolute inset-[6px] flex items-center justify-center pointer-events-none">
+                  <div className="absolute inset-[5px] flex items-center justify-center pointer-events-none">
                     <span className="absolute text-[6px] font-serif font-black uppercase tracking-widest text-rose-600/[0.04] rotate-[-12deg] scale-[1.2]">
                       DEAD
                     </span>
@@ -120,7 +120,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
           })}
         </div>
 
-        <div className="mt-auto pt-3 border-t border-dashed border-border/40">
+        <div className="mt-auto border-t border-dashed border-border/40 pt-2.5">
           {selectedTask ? (() => {
             const daysLeft = dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day');
             const isOverdue = daysLeft < 0;

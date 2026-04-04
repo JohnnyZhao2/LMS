@@ -28,17 +28,17 @@ export const EditorialCard: React.FC<EditorialCardProps> = ({
     )}>
       <div className="absolute inset-0 opacity-[0.4] mix-blend-soft-light pointer-events-none z-0 bg-[image:var(--noise-texture)] brightness-100 contrast-150" />
 
-      <div className="relative z-10 px-8 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Icon className={cn("w-4 h-4 opacity-40", accentColor)} strokeWidth={2.5} />
-          <h3 className="font-bold text-muted-foreground/80 uppercase tracking-[0.25em] leading-none text-[11px] truncate group-hover/card:text-foreground transition-colors duration-300">
+      <div className="relative z-10 flex items-center justify-between px-6 py-5 xl:px-7">
+        <div className="flex items-center gap-2.5">
+          <Icon className={cn("h-3.5 w-3.5 opacity-40", accentColor)} strokeWidth={2.5} />
+          <h3 className="truncate text-[10px] font-bold leading-none tracking-[0.24em] text-muted-foreground/80 uppercase transition-colors duration-300 group-hover/card:text-foreground">
             {title}
           </h3>
         </div>
         {action}
       </div>
 
-      <div className="relative z-10 px-8 pb-8 pt-2 flex-1 flex flex-col">
+      <div className="relative z-10 flex flex-1 flex-col px-6 pb-6 pt-1 xl:px-7 xl:pb-7">
         {children}
       </div>
     </Card>

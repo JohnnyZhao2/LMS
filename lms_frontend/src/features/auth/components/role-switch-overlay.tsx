@@ -51,10 +51,10 @@ export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitchin
                 }`}
             >
                 <div className="relative role-switch-glow">
-                    <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+                    <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
                         <Sparkles className="role-switch-icon text-white w-8 h-8" />
                     </div>
-                    <div className="absolute inset-0 bg-primary-400 rounded-2xl -z-10 blur-xl opacity-30" />
+                    <div className="absolute inset-0 bg-primary-400 rounded-lg -z-10 blur-xl opacity-30" />
                 </div>
 
                 <div className="flex flex-col items-center gap-2">

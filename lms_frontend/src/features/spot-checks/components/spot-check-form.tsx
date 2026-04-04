@@ -65,7 +65,7 @@ interface SpotCheckFormProps {
 }
 
 const StudentCard: React.FC<{ student: SelectedStudentInfo }> = ({ student }) => (
-  <div className="rounded-lg bg-white/72 p-4">
+  <div className="rounded-xl bg-white/72 p-4">
     <div className="flex items-center gap-3">
       <UserAvatar avatarKey={student.avatar_key} name={student.username} size="md" />
       <div className="min-w-0">
@@ -80,7 +80,7 @@ const StudentCard: React.FC<{ student: SelectedStudentInfo }> = ({ student }) =>
 );
 
 const StatBlock: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
-  <div className="rounded-lg bg-white/68 px-4 py-3">
+  <div className="rounded-xl bg-white/68 px-4 py-3">
     <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">{label}</p>
     <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</p>
   </div>
@@ -242,12 +242,12 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
       ) : null}
 
       <PageSplit className="gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="flex h-full flex-col gap-5 rounded-lg bg-[#f6f7fb] p-5">
+        <aside className="flex h-full flex-col gap-5 rounded-2xl bg-[#f6f7fb] p-5">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-muted">学员</p>
             {isEdit ? (
               detailLoading && !selectedStudent ? (
-                <div className="rounded-lg bg-white/70 px-4 py-3 text-sm text-text-muted">
+                <div className="rounded-xl bg-white/70 px-4 py-3 text-sm text-text-muted">
                   加载中...
                 </div>
               ) : selectedStudent ? (
@@ -289,7 +289,7 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
         <section className="h-full space-y-0">
           <div className="flex items-center justify-between pb-3">
             <h2 className="text-base font-semibold text-foreground">抽查项</h2>
-            <Button variant="outline" onClick={handleAddItem} className="h-9 rounded-[16px] border-transparent bg-muted/55 px-3 hover:bg-muted">
+            <Button variant="outline" onClick={handleAddItem} className="h-9 rounded-lg border-transparent bg-muted/55 px-3 hover:bg-muted">
               <Plus className="h-4 w-4" />
               添加
             </Button>

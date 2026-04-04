@@ -324,7 +324,7 @@ const DistributionPanel: React.FC<DistributionPanelProps> = ({
       </div>
 
       {hasScoreDistribution && (
-        <div className="flex rounded-lg bg-muted p-1">
+        <div className="flex rounded-xl bg-muted p-1">
           <button
             onClick={() => onChartTypeChange('time')}
             className={cn(

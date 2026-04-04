@@ -5,9 +5,11 @@ import { Check, GripVertical, X } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import type { QuestionType } from '@/types/api';
 
 interface SortableOptionItemProps {
   id: string;
+  questionType: QuestionType;
   optionKey: string;
   optionValue: string;
   selected: boolean;
@@ -20,6 +22,7 @@ interface SortableOptionItemProps {
 
 export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
   id,
+  questionType,
   optionKey,
   optionValue,
   selected,
@@ -30,6 +33,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
   onRemove,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const isSingleChoice = questionType === 'SINGLE_CHOICE';
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -49,27 +53,40 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         type="button"
         onClick={onToggleAnswer}
         disabled={disabled}
+        aria-label={`${selected ? '取消' : '设为'}${isSingleChoice ? '正确答案' : '正确选项'} ${optionKey}`}
         className={cn(
-          'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] border',
-          'text-[10.5px] font-semibold transition-all duration-150',
+          'flex h-[14px] w-[14px] shrink-0 items-center justify-center border transition-all duration-150',
           disabled ? 'cursor-default' : 'cursor-pointer',
+          isSingleChoice ? 'rounded-full' : 'rounded-[7px]',
           selected
-            ? 'border-primary-200 bg-primary-50 text-primary-600 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.08)]'
-            : 'border-border bg-background text-text-muted hover:border-primary-200 hover:bg-primary-50/40',
+            ? 'border-primary-500 bg-primary-500 text-white shadow-[0_0_0_2px_var(--theme-interaction-outline)]'
+            : 'border-gray-300 bg-transparent text-text-muted hover:border-gray-400 hover:bg-transparent',
         )}
       >
-        {selected ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : optionKey}
+        {isSingleChoice ? (
+          <span
+            className={cn(
+              'block rounded-full transition-all duration-150',
+              selected ? 'h-[5px] w-[5px] bg-white' : 'h-0 w-0',
+            )}
+            aria-hidden="true"
+          />
+        ) : selected ? (
+          <Check className="h-[8px] w-[8px]" strokeWidth={4.4} />
+        ) : null}
       </button>
 
       <Input
         value={optionValue}
         onChange={(e) => onChange(e.target.value)}
         placeholder=""
+        interactionStyle="minimal"
         className={cn(
-          'h-7 flex-1 rounded-lg border px-3 text-[13px] shadow-none placeholder:text-text-muted/35 focus-visible:ring-0',
+          'h-7 flex-1 rounded-lg border border-transparent px-3 text-[13px] shadow-none placeholder:text-text-muted/35 transition-[border-color,box-shadow,background-color,color] duration-200 focus-visible:ring-0',
           selected
-            ? 'border-primary-200 bg-white'
-            : 'border-border bg-white',
+            ? 'border-primary-300 bg-interaction-surface-strong text-foreground shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]'
+            : 'bg-interaction-surface-strong',
+          'hover:border-transparent hover:bg-interaction-surface-strong focus:border-primary-300 focus:bg-interaction-surface-strong focus:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]',
         )}
         readOnly={disabled}
       />
@@ -92,7 +109,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
             type="button"
             aria-label={`拖动排序选项 ${optionKey}`}
             className={cn(
-              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-primary-50/70 hover:text-foreground',
+              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-interaction-surface-strong hover:text-foreground',
               isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
             )}
             {...attributes}

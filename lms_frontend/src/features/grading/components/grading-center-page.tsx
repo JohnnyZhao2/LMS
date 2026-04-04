@@ -316,7 +316,7 @@ export const GradingCenterPage: React.FC = () => {
           <Skeleton className="h-10 w-56" />
           <Skeleton className="h-10 w-56" />
         </div>
-        <Skeleton className="h-[600px] rounded-xl" />
+        <Skeleton className="h-[600px] rounded-lg" />
       </PageShell>
     );
   }

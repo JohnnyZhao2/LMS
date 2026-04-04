@@ -147,7 +147,7 @@ export const TaskPreviewPage: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/${role}/tasks`)}
-              className="mt-0.5 h-10 w-10 rounded-xl transition-colors duration-150 hover:bg-muted"
+              className="mt-0.5 h-10 w-10 rounded-lg transition-colors duration-150 hover:bg-muted"
             >
               <ArrowLeft className="h-5 w-5 text-text-muted" />
             </Button>
@@ -219,7 +219,7 @@ export const TaskPreviewPage: React.FC = () => {
                       key={quiz.id}
                       onClick={() => setSelectedQuizId(quiz.quiz)}
                       className={cn(
-                        'group relative flex flex-col items-start overflow-hidden rounded-2xl border-2 p-4 text-left transition-all duration-200',
+                        'group relative flex flex-col items-start overflow-hidden rounded-xl border-2 p-4 text-left transition-all duration-200',
                         isActive
                           ? isExam
                             ? 'border-destructive-500 bg-destructive-50/30 ring-4 ring-destructive-100'
@@ -269,7 +269,7 @@ export const TaskPreviewPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-4">
                 <div
                   className={cn(
                     'flex h-10 w-10 items-center justify-center rounded-full',

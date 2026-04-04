@@ -168,7 +168,7 @@ export const ActivityLogsPanel: React.FC = () => {
           </div>
         </div>
         <div className="px-5 py-6">
-          <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-error-50 px-3 py-2.5 text-xs font-medium text-destructive">
+          <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-error-50 px-3 py-2.5 text-xs font-medium text-destructive">
             <ShieldAlert className="h-3.5 w-3.5" />
             无权查看活动日志。
           </div>
@@ -203,13 +203,13 @@ export const ActivityLogsPanel: React.FC = () => {
             type="date"
             value={dateFrom}
             onChange={(e) => { setDateFrom(e.target.value); setPage(1); setSelectedLogIds([]); }}
-            className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
+            className="h-10 w-[9rem] shrink-0 rounded-lg border-border/60 bg-background text-[13px] shadow-none"
           />
           <Input
             type="date"
             value={dateTo}
             onChange={(e) => { setDateTo(e.target.value); setPage(1); setSelectedLogIds([]); }}
-            className="h-10 w-[9rem] shrink-0 rounded-xl border-border/60 bg-background text-[13px] shadow-none"
+            className="h-10 w-[9rem] shrink-0 rounded-lg border-border/60 bg-background text-[13px] shadow-none"
           />
           {hasActiveFilters && (
             <button
@@ -218,7 +218,7 @@ export const ActivityLogsPanel: React.FC = () => {
                 setSearch(''); setDateFrom(''); setDateTo('');
                 setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
               }}
-              className="h-10 shrink-0 rounded-xl border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:border-primary-200 hover:bg-primary-50/40 hover:text-foreground"
+              className="h-10 shrink-0 rounded-lg border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:border-primary-200 hover:bg-primary-50/40 hover:text-foreground"
             >
               清空
             </button>
@@ -240,7 +240,7 @@ export const ActivityLogsPanel: React.FC = () => {
 
           {/* 右侧日志流 */}
           <div className="min-h-0 h-full">
-            <div className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background">
+            <div className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background">
               {/* 选中成员标签 + Tab */}
               <div className="border-b border-border/60 px-5">
                 <div className="flex flex-wrap items-end justify-between gap-3">

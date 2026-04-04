@@ -60,7 +60,7 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
   return (
     <label
       className={cn(
-        'group relative flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 transition-all duration-300',
+        'group relative flex cursor-pointer flex-col gap-3 rounded-xl border p-4 transition-all duration-300',
         forcedDisabled && 'cursor-not-allowed opacity-55 hover:translate-y-0 hover:shadow-none',
         checked
           ? 'border-primary/20 bg-primary/[0.03] shadow-[0_2px_10px_-4px_rgba(var(--primary),0.05)] hover:border-primary/30'

@@ -3,7 +3,7 @@ import { FileText, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { SOFT_ACCENT_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
+import { QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -50,14 +50,14 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
       <div className="space-y-3 bg-background px-5 pb-2 pt-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-          <Input
-            placeholder="检索题目内容..."
-            className={cn(
-              'h-10 rounded-xl pl-9 text-[12px] placeholder:text-text-muted/50',
-              SOFT_ACCENT_FIELD_CLASSNAME,
-            )}
-            value={resourceSearch}
-            onChange={e => onResourceSearchChange(e.target.value)}
+            <Input
+              placeholder="检索题目内容..."
+              className={cn(
+                'h-10 rounded-lg pl-9 text-[12px] placeholder:text-text-muted/50',
+                QUIET_OUTLINE_FIELD_CLASSNAME,
+              )}
+              value={resourceSearch}
+              onChange={e => onResourceSearchChange(e.target.value)}
           />
         </div>
         <div className="flex gap-2">

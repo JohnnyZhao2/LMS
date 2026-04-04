@@ -72,7 +72,7 @@ export function SearchableSelect<T>({
             <PopoverTrigger asChild>
                 <button
                     className={cn(
-                        "group flex h-12 w-full items-center justify-between rounded-md px-4 active:scale-[0.98]",
+                        "group flex h-12 w-full items-center justify-between rounded-lg px-4 active:scale-[0.98]",
                         FIELD_CHROME_CLASSNAME,
                         className
                     )}
@@ -99,7 +99,7 @@ export function SearchableSelect<T>({
                 </button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-0 border border-border  rounded-lg overflow-hidden z-[1001]"
+                className="w-[var(--radix-popover-trigger-width)] p-0 border border-border  rounded-xl overflow-hidden z-[1001]"
                 align="start"
                 asChild
             >

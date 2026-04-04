@@ -16,7 +16,7 @@ export const UserPermissionModuleSidebar: React.FC<UserPermissionModuleSidebarPr
 }) => (
   <aside className="sticky top-20 space-y-0.5">
     {permissionModules.length === 0 ? (
-      <div className="rounded-lg border border-dashed border-border bg-muted px-3 py-4 text-xs text-text-muted">
+      <div className="rounded-xl border border-dashed border-border bg-muted px-3 py-4 text-xs text-text-muted">
         暂无模块数据
       </div>
     ) : (

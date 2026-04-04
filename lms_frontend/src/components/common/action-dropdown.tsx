@@ -88,7 +88,7 @@ export const ActionDropdown: React.FC<ActionDropdownProps> = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="w-48 rounded-xl p-2 border border-border bg-background"
+        className="w-48 rounded-lg p-2 border border-border bg-background"
       >
         {label && (
           <>

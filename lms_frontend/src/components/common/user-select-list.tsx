@@ -172,7 +172,7 @@ export function UserSelectList({
                   layout === 'grid'
                     ? 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
                     : appearance === 'panel'
-                      ? 'rounded-xl px-3 py-2.5'
+                      ? 'rounded-lg px-3 py-2.5'
                       : 'rounded-lg border px-2.5 py-2',
                   appearance === 'panel'
                     ? layout === 'grid'

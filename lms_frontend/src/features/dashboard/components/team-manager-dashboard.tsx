@@ -80,7 +80,7 @@ const ComparisonSection: React.FC<{ comparison: TeamManagerDepartmentComparison 
   return (
     <Card className="border border-border p-6">
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
           <Building2 className="h-5 w-5 text-primary" />
         </div>
         <div>
@@ -139,7 +139,7 @@ const ComparisonSection: React.FC<{ comparison: TeamManagerDepartmentComparison 
         ].map((row) => (
           <div
             key={row.label}
-            className="grid grid-cols-[1.2fr_1fr_1fr_1fr] items-center rounded-lg bg-background px-3 py-2 text-sm"
+            className="grid grid-cols-[1.2fr_1fr_1fr_1fr] items-center rounded-xl bg-background px-3 py-2 text-sm"
           >
             <span className="text-foreground">{row.label}</span>
             <span className="text-center font-medium text-foreground tabular-nums">{row.leftValue}</span>
@@ -175,7 +175,7 @@ const HierarchySection: React.FC<{ departments: TeamManagerDepartmentStudentView
   return (
     <Card className="border border-border p-6">
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10">
           <Users className="h-5 w-5 text-secondary" />
         </div>
         <div>
@@ -209,7 +209,7 @@ const HierarchySection: React.FC<{ departments: TeamManagerDepartmentStudentView
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-border/60 bg-background">
+            <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border/60 bg-muted">
@@ -269,14 +269,14 @@ export const TeamManagerDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <PageShell className="animate-pulse">
-        <Skeleton className="h-20 w-1/3 rounded-2xl" />
+        <Skeleton className="h-20 w-1/3 rounded-lg" />
         <div className="grid grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-36 rounded-3xl" />
+            <Skeleton key={i} className="h-36 rounded-lg" />
           ))}
         </div>
-        <Skeleton className="h-72 rounded-2xl" />
-        <Skeleton className="h-96 rounded-2xl" />
+        <Skeleton className="h-72 rounded-lg" />
+        <Skeleton className="h-96 rounded-lg" />
       </PageShell>
     );
   }

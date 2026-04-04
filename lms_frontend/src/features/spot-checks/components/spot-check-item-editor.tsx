@@ -39,7 +39,7 @@ export const SpotCheckItemEditor: React.FC<SpotCheckItemEditorProps> = ({
   onRemove,
 }) => {
   return (
-    <section className="group relative space-y-3 rounded-lg border border-border/55 bg-white/72 p-4">
+    <section className="group relative space-y-3 rounded-xl border border-border/55 bg-white/72 p-4">
       {canRemove ? (
         <Button
           type="button"

@@ -76,7 +76,7 @@ export const AuthorizationCenterPage: React.FC = () => {
     return (
       <PageShell>
         <PageHeader title="角色模板配置" icon={<Layers3 />} />
-        <div className="rounded-2xl border border-border bg-muted p-8 text-sm text-text-muted">
+        <div className="rounded-xl border border-border bg-muted p-8 text-sm text-text-muted">
           当前账号没有角色模板配置权限，请联系管理员开通。
         </div>
       </PageShell>

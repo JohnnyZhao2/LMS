@@ -79,11 +79,11 @@ export const SpotCheckStatsCard: React.FC<SpotCheckStatsCardProps> = ({ stats })
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div className="p-3 rounded-lg bg-muted">
+        <div className="p-3 rounded-xl bg-muted">
           <p className={cardMetaClass}>抽查次数</p>
           <p className="text-xl font-black text-foreground tabular-nums">{stats.count}</p>
         </div>
-        <div className="p-3 rounded-lg bg-muted">
+        <div className="p-3 rounded-xl bg-muted">
           <p className={cardMetaClass}>平均分</p>
           <p className="text-xl font-black text-foreground tabular-nums">
             {stats.avg_score ?? '--'}
@@ -331,7 +331,7 @@ export const ScoreDistributionCard: React.FC<ScoreDistributionCardProps> = ({ di
           {summaryItems.map((item) => (
             <div
               key={item.key}
-              className="flex items-center justify-between rounded-lg bg-muted px-3 py-2"
+              className="flex items-center justify-between rounded-xl bg-muted px-3 py-2"
             >
               <div className="flex items-center gap-2">
                 <span className={cn('h-2 w-2 rounded-full', item.barClass)} />

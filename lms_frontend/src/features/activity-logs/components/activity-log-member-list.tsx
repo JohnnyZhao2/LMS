@@ -74,7 +74,7 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
     : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
 
   return (
-    <aside className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-2xl border border-border/60 bg-background xl:max-h-full">
+    <aside className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
       <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-text-muted" />

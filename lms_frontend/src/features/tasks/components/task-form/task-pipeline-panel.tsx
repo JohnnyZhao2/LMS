@@ -58,7 +58,7 @@ export function TaskPipelinePanel({
       <ScrollContainer className="min-h-0 flex-1 overflow-y-auto bg-muted/35 p-6">
         {selectedResources.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
-            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border border-border/60 bg-background shadow-sm">
+            <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-xl border border-border/60 bg-background shadow-sm">
               <Send className="h-9 w-9 -rotate-45 text-primary-500" />
             </div>
             <h3 className="mb-3 text-xl font-bold tracking-tight text-foreground">开启你的学习任务</h3>

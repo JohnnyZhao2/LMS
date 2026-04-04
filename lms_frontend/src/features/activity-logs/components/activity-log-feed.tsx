@@ -103,7 +103,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
 
                   <div
                     className={cn(
-                      'group ml-5 flex gap-3 rounded-xl py-2.5 pl-2 pr-2 transition-colors hover:bg-muted',
+                      'group ml-5 flex gap-3 rounded-lg py-2.5 pl-2 pr-2 transition-colors hover:bg-muted',
                       isLast && 'mb-0'
                     )}
                   >
@@ -131,7 +131,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                       </div>
 
                       {item.description && (
-                        <div className="mt-1.5 rounded-lg border border-border/50 bg-muted px-3 py-2 text-[13px] leading-relaxed text-foreground/80">
+                        <div className="mt-1.5 rounded-xl border border-border/50 bg-muted px-3 py-2 text-[13px] leading-relaxed text-foreground/80">
                           {item.description}
                         </div>
                       )}

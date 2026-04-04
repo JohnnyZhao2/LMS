@@ -21,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
  */
 
 const optionItemVariants = cva(
-  'flex items-start gap-3 p-4 rounded-lg border transition-all',
+  'flex items-start gap-3 p-4 rounded-xl border transition-all',
   {
     variants: {
       state: {

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils"
  */
 type TextareaProps = React.ComponentProps<"textarea"> & {
   autoResize?: boolean
+  interactionStyle?: "default" | "minimal"
 }
 
 const syncTextareaHeight = (node: HTMLTextAreaElement | null) => {
@@ -23,7 +24,7 @@ const syncTextareaHeight = (node: HTMLTextAreaElement | null) => {
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ autoResize = false, className, onChange, style, ...props }, ref) => {
+  ({ autoResize = false, interactionStyle = "default", className, onChange, style, ...props }, ref) => {
     const innerRef = React.useRef<HTMLTextAreaElement | null>(null)
 
     React.useLayoutEffect(() => {
@@ -47,8 +48,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[120px] w-full rounded-md px-4 py-3",
-          FIELD_CHROME_CLASSNAME,
+          "flex min-h-[120px] w-full rounded-lg px-4 py-3",
+          interactionStyle === "default" ? FIELD_CHROME_CLASSNAME : "focus:outline-none",
           "text-base font-normal text-foreground leading-relaxed",
           "placeholder:text-text-muted",
           "disabled:bg-white disabled:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed",

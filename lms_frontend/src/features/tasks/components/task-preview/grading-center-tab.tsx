@@ -157,12 +157,12 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
         <div className="flex min-h-0 h-full flex-col rounded-2xl border border-border bg-background p-4 space-y-4">
           <Skeleton className="h-10 w-full rounded-lg" />
           <div className="flex-1 space-y-2 overflow-hidden">
-            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+            {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)}
           </div>
         </div>
         <div className="flex min-h-0 h-full flex-col rounded-2xl border border-border bg-background p-6 space-y-6">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </div>
     );
@@ -170,7 +170,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
   if (!quizId) {
     return (
-      <div className="flex h-full min-h-[36rem] flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted text-text-muted">
+      <div className="flex h-full min-h-[36rem] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted text-text-muted">
         <BarChart3 className="w-12 h-12 mb-3 text-text-muted" />
         <p>请先从左侧选择试卷以开始阅卷</p>
       </div>
@@ -179,7 +179,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
 
   if (!questions || questions.length === 0) {
     return (
-      <div className="flex h-full min-h-[36rem] flex-col rounded-3xl border border-dashed border-border bg-muted">
+      <div className="flex h-full min-h-[36rem] flex-col rounded-2xl border border-dashed border-border bg-muted">
         <EmptyState
           icon={Filter}
           description="暂无可分析的题目数据"
@@ -302,9 +302,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               <ScrollContainer className="flex-1 overflow-y-auto bg-muted p-6">
                 {detailLoading ? (
                   <div className="space-y-4">
-                    <Skeleton className="h-24 w-full rounded-xl" />
-                    <Skeleton className="h-24 w-full rounded-xl" />
-                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
                   </div>
                 ) : (
                   <>
@@ -312,7 +312,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     {selectedQuestion?.question_type !== 'SHORT_ANSWER' && (
                       <div className="space-y-4 max-w-3xl mx-auto">
                         {sortedOptions.length === 0 && (
-                          <div className="bg-background rounded-2xl border border-dashed">
+                          <div className="bg-background rounded-xl border border-dashed">
                             <EmptyState
                               description="暂无选项数据"
                               iconSize="sm"
@@ -411,7 +411,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                     {selectedQuestion?.question_type === 'SHORT_ANSWER' && (
                       <div className="space-y-4 max-w-4xl mx-auto">
                         {questionDetail?.subjective_answers?.length === 0 && (
-                          <div className="text-center py-12 text-text-muted bg-background rounded-2xl border border-dashed">
+                          <div className="text-center py-12 text-text-muted bg-background rounded-xl border border-dashed">
                             暂无学员回答
                           </div>
                         )}

@@ -268,7 +268,7 @@ export const TagManagementPage: React.FC = () => {
             icon={activeTab === 'SPACE' ? <Shapes className="h-12 w-12" /> : <Hash className="h-12 w-12" />}
             title={`暂无${typeLabel[activeTab]}`}
             description={search ? '没有匹配的标签，换个关键词试试。' : '创建后会以胶囊形式集中展示在这里。'}
-            className="rounded-[28px] border border-dashed border-border/70 bg-muted/20"
+            className="rounded-xl border border-dashed border-border/70 bg-muted/20"
           />
         ) : (
           <div className="flex flex-wrap content-start gap-3">
@@ -411,7 +411,7 @@ export const TagManagementPage: React.FC = () => {
                   value={mergedName}
                   onChange={(event) => setMergedName(event.target.value)}
                   placeholder="输入合并后的标签名"
-                  className="h-14 rounded-[18px] border-white/80 bg-white/84 px-5 text-[16px] font-semibold shadow-[0_16px_34px_rgba(15,23,42,0.08)] placeholder:text-text-muted/80"
+                  className="h-14 rounded-lg border-white/80 bg-white/84 px-5 text-[16px] font-semibold shadow-[0_16px_34px_rgba(15,23,42,0.08)] placeholder:text-text-muted/80"
                 />
                 <p className="text-xs leading-6 text-text-muted">
                   合并后只保留一个标签实体，其他已选标签会被移除，知识和题目的引用关系会自动迁移。

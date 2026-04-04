@@ -8,6 +8,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
+import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { QuestionType } from '@/types/api';
 import { QuestionTab } from './question-tab';
 
@@ -21,10 +22,10 @@ const QUESTION_TYPE_FILTER_OPTIONS: Array<{ value: QuestionType | 'all'; label: 
 
 export const QuestionManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
-  const [questionCreateSignal, setQuestionCreateSignal] = useState(0);
   const [filterQuestionType, setFilterQuestionType] = useState<QuestionType | 'all'>('all');
   const [filterSpaceTypeId, setFilterSpaceTypeId] = useState<string>('all');
   const { data: spaceTypes } = useSpaceTypeTags();
+  const { roleNavigate } = useRoleNavigate();
 
   return (
     <PageFillShell>
@@ -68,7 +69,7 @@ export const QuestionManagementPage: React.FC = () => {
               onChange={setSearch}
             />
             <CircleButton
-              onClick={() => setQuestionCreateSignal((prev) => prev + 1)}
+              onClick={() => roleNavigate('/questions/create')}
               label="新建题目"
               className="shrink-0"
             />
@@ -78,7 +79,6 @@ export const QuestionManagementPage: React.FC = () => {
         <div className="flex flex-1 min-h-0 flex-col">
           <QuestionTab
             search={search}
-            createSignal={questionCreateSignal}
             filterQuestionType={filterQuestionType}
             filterSpaceTypeId={filterSpaceTypeId}
             spaceTypes={spaceTypes}

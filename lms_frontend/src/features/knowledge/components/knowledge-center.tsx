@@ -452,7 +452,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     <EmptyState
                         icon={Inbox}
                         description="暂无知识内容"
-                        className="py-32 bg-muted rounded-lg"
+                        className="py-32 bg-muted rounded-2xl"
                     />
                 )}
             </div>
@@ -605,7 +605,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         placeholder="输入类型名称"
                                         maxLength={20}
                                         autoFocus
-                                        className="h-14 w-full rounded-[12px] border border-border bg-transparent px-5 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-text-muted focus:border-primary"
+                                        className="h-14 w-full rounded-lg border border-border bg-transparent px-5 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-text-muted focus:border-primary"
                                     />
                                 </div>
 

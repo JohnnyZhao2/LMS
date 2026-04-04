@@ -170,7 +170,7 @@ export const QuizPlayer: React.FC = () => {
   return (
     <div className="-m-6 flex min-h-0 flex-1 flex-col overflow-auto bg-muted p-6">
       {/* 顶部信息栏 - Flat Design */}
-      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-lg bg-background">
+      <div className="flex justify-between items-center mb-6 px-5 py-4 rounded-xl bg-background">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -229,7 +229,7 @@ export const QuizPlayer: React.FC = () => {
         {/* 题目导航 */}
         <div className="lg:col-span-1">
           <div className="sticky top-[88px]">
-            <Card className="rounded-lg bg-background">
+            <Card className="rounded-xl bg-background">
               <CardContent className="p-5">
                 <div className="mb-4">
                   <div className="flex justify-between mb-2">
@@ -286,7 +286,7 @@ export const QuizPlayer: React.FC = () => {
               ref={(el) => {
                 questionRefs.current[answer.question] = el;
               }}
-              className="rounded-lg bg-background scroll-mt-24"
+              className="rounded-xl bg-background scroll-mt-24"
             >
               <CardContent className="p-6">
                 {/* 题号指示 */}

@@ -155,7 +155,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
   if (!canViewRoleTemplate) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="relative w-full max-w-md rounded-3xl border border-border bg-background p-10 shadow-2xl">
+        <div className="relative w-full max-w-md rounded-xl border border-border bg-background p-10 shadow-2xl">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
@@ -181,11 +181,11 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-      <div className="relative w-full max-w-6xl max-h-[90vh] rounded-3xl border border-slate-200/60 bg-white shadow-[0_20px_60px_rgb(0,0,0,0.15)] flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-6xl max-h-[90vh] rounded-xl border border-slate-200/60 bg-white shadow-[0_20px_60px_rgb(0,0,0,0.15)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="relative flex items-center justify-between border-b border-slate-100 px-8 py-4 bg-gradient-to-b from-slate-50/50 to-transparent">
           <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.15)]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.15)]">
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -196,7 +196,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-xl p-2.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 hover:rotate-90"
+            className="rounded-lg p-2.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 hover:rotate-90"
           >
             <X className="h-5 w-5" />
           </button>
@@ -284,7 +284,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
                   <>
                     {/* Module locked warning */}
                     {activeModulePermissions.every((p) => isPermissionLockedForRole(selectedRole, p)) && (
-                      <div className="mb-4 rounded-2xl border border-amber-200/60 bg-amber-50/30 px-5 py-3">
+                      <div className="mb-4 rounded-xl border border-amber-200/60 bg-amber-50/30 px-5 py-3">
                         <p className="text-xs font-bold text-amber-600">
                           配置管理模块仅支持在管理员角色下配置，当前角色已锁定为只读。
                         </p>
@@ -301,7 +301,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
                           <label
                             key={permission.code}
                             className={cn(
-                              "group flex items-center justify-between gap-4 rounded-2xl border border-slate-200/60 bg-white px-5 py-4 cursor-pointer transition-all duration-300",
+                              "group flex items-center justify-between gap-4 rounded-xl border border-slate-200/60 bg-white px-5 py-4 cursor-pointer transition-all duration-300",
                               "hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-slate-300/60",
                               !isChecked && "opacity-60",
                               isDisabled && "cursor-not-allowed opacity-40"
@@ -372,7 +372,7 @@ export const RolePermissionDialog: React.FC<RolePermissionDialogProps> = ({
               onClick={handleSaveRoleTemplate}
               disabled={!canUpdateRoleTemplate || roleTemplateQuery.isLoading || replaceRoleTemplateMutation.isPending}
               className={cn(
-                "rounded-xl px-6 py-2.5 text-sm font-bold transition-all duration-300",
+                "rounded-lg px-6 py-2.5 text-sm font-bold transition-all duration-300",
                 "bg-primary text-white shadow-[0_4px_12px_rgba(var(--primary),0.3)] hover:shadow-[0_6px_16px_rgba(var(--primary),0.4)] hover:scale-105",
                 "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               )}

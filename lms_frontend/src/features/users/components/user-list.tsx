@@ -272,7 +272,7 @@ export const UserList: React.FC = () => {
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-lg p-1 border border-border">
+            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border border-border">
               <DropdownMenuLabel className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-3 py-2">
                 账号控制台
               </DropdownMenuLabel>
@@ -482,7 +482,7 @@ export const UserList: React.FC = () => {
         open={tempPasswordDialog.open}
         onOpenChange={(open) => setTempPasswordDialog({ open, password: tempPasswordDialog.password })}
       >
-        <DialogContent className="rounded-lg max-w-md p-8 border border-border">
+        <DialogContent className="rounded-xl max-w-md p-8 border border-border">
           <DialogHeader>
             <AvatarCircle size="lg" variant="secondary" className="mb-6 mx-auto">
               <ShieldCheck className="h-8 w-8" />
@@ -497,7 +497,7 @@ export const UserList: React.FC = () => {
             navigator.clipboard.writeText(tempPasswordDialog.password || '');
             toast.success('密码已复制');
           }}>
-            <div className="bg-muted rounded-lg p-6 text-center hover:bg-muted transition-colors">
+            <div className="bg-muted rounded-xl p-6 text-center hover:bg-muted transition-colors">
               <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 block">临时密码</span>
               <code className="text-2xl font-bold text-primary-600 tracking-widest font-mono">
                 {tempPasswordDialog.password}

@@ -43,6 +43,8 @@ const createBreadcrumbs = (
     { pattern: '/:role/quizzes/create', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理', path: quizzesPath }, { title: '新建试卷' }] },
     { pattern: '/:role/quizzes/:id/edit', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理', path: quizzesPath }, { title: '编辑试卷' }] },
     { pattern: '/:role/quizzes', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理' }] },
+    { pattern: '/:role/questions/create', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildRolePath(role, ROUTES.QUESTIONS) }, { title: '新建题目' }] },
+    { pattern: '/:role/questions/:id/edit', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildRolePath(role, ROUTES.QUESTIONS) }, { title: '编辑题目' }] },
     { pattern: '/:role/questions', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理' }] },
     {
       pattern: '/:role/grading-center',
