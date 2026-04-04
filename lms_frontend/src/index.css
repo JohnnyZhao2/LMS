@@ -341,12 +341,10 @@
     html {
         scroll-behavior: smooth;
         overflow-y: auto;
-        scrollbar-gutter: stable;
     }
 
     /*
-     * 修复 Radix/RemoveScroll 弹层打开时页面横向位移：
-     * 我们已使用 stable gutter，不需要额外的 scrollbar 补偿。
+     * 修复 Radix/RemoveScroll 弹层打开时页面横向位移。
      */
     html[data-scroll-locked],
     html.with-scroll-bars-hidden,

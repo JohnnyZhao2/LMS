@@ -42,14 +42,14 @@ export const StudentDashboard: React.FC = () => {
         <StatCard title="考试均分" value={stats?.exam_avg_score ?? '-'} icon={GraduationCap} accentClassName="bg-amber-500" size="sm" />
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12 2xl:gap-6">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 2xl:gap-6">
         {/* 知识速递 */}
-        <div className="min-w-0 xl:col-span-8">
+        <div className="min-w-0 xl:col-span-8 xl:h-full">
           <EditorialCard
             title="知识速递"
             icon={BookOpen}
             accentColor="text-teal-500"
-            className="overflow-visible"
+            className="h-full overflow-visible"
             action={
               <button
                 onClick={() => roleNavigate('knowledge')}
@@ -70,12 +70,12 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         {/* 迷你日历 */}
-        <div className="min-w-0 xl:col-span-4">
+        <div className="min-w-0 xl:col-span-4 xl:h-full">
           <MiniCalendar selectedTask={selectedTask} />
         </div>
 
         {/* 任务中心 */}
-        <div className="min-w-0 xl:col-span-8">
+        <div className="min-w-0 xl:col-span-8 xl:h-full">
           <EditorialCard
             title="任务中心"
             icon={CalendarIcon}
@@ -98,7 +98,7 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         {/* 同伴进度 */}
-        <div className="min-w-0 xl:col-span-4">
+        <div className="min-w-0 xl:col-span-4 xl:h-full">
           <EditorialCard
             title="同伴进度"
             icon={TrendingUp}
