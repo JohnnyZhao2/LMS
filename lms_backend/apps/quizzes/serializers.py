@@ -9,6 +9,7 @@ from rest_framework import serializers
 
 from apps.questions.models import Question
 from apps.questions.serializers import QuestionCreateSerializer
+from apps.tags.serializers import TagSimpleSerializer
 
 from .models import Quiz, QuizQuestion
 
@@ -22,12 +23,22 @@ class QuizQuestionSerializer(serializers.ModelSerializer):
     question_content = serializers.CharField(source='question.content', read_only=True)
     question_type = serializers.CharField(source='question.question_type', read_only=True)
     question_type_display = serializers.CharField(source='question.get_question_type_display', read_only=True)
-    score = serializers.DecimalField(source='question.score', max_digits=5, decimal_places=2, read_only=True)
+    score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
     resource_uuid = serializers.UUIDField(source='question.resource_uuid', read_only=True)
     is_current = serializers.BooleanField(source='question.is_current', read_only=True)
+    version_number = serializers.IntegerField(source='question.version_number', read_only=True)
+    options = serializers.JSONField(source='question.options', read_only=True)
+    answer = serializers.JSONField(source='question.answer', read_only=True)
+    explanation = serializers.CharField(source='question.explanation', read_only=True)
+    space_tag = TagSimpleSerializer(source='question.space_tag', read_only=True)
+    tags = TagSimpleSerializer(source='question.tags', many=True, read_only=True)
     class Meta:
         model = QuizQuestion
-        fields = ['id', 'question', 'question_content', 'question_type', 'question_type_display', 'score', 'order', 'resource_uuid', 'is_current']
+        fields = [
+            'id', 'question', 'question_content', 'question_type', 'question_type_display',
+            'score', 'order', 'resource_uuid', 'version_number', 'is_current',
+            'options', 'answer', 'explanation', 'space_tag', 'tags',
+        ]
 class QuizListSerializer(serializers.ModelSerializer):
     """
     Serializer for quiz list view.
@@ -91,6 +102,7 @@ class AddNewQuestionSerializer(serializers.Serializer):
     explanation = serializers.CharField(required=False, default='')
     score = serializers.DecimalField(max_digits=5, decimal_places=2, default=1.0)
     space_tag_id = serializers.IntegerField(required=False, allow_null=True)
+    tag_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
     def validate(self, attrs):
         """Validate question data based on question type."""
         question_type = attrs.get('question_type')
@@ -143,6 +155,11 @@ class AddNewQuestionSerializer(serializers.Serializer):
                     'answer': '简答题答案必须是字符串'
                 })
         return attrs
+class QuizQuestionBindingSerializer(serializers.Serializer):
+    question_id = serializers.IntegerField()
+    score = serializers.DecimalField(max_digits=5, decimal_places=2)
+
+
 class QuizCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating quizzes.
@@ -153,6 +170,12 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         default=list,
         help_text='要添加的已有题目ID列表'
     )
+    question_versions = QuizQuestionBindingSerializer(
+        many=True,
+        required=False,
+        default=list,
+        help_text='试卷题目与分值列表'
+    )
     new_questions = AddNewQuestionSerializer(
         many=True,
         required=False,
@@ -161,7 +184,10 @@ class QuizCreateSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = Quiz
-        fields = ['title', 'quiz_type', 'duration', 'pass_score', 'existing_question_ids', 'new_questions']
+        fields = [
+            'title', 'quiz_type', 'duration', 'pass_score',
+            'existing_question_ids', 'question_versions', 'new_questions'
+        ]
     def validate(self, attrs):
         """Validate quiz_type specific fields."""
         quiz_type = attrs.get('quiz_type', 'PRACTICE')
@@ -185,6 +211,21 @@ class QuizCreateSerializer(serializers.ModelSerializer):
         if invalid_ids:
             raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
         return value
+
+    def validate_question_versions(self, value):
+        if not value:
+            return value
+        question_ids = [item['question_id'] for item in value]
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=question_ids,
+                is_deleted=False,
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(question_ids) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
 class QuizUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
@@ -199,6 +240,11 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_empty=True,
         help_text='新的题目 ID 顺序列表（会覆盖现有顺序）'
+    )
+    question_versions = QuizQuestionBindingSerializer(
+        many=True,
+        required=False,
+        help_text='新的题目与分值列表（会覆盖现有顺序）'
     )
     add_question_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -223,7 +269,8 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
         model = Quiz
         fields = [
             'title', 'quiz_type', 'duration', 'pass_score',
-            'existing_question_ids', 'add_question_ids', 'new_questions', 'remove_question_ids'
+            'existing_question_ids', 'question_versions',
+            'add_question_ids', 'new_questions', 'remove_question_ids'
         ]
 
     def validate(self, attrs):
@@ -264,6 +311,21 @@ class QuizUpdateSerializer(serializers.ModelSerializer):
             ).values_list('id', flat=True)
         )
         invalid_ids = set(value) - existing_ids
+        if invalid_ids:
+            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
+        return value
+
+    def validate_question_versions(self, value):
+        if value is None:
+            return value
+        question_ids = [item['question_id'] for item in value]
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=question_ids,
+                is_deleted=False,
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = set(question_ids) - existing_ids
         if invalid_ids:
             raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
         return value

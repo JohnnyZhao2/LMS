@@ -111,7 +111,7 @@ class SaveAnswerView(BaseAPIView):
             400: OpenApiResponse(description='参数错误'),
             404: OpenApiResponse(description='答题记录不存在'),
         },
-        tags=['练习答题', '考试答题']
+        tags=['测验答题', '考试答题']
     )
     def post(self, request, pk):
         enforce_student_submission_role(request)

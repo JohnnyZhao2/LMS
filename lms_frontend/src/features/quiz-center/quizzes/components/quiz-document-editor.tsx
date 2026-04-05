@@ -16,6 +16,8 @@ interface QuizDocumentEditorProps {
   onAddBlank: (questionType?: QuestionType) => void;
   onFocusItem: (key: string) => void;
   savingItemKey?: string | null;
+  onToggleSyncToBank: (key: string) => void;
+  onUpgradeToLatest: (key: string) => void;
 }
 
 /**
@@ -32,6 +34,8 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   onAddBlank,
   onFocusItem,
   savingItemKey = null,
+  onToggleSyncToBank,
+  onUpgradeToLatest,
 }) => {
   const [showAddMenu, setShowAddMenu] = React.useState(false);
 
@@ -49,6 +53,8 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
       addMenuOpen={showAddMenu}
       onAddMenuOpenChange={setShowAddMenu}
       onAddQuestion={onAddBlank}
+      onToggleSyncToBank={onToggleSyncToBank}
+      onUpgradeToLatest={onUpgradeToLatest}
     />
   );
 };

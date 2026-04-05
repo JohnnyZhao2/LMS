@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pencil, Trash2, Layout } from 'lucide-react';
+import { Eye, Pencil, Trash2, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
@@ -76,7 +76,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
             <CellTags
               tags={[{
                 key: row.original.quiz_type,
-                label: row.original.quiz_type_display || (isExam ? '考试' : '练习'),
+                label: row.original.quiz_type_display || (isExam ? '考试' : '测验'),
                 bgClass: isExam ? 'bg-destructive-100' : 'bg-primary-50',
                 textClass: isExam ? 'text-destructive' : 'text-primary-600',
               }]}
@@ -189,6 +189,17 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         const record = row.original;
         return (
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <Tooltip title="预览试卷">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-text-muted hover:text-foreground hover:bg-muted"
+                onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${record.id}/preview`)}
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+
             <Tooltip title="编辑试卷">
               <Button
                 variant="ghost"
@@ -245,7 +256,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
           },
         }}
         rowClassName="group"
-        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/edit`)}
+        onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/preview`)}
       />
 
       {/* 删除确认对话框 */}

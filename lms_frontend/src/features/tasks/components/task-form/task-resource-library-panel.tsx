@@ -2,14 +2,20 @@ import {
   AlertCircle,
   BookOpen,
   ClipboardList,
+  Eye,
   LayoutGrid,
   Plus,
 } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
-import { QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
+import {
+  GHOST_ACCENT_HOVER_CLASSNAME,
+  QUIET_OUTLINE_FIELD_CLASSNAME,
+  SUBTLE_SURFACE_HOVER_CLASSNAME,
+} from '@/components/ui/interactive-styles';
 import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';
@@ -25,6 +31,7 @@ interface TaskResourceLibraryPanelProps {
   resourceType: 'ALL' | ResourceType;
   onResourceTypeChange: (value: 'ALL' | ResourceType) => void;
   onResourceAdd: (resource: ResourceItem) => void;
+  onQuizPreview: (quizId: number) => void;
   resourcesDisabled: boolean;
   totalResourceCount: number;
   pageSize: number;
@@ -40,6 +47,7 @@ export function TaskResourceLibraryPanel({
   resourceType,
   onResourceTypeChange,
   onResourceAdd,
+  onQuizPreview,
   resourcesDisabled,
   totalResourceCount,
   pageSize,
@@ -119,15 +127,23 @@ export function TaskResourceLibraryPanel({
                     key={`${resource.resourceType}-${resource.id}-${resource.title}`}
                     type="button"
                     className={cn(
-                      'group flex h-[72px] w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition-all',
+                      'group flex h-[72px] w-full items-center gap-3 rounded-xl border border-border bg-background p-3 text-left',
+                      SUBTLE_SURFACE_HOVER_CLASSNAME,
                       resourcesDisabled
                         ? 'cursor-not-allowed opacity-50'
-                        : 'cursor-pointer hover:-translate-y-0.5 hover:border-primary-300',
+                        : 'cursor-pointer',
                     )}
                     onClick={() => {
-                      if (!resourcesDisabled) {
-                        onResourceAdd(resource);
+                      if (resourcesDisabled) {
+                        return;
                       }
+
+                      if (resource.resourceType === 'QUIZ') {
+                        onQuizPreview(resource.id);
+                        return;
+                      }
+
+                      onResourceAdd(resource);
                     }}
                   >
                     <div
@@ -151,15 +167,42 @@ export function TaskResourceLibraryPanel({
                       <div className="mb-1 truncate text-sm font-bold text-foreground">{resource.title}</div>
                       <div className="flex items-center gap-2 text-[11px] font-medium text-text-muted">
                         <span className="text-text-muted">
-                          {resource.resourceType === 'DOCUMENT' ? '文档' : resource.quizType === 'EXAM' ? '考试' : '练习'}
+                          {resource.resourceType === 'DOCUMENT' ? '文档' : resource.quizType === 'EXAM' ? '考试' : '测验'}
                         </span>
                         <span className="h-0.5 w-0.5 rounded-full bg-border" />
                         <span className="truncate text-text-muted">{resource.category}</span>
                       </div>
                     </div>
 
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-primary-500 hover:text-white">
-                      <Plus className="h-4 w-4" />
+                    <div className="flex items-center gap-1">
+                      {resource.resourceType === 'QUIZ' ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!resourcesDisabled) {
+                              onQuizPreview(resource.id);
+                            }
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn('h-7 w-7 rounded-full opacity-0 group-hover:opacity-100', GHOST_ACCENT_HOVER_CLASSNAME)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!resourcesDisabled) {
+                            onResourceAdd(resource);
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
                   </button>
                 ))}

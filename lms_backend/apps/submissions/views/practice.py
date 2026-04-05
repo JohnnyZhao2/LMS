@@ -23,15 +23,15 @@ class PracticeResultView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
     @extend_schema(
-        summary='查看练习结果',
+        summary='查看测验结果',
         description='''
-        查看练习结果，包括答案和解析。
+        查看测验结果，包括答案和解析。
         ''',
         responses={
             200: PracticeResultSerializer,
             404: OpenApiResponse(description='答题记录不存在'),
         },
-        tags=['练习答题']
+        tags=['测验答题']
     )
     def get(self, request, pk):
         enforce_student_submission_role(request)

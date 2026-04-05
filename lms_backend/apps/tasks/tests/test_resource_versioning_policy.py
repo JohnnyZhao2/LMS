@@ -147,11 +147,31 @@ def test_question_historical_version_update_blocked(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_question_update_creates_new_version_when_quiz_referenced(monkeypatch):
+def test_question_update_in_place_when_only_one_unfrozen_quiz_referenced(monkeypatch):
     user = UserFactory()
     question = _create_question(created_by=user, content='旧题干')
     quiz = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
     QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
+    service = QuestionService(_build_request(user))
+    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+
+    updated = service.update(question.id, {'content': '新题干'})
+
+    question.refresh_from_db()
+    assert updated.id == question.id
+    assert updated.version_number == 1
+    assert updated.is_current is True
+    assert Question.objects.filter(resource_uuid=question.resource_uuid).count() == 1
+
+
+@pytest.mark.django_db
+def test_question_update_creates_new_version_when_shared_by_quizzes(monkeypatch):
+    user = UserFactory()
+    question = _create_question(created_by=user, content='旧题干')
+    quiz_a = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
+    quiz_b = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
+    QuizQuestion.objects.create(quiz=quiz_a, question=question, order=1)
+    QuizQuestion.objects.create(quiz=quiz_b, question=question, order=1)
     service = QuestionService(_build_request(user))
     monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
@@ -184,6 +204,62 @@ def test_question_update_creates_new_version_when_task_bound_quiz_referenced(mon
     assert updated.is_current is True
     assert question.is_current is False
     assert Question.objects.filter(resource_uuid=question.resource_uuid).count() == 2
+
+
+@pytest.mark.django_db
+def test_question_update_without_sync_to_bank_keeps_current_version(monkeypatch):
+    user = UserFactory()
+    question = _create_question(created_by=user, content='旧题干')
+    service = QuestionService(_build_request(user))
+    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+
+    updated = service.update(question.id, {'content': '试卷内修改', 'sync_to_bank': False})
+
+    question.refresh_from_db()
+    assert updated.id != question.id
+    assert updated.is_current is False
+    assert question.is_current is True
+    assert Question.objects.filter(resource_uuid=question.resource_uuid).count() == 2
+
+
+@pytest.mark.django_db
+def test_question_create_from_source_without_sync_to_bank_keeps_bank_current():
+    user = UserFactory()
+    question = _create_question(created_by=user, content='题库原题')
+    service = QuestionService(_build_request(user))
+
+    created = service.create({
+        'source_question_id': question.id,
+        'content': '试卷内改题',
+        'sync_to_bank': False,
+    })
+
+    question.refresh_from_db()
+    assert created.id != question.id
+    assert created.resource_uuid == question.resource_uuid
+    assert created.version_number == 2
+    assert created.is_current is False
+    assert question.is_current is True
+
+
+@pytest.mark.django_db
+def test_question_create_from_source_with_sync_to_bank_promotes_new_current():
+    user = UserFactory()
+    question = _create_question(created_by=user, content='题库原题')
+    service = QuestionService(_build_request(user))
+
+    created = service.create({
+        'source_question_id': question.id,
+        'content': '题库新题',
+        'sync_to_bank': True,
+    })
+
+    question.refresh_from_db()
+    assert created.id != question.id
+    assert created.resource_uuid == question.resource_uuid
+    assert created.version_number == 2
+    assert created.is_current is True
+    assert question.is_current is False
 
 
 @pytest.mark.django_db

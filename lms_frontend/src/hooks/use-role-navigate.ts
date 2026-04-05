@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, type NavigateOptions } from 'react-router-dom';
 import { tokenStorage } from '@/lib/token-storage';
 
 /**
@@ -11,7 +11,7 @@ export function useRoleNavigate() {
   const { role: urlRole } = useParams<{ role: string }>();
 
   const roleNavigate = useCallback(
-    (path: string, options?: { replace?: boolean }) => {
+    (path: string, options?: NavigateOptions) => {
       // 获取角色前缀
       const role = urlRole || tokenStorage.getCurrentRole();
       const rolePrefix = role ? `/${role.toLowerCase()}` : '';

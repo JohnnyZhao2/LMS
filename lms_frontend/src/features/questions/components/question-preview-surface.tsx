@@ -1,8 +1,18 @@
 import React from 'react';
 
-import { cn } from '@/lib/utils';
 import { richTextToPlainText } from '@/lib/rich-text';
+import { cn } from '@/lib/utils';
 import type { Question } from '@/types/api';
+
+import {
+  QuestionChoiceRow,
+  QuestionDocumentDivider,
+} from './question-document-shared';
+import {
+  QUESTION_TRUE_FALSE_ITEMS,
+  normalizeQuestionValueToArray,
+  useQuestionDocumentSplitLayout,
+} from './question-document-utils';
 
 interface QuestionPreviewSurfaceProps {
   question: Question;
@@ -16,13 +26,6 @@ interface QuestionPreviewSurfaceProps {
 
 type EditingField = 'content' | 'explanation' | `option:${number}` | null;
 
-const typeLabelMap: Record<Question['question_type'], string> = {
-  SINGLE_CHOICE: '单选题',
-  MULTIPLE_CHOICE: '多选题',
-  TRUE_FALSE: '判断题',
-  SHORT_ANSWER: '简答题',
-};
-
 export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
   question,
   className,
@@ -32,12 +35,15 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
   onSaveExplanation,
   onSaveOption,
 }) => {
-  const answers = Array.isArray(question.answer) ? question.answer : [question.answer].filter(Boolean);
+  const { rootRef, isCompact, splitLayoutStyle, dividerPositionStyle, startResize } =
+    useQuestionDocumentSplitLayout(720);
+  const answers = normalizeQuestionValueToArray(question.answer, question.question_type);
   const options = question.options ?? [];
   const plainContent = richTextToPlainText(question.content || '');
   const explanation = question.explanation?.trim() ?? '';
   const [editingField, setEditingField] = React.useState<EditingField>(null);
   const draftRef = React.useRef('');
+  const isChoiceType = question.question_type === 'SINGLE_CHOICE' || question.question_type === 'MULTIPLE_CHOICE';
 
   React.useEffect(() => {
     setEditingField(null);
@@ -66,10 +72,7 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
     draftRef.current = '';
   };
 
-  const cancelEditing = (
-    element: HTMLDivElement,
-    value: string,
-  ) => {
+  const cancelEditing = (element: HTMLDivElement, value: string) => {
     element.textContent = value;
     setEditingField(null);
     draftRef.current = '';
@@ -130,10 +133,8 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
         }}
         onKeyDown={(event) => { void handleKeyDown(event, field, value, options?.multiline); }}
         className={cn(
-          'w-full bg-transparent outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-[#9aa6b2]',
-          options?.multiline
-            ? cn('whitespace-pre-wrap break-words', isEditing && 'min-h-[84px]')
-            : 'whitespace-pre-wrap break-words',
+          'block w-full min-w-0 max-w-full bg-transparent outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-[#9aa6b2]',
+          'whitespace-pre-wrap break-all',
           isEditing ? options?.inputClassName : options?.displayClassName,
           editable ? 'cursor-text' : 'cursor-default',
         )}
@@ -147,33 +148,25 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
   const renderOptions = () => {
     if (question.question_type === 'SHORT_ANSWER') {
       return (
-        <div className="rounded-[10px] border border-[#d9e2ec] bg-[#f8fafc] px-5 py-4 text-[14px] leading-7 text-[#5b6878]">
-          <div className="mb-2 text-[11px] font-semibold tracking-[0.08em] text-[#9aa6b2]">参考答案</div>
-          <div className="text-[14px] leading-7 text-[#5b6878]">
-            {String(question.answer || '').trim() || '暂无参考答案'}
-          </div>
+        <div className="min-h-[190px] rounded-[14px] border border-border bg-background px-4 py-3 text-[14px] leading-6 text-foreground">
+          {String(question.answer || '').trim() || '暂无参考答案'}
         </div>
       );
     }
 
     if (question.question_type === 'TRUE_FALSE') {
-      const items = [
-        { key: 'TRUE', label: '正确' },
-        { key: 'FALSE', label: '错误' },
-      ];
-
       return (
-        <div className="grid grid-cols-2 gap-3">
-          {items.map((item) => {
+        <div className="space-y-3">
+          {QUESTION_TRUE_FALSE_ITEMS.map((item) => {
             const selected = answers.includes(item.key);
             return (
               <div
                 key={item.key}
                 className={cn(
-                  'flex items-center justify-center rounded-[10px] border px-4 py-3 text-[14px] font-medium transition-colors',
+                  'flex h-[42px] items-center rounded-xl border px-4 text-[14px] font-medium transition-colors',
                   selected
                     ? 'border-primary-300 bg-primary-50 text-primary-700'
-                    : 'border-[#dde5ee] bg-[#f8fafc] text-[#526277]',
+                    : 'border-border bg-background text-foreground',
                 )}
               >
                 {item.label}
@@ -185,37 +178,19 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {options.map((option, index) => {
-          const selected = answers.includes(option.key);
           return (
-            <div
+            <QuestionChoiceRow
               key={option.key}
-              className={cn(
-                'flex items-center gap-3 rounded-[10px] border px-4 py-3 transition-colors',
-                selected
-                  ? 'border-primary-300 bg-primary-50/80'
-                  : 'border-[#e2e8f0] bg-[#f8fafc]',
-              )}
-            >
-              <span
-                className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[12px] font-semibold',
-                  selected
-                    ? 'border-primary-500 bg-primary-500 text-white'
-                    : 'border-[#cbd5e1] bg-white text-[#64748b]',
-                )}
-              >
-                {option.key}
-              </span>
-              <div className="min-w-0 flex-1">
-                {renderEditableText(`option:${index}`, option.value || '', {
-                  displayClassName: 'text-[14px] leading-6 text-[#334155]',
-                  inputClassName: 'text-[14px] leading-6 text-[#334155]',
-                  placeholder: '未填写选项内容',
-                })}
-              </div>
-            </div>
+              optionKey={option.key}
+              selected={answers.includes(option.key)}
+              label={renderEditableText(`option:${index}`, option.value || '', {
+                displayClassName: 'flex min-h-[20px] items-center whitespace-pre-wrap break-words text-[14px] leading-[1.35] text-foreground',
+                inputClassName: 'flex min-h-[20px] items-center whitespace-pre-wrap break-words text-[14px] leading-[1.35] text-foreground',
+                placeholder: '未填写选项内容',
+              })}
+            />
           );
         })}
       </div>
@@ -223,38 +198,58 @@ export const QuestionPreviewSurface: React.FC<QuestionPreviewSurfaceProps> = ({
   };
 
   return (
-    <div className={cn('mx-auto flex w-full max-w-[860px] flex-col gap-8', className)}>
-      <section className="space-y-5">
-        <div className="flex items-center justify-between border-b border-[#e8edf3] pb-3">
-          <div className="text-[12px] font-semibold tracking-[0.08em] text-[#8b97a6]">
-            {typeLabelMap[question.question_type]}
+    <div
+      ref={rootRef}
+      className={cn(
+        'w-full',
+        saving && 'opacity-70',
+        className,
+      )}
+    >
+      <div
+        className={cn('relative grid', isCompact ? 'grid-cols-1' : '')}
+        style={splitLayoutStyle}
+      >
+        <div className={cn('flex min-h-full min-w-0 flex-col px-5 py-4', isCompact ? '' : 'pr-5')}>
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+            题干
           </div>
-          <div className="text-[13px] font-medium text-[#9aa6b2]">{question.score || '0'} 分</div>
-        </div>
-
-        <div className={cn(saving && 'opacity-70')}>
           {renderEditableText('content', plainContent, {
             multiline: true,
-            displayClassName: 'text-[18px] font-semibold leading-8 tracking-[-0.015em] text-[#1f2937]',
-            inputClassName: 'text-[18px] font-semibold leading-8 tracking-[-0.015em] text-[#1f2937]',
+            displayClassName: 'min-h-[164px] whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-foreground',
+            inputClassName: 'min-h-[164px] whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-foreground',
             placeholder: '暂无题目内容',
           })}
         </div>
 
-        <div>{renderOptions()}</div>
-      </section>
+        <div className={cn('min-w-0 px-5 py-4', isCompact ? '' : 'pl-5')}>
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+            {isChoiceType ? '选项' : '参考答案'}
+          </div>
+          {renderOptions()}
+        </div>
 
-      <section className="border-t border-[#e8edf3] pt-6">
-        <div className="mb-3 text-[12px] font-semibold tracking-[0.06em] text-[#8b97a6]">考点解析</div>
-        <div className="rounded-[10px] border border-[#e2e8f0] bg-[#fbfcfd] px-5 py-4 text-[14px] leading-7 text-[#64748b]">
+        <QuestionDocumentDivider
+          isCompact={isCompact}
+          dividerPositionStyle={dividerPositionStyle}
+          resizable
+          onResizeStart={startResize}
+        />
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+          答案解析
+        </div>
+        <div className="rounded-xl bg-muted/30 px-4 py-3">
           {renderEditableText('explanation', explanation, {
             multiline: true,
-            displayClassName: 'text-[14px] leading-7 text-[#64748b]',
-            inputClassName: 'text-[14px] leading-7 text-[#64748b]',
-            placeholder: '暂无考点解析',
+            displayClassName: 'min-h-[108px] whitespace-pre-wrap break-words text-[14px] leading-7 text-foreground',
+            inputClassName: 'min-h-[108px] whitespace-pre-wrap break-words text-[14px] leading-7 text-foreground',
+            placeholder: '无解析',
           })}
         </div>
-      </section>
+      </div>
     </div>
   );
 };

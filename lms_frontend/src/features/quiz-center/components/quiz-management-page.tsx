@@ -29,7 +29,7 @@ export const QuizManagementPage: React.FC = () => {
             options={[
               { label: '全部', value: 'ALL' },
               { label: '考试', value: 'EXAM' },
-              { label: '练习', value: 'PRACTICE' },
+              { label: '测验', value: 'PRACTICE' },
             ]}
             activeColor="white"
             className="shrink-0"

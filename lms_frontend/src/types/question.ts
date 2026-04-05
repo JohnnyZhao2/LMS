@@ -43,4 +43,6 @@ export interface QuestionCreateRequest {
   score?: string | number;
   space_tag_id?: number | null;
   tag_ids?: number[];
+  source_question_id?: number;
+  sync_to_bank?: boolean;
 }

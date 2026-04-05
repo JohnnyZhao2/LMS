@@ -6,7 +6,7 @@
     service = QuizService(request)
     quiz = service.get_by_id(pk=123)
 """
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from django.db import transaction
 from django.db.models import Max
@@ -38,7 +38,13 @@ class QuizService(BaseService):
         'duration', 'pass_score',
     ]
 
-    def _add_question(self, quiz_id: int, question_id: int, order: int = None) -> QuizQuestion:
+    def _add_question(
+        self,
+        quiz_id: int,
+        question_id: int,
+        order: int = None,
+        score=None,
+    ) -> QuizQuestion:
         if order is None:
             max_order = QuizQuestion.objects.filter(
                 quiz_id=quiz_id
@@ -46,10 +52,14 @@ class QuizService(BaseService):
                 max_order=Max('order')
             )['max_order']
             order = (max_order or 0) + 1
+        if score is None:
+            question = Question.objects.filter(pk=question_id).only('score').first()
+            score = question.score if question else 1
         return QuizQuestion.objects.create(
             quiz_id=quiz_id,
             question_id=question_id,
-            order=order
+            order=order,
+            score=score,
         )
 
     def _remove_questions(self, quiz_id: int, question_ids: List[int]) -> int:
@@ -149,6 +159,7 @@ class QuizService(BaseService):
     def create(
         self,
         data: dict,
+        question_versions: List[dict] = None,
         existing_question_ids: List[int] = None,
         new_questions_data: List[dict] = None
     ) -> Quiz:
@@ -156,6 +167,7 @@ class QuizService(BaseService):
         创建试卷
         Args:
             data: 试卷数据
+            question_versions: 已有题目与分值列表
             existing_question_ids: 已有题目 ID 列表
             new_questions_data: 新建题目数据列表
         Returns:
@@ -173,13 +185,19 @@ class QuizService(BaseService):
         # 3. 创建试卷
         quiz = Quiz.objects.create(**data)
         # 4. 添加题目
+        question_versions = question_versions or []
         existing_question_ids = existing_question_ids or []
         new_questions_data = new_questions_data or []
+        normalized_question_versions = self._normalize_question_versions(
+            question_versions=question_versions,
+            question_ids=existing_question_ids,
+        )
         # 添加已有题目
-        for question_id in existing_question_ids:
+        for binding in normalized_question_versions:
             self._add_question(
                 quiz_id=quiz.id,
-                question_id=question_id
+                question_id=binding['question_id'],
+                score=binding['score'],
             )
         # 创建并添加新题目
         for question_data in new_questions_data:
@@ -199,6 +217,7 @@ class QuizService(BaseService):
         self,
         pk: int,
         data: dict,
+        question_versions: List[dict] = None,
         question_ids: List[int] = None,
         add_question_ids: List[int] = None,
         new_questions_data: List[dict] = None,
@@ -210,6 +229,7 @@ class QuizService(BaseService):
         Args:
             pk: 主键
             data: 更新数据
+            question_versions: 新的题目与分值列表（可选，会覆盖现有顺序）
             question_ids: 新的题目 ID 顺序列表（可选，会覆盖现有顺序）
             add_question_ids: 要添加的已有题目 ID 列表
             new_questions_data: 要新建的题目数据列表
@@ -231,11 +251,16 @@ class QuizService(BaseService):
                 message='历史版本不可修改'
             )
         # 处理题目操作（在同一个事务中）
+        normalized_question_versions = self._normalize_question_versions(
+            question_versions=question_versions,
+            question_ids=question_ids,
+        )
         add_question_ids = add_question_ids or []
         new_questions_data = new_questions_data or []
         remove_question_ids = remove_question_ids or []
         has_question_changes = (
-            question_ids is not None
+            normalized_question_versions is not None
+            or question_ids is not None
             or bool(add_question_ids)
             or bool(new_questions_data)
             or bool(remove_question_ids)
@@ -286,8 +311,13 @@ class QuizService(BaseService):
             self._create_and_add_question(quiz, question_data)
 
         # 4. 更新题目顺序（如果提供）
-        if question_ids is not None:
-            self._sync_question_order(quiz, question_ids)
+        if normalized_question_versions is not None:
+            self._sync_question_bindings(quiz, normalized_question_versions)
+        elif question_ids is not None:
+            self._sync_question_bindings(
+                quiz,
+                self._normalize_question_versions(question_ids=question_ids),
+            )
 
         if has_question_changes and not should_create_new_version and not has_base_changes:
             quiz.updated_by = self.user
@@ -342,7 +372,9 @@ class QuizService(BaseService):
         Returns:
             创建的题目对象
         """
+        relation_score = question_data.get('score')
         space_tag_id = question_data.pop('space_tag_id', None)
+        tag_ids = question_data.pop('tag_ids', [])
         # 准备版本数据
         self._prepare_question_version_data(question_data)
         # 准备题目属性
@@ -355,10 +387,13 @@ class QuizService(BaseService):
         # 设置space
         if space_tag_id is not None:
             self._set_question_space_tag(question, space_tag_id)
+        if tag_ids:
+            question.tags.set(tag_ids)
         # 添加到试卷
         self._add_question(
             quiz_id=quiz.id,
-            question_id=question.id
+            question_id=question.id,
+            score=relation_score,
         )
         return question
 
@@ -443,7 +478,8 @@ class QuizService(BaseService):
                 self._add_question(
                     quiz_id=new_quiz.id,
                     question_id=relation.question_id,
-                    order=relation.order
+                    order=relation.order,
+                    score=relation.score,
                 )
         else:
             for order, question_id in enumerate(question_ids, start=1):
@@ -454,35 +490,40 @@ class QuizService(BaseService):
                 )
         return new_quiz
 
-    def _sync_question_order(
+    def _sync_question_bindings(
         self,
         quiz: Quiz,
-        question_ids: List[int]
+        question_versions: List[dict[str, Any]]
     ) -> None:
         """
-        同步题目顺序（按 resource_uuid 去重）
+        同步题目顺序与分值（按 resource_uuid 去重）
         Args:
             quiz: 试卷对象
-            question_ids: 新的题目 ID 顺序列表
+            question_versions: 新的题目与分值列表
         """
-        # 获取提交的题目信息，按 resource_uuid 去重（保留最后出现的）
+        question_ids = [item['question_id'] for item in question_versions]
         questions = Question.objects.filter(pk__in=question_ids).values('id', 'resource_uuid')
         question_map = {q['id']: q['resource_uuid'] for q in questions}
-        
-        # 按 resource_uuid 去重，保留最后出现的 id
-        seen_uuids = {}
-        for qid in question_ids:
+
+        # 按 resource_uuid 去重，保留最后出现的题目和分值
+        seen_uuids: dict[Any, dict[str, Any]] = {}
+        for item in question_versions:
+            qid = item['question_id']
             uuid = question_map.get(qid)
             if uuid:
-                seen_uuids[uuid] = qid
-        deduped_question_ids = [seen_uuids[question_map[qid]] for qid in question_ids 
-                                if qid in question_map and seen_uuids.get(question_map[qid]) == qid]
-        
+                seen_uuids[uuid] = item
+        deduped_question_versions = [
+            seen_uuids[question_map[item['question_id']]]
+            for item in question_versions
+            if item['question_id'] in question_map
+            and seen_uuids.get(question_map[item['question_id']]) == item
+        ]
+
         current_relations = {
             qq.question_id: qq
             for qq in list_quiz_questions(quiz.id)
         }
-        new_id_set = set(deduped_question_ids)
+        new_id_set = {item['question_id'] for item in deduped_question_versions}
         # 移除不再存在的题目
         to_remove = [
             qid for qid in current_relations.keys()
@@ -494,12 +535,20 @@ class QuizService(BaseService):
                 question_ids=to_remove
             )
         # 重新排序/添加缺失的题目
-        for order, question_id in enumerate(deduped_question_ids, start=1):
+        for order, item in enumerate(deduped_question_versions, start=1):
+            question_id = item['question_id']
+            score = item['score']
             relation = current_relations.get(question_id)
             if relation:
+                changed_fields = []
                 if relation.order != order:
                     relation.order = order
-                    relation.save(update_fields=['order'])
+                    changed_fields.append('order')
+                if relation.score != score:
+                    relation.score = score
+                    changed_fields.append('score')
+                if changed_fields:
+                    relation.save(update_fields=changed_fields)
             else:
                 # 验证题目存在
                 question = Question.objects.filter(pk=question_id).first()
@@ -511,7 +560,8 @@ class QuizService(BaseService):
                 self._add_question(
                     quiz_id=quiz.id,
                     question_id=question_id,
-                    order=order
+                    order=order,
+                    score=score,
                 )
 
     def _is_referenced_by_task(self, quiz_id: int) -> bool:
@@ -521,3 +571,28 @@ class QuizService(BaseService):
             return is_referenced(quiz_id, TaskQuiz, 'quiz_id')
         except ImportError:
             return False
+
+    def _normalize_question_versions(
+        self,
+        *,
+        question_versions: Optional[List[dict]] = None,
+        question_ids: Optional[List[int]] = None,
+    ) -> Optional[List[dict[str, Any]]]:
+        if question_versions is None:
+            if question_ids is None:
+                return None
+            return [
+                {'question_id': question_id, 'score': self._get_question_default_score(question_id)}
+                for question_id in question_ids
+            ]
+        return [
+            {
+                'question_id': item['question_id'],
+                'score': item['score'],
+            }
+            for item in question_versions
+        ]
+
+    def _get_question_default_score(self, question_id: int):
+        relation = Question.objects.filter(pk=question_id).only('score').first()
+        return relation.score if relation else 1

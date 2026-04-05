@@ -2,6 +2,7 @@
  * 试卷相关类型定义
  */
 
+import type { SimpleTag } from './common';
 import type { QuestionType } from './common';
 import type { QuestionCreateRequest } from './question';
 
@@ -22,7 +23,13 @@ export interface QuizQuestion {
   order: number;
   score: string;
   resource_uuid: string;
+  version_number: number;
   is_current: boolean;
+  options?: Array<{ key: string; value: string }>;
+  answer?: string | string[];
+  explanation?: string;
+  space_tag?: SimpleTag;
+  tags?: SimpleTag[];
 }
 
 /**
@@ -86,6 +93,7 @@ export interface QuizCreateRequest {
   duration?: number;       // 考试类型必填
   pass_score?: number;     // 考试类型必填
   existing_question_ids?: number[];
+  question_versions?: Array<{ question_id: number; score: string | number }>;
   new_questions?: QuestionCreateRequest[];
 }
 

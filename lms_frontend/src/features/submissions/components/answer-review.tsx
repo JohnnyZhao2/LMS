@@ -95,7 +95,7 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
           <CardTitle>答题详情</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {data.answers.map((answer) => (
+          {data.answers.map((answer, index) => (
             <QuestionCard
               key={answer.id}
               answer={answer}
@@ -103,6 +103,8 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
               onAnswerChange={() => undefined}
               disabled
               showResult
+              questionNumber={index + 1}
+              showScore
             />
           ))}
         </CardContent>

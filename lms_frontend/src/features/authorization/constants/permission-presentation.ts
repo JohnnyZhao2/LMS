@@ -229,7 +229,7 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   },
   'submission.answer': {
     pageLabel: '答题流程',
-    detail: '进入答题页并提交练习或考试答案。',
+    detail: '进入答题页并提交测验或考试答案。',
   },
   'submission.review': {
     pageLabel: '结果查看',

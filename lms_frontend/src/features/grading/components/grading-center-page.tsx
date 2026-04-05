@@ -249,14 +249,14 @@ export const GradingCenterPage: React.FC = () => {
                   >
                     {type === 'EXAM' && <GraduationCap className="h-3 w-3" />}
                     {type === 'PRACTICE' && <BookOpen className="h-3 w-3" />}
-                    {type === 'all' ? '全部' : type === 'EXAM' ? '考试' : '练习'}
+                    {type === 'all' ? '全部' : type === 'EXAM' ? '考试' : '测验'}
                   </button>
                 ))}
               </div>
               <div className="max-h-[350px] space-y-1 overflow-y-auto p-1.5">
                 {filteredQuizzes.length === 0 ? (
                   <div className="py-8 text-center text-sm text-text-muted">
-                    暂无{quizTypeFilter === 'EXAM' ? '考试' : '练习'}类型的试卷
+                    暂无{quizTypeFilter === 'EXAM' ? '考试' : '测验'}类型的试卷
                   </div>
                 ) : (
                   filteredQuizzes.map((quiz) => {

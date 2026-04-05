@@ -147,7 +147,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F6F8FC]">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[#F6F8FC]">
       <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-white/90 backdrop-blur-md">
         <div className={cn(
           STUDENT_SHELL_WIDTH_CLASS,
@@ -294,14 +294,14 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         )}
       </header>
 
-      <main className="min-w-0">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className={cn(
           STUDENT_SHELL_WIDTH_CLASS,
           STUDENT_SHELL_PADDING_CLASS,
-          'flex w-full min-w-0 flex-col py-5 md:py-6 xl:py-7'
+          'flex h-full w-full min-w-0 min-h-0 flex-1 flex-col py-5 md:py-6 xl:py-7'
         )}>
           <GlobalBreadcrumb />
-          <div className="flex flex-col pb-8">
+          <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto">
             {children}
           </div>
         </div>

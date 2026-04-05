@@ -5,11 +5,14 @@ Properties:
 - Property 13: 被引用题目删除保护
 - Property 15: 题目所有权编辑控制
 """
+import uuid
+
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
 from apps.authorization.services import AuthorizationService
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import created_response, list_response, no_content_response, success_response
@@ -38,6 +41,7 @@ class QuestionListCreateView(BaseAPIView):
             OpenApiParameter(name='question_type', type=str, description='题目类型'),
             OpenApiParameter(name='tag_id', type=int, description='题目标签ID'),
             OpenApiParameter(name='search', type=str, description='搜索题目内容'),
+            OpenApiParameter(name='resource_uuid', type=str, description='题目资源 UUID'),
             OpenApiParameter(name='created_by', type=int, description='创建者ID'),
             OpenApiParameter(name='space_tag_id', type=int, description='space ID'),
             OpenApiParameter(name='page', type=int, description='页码'),
@@ -81,6 +85,15 @@ class QuestionListCreateView(BaseAPIView):
         )
         if tag_id is not None:
             filters['tag_id'] = tag_id
+        resource_uuid = request.query_params.get('resource_uuid')
+        if resource_uuid:
+            try:
+                filters['resource_uuid'] = uuid.UUID(resource_uuid)
+            except (TypeError, ValueError):
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='参数 resource_uuid 必须是合法 UUID',
+                )
 
         search = request.query_params.get('search')
 

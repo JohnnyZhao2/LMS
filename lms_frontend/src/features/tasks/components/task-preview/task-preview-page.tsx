@@ -248,7 +248,7 @@ export const TaskPreviewPage: React.FC = () => {
                           )}
                         >
                           {isExam ? <GraduationCap className="w-3 h-3 mr-1" /> : <BookOpen className="w-3 h-3 mr-1" />}
-                          {quiz.quiz_type_display || (isExam ? '考试' : '练习')}
+                          {quiz.quiz_type_display || (isExam ? '考试' : '测验')}
                         </Badge>
                         <div className="flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
                           <Clock className="w-3 h-3 mr-1" />
@@ -301,7 +301,7 @@ export const TaskPreviewPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-bold">提示：</span>
-                  当前选择的是练习/测验试卷。通常此类试卷主要用于学员自测，题目多为客观题（系统自动评分）。请重点关注“考试”类型的试卷进行人工批阅。
+                  当前选择的是测验试卷。通常此类试卷主要用于学员自测，题目多为客观题（系统自动评分）。请重点关注“考试”类型的试卷进行人工批阅。
                 </div>
               </div>
             )}

@@ -186,8 +186,8 @@ export const TagInput: React.FC<TagInputProps> = ({
           gap: 5px;
           background: #e0e3e8;
           border-radius: 100px;
-          padding: 5px 12px;
-          font-size: 13px;
+          padding: 4px 11px;
+          font-size: 12px;
           color: #555;
         }
         .taginput-chip-x {
@@ -255,7 +255,7 @@ export const TagInput: React.FC<TagInputProps> = ({
           border: none;
           background: none;
           padding: 9px 14px;
-          font-size: 13px;
+          font-size: 12px;
           color: #333;
           cursor: pointer;
           font-family: inherit;

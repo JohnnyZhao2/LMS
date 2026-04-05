@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Loader2, Save } from 'lucide-react';
+import { Eye, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { useQuestions } from '@/features/questions/api/get-questions';
 import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import {
-  buildQuestionCreatePayload,
   buildQuestionPatchPayload,
   createBlankEditableQuestion,
   hasQuestionAnswer,
@@ -26,18 +25,30 @@ import {
   syncEditableQuestionItem,
 } from '@/features/questions/components/question-editor-helpers';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { Question, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
+import type { PaginatedResponse, Question, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
 import { useQuizDetail } from '../api/get-quizzes';
-import type { InlineQuestionItem } from '../types';
+import type { InlineQuestionItem, QuizDraftState } from '../types';
 
 import { QuizDocumentEditor } from './quiz-document-editor';
 import { QuizOutlinePanel } from './quiz-outline-panel';
+import { QuizPreviewWorkbench } from './quiz-preview-workbench';
+
+const buildQuizQuestionLibraryPayload = (item: InlineQuestionItem) => ({
+  question_type: item.questionType,
+  content: item.content,
+  options: item.options,
+  answer: item.answer,
+  explanation: item.explanation,
+  space_tag_id: item.spaceTagId ?? null,
+  tag_ids: item.tagIds,
+});
 
 const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => {
   const normalizedScore = normalizeQuestionScore(score);
@@ -51,9 +62,16 @@ const applyScoreOverride = (item: InlineQuestionItem, score: string | number | n
 
 export const QuizForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { roleNavigate } = useRoleNavigate();
+  const { hasPermission } = useAuth();
   const isEdit = !!id;
+  const isPreviewRoute = location.pathname.endsWith('/preview');
+  const routeState = location.state as { quizDraft?: QuizDraftState } | null;
+  const quizDraft = routeState?.quizDraft && (!id || routeState.quizDraft.quizId === Number(id))
+    ? routeState.quizDraft
+    : undefined;
 
   const [title, setTitle] = useState('');
   const [quizType, setQuizType] = useState<QuizType>('PRACTICE');
@@ -90,7 +108,7 @@ export const QuizForm: React.FC = () => {
   const isSubmitting = createQuiz.isPending || updateQuiz.isPending;
 
   const buildSavedLocalItem = useCallback((item: InlineQuestionItem): InlineQuestionItem => {
-    const payload = buildQuestionCreatePayload(item);
+    const payload = buildQuizQuestionLibraryPayload(item);
     const normalizedScore = normalizeQuestionScore(item.score);
 
     return {
@@ -101,26 +119,134 @@ export const QuizForm: React.FC = () => {
     };
   }, []);
 
+  const buildQuizDraft = useCallback((): QuizDraftState => ({
+    quizId: id ? Number(id) : undefined,
+    title,
+    quizType,
+    duration,
+    passScore,
+    items,
+  }), [duration, id, items, passScore, quizType, title]);
+
+  const getCurrentQuestionByResourceUuid = useCallback(async (resourceUuid: string) => {
+    const response = await apiClient.get<PaginatedResponse<Question>>(
+      `/questions/?resource_uuid=${encodeURIComponent(resourceUuid)}&page=1&page_size=1`,
+    );
+    const currentQuestion = response.results[0];
+
+    if (!currentQuestion) {
+      throw new Error('未找到题目的当前版本');
+    }
+
+    return currentQuestion;
+  }, []);
+
+  const loadQuizQuestionItem = useCallback(async (
+    quizQuestion: {
+      question: number;
+      resource_uuid: string;
+      version_number: number;
+      is_current: boolean;
+      score: string;
+      question_content: string;
+      question_type: QuestionType;
+      question_type_display: string;
+      options?: Array<{ key: string; value: string }>;
+      answer?: string | string[];
+      explanation?: string;
+      space_tag?: Question['space_tag'];
+      tags?: Question['tags'];
+    },
+  ) => {
+    const question: Question = {
+      id: quizQuestion.question,
+      resource_uuid: quizQuestion.resource_uuid,
+      version_number: quizQuestion.version_number,
+      is_current: quizQuestion.is_current,
+      content: quizQuestion.question_content,
+      question_type: quizQuestion.question_type,
+      question_type_display: quizQuestion.question_type_display,
+      options: quizQuestion.options ?? [],
+      answer: quizQuestion.answer ?? '',
+      explanation: quizQuestion.explanation ?? '',
+      score: quizQuestion.score,
+      space_tag: quizQuestion.space_tag,
+      tags: quizQuestion.tags ?? [],
+      created_at: '',
+      updated_at: '',
+    };
+
+    return applyScoreOverride(questionToEditableItem(question), quizQuestion.score);
+  }, []);
+
   const persistItemToLibrary = useCallback(async (item: InlineQuestionItem) => {
-    if (item.questionId) {
-      const patchData = buildQuestionPatchPayload(item.original ?? {}, buildQuestionCreatePayload(item));
+    const currentItem = item;
+    const payload = buildQuizQuestionLibraryPayload(currentItem);
+
+    if (currentItem.questionId) {
+      const patchData = buildQuestionPatchPayload(
+        currentItem.original ?? {},
+        payload,
+      );
+      delete patchData.score;
       if (Object.keys(patchData).length === 0) {
+        if (!currentItem.isCurrent && currentItem.syncToBank) {
+          const created = await createQuestion.mutateAsync({
+            ...payload,
+            source_question_id: currentItem.questionId,
+            sync_to_bank: true,
+          });
+          return {
+            item: syncEditableQuestionItem(currentItem, created),
+            changed: true,
+          };
+        }
         return {
-          item: buildSavedLocalItem(item),
+          item: buildSavedLocalItem(currentItem),
           changed: false,
         };
       }
 
-      const updated = await updateQuestion.mutateAsync({ id: item.questionId, data: patchData });
+      if (currentItem.isCurrent) {
+        if (currentItem.syncToBank) {
+          const updated = await updateQuestion.mutateAsync({
+            id: currentItem.questionId,
+            data: { ...patchData, sync_to_bank: true },
+          });
+          return {
+            item: syncEditableQuestionItem(currentItem, updated),
+            changed: true,
+          };
+        }
+
+        const created = await createQuestion.mutateAsync({
+          ...payload,
+          source_question_id: currentItem.questionId,
+          sync_to_bank: false,
+        });
+        return {
+          item: syncEditableQuestionItem(currentItem, created),
+          changed: true,
+        };
+      }
+
+      const created = await createQuestion.mutateAsync({
+        ...payload,
+        source_question_id: currentItem.questionId,
+        sync_to_bank: currentItem.syncToBank,
+      });
       return {
-        item: syncEditableQuestionItem(item, updated),
+        item: syncEditableQuestionItem(currentItem, created),
         changed: true,
       };
     }
 
-    const created = await createQuestion.mutateAsync(buildQuestionCreatePayload(item));
+    const created = await createQuestion.mutateAsync({
+      ...payload,
+      sync_to_bank: currentItem.syncToBank,
+    });
     return {
-      item: syncEditableQuestionItem(item, created),
+      item: syncEditableQuestionItem(currentItem, created),
       changed: true,
     };
   }, [buildSavedLocalItem, createQuestion, updateQuestion]);
@@ -131,15 +257,23 @@ export const QuizForm: React.FC = () => {
     let cancelled = false;
 
     const bootstrap = async () => {
+      if (quizDraft) {
+        setTitle(quizDraft.title);
+        setQuizType(quizDraft.quizType);
+        setDuration(quizDraft.duration);
+        setPassScore(quizDraft.passScore);
+        setItems(quizDraft.items);
+        setActiveKey(quizDraft.items[0]?.key ?? null);
+        initializedRef.current = true;
+        return;
+      }
+
       if (isEdit) {
         if (!quizData) return;
 
         const sorted = [...(quizData.questions ?? [])].sort((a, b) => a.order - b.order);
         const loadedItems = await Promise.all(
-          sorted.map(async (quizQuestion) => {
-            const question = await apiClient.get<Question>(`/questions/${quizQuestion.question}/`);
-            return applyScoreOverride(questionToEditableItem(question), quizQuestion.score);
-          }),
+          sorted.map(loadQuizQuestionItem),
         );
 
         if (cancelled) return;
@@ -178,7 +312,7 @@ export const QuizForm: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isEdit, quizData, searchParams]);
+  }, [isEdit, loadQuizQuestionItem, quizData, quizDraft, searchParams]);
 
   const filteredQuestionsData = useMemo(() => {
     if (!questionsData) return undefined;
@@ -217,6 +351,14 @@ export const QuizForm: React.FC = () => {
     setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch, saved: false } : item)));
   }, []);
 
+  const handleToggleSyncToBank = useCallback((key: string) => {
+    setItems((prev) => prev.map((item) => (
+      item.key === key
+        ? { ...item, syncToBank: !item.syncToBank, saved: false }
+        : item
+    )));
+  }, []);
+
   const handleRemoveItem = useCallback((key: string) => {
     setItems((prev) => prev.filter((item) => item.key !== key));
     setActiveKey((current) => (current === key ? null : current));
@@ -239,6 +381,23 @@ export const QuizForm: React.FC = () => {
       showApiError(error);
     }
   }, []);
+
+  const handleUpgradeToLatest = useCallback(async (key: string) => {
+    const item = items.find((current) => current.key === key);
+    if (!item?.resourceUuid) return;
+
+    try {
+      const currentQuestion = await getCurrentQuestionByResourceUuid(item.resourceUuid);
+      const upgraded = syncEditableQuestionItem(
+        { key: item.key, score: item.score, syncToBank: true },
+        currentQuestion,
+      );
+      setItems((prev) => prev.map((current) => (current.key === key ? upgraded : current)));
+      toast.success('已更新到题库最新版本');
+    } catch (error) {
+      showApiError(error);
+    }
+  }, [getCurrentQuestionByResourceUuid, items]);
 
   const handleSaveItem = useCallback(async (key: string) => {
     const item = items.find((current) => current.key === key);
@@ -288,7 +447,10 @@ export const QuizForm: React.FC = () => {
         quiz_type: quizType,
         duration: quizType === 'EXAM' ? duration : undefined,
         pass_score: quizType === 'EXAM' ? passScore : undefined,
-        existing_question_ids: savedItems.map((item) => item.questionId!),
+        question_versions: savedItems.map((item) => ({
+          question_id: item.questionId!,
+          score: normalizeQuestionScore(item.score),
+        })),
       };
 
       if (isEdit) {
@@ -303,6 +465,27 @@ export const QuizForm: React.FC = () => {
       showApiError(error);
     }
   };
+
+  if (isPreviewRoute && isEdit) {
+    return (
+      <EditorPageShell>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <QuizPreviewWorkbench
+            quizId={Number(id)}
+            quizDraft={quizDraft}
+            onEdit={
+              hasPermission('quiz.update')
+                ? (targetQuizId) => roleNavigate(`${ROUTES.QUIZZES}/${targetQuizId}/edit`, {
+                  state: quizDraft ? { quizDraft } : undefined,
+                })
+                : undefined
+            }
+            className="h-full"
+          />
+        </div>
+      </EditorPageShell>
+    );
+  }
 
   return (
     <EditorPageShell>
@@ -352,14 +535,29 @@ export const QuizForm: React.FC = () => {
                 />
               </div>
 
-              <Button
-                onClick={handleSubmitQuiz}
-                disabled={isSubmitting}
-                className="relative z-10 h-9 shrink-0 rounded-lg bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
-              >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                保存试卷
-              </Button>
+              <div className="relative z-10 flex shrink-0 items-center gap-2">
+                {isEdit ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => roleNavigate(`${ROUTES.QUIZZES}/${id}/preview`, {
+                      state: { quizDraft: buildQuizDraft() },
+                    })}
+                    className="h-9 rounded-lg px-4 text-[12px] font-semibold"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    预览试卷
+                  </Button>
+                ) : null}
+                <Button
+                  onClick={handleSubmitQuiz}
+                  disabled={isSubmitting}
+                  className="h-9 rounded-lg bg-foreground px-4 text-[12px] font-semibold text-background hover:bg-foreground/90"
+                >
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  保存试卷
+                </Button>
+              </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden bg-background">
@@ -371,9 +569,11 @@ export const QuizForm: React.FC = () => {
                 onSaveItem={handleSaveItem}
                 onRemoveItem={handleRemoveItem}
                 onReorderItems={handleReorderItems}
-                onAddBlank={handleAddBlank}
-                onFocusItem={setActiveKey}
-                savingItemKey={savingItemKey}
+              onAddBlank={handleAddBlank}
+              onFocusItem={setActiveKey}
+              savingItemKey={savingItemKey}
+              onToggleSyncToBank={handleToggleSyncToBank}
+              onUpgradeToLatest={handleUpgradeToLatest}
               />
             </div>
           </div>

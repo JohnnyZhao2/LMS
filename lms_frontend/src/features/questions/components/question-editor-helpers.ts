@@ -1,4 +1,4 @@
-import { ensureChoiceOptions } from './question-document-core';
+import { ensureChoiceOptions } from '@/features/questions/constants';
 
 import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
 
@@ -17,6 +17,7 @@ export interface EditableQuestionItem {
   questionId: number | null;
   resourceUuid: string | null;
   isCurrent: boolean;
+  syncToBank: boolean;
   questionType: QuestionType;
   spaceTagId?: number | null;
   content: string;
@@ -121,6 +122,7 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
     questionId: question.id,
     resourceUuid: question.resource_uuid,
     isCurrent: question.is_current,
+    syncToBank: question.is_current,
     questionType: question.question_type,
     spaceTagId: question.space_tag?.id ?? null,
     content: question.content,
@@ -139,7 +141,7 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
 };
 
 export const syncEditableQuestionItem = (
-  source: Pick<EditableQuestionItem, 'key' | 'score'>,
+  source: Pick<EditableQuestionItem, 'key' | 'score' | 'syncToBank'>,
   question: Question,
   scoreOverride?: string | number | null,
 ): EditableQuestionItem => {
@@ -147,6 +149,7 @@ export const syncEditableQuestionItem = (
   const resolvedScore = normalizeQuestionScore(scoreOverride ?? source.score ?? next.score);
 
   next.score = resolvedScore;
+  next.syncToBank = source.syncToBank;
   if (next.original) {
     next.original.score = resolvedScore;
   }
@@ -165,6 +168,7 @@ export const createBlankEditableQuestion = (
     questionId: null,
     resourceUuid: null,
     isCurrent: true,
+    syncToBank: true,
     questionType,
     spaceTagId,
     content: '',

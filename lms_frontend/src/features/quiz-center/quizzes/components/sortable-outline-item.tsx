@@ -15,6 +15,7 @@ interface SortableOutlineItemProps {
   isActive: boolean;
   onSelect: () => void;
   isOverlay?: boolean;
+  dragDisabled?: boolean;
 }
 
 export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
@@ -23,10 +24,11 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
   isActive,
   onSelect,
   isOverlay = false,
+  dragDisabled = false,
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.key,
-    disabled: isOverlay,
+    disabled: isOverlay || dragDisabled,
   });
   const style = getQuestionTypeStyle(item.questionType);
   const cardStyle = {
@@ -47,6 +49,7 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
       isDraggingSource={isDragging && !isOverlay}
       isOverlay={isOverlay}
       style={style}
+      dragDisabled={dragDisabled}
     />
   );
 };
@@ -62,6 +65,7 @@ interface OutlineItemCardProps {
   isDraggingSource?: boolean;
   isOverlay?: boolean;
   style?: ReturnType<typeof getQuestionTypeStyle>;
+  dragDisabled?: boolean;
 }
 
 const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
@@ -75,6 +79,7 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
   isDraggingSource = false,
   isOverlay = false,
   style = getQuestionTypeStyle(item.questionType),
+  dragDisabled = false,
 }) => (
     <div
       ref={setNodeRef}
@@ -100,16 +105,18 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
           {richTextToPreviewText(item.content || '') || '未填写题目'}
         </p>
       </div>
-      <button
-        type="button"
-        aria-label={`拖动排序第${index + 1}题`}
-        className={cn(
-          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-muted hover:text-foreground',
-          isDraggingSource || isOverlay ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
-        )}
-        {...dragButtonProps}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {dragDisabled ? null : (
+        <button
+          type="button"
+          aria-label={`拖动排序第${index + 1}题`}
+          className={cn(
+            'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-muted hover:text-foreground',
+            isDraggingSource || isOverlay ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
+          )}
+          {...dragButtonProps}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );

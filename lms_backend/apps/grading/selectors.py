@@ -29,7 +29,7 @@ def get_latest_answers(task, question_id, quiz_id):
     return get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id)
 
 
-def calculate_question_pass_rate(task, question, quiz_id):
+def calculate_question_pass_rate(task, question_id, quiz_id, max_score, is_objective):
     """
     计算题目通过率
     规则：
@@ -37,9 +37,9 @@ def calculate_question_pass_rate(task, question, quiz_id):
     2. 主观题：通过数(graded & >=60%) / 总已评分数 (graded)
        注意：主观题分母不包含等待评分的记录，避免拉低通过率
     """
-    answers = get_latest_answers(task, question.id, quiz_id)
+    answers = get_latest_answers(task, question_id, quiz_id)
 
-    if question.is_objective:
+    if is_objective:
         total_count = answers.count()
         if total_count == 0:
             return None
@@ -51,7 +51,7 @@ def calculate_question_pass_rate(task, question, quiz_id):
     if total_count == 0:
         return None
 
-    score_threshold = float(question.score) * 0.6
+    score_threshold = float(max_score) * 0.6
     correct_count = graded_answers.filter(
         obtained_score__gte=score_threshold
     ).count()

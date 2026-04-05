@@ -152,7 +152,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
   };
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={optionIds} strategy={verticalListSortingStrategy}>
           {value.map((opt, index) => (
@@ -180,7 +180,7 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
           size="sm"
           onClick={handleAdd}
           className={cn(
-            'h-8 w-fit px-1 text-[12px] font-medium text-primary-600 hover:bg-transparent hover:text-primary-700',
+            'mt-1 flex h-5 w-[14px] items-center justify-center p-0 text-[12px] font-medium text-primary-600 hover:bg-transparent hover:text-primary-700',
           )}
         >
           <Plus className="w-3.5 h-3.5" />

@@ -124,7 +124,7 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
     def is_subjective(self):
         """是否为主观题（需人工评分）"""
         return self.question_type == 'SHORT_ANSWER'
-    def check_answer(self, user_answer):
+    def check_answer(self, user_answer, full_score=None):
         """
         检查用户答案是否正确（仅适用于客观题）
         Args:
@@ -148,5 +148,6 @@ class Question(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceM
             is_correct = user_answer == self.answer
         else:
             is_correct = False
-        obtained_score = self.score if is_correct else Decimal('0')
+        resolved_score = self.score if full_score is None else Decimal(str(full_score))
+        obtained_score = resolved_score if is_correct else Decimal('0')
         return is_correct, obtained_score

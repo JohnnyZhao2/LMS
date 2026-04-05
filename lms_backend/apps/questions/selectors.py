@@ -26,6 +26,8 @@ def apply_question_filters(
     search: str = None
 ) -> QuerySet:
     if filters:
+        if filters.get('resource_uuid'):
+            qs = qs.filter(resource_uuid=filters['resource_uuid'])
         if filters.get('question_type'):
             qs = qs.filter(question_type=filters['question_type'])
         if filters.get('created_by_id'):

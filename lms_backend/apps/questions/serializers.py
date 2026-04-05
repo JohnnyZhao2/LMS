@@ -90,11 +90,14 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     """
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
+    source_question_id = serializers.IntegerField(write_only=True, required=False)
+    sync_to_bank = serializers.BooleanField(write_only=True, required=False, default=True)
     class Meta:
         model = Question
         fields = [
             'content', 'question_type', 'options', 'answer',
-            'explanation', 'score', 'space_tag_id', 'tag_ids'
+            'explanation', 'score', 'space_tag_id', 'tag_ids',
+            'source_question_id', 'sync_to_bank',
         ]
 
     def validate_space_tag_id(self, value):
@@ -102,6 +105,11 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
     def validate_tag_ids(self, value):
         return validate_question_tag_ids(value)
+
+    def validate_source_question_id(self, value):
+        if not Question.objects.filter(id=value, is_deleted=False).exists():
+            raise serializers.ValidationError('来源题目不存在')
+        return value
 
 
 class QuestionUpdateSerializer(serializers.ModelSerializer):
@@ -111,11 +119,12 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
     """
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    sync_to_bank = serializers.BooleanField(write_only=True, required=False, default=True)
     class Meta:
         model = Question
         fields = [
             'content', 'options', 'answer', 'explanation',
-            'score', 'space_tag_id', 'tag_ids'
+            'score', 'space_tag_id', 'tag_ids', 'sync_to_bank'
         ]
 
     def validate_space_tag_id(self, value):

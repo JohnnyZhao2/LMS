@@ -23,7 +23,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     )
     question_options = serializers.JSONField(source='question.options', read_only=True)
     question_score = serializers.DecimalField(
-        source='question.score', max_digits=5, decimal_places=2, read_only=True
+        source='max_score', max_digits=5, decimal_places=2, read_only=True
     )
     correct_answer = serializers.JSONField(source='question.answer', read_only=True)
     explanation = serializers.CharField(source='question.explanation', read_only=True)

@@ -27,6 +27,7 @@ interface QuizOutlinePanelProps {
   title?: string;
   duration?: number;
   passScore?: number;
+  readOnly?: boolean;
   onSelectItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
   onDurationChange: (value?: number) => void;
@@ -40,6 +41,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   title = '试卷结构',
   duration,
   passScore,
+  readOnly = false,
   onSelectItem,
   onReorderItems,
   onDurationChange,
@@ -180,40 +182,65 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
               <Clock3 className="h-3.5 w-3.5" />
               时间限制
             </div>
-            <CompactNumberInput
-              value={duration ? String(duration) : ''}
-              onChange={(value) => onDurationChange(parseIntegerValue(value))}
-              min={1}
-              step={1}
-              unit="分"
-              dividerBeforeUnit
-              inputWidthClassName="w-10"
-              inputClassName="text-[12px] font-semibold"
-              className="w-[88px] justify-center gap-1.5 bg-muted px-2"
-            />
+            {readOnly ? (
+              <div className="inline-flex h-8 min-w-[88px] items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
+                {duration || 0} 分
+              </div>
+            ) : (
+              <CompactNumberInput
+                value={duration ? String(duration) : ''}
+                onChange={(value) => onDurationChange(parseIntegerValue(value))}
+                min={1}
+                step={1}
+                unit="分"
+                dividerBeforeUnit
+                inputWidthClassName="w-10"
+                inputClassName="text-[12px] font-semibold"
+                className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+              />
+            )}
           </div>
           <div className="flex items-center justify-between text-[12px]">
             <div className="flex items-center gap-1.5 font-medium text-text-muted">
               <Target className="h-3.5 w-3.5" />
               及格分数
             </div>
-            <CompactNumberInput
-              value={passScore ? String(passScore) : ''}
-              onChange={(value) => onPassScoreChange(parseIntegerValue(value))}
-              min={1}
-              step={1}
-              unit="分"
-              dividerBeforeUnit
-              inputWidthClassName="w-10"
-              inputClassName="text-[12px] font-semibold"
-              className="w-[88px] justify-center gap-1.5 bg-muted px-2"
-            />
+            {readOnly ? (
+              <div className="inline-flex h-8 min-w-[88px] items-center justify-center rounded-lg bg-muted px-3 text-[12px] font-semibold text-foreground">
+                {passScore || 0} 分
+              </div>
+            ) : (
+              <CompactNumberInput
+                value={passScore ? String(passScore) : ''}
+                onChange={(value) => onPassScoreChange(parseIntegerValue(value))}
+                min={1}
+                step={1}
+                unit="分"
+                dividerBeforeUnit
+                inputWidthClassName="w-10"
+                inputClassName="text-[12px] font-semibold"
+                className="w-[88px] justify-center gap-1.5 bg-muted px-2"
+              />
+            )}
           </div>
         </div>
       )}
       <ScrollContainer className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="h-full" />
+        ) : readOnly ? (
+          <div className="space-y-2.5 px-5 py-4">
+            {items.map((item, idx) => (
+              <SortableOutlineItem
+                key={item.key}
+                item={item}
+                index={idx}
+                isActive={item.key === activeKey}
+                onSelect={() => onSelectItem(item.key)}
+                dragDisabled
+              />
+            ))}
+          </div>
         ) : (
           <DndContext
             sensors={sensors}

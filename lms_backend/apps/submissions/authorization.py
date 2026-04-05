@@ -11,7 +11,7 @@ AUTHORIZATION_SPECS = (
             PermissionDefinition(
                 code='submission.answer',
                 name='答题提交',
-                description='参与练习或考试并提交答案',
+                description='参与测验或考试并提交答案',
             ),
             PermissionDefinition(
                 code='submission.review',

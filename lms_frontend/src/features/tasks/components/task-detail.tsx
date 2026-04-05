@@ -425,7 +425,7 @@ export const TaskDetail: React.FC = () => {
                                   ? "bg-secondary-100/50 text-secondary-700"
                                   : (isExam ? "bg-warning-100/50 text-warning-700" : "bg-primary-100/50 text-primary-700")
                               )}>
-                                {item.quiz_type_display || (isExam ? '考试' : '练习')}
+                                {item.quiz_type_display || (isExam ? '考试' : '测验')}
                               </Badge>
                               <h4 className={cn(
                                 "text-lg font-bold tracking-tight leading-none transition-colors",

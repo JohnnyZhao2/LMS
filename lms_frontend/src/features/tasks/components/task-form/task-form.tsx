@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { FileText, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,10 @@ import { TaskConfigurationPanel } from './task-configuration-panel';
 import { TASK_FORM_WORKBENCH_CLASSNAME } from './task-form.constants';
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
+import { QuizPreviewDialog } from '@/features/quiz-center/quizzes/components/quiz-preview-dialog';
 
 export const TaskForm: React.FC = () => {
+  const [previewQuizId, setPreviewQuizId] = useState<number | null>(null);
   const {
     isEdit,
     taskError,
@@ -89,6 +92,7 @@ export const TaskForm: React.FC = () => {
               setCurrentPage(1);
             }}
             onResourceAdd={addResource}
+            onQuizPreview={setPreviewQuizId}
             resourcesDisabled={resourcesDisabled}
             totalResourceCount={totalResourceCount}
             pageSize={resourcePageSize}
@@ -146,6 +150,23 @@ export const TaskForm: React.FC = () => {
           />
         </div>
       </div>
+
+      <QuizPreviewDialog
+        open={previewQuizId !== null}
+        quizId={previewQuizId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreviewQuizId(null);
+          }
+        }}
+        onPrimaryAction={(quizId) => {
+          const target = availableResources.find((resource) => resource.resourceType === 'QUIZ' && resource.id === quizId);
+          if (target) {
+            addResource(target);
+          }
+          setPreviewQuizId(null);
+        }}
+      />
     </EditorPageShell>
   );
 };

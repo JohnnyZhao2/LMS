@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, GripVertical, X } from 'lucide-react';
 
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/api';
 
@@ -45,7 +45,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-center gap-2 will-change-transform',
+        'group flex items-start gap-2.5 will-change-transform',
         isDragging && 'relative z-10',
       )}
     >
@@ -55,7 +55,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         disabled={disabled}
         aria-label={`${selected ? '取消' : '设为'}${isSingleChoice ? '正确答案' : '正确选项'} ${optionKey}`}
         className={cn(
-          'flex h-[14px] w-[14px] shrink-0 items-center justify-center border transition-all duration-150',
+          'mt-[14px] flex h-[14px] w-[14px] shrink-0 items-center justify-center border transition-all duration-150',
           disabled ? 'cursor-default' : 'cursor-pointer',
           isSingleChoice ? 'rounded-full' : 'rounded-[7px]',
           selected
@@ -76,48 +76,57 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         ) : null}
       </button>
 
-      <Input
-        value={optionValue}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder=""
-        interactionStyle="minimal"
+      <div
         className={cn(
-          'h-7 flex-1 rounded-lg border border-transparent px-3 text-[13px] shadow-none placeholder:text-text-muted/35 transition-[border-color,box-shadow,background-color,color] duration-200 focus-visible:ring-0',
+          'flex min-h-[42px] flex-1 items-start gap-1.5 rounded-xl border px-3.5 py-2.5',
           selected
-            ? 'border-primary-300 bg-interaction-surface-strong text-foreground shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]'
-            : 'bg-interaction-surface-strong',
-          'hover:border-transparent hover:bg-interaction-surface-strong focus:border-primary-300 focus:bg-interaction-surface-strong focus:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]',
+            ? 'border-primary-300 bg-primary-50/70'
+            : 'border-border bg-background',
         )}
-        readOnly={disabled}
-      />
+      >
+        <Textarea
+          autoResize
+          rows={1}
+          value={optionValue}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder=""
+          interactionStyle="minimal"
+          className={cn(
+            'min-h-[20px] min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1 py-0 text-[14px] leading-5 break-all shadow-none placeholder:text-text-muted/35 transition-[border-color,box-shadow,background-color,color] duration-200 focus-visible:ring-0',
+            'hover:border-transparent hover:bg-transparent focus:border-transparent focus:bg-transparent focus:shadow-none',
+            'resize-none',
+          )}
+          readOnly={disabled}
+        />
 
-      <div className="flex items-center gap-0.5">
-        {canRemove && !disabled && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className={cn(
-              'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md',
-              'text-text-muted/45 transition-colors hover:bg-destructive/10 hover:text-destructive',
-            )}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        )}
-        {!disabled && (
-          <button
-            type="button"
-            aria-label={`拖动排序选项 ${optionKey}`}
-            className={cn(
-              'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-interaction-surface-strong hover:text-foreground',
-              isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
-            )}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-0.5 self-start pt-0.5">
+          {canRemove && !disabled && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className={cn(
+                'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md',
+                'text-text-muted/45 transition-colors hover:bg-destructive/10 hover:text-destructive',
+              )}
+            >
+              <X className="h-[11px] w-[11px]" />
+            </button>
+          )}
+          {!disabled && (
+            <button
+              type="button"
+              aria-label={`拖动排序选项 ${optionKey}`}
+              className={cn(
+                'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md text-text-muted transition hover:bg-interaction-surface-strong hover:text-foreground',
+                isDragging ? 'cursor-grabbing' : 'cursor-grab active:cursor-grabbing',
+              )}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-[11px] w-[11px]" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

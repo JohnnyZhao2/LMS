@@ -118,7 +118,7 @@ export const MentorDashboard: React.FC = () => {
               />
               <ActionCard
                 title="发布任务"
-                description="创建学习/练习/考试任务"
+                description="创建学习/测验/考试任务"
                 icon={Send}
                 route={`${ROUTES.TASKS}/create`}
                 actionColor="indigo"
@@ -126,7 +126,7 @@ export const MentorDashboard: React.FC = () => {
               />
               <ActionCard
                 title="新建试卷"
-                description="创建新的考试或练习试卷"
+                description="创建新的考试或测验试卷"
                 icon={Plus}
                 route={`${ROUTES.QUIZZES}/create`}
                 actionColor="emerald"

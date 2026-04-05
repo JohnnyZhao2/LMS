@@ -13,7 +13,7 @@ from apps.grading.serializers import (
     GradingSubmitSerializer,
     PendingTaskSerializer,
 )
-from apps.questions.models import Question
+from apps.quizzes.models import QuizQuestion
 from apps.tasks.models import Task
 from apps.tasks.task_service import TaskService
 from core.base_view import BaseAPIView
@@ -67,20 +67,27 @@ class GradingQuestionsView(GradingBaseView):
 
     def _get_grading_questions(self, task, quiz_id):
         """获取阅卷中心题目列表"""
-        questions = Question.objects.filter(
-            question_quizzes__quiz_id=quiz_id
-        ).distinct().order_by('question_quizzes__order')
+        relations = QuizQuestion.objects.filter(
+            quiz_id=quiz_id
+        ).select_related('question').order_by('order')
 
         results = []
-        for question in questions:
-            pass_rate = calculate_question_pass_rate(task, question, quiz_id)
+        for relation in relations:
+            question = relation.question
+            pass_rate = calculate_question_pass_rate(
+                task,
+                question.id,
+                quiz_id,
+                relation.score,
+                question.is_objective,
+            )
             results.append({
                 'question_id': question.id,
                 'question_text': question.content,
                 'question_analysis': question.explanation or '',
                 'question_type': question.question_type,
                 'question_type_display': question.get_question_type_display(),
-                'max_score': float(question.score),
+                'max_score': float(relation.score),
                 'pass_rate': pass_rate,
             })
 
@@ -115,21 +122,28 @@ class GradingAnswersView(GradingBaseView):
 
     def _get_grading_answers(self, task, question_id, quiz_id):
         """获取题目分析详情"""
-        question = Question.objects.filter(
-            id=question_id,
-            question_quizzes__quiz_id=quiz_id
+        relation = QuizQuestion.objects.select_related('question').filter(
+            quiz_id=quiz_id,
+            question_id=question_id,
         ).first()
-        if not question:
+        if not relation:
             raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='未找到对应题目或题目不属于该试卷'
             )
+        question = relation.question
         answers = get_latest_answers(task, question_id, quiz_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
 
-        pass_rate = calculate_question_pass_rate(task, question, quiz_id)
+        pass_rate = calculate_question_pass_rate(
+            task,
+            question.id,
+            quiz_id,
+            relation.score,
+            question.is_objective,
+        )
 
         if question.is_objective:
             return {
@@ -262,10 +276,10 @@ class GradingSubmitView(GradingBaseView):
                 message='未找到对应的答案记录'
             )
 
-        if score < 0 or score > float(answer.question.score):
+        if score < 0 or score > float(answer.max_score):
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
-                message=f'分数必须在 0 到 {answer.question.score} 之间'
+                message=f'分数必须在 0 到 {answer.max_score} 之间'
             )
 
         answer.grade(grader=grader, score=score, comment=comments)
@@ -282,7 +296,7 @@ class PendingQuizzesView(GradingBaseView):
                 name='quiz_type',
                 type=str,
                 required=False,
-                description='试卷类型筛选: EXAM(考试) / PRACTICE(练习)'
+                description='试卷类型筛选: EXAM(考试) / PRACTICE(测验)'
             ),
         ],
         responses={

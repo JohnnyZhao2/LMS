@@ -38,7 +38,7 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         verbose_name='题目'
     )
     QUIZ_TYPE_CHOICES = [
-        ('PRACTICE', '练习'),
+        ('PRACTICE', '测验'),
         ('EXAM', '考试'),
     ]
     # 试卷类型
@@ -98,7 +98,7 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
         """
         from django.db.models import Sum
         result = self.quiz_questions.aggregate(
-            total=Sum('question__score')
+            total=Sum('score')
         )
         return result['total'] or 0
     @property
@@ -186,6 +186,12 @@ class QuizQuestion(TimestampMixin, models.Model):
     order = models.PositiveIntegerField(
         default=1,
         verbose_name='顺序'
+    )
+    score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=1.0,
+        verbose_name='本卷分值',
     )
     class Meta:
         db_table = 'lms_quiz_question'

@@ -951,12 +951,12 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           padding: 22px 20px 16px;
         }
         .kd-title {
-          font-size: 17px; font-weight: 400; color: #6a7a8a;
+          font-size: 16px; font-weight: 400; color: #6a7a8a;
           margin: 0; line-height: 1.3; letter-spacing: -0.01em;
         }
         .kd-title-input {
           width: 100%; border: none; background: none; outline: none;
-          font-size: 17px; font-weight: 400; color: #6a7a8a;
+          font-size: 16px; font-weight: 400; color: #6a7a8a;
           margin-bottom: 5px; line-height: 1.3;
           font-family: inherit; padding: 0;
         }
@@ -1109,11 +1109,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         }
 
         /* Tags */
-        .kd-tags { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+        .kd-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
         .kd-tag {
           display: inline-flex; align-items: center; gap: 5px;
           background: #e0e3e8; border-radius: 100px;
-          padding: 5px 12px; font-size: 13px; color: #555;
+          padding: 4px 11px; font-size: 12px; color: #555;
         }
         .kd-tag-remove {
           background: none; border: none; cursor: pointer;
@@ -1123,7 +1123,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         .kd-tag-remove:hover { color: #666; }
         .kd-add-tag-btn {
           background: #e8793a; border: none; border-radius: 100px;
-          padding: 6px 16px; font-size: 13px; color: #fff;
+          padding: 5px 14px; font-size: 12px; color: #fff;
           cursor: pointer; font-family: inherit; font-weight: 600;
           display: inline-flex; align-items: center; gap: 4px;
           transition: background 0.15s;

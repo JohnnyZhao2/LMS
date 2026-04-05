@@ -274,6 +274,14 @@ class Answer(TimestampMixin, models.Model):
         if self.is_objective:
             return True  # 客观题自动评分
         return self.graded_by is not None
+
+    @property
+    def max_score(self):
+        relation = self.submission.quiz.quiz_questions.filter(
+            question_id=self.question_id
+        ).only('score').first()
+        return relation.score if relation else self.question.score
+
     def auto_grade(self):
         """
         自动评分（仅适用于客观题）
@@ -281,7 +289,10 @@ class Answer(TimestampMixin, models.Model):
         """
         if self.is_subjective:
             return  # 主观题不自动评分
-        is_correct, score = self.question.check_answer(self.user_answer)
+        is_correct, score = self.question.check_answer(
+            self.user_answer,
+            full_score=self.max_score,
+        )
         self.is_correct = is_correct
         self.obtained_score = score
         self.save(update_fields=['is_correct', 'obtained_score'])
@@ -296,15 +307,15 @@ class Answer(TimestampMixin, models.Model):
         if self.is_objective:
             raise ValidationError('客观题不需要人工评分')
         score_decimal = Decimal(str(score))
-        if score_decimal < 0 or score_decimal > self.question.score:
-            raise ValidationError(f'分数必须在 0 到 {self.question.score} 之间')
+        if score_decimal < 0 or score_decimal > self.max_score:
+            raise ValidationError(f'分数必须在 0 到 {self.max_score} 之间')
         self.graded_by = grader
         self.graded_at = timezone.now()
         self.obtained_score = score_decimal
         self.comment = comment
         # 主观题的正确性由评分人判断
         # 如果得分等于满分，认为是正确的
-        self.is_correct = (self.obtained_score == self.question.score)
+        self.is_correct = (self.obtained_score == self.max_score)
         self.save()
         # 检查是否所有主观题都已评分
         submission = self.submission

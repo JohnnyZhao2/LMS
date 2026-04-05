@@ -39,18 +39,18 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   const { data: spaceTypes = [] } = useSpaceTypeTags();
 
   React.useEffect(() => {
-    if (!open) {
-      setShowSpaceInfo(false);
-      setShowTagInput(false);
-    }
-  }, [open]);
-
-  React.useEffect(() => {
     setPreviewQuestion(question);
     setActiveTags(question?.tags ?? []);
     setActiveSpaceTag(question?.space_tag ?? null);
     setScoreDraft(question?.score ?? '1');
   }, [question]);
+
+  React.useEffect(() => {
+    if (!open) {
+      setShowSpaceInfo(false);
+      setShowTagInput(false);
+    }
+  }, [open]);
 
   if (!question) {
     return null;
@@ -123,15 +123,15 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showClose={false}
-        className="flex h-[min(780px,88vh)] w-[min(1360px,90vw)] max-w-none gap-[10px] overflow-hidden rounded-[6px] border-0 bg-[#f1f3f6] p-[10px] shadow-[0_40px_100px_rgba(0,0,0,0.35)]"
+        className="flex h-[min(700px,84vh)] w-[min(1180px,84vw)] max-w-none gap-3 overflow-hidden rounded-[6px] border-0 bg-[#f1f3f6] p-3 shadow-[0_32px_84px_rgba(0,0,0,0.28)]"
       >
-        <ScrollContainer className="flex min-h-0 flex-1 flex-col rounded-[6px] bg-white px-[76px] py-[56px] shadow-[0_10px_24px_rgba(21,38,61,0.07)]">
-          <div className="mx-auto flex min-h-full w-full max-w-[920px] flex-col py-2">
+        <ScrollContainer className="flex min-h-0 flex-1 flex-col rounded-[6px] bg-white px-[40px] py-[32px] shadow-[0_10px_24px_rgba(21,38,61,0.07)]">
+          <div className="mx-auto flex min-h-full w-full max-w-[960px] items-center justify-center">
             <QuestionPreviewSurface
               question={activeQuestion}
               editable
               saving={updateQuestion.isPending}
-              className="pb-10"
+              className="w-full"
               onSaveContent={async (content) => {
                 await syncPreviewQuestion({ content });
               }}
@@ -148,10 +148,10 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
           </div>
         </ScrollContainer>
 
-        <div className="relative flex min-h-0 w-[320px] shrink-0 flex-col overflow-hidden rounded-[6px] bg-[#eef2f6] shadow-[0_10px_24px_rgba(21,38,61,0.08)]">
+        <div className="relative flex min-h-0 w-[300px] shrink-0 flex-col overflow-hidden rounded-[6px] bg-[#eef2f6] shadow-[0_10px_24px_rgba(21,38,61,0.08)]">
           <div className="bg-[linear-gradient(160deg,#dce4ee_0%,#eef0f3_100%)] px-5 pb-4 pt-[22px]">
             <div className="flex items-center justify-between">
-              <h2 className="m-0 text-[17px] font-normal leading-[1.3] tracking-[-0.01em] text-[#6a7a8a]">
+              <h2 className="m-0 text-[16px] font-normal leading-[1.3] tracking-[-0.01em] text-[#6a7a8a]">
                 {getQuestionTypeLabel(question.question_type)}
               </h2>
               <CompactNumberInput
@@ -164,7 +164,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                 step={0.5}
                 inputWidthClassName="w-10"
                 className="h-7 gap-1 rounded-md bg-transparent px-0 py-0"
-                inputClassName="text-right text-[12px] text-[#9aa0aa]"
+                inputClassName="text-right text-[11px] text-[#9aa0aa]"
                 prefixClassName="hidden"
               />
             </div>
@@ -198,7 +198,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowTagInput((value) => !value)}
-                    className="inline-flex items-center gap-1 rounded-[100px] bg-[#e8793a] px-4 py-[6px] text-[13px] font-semibold text-white transition hover:bg-[#d66b2e]"
+                    className="inline-flex items-center gap-1 rounded-[100px] bg-[#e8793a] px-[14px] py-[5px] text-[12px] font-semibold text-white transition hover:bg-[#d66b2e]"
                   >
                     <Plus className="h-3 w-3" strokeWidth={2.2} />
                     添加标签
@@ -206,7 +206,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   {activeTags.map((tag) => (
                     <span
                       key={tag.id}
-                      className="inline-flex items-center gap-[5px] rounded-[100px] bg-[#e0e3e8] px-3 py-[5px] text-[13px] text-[#555]"
+                      className="inline-flex items-center gap-[5px] rounded-[100px] bg-[#e0e3e8] px-[11px] py-1 text-[12px] text-[#555]"
                     >
                       {tag.name}
                       <button

@@ -13,3 +13,12 @@ export interface QuizQuestionItem {
 }
 
 export type InlineQuestionItem = EditableQuestionItem;
+
+export interface QuizDraftState {
+  quizId?: number;
+  title: string;
+  quizType: 'PRACTICE' | 'EXAM';
+  duration?: number;
+  passScore?: number;
+  items: InlineQuestionItem[];
+}

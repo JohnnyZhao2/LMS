@@ -112,6 +112,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         
         # 2. 提取数据
         validated_data = serializer.validated_data
+        question_versions = validated_data.pop('question_versions', [])
         existing_question_ids = validated_data.pop('existing_question_ids', [])
         new_questions_data = validated_data.pop('new_questions', [])
         
@@ -119,6 +120,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         try:
             quiz = self.service.create(
                 data=validated_data,
+                question_versions=question_versions,
                 existing_question_ids=existing_question_ids,
                 new_questions_data=new_questions_data
             )
@@ -195,6 +197,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
 
         # 2. 提取数据
         validated_data = serializer.validated_data
+        question_versions = validated_data.pop('question_versions', None)
         question_ids = validated_data.pop('existing_question_ids', None)
         add_question_ids = validated_data.pop('add_question_ids', [])
         new_questions_data = validated_data.pop('new_questions', [])
@@ -205,6 +208,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
             quiz = self.service.update(
                 pk=pk,
                 data=validated_data,
+                question_versions=question_versions,
                 question_ids=question_ids,
                 add_question_ids=add_question_ids,
                 new_questions_data=new_questions_data,

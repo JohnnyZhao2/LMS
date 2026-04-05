@@ -203,6 +203,15 @@ export const roleRoutes = [
     }
   />,
   <Route
+    key="quiz-preview"
+    path="quizzes/:id/preview"
+    element={
+      <ProtectedRoute requiredPermissions={['quiz.view', 'question.view']}>
+        <QuizForm />
+      </ProtectedRoute>
+    }
+  />,
+  <Route
     key="quiz-edit"
     path="quizzes/:id/edit"
     element={
