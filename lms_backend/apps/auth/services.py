@@ -24,6 +24,7 @@ from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
+from apps.auth.one_account import OneAccountClient
 from apps.authorization.services import AuthorizationService
 from apps.users.models import Role, User
 from apps.users.permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
@@ -35,6 +36,10 @@ class AuthenticationService(BaseService):
     Authentication service handling login, logout, and role switching.
     """
     TEMP_PASSWORD_LENGTH = 12
+
+    def __init__(self, request):
+        super().__init__(request)
+        self.one_account_client = OneAccountClient()
 
     def _user_queryset(self) -> QuerySet[User]:
         return User.objects.select_related(
@@ -180,6 +185,31 @@ class AuthenticationService(BaseService):
             user=authenticated_user,
             action='login',
             description=f'账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
+            status='success',
+        )
+        return self._build_auth_payload(authenticated_user)
+
+
+    def get_oidc_authorize_url(self) -> Dict[str, str]:
+        state = secrets.token_urlsafe(24)
+        authorize_url = self.one_account_client.build_authorize_url(state=state)
+        return {
+            'authorize_url': authorize_url,
+            'state': state,
+        }
+
+    def login_by_oidc_code(self, code: str) -> Dict[str, Any]:
+        oidc_result = self.one_account_client.exchange_code(code=code)
+        employee_id = oidc_result['employee_id']
+        user_obj = self._get_user_by_employee_id(employee_id)
+        authenticated_user = self._validate_active_user(user_obj)
+        authenticated_user.last_login = timezone.now()
+        authenticated_user.save(update_fields=['last_login'])
+
+        self._log_user_action_safely(
+            user=authenticated_user,
+            action='login',
+            description=f'统一认证扫码登录：账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
             status='success',
         )
         return self._build_auth_payload(authenticated_user)

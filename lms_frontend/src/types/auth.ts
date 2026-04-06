@@ -56,3 +56,13 @@ export type MeResponse = AuthSessionPayload;
 export interface LogoutRequest {
   refresh_token?: string;
 }
+
+
+export interface OidcAuthorizeUrlResponse {
+  authorize_url: string;
+  state: string;
+}
+
+export interface OidcCodeLoginRequest {
+  code: string;
+}

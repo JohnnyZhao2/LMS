@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
+import { oidcApi } from '../api/oidc';
 
 // Zod 验证 schema
 const loginSchema = z.object({
@@ -32,6 +33,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
  */
 export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [oidcLoading, setOidcLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -42,6 +44,18 @@ export const LoginForm: React.FC = () => {
       password: '',
     },
   });
+
+  const handleOidcLogin = async () => {
+    setOidcLoading(true);
+    try {
+      const result = await oidcApi.getAuthorizeUrl();
+      sessionStorage.setItem('lms_oidc_state', result.state);
+      window.location.href = result.authorize_url;
+    } catch {
+      toast.error('获取扫码登录地址失败');
+      setOidcLoading(false);
+    }
+  };
 
   const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
@@ -153,13 +167,24 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
-          >
-            {loading ? "正在验证身份..." : "登录"}
-          </Button>
+          <div className="space-y-3">
+            <Button
+              type="submit"
+              disabled={loading || oidcLoading}
+              className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
+            >
+              {loading ? '正在验证身份...' : '登录'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading || oidcLoading}
+              onClick={handleOidcLogin}
+              className="w-full h-11 border-foreground/20 text-foreground/80 hover:bg-foreground/5"
+            >
+              {oidcLoading ? '跳转扫码中...' : '扫码登录'}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

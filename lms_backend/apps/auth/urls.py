@@ -14,12 +14,16 @@ from apps.auth.views import (
     LoginView,
     LogoutView,
     MeView,
+    OidcAuthorizeUrlView,
+    OidcCodeLoginView,
     RefreshTokenView,
     ResetPasswordView,
     SwitchRoleView,
 )
 
 urlpatterns = [
+    path('oidc/authorize-url/', OidcAuthorizeUrlView.as_view(), name='auth-oidc-authorize-url'),
+    path('oidc/code-login/', OidcCodeLoginView.as_view(), name='auth-oidc-code-login'),
     path('login/', LoginView.as_view(), name='auth-login'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),

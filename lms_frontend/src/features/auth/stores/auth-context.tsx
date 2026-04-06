@@ -6,6 +6,7 @@ import { loginApi } from '../api/login';
 import { logoutApi } from '../api/logout';
 import { switchRoleApi } from '../api/switch-role';
 import { meApi } from '../api/get-me';
+import { oidcApi } from '../api/oidc';
 
 export interface AuthState {
   user: UserInfo | null;
@@ -19,6 +20,7 @@ export interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (data: LoginRequest) => Promise<RoleCode>;
+  loginByOidcCode: (code: string) => Promise<RoleCode>;
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -120,6 +122,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const login = useCallback(async (data: LoginRequest) => {
     const response = await loginApi.login(data);
+    tokenStorage.setTokens(response.access_token, response.refresh_token);
+    applyAuthSession(response, { isSwitching: false });
+    return response.current_role;
+  }, [applyAuthSession]);
+
+
+  const loginByOidcCode = useCallback(async (code: string) => {
+    const response = await oidcApi.codeLogin({ code });
     tokenStorage.setTokens(response.access_token, response.refresh_token);
     applyAuthSession(response, { isSwitching: false });
     return response.current_role;
@@ -236,6 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextValue = {
     ...state,
     login,
+    loginByOidcCode,
     logout,
     switchRole,
     refreshUser,
