@@ -20,7 +20,6 @@ from apps.auth.serializers import (
     MeResponseSerializer,
     OidcAuthorizeUrlResponseSerializer,
     OidcCodeLoginRequestSerializer,
-    OidcCodeLoginResponseSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
     ResetPasswordRequestSerializer,
@@ -229,7 +228,7 @@ class OidcCodeLoginView(BaseAPIView):
         description='使用统一认证回调code登录并换发本系统JWT',
         request=OidcCodeLoginRequestSerializer,
         responses={
-            200: OidcCodeLoginResponseSerializer,
+            200: LoginResponseSerializer,
             400: OpenApiResponse(description='授权码无效或统一认证失败'),
         },
         tags=['认证']

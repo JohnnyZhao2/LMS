@@ -51,7 +51,6 @@ export const QuestionDocumentAnswerEditor: React.FC<QuestionDocumentAnswerEditor
   return (
     <AnswerInput
       questionType={questionType}
-      options={choiceOptions}
       value={answer}
       onChange={(value) => onAnswerChange?.(value)}
       disabled={readOnly}

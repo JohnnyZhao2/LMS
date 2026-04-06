@@ -170,10 +170,7 @@ export const TagManagementPage: React.FC = () => {
       }
     }
   };
-  const selectedTags = React.useMemo(
-    () => tags.filter((tag) => selectedTagIds.includes(tag.id)),
-    [tags, selectedTagIds],
-  );
+  const selectedTags = tags.filter((tag) => selectedTagIds.includes(tag.id));
 
   const handleDelete = async () => {
     if (!deleteTarget) return;

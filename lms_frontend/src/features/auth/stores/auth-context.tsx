@@ -24,7 +24,6 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
-  setIsSwitching: (isSwitching: boolean) => void;
   hasPermission: (permissionCode: string) => boolean;
   hasAnyPermission: (permissionCodes: string[]) => boolean;
 }
@@ -190,13 +189,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [applyAuthSession]);
 
-  /**
-   * 设置切换状态
-   */
-  const setIsSwitching = useCallback((isSwitching: boolean) => {
-    setState((prev) => ({ ...prev, isSwitching }));
-  }, []);
-
   const hasPermission = useCallback((permissionCode: string) => {
     if (!permissionCode) {
       return false;
@@ -250,7 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     switchRole,
     refreshUser,
-    setIsSwitching,
     hasPermission,
     hasAnyPermission,
   };

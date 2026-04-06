@@ -123,7 +123,3 @@ class OidcAuthorizeUrlResponseSerializer(serializers.Serializer):
 
 class OidcCodeLoginRequestSerializer(serializers.Serializer):
     code = serializers.CharField(required=True, help_text='统一认证回调授权码')
-
-
-class OidcCodeLoginResponseSerializer(LoginResponseSerializer):
-    pass

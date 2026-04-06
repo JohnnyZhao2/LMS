@@ -195,7 +195,6 @@ export const OptionsInput: React.FC<OptionsInputProps> = ({
    ───────────────────────────────────────────── */
 interface AnswerInputProps {
   questionType: QuestionType;
-  options: Array<{ key: string; value: string }>;
   value: string | string[];
   onChange: (value: string | string[]) => void;
   disabled?: boolean;

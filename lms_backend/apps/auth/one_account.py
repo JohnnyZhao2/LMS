@@ -119,8 +119,6 @@ class OneAccountClient:
 
         return {
             'employee_id': employee_id,
-            'claims': claims,
-            'raw_token': data,
         }
 
     def _sm2_sign_base64(self, text: str) -> str:

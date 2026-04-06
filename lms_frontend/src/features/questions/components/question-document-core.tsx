@@ -4,9 +4,6 @@ import { QuestionDocumentEditMode } from './question-document-edit-mode';
 import { QuestionDocumentReadMode } from './question-document-read-mode';
 import type { QuestionDocumentBodyProps, QuestionDocumentMode } from './question-document-types';
 
-export type { QuestionDocumentBodyProps, QuestionDocumentMode } from './question-document-types';
-export { QuestionChoiceRow } from './question-document-shared';
-
 export const QuestionDocumentBody: React.FC<QuestionDocumentBodyProps> = ({
   mode = 'edit',
   ...props

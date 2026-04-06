@@ -7,13 +7,6 @@ export const useSpaceTypeTags = (search?: string) => {
   return useTags({ tag_type: 'SPACE', search });
 };
 
-/**
- * 获取知识标签列表
- */
-export const useKnowledgeTags = (search?: string) => {
-  return useTags({ tag_type: 'TAG', search, applicable_to: 'knowledge' });
-};
-
 export const useScopedTags = (
   applicableTo: 'knowledge' | 'question',
   search?: string,
