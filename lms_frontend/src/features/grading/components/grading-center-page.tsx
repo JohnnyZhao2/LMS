@@ -38,10 +38,7 @@ export const GradingCenterPage: React.FC = () => {
   const lockedTaskTitle = searchParams.get('taskTitle')?.trim() || '';
 
   const { data: tasks, isLoading } = usePendingQuizzes();
-  const selectedTask = React.useMemo(
-    () => tasks?.find((task) => task.task_id === selectedTaskId) ?? null,
-    [selectedTaskId, tasks]
-  );
+  const selectedTask = tasks?.find((task) => task.task_id === selectedTaskId) ?? null;
 
   React.useEffect(() => {
     if (!tasks || tasks.length === 0) {
@@ -113,13 +110,10 @@ export const GradingCenterPage: React.FC = () => {
   };
 
   const selectedQuiz = selectedTask?.quizzes.find(q => q.quiz_id === selectedQuizId);
-
-  // 根据筛选条件过滤试卷列表
-  const filteredQuizzes = React.useMemo(() => {
-    if (!selectedTask) return [];
-    if (quizTypeFilter === 'all') return selectedTask.quizzes;
-    return selectedTask.quizzes.filter(q => q.quiz_type === quizTypeFilter);
-  }, [selectedTask, quizTypeFilter]);
+  const filteredQuizzes =
+    !selectedTask || quizTypeFilter === 'all'
+      ? selectedTask?.quizzes ?? []
+      : selectedTask.quizzes.filter(q => q.quiz_type === quizTypeFilter);
 
   const taskDisplayTitle = selectedTask?.task_title || lockedTaskTitle || '当前任务';
   const showHeaderControls = isTaskManagementEntry ? preferredTaskId > 0 : Boolean(tasks && tasks.length > 0);

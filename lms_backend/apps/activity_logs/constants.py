@@ -4,7 +4,6 @@
 """
 
 LOG_ACTIONS = [
-    # ==================== 用户日志 ====================
     {
         'key': 'user.login',
         'category': 'user',
@@ -68,7 +67,6 @@ LOG_ACTIONS = [
         'label': '分配导师',
         'default_enabled': True,
     },
-    # ==================== 内容日志 ====================
     {
         'key': 'content.knowledge.create',
         'category': 'content',
@@ -132,7 +130,6 @@ LOG_ACTIONS = [
         'label': '删除试卷',
         'default_enabled': True,
     },
-    # ==================== 操作日志 ====================
     {
         'key': 'operation.task_management.create_and_assign',
         'category': 'operation',

@@ -62,7 +62,7 @@ export const StudentDashboard: React.FC = () => {
           >
             <div className="grid h-full grid-cols-[repeat(auto-fit,minmax(17.5rem,1fr))] gap-3">
               {isLoading ? [1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-[88px] rounded-xl" />) :
-                data?.latest_knowledge?.slice(0, 6).map((k) => (
+                data?.latest_knowledge?.map((k) => (
                   <KnowledgeItem key={k.id} knowledge={k} navigate={roleNavigate} />
                 ))}
             </div>

@@ -451,11 +451,9 @@ class QuestionService(BaseService):
 
     def _is_referenced_by_quiz(self, question_id: int) -> bool:
         """检查题目是否被试卷引用"""
-        try:
-            from apps.quizzes.models import QuizQuestion
-            return is_referenced(question_id, QuizQuestion, 'question_id')
-        except ImportError:
-            return False
+        from apps.quizzes.models import QuizQuestion
+
+        return is_referenced(question_id, QuizQuestion, 'question_id')
 
     def _should_fork_question_version(
         self,
@@ -469,11 +467,8 @@ class QuestionService(BaseService):
 
     def _has_frozen_version_boundary(self, question: Question) -> bool:
         """题目进入共享或任务快照边界后，必须派生新版本。"""
-        try:
-            from apps.quizzes.models import QuizQuestion
-            from apps.tasks.models import TaskQuiz
-        except ImportError:
-            return False
+        from apps.quizzes.models import QuizQuestion
+        from apps.tasks.models import TaskQuiz
 
         quiz_ids = list(
             QuizQuestion.objects.filter(question_id=question.id)

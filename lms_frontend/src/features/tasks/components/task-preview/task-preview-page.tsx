@@ -33,42 +33,27 @@ export const TaskPreviewPage: React.FC = () => {
 
   const canViewProgress = hasPermission('task.update') || hasPermission('task.analytics.view');
   const canViewGrading = hasPermission('grading.view');
-  const availableTabs = React.useMemo(() => {
-    const tabs: string[] = [];
-    if (canViewProgress) {
-      tabs.push('progress');
-    }
-    if (canViewGrading) {
-      tabs.push('grading');
-    }
-    return tabs;
-  }, [canViewGrading, canViewProgress]);
-  const initialTab = React.useMemo(() => {
+  const availableTabs = React.useMemo(
+    () => [
+      canViewProgress ? 'progress' : null,
+      canViewGrading ? 'grading' : null,
+    ].filter(Boolean) as string[],
+    [canViewGrading, canViewProgress],
+  );
+  const [activeTab, setActiveTab] = React.useState(() => {
     const requestedTab = searchParams.get('tab') || 'progress';
-    if (availableTabs.includes(requestedTab)) {
-      return requestedTab;
-    }
-    return availableTabs[0] ?? 'progress';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableTabs]);
-  const [activeTab, setActiveTab] = React.useState(initialTab);
+    return availableTabs.includes(requestedTab) ? requestedTab : (availableTabs[0] ?? 'progress');
+  });
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
 
   const { data: task, isLoading } = useTaskDetail(taskId);
 
-  // Compute quizzes and active ID *before* early returns
-  // Use useMemo to prevent unnecessary re-renders of dependent effects
   const quizzes = React.useMemo(() => task?.quizzes || [], [task]);
   const hasMultipleQuizzes = quizzes.length > 0;
+  const activeQuizId = (selectedQuizId && quizzes.some((q) => q.quiz === selectedQuizId))
+    ? selectedQuizId
+    : (quizzes[0]?.quiz ?? null);
 
-  const activeQuizId = React.useMemo(() => {
-    return (selectedQuizId && quizzes.some(q => q.quiz === selectedQuizId))
-      ? selectedQuizId
-      : (quizzes[0]?.quiz ?? null);
-  }, [selectedQuizId, quizzes]);
-
-  // Effect to sync selectedQuizId with default
-  // This hook is now unconditionally called
   React.useEffect(() => {
     if (activeTab === 'grading' && !selectedQuizId && quizzes.length > 0) {
       setSelectedQuizId(quizzes[0].quiz);

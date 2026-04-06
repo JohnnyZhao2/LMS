@@ -2,15 +2,12 @@ import { Loader2 } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import type { PermissionOverrideScope } from '@/types/api';
+import type { PermissionCatalogItem, PermissionOverrideScope } from '@/types/api';
 
-import type {
-  PermissionCatalogEntry,
-  PermissionState,
-} from './user-permission-section.types';
+import type { PermissionState } from './user-permission-section.types';
 
 interface UserPermissionCardProps {
-  permission: PermissionCatalogEntry;
+  permission: PermissionCatalogItem;
   permissionState: PermissionState;
   loading: boolean;
   forcedDisabled?: boolean;

@@ -2,10 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { ParseDocumentResponse } from '@/types/knowledge';
 
-/**
- * 解析文档
- */
-export const parseDocument = async (file: File): Promise<ParseDocumentResponse> => {
+const parseDocument = async (file: File): Promise<ParseDocumentResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -16,9 +13,6 @@ export const parseDocument = async (file: File): Promise<ParseDocumentResponse> 
   return response;
 };
 
-/**
- * 文档解析 Hook
- */
 export const useParseDocument = () => {
   return useMutation({
     mutationFn: parseDocument,

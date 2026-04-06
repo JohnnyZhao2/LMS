@@ -19,7 +19,6 @@ import { useAuth } from '../hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
 import { oidcApi } from '../api/oidc';
 
-// Zod 验证 schema
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
   password: z.string().min(1, '请输入密码'),
@@ -27,10 +26,6 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-/**
- * 登录表单组件 - 现代极致版
- * 设计理念：去容器化、重排版、细腻微交互
- */
 export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
@@ -117,11 +112,9 @@ export const LoginForm: React.FC = () => {
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        {/* 墨水跟随效果 - 底线 */}
                         <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
-                        
-                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
-                        <div 
+
+                        <div
                           className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>
@@ -151,11 +144,9 @@ export const LoginForm: React.FC = () => {
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        {/* 墨水跟随效果 - 底线 */}
                         <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
-                        
-                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
-                        <div 
+
+                        <div
                           className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>

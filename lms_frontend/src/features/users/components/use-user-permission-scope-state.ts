@@ -392,10 +392,6 @@ export const useUserPermissionScopeState = ({
     return options;
   }, [departments]);
 
-  const setScopeUserFilter = (value: string) => {
-    setScopeUserFilterState(value);
-  };
-
   const handleScopeFilterChange = (filterValue: string) => {
     setScopeUserFilterState((prev) => (prev === filterValue ? 'all' : filterValue));
   };
@@ -527,7 +523,6 @@ export const useUserPermissionScopeState = ({
     hasPartialFilteredScopeSelection,
     setShowScopeAdjustPanel,
     setScopeUserSearch,
-    setScopeUserFilter,
     formatScopeSummaryForDisplay,
     handleScopeFilterChange,
     handleFilterDoubleClick,
@@ -535,5 +530,6 @@ export const useUserPermissionScopeState = ({
     applyDefaultScopePreset,
     toggleScopeUser,
     ensureExplicitUsersScopeSelected,
+    setScopeUserFilter: setScopeUserFilterState,
   };
 };

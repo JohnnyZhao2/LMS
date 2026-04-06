@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,14 +13,19 @@ interface TimerProps {
  */
 export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
   const [seconds, setSeconds] = useState(remainingSeconds);
+  const hasTriggeredRef = useRef(false);
 
   useEffect(() => {
+    hasTriggeredRef.current = false;
     setSeconds(remainingSeconds);
   }, [remainingSeconds]);
 
   useEffect(() => {
     if (seconds <= 0) {
-      onTimeUp?.();
+      if (!hasTriggeredRef.current) {
+        hasTriggeredRef.current = true;
+        onTimeUp?.();
+      }
       return;
     }
 
@@ -28,7 +33,10 @@ export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
       setSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          onTimeUp?.();
+          if (!hasTriggeredRef.current) {
+            hasTriggeredRef.current = true;
+            onTimeUp?.();
+          }
           return 0;
         }
         return prev - 1;

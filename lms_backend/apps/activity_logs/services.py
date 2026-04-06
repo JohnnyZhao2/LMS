@@ -36,7 +36,6 @@ class ActivityLogService:
             )
             return policy
 
-        # 未注册的动作，降级为通用策略，默认开启避免漏记
         category = action_key.split('.')[0] if '.' in action_key else 'operation'
         if category not in ['user', 'content', 'operation']:
             category = 'operation'
@@ -62,7 +61,6 @@ class ActivityLogService:
         try:
             policy = cls._ensure_policy(action_key)
         except Exception:
-            # 数据库未就绪或其它异常时，不阻断业务
             return True
         enabled = bool(policy.enabled)
         cache.set(cache_key, enabled, cls.POLICY_CACHE_TTL)

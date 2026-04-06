@@ -9,7 +9,6 @@ import type {
 } from '@/types/api';
 
 import {
-  PERMISSION_SCOPE_ORDER,
   normalizeScopeTypes,
   sameScopeUserIds,
 } from './user-form.utils';
@@ -199,34 +198,6 @@ export const useUserPermissionDraft = ({
       matchesSelectedScope(override.scope_type, override.scope_user_ids, selectedPermissionScopes, selectedScopeUserIds),
     );
 
-    const effectiveStandardScopeTypes = normalizeScopeTypes(
-      PERMISSION_SCOPE_ORDER.filter(
-        (scopeType) => scopeType !== 'EXPLICIT_USERS' && isStandardScopeGranted(scopeType),
-      ),
-    );
-    const effectiveExplicitUserIds = Array.from(
-      new Set(
-        allowOverrides
-          .filter((override) => override.scope_type === 'EXPLICIT_USERS')
-          .flatMap((override) => override.scope_user_ids),
-      ),
-    ).sort((left, right) => left - right);
-
-    const addedScopeTypes = normalizeScopeTypes(
-      PERMISSION_SCOPE_ORDER.filter((scopeType) => (
-        scopeType !== 'EXPLICIT_USERS'
-        && allowOverrides.some((override) => override.scope_type === scopeType)
-        && !inheritedScopeTypes.includes(scopeType)
-      )),
-    );
-    const removedScopeTypes = normalizeScopeTypes(
-      PERMISSION_SCOPE_ORDER.filter((scopeType) => (
-        scopeType !== 'EXPLICIT_USERS'
-        && denyOverrides.some((override) => override.scope_type === scopeType)
-        && inheritedScopeTypes.includes(scopeType)
-      )),
-    );
-
     const checked = isSelfOnlySelection
       ? isSelfGranted
       : (
@@ -256,12 +227,7 @@ export const useUserPermissionDraft = ({
       isSelfOnlySelection,
       hasSelfAllow,
       hasNonSelfAllow,
-      addedScopeTypes,
-      removedScopeTypes,
-      effectiveStandardScopeTypes,
-      effectiveExplicitUserIds,
       hasExactExplicitAllow,
-      hasExactExplicitDeny,
       missingSelectedAllowScopeTypes,
     };
   }, [

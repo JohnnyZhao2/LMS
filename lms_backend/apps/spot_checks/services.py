@@ -32,13 +32,9 @@ class SpotCheckService(BaseService):
             'student__department',
         ).prefetch_related('items')
 
-    def _get_by_id(self, pk: int) -> Optional[SpotCheck]:
-        """按 ID 获取抽查记录。"""
-        return self._base_queryset().filter(pk=pk).first()
-
     def get_by_id(self, pk: int) -> SpotCheck:
         """获取抽查记录详情。"""
-        spot_check = self._get_by_id(pk)
+        spot_check = self._base_queryset().filter(pk=pk).first()
         self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
         self._validate_data_scope_access(spot_check)
         return spot_check

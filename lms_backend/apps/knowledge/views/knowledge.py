@@ -2,22 +2,18 @@
 Knowledge document management views.
 Implements:
 - Knowledge CRUD
-- Knowledge stats
 - Student knowledge list
 - View count increment
 """
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from django.utils.html import strip_tags
 
 from apps.authorization.services import AuthorizationService
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
     KnowledgeListSerializer,
-    KnowledgeStatsSerializer,
     KnowledgeUpdateSerializer,
 )
 from apps.knowledge.services import KnowledgeService
@@ -242,44 +238,6 @@ class KnowledgeDetailView(BaseAPIView):
         except BusinessError as e:
             return _handle_business_error(e)
         return no_content_response()
-class KnowledgeStatsView(BaseAPIView):
-    """知识统计端点"""
-    permission_classes = [IsAuthenticated]
-    service_class = KnowledgeService
-    @extend_schema(
-        summary='获取知识统计',
-        description='获取知识文档的统计数据，统计维度已统一到正文内容。',
-        parameters=[
-            OpenApiParameter(name='space_tag_id', type=int, description='space ID'),
-            OpenApiParameter(name='tag_id', type=int, description='知识标签ID'),
-            OpenApiParameter(name='search', type=str, description='搜索标题或内容'),
-        ],
-        responses={200: KnowledgeStatsSerializer},
-        tags=['知识管理']
-    )
-    def get(self, request):
-        _enforce_knowledge_view_permission(request, '无权查看知识统计')
-        filters, search = _build_knowledge_filters(request)
-        # 2. 调用 Service 获取知识列表（只返回当前版本）
-        knowledge_list = self.service.get_all_with_filters(
-            filters=filters,
-            search=search
-        )
-        # 3. 计算统计信息
-        from django.utils import timezone
-        now = timezone.now()
-        first_day_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        stats = {
-            'total': len(knowledge_list),
-            'published': len(knowledge_list),  # 所有返回的都是当前版本
-            'with_content': len([k for k in knowledge_list if strip_tags(k.content).strip()]),
-            'monthly_new': len([k for k in knowledge_list if k.created_at >= first_day_of_month]),
-        }
-        # 4. 序列化输出
-        serializer = KnowledgeStatsSerializer(stats)
-        return success_response(serializer.data)
-
-
 class StudentTaskKnowledgeDetailView(BaseAPIView):
     """学员任务知识详情端点 - 允许访问任务锁定版本"""
     permission_classes = [IsAuthenticated]

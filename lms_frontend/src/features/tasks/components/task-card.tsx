@@ -1,11 +1,8 @@
 import * as React from 'react';
 import {
-  BookOpen,
-  FileText,
   Pencil,
   Trash2,
   MoreHorizontal,
-  Activity,
 } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { toast } from 'sonner';
@@ -71,28 +68,11 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const hasQuiz = managerTask ? managerTask.quiz_count > 0 : (studentTask?.has_quiz ?? false);
   const hasKnowledge = managerTask ? managerTask.knowledge_count > 0 : (studentTask?.has_knowledge ?? false);
 
-  // Flat Design: 实心颜色配置
-  const missionConfig = React.useMemo(() => {
-    if (hasQuiz && hasKnowledge) {
-      return {
-        icon: Activity,
-        bgClass: 'bg-primary', // Blue - 实心颜色
-        label: '综合任务',
-      };
-    }
-    if (hasQuiz) {
-      return {
-        icon: FileText,
-        bgClass: 'bg-primary-500', // Purple - 实心颜色
-        label: '考核任务',
-      };
-    }
-    return {
-      icon: BookOpen,
-      bgClass: 'bg-secondary', // Emerald - 实心颜色
-      label: '知识任务',
-    };
-  }, [hasQuiz, hasKnowledge]);
+  const missionConfig = hasQuiz && hasKnowledge
+    ? { bgClass: 'bg-primary', label: '综合任务' }
+    : hasQuiz
+      ? { bgClass: 'bg-primary-500', label: '考核任务' }
+      : { bgClass: 'bg-secondary', label: '知识任务' };
 
   const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
 

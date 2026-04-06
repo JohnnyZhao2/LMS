@@ -64,12 +64,6 @@ interface FormErrors {
 }
 
 const NON_STUDENT_ROLE_CODES: RoleCode[] = ['MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN'];
-const DEFAULT_MANAGEABLE_ROLES: Role[] = [
-  { code: 'MENTOR', name: '导师' },
-  { code: 'DEPT_MANAGER', name: '室经理' },
-  { code: 'TEAM_MANAGER', name: '团队经理' },
-  { code: 'ADMIN', name: '管理员' },
-];
 
 const isRoleSelectionValid = (roleCodes: RoleCode[], isSuperuserAccount: boolean): boolean => {
   if (isSuperuserAccount) return roleCodes.length === 0;
@@ -107,7 +101,6 @@ export const UserForm: React.FC<UserFormProps> = ({
   const { data: departments = [] } = useDepartments();
   const { data: roles = [] } = useRoles();
   const isEdit = !!userId;
-  const roleOptions = roles.length > 0 ? roles : DEFAULT_MANAGEABLE_ROLES;
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -131,7 +124,7 @@ export const UserForm: React.FC<UserFormProps> = ({
             isMentorsLoading={isMentorsLoading}
             isMentorsError={isMentorsError}
             departments={departments}
-            roles={roleOptions}
+            roles={roles}
             initialDepartmentId={initialDepartmentId}
             initialMentorId={initialMentorId}
             dialogContentElement={dialogContentElement}

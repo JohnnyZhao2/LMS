@@ -74,15 +74,8 @@ class SaveAnswerSerializer(serializers.Serializer):
         """Validate the answer data."""
         submission = self.context.get('submission')
         question_id = attrs['question_id']
-        # Check question is part of the submission
-        try:
-            answer = Answer.objects.get(
-                submission=submission,
-                question_id=question_id
-            )
-        except Answer.DoesNotExist:
+        if not Answer.objects.filter(submission=submission, question_id=question_id).exists():
             raise serializers.ValidationError({'question_id': '该题目不在此答卷中'})
-        attrs['answer'] = answer
         return attrs
     def save(self):
         """Save the answer - 委托给 SubmissionService"""
@@ -151,7 +144,6 @@ class StartQuizSerializer(serializers.Serializer):
         attrs['in_progress_submission'] = in_progress
         attrs['assignment'] = assignment
         attrs['quiz'] = quiz
-        attrs['task'] = assignment.task
         attrs['task_quiz'] = task_quiz
         attrs['is_exam'] = is_exam
         return attrs

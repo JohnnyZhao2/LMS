@@ -34,7 +34,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
   const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
   const pageSize = pagination.pageSize;
 
-  const { data, isLoading, refetch } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
+  const { data, isLoading } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
   const { roleNavigate } = useRoleNavigate();
 
@@ -44,7 +44,6 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
       await deleteQuiz.mutateAsync(deleteId);
       toast.success('试卷已从系统中清除');
       setDeleteId(null);
-      refetch();
     } catch (error) {
       showApiError(error);
     }
@@ -272,7 +271,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         cancelText="取消"
         confirmVariant="destructive"
         onConfirm={handleDelete}
-        isConfirming={false} // deleteQuiz.isLoading could be used if available
+        isConfirming={deleteQuiz.isPending}
       />
     </>
   );

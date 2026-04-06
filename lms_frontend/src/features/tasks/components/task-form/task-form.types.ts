@@ -16,13 +16,6 @@ export interface SelectedResource extends ResourceItem {
   uid: number;
 }
 
-export interface AssignableUser {
-  id: number;
-  username: string;
-  employee_id?: string;
-  department?: { name: string };
-}
-
 export const mapKnowledgeToResource = (item: KnowledgeListItem): ResourceItem => ({
   id: item.id,
   resource_uuid: item.resource_uuid,

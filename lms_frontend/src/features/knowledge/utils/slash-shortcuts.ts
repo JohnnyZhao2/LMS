@@ -118,12 +118,6 @@ export function applySlashShortcut(
   }
 }
 
-export function estimateSlashMenuTop(value: string, cursor: number, lineHeight: number, baseTop: number): number {
-  const safeCursor = Math.max(0, Math.min(cursor, value.length));
-  const lineCount = value.slice(0, safeCursor).split('\n').length;
-  return baseTop + Math.max(0, lineCount - 1) * lineHeight + lineHeight + 8;
-}
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

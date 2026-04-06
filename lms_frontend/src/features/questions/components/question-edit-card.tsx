@@ -52,37 +52,6 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
   showMetaToolbar = false,
   headerActions,
 }) => {
-  const resolvedActionButtons = headerActions ?? ((onDelete || onSave) ? (
-    <div className="flex items-center gap-2.5">
-      {onDelete ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none border-none bg-transparent p-0 text-destructive shadow-none hover:bg-transparent hover:text-destructive/85"
-          onClick={onDelete}
-          disabled={isDeleting || isSaving}
-          aria-label="删除"
-          title="删除"
-        >
-          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-        </Button>
-      ) : null}
-      {onSave ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none border-none bg-transparent p-0 text-primary-600 shadow-none hover:bg-transparent hover:text-primary-500"
-          onClick={onSave}
-          disabled={isDeleting || isSaving}
-          aria-label="保存"
-          title="保存"
-        >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-        </Button>
-      ) : null}
-    </div>
-  ) : null);
-
   return (
     <div className="group flex items-start gap-2.5 transition-all">
       {leadingSlot}
@@ -139,7 +108,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
                 showTags
                 spaceTypes={spaceTypes}
                 spaceTagId={item.spaceTagId}
-                selectedTags={(item.tagIds ?? []).map((id) => ({ id }))}
+                selectedTagIds={item.tagIds ?? []}
                 onSpaceTagIdChange={(value) => onChange({ spaceTagId: value })}
                 onTagAdd={(tag) => onChange({
                   tagIds: [...new Set([...(item.tagIds ?? []), tag.id])],
@@ -149,7 +118,36 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
                 })}
               />
             ) : null}
-            footerActions={resolvedActionButtons}
+            footerActions={headerActions ?? ((onDelete || onSave) ? (
+              <div className="flex items-center gap-2.5">
+                {onDelete ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-none border-none bg-transparent p-0 text-destructive shadow-none hover:bg-transparent hover:text-destructive/85"
+                    onClick={onDelete}
+                    disabled={isDeleting || isSaving}
+                    aria-label="删除"
+                    title="删除"
+                  >
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                ) : null}
+                {onSave ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-none border-none bg-transparent p-0 text-primary-600 shadow-none hover:bg-transparent hover:text-primary-500"
+                    onClick={onSave}
+                    disabled={isDeleting || isSaving}
+                    aria-label="保存"
+                    title="保存"
+                  >
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null)}
           />
         </div>
       </div>

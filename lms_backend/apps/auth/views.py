@@ -25,7 +25,6 @@ from apps.auth.serializers import (
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
     SwitchRoleRequestSerializer,
-    SwitchRoleResponseSerializer,
 )
 from apps.auth.services import AuthenticationService
 
@@ -126,7 +125,7 @@ class SwitchRoleView(BaseAPIView):
         description='切换当前用户的生效角色，返回新的令牌',
         request=SwitchRoleRequestSerializer,
         responses={
-            200: SwitchRoleResponseSerializer,
+            200: LoginResponseSerializer,
             400: OpenApiResponse(description='用户没有该角色权限'),
         },
         tags=['认证']

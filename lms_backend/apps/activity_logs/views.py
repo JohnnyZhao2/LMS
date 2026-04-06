@@ -29,7 +29,7 @@ from .serializers import (
     ActivityLogPolicySerializer,
     ActivityLogPolicyUpdateSerializer,
     ActivityLogQuerySerializer,
-    ActivityLogUserOptionSerializer,
+    SimpleUserSerializer,
 )
 from .services import ActivityLogService
 
@@ -91,7 +91,11 @@ class ActivityLogListView(BaseAPIView):
         members_queryset = apply_activity_log_filters(
             get_activity_log_queryset(log_type),
             log_type,
-            _without_member_filters(params),
+            {
+                key: value
+                for key, value in params.items()
+                if key != 'member_ids'
+            },
         )
         queryset = apply_activity_log_filters(
             get_activity_log_queryset(log_type),
@@ -135,7 +139,7 @@ class ActivityLogUserListView(BaseAPIView):
         parameters=[
             OpenApiParameter(name='search', type=str, description='按姓名、工号或部门搜索'),
         ],
-        responses={200: ActivityLogUserOptionSerializer(many=True), 403: OpenApiResponse(description='无权限')},
+        responses={200: SimpleUserSerializer(many=True), 403: OpenApiResponse(description='无权限')},
         tags=['活动日志']
     )
     def get(self, request):
@@ -156,7 +160,7 @@ class ActivityLogUserListView(BaseAPIView):
             )
 
         queryset = queryset.order_by('department__code', 'employee_id', 'id')
-        serializer = ActivityLogUserOptionSerializer(queryset, many=True)
+        serializer = SimpleUserSerializer(queryset, many=True)
         return success_response(serializer.data)
 
 
@@ -258,14 +262,6 @@ def _extract_validation_message(errors: Any) -> str:
     if isinstance(errors, list) and errors:
         return _extract_validation_message(errors[0])
     return str(errors)
-
-
-def _without_member_filters(params: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: value
-        for key, value in params.items()
-        if key != 'member_ids'
-    }
 
 
 def _parse_log_item_id(log_item_id: str) -> tuple[str, int]:

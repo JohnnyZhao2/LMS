@@ -51,9 +51,6 @@ const buildLoggedOutState = (): AuthState => ({
   isSwitching: false,
 });
 
-/**
- * 认证 Provider
- */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(() => {
     const user = tokenStorage.getUserInfo();
@@ -61,7 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const availableRoles = tokenStorage.getAvailableRoles();
     const effectivePermissions = tokenStorage.getEffectivePermissions();
     const hasTokens = tokenStorage.hasTokens();
-    const shouldRefreshSession = hasTokens;
 
     const isAuthenticated = hasTokens && !!user;
 
@@ -71,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       availableRoles,
       effectivePermissions,
       isAuthenticated,
-      isLoading: shouldRefreshSession,
+      isLoading: hasTokens,
       isSwitching: false,
     };
   });
@@ -99,9 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [],
   );
 
-  /**
-   * 从服务器获取最新用户信息并更新本地存储
-   */
   const refreshUser = useCallback(async () => {
     if (!tokenStorage.hasTokens()) {
       setState(buildLoggedOutState());
@@ -116,9 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [applyAuthSession, resetAuthState]);
 
-  /**
-   * 登录
-   */
   const login = useCallback(async (data: LoginRequest) => {
     const response = await loginApi.login(data);
     tokenStorage.setTokens(response.access_token, response.refresh_token);
@@ -134,24 +124,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return response.current_role;
   }, [applyAuthSession]);
 
-  /**
-   * 登出
-   */
   const logout = useCallback(async () => {
     const refreshToken = tokenStorage.getRefreshToken();
     if (refreshToken) {
       try {
         await logoutApi.logout({ refresh_token: refreshToken });
-      } catch {
-        // 忽略登出错误
-      }
+      } catch {}
     }
     resetAuthState();
   }, [resetAuthState]);
 
-  /**
-   * 切换角色
-   */
   const switchRole = useCallback(async (roleCode: RoleCode) => {
     setState((prev) => ({ ...prev, isSwitching: true }));
 
@@ -209,12 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return permissionCodes.some((permissionCode) => state.effectivePermissions.includes(permissionCode));
   }, [state.currentRole, state.effectivePermissions, state.user?.is_superuser]);
 
-  // 初始化时检查 token
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
 
-  // 页面重新聚焦时刷新会话，减少权限变更后的滞后感
   useEffect(() => {
     if (!state.isAuthenticated) {
       return;
@@ -249,9 +229,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-/**
- * 使用认证上下文
- */
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
   if (context === undefined) {

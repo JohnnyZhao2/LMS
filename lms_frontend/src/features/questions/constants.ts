@@ -114,13 +114,6 @@ export const normalizeQuestionTypeFields = (
   };
 };
 
-export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  SINGLE_CHOICE: QUESTION_TYPE_CONFIG.SINGLE_CHOICE.fullLabel,
-  MULTIPLE_CHOICE: QUESTION_TYPE_CONFIG.MULTIPLE_CHOICE.fullLabel,
-  TRUE_FALSE: QUESTION_TYPE_CONFIG.TRUE_FALSE.fullLabel,
-  SHORT_ANSWER: QUESTION_TYPE_CONFIG.SHORT_ANSWER.fullLabel,
-};
-
 export const getQuestionTypePresentation = (type: QuestionType): QuestionTypePresentation =>
   QUESTION_TYPE_CONFIG[type];
 

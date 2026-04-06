@@ -70,21 +70,6 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
     )
 
 
-class SwitchRoleResponseSerializer(serializers.Serializer):
-    """
-    Serializer for role switch response.
-    """
-    access_token = serializers.CharField(help_text='新的访问令牌')
-    refresh_token = serializers.CharField(help_text='新的刷新令牌')
-    user = UserInfoSerializer(help_text='用户信息')
-    available_roles = RoleSerializer(many=True, help_text='可用角色列表')
-    current_role = serializers.CharField(help_text='当前生效角色')
-    effective_permissions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text='当前生效角色下的最终权限编码列表',
-    )
-
-
 class MeResponseSerializer(serializers.Serializer):
     """
     Serializer for current user info response.

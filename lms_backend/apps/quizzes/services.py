@@ -25,7 +25,7 @@ from core.versioning import (
 )
 
 from .models import Quiz, QuizQuestion
-from .selectors import get_question_ids, get_quiz_by_id, list_quiz_questions
+from .selectors import get_quiz_by_id, list_quiz_questions
 
 
 class QuizService(BaseService):
@@ -181,7 +181,7 @@ class QuizService(BaseService):
         data['created_by'] = self.user
         data['updated_by'] = self.user
         # 处理版本号
-        self._prepare_quiz_version_data(data)
+        initialize_new_resource_version(data)
         # 3. 创建试卷
         quiz = Quiz.objects.create(**data)
         # 4. 添加题目
@@ -295,7 +295,9 @@ class QuizService(BaseService):
             self._remove_questions(quiz_id=quiz.id, question_ids=remove_question_ids)
 
         # 2. 添加已有题目
-        existing_quiz_question_ids = set(get_question_ids(quiz.id))
+        existing_quiz_question_ids = set(
+            QuizQuestion.objects.filter(quiz_id=quiz.id).values_list('question_id', flat=True)
+        )
         for question_id in add_question_ids:
             if question_id not in existing_quiz_question_ids:
                 question = Question.objects.filter(pk=question_id).first()
@@ -376,7 +378,7 @@ class QuizService(BaseService):
         space_tag_id = question_data.pop('space_tag_id', None)
         tag_ids = question_data.pop('tag_ids', [])
         # 准备版本数据
-        self._prepare_question_version_data(question_data)
+        initialize_new_resource_version(question_data)
         # 准备题目属性
         question_attrs = {
             'created_by': self.user,
@@ -396,22 +398,6 @@ class QuizService(BaseService):
             score=relation_score,
         )
         return question
-
-    def _prepare_quiz_version_data(self, data: dict) -> None:
-        """
-        准备试卷版本号相关数据
-        Args:
-            data: 试卷数据字典（会被修改）
-        """
-        initialize_new_resource_version(data)
-
-    def _prepare_question_version_data(self, data: dict) -> None:
-        """
-        准备题目版本号相关数据
-        Args:
-            data: 题目数据字典（会被修改）
-        """
-        initialize_new_resource_version(data)
 
     def _set_question_space_tag(self, question: Question, space_tag_id: int) -> None:
         """
@@ -566,11 +552,8 @@ class QuizService(BaseService):
 
     def _is_referenced_by_task(self, quiz_id: int) -> bool:
         """检查试卷是否被任务引用"""
-        try:
-            from apps.tasks.models import TaskQuiz
-            return is_referenced(quiz_id, TaskQuiz, 'quiz_id')
-        except ImportError:
-            return False
+        from apps.tasks.models import TaskQuiz
+        return is_referenced(quiz_id, TaskQuiz, 'quiz_id')
 
     def _normalize_question_versions(
         self,
@@ -582,7 +565,15 @@ class QuizService(BaseService):
             if question_ids is None:
                 return None
             return [
-                {'question_id': question_id, 'score': self._get_question_default_score(question_id)}
+                {
+                    'question_id': question_id,
+                    'score': (
+                        Question.objects.filter(pk=question_id)
+                        .values_list('score', flat=True)
+                        .first()
+                        or 1
+                    ),
+                }
                 for question_id in question_ids
             ]
         return [
@@ -592,7 +583,3 @@ class QuizService(BaseService):
             }
             for item in question_versions
         ]
-
-    def _get_question_default_score(self, question_id: int):
-        relation = Question.objects.filter(pk=question_id).only('score').first()
-        return relation.score if relation else 1

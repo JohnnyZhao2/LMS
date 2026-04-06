@@ -290,11 +290,9 @@ class KnowledgeService(BaseService):
 
     def _is_referenced_by_task(self, knowledge_id: int) -> bool:
         """检查知识文档是否被任务引用"""
-        try:
-            from apps.tasks.models import TaskKnowledge
-            return is_referenced(knowledge_id, TaskKnowledge, 'knowledge_id')
-        except ImportError:
-            return False
+        from apps.tasks.models import TaskKnowledge
+
+        return is_referenced(knowledge_id, TaskKnowledge, 'knowledge_id')
 
     def _create_new_version(
         self,

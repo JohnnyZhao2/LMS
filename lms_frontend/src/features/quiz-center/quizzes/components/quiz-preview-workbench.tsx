@@ -105,30 +105,25 @@ export function QuizPreviewWorkbench({
     [effectiveQuiz?.questions],
   );
 
-  const previewQuestions = React.useMemo(
+  const previewQuestions = React.useMemo<Question[]>(
     () =>
-      orderedQuestions
-        .map((item) => {
-          const question: Question = {
-            id: item.question,
-            resource_uuid: item.resource_uuid,
-            version_number: item.version_number,
-            content: item.question_content,
-            question_type: item.question_type,
-            question_type_display: item.question_type_display,
-            options: item.options ?? [],
-            answer: item.answer ?? '',
-            explanation: item.explanation ?? '',
-            score: item.score,
-            space_tag: item.space_tag,
-            tags: item.tags ?? [],
-            is_current: item.is_current,
-            created_at: '',
-            updated_at: '',
-          };
-          return question;
-        })
-        .filter((question): question is Question => question !== null),
+      orderedQuestions.map((item) => ({
+        id: item.question,
+        resource_uuid: item.resource_uuid,
+        version_number: item.version_number,
+        content: item.question_content,
+        question_type: item.question_type,
+        question_type_display: item.question_type_display,
+        options: item.options ?? [],
+        answer: item.answer ?? '',
+        explanation: item.explanation ?? '',
+        score: item.score,
+        space_tag: item.space_tag,
+        tags: item.tags ?? [],
+        is_current: item.is_current,
+        created_at: '',
+        updated_at: '',
+      })),
     [orderedQuestions],
   );
 
@@ -144,8 +139,6 @@ export function QuizPreviewWorkbench({
   }, [activeQuestionId, previewQuestions]);
 
   const isExam = effectiveQuiz?.quiz_type === 'EXAM';
-  const isQuestionLoading = false;
-  const questionError = null;
 
   const previewOutlineItems = React.useMemo<InlineQuestionItem[]>(
     () =>
@@ -236,7 +229,7 @@ export function QuizPreviewWorkbench({
     );
   }
 
-  if (error || !effectiveQuiz || questionError) {
+  if (error || !effectiveQuiz) {
     return (
       <div className={cn(THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME, className)}>
         <div className={cn(PANEL_CLASSNAME, 'col-span-full items-center justify-center px-6 text-sm text-text-muted')}>
@@ -290,13 +283,6 @@ export function QuizPreviewWorkbench({
         <ScrollContainer className="min-h-0 flex-1 overflow-y-auto">
           {orderedQuestions.length === 0 ? (
             <div className="flex h-full items-center justify-center px-6 text-sm text-text-muted">先添加题目，再进行预览。</div>
-          ) : isQuestionLoading ? (
-            <div className="space-y-4 p-6">
-              <Skeleton className="h-7 w-32 rounded-lg" />
-              <Skeleton className="h-28 w-full rounded-xl" />
-              <Skeleton className="h-20 w-full rounded-xl" />
-              <Skeleton className="h-20 w-full rounded-xl" />
-            </div>
           ) : (
             <div className="space-y-10 px-8 py-6">
               {previewSections.map((section) => (

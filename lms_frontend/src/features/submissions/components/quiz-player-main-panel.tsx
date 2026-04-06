@@ -56,7 +56,6 @@ export const QuizPlayerMainPanel: React.FC<QuizPlayerMainPanelProps> = ({
               userAnswer={answers[answer.question]}
               onAnswerChange={(value) => onAnswerChange(answer.question, value)}
               questionNumber={index + 1}
-              showScore
             />
           </div>
         ))}
