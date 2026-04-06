@@ -327,6 +327,44 @@ def test_quiz_update_creates_new_version_when_task_referenced(monkeypatch):
 
 
 @pytest.mark.django_db
+def test_quiz_update_question_bindings_create_new_version_when_task_referenced(monkeypatch):
+    user = UserFactory()
+    quiz = QuizFactory(created_by=user, updated_by=user, title='旧试卷', is_current=True, version_number=1)
+    question_a = _create_question(created_by=user, content='题目A')
+    question_b = _create_question(created_by=user, content='题目B')
+    TaskQuiz.objects.create(task=TaskFactory(created_by=user), quiz=quiz, order=1)
+    QuizQuestion.objects.create(quiz=quiz, question=question_a, order=1, score=2)
+    service = QuizService(_build_request(user))
+    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+
+    updated = service.update(
+        quiz.id,
+        {},
+        question_versions=[
+            {'question_id': question_a.id, 'score': 5},
+            {'question_id': question_b.id, 'score': 3},
+        ],
+    )
+
+    quiz.refresh_from_db()
+    assert updated.id != quiz.id
+    assert updated.resource_uuid == quiz.resource_uuid
+    assert updated.version_number == 2
+    assert updated.is_current is True
+    assert quiz.is_current is False
+    assert list(
+        QuizQuestion.objects.filter(quiz_id=quiz.id)
+        .order_by('order')
+        .values_list('question_id', 'score')
+    ) == [(question_a.id, 2)]
+    assert list(
+        QuizQuestion.objects.filter(quiz_id=updated.id)
+        .order_by('order')
+        .values_list('question_id', 'score')
+    ) == [(question_a.id, 5), (question_b.id, 3)]
+
+
+@pytest.mark.django_db
 def test_quiz_update_referenced_no_change_keeps_single_version(monkeypatch):
     user = UserFactory()
     quiz = QuizFactory(created_by=user, updated_by=user, title='不变试卷', is_current=True, version_number=1)

@@ -37,7 +37,6 @@ export const buildQuestionForm = (question: Question): Partial<QuestionCreateReq
   options: question.options || [],
   answer: question.answer || '',
   explanation: question.explanation || '',
-  score: question.score || '1',
   space_tag_id: question.space_tag?.id,
   tag_ids: question.tags?.map((tag) => tag.id) ?? [],
 });
@@ -62,7 +61,6 @@ export const buildQuestionPatchPayload = (
     'options',
     'answer',
     'explanation',
-    'score',
     'tag_ids',
   ];
   const patch: Partial<QuestionCreateRequest> = {};
@@ -88,9 +86,6 @@ export const buildQuestionPatchPayload = (
         case 'explanation':
           patch.explanation = current.explanation;
           break;
-        case 'score':
-          patch.score = current.score;
-          break;
         case 'tag_ids':
           patch.tag_ids = current.tag_ids;
           break;
@@ -109,7 +104,6 @@ export const buildQuestionCreatePayload = (item: EditableQuestionItem): Question
   options: item.options,
   answer: item.answer,
   explanation: item.explanation,
-  score: item.score,
   space_tag_id: item.spaceTagId ?? null,
   tag_ids: item.tagIds,
 });
@@ -130,12 +124,9 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
     answer: question.answer || '',
     explanation: question.explanation || '',
     showExplanation: Boolean(question.explanation?.trim()),
-    score: normalizeQuestionScore(question.score || '1'),
+    score: normalizeQuestionScore(question.score ?? '1'),
     tagIds: question.tags?.map((tag) => tag.id) ?? [],
-    original: {
-      ...form,
-      score: normalizeQuestionScore(question.score || '1'),
-    },
+    original: form,
     saved: true,
   };
 };
@@ -150,9 +141,6 @@ export const syncEditableQuestionItem = (
 
   next.score = resolvedScore;
   next.syncToBank = source.syncToBank;
-  if (next.original) {
-    next.original.score = resolvedScore;
-  }
 
   return next;
 };

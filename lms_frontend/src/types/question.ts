@@ -17,7 +17,7 @@ export interface Question {
   options?: Array<{ key: string; value: string }>;
   answer?: string | string[];
   explanation?: string;
-  score: string;
+  score?: string;
   space_tag?: SimpleTag;
   tags?: SimpleTag[];
   is_objective?: boolean;

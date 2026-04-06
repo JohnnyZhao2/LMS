@@ -25,6 +25,7 @@ interface QuestionEditCardProps {
   item: QuestionEditCardValue;
   index: number;
   spaceTypes?: Tag[];
+  showScore?: boolean;
   leadingSlot?: React.ReactNode;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
   onFocus?: () => void;
@@ -40,6 +41,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
   item,
   index,
   spaceTypes,
+  showScore = false,
   leadingSlot,
   onChange,
   onFocus,
@@ -132,7 +134,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
                 score={item.score}
                 onScoreChange={(value) => onChange({ score: value })}
                 showType
-                showScore
+                showScore={showScore}
                 showSpace
                 showTags
                 spaceTypes={spaceTypes}

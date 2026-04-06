@@ -305,17 +305,24 @@ class TaskService(BaseService):
                 is_current=True
             )
         resource_map = {r.id: r for r in queryset}
-        # 按 resource_uuid 去重，保留最后出现的
-        seen_uuids = {}
-        for resource_id in resource_ids:
-            resource = resource_map.get(resource_id)
-            if resource:
-                seen_uuids[resource.resource_uuid] = resource_id
-        deduped_ids = [
-            seen_uuids[resource_map[rid].resource_uuid]
-            for rid in resource_ids
-            if rid in resource_map and seen_uuids.get(resource_map[rid].resource_uuid) == rid
-        ]
+        valid_ids = [resource_id for resource_id in resource_ids if resource_id in resource_map]
+
+        # 按 resource_uuid 去重，保留最后一个有效版本引用，避免重复插入同一当前版本。
+        last_seen_ids = {}
+        for resource_id in valid_ids:
+            last_seen_ids[resource_map[resource_id].resource_uuid] = resource_id
+
+        deduped_ids = []
+        emitted_uuids = set()
+        for resource_id in valid_ids:
+            resource_uuid = resource_map[resource_id].resource_uuid
+            if last_seen_ids[resource_uuid] != resource_id:
+                continue
+            if resource_uuid in emitted_uuids:
+                continue
+            emitted_uuids.add(resource_uuid)
+            deduped_ids.append(resource_id)
+
         associations = []
         for order, resource_id in enumerate(deduped_ids, start=1):
             if resource_type == 'knowledge':

@@ -6,7 +6,6 @@ import { useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { QuestionPreviewSurface } from '@/features/questions/components/question-preview-surface';
 import { TagInput } from '@/features/knowledge/components/shared/tag-input';
-import { CompactNumberInput } from '@/features/quiz-center/quizzes/components/compact-number-input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
@@ -34,7 +33,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   const [previewQuestion, setPreviewQuestion] = React.useState<Question | null>(question);
   const [activeTags, setActiveTags] = React.useState(() => question?.tags ?? []);
   const [activeSpaceTag, setActiveSpaceTag] = React.useState<Question['space_tag'] | null>(() => question?.space_tag ?? null);
-  const [scoreDraft, setScoreDraft] = React.useState(() => question?.score ?? '1');
   const updateQuestion = useUpdateQuestion();
   const { data: spaceTypes = [] } = useSpaceTypeTags();
 
@@ -42,7 +40,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
     setPreviewQuestion(question);
     setActiveTags(question?.tags ?? []);
     setActiveSpaceTag(question?.space_tag ?? null);
-    setScoreDraft(question?.score ?? '1');
   }, [question]);
 
   React.useEffect(() => {
@@ -79,27 +76,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
       setShowSpaceInfo(false);
       toast.success('空间已更新');
     } catch (error) {
-      showApiError(error);
-    }
-  };
-
-  const syncScore = async () => {
-    const normalized = String(Number(scoreDraft || 0));
-    if (normalized === String(Number(question.score || 0))) {
-      setScoreDraft(question.score ?? '1');
-      return;
-    }
-
-    try {
-      await updateQuestion.mutateAsync({
-        id: question.id,
-        data: { score: normalized },
-      });
-      setPreviewQuestion((current) => (current ? { ...current, score: normalized } : current));
-      setScoreDraft(normalized);
-      toast.success('分值已更新');
-    } catch (error) {
-      setScoreDraft(question.score ?? '1');
       showApiError(error);
     }
   };
@@ -154,19 +130,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
               <h2 className="m-0 text-[16px] font-normal leading-[1.3] tracking-[-0.01em] text-[#6a7a8a]">
                 {getQuestionTypeLabel(question.question_type)}
               </h2>
-              <CompactNumberInput
-                value={scoreDraft}
-                onChange={setScoreDraft}
-                onBlur={() => { void syncScore(); }}
-                unit="分"
-                mode="decimal"
-                min={0}
-                step={0.5}
-                inputWidthClassName="w-10"
-                className="h-7 gap-1 rounded-md bg-transparent px-0 py-0"
-                inputClassName="text-right text-[11px] text-[#9aa0aa]"
-                prefixClassName="hidden"
-              />
             </div>
           </div>
 

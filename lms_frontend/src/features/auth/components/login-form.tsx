@@ -167,20 +167,25 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Button
               type="submit"
               disabled={loading || oidcLoading}
-              className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
+              className="w-full h-12 !rounded-full border-none bg-[#C41230] text-white font-black text-sm tracking-[0.6em] soft-press shadow-[0_6px_16px_rgba(196,18,48,0.22)] hover:bg-[#A30F28] hover:shadow-[0_8px_20px_rgba(196,18,48,0.28)] focus-visible:ring-[#C41230]/20 focus-visible:ring-offset-0"
             >
               {loading ? '正在验证身份...' : '登录'}
             </Button>
+            <div className="flex items-center gap-4 py-3">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-foreground/10 to-foreground/5" />
+              <span className="text-[10px] font-bold tracking-[0.35em] text-foreground/24">或</span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent via-foreground/10 to-foreground/5" />
+            </div>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               disabled={loading || oidcLoading}
               onClick={handleOidcLogin}
-              className="w-full h-11 border-foreground/20 text-foreground/80 hover:bg-foreground/5"
+              className="w-full h-12 !rounded-full border-none bg-[#F7E8EA] text-[#C41230] shadow-none hover:bg-[#F2DADD] hover:text-[#A30F28] focus-visible:ring-[#C41230]/16 focus-visible:ring-offset-0"
             >
               {oidcLoading ? '跳转扫码中...' : '扫码登录'}
             </Button>
