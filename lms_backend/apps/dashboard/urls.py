@@ -8,12 +8,9 @@ Implements URL routing for:
 """
 from django.urls import path
 
-from .views import (
-    MentorDashboardView,
-    StudentDashboardView,
-    TeamManagerDashboardView,
-)
-from .views.student import TaskParticipantsView
+from .views.mentor import MentorDashboardView
+from .views.student import StudentDashboardView, TaskParticipantsView
+from .views.team_manager import TeamManagerDashboardView
 
 urlpatterns = [
     # Student dashboard

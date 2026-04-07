@@ -47,7 +47,6 @@ class QuizListSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
-    has_subjective_questions = serializers.ReadOnlyField()
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
     question_type_counts = serializers.DictField(child=serializers.IntegerField(), read_only=True)
     class Meta:
@@ -55,10 +54,10 @@ class QuizListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'question_count', 'total_score',
-            'has_subjective_questions', 'question_type_counts',
+            'question_type_counts',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
+            'created_by_name', 'updated_by_name',
             'created_at', 'updated_at'
         ]
 
@@ -71,9 +70,6 @@ class QuizDetailSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_count = serializers.ReadOnlyField()
     total_score = serializers.ReadOnlyField()
-    has_subjective_questions = serializers.ReadOnlyField()
-    objective_question_count = serializers.ReadOnlyField()
-    subjective_question_count = serializers.ReadOnlyField()
     questions = serializers.SerializerMethodField()
     quiz_type_display = serializers.CharField(source='get_quiz_type_display', read_only=True)
     class Meta:
@@ -81,11 +77,10 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'title', 'question_count', 'total_score',
-            'has_subjective_questions', 'objective_question_count',
-            'subjective_question_count', 'questions',
+            'questions',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'is_current',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
+            'created_by_name', 'updated_by_name', 'created_at', 'updated_at'
         ]
     def get_questions(self, obj):
         """Get ordered questions with details."""

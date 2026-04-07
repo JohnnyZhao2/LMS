@@ -3,7 +3,8 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { showApiError } from '@/utils/error-handler';
-import { useCreateTag, useScopedTags } from '../../api/get-tags';
+import { useTags } from '@/features/tags/api/tags';
+import { useCreateTag } from '@/features/tags/api/tags';
 
 interface TagInputProps {
   applicableTo: 'knowledge' | 'question';
@@ -24,32 +25,32 @@ export const TagInput: React.FC<TagInputProps> = ({
   extendScope = true,
 }) => {
   const [input, setInput] = React.useState('');
-  const { data: scopedTags = [] } = useScopedTags(applicableTo);
+  const { data: scopedTags = [] } = useTags({ tag_type: 'TAG', applicable_to: applicableTo });
   const createTag = useCreateTag();
-  const allTags = scopedTags;
+  const trimmedInput = input.trim();
 
   // 输入时匹配的已有标签（排除已选）
-  const matchedTags = input.trim()
-    ? allTags.filter(
+  const matchedTags = trimmedInput
+    ? scopedTags.filter(
         (t) =>
           !selectedTags.some((s) => s.id === t.id) &&
-          t.name.toLowerCase().includes(input.trim().toLowerCase())
+          t.name.toLowerCase().includes(trimmedInput.toLowerCase())
       ).slice(0, 6)
     : [];
 
   // 没有输入时显示最近标签
-  const recentTags = !input.trim()
-    ? allTags
+  const recentTags = !trimmedInput
+    ? scopedTags
         .filter((t) => !selectedTags.some((s) => s.id === t.id))
         .slice(0, 5)
     : [];
 
   const handleAdd = async () => {
-    const name = input.trim();
+    const name = trimmedInput;
     if (!name) return;
 
     // 精确匹配已有标签
-    const exact = allTags.find(
+    const exact = scopedTags.find(
       (t) => t.name.toLowerCase() === name.toLowerCase()
     );
     if (exact) {
@@ -81,7 +82,7 @@ export const TagInput: React.FC<TagInputProps> = ({
     }
   };
 
-  const handleSelectSuggestion = (tag: (typeof allTags)[number]) => {
+  const handleSelectSuggestion = (tag: (typeof scopedTags)[number]) => {
     if (selectedTags.some((s) => s.id === tag.id)) {
       toast.info('标签已添加');
       setInput('');
@@ -98,7 +99,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         <div className="taginput-chips">
           {selectedTags.map((t) => (
             <span key={t.id} className="taginput-chip">
-              {t.name || allTags.find((item) => item.id === t.id)?.name || `#${t.id}`}
+              {t.name || scopedTags.find((item) => item.id === t.id)?.name || `#${t.id}`}
               <button
                 type="button"
                 onClick={() => onRemove(t.id)}
@@ -128,7 +129,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         <button
           type="button"
           onClick={() => void handleAdd()}
-          disabled={!input.trim() || createTag.isPending}
+          disabled={!trimmedInput || createTag.isPending}
           className="taginput-add-btn"
         >
           <Plus style={{ width: 18, height: 18 }} />

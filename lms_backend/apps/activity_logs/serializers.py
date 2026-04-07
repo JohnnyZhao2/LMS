@@ -9,8 +9,6 @@ LOG_TYPE_CHOICES = (
     ('operation', '行为记录'),
 )
 
-# UserLog action → summary 模板
-# {actor}: 操作者, {user}: 被操作用户
 _USER_ACTION_SUMMARIES = {
     'login': '{actor} 登录成功',
     'logout': '{actor} 退出登录',
@@ -23,7 +21,6 @@ _USER_ACTION_SUMMARIES = {
     'deactivate': '{actor} 停用了用户账号',
 }
 
-# ContentLog content_type → 中文名
 _CONTENT_TYPE_NAMES = {
     'knowledge': '知识文档',
     'quiz': '试卷',
@@ -31,7 +28,6 @@ _CONTENT_TYPE_NAMES = {
     'assignment': '作业',
 }
 
-# ContentLog action → 动词
 _CONTENT_ACTION_VERBS = {
     'create': '创建了',
     'update': '更新了',
@@ -39,8 +35,6 @@ _CONTENT_ACTION_VERBS = {
     'publish': '发布了',
 }
 
-# OperationLog action → summary 模板
-# {actor}: 操作者, {target}: target_title
 _OPERATION_ACTION_SUMMARIES = {
     'create_and_assign': '{actor} 创建了任务《{target}》',
     'update_task': '{actor} 更新了任务《{target}》',
@@ -69,7 +63,6 @@ def _build_summary(obj, log_type: str) -> str:
         verb = _CONTENT_ACTION_VERBS.get(obj.action, obj.action)
         type_name = _CONTENT_TYPE_NAMES.get(obj.content_type, obj.content_type)
         title = obj.content_title or ''
-        # 题目标题可能很长（题干内容），截断
         if obj.content_type == 'question' and len(title) > 20:
             title = title[:20] + '...'
         if title and obj.content_type != 'question':
@@ -82,7 +75,6 @@ def _build_summary(obj, log_type: str) -> str:
         template = _OPERATION_ACTION_SUMMARIES.get(obj.action)
         if template:
             return template.format(actor=actor_name, target=target)
-        # fallback
         return f'{actor_name} {obj.action}'
 
     return ''
@@ -105,23 +97,6 @@ class SimpleUserSerializer(serializers.Serializer):
     def get_department_code(self, obj):
         if isinstance(obj, dict):
             return obj.get('department_code')
-        department = getattr(obj, 'department', None)
-        return getattr(department, 'code', None)
-
-
-class ActivityLogUserOptionSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    employee_id = serializers.CharField(read_only=True)
-    username = serializers.CharField(read_only=True)
-    avatar_key = serializers.CharField(read_only=True)
-    department_name = serializers.SerializerMethodField()
-    department_code = serializers.SerializerMethodField()
-
-    def get_department_name(self, obj):
-        department = getattr(obj, 'department', None)
-        return getattr(department, 'name', None)
-
-    def get_department_code(self, obj):
         department = getattr(obj, 'department', None)
         return getattr(department, 'code', None)
 

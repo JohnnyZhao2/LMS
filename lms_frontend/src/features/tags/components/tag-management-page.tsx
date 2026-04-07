@@ -98,19 +98,6 @@ export const TagManagementPage: React.FC = () => {
     setSelectedTagIds((current) => current.filter((id) => tags.some((tag) => tag.id === id)));
   }, [tags]);
 
-  const openCreateDialog = () => {
-    setDialogMode('create');
-    setEditingTag(null);
-    setIsDialogOpen(true);
-  };
-
-  /** 打开编辑弹窗（供表格操作列使用，需稳定引用以便列 memo 生效） */
-  const openEditDialog = React.useCallback((tag: Tag) => {
-    setDialogMode('edit');
-    setEditingTag(tag);
-    setIsDialogOpen(true);
-  }, []);
-
   const handleSubmit = async (payload: {
     name: string;
     tag_type: TagType;
@@ -170,10 +157,6 @@ export const TagManagementPage: React.FC = () => {
       }
     }
   };
-  const selectedTags = React.useMemo(
-    () => tags.filter((tag) => selectedTagIds.includes(tag.id)),
-    [tags, selectedTagIds],
-  );
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -245,7 +228,11 @@ export const TagManagementPage: React.FC = () => {
           )}
           {canCreate && (
             <CircleButton
-              onClick={openCreateDialog}
+              onClick={() => {
+                setDialogMode('create');
+                setEditingTag(null);
+                setIsDialogOpen(true);
+              }}
               label={`新建${typeLabel[activeTab]}`}
               className="shrink-0"
             />
@@ -325,7 +312,9 @@ export const TagManagementPage: React.FC = () => {
                           className="h-7 w-7 rounded-full p-0 text-text-muted hover:bg-black/5 hover:text-foreground"
                           onClick={(event) => {
                             event.stopPropagation();
-                            openEditDialog(tag);
+                            setDialogMode('edit');
+                            setEditingTag(tag);
+                            setIsDialogOpen(true);
                           }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -392,7 +381,7 @@ export const TagManagementPage: React.FC = () => {
                   已选标签
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  {selectedTags.map((tag) => (
+                  {tags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => (
                     <span
                       key={tag.id}
                       className="inline-flex items-center rounded-full border border-white/80 bg-white/76 px-3.5 py-2 text-[12px] font-medium text-foreground shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-sm"

@@ -10,11 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
     StudentDashboardSerializer,
-    StudentStatsSerializer,
-    StudentTaskSerializer,
 )
 from apps.dashboard.services import StudentDashboardService
-from apps.knowledge.serializers import KnowledgeListSerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
@@ -68,11 +65,7 @@ class StudentDashboardView(BaseAPIView):
             knowledge_limit=knowledge_limit
         )
 
-        return success_response({
-            'stats': StudentStatsSerializer(data['stats']).data,
-            'tasks': StudentTaskSerializer(data['tasks'], many=True).data,
-            'latest_knowledge': KnowledgeListSerializer(data['latest_knowledge'], many=True).data,
-        })
+        return success_response(StudentDashboardSerializer(data).data)
 
 
 class TaskParticipantsView(BaseAPIView):

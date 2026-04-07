@@ -7,9 +7,6 @@ interface RoleSwitchOverlayProps {
 
 const EXIT_TRANSITION_MS = 80;
 
-/**
- * 角色切换过渡遮罩
- */
 export const RoleSwitchOverlay: React.FC<RoleSwitchOverlayProps> = ({ isSwitching }) => {
     const [mounted, setMounted] = React.useState(isSwitching);
     const [visible, setVisible] = React.useState(isSwitching);

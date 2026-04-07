@@ -67,10 +67,8 @@ class PendingQuizSerializer(serializers.Serializer):
     quiz_type = serializers.CharField()
     quiz_type_display = serializers.CharField()
     question_count = serializers.IntegerField()
-    total_score = serializers.FloatField()
     duration = serializers.IntegerField(allow_null=True)
     pending_count = serializers.IntegerField()
-    total_count = serializers.IntegerField()
 
 
 class PendingTaskSerializer(serializers.Serializer):

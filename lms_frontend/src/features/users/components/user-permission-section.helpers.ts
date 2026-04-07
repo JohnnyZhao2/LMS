@@ -55,11 +55,6 @@ export const createUncheckedPermissionState = (): PermissionState => ({
   isSelfOnlySelection: false,
   hasSelfAllow: false,
   hasNonSelfAllow: false,
-  addedScopeTypes: [],
-  removedScopeTypes: [],
-  effectiveStandardScopeTypes: [],
-  effectiveExplicitUserIds: [],
   hasExactExplicitAllow: false,
-  hasExactExplicitDeny: false,
   missingSelectedAllowScopeTypes: [],
 });

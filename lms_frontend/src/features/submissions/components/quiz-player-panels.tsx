@@ -190,7 +190,7 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
         </div>
       </div>
 
-      {isExam && submission.remaining_seconds !== undefined ? (
+      {isExam && submission.remaining_seconds != null ? (
         <div className="mt-4">
           <Timer remainingSeconds={submission.remaining_seconds} onTimeUp={onTimeUp} />
         </div>

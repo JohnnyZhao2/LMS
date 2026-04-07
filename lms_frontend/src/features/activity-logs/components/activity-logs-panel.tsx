@@ -36,7 +36,6 @@ const PANEL_GRID_CLASS = 'grid min-h-0 items-stretch gap-5 xl:grid-cols-[20rem_m
 export const ActivityLogsPanel: React.FC = () => {
   const { hasPermission } = useAuth();
   const canViewActivityLogs = hasPermission('activity_log.view');
-  const canDeleteActivityLogs = hasPermission('activity_log.view');
 
   const [activeType, setActiveType] = useState<ActivityLogType>('user');
   const [page, setPage] = useState(1);
@@ -97,7 +96,7 @@ export const ActivityLogsPanel: React.FC = () => {
     dateFrom !== '' ||
     dateTo !== '';
   const totalCount = data?.count ?? 0;
-  const shouldShowPagination = totalCount > 0 && (totalCount > pageSize || pageSize !== 10);
+  const shouldShowPagination = totalCount > pageSize;
 
   const handleConfirmBulkDelete = async () => {
     if (selectedLogs.length === 0) return;
@@ -277,7 +276,7 @@ export const ActivityLogsPanel: React.FC = () => {
                     </button>
                   )}
 
-                  {canDeleteActivityLogs && normalizedItems.length > 0 && (
+                  {canViewActivityLogs && normalizedItems.length > 0 && (
                     <div className="flex h-14 flex-wrap items-center gap-3">
                       <label className="inline-flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-foreground">
                         <Checkbox
@@ -314,7 +313,6 @@ export const ActivityLogsPanel: React.FC = () => {
                 <ActivityLogFeed
                   items={normalizedItems}
                   isLoading={isLoading}
-                  canDelete={canDeleteActivityLogs}
                   selectedLogIds={selectedLogIds}
                   selectionDisabled={isDeleting}
                   onToggleSelect={handleToggleLog}

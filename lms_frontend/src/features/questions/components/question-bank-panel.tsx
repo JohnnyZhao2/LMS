@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
-import { getQuestionTypeLabel, getQuestionTypeStyle, QUESTION_TYPE_LABELS } from '@/features/questions/constants';
-import type { PaginatedResponse, Question, QuestionType, Tag } from '@/types/api';
+import { QUESTION_TYPE_PICKER_OPTIONS, getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
+import type { PaginatedResponse, Question, Tag } from '@/types/api';
 
 interface QuestionBankPanelProps {
   resourceSearch: string;
@@ -75,8 +75,8 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
               <SelectTrigger><SelectValue placeholder="全部题型" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部题型</SelectItem>
-                {Object.entries(QUESTION_TYPE_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                {QUESTION_TYPE_PICKER_OPTIONS.map(({ value, fullLabel }) => (
+                  <SelectItem key={value} value={value}>{fullLabel}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -96,36 +96,38 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {questionsData?.results.map(q => (
-              <div
-                key={q.id}
-                className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-primary-300"
-              >
-                <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge
-                      className={cn('h-5 px-1.5 text-[10px] font-semibold', getQuestionTypeStyle(q.question_type).bg, getQuestionTypeStyle(q.question_type).color)}
-                    >
-                      {getQuestionTypeLabel(q.question_type as QuestionType)}
-                    </Badge>
-                  </div>
-                  <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">
-                    {richTextToPreviewText(q.content)}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddQuestion(q);
-                  }}
+            {questionsData?.results.map((q) => {
+              const typeStyle = getQuestionTypeStyle(q.question_type);
+
+              return (
+                <div
+                  key={q.id}
+                  className="group relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-background p-4 transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-primary-300"
                 >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="min-w-0 flex-1 cursor-pointer" onClick={() => onPreview(q)}>
+                    <div className="mb-1 flex items-center gap-2">
+                      <Badge className={cn('h-5 px-1.5 text-[10px] font-semibold', typeStyle.bg, typeStyle.color)}>
+                        {getQuestionTypeLabel(q.question_type)}
+                      </Badge>
+                    </div>
+                    <p className="line-clamp-2 text-[13px] font-medium leading-relaxed text-foreground">
+                      {richTextToPreviewText(q.content)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 shrink-0 p-0 text-text-muted opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddQuestion(q);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

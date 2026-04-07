@@ -7,6 +7,7 @@ from apps.tasks.task_service import TaskService
 from apps.tasks.tests.factories import (
     KnowledgeFactory,
     KnowledgeLearningProgressFactory,
+    QuizFactory,
     SubmissionFactory,
     TaskAssignmentFactory,
     TaskFactory,
@@ -296,6 +297,84 @@ def test_validate_assignee_ids_rejects_non_student_identity():
     assert not is_valid
     assert super_admin_user.id in invalid_ids
     assert student_user.id not in invalid_ids
+
+
+@pytest.mark.django_db
+def test_validate_knowledge_ids_rejects_historical_version():
+    """任务只允许绑定知识当前版本。"""
+    current = KnowledgeFactory(version_number=2, is_current=True)
+    historical = KnowledgeFactory(
+        resource_uuid=current.resource_uuid,
+        version_number=1,
+        is_current=False,
+    )
+
+    is_valid, invalid_ids = TaskService.validate_knowledge_ids([historical.id, current.id])
+
+    assert is_valid is False
+    assert historical.id in invalid_ids
+    assert current.id not in invalid_ids
+
+
+@pytest.mark.django_db
+def test_validate_quiz_ids_rejects_historical_version():
+    """任务只允许绑定试卷当前版本。"""
+    user = UserFactory()
+    current = QuizFactory(created_by=user, updated_by=user, version_number=2, is_current=True)
+    historical = QuizFactory(
+        created_by=user,
+        updated_by=user,
+        resource_uuid=current.resource_uuid,
+        version_number=1,
+        is_current=False,
+    )
+
+    is_valid, invalid_ids = TaskService.validate_quiz_ids([historical.id, current.id])
+
+    assert is_valid is False
+    assert historical.id in invalid_ids
+    assert current.id not in invalid_ids
+
+
+@pytest.mark.django_db
+def test_create_knowledge_associations_binds_only_current_version_once():
+    """任务知识绑定按 resource_uuid 去重，且忽略历史版本。"""
+    task = TaskFactory()
+    current = KnowledgeFactory(version_number=2, is_current=True)
+    historical = KnowledgeFactory(
+        resource_uuid=current.resource_uuid,
+        version_number=1,
+        is_current=False,
+    )
+    service = TaskService(_build_request())
+
+    service._create_knowledge_associations(task, [historical.id, current.id, historical.id, current.id])
+
+    task.refresh_from_db()
+    bound_ids = list(task.task_knowledge.order_by('order').values_list('knowledge_id', flat=True))
+    assert bound_ids == [current.id]
+
+
+@pytest.mark.django_db
+def test_create_quiz_associations_binds_only_current_version_once():
+    """任务试卷绑定按 resource_uuid 去重，且忽略历史版本。"""
+    user = UserFactory()
+    task = TaskFactory()
+    current = QuizFactory(created_by=user, updated_by=user, version_number=2, is_current=True)
+    historical = QuizFactory(
+        created_by=user,
+        updated_by=user,
+        resource_uuid=current.resource_uuid,
+        version_number=1,
+        is_current=False,
+    )
+    service = TaskService(_build_request())
+
+    service._create_quiz_associations(task, [historical.id, current.id, historical.id, current.id])
+
+    task.refresh_from_db()
+    bound_ids = list(task.task_quizzes.order_by('order').values_list('quiz_id', flat=True))
+    assert bound_ids == [current.id]
 
 
 @pytest.mark.django_db

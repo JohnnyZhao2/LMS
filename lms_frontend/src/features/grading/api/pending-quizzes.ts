@@ -8,10 +8,8 @@ export interface PendingQuiz {
   quiz_type: 'EXAM' | 'PRACTICE';
   quiz_type_display: string;
   question_count: number;
-  total_score: number;
   duration: number | null;
   pending_count: number;
-  total_count: number;
 }
 
 export interface PendingTask {

@@ -82,14 +82,12 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
     config = LOG_TYPE_CONFIG[log_type]
 
     if config['needs_annotation']:
-        # UserLog: actor = COALESCE(operator, user)，需要用 annotation 聚合
         from apps.users.models import User
         actor_ids = (
             queryset
             .values_list('effective_actor_id', flat=True)
             .distinct()
         )
-        # 按 actor_id 聚合统计
         aggregated = (
             queryset
             .values('effective_actor_id')
@@ -99,7 +97,6 @@ def list_activity_log_members(queryset: QuerySet, log_type: str) -> list[dict[st
             )
             .order_by('-activity_count', '-last_activity_at')
         )
-        # 批量查用户信息
         users = (
             User.objects.filter(id__in=actor_ids)
             .select_related('department')

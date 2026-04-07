@@ -10,14 +10,7 @@ export interface ActivityLogActor {
   department_code?: string | null;
 }
 
-export interface ActivityLogUser {
-  id: number;
-  employee_id: string;
-  username: string;
-  avatar_key: string;
-  department_name?: string | null;
-  department_code?: string | null;
-}
+export type ActivityLogUser = ActivityLogActor;
 
 export interface ActivityLogItem {
   id: string;
@@ -58,7 +51,7 @@ export interface ActivityLogsQuery {
 export interface ActivityLogPolicy {
   id: number;
   key: string;
-  category: 'user' | 'content' | 'operation';
+  category: ActivityLogType;
   group: string;
   label: string;
   enabled: boolean;

@@ -512,9 +512,6 @@ def get_task_participants_progress(
         quiz_completed_count=Subquery(quiz_completed_subquery)
     )
 
-    if not assignments.exists():
-        return []
-
     participants = []
     for assignment in assignments:
         quiz_completed = assignment.quiz_completed_count or 0

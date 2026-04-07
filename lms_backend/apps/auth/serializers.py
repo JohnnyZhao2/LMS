@@ -70,21 +70,6 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
     )
 
 
-class SwitchRoleResponseSerializer(serializers.Serializer):
-    """
-    Serializer for role switch response.
-    """
-    access_token = serializers.CharField(help_text='新的访问令牌')
-    refresh_token = serializers.CharField(help_text='新的刷新令牌')
-    user = UserInfoSerializer(help_text='用户信息')
-    available_roles = RoleSerializer(many=True, help_text='可用角色列表')
-    current_role = serializers.CharField(help_text='当前生效角色')
-    effective_permissions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text='当前生效角色下的最终权限编码列表',
-    )
-
-
 class MeResponseSerializer(serializers.Serializer):
     """
     Serializer for current user info response.
@@ -114,3 +99,12 @@ class ResetPasswordResponseSerializer(serializers.Serializer):
     """
     temporary_password = serializers.CharField(help_text='临时密码')
     message = serializers.CharField(help_text='提示信息')
+
+
+class OidcAuthorizeUrlResponseSerializer(serializers.Serializer):
+    authorize_url = serializers.CharField(help_text='统一认证授权跳转地址')
+    state = serializers.CharField(help_text='防重放随机值')
+
+
+class OidcCodeLoginRequestSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True, help_text='统一认证回调授权码')

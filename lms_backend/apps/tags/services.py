@@ -232,14 +232,6 @@ class TagService(BaseService):
         data['allow_question'] = bool(allow_question)
 
     @staticmethod
-    def _is_scope_enabled(tag: Tag, current_module: str) -> bool:
-        if current_module == 'knowledge':
-            return tag.allow_knowledge
-        if current_module == 'question':
-            return tag.allow_question
-        return False
-
-    @staticmethod
     def _enable_scope(tag: Tag, current_module: str) -> None:
         updated_fields = []
         if current_module == 'knowledge' and not tag.allow_knowledge:
@@ -265,7 +257,12 @@ class TagService(BaseService):
                 message='同名 space 已存在',
             )
 
-        if current_module and not self._is_scope_enabled(existing, current_module):
+        is_scope_enabled = (
+            existing.allow_knowledge if current_module == 'knowledge'
+            else existing.allow_question if current_module == 'question'
+            else False
+        )
+        if current_module and not is_scope_enabled:
             if not extend_scope:
                 raise BusinessError(
                     code=ErrorCodes.VALIDATION_ERROR,

@@ -17,8 +17,8 @@ import {
 } from '@/components/ui/form';
 import { useAuth } from '../hooks/use-auth';
 import { ApiError } from '@/lib/api-client';
+import { oidcApi } from '../api/oidc';
 
-// Zod 验证 schema
 const loginSchema = z.object({
   employee_id: z.string().min(1, '请输入工号'),
   password: z.string().min(1, '请输入密码'),
@@ -26,12 +26,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-/**
- * 登录表单组件 - 现代极致版
- * 设计理念：去容器化、重排版、细腻微交互
- */
 export const LoginForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [oidcLoading, setOidcLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -42,6 +39,18 @@ export const LoginForm: React.FC = () => {
       password: '',
     },
   });
+
+  const handleOidcLogin = async () => {
+    setOidcLoading(true);
+    try {
+      const result = await oidcApi.getAuthorizeUrl();
+      sessionStorage.setItem('lms_oidc_state', result.state);
+      window.location.href = result.authorize_url;
+    } catch {
+      toast.error('获取扫码登录地址失败');
+      setOidcLoading(false);
+    }
+  };
 
   const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
@@ -103,11 +112,9 @@ export const LoginForm: React.FC = () => {
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        {/* 墨水跟随效果 - 底线 */}
                         <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
-                        
-                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
-                        <div 
+
+                        <div
                           className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>
@@ -137,11 +144,9 @@ export const LoginForm: React.FC = () => {
                           className="h-12 !bg-transparent !border-0 !border-b !border-foreground/10 !rounded-none !shadow-none focus-visible:ring-0 focus-visible:border-foreground/20 transition-all duration-300 placeholder:text-sm placeholder:font-normal placeholder:text-foreground/30 text-foreground font-bold text-lg px-0 peer"
                           {...field}
                         />
-                        {/* 墨水跟随效果 - 底线 */}
                         <div className="absolute bottom-0 left-0 right-0 h-px bg-foreground/10" />
-                        
-                        {/* 墨水跟随效果 - 激活线 (聚焦时从左向右展开至全长) */}
-                        <div 
+
+                        <div
                           className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary origin-left transition-transform duration-500 ease-out shadow-[0_0_8px_rgba(196,18,48,0.4)] scale-x-0 peer-focus:scale-x-100"
                         />
                       </div>
@@ -153,13 +158,29 @@ export const LoginForm: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full h-14 bg-primary hover:bg-primary-hover text-white rounded-[2px] font-black text-sm tracking-[0.8em] transition-all duration-300 active:scale-[0.98] border-none soft-press shadow-[0_4px_14px_rgba(196,18,48,0.3)] hover:shadow-[0_6px_20px_rgba(196,18,48,0.4)]"
-          >
-            {loading ? "正在验证身份..." : "登录"}
-          </Button>
+          <div className="space-y-4">
+            <Button
+              type="submit"
+              disabled={loading || oidcLoading}
+              className="w-full h-12 !rounded-full border-none bg-[#C41230] text-white font-black text-sm tracking-[0.6em] soft-press shadow-[0_6px_16px_rgba(196,18,48,0.22)] hover:bg-[#A30F28] hover:shadow-[0_8px_20px_rgba(196,18,48,0.28)] focus-visible:ring-[#C41230]/20 focus-visible:ring-offset-0"
+            >
+              {loading ? '正在验证身份...' : '登录'}
+            </Button>
+            <div className="flex items-center gap-4 py-3">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-foreground/10 to-foreground/5" />
+              <span className="text-[10px] font-bold tracking-[0.35em] text-foreground/24">或</span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent via-foreground/10 to-foreground/5" />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={loading || oidcLoading}
+              onClick={handleOidcLogin}
+              className="w-full h-12 !rounded-full border-none bg-[#F7E8EA] text-[#C41230] shadow-none hover:bg-[#F2DADD] hover:text-[#A30F28] focus-visible:ring-[#C41230]/16 focus-visible:ring-offset-0"
+            >
+              {oidcLoading ? '跳转扫码中...' : '扫码登录'}
+            </Button>
+          </div>
         </form>
       </Form>
     </div>

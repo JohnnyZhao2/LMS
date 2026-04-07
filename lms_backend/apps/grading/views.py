@@ -3,7 +3,6 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.grading.selectors import (
     calculate_question_pass_rate,
-    get_latest_answers,
     get_latest_quiz_answers,
 )
 from apps.authorization.services import AuthorizationService
@@ -132,7 +131,7 @@ class GradingAnswersView(GradingBaseView):
                 message='未找到对应题目或题目不属于该试卷'
             )
         question = relation.question
-        answers = get_latest_answers(task, question_id, quiz_id).select_related(
+        answers = get_latest_quiz_answers(task, quiz_id).filter(question_id=question_id).select_related(
             'submission__task_assignment__assignee',
             'submission__task_assignment__assignee__department'
         ).order_by('graded_by', 'submission__submitted_at')
@@ -266,7 +265,8 @@ class GradingSubmitView(GradingBaseView):
     def _submit_grading(self, task, quiz_id, question_id, student_id, score, comments):
         """提交评分"""
         grader = self.request.user
-        answer = get_latest_answers(task, question_id, quiz_id).filter(
+        answer = get_latest_quiz_answers(task, quiz_id).filter(
+            question_id=question_id,
             submission__task_assignment__assignee_id=student_id,
             submission__status__in=['GRADING', 'SUBMITTED', 'GRADED']
         ).order_by('-submission__submitted_at', '-submission_id').first()
@@ -317,9 +317,6 @@ class PendingQuizzesView(GradingBaseView):
             created_by=user,
             is_deleted=False,
             task_quizzes__isnull=False
-        ).select_related('created_by').prefetch_related(
-            'task_quizzes__quiz',
-            'assignments'
         ).distinct().order_by('-created_at')
 
         results = []
@@ -341,7 +338,6 @@ class PendingQuizzesView(GradingBaseView):
                 quiz = tq.quiz
                 # 统计待批阅数量（主观题未评分的提交）
                 pending_count = self._count_pending_grading(task, quiz.id)
-                total_count = self._count_total_submissions(task, quiz.id)
 
                 quizzes_data.append({
                     'quiz_id': quiz.id,
@@ -349,10 +345,8 @@ class PendingQuizzesView(GradingBaseView):
                     'quiz_type': quiz.quiz_type,
                     'quiz_type_display': quiz.get_quiz_type_display(),
                     'question_count': quiz.question_count,
-                    'total_score': float(quiz.total_score),
                     'duration': quiz.duration,
                     'pending_count': pending_count,
-                    'total_count': total_count,
                 })
 
             if quizzes_data:
@@ -372,14 +366,4 @@ class PendingQuizzesView(GradingBaseView):
             submission__status__in=['SUBMITTED', 'GRADING'],
             question__question_type='SHORT_ANSWER',
             graded_by__isnull=True
-        ).count()
-
-    def _count_total_submissions(self, task, quiz_id):
-        """统计总提交数量"""
-        from apps.submissions.models import Submission
-
-        return Submission.objects.filter(
-            task_assignment__task=task,
-            quiz_id=quiz_id,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
         ).count()

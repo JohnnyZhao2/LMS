@@ -24,6 +24,7 @@ from core.base_service import BaseService
 from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
+from apps.auth.one_account import OneAccountClient
 from apps.authorization.services import AuthorizationService
 from apps.users.models import Role, User
 from apps.users.permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
@@ -35,6 +36,10 @@ class AuthenticationService(BaseService):
     Authentication service handling login, logout, and role switching.
     """
     TEMP_PASSWORD_LENGTH = 12
+
+    def __init__(self, request):
+        super().__init__(request)
+        self.one_account_client = OneAccountClient()
 
     def _user_queryset(self) -> QuerySet[User]:
         return User.objects.select_related(
@@ -136,14 +141,7 @@ class AuthenticationService(BaseService):
             Dict containing tokens, user info, and available roles
         Raises:
             BusinessError: If credentials are invalid or user is inactive
-        Properties:
-        - Property 1: 有效凭证登录成功
-        - Property 2: 登录返回完整角色列表
-        - Property 3: 停用用户登录拒绝
         """
-        # First, check if user exists and is active (Property 3)
-        # We need to do this separately because Django's authenticate()
-        # returns None for both invalid credentials AND inactive users
         user_obj = self._get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
             self._log_user_action_safely(
@@ -157,7 +155,6 @@ class AuthenticationService(BaseService):
                 message='用户账号已被停用',
             )
 
-        # Authenticate user using employee_id as username
         user = authenticate(username=employee_id, password=password)
         if user is None:
             if user_obj:
@@ -172,7 +169,7 @@ class AuthenticationService(BaseService):
                 message='工号或密码错误',
             )
 
-        authenticated_user = self._validate_active_user(self._get_user_by_id(user.id))
+        authenticated_user = self._validate_active_user(user)
         authenticated_user.last_login = timezone.now()
         authenticated_user.save(update_fields=['last_login'])
 
@@ -180,6 +177,31 @@ class AuthenticationService(BaseService):
             user=authenticated_user,
             action='login',
             description=f'账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
+            status='success',
+        )
+        return self._build_auth_payload(authenticated_user)
+
+
+    def get_oidc_authorize_url(self) -> Dict[str, str]:
+        state = secrets.token_urlsafe(24)
+        authorize_url = self.one_account_client.build_authorize_url(state=state)
+        return {
+            'authorize_url': authorize_url,
+            'state': state,
+        }
+
+    def login_by_oidc_code(self, code: str) -> Dict[str, Any]:
+        oidc_result = self.one_account_client.exchange_code(code=code)
+        employee_id = oidc_result['employee_id']
+        user_obj = self._get_user_by_employee_id(employee_id)
+        authenticated_user = self._validate_active_user(user_obj)
+        authenticated_user.last_login = timezone.now()
+        authenticated_user.save(update_fields=['last_login'])
+
+        self._log_user_action_safely(
+            user=authenticated_user,
+            action='login',
+            description=f'统一认证扫码登录：账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
             status='success',
         )
         return self._build_auth_payload(authenticated_user)
@@ -198,8 +220,6 @@ class AuthenticationService(BaseService):
                 token = RefreshToken(refresh_token)
                 token.blacklist()
             except (TokenError, InvalidToken, ValueError):
-                # Token might already be blacklisted or invalid
-                # These are expected errors during logout, so we silently ignore them
                 pass
 
         self._log_user_action_safely(
@@ -259,8 +279,6 @@ class AuthenticationService(BaseService):
             Dict containing new tokens and updated role info
         Raises:
             BusinessError: If user doesn't have the requested role
-        Properties:
-        - Property 4: 角色切换权限生效
         """
         active_user = self._validate_active_user(self._get_user_by_id(user.id))
         if active_user.is_superuser:
@@ -317,9 +335,8 @@ class AuthenticationService(BaseService):
             Dict containing access and refresh tokens
         """
         refresh = RefreshToken.for_user(user)
-        # Add custom claims
         refresh['employee_id'] = user.employee_id
-        refresh['username'] = user.username  # username 字段存储显示名称
+        refresh['username'] = user.username
         if user.is_superuser:
             refresh['roles'] = [SUPER_ADMIN_ROLE]
             refresh['current_role'] = SUPER_ADMIN_ROLE
@@ -328,7 +345,6 @@ class AuthenticationService(BaseService):
             if current_role:
                 refresh['current_role'] = current_role
             else:
-                # Set default role
                 refresh['current_role'] = self._get_default_role(
                     self._get_user_roles(user)
                 )
@@ -361,11 +377,9 @@ class AuthenticationService(BaseService):
         role_codes = {r['code'] for r in roles}
         if SUPER_ADMIN_ROLE in role_codes:
             return SUPER_ADMIN_ROLE
-        # Use the priority order from Role model
         for role_code in Role.ROLE_PRIORITY_ORDER:
             if role_code in role_codes:
                 return role_code
-        # Fallback to STUDENT if no roles found (shouldn't happen)
         return 'STUDENT'
 
     def blacklist_all_tokens(self, user: User) -> int:

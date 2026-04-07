@@ -111,7 +111,7 @@ interface QuestionMetaToolbarProps {
   spaceTag?: MetaSpaceTag | null;
   spaceTagId?: number | null;
   onSpaceTagIdChange?: (value: number | null) => void;
-  selectedTags?: Array<{ id: number; name?: string }>;
+  selectedTagIds?: number[];
   onTagAdd?: (tag: { id: number; name: string }) => void;
   onTagRemove?: (tagId: number) => void;
   leadingContent?: React.ReactNode;
@@ -132,7 +132,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
   spaceTag,
   spaceTagId,
   onSpaceTagIdChange,
-  selectedTags = [],
+  selectedTagIds = [],
   onTagAdd,
   onTagRemove,
   leadingContent,
@@ -237,7 +237,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
                     tagPopoverOpen && 'bg-white/95 text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.05)]',
                   )}
                 >
-                  标签{selectedTags.length > 0 ? ` (${selectedTags.length})` : ''}
+                  标签{selectedTagIds.length > 0 ? ` (${selectedTagIds.length})` : ''}
                 </button>
               </PopoverTrigger>
               <PopoverContent
@@ -247,7 +247,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
                 className="w-[340px] rounded-[16px] border-[rgba(255,255,255,0.5)] bg-[rgba(255,255,255,0.42)] p-[16px_18px] text-foreground shadow-[0_4px_24px_rgba(0,0,0,0.06)] backdrop-blur-[20px]"
               >
                 <QuestionTagInput
-                  selectedTagIds={selectedTags.map((tag) => tag.id)}
+                  selectedTagIds={selectedTagIds}
                   onAdd={onTagAdd}
                   onRemove={onTagRemove}
                 />
@@ -255,7 +255,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
             </Popover>
           ) : (
             <div className={cn(TAG_BUTTON_CLASSNAME, 'shrink-0 whitespace-nowrap')}>
-              标签{selectedTags.length > 0 ? ` (${selectedTags.length})` : ''}
+              标签{selectedTagIds.length > 0 ? ` (${selectedTagIds.length})` : ''}
             </div>
           )
         ) : null}

@@ -43,7 +43,6 @@ class QuestionListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
-    is_objective = serializers.ReadOnlyField()
     space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     class Meta:
@@ -52,10 +51,9 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
             'options', 'answer', 'explanation',
-            'score',
-            'is_objective', 'space_tag', 'tags',
+            'space_tag', 'tags',
             'is_current',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
+            'created_by_name', 'updated_by_name',
             'created_at', 'updated_at'
 
         ]
@@ -66,8 +64,6 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     question_type_display = serializers.CharField(source='get_question_type_display', read_only=True)
-    is_objective = serializers.ReadOnlyField()
-    is_subjective = serializers.ReadOnlyField()
     space_tag = TagSimpleSerializer(read_only=True)
     tags = TagSimpleSerializer(many=True, read_only=True)
     class Meta:
@@ -75,10 +71,10 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'resource_uuid', 'version_number',
             'content', 'question_type', 'question_type_display',
-            'options', 'answer', 'explanation', 'score',
-            'is_objective', 'is_subjective', 'space_tag', 'tags',
+            'options', 'answer', 'explanation',
+            'space_tag', 'tags',
             'is_current',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name',
+            'created_by_name', 'updated_by_name',
             'created_at', 'updated_at'
         ]
 
@@ -96,7 +92,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             'content', 'question_type', 'options', 'answer',
-            'explanation', 'score', 'space_tag_id', 'tag_ids',
+            'explanation', 'space_tag_id', 'tag_ids',
             'source_question_id', 'sync_to_bank',
         ]
 
@@ -124,7 +120,7 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             'content', 'options', 'answer', 'explanation',
-            'score', 'space_tag_id', 'tag_ids', 'sync_to_bank'
+            'space_tag_id', 'tag_ids', 'sync_to_bank'
         ]
 
     def validate_space_tag_id(self, value):

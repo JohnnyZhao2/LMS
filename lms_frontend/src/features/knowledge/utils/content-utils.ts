@@ -14,14 +14,6 @@ export function isLong(html: string): boolean {
 }
 
 /**
- * 提取内容中的第一个标题
- */
-export function getH(html: string): string | null {
-  const m = html.match(/<h[123][^>]*>(.*?)<\/h[123]>/i);
-  return m ? plain(m[1]) : null;
-}
-
-/**
  * 提取内容中的第一个一级标题，作为知识主题
  */
 export function getKnowledgeTitleFromHtml(html: string): string {

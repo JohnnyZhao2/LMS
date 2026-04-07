@@ -50,12 +50,11 @@ export const TaskManagement: React.FC = () => {
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
-    const [isDeleting, setIsDeleting] = React.useState(false)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
     const isAdmin = isAdminLikeRole(currentRole)
 
-    const { data: tasksData, isLoading, refetch } = useTaskList({
+    const { data: tasksData, isLoading } = useTaskList({
         page,
         pageSize,
         taskStatus: statusFilter as 'open' | 'closed' | 'all',
@@ -73,16 +72,12 @@ export const TaskManagement: React.FC = () => {
 
     const handleDeleteTask = async () => {
         if (!deleteId) return
-        setIsDeleting(true)
         try {
             await deleteTask.mutateAsync(deleteId)
             toast.success("任务已永久删除")
             setDeleteId(null)
-            refetch()
         } catch (error) {
             showApiError(error)
-        } finally {
-            setIsDeleting(false)
         }
     }
 
@@ -352,7 +347,7 @@ export const TaskManagement: React.FC = () => {
                 cancelText="取消"
                 confirmVariant="destructive"
                 onConfirm={handleDeleteTask}
-                isConfirming={isDeleting}
+                isConfirming={deleteTask.isPending}
             />
         </PageFillShell>
     )

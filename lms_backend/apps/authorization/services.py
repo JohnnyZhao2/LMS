@@ -573,11 +573,10 @@ class AuthorizationService(BaseService):
         return override
 
     @staticmethod
-    def sync_permission_catalog() -> dict:
+    def sync_permission_catalog() -> None:
         """Sync code-defined permissions into DB and prune removed permissions."""
-        permissions_by_code = {}
         for item in PERMISSION_CATALOG:
-            permission, _ = Permission.objects.update_or_create(
+            Permission.objects.update_or_create(
                 code=item['code'],
                 defaults={
                     'name': item['name'],
@@ -586,22 +585,8 @@ class AuthorizationService(BaseService):
                     'is_active': True,
                 },
             )
-            permissions_by_code[item['code']] = permission
 
-        Permission.objects.exclude(code__in=permissions_by_code.keys()).delete()
-        return permissions_by_code
-
-    @staticmethod
-    def sync_role_permission_defaults(
-        permissions_by_code: dict,
-        *,
-        overwrite_existing: bool = False,
-    ) -> None:
-        """Reset DB overrides back to pure code defaults when explicitly requested."""
-        del permissions_by_code
-        if not overwrite_existing:
-            return
-        RolePermission.objects.filter(role__code__in=ROLE_PERMISSION_DEFAULTS.keys()).delete()
+        Permission.objects.exclude(code__in=[item['code'] for item in PERMISSION_CATALOG]).delete()
 
     @staticmethod
     @transaction.atomic
@@ -616,9 +601,7 @@ class AuthorizationService(BaseService):
         Normal syncs only manage the permission catalog. Role templates are
         computed from code defaults plus DB overrides.
         """
-        permissions_by_code = AuthorizationService.sync_permission_catalog()
+        AuthorizationService.sync_permission_catalog()
         if sync_role_templates:
-            AuthorizationService.sync_role_permission_defaults(
-                permissions_by_code,
-                overwrite_existing=overwrite_existing_role_templates,
-            )
+            if overwrite_existing_role_templates:
+                RolePermission.objects.filter(role__code__in=ROLE_PERMISSION_DEFAULTS.keys()).delete()

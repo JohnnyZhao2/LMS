@@ -18,12 +18,13 @@ from apps.auth.serializers import (
     LoginResponseSerializer,
     LogoutRequestSerializer,
     MeResponseSerializer,
+    OidcAuthorizeUrlResponseSerializer,
+    OidcCodeLoginRequestSerializer,
     RefreshTokenRequestSerializer,
     RefreshTokenResponseSerializer,
     ResetPasswordRequestSerializer,
     ResetPasswordResponseSerializer,
     SwitchRoleRequestSerializer,
-    SwitchRoleResponseSerializer,
 )
 from apps.auth.services import AuthenticationService
 
@@ -124,7 +125,7 @@ class SwitchRoleView(BaseAPIView):
         description='切换当前用户的生效角色，返回新的令牌',
         request=SwitchRoleRequestSerializer,
         responses={
-            200: SwitchRoleResponseSerializer,
+            200: LoginResponseSerializer,
             400: OpenApiResponse(description='用户没有该角色权限'),
         },
         tags=['认证']
@@ -196,3 +197,44 @@ class ResetPasswordView(BaseAPIView):
             data=result,
             message='密码已重置，请通知用户使用临时密码登录并修改密码'
         )
+
+
+class OidcAuthorizeUrlView(BaseAPIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+    service_class = AuthenticationService
+
+    @extend_schema(
+        summary='获取统一认证扫码登录地址',
+        description='返回统一认证扫码登录跳转地址和state',
+        responses={
+            200: OidcAuthorizeUrlResponseSerializer,
+        },
+        tags=['认证']
+    )
+    def get(self, request):
+        result = self.service.get_oidc_authorize_url()
+        return success_response(result)
+
+
+class OidcCodeLoginView(BaseAPIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthThrottle]
+    service_class = AuthenticationService
+
+    @extend_schema(
+        summary='统一认证授权码登录',
+        description='使用统一认证回调code登录并换发本系统JWT',
+        request=OidcCodeLoginRequestSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            400: OpenApiResponse(description='授权码无效或统一认证失败'),
+        },
+        tags=['认证']
+    )
+    def post(self, request):
+        serializer = OidcCodeLoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = self.service.login_by_oidc_code(code=serializer.validated_data['code'])
+        return success_response(result)

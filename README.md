@@ -82,6 +82,13 @@ cp lms_backend/.env.example lms_backend/.env
 cp lms_frontend/.env.example lms_frontend/.env
 ```
 
+若对接统一认证扫码登录，建议按环境直接切换：
+
+```bash
+cp lms_backend/.env.test lms_backend/.env   # 测试
+cp lms_backend/.env.prod lms_backend/.env   # 生产
+```
+
 说明：
 
 - 后端统一读取 `lms_backend/.env`

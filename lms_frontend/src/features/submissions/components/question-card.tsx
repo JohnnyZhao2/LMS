@@ -16,7 +16,6 @@ interface QuestionCardProps {
   disabled?: boolean;
   showResult?: boolean;
   questionNumber?: number;
-  showScore?: boolean;
 }
 
 const normalizeChoiceOptions = (questionOptions?: Answer['question_options']) => {
@@ -78,23 +77,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   disabled = false,
   showResult = false,
   questionNumber,
-  showScore = false,
 }) => {
   const options = normalizeChoiceOptions(answer.question_options);
-  const normalizedResponse = (() => {
-    switch (answer.question_type) {
-      case 'MULTIPLE_CHOICE':
-        return normalizeMultipleValue(userAnswer);
-      default:
-        return normalizeStringValue(userAnswer);
-    }
-  })();
+  const normalizedResponse =
+    answer.question_type === 'MULTIPLE_CHOICE'
+      ? normalizeMultipleValue(userAnswer)
+      : normalizeStringValue(userAnswer);
 
   return (
     <div className="space-y-5">
       <QuestionDocumentBody
         mode="answer"
-        score={showScore ? (answer.question_score ?? '0') : undefined}
+        score={answer.question_score ?? '0'}
         questionNumber={questionNumber}
         questionType={answer.question_type}
         content={answer.question_content}

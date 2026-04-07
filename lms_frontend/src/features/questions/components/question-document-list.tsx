@@ -35,6 +35,7 @@ interface QuestionDocumentListProps {
   items: QuestionListItem[];
   activeKey: string | null;
   spaceTypes?: Tag[];
+  showScore?: boolean;
   onChangeItem: (key: string, patch: Partial<QuestionEditCardValue>) => void;
   onSelectItem: (key: string) => void;
   onReorderItems: (activeKey: string, overKey: string) => void;
@@ -55,6 +56,7 @@ interface SortableQuestionListItemProps {
   index: number;
   isActive: boolean;
   spaceTypes?: Tag[];
+  showScore: boolean;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
   onSave?: () => void;
   onDelete?: () => void;
@@ -82,6 +84,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
   index,
   isActive,
   spaceTypes,
+  showScore,
   onChange,
   onSave,
   onDelete,
@@ -142,6 +145,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
           item={item}
           index={index}
           spaceTypes={spaceTypes}
+          showScore={showScore}
           onChange={onChange}
           onFocus={onFocus}
           onDelete={onDelete}
@@ -160,6 +164,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
   items,
   activeKey,
   spaceTypes,
+  showScore = false,
   onChangeItem,
   onSelectItem,
   onReorderItems,
@@ -268,6 +273,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     index={index}
                     isActive={item.key === activeKey}
                     spaceTypes={spaceTypes}
+                    showScore={showScore}
                     onChange={(patch) => onChangeItem(item.key, patch)}
                     onSave={onSaveItem ? () => onSaveItem(item.key) : undefined}
                     onDelete={onDeleteItem ? () => onDeleteItem(item.key) : undefined}
@@ -320,6 +326,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     index={items.findIndex((item) => item.key === draggingItem.key)}
                     isActive={draggingItem.key === activeKey}
                     spaceTypes={spaceTypes}
+                    showScore={showScore}
                     onChange={() => undefined}
                     onSave={undefined}
                     onDelete={undefined}

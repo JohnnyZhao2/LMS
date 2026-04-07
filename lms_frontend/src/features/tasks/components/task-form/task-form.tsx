@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 import { useTaskForm } from './use-task-form';
 import { TaskConfigurationPanel } from './task-configuration-panel';
-import { TASK_FORM_WORKBENCH_CLASSNAME } from './task-form.constants';
+import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { TaskPipelinePanel } from './task-pipeline-panel';
 import { TaskResourceLibraryPanel } from './task-resource-library-panel';
 import { QuizPreviewDialog } from '@/features/quiz-center/quizzes/components/quiz-preview-dialog';
@@ -77,7 +77,7 @@ export const TaskForm: React.FC = () => {
   return (
     <EditorPageShell>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <div className={TASK_FORM_WORKBENCH_CLASSNAME}>
+        <div className={THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME}>
           <TaskResourceLibraryPanel
             availableResources={availableResources}
             isLoading={isLoading}

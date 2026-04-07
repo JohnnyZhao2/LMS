@@ -7,7 +7,6 @@ import type { ActivityLogItem } from '../types';
 interface ActivityLogFeedProps {
   items: ActivityLogItem[];
   isLoading?: boolean;
-  canDelete?: boolean;
   selectedLogIds?: string[];
   selectionDisabled?: boolean;
   onToggleSelect?: (itemId: string) => void;
@@ -26,8 +25,8 @@ const formatDayLabel = (value: string) => {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
 
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (date.toDateString() === today.toDateString()) return '今天';
+  if (date.toDateString() === yesterday.toDateString()) return '昨天';
 
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
@@ -65,7 +64,6 @@ const LoadingState = () => (
 export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
   items,
   isLoading = false,
-  canDelete = false,
   selectedLogIds = [],
   selectionDisabled = false,
   onToggleSelect,
@@ -87,15 +85,14 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
       <div className="relative ml-[18px]">
         <div className="absolute bottom-0 left-0 top-0 w-px bg-border/60" />
 
-        {groups.map((group, gi) => (
+        {groups.map((group) => (
           <div key={group.label}>
             <div className="relative flex items-center pb-1 pt-1">
               <div className="absolute -left-[5px] flex h-[10px] w-[10px] items-center justify-center rounded-full border-2 border-primary bg-background" />
               <span className="pl-7 text-[13px] font-semibold text-foreground">{group.label}</span>
             </div>
 
-            {group.items.map((item, ii) => {
-              const isLast = gi === groups.length - 1 && ii === group.items.length - 1;
+            {group.items.map((item) => {
               const isFailed = item.status === 'failed' || item.status === 'partial';
               return (
                 <div key={item.id} className="relative">
@@ -104,7 +101,6 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                   <div
                     className={cn(
                       'group ml-5 flex gap-3 rounded-lg py-2.5 pl-2 pr-2 transition-colors hover:bg-muted',
-                      isLast && 'mb-0'
                     )}
                   >
                     <UserAvatar
@@ -137,7 +133,7 @@ export const ActivityLogFeed: React.FC<ActivityLogFeedProps> = ({
                       )}
                     </div>
 
-                    {canDelete && onToggleSelect ? (
+                    {onToggleSelect ? (
                       <Checkbox
                         checked={selectedLogIds.includes(item.id)}
                         onCheckedChange={() => onToggleSelect(item.id)}

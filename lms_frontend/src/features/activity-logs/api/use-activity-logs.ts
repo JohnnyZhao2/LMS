@@ -79,19 +79,6 @@ export const useUpdateActivityLogPolicy = () => {
   });
 };
 
-export const useDeleteActivityLog = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (logItemId: string) => {
-      return apiClient.delete<void>(`/logs/items/${logItemId}/`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['activity-logs'] });
-    },
-  });
-};
-
 export const useBulkDeleteActivityLogs = () => {
   const queryClient = useQueryClient();
 

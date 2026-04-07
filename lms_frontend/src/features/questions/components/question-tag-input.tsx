@@ -20,13 +20,10 @@ export const QuestionTagInput: React.FC<QuestionTagInputProps> = ({
     limit: 200,
   });
 
-  const selectedTags = React.useMemo(
-    () => selectedTagIds
-      .map((tagId) => allTags.find((tag) => tag.id === tagId))
-      .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag))
-      .map((tag) => ({ id: tag.id, name: tag.name })),
-    [allTags, selectedTagIds],
-  );
+  const selectedTags = selectedTagIds
+    .map((tagId) => allTags.find((tag) => tag.id === tagId))
+    .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag))
+    .map((tag) => ({ id: tag.id, name: tag.name }));
 
   return (
     <TagInput

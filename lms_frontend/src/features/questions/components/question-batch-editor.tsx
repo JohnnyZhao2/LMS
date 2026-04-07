@@ -172,6 +172,7 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
             items={items}
             activeKey={activeKey}
             spaceTypes={spaceTypes}
+            showScore={false}
             onChangeItem={(key, patch) => replaceItem(key, (current) => ({ ...current, ...patch, saved: false }))}
             onSelectItem={setActiveKey}
             onReorderItems={handleReorderItems}

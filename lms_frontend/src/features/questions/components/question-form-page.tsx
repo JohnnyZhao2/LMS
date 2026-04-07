@@ -12,7 +12,6 @@ import { QuestionBatchEditor } from '@/features/questions/components/question-ba
 import { createBlankEditableQuestion, questionToEditableItem } from '@/features/questions/components/question-editor-helpers';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import type { QuestionCreateRequest } from '@/types/api';
 
 export const QuestionFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,33 +24,11 @@ export const QuestionFormPage: React.FC = () => {
   const updateQuestion = useUpdateQuestion();
   const deleteQuestion = useDeleteQuestion();
 
-  const handleBack = React.useCallback(() => {
-    roleNavigate('/questions');
-  }, [roleNavigate]);
-
-  const handleCreateQuestion = React.useCallback(async (data: QuestionCreateRequest) => {
-    const created = await createQuestion.mutateAsync(data);
-    toast.success('题目创建成功');
-    return created;
-  }, [createQuestion]);
-
-  const handleUpdateQuestion = React.useCallback(async (targetId: number, data: Partial<QuestionCreateRequest>) => {
-    const updated = await updateQuestion.mutateAsync({ id: targetId, data });
-    toast.success('题目保存成功');
-    return updated;
-  }, [updateQuestion]);
-
-  const handleDeleteQuestion = React.useCallback(async (targetId: number) => {
-    await deleteQuestion.mutateAsync(targetId);
-    toast.success('题目已删除');
-  }, [deleteQuestion]);
-
-  const initialItems = React.useMemo(() => {
-    if (isEdit) {
-      return questionDetail ? [questionToEditableItem(questionDetail)] : [];
-    }
-    return [createBlankEditableQuestion()];
-  }, [isEdit, questionDetail]);
+  const initialItems = isEdit
+    ? questionDetail
+      ? [questionToEditableItem(questionDetail)]
+      : []
+    : [createBlankEditableQuestion()];
 
   return (
     <PageFillShell>
@@ -59,7 +36,7 @@ export const QuestionFormPage: React.FC = () => {
         title={isEdit ? '编辑题目' : '新建题目'}
         icon={<FilePenLine />}
         extra={(
-          <Button variant="outline" onClick={handleBack}>
+          <Button variant="outline" onClick={() => roleNavigate('/questions')}>
             <ArrowLeft className="h-4 w-4" />
             返回列表
           </Button>
@@ -74,10 +51,21 @@ export const QuestionFormPage: React.FC = () => {
               initialItems={initialItems}
               spaceTypes={spaceTypes}
               allowAdd={!isEdit}
-              onCreateQuestion={handleCreateQuestion}
-              onUpdateQuestion={handleUpdateQuestion}
-              onDeleteQuestion={handleDeleteQuestion}
-              onEmpty={handleBack}
+              onCreateQuestion={async (data) => {
+                const created = await createQuestion.mutateAsync(data);
+                toast.success('题目创建成功');
+                return created;
+              }}
+              onUpdateQuestion={async (targetId, data) => {
+                const updated = await updateQuestion.mutateAsync({ id: targetId, data });
+                toast.success('题目保存成功');
+                return updated;
+              }}
+              onDeleteQuestion={async (targetId) => {
+                await deleteQuestion.mutateAsync(targetId);
+                toast.success('题目已删除');
+              }}
+              onEmpty={() => roleNavigate('/questions')}
             />
           )}
         </div>

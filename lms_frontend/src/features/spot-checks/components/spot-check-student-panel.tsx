@@ -18,11 +18,6 @@ interface SpotCheckStudentPanelProps {
   isLoading: boolean;
 }
 
-const buildStudentMeta = (student: SpotCheckStudent) => {
-  const employeeId = student.employee_id || '未填写工号';
-  return student.department_name ? `${employeeId} · ${student.department_name}` : employeeId;
-};
-
 export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
   students,
   selectedStudentId,
@@ -37,7 +32,9 @@ export const SpotCheckStudentPanel: React.FC<SpotCheckStudentPanelProps> = ({
     id: student.id,
     name: student.username,
     avatarKey: student.avatar_key,
-    meta: buildStudentMeta(student),
+    meta: student.department_name
+      ? `${student.employee_id || '未填写工号'} · ${student.department_name}`
+      : (student.employee_id || '未填写工号'),
   }));
 
   return (

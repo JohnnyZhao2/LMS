@@ -18,8 +18,8 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   const submissionId = Number.isNaN(parsedSubmissionId ?? NaN) ? undefined : parsedSubmissionId;
   const isPractice = type === 'practice';
 
-  const practiceResultQuery = usePracticeResult(submissionId, { enabled: isPractice });
-  const examResultQuery = useExamResult(submissionId, { enabled: !isPractice });
+  const practiceResultQuery = usePracticeResult(submissionId, isPractice);
+  const examResultQuery = useExamResult(submissionId, !isPractice);
   const { data, isLoading } = isPractice ? practiceResultQuery : examResultQuery;
 
   if (!submissionId) {
@@ -104,7 +104,6 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
               disabled
               showResult
               questionNumber={index + 1}
-              showScore
             />
           ))}
         </CardContent>

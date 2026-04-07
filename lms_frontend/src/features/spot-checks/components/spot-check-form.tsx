@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ListChecks, Loader2, Plus, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams } from 'react-router-dom';
@@ -109,35 +109,28 @@ export const SpotCheckForm: React.FC<SpotCheckFormProps> = ({
   const [draftItems, setDraftItems] = useState<SpotCheckItem[] | null>(isEdit ? null : [createEmptyItem()]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const baseItems = useMemo(() => {
-    if (isEdit) {
-      return spotCheckDetail ? normalizeItems(spotCheckDetail.items) : [];
-    }
-    return [createEmptyItem()];
-  }, [isEdit, spotCheckDetail]);
+  const baseItems = isEdit
+    ? (spotCheckDetail ? normalizeItems(spotCheckDetail.items) : [])
+    : [createEmptyItem()];
 
   const items = draftItems ?? baseItems;
 
   const isSubmitting = createSpotCheck.isPending || updateSpotCheck.isPending;
-  const selectedStudent = useMemo<SelectedStudentInfo | null>(() => {
-    if (isEdit) {
-      return spotCheckDetail
-        ? {
-            id: spotCheckDetail.student,
-            username: spotCheckDetail.student_name,
-            employee_id: spotCheckDetail.student_employee_id,
-            avatar_key: spotCheckDetail.student_avatar_key,
-            department: spotCheckDetail.student_department
-              ? { name: spotCheckDetail.student_department }
-              : undefined,
-          }
-        : null;
-    }
+  const selectedStudent: SelectedStudentInfo | null = isEdit
+    ? (spotCheckDetail
+      ? {
+          id: spotCheckDetail.student,
+          username: spotCheckDetail.student_name,
+          employee_id: spotCheckDetail.student_employee_id,
+          avatar_key: spotCheckDetail.student_avatar_key,
+          department: spotCheckDetail.student_department
+            ? { name: spotCheckDetail.student_department }
+            : undefined,
+        }
+      : null)
+    : (users || []).find((user) => String(user.id) === studentId) ?? null;
 
-    return (users || []).find((user) => String(user.id) === studentId) ?? null;
-  }, [isEdit, spotCheckDetail, studentId, users]);
-
-  const averageScore = useMemo(() => calculateAverageScore(items), [items]);
+  const averageScore = calculateAverageScore(items);
 
   const updateItems = (updater: (current: SpotCheckItem[]) => SpotCheckItem[]) => {
     setDraftItems((prev) => updater(prev ?? baseItems));

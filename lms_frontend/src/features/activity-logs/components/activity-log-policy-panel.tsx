@@ -4,18 +4,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
-import type { ActivityLogPolicy } from '../types';
+import type { ActivityLogPolicy, ActivityLogType } from '../types';
 
-const categoryLabels: Record<ActivityLogPolicy['category'], string> = {
-  user: '用户日志',
-  content: '内容日志',
-  operation: '操作日志',
-};
-
-const categoryIcons: Record<ActivityLogPolicy['category'], React.ReactNode> = {
-  user: <Zap size={14} />,
-  content: <ShieldCheck size={14} />,
-  operation: <SlidersHorizontal size={14} />,
+const CATEGORY_META: Record<ActivityLogType, { label: string; icon: React.ReactNode }> = {
+  user: { label: '用户日志', icon: <Zap size={14} /> },
+  content: { label: '内容日志', icon: <ShieldCheck size={14} /> },
+  operation: { label: '操作日志', icon: <SlidersHorizontal size={14} /> },
 };
 
 export const ActivityLogPolicyPanel: React.FC = () => {
@@ -82,14 +76,13 @@ export const ActivityLogPolicyPanel: React.FC = () => {
               .filter((category) => groupedPolicies[category])
               .map((category) => (
                 <div key={category} className="space-y-6">
-                  {/* Category Header - Minimalist & Grand */}
                   <div className="flex items-center gap-3 px-1">
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-[0_0_10px_rgba(var(--primary),0.1)]">
-                      {categoryIcons[category]}
+                      {CATEGORY_META[category].icon}
                     </div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-sm font-black text-foreground uppercase tracking-[0.15em] transition-all">
-                        {categoryLabels[category]}
+                        {CATEGORY_META[category].label}
                       </span>
                       <span className="text-[10px] font-bold text-muted-foreground/30 tabular-nums">
                         ({Object.values(groupedPolicies[category]).flat().length})
@@ -98,21 +91,18 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                     <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent" />
                   </div>
 
-                  {/* Groups Grid */}
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                     {Object.entries(groupedPolicies[category]).map(([group, items]) => (
                       <div
                         key={group}
                         className="group flex flex-col rounded-xl border border-slate-200/60 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden"
                       >
-                        {/* Group Title - Clean & Soft */}
                         <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                             {group}
                           </span>
                         </div>
 
-                        {/* Policies List */}
                         <div className="divide-y divide-slate-50">
                           {items.map((policy) => (
                             <label
@@ -135,7 +125,6 @@ export const ActivityLogPolicyPanel: React.FC = () => {
                                 </div>
                               </div>
 
-                              {/* Professional iOS-style Switch */}
                               <div
                                 onClick={(e) => {
                                   e.preventDefault();

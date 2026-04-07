@@ -330,6 +330,46 @@ class TestQuestionApiContracts:
         assert sample_question.id in result_ids
         assert historical_version.id not in result_ids
 
+    def test_question_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
+        current = Question.objects.create(
+            content='当前题目',
+            question_type='SINGLE_CHOICE',
+            options=[
+                {'key': 'A', 'value': '选项A'},
+                {'key': 'B', 'value': '选项B'},
+            ],
+            answer='A',
+            score=1,
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=space_tag,
+            version_number=2,
+            is_current=True,
+        )
+        historical_version = Question.objects.create(
+            content='历史题目',
+            question_type='SINGLE_CHOICE',
+            options=[
+                {'key': 'A', 'value': '选项A'},
+                {'key': 'B', 'value': '选项B'},
+            ],
+            answer='A',
+            score=1,
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=space_tag,
+            resource_uuid=current.resource_uuid,
+            version_number=1,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get(f'/api/questions/{historical_version.id}/')
+
+        assert response.status_code == 403
+        assert response.data['code'] == 'PERMISSION_DENIED'
+        assert '无权访问该题目' in response.data['message']
+
     def test_question_list_rejects_invalid_created_by(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/questions/?created_by=not-an-int')
@@ -534,6 +574,25 @@ class TestQuizApiContracts:
         assert 'results' in response.data['data']
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_quiz.id in result_ids
+
+    def test_quiz_list_hides_history_versions(self, api_client, mentor_user, sample_quiz):
+        historical_version = Quiz.objects.create(
+            title='旧版本试卷',
+            quiz_type='PRACTICE',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            resource_uuid=sample_quiz.resource_uuid,
+            version_number=2,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/quizzes/?page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert sample_quiz.id in result_ids
+        assert historical_version.id not in result_ids
 
     def test_quiz_list_rejects_invalid_created_by(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
@@ -834,6 +893,26 @@ class TestKnowledgeApiContracts:
         result_ids = [item['id'] for item in response.data['data']['results']]
         assert sample_knowledge.id in result_ids
 
+    def test_knowledge_list_hides_history_versions(self, api_client, mentor_user, sample_knowledge):
+        historical_version = Knowledge.objects.create(
+            title='旧版本知识',
+            content='旧版本正文',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=sample_knowledge.space_tag,
+            resource_uuid=sample_knowledge.resource_uuid,
+            version_number=2,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/knowledge/?page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert sample_knowledge.id in result_ids
+        assert historical_version.id not in result_ids
+
     def test_knowledge_list_rejects_invalid_space_tag_id(self, api_client, mentor_user):
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/knowledge/?space_tag_id=bad')
@@ -850,6 +929,34 @@ class TestKnowledgeApiContracts:
         assert response.data['code'] == 'SUCCESS'
         assert response.data['message'] == 'success'
         assert response.data['data']['id'] == sample_knowledge.id
+
+    def test_knowledge_detail_blocks_historical_version_for_non_admin(self, api_client, mentor_user, space_tag):
+        current = Knowledge.objects.create(
+            title='当前知识',
+            content='当前正文',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=space_tag,
+            version_number=2,
+            is_current=True,
+        )
+        historical_version = Knowledge.objects.create(
+            title='历史知识',
+            content='历史正文',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            space_tag=space_tag,
+            resource_uuid=current.resource_uuid,
+            version_number=1,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get(f'/api/knowledge/{historical_version.id}/')
+
+        assert response.status_code == 403
+        assert response.data['code'] == 'PERMISSION_DENIED'
+        assert '无权访问该知识文档' in response.data['message']
 
     def test_knowledge_increment_view_count_response_is_wrapped(self, api_client, mentor_user, sample_knowledge):
         api_client.force_authenticate(user=mentor_user)

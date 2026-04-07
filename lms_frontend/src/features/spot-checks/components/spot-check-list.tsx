@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useMemo, useState } from 'react';
+import { startTransition, useDeferredValue, useState } from 'react';
 import { ListChecks, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -49,19 +49,13 @@ export const SpotCheckList: React.FC = () => {
     role: currentRole,
     search: deferredStudentSearch || undefined,
   });
-  const filteredStudents = useMemo(
-    () => students.filter((student) => matchDepartmentFilter(student, departmentFilter)),
-    [departmentFilter, students],
-  );
-  const resolvedSelectedStudentId = useMemo(() => {
-    if (filteredStudents.length === 0) {
-      return null;
-    }
-    if (selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)) {
-      return selectedStudentId;
-    }
-    return filteredStudents[0].id;
-  }, [filteredStudents, selectedStudentId]);
+  const filteredStudents = students.filter((student) => matchDepartmentFilter(student, departmentFilter));
+  const resolvedSelectedStudentId =
+    filteredStudents.length === 0
+      ? null
+      : selectedStudentId !== null && filteredStudents.some((student) => student.id === selectedStudentId)
+        ? selectedStudentId
+        : filteredStudents[0].id;
 
   const { page, pageSize } = resolvedSelectedStudentId
     ? (paginationByStudent[resolvedSelectedStudentId] ?? { page: 1, pageSize: 20 })
@@ -75,11 +69,8 @@ export const SpotCheckList: React.FC = () => {
     enabled: resolvedSelectedStudentId !== null,
   });
 
-  const selectedStudent = useMemo(
-    () => filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null,
-    [filteredStudents, resolvedSelectedStudentId],
-  );
-  const records = useMemo(() => recordsData?.results ?? [], [recordsData?.results]);
+  const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
+  const records = recordsData?.results ?? [];
 
   const canCreateSpotCheck = hasPermission('spot_check.create');
   const canUpdateSpotCheck = hasPermission('spot_check.update');

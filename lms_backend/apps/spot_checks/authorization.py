@@ -2,6 +2,18 @@
 
 from apps.authorization.registry import AuthorizationSpec, PermissionDefinition
 
+MANAGER_DEFAULT_PERMISSIONS = (
+    'spot_check.view',
+    'spot_check.create',
+    'spot_check.update',
+    'spot_check.delete',
+)
+
+MANAGER_SCOPE_PERMISSIONS = (
+    'spot_check.view',
+    'spot_check.create',
+)
+
 
 AUTHORIZATION_SPECS = (
     AuthorizationSpec(
@@ -30,9 +42,9 @@ AUTHORIZATION_SPECS = (
             ),
         ),
         role_defaults={
-            'MENTOR': ('spot_check.view', 'spot_check.create', 'spot_check.update', 'spot_check.delete'),
-            'DEPT_MANAGER': ('spot_check.view', 'spot_check.create', 'spot_check.update', 'spot_check.delete'),
+            'MENTOR': MANAGER_DEFAULT_PERMISSIONS,
+            'DEPT_MANAGER': MANAGER_DEFAULT_PERMISSIONS,
         },
-        scope_aware_permissions=('spot_check.view', 'spot_check.create'),
+        scope_aware_permissions=MANAGER_SCOPE_PERMISSIONS,
     ),
 )

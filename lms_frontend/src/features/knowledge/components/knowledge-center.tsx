@@ -23,11 +23,12 @@ import type { Tag as TagType } from '@/types/api';
 
 import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
-import { useCreateTag, useDeleteTag, useSpaceTypeTags } from '../api/get-tags';
 import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
+import { useCreateTag, useDeleteTag } from '@/features/tags/api/tags';
+import { useSpaceTypeTags } from '../api/get-tags';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';

@@ -135,7 +135,6 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             attrs['related_links'] = _normalize_related_links(attrs['related_links'])
         return attrs
 
-
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating knowledge documents.
@@ -177,14 +176,3 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
         if 'related_links' in attrs:
             attrs['related_links'] = _normalize_related_links(attrs['related_links'])
         return attrs
-
-
-class KnowledgeStatsSerializer(serializers.Serializer):
-    """
-    知识统计序列化器
-    返回知识文档的统计数据。
-    """
-    total = serializers.IntegerField(help_text='总文档数')
-    published = serializers.IntegerField(help_text='已发布数')
-    monthly_new = serializers.IntegerField(help_text='本月新增文档数')
-    with_content = serializers.IntegerField(help_text='包含正文的文档数')

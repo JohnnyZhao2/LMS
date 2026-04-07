@@ -20,20 +20,6 @@ def get_permission_constraint_summary(permission_code: str) -> str:
     return PERMISSION_CONSTRAINT_SUMMARIES.get(permission_code, '')
 
 
-def can_manage_owned_resource(
-    *,
-    current_role: Optional[str],
-    actor_user_id: Optional[int],
-    owner_user_id: Optional[int],
-    has_allow_override: bool = False,
-) -> bool:
-    if is_admin_like_role(current_role):
-        return True
-    if actor_user_id and owner_user_id and actor_user_id == owner_user_id:
-        return True
-    return has_allow_override
-
-
 def can_view_task_resource(
     *,
     current_role: Optional[str],

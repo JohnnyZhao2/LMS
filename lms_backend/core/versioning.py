@@ -2,7 +2,7 @@
 版本化资源通用工具。
 """
 import uuid
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 
 from django.db import models
 
@@ -32,8 +32,8 @@ def build_next_version_data(
     *,
     actor,
     copy_fields: Iterable[str],
-    overrides: dict[str, Any] | None = None,
-    extra_fields: dict[str, Any] | None = None,
+    overrides: Optional[dict[str, Any]] = None,
+    extra_fields: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """
     基于 source 构造新版本数据。

@@ -44,6 +44,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
       items={items}
       activeKey={activeKey}
       spaceTypes={spaceTypes}
+      showScore
       onChangeItem={(key, patch) => onUpdateItem(key, patch as Partial<InlineQuestionItem>)}
       onSelectItem={onFocusItem}
       onReorderItems={onReorderItems}
