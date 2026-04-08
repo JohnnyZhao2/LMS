@@ -38,14 +38,14 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
 
   return (
     <Card className={cn(
-      "relative border-border/40 bg-card shadow-xl shadow-slate-200/30 flex flex-col overflow-hidden group/calendar transition-all duration-700 hover:shadow-primary/5 h-full",
+      "relative flex w-full min-h-[318px] flex-col overflow-hidden border-border/40 bg-card shadow-xl shadow-slate-200/30 transition-all duration-700 group/calendar hover:shadow-primary/5 xl:min-h-0",
       className
     )}>
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[image:var(--noise-texture)]" />
       <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-muted/50 to-transparent opacity-50" />
 
       <div className="relative z-10 px-5 pt-3 pb-0 xl:px-6">
-        <div className="relative flex items-center justify-between h-12">
+        <div className="relative flex h-12 items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground/30 hover:text-foreground" onClick={prevMonth}>
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -78,8 +78,8 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
           ))}
         </div>
 
-        <div className="grid grid-cols-7 auto-rows-[clamp(2.6rem,2.4vw,3.5rem)] gap-x-0.5 gap-y-1">
-          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="h-full min-h-[42px]" />)}
+        <div className="grid min-h-0 flex-1 grid-cols-7 auto-rows-fr gap-x-0.5 gap-y-1">
+          {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="h-full min-h-0" />)}
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
             const day = i + 1;
@@ -87,7 +87,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
             const isDeadline = isDeadlineMonth && day === deadlineDay;
 
             return (
-              <div key={day} className="relative flex h-full min-h-[42px] items-center justify-center">
+              <div key={day} className="relative flex h-full min-h-0 items-center justify-center">
                 {isToday && (
                   <div className="absolute inset-1.5 pointer-events-none transition-all duration-500">
                     <div className="absolute top-0 left-0 w-3 h-3 border-t-[1.5px] border-l-[1.5px] border-slate-400/60" />
@@ -120,7 +120,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ className, selectedT
           })}
         </div>
 
-        <div className="mt-auto border-t border-dashed border-border/40 pt-2.5">
+        <div className="mt-3 border-t border-dashed border-border/40 pt-2.5">
           {selectedTask ? (() => {
             const daysLeft = dayjs(selectedTask.deadline).startOf('day').diff(today.startOf('day'), 'day');
             const isOverdue = daysLeft < 0;

@@ -197,7 +197,7 @@ export const QuizPlayer: React.FC = () => {
   const unansweredCount = totalQuestions - answeredCount;
 
   return (
-    <PageShell className="min-h-0 flex-1 gap-4">
+    <PageShell className="min-h-0 flex-1 gap-4 pb-4">
       <PageWorkbench className="gap-0">
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)_300px]">
           <div className="min-h-0 xl:h-full">

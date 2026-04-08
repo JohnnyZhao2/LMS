@@ -1,4 +1,5 @@
 # 仓库指南
+后端环境 conda activate lms
 用中文回复，言简意赅，不要废话
 **No backward compatibility** - Break old formats freely
 

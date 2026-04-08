@@ -276,6 +276,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     return (
         <PageShell
+            className="pb-4"
             style={{ fontFamily: "'DM Sans', 'PingFang SC', 'Noto Sans SC', sans-serif" }}
         >
             <PageHeader

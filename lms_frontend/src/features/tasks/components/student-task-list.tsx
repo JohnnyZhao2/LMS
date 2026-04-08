@@ -39,7 +39,7 @@ export const StudentTaskList: React.FC = () => {
     );
 
     return (
-        <PageShell>
+        <PageShell className="pb-4">
             <PageHeader
                 title="任务治理中心"
                 icon={<Activity />}

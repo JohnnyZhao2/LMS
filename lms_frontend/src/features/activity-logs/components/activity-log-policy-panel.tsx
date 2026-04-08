@@ -1,15 +1,16 @@
-import React, { useMemo } from 'react';
-import { SlidersHorizontal, ShieldCheck, Zap } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ShieldCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy, ActivityLogType } from '../types';
+import { ActivityLogPolicyCategorySection } from './activity-log-policy-category-section';
+import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
 
-const CATEGORY_META: Record<ActivityLogType, { label: string; icon: React.ReactNode }> = {
-  user: { label: '用户日志', icon: <Zap size={14} /> },
-  content: { label: '内容日志', icon: <ShieldCheck size={14} /> },
-  operation: { label: '操作日志', icon: <SlidersHorizontal size={14} /> },
+const CATEGORY_LABELS: Record<ActivityLogType, string> = {
+  user: '用户日志',
+  content: '内容日志',
+  operation: '操作日志',
 };
 
 export const ActivityLogPolicyPanel: React.FC = () => {
@@ -19,6 +20,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
+  const [activeCategory, setActiveCategory] = useState<ActivityLogType | ''>('');
 
   const groupedPolicies = useMemo(() => {
     const grouped: Record<string, Record<string, ActivityLogPolicy[]>> = {};
@@ -34,6 +36,41 @@ export const ActivityLogPolicyPanel: React.FC = () => {
     return grouped;
   }, [policies]);
 
+  const categorySummaries = useMemo(
+    () => (['user', 'content', 'operation'] as const)
+      .filter((category) => groupedPolicies[category])
+      .map((category) => {
+        const groups = Object.entries(groupedPolicies[category]);
+        const items = groups.flatMap(([, records]) => records);
+        return {
+          category,
+          groups,
+          total: items.length,
+          enabled: items.filter((policy) => policy.enabled).length,
+        };
+      }),
+    [groupedPolicies],
+  );
+
+  const categoryModules = useMemo(
+    () => categorySummaries.map(({ category }) => category),
+    [categorySummaries],
+  );
+  const categoryCounts = useMemo(
+    () => Object.fromEntries(categorySummaries.map(({ category, total, enabled }) => [category, { total, enabled }])),
+    [categorySummaries],
+  );
+  const resolvedActiveCategory = useMemo<ActivityLogType | null>(
+    () => (categoryModules.includes(activeCategory as ActivityLogType)
+      ? activeCategory as ActivityLogType
+      : categoryModules[0] ?? null),
+    [activeCategory, categoryModules],
+  );
+  const activeCategorySummary = useMemo(
+    () => categorySummaries.find(({ category }) => category === resolvedActiveCategory) ?? null,
+    [categorySummaries, resolvedActiveCategory],
+  );
+
   const handleTogglePolicy = async (policy: ActivityLogPolicy) => {
     try {
       await updatePolicy({ key: policy.key, enabled: !policy.enabled });
@@ -46,7 +83,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canViewPolicies) {
     return (
-      <div className="p-8 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
+      <div className="flex items-center gap-3 rounded-[22px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
         <ShieldCheck size={18} />
         无权查看日志策略。
       </div>
@@ -55,7 +92,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
 
   if (!canUpdatePolicies) {
     return (
-      <div className="p-8 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-600 text-sm font-bold flex items-center gap-3">
+      <div className="flex items-center gap-3 rounded-[22px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
         <ShieldCheck size={18} />
         无权配置日志策略。
       </div>
@@ -63,102 +100,45 @@ export const ActivityLogPolicyPanel: React.FC = () => {
   }
 
   return (
-    <div className="space-y-12 pb-8">
+    <div className="space-y-5">
       {isLoading ? (
-        <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground/40 animate-pulse px-2">
+        <div className="flex items-center gap-3 rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] px-5 py-8 text-sm font-semibold text-text-muted">
           <Zap className="animate-spin duration-1000" size={16} />
           正在同步审计策略架构...
         </div>
       ) : (
-        Object.keys(groupedPolicies).length > 0 ? (
-          <div className="grid gap-12">
-            {(['user', 'content', 'operation'] as const)
-              .filter((category) => groupedPolicies[category])
-              .map((category) => (
-                <div key={category} className="space-y-6">
-                  <div className="flex items-center gap-3 px-1">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 shadow-[0_0_10px_rgba(var(--primary),0.1)]">
-                      {CATEGORY_META[category].icon}
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-black text-foreground uppercase tracking-[0.15em] transition-all">
-                        {CATEGORY_META[category].label}
-                      </span>
-                      <span className="text-[10px] font-bold text-muted-foreground/30 tabular-nums">
-                        ({Object.values(groupedPolicies[category]).flat().length})
-                      </span>
-                    </div>
-                    <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent" />
-                  </div>
+        activeCategorySummary ? (
+          <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <section className="rounded-[20px] border border-border/70 bg-white p-3">
+              <UserPermissionModuleSidebar
+                permissionModules={categoryModules}
+                activePermissionModule={resolvedActiveCategory ?? ''}
+                moduleCounts={categoryCounts}
+                onSelectModule={(moduleName) => setActiveCategory(moduleName as ActivityLogType)}
+                getModuleLabel={(moduleName) => CATEGORY_LABELS[moduleName as ActivityLogType] ?? moduleName}
+              />
+            </section>
 
-                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-                    {Object.entries(groupedPolicies[category]).map(([group, items]) => (
-                      <div
-                        key={group}
-                        className="group flex flex-col rounded-xl border border-slate-200/60 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden"
-                      >
-                        <div className="px-6 py-4 border-b border-slate-50/50 bg-slate-50">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                            {group}
-                          </span>
-                        </div>
+            <section className="rounded-[20px] border border-border/70 bg-white">
+              <div className="px-5 py-4">
+                <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
+                  {CATEGORY_LABELS[activeCategorySummary.category]}
+                </h3>
+              </div>
 
-                        <div className="divide-y divide-slate-50">
-                          {items.map((policy) => (
-                            <label
-                              key={policy.key}
-                              className={cn(
-                                "flex items-center justify-between gap-4 py-4 px-6 cursor-pointer transition-all duration-300",
-                                "hover:bg-slate-50",
-                                !policy.enabled && "opacity-60"
-                              )}
-                            >
-                              <div className="space-y-1">
-                                <div className={cn(
-                                  "text-[13px] font-bold tracking-tight transition-colors",
-                                  policy.enabled ? "text-slate-700" : "text-slate-400"
-                                )}>
-                                  {policy.label}
-                                </div>
-                                <div className="text-[9px] font-medium text-slate-300 uppercase tracking-wider font-mono">
-                                  {policy.key}
-                                </div>
-                              </div>
-
-                              <div
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  if (!isUpdating) handleTogglePolicy(policy);
-                                }}
-                                className={cn(
-                                  "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-all duration-500 ease-in-out outline-none ring-offset-background",
-                                  policy.enabled ? "bg-primary" : "bg-slate-200",
-                                  isUpdating && "opacity-50 cursor-not-allowed"
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg ring-0 transition-transform duration-500 ease-in-out",
-                                    policy.enabled ? "translate-x-[1.15rem]" : "translate-x-0.5"
-                                  )}
-                                />
-                                {policy.enabled && (
-                                  <div className="absolute inset-0 rounded-full bg-primary/20 blur-md scale-110 pointer-events-none animate-pulse" />
-                                )}
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <div className="px-5 pb-5">
+                <ActivityLogPolicyCategorySection
+                  groups={activeCategorySummary.groups}
+                  isUpdating={isUpdating}
+                  onTogglePolicy={handleTogglePolicy}
+                />
+              </div>
+            </section>
           </div>
         ) : (
-          <div className="p-12 text-center rounded-2xl border border-dashed border-border/40 bg-muted">
-            <ShieldCheck size={32} className="mx-auto text-muted-foreground/20 mb-4" />
-            <div className="text-sm font-bold text-muted-foreground/40">暂无可配置的日志策略</div>
+          <div className="rounded-[22px] border border-dashed border-border/60 bg-muted/50 px-6 py-14 text-center">
+            <ShieldCheck size={32} className="mx-auto mb-4 text-text-muted/40" />
+            <div className="text-sm font-semibold text-text-muted">暂无可配置的日志策略</div>
           </div>
         )
       )}

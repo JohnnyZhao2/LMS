@@ -18,14 +18,12 @@ import {
 import { ROLE_FULL_LABELS, ROLE_INDICATOR_CLASSES, ROLE_ORDER } from '@/config/role-constants'
 import type { RoleCode } from '@/types/api'
 import { toast } from 'sonner'
-import { GlobalBreadcrumb } from './global-breadcrumb'
 
 interface StudentLayoutProps {
   children: React.ReactNode
 }
 
-const STUDENT_SHELL_WIDTH_CLASS = 'mx-auto w-full max-w-[1880px]'
-const STUDENT_SHELL_PADDING_CLASS = 'px-6 md:px-10 xl:px-14 2xl:px-16'
+const STUDENT_FRAME_CLASS = 'mx-auto w-full max-w-[1680px] px-6 md:px-8 xl:px-10'
 
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   const { user, availableRoles, logout, switchRole, refreshUser } = useAuth()
@@ -147,11 +145,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-[#F6F8FC]">
-      <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-white/90 backdrop-blur-md">
+    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F6F8FC]">
+      <header className="sticky top-0 z-30 h-14 shrink-0 border-b border-border/60 bg-white">
         <div className={cn(
-          STUDENT_SHELL_WIDTH_CLASS,
-          STUDENT_SHELL_PADDING_CLASS,
+          STUDENT_FRAME_CLASS,
           'grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4'
         )}>
           <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
@@ -296,12 +293,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <div className={cn(
-          STUDENT_SHELL_WIDTH_CLASS,
-          STUDENT_SHELL_PADDING_CLASS,
-          'flex h-full w-full min-w-0 min-h-0 flex-1 flex-col py-5 md:py-6 xl:py-7'
+          STUDENT_FRAME_CLASS,
+          'flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden py-6'
         )}>
-          <GlobalBreadcrumb />
-          <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-auto">
+          <div className="scrollbar-subtle -mt-4 flex w-full min-h-0 flex-1 flex-col overflow-auto pt-4">
             {children}
           </div>
         </div>

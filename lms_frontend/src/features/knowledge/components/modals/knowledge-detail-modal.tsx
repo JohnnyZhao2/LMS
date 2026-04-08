@@ -306,8 +306,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     bodyStyle.overflow = 'hidden';
     htmlStyle.overscrollBehavior = 'none';
     bodyStyle.overscrollBehavior = 'none';
-    htmlStyle.scrollbarGutter = 'auto';
-    bodyStyle.scrollbarGutter = 'auto';
+    htmlStyle.scrollbarGutter = 'stable';
+    bodyStyle.scrollbarGutter = 'stable';
     return () => {
       window.removeEventListener('keydown', handler);
       htmlStyle.overflow = previousHtmlOverflow;

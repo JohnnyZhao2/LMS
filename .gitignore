@@ -66,6 +66,7 @@ lms_frontend/out/
 lms_backend/openapi-schema.yaml
 
 # 仓库根目录杂项
+/.playwright-cli
 /.playwright-mcp/
 /docs/
 /avatars/

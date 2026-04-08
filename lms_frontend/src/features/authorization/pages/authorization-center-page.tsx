@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Layers3 } from 'lucide-react';
-import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -9,9 +8,10 @@ import type { RoleCode } from '@/types/api';
 import {
   usePermissionCatalog,
   useReplaceRolePermissionTemplate,
-  useRolePermissionTemplate,
+  useRolePermissionTemplates,
 } from '../api/authorization';
 import { isPermissionLockedForRole } from '../constants/permission-constraints';
+import { ROLE_TEMPLATE_ORDER } from '../constants/role-template';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
 export const AuthorizationCenterPage: React.FC = () => {
@@ -19,8 +19,8 @@ export const AuthorizationCenterPage: React.FC = () => {
   const canViewRoleTemplate = hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update');
   const canUpdateRoleTemplate = hasPermission('authorization.role_template.update');
 
-  const [selectedRole, setSelectedRole] = useState<RoleCode>('STUDENT');
-  const [selectedRolePermissionCodes, setSelectedRolePermissionCodes] = useState<string[]>([]);
+  const [draftPermissionCodes, setDraftPermissionCodes] = useState<Partial<Record<RoleCode, string[]>>>({});
+  const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
   const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
@@ -31,44 +31,56 @@ export const AuthorizationCenterPage: React.FC = () => {
     });
     return permissionMap;
   }, [permissionCatalog]);
-  const roleTemplateQuery = useRolePermissionTemplate(selectedRole, canViewRoleTemplate);
-
+  const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
+  const permissionCodesByRole = useMemo(
+    () => Object.fromEntries(
+      ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
+        roleCode,
+        draftPermissionCodes[roleCode] ?? roleTemplateQueries[index]?.data?.permission_codes ?? [],
+      ]),
+    ) as Partial<Record<RoleCode, string[]>>,
+    [draftPermissionCodes, roleTemplateQueries],
+  );
+  const isLoadingTemplates = roleTemplateQueries.some((query) => query.isLoading);
   const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
 
-  useEffect(() => {
-    if (roleTemplateQuery.data?.permission_codes) {
-      setSelectedRolePermissionCodes(roleTemplateQuery.data.permission_codes);
-    }
-  }, [roleTemplateQuery.data]);
+  const handleChangeRoleTemplate = async (roleCode: RoleCode, nextCodes: string[]) => {
+    if (!canUpdateRoleTemplate) return;
 
-  const handleToggleRolePermission = (permissionCode: string, checked: boolean) => {
-    const permission = permissionByCode.get(permissionCode);
-    if (permission && isPermissionLockedForRole(selectedRole, permission)) {
+    const previousCodes = permissionCodesByRole[roleCode] ?? [];
+    const normalizedNextCodes = Array.from(new Set(nextCodes)).sort();
+    if (previousCodes.join('|') === normalizedNextCodes.join('|')) {
       return;
     }
 
-    setSelectedRolePermissionCodes((previousCodes) => {
-      const codeSet = new Set(previousCodes);
-      if (checked) {
-        codeSet.add(permissionCode);
-      } else {
-        codeSet.delete(permissionCode);
-      }
-      return Array.from(codeSet).sort();
+    const hasLockedPermissionChange = normalizedNextCodes.some((permissionCode) => {
+      const permission = permissionByCode.get(permissionCode);
+      return permission ? isPermissionLockedForRole(roleCode, permission) : false;
     });
-  };
+    if (hasLockedPermissionChange) {
+      return;
+    }
 
-  const handleSaveRoleTemplate = async () => {
-    if (!canUpdateRoleTemplate) return;
+    setDraftPermissionCodes((previousDrafts) => ({
+      ...previousDrafts,
+      [roleCode]: normalizedNextCodes,
+    }));
+    setSavingRoleCodes((previous) => (previous.includes(roleCode) ? previous : [...previous, roleCode]));
+
     try {
       await replaceRoleTemplateMutation.mutateAsync({
-        roleCode: selectedRole,
-        permissionCodes: selectedRolePermissionCodes,
+        roleCode,
+        permissionCodes: normalizedNextCodes,
       });
-      toast.success(`${selectedRole} 权限模板已更新`);
       await refreshUser();
     } catch (error) {
+      setDraftPermissionCodes((previousDrafts) => ({
+        ...previousDrafts,
+        [roleCode]: previousCodes,
+      }));
       showApiError(error);
+    } finally {
+      setSavingRoleCodes((previous) => previous.filter((code) => code !== roleCode));
     }
   };
 
@@ -88,17 +100,13 @@ export const AuthorizationCenterPage: React.FC = () => {
       <PageHeader title="角色模板配置" icon={<Layers3 />} />
 
       <RolePermissionTemplatePanel
-        canViewRoleTemplate={canViewRoleTemplate}
         canUpdateRoleTemplate={canUpdateRoleTemplate}
-        selectedRole={selectedRole}
-        onRoleChange={setSelectedRole}
-        isPermissionLockedForSelectedRole={(permission) => isPermissionLockedForRole(selectedRole, permission)}
+        roleCodes={ROLE_TEMPLATE_ORDER}
         permissionCatalog={permissionCatalog}
-        selectedCodes={selectedRolePermissionCodes}
-        onToggleCode={handleToggleRolePermission}
-        onSave={handleSaveRoleTemplate}
-        isLoadingTemplate={roleTemplateQuery.isLoading}
-        isSaving={replaceRoleTemplateMutation.isPending}
+        permissionCodesByRole={permissionCodesByRole}
+        onChangeCodes={handleChangeRoleTemplate}
+        isLoadingTemplate={isLoadingTemplates}
+        savingRoleCodes={savingRoleCodes}
       />
     </PageShell>
   );

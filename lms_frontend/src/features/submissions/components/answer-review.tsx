@@ -21,18 +21,21 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
   const practiceResultQuery = usePracticeResult(submissionId, isPractice);
   const examResultQuery = useExamResult(submissionId, !isPractice);
   const { data, isLoading } = isPractice ? practiceResultQuery : examResultQuery;
+  const reviewContainerClass = 'space-y-4 pb-4';
 
   if (!submissionId) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center text-text-muted">缺少有效的 submission 参数</CardContent>
-      </Card>
+      <div className={reviewContainerClass}>
+        <Card>
+          <CardContent className="p-6 text-center text-text-muted">缺少有效的 submission 参数</CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className={reviewContainerClass}>
         <Card>
           <CardContent className="p-6">
             <Skeleton className="h-8 w-48 mb-4" />
@@ -52,16 +55,18 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
 
   if (!data) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center text-text-muted">结果不存在</CardContent>
-      </Card>
+      <div className={reviewContainerClass}>
+        <Card>
+          <CardContent className="p-6 text-center text-text-muted">结果不存在</CardContent>
+        </Card>
+      </div>
     );
   }
 
   const correctCount = data.answers.filter((a) => a.is_correct).length;
 
   return (
-    <div className="space-y-4">
+    <div className={reviewContainerClass}>
       {/* 统计卡片 */}
       <Card>
         <CardContent className="p-6">
