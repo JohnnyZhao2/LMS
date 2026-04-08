@@ -5,7 +5,7 @@ Properties: 37, 38, 39
 from django.db import models
 from django.utils import timezone
 
-from apps.users.permissions import get_current_role as get_user_current_role
+from apps.authorization.roles import get_current_role as get_user_current_role
 from core.exceptions import BusinessError, ErrorCodes, get_status_code_for_error
 
 

@@ -3,6 +3,7 @@
  */
 
 import type { RoleCode, UserInfo, Role } from './common';
+import type { CapabilityMap } from './authorization';
 
 /**
  * 登录请求
@@ -19,7 +20,7 @@ export interface AuthSessionPayload {
   user: UserInfo;
   available_roles: Role[];
   current_role: RoleCode;
-  effective_permissions: string[];
+  capabilities: CapabilityMap;
 }
 
 /**

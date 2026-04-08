@@ -1,6 +1,11 @@
 import { useCallback } from 'react';
 import { useNavigate, useParams, type NavigateOptions } from 'react-router-dom';
 import { tokenStorage } from '@/lib/token-storage';
+import {
+  getRoleFromPathname,
+  getWorkspacePath,
+  normalizeRoleCode,
+} from '@/app/workspace-config';
 
 /**
  * 带角色前缀的导航 hook
@@ -12,21 +17,15 @@ export function useRoleNavigate() {
 
   const roleNavigate = useCallback(
     (path: string, options?: NavigateOptions) => {
-      // 获取角色前缀
-      const role = urlRole || tokenStorage.getCurrentRole();
-      const rolePrefix = role ? `/${role.toLowerCase()}` : '';
-
       // 如果路径已经包含角色前缀，直接导航
-      if (path.startsWith('/student/') || path.startsWith('/mentor/') ||
-          path.startsWith('/admin/') || path.startsWith('/dept_manager/') ||
-          path.startsWith('/team_manager/') || path.startsWith('/super_admin/')) {
+      if (getRoleFromPathname(path)) {
         navigate(path, options);
         return;
       }
 
-      // 移除路径开头的斜杠
-      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-      navigate(`${rolePrefix}/${cleanPath}`, options);
+      const targetRole = normalizeRoleCode(urlRole) ?? tokenStorage.getCurrentRole();
+      const nextPath = getWorkspacePath(targetRole, path);
+      navigate(nextPath ?? path, options);
     },
     [navigate, urlRole]
   );
@@ -34,10 +33,8 @@ export function useRoleNavigate() {
   // 获取带角色前缀的路径（不导航）
   const getRolePath = useCallback(
     (path: string): string => {
-      const role = urlRole || tokenStorage.getCurrentRole();
-      const rolePrefix = role ? `/${role.toLowerCase()}` : '';
-      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-      return `${rolePrefix}/${cleanPath}`;
+      const targetRole = normalizeRoleCode(urlRole) ?? tokenStorage.getCurrentRole();
+      return getWorkspacePath(targetRole, path) ?? path;
     },
     [urlRole]
   );

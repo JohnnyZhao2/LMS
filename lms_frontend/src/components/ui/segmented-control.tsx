@@ -16,6 +16,7 @@ interface SegmentedControlProps {
   className?: string;
   activeColor?: 'white' | 'blue';
   size?: 'default' | 'sm';
+  fill?: boolean;
 }
 
 export const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -26,6 +27,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
   className,
   activeColor = 'white',
   size = 'default',
+  fill = false,
 }) => {
   const activeStyles = {
     white: 'bg-white text-foreground shadow-sm',
@@ -49,13 +51,20 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {label}
         </span>
       )}
-      <div className={cn('inline-flex w-fit max-w-full items-stretch overflow-x-auto bg-black/[0.04] no-scrollbar', sizeStyles[size].wrapper)}>
+      <div
+        className={cn(
+          'max-w-full items-stretch overflow-x-auto bg-black/[0.04] no-scrollbar',
+          sizeStyles[size].wrapper,
+          fill ? 'flex w-full' : 'inline-flex w-fit',
+        )}
+      >
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'flex-none transition-all duration-200 whitespace-nowrap outline-none',
+              'transition-all duration-200 whitespace-nowrap outline-none',
+              fill ? 'min-w-0 flex-1' : 'flex-none',
               sizeStyles[size].button,
               value === opt.value
                 ? activeStyles[activeColor]

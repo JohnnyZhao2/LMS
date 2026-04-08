@@ -1,12 +1,11 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useState,
 } from 'react';
-import { KeyRound } from 'lucide-react';
-
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import {
   useCreateUserPermissionOverride,
@@ -44,6 +43,7 @@ interface UserPermissionSectionProps {
   departmentId?: number;
   isSuperuserAccount: boolean;
   dialogContentElement: HTMLDivElement | null;
+  onPendingChangesChange?: (hasPendingChanges: boolean) => void;
 }
 
 export interface UserPermissionSectionHandle {
@@ -59,15 +59,16 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   departmentId,
   isSuperuserAccount,
   dialogContentElement,
+  onPendingChangesChange,
 }, ref) => {
-  const { hasPermission, refreshUser } = useAuth();
-  const canManageUserAuthorization = hasPermission('user.authorize');
+  const { hasCapability, refreshUser } = useAuth();
+  const canManageUserAuthorization = hasCapability('user.authorize');
   const canViewOverride = canManageUserAuthorization;
   const canCreateOverride = canManageUserAuthorization;
   const canRevokeOverride = canManageUserAuthorization;
   const canViewRoleTemplate =
-    hasPermission('authorization.role_template.view')
-    || hasPermission('authorization.role_template.update');
+    hasCapability('authorization.role_template.view')
+    || hasCapability('authorization.role_template.update');
   const shouldLoadPermissionCatalog = canViewOverride;
   const shouldLoadScopeUsers = canViewOverride;
   const shouldLoadUserOverrides = Boolean(userId) && canViewOverride;
@@ -271,6 +272,10 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
     submitChanges: submitDraftChanges,
   }), [hasDraftChanges, submitDraftChanges]);
 
+  useEffect(() => {
+    onPendingChangesChange?.(hasDraftChanges);
+  }, [hasDraftChanges, onPendingChangesChange]);
+
   const modulePermissionCounts: Record<string, { enabled: number; total: number }> = {};
   permissionModules.forEach((moduleName) => {
     modulePermissionCounts[moduleName] = { enabled: 0, total: 0 };
@@ -295,13 +300,8 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
   }
 
   return (
-    <div className="mt-6 border-t border-slate-100 pt-6">
-      <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-2 shrink-0">
-          <KeyRound className="w-4 h-4 text-slate-400" />
-          <h3 className="text-base font-bold text-slate-800">用户权限自定义</h3>
-        </div>
-
+    <div>
+      <div className="flex items-center justify-end gap-3">
         <div className="flex items-center gap-3 flex-1 justify-end max-w-[320px]">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">扩展范围</span>
           <UserPermissionScopePopover
@@ -334,7 +334,7 @@ export const UserPermissionSection = forwardRef<UserPermissionSectionHandle, Use
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 xl:grid-cols-[200px_1fr] gap-8 items-start relative">
+      <div className="mt-6 grid grid-cols-1 gap-8 items-start relative xl:grid-cols-[200px_1fr]">
         <UserPermissionModuleSidebar
           permissionModules={permissionModules}
           activePermissionModule={activePermissionModule}

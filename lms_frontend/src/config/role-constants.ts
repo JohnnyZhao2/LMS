@@ -1,5 +1,21 @@
 import type { RoleCode } from '@/types/api'
 
+export const ROLE_CODES: RoleCode[] = [
+  'STUDENT',
+  'MENTOR',
+  'DEPT_MANAGER',
+  'TEAM_MANAGER',
+  'ADMIN',
+  'SUPER_ADMIN',
+]
+
+export const isRoleCode = (value: string | null | undefined): value is RoleCode => {
+  if (!value) {
+    return false
+  }
+  return ROLE_CODES.includes(value as RoleCode)
+}
+
 export const ROLE_SHORT_LABELS: Record<RoleCode, string> = {
   STUDENT: '学',
   MENTOR: '师',
@@ -27,11 +43,4 @@ export const ROLE_INDICATOR_CLASSES: Record<RoleCode, { bar: string; glow: strin
   SUPER_ADMIN: { bar: 'bg-red-500', glow: 'bg-red-500/80' },
 }
 
-export const ROLE_ORDER: RoleCode[] = [
-  'STUDENT',
-  'MENTOR',
-  'DEPT_MANAGER',
-  'TEAM_MANAGER',
-  'ADMIN',
-  'SUPER_ADMIN',
-]
+export const ROLE_ORDER: RoleCode[] = ROLE_CODES

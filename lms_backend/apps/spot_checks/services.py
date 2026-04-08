@@ -12,8 +12,8 @@ from typing import List, Optional
 from django.db import transaction
 from django.db.models import QuerySet
 
+from apps.authorization.engine import enforce, scope_filter
 from apps.users.models import User
-from apps.users.permissions import get_accessible_students, is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
@@ -36,7 +36,7 @@ class SpotCheckService(BaseService):
         """获取抽查记录详情。"""
         spot_check = self._base_queryset().filter(pk=pk).first()
         self.validate_not_none(spot_check, f'抽查记录 {pk} 不存在')
-        self._validate_data_scope_access(spot_check)
+        enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
         return spot_check
 
     def get_list(
@@ -96,12 +96,7 @@ class SpotCheckService(BaseService):
     def update(self, pk: int, data: dict) -> SpotCheck:
         """更新抽查记录。"""
         spot_check = self.get_by_id(pk)
-
-        if not is_admin_like_role(self.get_current_role()) and spot_check.checker_id != self.user.id:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只能更新自己创建的抽查记录',
-            )
+        enforce('spot_check.update', self.request, resource=spot_check, error_message='无权更新抽查记录')
 
         if 'items' in data:
             items = self._normalize_items(data.get('items'))
@@ -119,12 +114,7 @@ class SpotCheckService(BaseService):
     def delete(self, pk: int) -> SpotCheck:
         """删除抽查记录。"""
         spot_check = self.get_by_id(pk)
-
-        if not is_admin_like_role(self.get_current_role()) and spot_check.checker_id != self.user.id:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只能删除自己创建的抽查记录',
-            )
+        enforce('spot_check.delete', self.request, resource=spot_check, error_message='无权删除抽查记录')
 
         spot_check.delete()
         return spot_check
@@ -136,13 +126,7 @@ class SpotCheckService(BaseService):
     ) -> QuerySet:
         """根据当前用户可查看学员范围获取查询集。"""
         qs = self._base_queryset()
-        accessible_students = get_accessible_students(
-            self.user,
-            request=self.request,
-            permission_code='spot_check.view',
-        )
-
-        qs = qs.filter(student_id__in=accessible_students.values('id'))
+        qs = scope_filter('spot_check.view', self.request, base_queryset=qs)
 
         if student_id:
             qs = qs.filter(student_id=student_id)
@@ -203,41 +187,12 @@ class SpotCheckService(BaseService):
 
     def _validate_data_scope_access(self, spot_check: SpotCheck) -> None:
         """验证用户是否有权限访问该抽查记录。"""
-        if not get_accessible_students(
-            self.user,
-            request=self.request,
-            permission_code='spot_check.view',
-        ).filter(pk=spot_check.student_id).exists():
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问该抽查记录',
-            )
+        enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
 
     def _validate_student_scope(self, student: User) -> None:
         """验证用户是否有权限为指定学员创建抽查记录。"""
-        if not get_accessible_students(
-            self.user,
-            request=self.request,
-            permission_code='spot_check.create',
-        ).filter(pk=student.id).exists():
-            current_role = self.get_current_role()
-
-            if current_role == 'DEPT_MANAGER' and not self.user.department_id:
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='您未分配部门，无法创建抽查记录',
-                )
-            if current_role == 'MENTOR':
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='只能为名下学员创建抽查记录',
-                )
-            if current_role == 'DEPT_MANAGER':
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='只能为本室学员创建抽查记录',
-                )
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权创建抽查记录',
-            )
+        enforce(
+            'spot_check.create',
+            self.request,
+            context={'student': student},
+        )

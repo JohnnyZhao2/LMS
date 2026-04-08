@@ -9,7 +9,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import { isAdminLikeRole } from '@/lib/role-utils';
 import type { SpotCheck, SpotCheckStudent } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
@@ -42,7 +41,7 @@ export const SpotCheckList: React.FC = () => {
 
   const currentRole = useCurrentRole();
   const deferredStudentSearch = useDeferredValue(studentSearch.trim());
-  const { user, hasPermission } = useAuth();
+  const { hasCapability } = useAuth();
   const deleteSpotCheck = useDeleteSpotCheck();
 
   const { data: students = [], isLoading: studentsLoading } = useSpotCheckStudents({
@@ -72,10 +71,7 @@ export const SpotCheckList: React.FC = () => {
   const selectedStudent = filteredStudents.find((student) => student.id === resolvedSelectedStudentId) ?? null;
   const records = recordsData?.results ?? [];
 
-  const canCreateSpotCheck = hasPermission('spot_check.create');
-  const canUpdateSpotCheck = hasPermission('spot_check.update');
-  const canDeleteSpotCheck = hasPermission('spot_check.delete');
-  const canManageRecord = (record: SpotCheck) => isAdminLikeRole(currentRole) || record.checker === user?.id;
+  const canCreateSpotCheck = hasCapability('spot_check.create');
 
   const handleDelete = async () => {
     if (!deleteTarget) {
@@ -153,9 +149,6 @@ export const SpotCheckList: React.FC = () => {
               page={page}
               pageSize={pageSize}
               isLoading={recordsLoading}
-              canUpdateSpotCheck={canUpdateSpotCheck}
-              canDeleteSpotCheck={canDeleteSpotCheck}
-              canManageRecord={canManageRecord}
               onEditRecord={setEditingRecord}
               onDeleteRecord={setDeleteTarget}
               onPageChange={(nextPage) => updatePagination({ page: nextPage })}

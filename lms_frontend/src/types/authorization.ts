@@ -6,6 +6,7 @@ export interface PermissionCatalogItem {
   module: string;
   description: string;
   constraint_summary: string;
+  role_template_visible: boolean;
   is_active: boolean;
 }
 
@@ -54,3 +55,11 @@ export interface CreateUserPermissionOverrideRequest {
   reason?: string;
   expires_at?: string | null;
 }
+
+export interface PermissionCapability {
+  allowed: boolean;
+  conditional: boolean;
+  scope_types: PermissionOverrideScope[];
+}
+
+export type CapabilityMap = Record<string, PermissionCapability>;

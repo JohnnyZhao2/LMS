@@ -11,7 +11,7 @@ from typing import Any, List, Optional
 from django.db import transaction
 from django.db.models import Max
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce
 from apps.questions.models import Question
 from apps.tags.models import Tag
 from core.base_service import BaseService
@@ -137,18 +137,8 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果权限不足
         """
-        authorization_service = AuthorizationService(self.request)
-        if authorization_service.has_deny_override(permission_code):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权操作此试卷',
-            )
-        if authorization_service.can(permission_code):
-            return True
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message=error_message,
-        )
+        enforce(permission_code, self.request, error_message=error_message)
+        return True
 
     @transaction.atomic
     @log_content_action(

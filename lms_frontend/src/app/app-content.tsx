@@ -1,10 +1,10 @@
 import { AppLayout } from '@/components/layouts/app-layout';
-import { StudentLayout } from '@/components/layouts/student-layout';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { RoleSwitchOverlay } from '@/features/auth/components/role-switch-overlay';
+import { getWorkspaceConfig } from './workspace-config';
 
 /**
  * 应用内容组件（在 Provider 内部）
@@ -27,7 +27,7 @@ export const AppContent: React.FC = () => {
   }
 
   const isLoginPage = location.pathname === ROUTES.LOGIN;
-  const Layout = currentRole === 'STUDENT' ? StudentLayout : AppLayout;
+  const Layout = getWorkspaceConfig(currentRole)?.layout ?? AppLayout;
 
   const content = (isAuthenticated && !isLoginPage) ? (
     <Layout>

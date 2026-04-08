@@ -65,7 +65,7 @@ export const QuizForm: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { roleNavigate } = useRoleNavigate();
-  const { hasPermission } = useAuth();
+  const { hasCapability } = useAuth();
   const isEdit = !!id;
   const isPreviewRoute = location.pathname.endsWith('/preview');
   const routeState = location.state as { quizDraft?: QuizDraftState } | null;
@@ -474,7 +474,7 @@ export const QuizForm: React.FC = () => {
             quizId={Number(id)}
             quizDraft={quizDraft}
             onEdit={
-              hasPermission('quiz.update')
+              hasCapability('quiz.update')
                 ? (targetQuizId) => roleNavigate(`${ROUTES.QUIZZES}/${targetQuizId}/edit`, {
                   state: quizDraft ? { quizDraft } : undefined,
                 })

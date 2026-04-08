@@ -12,13 +12,14 @@ import { authRoutes } from './routes/auth';
 import { AppContent } from './app-content';
 import { AppProvider } from './provider';
 import { tokenStorage } from '@/lib/token-storage';
+import { getWorkspaceHome } from './workspace-config';
 
 /**
  * 获取默认角色路径
  */
 const getDefaultRolePath = () => {
   const role = tokenStorage.getCurrentRole();
-  return role ? `/${role.toLowerCase()}/dashboard` : '/login';
+  return getWorkspaceHome(role) ?? '/login';
 };
 
 /**

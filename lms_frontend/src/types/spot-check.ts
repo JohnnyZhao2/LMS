@@ -10,6 +10,11 @@ export interface SpotCheckItem {
   order?: number;
 }
 
+export interface SpotCheckActions {
+  update: boolean;
+  delete: boolean;
+}
+
 /**
  * 抽查记录
  */
@@ -27,6 +32,7 @@ export interface SpotCheck {
   topic_summary: string;
   average_score: string | null;
   items: SpotCheckItem[];
+  actions: SpotCheckActions;
   created_at: string;
   updated_at: string;
 }

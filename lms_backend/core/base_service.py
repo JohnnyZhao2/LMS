@@ -8,10 +8,7 @@
 """
 from typing import Optional, TypeVar
 
-from apps.users.permissions import (
-    get_current_role as _get_current_role,
-    is_admin_like_role as _is_admin_like_role,
-)
+from apps.authorization.roles import get_current_role as _get_current_role, is_admin_like_role as _is_admin_like_role
 from core.exceptions import BusinessError, ErrorCodes
 
 T = TypeVar('T')

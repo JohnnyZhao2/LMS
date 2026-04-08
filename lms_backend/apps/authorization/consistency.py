@@ -6,7 +6,7 @@ from typing import List, Set
 
 from .constants import (
     PERMISSION_CATALOG,
-    ROLE_DEFAULT_SCOPE_TYPES,
+    PERMISSION_SCOPE_RULES,
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SYSTEM_MANAGED_PERMISSION_CODES,
@@ -110,9 +110,10 @@ def validate_authorization_consistency() -> List[str]:
         if invalid_codes:
             errors.append(f'角色 {role_code} 的系统权限引用了未声明权限: {invalid_codes}')
 
-    unknown_scope_roles = sorted(set(ROLE_DEFAULT_SCOPE_TYPES.keys()) - set(ROLE_PERMISSION_DEFAULTS.keys()) - {'SUPER_ADMIN'})
-    if unknown_scope_roles:
-        errors.append(f'ROLE_DEFAULT_SCOPE_TYPES 包含未配置默认权限的角色: {unknown_scope_roles}')
+    scope_rule_permission_codes = {rule.permission_code for rule in PERMISSION_SCOPE_RULES}
+    unknown_scope_rule_permissions = sorted(scope_rule_permission_codes - declared_codes)
+    if unknown_scope_rule_permissions:
+        errors.append(f'PermissionScopeRule 声明了未登记权限: {unknown_scope_rule_permissions}')
 
     used_codes = _extract_used_permission_codes()
     unknown_used_codes = sorted(code for code in used_codes if code not in declared_codes)

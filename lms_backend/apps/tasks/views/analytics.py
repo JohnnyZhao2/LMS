@@ -7,7 +7,7 @@ Implements:
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce
 from apps.tasks.selectors import (
     task_analytics_payload,
     task_student_executions,
@@ -33,12 +33,13 @@ class TaskAnalyticsView(BaseAPIView):
         tags=['任务分析']
     )
     def get(self, request, pk):
-        AuthorizationService(request).enforce(
+        task = self.service.get_task_by_id(pk)
+        enforce(
             'task.analytics.view',
+            request,
+            resource=task,
             error_message='无权查看任务分析',
         )
-        task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task)
 
         analytics = task_analytics_payload(task.id)
         serializer = TaskAnalyticsSerializer(analytics)
@@ -60,12 +61,13 @@ class StudentExecutionsView(BaseAPIView):
         tags=['任务分析']
     )
     def get(self, request, pk):
-        AuthorizationService(request).enforce(
+        task = self.service.get_task_by_id(pk)
+        enforce(
             'task.analytics.view',
+            request,
+            resource=task,
             error_message='无权查看学员执行情况',
         )
-        task = self.service.get_task_by_id(pk)
-        self.service.check_task_read_permission(task)
 
         executions = task_student_executions(task.id)
         serializer = StudentExecutionSerializer(executions, many=True)

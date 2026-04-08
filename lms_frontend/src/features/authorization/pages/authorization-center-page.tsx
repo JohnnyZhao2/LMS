@@ -15,15 +15,19 @@ import { ROLE_TEMPLATE_ORDER } from '../constants/role-template';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
 export const AuthorizationCenterPage: React.FC = () => {
-  const { hasPermission, refreshUser } = useAuth();
-  const canViewRoleTemplate = hasPermission('authorization.role_template.view') || hasPermission('authorization.role_template.update');
-  const canUpdateRoleTemplate = hasPermission('authorization.role_template.update');
+  const { hasCapability, refreshUser } = useAuth();
+  const canViewRoleTemplate = hasCapability('authorization.role_template.view') || hasCapability('authorization.role_template.update');
+  const canUpdateRoleTemplate = hasCapability('authorization.role_template.update');
 
   const [draftPermissionCodes, setDraftPermissionCodes] = useState<Partial<Record<RoleCode, string[]>>>({});
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
-  const { data: permissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
+  const { data: rawPermissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
+  const permissionCatalog = useMemo(
+    () => rawPermissionCatalog.filter((permission) => permission.role_template_visible),
+    [rawPermissionCatalog],
+  );
   const permissionByCode = useMemo(() => {
     const permissionMap = new Map<string, { module: string }>();
     permissionCatalog.forEach((permission) => {

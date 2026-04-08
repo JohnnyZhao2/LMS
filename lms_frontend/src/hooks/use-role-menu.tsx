@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
 import {
   LayoutGrid,
   BookOpen,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { getWorkspaceConfig, getRolePathPrefix } from '@/app/workspace-config';
 
 export interface MenuItem {
   key?: string;
@@ -26,16 +26,18 @@ export interface MenuItem {
  * 根据当前角色 + 生效权限生成顶部菜单
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
-  const { role: urlRole } = useParams<{ role: string }>();
-  const { hasAnyPermission } = useAuth();
+  const { hasAnyCapability, hasCapability } = useAuth();
 
   return useMemo(() => {
     if (!currentRole) {
       return [];
     }
+    const workspace = getWorkspaceConfig(currentRole);
+    if (!workspace) {
+      return [];
+    }
 
-    // 使用 URL 中的角色作为路径前缀
-    const rolePrefix = urlRole ? `/${urlRole.toLowerCase()}` : `/${currentRole.toLowerCase()}`;
+    const rolePrefix = getRolePathPrefix(currentRole);
 
     const baseMenu: MenuItem[] = [
       {
@@ -46,19 +48,19 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     ];
 
     const menu: MenuItem[] = [...baseMenu];
-    const isStudentLike = currentRole === 'STUDENT' || currentRole === 'TEAM_MANAGER';
-    const isAdminLike = currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN';
+    const isStudentStyle = workspace.menuVariant === 'student';
+    const isAdminStyle = workspace.menuVariant === 'admin';
     const quizChildren: MenuItem[] = [];
 
-    if (hasAnyPermission(['knowledge.view'])) {
+    if (hasAnyCapability(['knowledge.view'])) {
       menu.push({
         key: `${rolePrefix}/knowledge`,
         icon: <BookOpen className="w-4 h-4" />,
-        label: isStudentLike ? '知识中心' : '知识管理',
+        label: isStudentStyle ? '知识中心' : '知识管理',
       });
     }
 
-    if (hasAnyPermission(['tag.view'])) {
+    if (hasAnyCapability(['tag.view'])) {
       menu.push({
         key: `${rolePrefix}/tags`,
         icon: <Tags className="w-4 h-4" />,
@@ -66,21 +68,21 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
-    if (hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'])) {
+    if (hasAnyCapability(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete'])) {
       quizChildren.push({
         key: `${rolePrefix}/quizzes`,
         label: '试卷管理',
       });
     }
 
-    if (hasAnyPermission(['question.view', 'question.create', 'question.update', 'question.delete'])) {
+    if (hasAnyCapability(['question.view', 'question.create', 'question.update', 'question.delete'])) {
       quizChildren.push({
         key: `${rolePrefix}/questions`,
         label: '题目管理',
       });
     }
 
-    if (hasAnyPermission(['grading.view', 'grading.score'])) {
+    if (hasAnyCapability(['grading.view', 'grading.score'])) {
       quizChildren.push({
         key: `${rolePrefix}/grading-center`,
         label: '阅卷中心',
@@ -89,22 +91,22 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
 
     if (quizChildren.length > 0) {
       menu.push({
-        key: `${rolePrefix}/${hasAnyPermission(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete']) ? 'quizzes' : 'questions'}`,
+        key: `${rolePrefix}/${hasAnyCapability(['quiz.view', 'quiz.create', 'quiz.update', 'quiz.delete']) ? 'quizzes' : 'questions'}`,
         icon: <HelpCircle className="w-4 h-4" />,
         label: '测评管理',
         children: quizChildren,
       });
     }
 
-    if (hasAnyPermission(['task.view'])) {
+    if (hasAnyCapability(['task.view'])) {
       menu.push({
         key: `${rolePrefix}/tasks`,
         icon: <SquareCheck className="w-4 h-4" />,
-        label: isAdminLike ? '任务管理' : '任务中心',
+        label: isAdminStyle ? '任务管理' : '任务中心',
       });
     }
 
-    if (hasAnyPermission(['spot_check.view'])) {
+    if (hasAnyCapability(['spot_check.view'])) {
       menu.push({
         key: `${rolePrefix}/spot-checks`,
         icon: <FileSearch className="w-4 h-4" />,
@@ -112,15 +114,41 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
-    if (hasAnyPermission(['user.view'])) {
-      menu.push({
-        key: `${rolePrefix}/users`,
-        icon: <Users className="w-4 h-4" />,
-        label: '用户管理',
-      });
+    if (hasAnyCapability(['user.view', 'user.authorize'])) {
+      const userChildren: MenuItem[] = [];
+      if (hasAnyCapability(['user.view'])) {
+        userChildren.push({
+          key: `${rolePrefix}/users`,
+          label: '用户列表',
+        });
+      }
+      if (hasAnyCapability(['user.authorize'])) {
+        userChildren.push({
+          key: `${rolePrefix}/users/authorization`,
+          label: '用户授权',
+        });
+      }
+
+      if (userChildren.length <= 1) {
+        const onlyItem = userChildren[0];
+        if (onlyItem) {
+          menu.push({
+            key: onlyItem.key,
+            icon: <Users className="w-4 h-4" />,
+            label: '用户管理',
+          });
+        }
+      } else {
+        menu.push({
+          key: `${rolePrefix}/users`,
+          icon: <Users className="w-4 h-4" />,
+          label: '用户管理',
+          children: userChildren,
+        });
+      }
     }
 
-    if (hasAnyPermission(['activity_log.view'])) {
+    if (hasAnyCapability(['activity_log.view'])) {
       menu.push({
         key: `${rolePrefix}/audit-logs`,
         icon: <SquareTerminal className="w-4 h-4" />,
@@ -128,7 +156,7 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
-    if (currentRole === 'TEAM_MANAGER' && hasAnyPermission(['analytics.view'])) {
+    if (workspace.dashboardVariant === 'team_manager' && hasCapability('dashboard.team_manager.view')) {
       menu.push({
         key: `${rolePrefix}/analytics`,
         icon: <BarChart3 className="w-4 h-4" />,
@@ -136,7 +164,10 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
       });
     }
 
-    if (currentRole === 'STUDENT' && hasAnyPermission(['profile.view', 'profile.update'])) {
+    if (
+      workspace.dashboardVariant === 'student'
+      && (hasCapability('profile.student.view') || hasCapability('profile.student.update'))
+    ) {
       menu.push({
         key: `${rolePrefix}/personal`,
         icon: <User className="w-4 h-4" />,
@@ -145,5 +176,5 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
     }
 
     return menu;
-  }, [currentRole, hasAnyPermission, urlRole]);
+  }, [currentRole, hasAnyCapability, hasCapability]);
 };

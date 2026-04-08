@@ -3,14 +3,17 @@ import { matchPath, useLocation, useParams } from 'react-router-dom';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
+import { getWorkspaceConfig } from '@/app/workspace-config';
 
-const resolveTaskLabel = (role: RoleCode | null) => (
-  role === 'ADMIN' || role === 'SUPER_ADMIN' ? '任务管理' : '任务中心'
-)
+const resolveTaskLabel = (role: RoleCode | null) => {
+  const workspace = getWorkspaceConfig(role);
+  return workspace?.menuVariant === 'admin' ? '任务管理' : '任务中心';
+}
 
-const resolveKnowledgeLabel = (role: RoleCode | null) => (
-  role === 'STUDENT' || role === 'TEAM_MANAGER' ? '知识中心' : '知识管理'
-)
+const resolveKnowledgeLabel = (role: RoleCode | null) => {
+  const workspace = getWorkspaceConfig(role);
+  return workspace?.menuVariant === 'student' ? '知识中心' : '知识管理';
+}
 
 const buildRolePath = (role: string | undefined, route: string) => (
   role ? `/${role}${route}` : route
@@ -61,7 +64,8 @@ const createBreadcrumbs = (
     { pattern: '/:role/spot-checks/create', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '发起抽查' }] },
     { pattern: '/:role/spot-checks/:id/edit', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '编辑抽查' }] },
     { pattern: '/:role/spot-checks', items: [{ title: '抽查管理' }] },
-    { pattern: '/:role/users', items: [{ title: '用户管理' }] },
+    { pattern: '/:role/users/authorization', items: [{ title: '用户管理', path: buildRolePath(role, ROUTES.USERS) }, { title: '用户授权' }] },
+    { pattern: '/:role/users', items: [{ title: '用户管理' }, { title: '用户列表' }] },
     { pattern: '/:role/authorization', items: [{ title: '角色模板' }] },
     { pattern: '/:role/audit-logs/policy', items: [{ title: '日志审计', path: auditLogsPath }, { title: '日志策略' }] },
     { pattern: '/:role/audit-logs', items: [{ title: '日志审计' }] },

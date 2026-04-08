@@ -7,6 +7,7 @@ from rest_framework import serializers
 from core.base_view import BaseAPIView
 from core.responses import created_response, list_response, success_response
 
+from .engine import authorize, enforce
 from .serializers import (
     PermissionSerializer,
     RevokeUserPermissionOverrideSerializer,
@@ -37,11 +38,11 @@ class PermissionCatalogView(BaseAPIView):
     )
     def get(self, request):
         if not (
-            self.service.can('authorization.role_template.view')
-            or self.service.can('authorization.role_template.update')
-            or self.service.can('user.authorize')
+            authorize('authorization.role_template.view', request).allowed
+            or authorize('authorization.role_template.update', request).allowed
+            or authorize('user.authorize', request).allowed
         ):
-            self.service.enforce('authorization.role_template.view', error_message='无权查看权限目录')
+            enforce('authorization.role_template.view', request, error_message='无权查看权限目录')
 
         module = request.query_params.get('module')
         permissions = self.service.list_permission_catalog(module=module)
@@ -64,8 +65,8 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, role_code: str):
-        if not self.service.can('authorization.role_template.view'):
-            self.service.enforce('authorization.role_template.update', error_message='只有管理员可以查看角色权限模板')
+        if not authorize('authorization.role_template.view', request).allowed:
+            enforce('authorization.role_template.update', request, error_message='只有管理员可以查看角色权限模板')
 
         permission_codes = self.service.get_role_permission_codes(role_code)
         return success_response(
@@ -88,7 +89,7 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def put(self, request, role_code: str):
-        self.service.enforce('authorization.role_template.update', error_message='只有管理员可以配置角色权限模板')
+        enforce('authorization.role_template.update', request, error_message='只有管理员可以配置角色权限模板')
 
         serializer = RolePermissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -129,7 +130,7 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, user_id: int):
-        self.service.enforce('user.authorize', error_message='只有管理员可以查看用户权限覆盖')
+        enforce('user.authorize', request, error_message='只有管理员可以查看用户权限覆盖')
 
         include_inactive = request.query_params.get('include_inactive') == 'true'
         overrides = self.service.list_user_permission_overrides(
@@ -150,7 +151,7 @@ class UserPermissionOverrideListCreateView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int):
-        self.service.enforce('user.authorize', error_message='只有管理员可以创建用户权限覆盖')
+        enforce('user.authorize', request, error_message='只有管理员可以创建用户权限覆盖')
 
         serializer = UserPermissionOverrideCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -186,7 +187,7 @@ class UserPermissionOverrideRevokeView(BaseAPIView):
         tags=['授权管理'],
     )
     def post(self, request, user_id: int, override_id: int):
-        self.service.enforce('user.authorize', error_message='只有管理员可以撤销用户权限覆盖')
+        enforce('user.authorize', request, error_message='只有管理员可以撤销用户权限覆盖')
 
         serializer = RevokeUserPermissionOverrideSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

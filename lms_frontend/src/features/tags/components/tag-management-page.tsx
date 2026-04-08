@@ -61,10 +61,10 @@ const getTagRingColor = (tag: Tag) => {
 };
 
 export const TagManagementPage: React.FC = () => {
-  const { hasPermission } = useAuth();
-  const canCreate = hasPermission('tag.create');
-  const canUpdate = hasPermission('tag.update');
-  const canDelete = hasPermission('tag.delete');
+  const { hasCapability } = useAuth();
+  const canCreate = hasCapability('tag.create');
+  const canUpdate = hasCapability('tag.update');
+  const canDelete = hasCapability('tag.delete');
 
   const [activeTab, setActiveTab] = React.useState<TagType>('SPACE');
   const [applicableScope, setApplicableScope] = React.useState<ApplicableScope>('all');

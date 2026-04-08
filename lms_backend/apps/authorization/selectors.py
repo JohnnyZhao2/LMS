@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .constants import SYSTEM_MANAGED_PERMISSION_CODES
-from .models import Permission, UserPermissionOverride
+from .models import Permission, PermissionScopeRule, UserPermissionOverride
 
 
 def list_permissions(module: Optional[str] = None, include_system_managed: bool = False) -> List[Permission]:
@@ -53,3 +53,24 @@ def get_permissions_by_codes(permission_codes: Iterable[str]) -> List[Permission
     if not codes:
         return []
     return list(Permission.objects.filter(code__in=codes, is_active=True))
+
+
+def list_permission_scope_types(*, permission_code: str, role_code: str) -> List[str]:
+    return list(
+        PermissionScopeRule.objects.filter(
+            permission__code=permission_code,
+            permission__is_active=True,
+            role_code=role_code,
+            is_active=True,
+        ).order_by('scope_type').values_list('scope_type', flat=True)
+    )
+
+
+def list_role_scope_types(*, role_code: str) -> List[str]:
+    return list(
+        PermissionScopeRule.objects.filter(
+            role_code=role_code,
+            permission__is_active=True,
+            is_active=True,
+        ).order_by('scope_type').values_list('scope_type', flat=True).distinct()
+    )

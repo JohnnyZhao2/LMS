@@ -3,10 +3,9 @@ import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
-import type { RoleCode } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
-
-const VALID_ROLES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'TEAM_MANAGER', 'ADMIN', 'SUPER_ADMIN'];
+import type { RoleCode } from '@/types/api';
+import { getWorkspaceHome, normalizeRoleCode } from '@/app/workspace-config';
 
 /**
  * 角色路由包装器
@@ -18,8 +17,8 @@ export const RoleRouteWrapper: React.FC = () => {
   const { isAuthenticated, isLoading, availableRoles, currentRole, isSwitching, switchRole } = useAuth();
   const [failedRoleSync, setFailedRoleSync] = useState<RoleCode | null>(null);
 
-  const roleCode = role?.toUpperCase() as RoleCode;
-  const isValidRole = VALID_ROLES.includes(roleCode);
+  const roleCode = normalizeRoleCode(role);
+  const isValidRole = roleCode !== null;
   const hasRole = availableRoles.some((item) => item.code === roleCode);
   const shouldSyncRole = Boolean(
     isAuthenticated &&
@@ -37,7 +36,7 @@ export const RoleRouteWrapper: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!shouldSyncRole || isSwitching || failedRoleSync === roleCode) {
+    if (!shouldSyncRole || !roleCode || isSwitching || failedRoleSync === roleCode) {
       return;
     }
 
@@ -75,7 +74,7 @@ export const RoleRouteWrapper: React.FC = () => {
     if (!fallbackRole) {
       return <Navigate to={ROUTES.LOGIN} replace />;
     }
-    return <Navigate to={`/${fallbackRole.toLowerCase()}/dashboard`} replace />;
+    return <Navigate to={getWorkspaceHome(fallbackRole) ?? ROUTES.LOGIN} replace />;
   }
 
   // 检查用户是否有该角色权限
@@ -85,7 +84,7 @@ export const RoleRouteWrapper: React.FC = () => {
       return <Navigate to={ROUTES.LOGIN} replace />;
     }
 
-    const fallbackPath = `/${fallbackRole.toLowerCase()}/dashboard`;
+    const fallbackPath = getWorkspaceHome(fallbackRole) ?? ROUTES.LOGIN;
     if (fallbackPath === location.pathname) {
       return <Navigate to={ROUTES.LOGIN} replace />;
     }
@@ -98,7 +97,7 @@ export const RoleRouteWrapper: React.FC = () => {
     if (!fallbackRole) {
       return <Navigate to={ROUTES.LOGIN} replace />;
     }
-    return <Navigate to={`/${fallbackRole.toLowerCase()}/dashboard`} replace />;
+    return <Navigate to={getWorkspaceHome(fallbackRole) ?? ROUTES.LOGIN} replace />;
   }
 
   return <Outlet />;

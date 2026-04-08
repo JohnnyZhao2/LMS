@@ -33,7 +33,6 @@ import dayjs from '@/lib/dayjs';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
-import { isAdminLikeRole } from '@/lib/role-utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
 import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
@@ -66,8 +65,6 @@ export const TaskDetail: React.FC = () => {
 
   const effectiveRole = (role?.toUpperCase() as typeof currentRole) || currentRole;
   const isStudent = !authLoading && effectiveRole === 'STUDENT';
-  const isAdmin = isAdminLikeRole(effectiveRole);
-  const isMentorOrManager = effectiveRole === 'MENTOR' || effectiveRole === 'DEPT_MANAGER' || effectiveRole === 'TEAM_MANAGER';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;
@@ -177,7 +174,7 @@ export const TaskDetail: React.FC = () => {
   const canStartExam = isStudent
     ? (studentStatus === 'IN_PROGRESS')
     : (!!myAssignment && myAssignment.status === 'IN_PROGRESS');
-  const canEditTask = !isStudent && (isAdmin || isMentorOrManager) && dayjs(task.deadline).isAfter(dayjs());
+  const canEditTask = !isStudent && !!task.actions.update && dayjs(task.deadline).isAfter(dayjs());
 
   const displayQuizzes = isStudent ? (learningDetail?.quiz_items ?? []) : (task.quizzes ?? []);
   const hasKnowledge = knowledgeList.length > 0;

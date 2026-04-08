@@ -5,6 +5,13 @@
 import type { TaskStatus } from './common';
 import type { QuizType } from './quiz';
 
+export interface TaskActions {
+  view: boolean;
+  update: boolean;
+  delete: boolean;
+  analytics: boolean;
+}
+
 /**
  * 任务分配
  */
@@ -71,6 +78,7 @@ export interface TaskDetail {
   created_at: string;
   updated_at: string;
   has_progress: boolean;
+  actions: TaskActions;
 }
 
 /**
@@ -211,4 +219,5 @@ export interface TaskListItem {
   created_at: string;
   updated_at: string;
   has_progress: boolean;
+  actions: TaskActions;
 }

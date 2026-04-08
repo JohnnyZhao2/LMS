@@ -25,9 +25,10 @@ from core.decorators import log_user_action
 from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
 from apps.auth.one_account import OneAccountClient
+from apps.authorization.engine import enforce
+from apps.authorization.roles import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from apps.authorization.services import AuthorizationService
 from apps.users.models import Role, User
-from apps.users.permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from apps.users.serializers import UserInfoSerializer
 
 
@@ -107,7 +108,7 @@ class AuthenticationService(BaseService):
                 requested_role=requested_role,
             )
         authorization_service = AuthorizationService(self.request)
-        effective_permissions = authorization_service.get_effective_permission_codes(
+        capabilities = authorization_service.get_capability_map(
             current_role=current_role,
             user=user,
         )
@@ -115,7 +116,7 @@ class AuthenticationService(BaseService):
             'user': UserInfoSerializer(user).data,
             'available_roles': available_roles,
             'current_role': current_role,
-            'effective_permissions': effective_permissions,
+            'capabilities': capabilities,
         }
 
     def _build_auth_payload(
@@ -297,9 +298,15 @@ class AuthenticationService(BaseService):
         active_user = self._validate_active_user(self._get_user_by_id(user.id))
         return self._build_user_payload(active_user, requested_role=requested_role)
 
+    def get_capabilities(self, user: User, requested_role: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+        active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        payload = self._build_user_payload(active_user, requested_role=requested_role)
+        return payload['capabilities']
+
     def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
-        AuthorizationService(self.request).enforce(
+        enforce(
             'user.activate',
+            self.request,
             error_message='只有管理员可以重置用户密码',
         )
 

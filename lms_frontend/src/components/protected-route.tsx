@@ -2,11 +2,10 @@ import { Navigate, useParams } from 'react-router-dom';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { ROUTES } from '@/config/routes';
-import type { RoleCode } from '@/types/api';
+import { getAccessibleWorkspaceHome, normalizeRoleCode } from '@/app/workspace-config';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: RoleCode[];
   requiredPermissions?: string[];
   permissionMode?: 'all' | 'any';
 }
@@ -16,15 +15,11 @@ interface ProtectedRouteProps {
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  allowedRoles,
   requiredPermissions,
   permissionMode = 'all',
 }) => {
-  const { isAuthenticated, isLoading, hasAnyPermission, hasPermission } = useAuth();
+  const { isAuthenticated, isLoading, availableRoles, currentRole, hasAnyCapability, hasCapability } = useAuth();
   const { role: urlRole } = useParams<{ role: string }>();
-
-  // 从 URL 获取当前角色
-  const currentRole = urlRole?.toUpperCase() as RoleCode | undefined;
 
   if (isLoading) {
     return (
@@ -38,21 +33,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  // 权限检查：如果当前角色不在允许的角色列表中，重定向到当前角色的 dashboard
-  if (allowedRoles && currentRole && !allowedRoles.includes(currentRole)) {
-    const dashboardPath = urlRole ? `/${urlRole.toLowerCase()}/dashboard` : '/dashboard';
-    return <Navigate to={dashboardPath} replace />;
-  }
-
   const hasRequiredPermissions = !requiredPermissions || requiredPermissions.length === 0
     ? true
     : permissionMode === 'any'
-      ? hasAnyPermission(requiredPermissions)
-      : requiredPermissions.every((permissionCode) => hasPermission(permissionCode));
+      ? hasAnyCapability(requiredPermissions)
+      : requiredPermissions.every((permissionCode) => hasCapability(permissionCode));
 
   if (!hasRequiredPermissions) {
-    const dashboardPath = urlRole ? `/${urlRole.toLowerCase()}/dashboard` : '/dashboard';
-    return <Navigate to={dashboardPath} replace />;
+    const fallbackPath = getAccessibleWorkspaceHome(
+      availableRoles.map((role) => role.code),
+      hasCapability,
+      normalizeRoleCode(urlRole) ?? currentRole,
+    ) ?? ROUTES.LOGIN;
+    return <Navigate to={fallbackPath} replace />;
   }
 
   return <>{children}</>;

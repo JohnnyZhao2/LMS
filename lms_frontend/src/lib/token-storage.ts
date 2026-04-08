@@ -1,4 +1,5 @@
-import type { AuthSessionPayload, Role, RoleCode, UserInfo } from '@/types/api';
+import type { AuthSessionPayload, CapabilityMap, Role, RoleCode, UserInfo } from '@/types/api';
+import { normalizeRoleCode } from '@/app/workspace-config';
 
 /**
  * Token 存储工具
@@ -8,9 +9,7 @@ const REFRESH_TOKEN_KEY = 'lms_refresh_token';
 const USER_INFO_KEY = 'lms_user_info';
 const CURRENT_ROLE_KEY = 'lms_current_role';
 const AVAILABLE_ROLES_KEY = 'lms_available_roles';
-const EFFECTIVE_PERMISSIONS_KEY = 'lms_effective_permissions';
-const ROLE_CODES: RoleCode[] = ['STUDENT', 'MENTOR', 'DEPT_MANAGER', 'ADMIN', 'TEAM_MANAGER', 'SUPER_ADMIN'];
-
+const CAPABILITIES_KEY = 'lms_capabilities';
 const parseStorageJson = <T>(key: string, fallback: T): T => {
   const rawValue = localStorage.getItem(key);
   if (!rawValue) {
@@ -73,13 +72,9 @@ export const tokenStorage = {
    * 获取当前角色
    */
   getCurrentRole(): RoleCode | null {
-    const role = localStorage.getItem(CURRENT_ROLE_KEY);
-    if (!role) {
-      return null;
-    }
-
-    if (ROLE_CODES.includes(role as RoleCode)) {
-      return role as RoleCode;
+    const normalizedRole = normalizeRoleCode(localStorage.getItem(CURRENT_ROLE_KEY));
+    if (normalizedRole) {
+      return normalizedRole;
     }
 
     localStorage.removeItem(CURRENT_ROLE_KEY);
@@ -114,21 +109,15 @@ export const tokenStorage = {
     this.setUserInfo(session.user);
     this.setCurrentRole(session.current_role);
     this.setAvailableRoles(session.available_roles);
-    this.setEffectivePermissions(session.effective_permissions);
+    this.setCapabilities(session.capabilities);
   },
 
-  /**
-   * 获取当前生效权限列表
-   */
-  getEffectivePermissions(): string[] {
-    return parseStorageJson<string[]>(EFFECTIVE_PERMISSIONS_KEY, []);
+  getCapabilities(): CapabilityMap {
+    return parseStorageJson<CapabilityMap>(CAPABILITIES_KEY, {});
   },
 
-  /**
-   * 设置当前生效权限列表
-   */
-  setEffectivePermissions(permissionCodes: string[]): void {
-    localStorage.setItem(EFFECTIVE_PERMISSIONS_KEY, JSON.stringify(permissionCodes));
+  setCapabilities(capabilities: CapabilityMap): void {
+    localStorage.setItem(CAPABILITIES_KEY, JSON.stringify(capabilities));
   },
 
   /**
@@ -140,6 +129,6 @@ export const tokenStorage = {
     localStorage.removeItem(USER_INFO_KEY);
     localStorage.removeItem(CURRENT_ROLE_KEY);
     localStorage.removeItem(AVAILABLE_ROLES_KEY);
-    localStorage.removeItem(EFFECTIVE_PERMISSIONS_KEY);
+    localStorage.removeItem(CAPABILITIES_KEY);
   },
 };

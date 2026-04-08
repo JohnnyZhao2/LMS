@@ -14,6 +14,7 @@ from apps.auth.views import (
     LoginView,
     LogoutView,
     MeView,
+    MeCapabilitiesView,
     OidcAuthorizeUrlView,
     OidcCodeLoginView,
     RefreshTokenView,
@@ -29,5 +30,6 @@ urlpatterns = [
     path('refresh/', RefreshTokenView.as_view(), name='auth-refresh'),
     path('switch-role/', SwitchRoleView.as_view(), name='auth-switch-role'),
     path('me/', MeView.as_view(), name='auth-me'),
+    path('me/capabilities/', MeCapabilitiesView.as_view(), name='auth-me-capabilities'),
     path('reset-password/', ResetPasswordView.as_view(), name='auth-reset-password'),
 ]

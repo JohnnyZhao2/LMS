@@ -38,19 +38,21 @@ import { PageFillShell, PageWorkbench } from '@/components/ui/page-shell';
 import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
+import { useRoleNavigate } from "@/hooks/use-role-navigate"
 import type { UserList as UserListType, Role } from "@/types/api"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
-  const { hasPermission, currentRole, user: currentUser } = useAuth()
-  const canCreateUser = hasPermission('user.create')
-  const canUpdateUser = hasPermission('user.update')
-  const canManageUserAccount = hasPermission('user.activate')
-  const canManageUserAuthorization = hasPermission('user.authorize')
-  const canDeleteUser = hasPermission('user.delete')
+  const { hasCapability } = useAuth()
+  const { roleNavigate } = useRoleNavigate()
+  const canCreateUser = hasCapability('user.create')
+  const canUpdateUser = hasCapability('user.update')
+  const canManageUserAccount = hasCapability('user.activate')
+  const canManageUserAuthorization = hasCapability('user.authorize')
+  const canDeleteUser = hasCapability('user.delete')
   const canResetPassword = canManageUserAccount
   const canOpenUserEditor = canUpdateUser || canManageUserAuthorization
-  const canAdminEditAvatar = currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN' || !!currentUser?.is_superuser
+  const canAdminEditAvatar = hasCapability('user.avatar.update')
   const userIdParam = searchParams.get('user_id')
   const userIdFromParam = userIdParam ? Number(userIdParam) : undefined
 
@@ -288,6 +290,14 @@ export const UserList: React.FC = () => {
               >
                 <Pencil className="mr-2 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
+              {canManageUserAuthorization && (
+                <DropdownMenuItem
+                  className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
+                  onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> 权限配置
+                </DropdownMenuItem>
+              )}
               {canResetPassword && (
                 <DropdownMenuItem
                   className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"

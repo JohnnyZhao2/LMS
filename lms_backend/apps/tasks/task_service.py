@@ -12,11 +12,10 @@ from django.db.models import QuerySet
 
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
-from apps.authorization.policies import can_manage_task_resource, can_view_task_resource
 from apps.submissions.models import Submission
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import authorize, enforce, scope_filter
+from apps.authorization.roles import SUPER_ADMIN_ROLE
 from apps.users.models import User
-from apps.users.permissions import SUPER_ADMIN_ROLE, is_admin_like_role
 from core.base_service import BaseService
 from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
@@ -51,19 +50,8 @@ class TaskService(BaseService):
         Returns:
             QuerySet of tasks accessible to the user
         """
-        current_role = self.get_current_role()
         qs = task_base_queryset(include_deleted=False)
-        if is_admin_like_role(current_role):
-            return qs
-        if current_role in ['MENTOR', 'DEPT_MANAGER']:
-            return qs.filter(
-                created_by=self.user,
-                created_role=current_role,
-            )
-        assigned_task_ids = TaskAssignment.objects.filter(
-            assignee=self.user
-        ).values_list('task_id', flat=True)
-        return qs.filter(id__in=assigned_task_ids)
+        return scope_filter('task.view', self.request, base_queryset=qs)
 
     def filter_task_queryset_by_creator_side(
         self,
@@ -77,7 +65,7 @@ class TaskService(BaseService):
         if not creator_side or creator_side == 'all':
             return queryset
 
-        if not is_admin_like_role(self.get_current_role()):
+        if not authorize('user.view', self.request).allowed:
             return queryset
 
         if creator_side == 'management':
@@ -115,32 +103,8 @@ class TaskService(BaseService):
         Raises:
             BusinessError: If permission denied
         """
-        authorization_service = AuthorizationService(self.request)
-        if authorization_service.has_deny_override('task.view'):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问此任务'
-            )
-        if not authorization_service.can('task.view'):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权访问此任务'
-            )
-
-        if can_view_task_resource(
-            current_role=self.get_current_role(),
-            actor_user_id=getattr(self.user, 'id', None),
-            task_owner_user_id=task.created_by_id,
-            task_created_role=task.created_role,
-            is_assignee=task.assignments.filter(assignee=self.user).exists(),
-            has_allow_override=authorization_service.has_allow_override('task.view'),
-        ):
-            return True
-
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message='无权访问此任务'
-        )
+        enforce('task.view', self.request, resource=task, error_message='无权访问此任务')
+        return True
 
     @staticmethod
     def has_student_progress(task: Task) -> bool:
@@ -169,30 +133,13 @@ class TaskService(BaseService):
         Raises:
             BusinessError: If permission denied
         """
-        authorization_service = AuthorizationService(self.request)
-        if authorization_service.has_deny_override(permission_code):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权操作此任务'
-            )
-        if not authorization_service.can(permission_code):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message=error_message,
-            )
-
-        if can_manage_task_resource(
-            current_role=self.get_current_role(),
-            actor_user_id=getattr(self.user, 'id', None),
-            task_owner_user_id=task.created_by_id,
-            task_created_role=task.created_role,
-            has_allow_override=authorization_service.has_allow_override(permission_code),
-        ):
-            return True
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message=error_message,
+        enforce(
+            permission_code,
+            self.request,
+            resource=task,
+            error_message=error_message,
         )
+        return True
 
     @transaction.atomic
     @log_operation(
@@ -226,10 +173,7 @@ class TaskService(BaseService):
         knowledge_ids = knowledge_ids or []
         quiz_ids = quiz_ids or []
         assignee_ids = assignee_ids or []
-        AuthorizationService(self.request).enforce(
-            'task.create',
-            error_message='无权创建任务',
-        )
+        enforce('task.create', self.request, error_message='无权创建任务')
         current_role = self.get_current_role()
         created_role = (
             'ADMIN'

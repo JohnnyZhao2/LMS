@@ -4,11 +4,11 @@ Serializers for user management.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.authorization.roles import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from core.exceptions import BusinessError
 
 from .avatar_constants import validate_avatar_key
 from .models import Department, Role, User
-from .permissions import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
 from .role_constraints import validate_role_assignment_constraints
 
 

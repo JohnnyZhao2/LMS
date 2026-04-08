@@ -117,7 +117,7 @@ def test_header_role_cannot_override_token_current_role():
 
 
 @pytest.mark.django_db
-def test_login_response_contains_effective_permissions():
+def test_login_response_contains_capabilities():
     client = APIClient()
 
     department = Department.objects.create(name='Dept 4', code='DEPT4')
@@ -139,9 +139,9 @@ def test_login_response_contains_effective_permissions():
 
     assert login_response.status_code == 200
     assert login_response.data['code'] == 'SUCCESS'
-    effective_permissions = login_response.data['data'].get('effective_permissions')
-    assert isinstance(effective_permissions, list)
-    assert 'knowledge.view' in effective_permissions
+    capabilities = login_response.data['data'].get('capabilities')
+    assert isinstance(capabilities, dict)
+    assert capabilities['knowledge.view']['allowed'] is True
 
 
 @pytest.mark.django_db
@@ -208,9 +208,9 @@ def test_superuser_login_returns_dedicated_super_admin_role():
     payload = login_response.data['data']
     assert payload['current_role'] == 'SUPER_ADMIN'
     assert payload['available_roles'] == [{'code': 'SUPER_ADMIN', 'name': '超管'}]
-    assert 'user.view' in payload['effective_permissions']
-    assert 'knowledge.view' in payload['effective_permissions']
-    assert 'activity_log.view' in payload['effective_permissions']
+    assert payload['capabilities']['user.view']['allowed'] is True
+    assert payload['capabilities']['knowledge.view']['allowed'] is True
+    assert payload['capabilities']['activity_log.view']['allowed'] is True
 
 
 @pytest.mark.django_db

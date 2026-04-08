@@ -1,10 +1,14 @@
 """Authorization constants derived from the registry."""
 
 from .registry import (
+    build_conditional_permission_codes,
     build_permission_catalog,
-    build_role_default_scope_types,
+    build_permission_constraint_summaries,
+    build_permission_scope_rules,
+    build_resource_authorization_handlers,
     build_role_permission_defaults,
     build_role_system_permission_defaults,
+    build_scope_filter_handlers,
     build_scope_aware_permission_codes,
     build_system_managed_permission_codes,
     load_authorization_specs,
@@ -62,11 +66,13 @@ SCOPE_DESCRIPTIONS = {
     SCOPE_EXPLICIT_USERS: '仅对指定用户对象生效',
 }
 
-ROLE_DEFAULT_SCOPE_TYPES = build_role_default_scope_types(AUTHORIZATION_SPECS)
+PERMISSION_SCOPE_RULES = build_permission_scope_rules(AUTHORIZATION_SPECS)
 
-# 仅这些权限会在服务端按“学员对象范围”解析覆盖规则。
-# 其他权限的覆盖规则统一按全局能力处理（scope=ALL）。
 SCOPE_AWARE_PERMISSION_CODES = build_scope_aware_permission_codes(AUTHORIZATION_SPECS)
+RESOURCE_AUTHORIZATION_HANDLERS = build_resource_authorization_handlers(AUTHORIZATION_SPECS)
+SCOPE_FILTER_HANDLERS = build_scope_filter_handlers(AUTHORIZATION_SPECS)
+CONDITIONAL_PERMISSION_CODES = build_conditional_permission_codes(AUTHORIZATION_SPECS)
+PERMISSION_CONSTRAINT_SUMMARIES = build_permission_constraint_summaries(AUTHORIZATION_SPECS)
 
 
 EFFECT_ALLOW = 'ALLOW'

@@ -34,8 +34,8 @@ const LOG_TYPE_META = {
 const PANEL_GRID_CLASS = 'grid min-h-0 items-stretch gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]';
 
 export const ActivityLogsPanel: React.FC = () => {
-  const { hasPermission } = useAuth();
-  const canViewActivityLogs = hasPermission('activity_log.view');
+  const { hasCapability } = useAuth();
+  const canViewActivityLogs = hasCapability('activity_log.view');
 
   const [activeType, setActiveType] = useState<ActivityLogType>('user');
   const [page, setPage] = useState(1);

@@ -8,9 +8,8 @@ Serializers for task management.
 """
 from rest_framework import serializers
 
-from apps.users.permissions import (
-    get_accessible_student_ids,
-)
+from apps.authorization.engine import authorize, scope_filter
+from apps.users.models import User
 
 from .models import (
     KnowledgeLearningProgress,
@@ -24,11 +23,11 @@ from .task_service import TaskService
 
 
 def validate_assignee_scope(user, assignee_ids: list[int], request) -> None:
-    accessible_ids = get_accessible_student_ids(
-        user,
+    accessible_ids = set(scope_filter(
+        'task.assign',
         request,
-        permission_code='task.assign',
-    )
+        resource_model=User,
+    ).values_list('id', flat=True))
     invalid_ids = sorted(set(assignee_ids) - accessible_ids)
     if not invalid_ids:
         return
@@ -102,6 +101,18 @@ class TaskListSerializer(serializers.ModelSerializer):
     practice_count = serializers.ReadOnlyField()
     assignee_count = serializers.ReadOnlyField()
     completed_count = serializers.ReadOnlyField()
+    actions = serializers.SerializerMethodField()
+
+    def get_actions(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return {'view': False, 'update': False, 'delete': False, 'analytics': False}
+        return {
+            'view': authorize('task.view', request, resource=obj).allowed,
+            'update': authorize('task.update', request, resource=obj).allowed,
+            'delete': authorize('task.delete', request, resource=obj).allowed,
+            'analytics': authorize('task.analytics.view', request, resource=obj).allowed,
+        }
 
     class Meta:
         model = Task
@@ -110,7 +121,8 @@ class TaskListSerializer(serializers.ModelSerializer):
             'deadline',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
             'assignee_count', 'completed_count',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
+            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
+            'actions',
         ]
 class TaskDetailSerializer(serializers.ModelSerializer):
     """Serializer for task detail view."""
@@ -121,10 +133,22 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
     assignments = TaskAssignmentSerializer(many=True, read_only=True)
     has_progress = serializers.SerializerMethodField()
+    actions = serializers.SerializerMethodField()
 
     def get_has_progress(self, obj):
         """Check if task has student learning progress"""
         return TaskService.has_student_progress(obj)
+
+    def get_actions(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return {'view': False, 'update': False, 'delete': False, 'analytics': False}
+        return {
+            'view': authorize('task.view', request, resource=obj).allowed,
+            'update': authorize('task.update', request, resource=obj).allowed,
+            'delete': authorize('task.delete', request, resource=obj).allowed,
+            'analytics': authorize('task.analytics.view', request, resource=obj).allowed,
+        }
 
     class Meta:
         model = Task
@@ -134,6 +158,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'knowledge_items', 'quizzes', 'assignments',
             'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
             'has_progress',
+            'actions',
         ]
 class TaskCreateSerializer(serializers.Serializer):
     """

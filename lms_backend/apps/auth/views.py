@@ -14,6 +14,7 @@ from core.base_view import BaseAPIView
 from core.responses import success_response
 from core.throttles import AuthThrottle
 from apps.auth.serializers import (
+    CapabilitiesResponseSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     LogoutRequestSerializer,
@@ -160,6 +161,29 @@ class MeView(BaseAPIView):
     )
     def get(self, request):
         result = self.service.get_me(
+            user=request.user,
+            requested_role=getattr(request.user, 'current_role', None),
+        )
+        return success_response(result)
+
+
+class MeCapabilitiesView(BaseAPIView):
+    """获取当前用户能力映射。"""
+
+    permission_classes = [IsAuthenticated]
+    service_class = AuthenticationService
+
+    @extend_schema(
+        summary='获取当前用户能力映射',
+        description='获取当前用户在当前生效角色下的能力映射',
+        responses={
+            200: CapabilitiesResponseSerializer,
+            401: OpenApiResponse(description='未登录'),
+        },
+        tags=['认证']
+    )
+    def get(self, request):
+        result = self.service.get_capabilities(
             user=request.user,
             requested_role=getattr(request.user, 'current_role', None),
         )

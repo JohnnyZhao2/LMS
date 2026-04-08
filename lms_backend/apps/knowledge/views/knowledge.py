@@ -9,7 +9,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce
 from apps.knowledge.serializers import (
     KnowledgeCreateSerializer,
     KnowledgeDetailSerializer,
@@ -37,17 +37,11 @@ class ViewCountResponseSerializer(drf_serializers.Serializer):
 
 
 def _enforce_knowledge_view_permission(request, error_message: str = '无权访问知识内容') -> None:
-    authorization_service = AuthorizationService(request)
-    if authorization_service.can('knowledge.view'):
-        return
-    raise BusinessError(
-        code=ErrorCodes.PERMISSION_DENIED,
-        message=error_message,
-    )
+    enforce('knowledge.view', request, error_message=error_message)
 
 
 def _enforce_knowledge_action_permission(request, permission_code: str, error_message: str) -> None:
-    AuthorizationService(request).enforce(permission_code, error_message=error_message)
+    enforce(permission_code, request, error_message=error_message)
 
 
 def _build_knowledge_filters(request):
@@ -264,17 +258,6 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
                 message='任务知识不存在',
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        if not AuthorizationService(request).can('knowledge.view'):
-            has_assignment = TaskAssignment.objects.filter(
-                task_id=task_knowledge.task_id,
-                assignee=request.user
-            ).exists()
-            if not has_assignment:
-                return error_response(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='无权访问该知识文档',
-                    status_code=status.HTTP_403_FORBIDDEN,
-                )
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(serializer.data)

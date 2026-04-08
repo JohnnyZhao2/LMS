@@ -8,9 +8,8 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.users.permissions import get_current_role
+from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
 
 from ..serializers import (
@@ -22,11 +21,7 @@ from ..services import SubmissionService
 
 
 def enforce_student_submission_role(request) -> None:
-    if get_current_role(request.user, request) != 'STUDENT':
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message='只有学员角色可以进行答题和查看结果',
-        )
+    enforce('submission.answer', request, error_message='只有学员角色可以进行答题和查看结果')
 
 
 class StartQuizView(APIView):

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
   User,
@@ -30,10 +30,6 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';
-import {
-  UserPermissionSection,
-  type UserPermissionSectionHandle,
-} from './user-permission-section';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
 import type { UserList as UserDetail, Mentor, Department, Role } from '@/types/common';
@@ -82,16 +78,6 @@ export const UserForm: React.FC<UserFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [dialogContentElement, setDialogContentElement] = useState<HTMLDivElement | null>(null);
-  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
-    if (nextOpen) return;
-    setDialogContentElement(null);
-    onClose();
-  }, [onClose]);
-  const handleDialogContentRef = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    setDialogContentElement((prev) => (prev === node ? prev : node));
-  }, []);
   const { data: userDetail } = useUserDetail(userId || 0);
   const {
     data: mentors = [],
@@ -103,16 +89,17 @@ export const UserForm: React.FC<UserFormProps> = ({
   const isEdit = !!userId;
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) onClose();
+    }}>
       <DialogContent
-        ref={handleDialogContentRef}
         className="max-w-5xl p-0 gap-0 overflow-hidden rounded-xl border border-border flex flex-col bg-background"
       >
         <DialogTitle className="sr-only">
           {isEdit ? '编辑用户档案' : '新建用户档案'}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          配置用户基础信息、系统角色，以及基于角色的数据范围和权限开通情况。
+          配置用户基础信息、导师归属与系统角色。
         </DialogDescription>
         {open && (
           <UserFormContent
@@ -127,7 +114,6 @@ export const UserForm: React.FC<UserFormProps> = ({
             roles={roles}
             initialDepartmentId={initialDepartmentId}
             initialMentorId={initialMentorId}
-            dialogContentElement={dialogContentElement}
             onClose={onClose}
             onSuccess={onSuccess}
           />
@@ -149,7 +135,6 @@ const UserFormContent: React.FC<{
   roles: Role[];
   initialDepartmentId?: number;
   initialMentorId?: number;
-  dialogContentElement: HTMLDivElement | null;
   onClose: () => void;
   onSuccess?: () => void;
 }> = ({
@@ -163,21 +148,19 @@ const UserFormContent: React.FC<{
   roles = [],
   initialDepartmentId,
   initialMentorId,
-  dialogContentElement,
   onClose,
   onSuccess,
 }) => {
-    const { hasPermission } = useAuth();
-    const canCreateUser = hasPermission('user.create');
-    const canUpdateUser = hasPermission('user.update');
-    const canUpdateUserAuthorization = hasPermission('user.authorize');
+    const { hasCapability } = useAuth();
+    const canCreateUser = hasCapability('user.create');
+    const canUpdateUser = hasCapability('user.update');
+    const canUpdateUserAuthorization = hasCapability('user.authorize');
     const canSubmitForm = isEdit ? (canUpdateUser || canUpdateUserAuthorization) : canCreateUser;
 
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
     const assignRoles = useAssignRoles();
     const assignMentor = useAssignMentor();
-    const permissionSectionRef = useRef<UserPermissionSectionHandle | null>(null);
     // 直接从 props 初始化，组件通过 key 重挂载时自动重置
     const [initialRoleCodes] = useState<RoleCode[]>(() =>
       isEdit && userDetail
@@ -245,7 +228,6 @@ const UserFormContent: React.FC<{
             || (formData.department_id ?? null) !== (userDetail?.department?.id ?? null)
           );
           const mentorChanged = mentorTouched && formData.mentor_id !== initialAssignedMentorId;
-          const hasPermissionDraftChanges = permissionSectionRef.current?.hasPendingChanges() ?? false;
 
           if ((baseInfoChanged || mentorChanged) && !canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法提交基础信息变更');
@@ -253,10 +235,6 @@ const UserFormContent: React.FC<{
           }
           if (rolesChanged && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法调整角色');
-            return;
-          }
-          if (hasPermissionDraftChanges && !canUpdateUserAuthorization) {
-            toast.error('当前账号没有用户授权管理权限，无法提交权限草稿');
             return;
           }
 
@@ -276,22 +254,14 @@ const UserFormContent: React.FC<{
           if (rolesChanged) {
             await assignRoles.mutateAsync({ id: userId!, roles: formData.role_codes });
           }
-          if (hasPermissionDraftChanges) {
-            await permissionSectionRef.current?.submitChanges();
-          }
           toast.success("账号信息已更新");
         } else {
-          const hasPermissionDraftChanges = permissionSectionRef.current?.hasPendingChanges() ?? false;
           if (!canUpdateUser) {
             toast.error('当前账号没有用户资料管理权限，无法创建账号');
             return;
           }
           if (formData.role_codes.length > 0 && !canUpdateUserAuthorization) {
             toast.error('当前账号没有用户授权管理权限，无法分配角色');
-            return;
-          }
-          if (hasPermissionDraftChanges && !canUpdateUserAuthorization) {
-            toast.error('当前账号没有用户授权管理权限，无法提交权限草稿');
             return;
           }
           const newUser = await createUser.mutateAsync({
@@ -304,9 +274,6 @@ const UserFormContent: React.FC<{
           // 创建成功后分配额外角色
           if (formData.role_codes.length > 0) {
             await assignRoles.mutateAsync({ id: newUser.id, roles: formData.role_codes });
-          }
-          if (hasPermissionDraftChanges) {
-            await permissionSectionRef.current?.submitChanges(newUser.id);
           }
           toast.success("新账号已创建");
         }
@@ -581,16 +548,6 @@ const UserFormContent: React.FC<{
             </div>
           </div>
 
-          <UserPermissionSection
-            ref={permissionSectionRef}
-            userId={userId}
-            userDetail={userDetail}
-            departments={departments}
-            selectedRoleCodes={formData.role_codes}
-            departmentId={formData.department_id}
-            isSuperuserAccount={isSuperuserAccount}
-            dialogContentElement={dialogContentElement}
-          />
         </div>
 
         {/* Footer - Aligned with Grid */}

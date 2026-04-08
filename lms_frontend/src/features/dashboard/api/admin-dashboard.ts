@@ -2,18 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { TeamManagerDashboard } from '@/types/dashboard';
+import type { MentorDashboard } from '@/types/api';
 
 /**
- * 获取团队经理仪表盘数据
+ * 获取管理员仪表盘数据
  */
-export const useTeamManagerDashboard = () => {
+export const useAdminDashboard = () => {
   const currentRole = useCurrentRole();
   const { hasCapability } = useAuth();
+
   return useQuery({
-    queryKey: ['team-manager-dashboard', currentRole ?? 'UNKNOWN'],
-    queryFn: () => apiClient.get<TeamManagerDashboard>('/dashboard/team-manager/'),
-    enabled: hasCapability('dashboard.team_manager.view'),
+    queryKey: ['admin-dashboard', currentRole ?? 'UNKNOWN'],
+    queryFn: () => apiClient.get<MentorDashboard>('/dashboard/admin/'),
+    enabled: currentRole !== null && hasCapability('dashboard.admin.view'),
     staleTime: 0,
     refetchOnMount: 'always',
   });

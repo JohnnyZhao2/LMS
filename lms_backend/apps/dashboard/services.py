@@ -11,11 +11,11 @@ from typing import Any, Dict, List, Optional, Set
 from django.db.models import Avg, Case, Count, IntegerField, QuerySet, Sum, Value, When
 
 from apps.knowledge.models import Knowledge
+from apps.authorization.engine import scope_filter
 from apps.submissions.models import Submission
 from apps.tasks.models import TaskAssignment
 from core.base_service import BaseService
 from apps.users.models import Department, User
-from apps.users.permissions import get_accessible_students
 
 from .selectors import (
     calculate_average_completion_rate_by_students,
@@ -113,10 +113,10 @@ class MentorDashboardService(BaseService):
         """
         获取导师/室经理的完整仪表盘数据
         """
-        students = get_accessible_students(
-            self.user,
+        students = scope_filter(
+            MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
             self.request,
-            permission_code=MENTOR_DASHBOARD_SCOPE_PERMISSION_CODE,
+            resource_model=User,
         )
         student_ids = list(students.values_list('id', flat=True))
         monthly_active_ids = get_monthly_active_user_ids(student_ids)
@@ -249,10 +249,10 @@ class TeamManagerDashboardService(BaseService):
         """
         获取团队经理的完整仪表盘数据
         """
-        students = get_accessible_students(
-            self.user,
+        students = scope_filter(
+            TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE,
             self.request,
-            permission_code=TEAM_MANAGER_DASHBOARD_SCOPE_PERMISSION_CODE,
+            resource_model=User,
         )
         student_ids = list(students.values_list('id', flat=True))
         mentors = User.objects.filter(

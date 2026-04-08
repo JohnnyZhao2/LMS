@@ -6,7 +6,10 @@ from apps.users.models import Role
 
 from .constants import EFFECT_CHOICES, SCOPE_CHOICES, SCOPE_EXPLICIT_USERS, VISIBLE_SCOPE_CHOICES
 from .models import Permission, UserPermissionOverride
-from .policies import get_permission_constraint_summary
+from .policies import (
+    get_permission_constraint_summary,
+    is_permission_visible_in_role_template,
+)
 
 
 NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'STUDENT']
@@ -14,13 +17,25 @@ NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'ST
 
 class PermissionSerializer(serializers.ModelSerializer):
     constraint_summary = serializers.SerializerMethodField()
+    role_template_visible = serializers.SerializerMethodField()
 
     def get_constraint_summary(self, obj: Permission) -> str:
         return get_permission_constraint_summary(obj.code)
 
+    def get_role_template_visible(self, obj: Permission) -> bool:
+        return is_permission_visible_in_role_template(obj.code)
+
     class Meta:
         model = Permission
-        fields = ['code', 'name', 'module', 'description', 'constraint_summary', 'is_active']
+        fields = [
+            'code',
+            'name',
+            'module',
+            'description',
+            'constraint_summary',
+            'role_template_visible',
+            'is_active',
+        ]
 
 
 class ScopeOptionSerializer(serializers.Serializer):

@@ -31,7 +31,6 @@ import { type ColumnDef } from "@tanstack/react-table"
 import type { TaskListItem } from "@/types/api"
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
-import { isAdminLikeRole } from '@/lib/role-utils';
 
 /**
  * 辅助组件: 趋势图标
@@ -45,20 +44,20 @@ const TrendingUp = ({ className }: { className?: string }) => (
 
 export const TaskManagement: React.FC = () => {
     const { roleNavigate } = useRoleNavigate()
-    const { user, currentRole } = useAuth()
+    const { hasCapability } = useAuth()
     const [searchTerm, setSearchTerm] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
-    const isAdmin = isAdminLikeRole(currentRole)
+    const canFilterCreatorSide = hasCapability('user.view')
 
     const { data: tasksData, isLoading } = useTaskList({
         page,
         pageSize,
         taskStatus: statusFilter as 'open' | 'closed' | 'all',
-        creatorSide: isAdmin ? creatorSideFilter : 'all',
+        creatorSide: canFilterCreatorSide ? creatorSideFilter : 'all',
     })
     const deleteTask = useDeleteTask()
 
@@ -168,8 +167,8 @@ export const TaskManagement: React.FC = () => {
             header: "操作",
             id: "actions",
             cell: ({ row }) => {
-                const canEdit = isAdminLikeRole(currentRole) || row.original.created_by === user?.id;
-                const canPreview = isAdminLikeRole(currentRole) || currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER';
+                const canEdit = row.original.actions.update || row.original.actions.delete;
+                const canPreview = row.original.actions.analytics;
                 const isClosedByDeadline = !dayjs(row.original.deadline).isAfter(dayjs());
                 return (
                     <div className="flex items-center gap-1.5 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
@@ -221,22 +220,24 @@ export const TaskManagement: React.FC = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-md hover:bg-primary-100 hover:text-primary text-text-muted  soft-press"
-                                        disabled={isClosedByDeadline}
+                                        disabled={!row.original.actions.update || isClosedByDeadline}
                                         onClick={() => roleNavigate(`/tasks/${row.original.id}/edit`)}
                                     >
                                         <Pencil className="h-4 w-4" />
                                     </Button>
                                 </Tooltip>
-                                <Tooltip title="删除任务">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-9 w-9 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted  soft-press"
-                                        onClick={() => setDeleteId(row.original.id)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </Tooltip>
+                                {row.original.actions.delete && (
+                                    <Tooltip title="删除任务">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 rounded-md hover:bg-destructive-100 hover:text-destructive text-text-muted  soft-press"
+                                            onClick={() => setDeleteId(row.original.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </Tooltip>
+                                )}
                             </>
                         )}
                     </div>
@@ -257,7 +258,7 @@ export const TaskManagement: React.FC = () => {
                 {/* 搜索和筛选 */}
                 <div className="mb-1 flex items-center gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                        {isAdmin && (
+                        {canFilterCreatorSide && (
                             <SegmentedControl
                                 value={creatorSideFilter}
                                 onChange={(val: string) => setCreatorSideFilter(val as 'all' | 'management' | 'non_management')}

@@ -1,9 +1,10 @@
 """Authorization registry built from per-app specs."""
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import lru_cache
 from importlib import import_module
-from typing import Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,30 @@ class PermissionDefinition:
 
 
 @dataclass(frozen=True)
+class PermissionScopeRuleDefinition:
+    permission_code: str
+    role_code: str
+    scope_type: str
+
+
+@dataclass(frozen=True)
+class ResourceAuthorizationHandler:
+    key: str
+    permission_codes: tuple[str, ...]
+    authorize: Callable[..., Any]
+    constraint_summaries: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ScopeFilterHandler:
+    key: str
+    permission_code: str
+    resource_model: type
+    filter_queryset: Callable[..., Any]
+    constraint_summary: str = ''
+
+
+@dataclass(frozen=True)
 class AuthorizationSpec:
     key: str
     module: Optional[str] = None
@@ -21,8 +46,9 @@ class AuthorizationSpec:
     system_managed_codes: tuple[str, ...] = ()
     role_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
     role_system_defaults: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    role_default_scopes: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    scope_aware_permissions: tuple[str, ...] = ()
+    scope_rules: tuple[PermissionScopeRuleDefinition, ...] = ()
+    resource_authorization_handlers: tuple[ResourceAuthorizationHandler, ...] = ()
+    scope_filter_handlers: tuple[ScopeFilterHandler, ...] = ()
 
 
 AUTHORIZATION_SPEC_MODULES = (
@@ -106,15 +132,86 @@ def build_role_system_permission_defaults(
     return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_system_defaults')
 
 
-def build_role_default_scope_types(specs: Optional[Iterable[AuthorizationSpec]] = None) -> dict[str, list[str]]:
-    return _merge_sequence_map(tuple(specs or load_authorization_specs()), 'role_default_scopes')
+def build_permission_scope_rules(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> list[PermissionScopeRuleDefinition]:
+    resolved_specs = tuple(specs or load_authorization_specs())
+    rules: list[PermissionScopeRuleDefinition] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for spec in resolved_specs:
+        for rule in spec.scope_rules:
+            cache_key = (rule.permission_code, rule.role_code, rule.scope_type)
+            if cache_key in seen_keys:
+                continue
+            seen_keys.add(cache_key)
+            rules.append(rule)
+    return rules
 
 
 def build_scope_aware_permission_codes(specs: Optional[Iterable[AuthorizationSpec]] = None) -> set[str]:
+    return {rule.permission_code for rule in build_permission_scope_rules(specs)}
+
+
+def build_resource_authorization_handlers(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> tuple[ResourceAuthorizationHandler, ...]:
     resolved_specs = tuple(specs or load_authorization_specs())
-    codes: list[str] = []
+    handlers: list[ResourceAuthorizationHandler] = []
+    seen_keys: set[str] = set()
     for spec in resolved_specs:
-        for code in spec.scope_aware_permissions:
-            if code not in codes:
-                codes.append(code)
-    return set(codes)
+        for handler in spec.resource_authorization_handlers:
+            if handler.key in seen_keys:
+                continue
+            seen_keys.add(handler.key)
+            handlers.append(handler)
+    return tuple(handlers)
+
+
+def build_scope_filter_handlers(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> tuple[ScopeFilterHandler, ...]:
+    resolved_specs = tuple(specs or load_authorization_specs())
+    handlers: list[ScopeFilterHandler] = []
+    seen_keys: set[str] = set()
+    for spec in resolved_specs:
+        for handler in spec.scope_filter_handlers:
+            if handler.key in seen_keys:
+                continue
+            seen_keys.add(handler.key)
+            handlers.append(handler)
+    return tuple(handlers)
+
+
+def build_conditional_permission_codes(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> set[str]:
+    conditional_codes = set(build_scope_aware_permission_codes(specs))
+    for handler in build_resource_authorization_handlers(specs):
+        conditional_codes.update(handler.constraint_summaries.keys())
+    for handler in build_scope_filter_handlers(specs):
+        if handler.constraint_summary:
+            conditional_codes.add(handler.permission_code)
+    return conditional_codes
+
+
+def build_permission_constraint_summaries(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> dict[str, str]:
+    summaries: dict[str, str] = {}
+    for handler in build_resource_authorization_handlers(specs):
+        summaries.update(handler.constraint_summaries)
+    for handler in build_scope_filter_handlers(specs):
+        if handler.constraint_summary and handler.permission_code not in summaries:
+            summaries[handler.permission_code] = handler.constraint_summary
+
+    scope_rules_by_permission: dict[str, list[PermissionScopeRuleDefinition]] = defaultdict(list)
+    for rule in build_permission_scope_rules(specs):
+        scope_rules_by_permission[rule.permission_code].append(rule)
+    for permission_code, rules in scope_rules_by_permission.items():
+        if permission_code in summaries:
+            continue
+        scope_labels = sorted({rule.scope_type for rule in rules})
+        summaries[permission_code] = (
+            f"按默认范围 {', '.join(scope_labels)} 生效，可通过用户授权按对象范围增删。"
+        )
+    return summaries

@@ -69,7 +69,7 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
-      <section className="rounded-[20px] border border-border/70 bg-white p-3">
+      <section className="rounded-2xl border border-border/70 bg-white p-3">
         <UserPermissionModuleSidebar
           permissionModules={permissionModules}
           activePermissionModule={activeGroup.module}
@@ -78,7 +78,7 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
         />
       </section>
 
-      <section className="rounded-[20px] border border-border/70 bg-white">
+      <section className="rounded-2xl border border-border/70 bg-white">
         <div className="flex items-center justify-between gap-3 px-5 py-4">
           <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
             {activeGroup.modulePresentation.label}

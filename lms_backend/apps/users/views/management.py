@@ -11,14 +11,8 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce, scope_filter
 from apps.users.models import User
-from apps.users.permissions import (
-    SUPER_ADMIN_ROLE,
-    get_accessible_students,
-    get_current_role,
-    is_admin_like_role,
-)
 from apps.users.selectors import (
     get_user_by_id,
     list_departments,
@@ -49,13 +43,16 @@ from core.responses import created_response, list_response, no_content_response,
 
 
 def enforce_user_permission(request, permission_code: str, error_message: str) -> None:
-    AuthorizationService(request).enforce(permission_code, error_message=error_message)
+    enforce(permission_code, request, error_message=error_message)
 
 
 def enforce_any_user_permission(request, permission_codes: list[str], error_message: str) -> None:
-    service = AuthorizationService(request)
-    if any(service.can(permission_code) for permission_code in permission_codes):
-        return
+    for permission_code in permission_codes:
+        try:
+            enforce(permission_code, request, error_message=error_message)
+            return
+        except BusinessError:
+            continue
     raise BusinessError(
         code=ErrorCodes.PERMISSION_DENIED,
         message=error_message,
@@ -245,12 +242,7 @@ class UserAvatarUpdateView(BaseAPIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        current_role = get_current_role(request.user, request)
-        if not is_admin_like_role(current_role):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有管理员可以修改其他用户头像',
-            )
+        enforce_user_permission(request, 'user.avatar.update', '只有管理员可以修改其他用户头像')
 
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -371,16 +363,13 @@ class MenteesListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        current_role = get_current_role(request.user, request)
-        if current_role == 'MENTOR':
-            mentees = request.user.get_mentees()
-        elif current_role == SUPER_ADMIN_ROLE:
-            mentees = get_accessible_students(request.user, request)
-        else:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有导师或超管可以查看名下学员'
-            )
+        enforce_user_permission(request, 'user.mentee.view', '只有导师可以查看名下学员')
+        mentees = scope_filter(
+            'user.mentee.view',
+            request,
+            resource_model=User,
+            base_queryset=User.objects.select_related('department', 'mentor').prefetch_related('roles'),
+        )
         serializer = MenteeListSerializer(mentees, many=True)
         return list_response(serializer.data)
 class DepartmentMembersListView(APIView):
@@ -396,16 +385,13 @@ class DepartmentMembersListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        current_role = get_current_role(request.user, request)
-        if current_role == 'DEPT_MANAGER':
-            members = request.user.get_department_members()
-        elif current_role == SUPER_ADMIN_ROLE:
-            members = list_users(is_active=True)
-        else:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有室经理或超管可以查看本室成员'
-            )
+        enforce_user_permission(request, 'user.department_member.view', '只有室经理可以查看本室成员')
+        members = scope_filter(
+            'user.department_member.view',
+            request,
+            resource_model=User,
+            base_queryset=User.objects.select_related('department', 'mentor').prefetch_related('roles'),
+        )
         serializer = DepartmentMemberListSerializer(members, many=True)
         return list_response(serializer.data)
 class MentorsListView(APIView):

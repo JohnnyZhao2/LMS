@@ -8,16 +8,17 @@ from django.utils import timezone
 
 from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
+from apps.authorization.roles import SUPER_ADMIN_ROLE
 from apps.users.models import Role, User
-from apps.users.permissions import SUPER_ADMIN_ROLE
 
 from .constants import (
     CONFIG_MODULE_PERMISSION_CODES,
     CONFIG_PERMISSION_MANAGEABLE_ROLE,
+    CONDITIONAL_PERMISSION_CODES,
     EFFECT_ALLOW,
     EFFECT_DENY,
     PERMISSION_CATALOG,
-    ROLE_DEFAULT_SCOPE_TYPES,
+    PERMISSION_SCOPE_RULES,
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
@@ -30,11 +31,13 @@ from .constants import (
     SYSTEM_MANAGED_PERMISSION_CODES,
     VISIBLE_SCOPE_CHOICES,
 )
-from .models import Permission, RolePermission, UserPermissionOverride
+from .models import Permission, PermissionScopeRule, RolePermission, UserPermissionOverride
 from .selectors import (
     get_permissions_by_codes,
+    list_permission_scope_types,
     list_active_user_overrides,
     list_permissions,
+    list_role_scope_types,
 )
 
 
@@ -140,6 +143,7 @@ class AuthorizationService(BaseService):
         self,
         override: UserPermissionOverride,
         *,
+        actor: Optional[User],
         target_user: Optional[User],
     ) -> bool:
         scope_type = override.scope_type
@@ -147,7 +151,7 @@ class AuthorizationService(BaseService):
         if scope_type == SCOPE_ALL:
             return True
 
-        if not self.user:
+        if not actor:
             return False
 
         if target_user is None:
@@ -156,15 +160,15 @@ class AuthorizationService(BaseService):
         target_user_id = target_user.id
 
         if scope_type == SCOPE_SELF:
-            return target_user_id == self.user.id
+            return target_user_id == actor.id
 
         if scope_type == SCOPE_MENTEES:
-            return target_user.mentor_id == self.user.id
+            return target_user.mentor_id == actor.id
 
         if scope_type == SCOPE_DEPARTMENT:
-            if not self.user.department_id:
+            if not actor.department_id:
                 return False
-            return target_user.department_id == self.user.department_id
+            return target_user.department_id == actor.department_id
 
         if scope_type == SCOPE_EXPLICIT_USERS:
             return target_user_id in set(override.scope_user_ids or [])
@@ -174,6 +178,7 @@ class AuthorizationService(BaseService):
     def _resolve_override_effect(
         self,
         *,
+        acting_user: Optional[User],
         permission_code: str,
         current_role: Optional[str],
         target_user: Optional[User],
@@ -183,20 +188,20 @@ class AuthorizationService(BaseService):
         if self._is_config_permission_locked_for_role(permission_code, current_role):
             return None
 
-        if not self.user:
+        if not acting_user:
             return None
-        if self.user.is_superuser:
+        if acting_user.is_superuser:
             return None
 
         overrides = list_active_user_overrides(
-            user_id=self.user.id,
+            user_id=acting_user.id,
             current_role=current_role,
             permission_code=permission_code,
         )
 
         allow_matched = False
         for override in overrides:
-            if not self._match_scope(override, target_user=target_user):
+            if not self._match_scope(override, actor=acting_user, target_user=target_user):
                 continue
             if override.effect == EFFECT_DENY:
                 return EFFECT_DENY
@@ -219,6 +224,7 @@ class AuthorizationService(BaseService):
         resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
         return (
             self._resolve_override_effect(
+                acting_user=self.user,
                 permission_code=permission_code,
                 current_role=resolved_role,
                 target_user=resolved_target,
@@ -238,6 +244,7 @@ class AuthorizationService(BaseService):
         resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
         return (
             self._resolve_override_effect(
+                acting_user=self.user,
                 permission_code=permission_code,
                 current_role=resolved_role,
                 target_user=resolved_target,
@@ -245,23 +252,26 @@ class AuthorizationService(BaseService):
             == EFFECT_DENY
         )
 
-    def can(
+    def _is_permission_granted(
         self,
         permission_code: str,
         *,
+        acting_user: Optional[User] = None,
         current_role: Optional[str] = None,
         target_user: Optional[User] = None,
         target_user_id: Optional[int] = None,
     ) -> bool:
         """Evaluate permission with deny > allow > role baseline."""
-        if not self.user or not self.user.is_authenticated:
+        base_user = acting_user or self.user
+        if not base_user or not base_user.is_authenticated:
             return False
-        if self.user.is_superuser:
+        if base_user.is_superuser:
             return True
 
         resolved_role = self._resolve_role(current_role)
         resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
         override_effect = self._resolve_override_effect(
+            acting_user=base_user,
             permission_code=permission_code,
             current_role=resolved_role,
             target_user=resolved_target,
@@ -277,73 +287,6 @@ class AuthorizationService(BaseService):
 
         role_codes = self._get_role_permission_code_set(resolved_role)
         return permission_code in role_codes
-
-    def enforce(
-        self,
-        permission_code: str,
-        *,
-        error_message: Optional[str] = None,
-        current_role: Optional[str] = None,
-        target_user: Optional[User] = None,
-        target_user_id: Optional[int] = None,
-    ) -> None:
-        if self.can(
-            permission_code,
-            current_role=current_role,
-            target_user=target_user,
-            target_user_id=target_user_id,
-        ):
-            return
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message=error_message or f'缺少权限: {permission_code}',
-        )
-
-    def get_effective_permission_codes(
-        self,
-        *,
-        current_role: Optional[str] = None,
-        user: Optional[User] = None,
-    ) -> List[str]:
-        """
-        Return current effective global permission codes for frontend guards.
-
-        Note: only global (scope=ALL) overrides are folded into this list.
-        """
-        base_user = user or self.user
-        if not base_user or not base_user.is_authenticated:
-            return []
-        if base_user.is_superuser:
-            all_codes = set(
-                Permission.objects.filter(is_active=True).values_list('code', flat=True)
-            )
-            all_codes.update(SYSTEM_MANAGED_PERMISSION_CODES)
-            return sorted(all_codes)
-
-        resolved_role = current_role or self._resolve_role()
-        if not resolved_role:
-            return []
-
-        role_permissions: Set[str] = self._get_role_permission_code_set(resolved_role)
-
-        global_overrides = list_active_user_overrides(
-            user_id=base_user.id,
-            current_role=resolved_role,
-        )
-
-        for override in global_overrides:
-            if override.scope_type != SCOPE_ALL:
-                continue
-            code = override.permission.code
-            if code in SYSTEM_MANAGED_PERMISSION_CODES:
-                continue
-            if override.effect == EFFECT_DENY:
-                role_permissions.discard(code)
-                continue
-            if override.effect == EFFECT_ALLOW:
-                role_permissions.add(code)
-
-        return sorted(role_permissions)
 
     def list_permission_catalog(self, module: Optional[str] = None) -> List[Permission]:
         return list_permissions(module=module)
@@ -366,7 +309,7 @@ class AuthorizationService(BaseService):
             self.validate_role_code(role_code),
             f'角色 {role_code} 不存在',
         )
-        return list(ROLE_DEFAULT_SCOPE_TYPES.get(role_code, [SCOPE_ALL]))
+        return list_role_scope_types(role_code=role_code)
 
     def get_role_scope_options(self, role_code: str) -> List[dict]:
         default_scope_types = set(self.get_role_default_scope_types(role_code))
@@ -379,6 +322,55 @@ class AuthorizationService(BaseService):
             }
             for scope_code, scope_label in VISIBLE_SCOPE_CHOICES
         ]
+
+    def get_permission_scope_types(
+        self,
+        *,
+        permission_code: str,
+        current_role: Optional[str] = None,
+    ) -> List[str]:
+        resolved_role = self._resolve_role(current_role)
+        if not resolved_role:
+            return []
+
+        scope_types = list_permission_scope_types(
+            permission_code=permission_code,
+            role_code=resolved_role,
+        )
+        if scope_types:
+            return list(dict.fromkeys(scope_types))
+
+        if permission_code in SCOPE_AWARE_PERMISSION_CODES:
+            return []
+        return [SCOPE_ALL]
+
+    def get_capability_map(
+        self,
+        *,
+        current_role: Optional[str] = None,
+        user: Optional[User] = None,
+    ) -> dict[str, dict]:
+        resolved_role = current_role or self._resolve_role()
+        capability_codes = {item['code'] for item in PERMISSION_CATALOG}
+        capability_codes.update(SYSTEM_MANAGED_PERMISSION_CODES)
+
+        capability_map: dict[str, dict] = {}
+        for permission_code in sorted(capability_codes):
+            allowed = self._is_permission_granted(
+                permission_code,
+                acting_user=user,
+                current_role=resolved_role,
+            ) if resolved_role else False
+            scope_types = self.get_permission_scope_types(
+                permission_code=permission_code,
+                current_role=resolved_role,
+            ) if resolved_role else []
+            capability_map[permission_code] = {
+                'allowed': allowed,
+                'conditional': permission_code in CONDITIONAL_PERMISSION_CODES,
+                'scope_types': scope_types,
+            }
+        return capability_map
 
     @transaction.atomic
     def replace_role_permissions(self, role_code: str, permission_codes: Iterable[str]) -> List[str]:
@@ -589,6 +581,38 @@ class AuthorizationService(BaseService):
         Permission.objects.exclude(code__in=[item['code'] for item in PERMISSION_CATALOG]).delete()
 
     @staticmethod
+    def sync_permission_scope_rules() -> None:
+        """Sync code-defined scope rules into DB and prune removed rules."""
+        permission_map = {
+            permission.code: permission
+            for permission in Permission.objects.filter(
+                code__in=[rule.permission_code for rule in PERMISSION_SCOPE_RULES],
+                is_active=True,
+            )
+        }
+        desired_keys: set[tuple[int, str, str]] = set()
+        managed_permission_codes = {rule.permission_code for rule in PERMISSION_SCOPE_RULES}
+        for rule in PERMISSION_SCOPE_RULES:
+            permission = permission_map.get(rule.permission_code)
+            if permission is None:
+                continue
+            desired_keys.add((permission.id, rule.role_code, rule.scope_type))
+            PermissionScopeRule.objects.update_or_create(
+                permission=permission,
+                role_code=rule.role_code,
+                scope_type=rule.scope_type,
+                defaults={'is_active': True},
+            )
+
+        stale_rules = PermissionScopeRule.objects.filter(
+            permission__code__in=managed_permission_codes,
+        )
+        for scope_rule in stale_rules.select_related('permission'):
+            cache_key = (scope_rule.permission_id, scope_rule.role_code, scope_rule.scope_type)
+            if cache_key not in desired_keys:
+                scope_rule.delete()
+
+    @staticmethod
     @transaction.atomic
     def ensure_defaults(
         *,
@@ -602,6 +626,7 @@ class AuthorizationService(BaseService):
         computed from code defaults plus DB overrides.
         """
         AuthorizationService.sync_permission_catalog()
+        AuthorizationService.sync_permission_scope_rules()
         if sync_role_templates:
             if overwrite_existing_role_templates:
                 RolePermission.objects.filter(role__code__in=ROLE_PERMISSION_DEFAULTS.keys()).delete()

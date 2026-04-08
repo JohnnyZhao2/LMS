@@ -45,6 +45,5 @@ AUTHORIZATION_SPECS = (
                 'knowledge.delete',
             ),
         },
-        scope_aware_permissions=('knowledge.view',),
     ),
 )

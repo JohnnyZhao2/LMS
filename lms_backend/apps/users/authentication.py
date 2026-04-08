@@ -4,7 +4,7 @@ Custom authentication helpers for user role awareness.
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from .permissions import SUPER_ADMIN_ROLE, is_super_admin
+from apps.authorization.roles import SUPER_ADMIN_ROLE, is_super_admin
 
 
 class RoleAwareJWTAuthentication(JWTAuthentication):

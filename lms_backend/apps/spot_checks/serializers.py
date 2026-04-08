@@ -4,6 +4,7 @@ Properties: 35, 36
 """
 from rest_framework import serializers
 
+from apps.authorization.engine import authorize
 from apps.users.models import User
 
 from .models import SpotCheck, SpotCheckItem
@@ -38,6 +39,16 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
     topic_summary = serializers.CharField(read_only=True)
     average_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True, allow_null=True)
     items = SpotCheckItemSerializer(many=True, read_only=True)
+    actions = serializers.SerializerMethodField()
+
+    def get_actions(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return {'update': False, 'delete': False}
+        return {
+            'update': authorize('spot_check.update', request, resource=obj).allowed,
+            'delete': authorize('spot_check.delete', request, resource=obj).allowed,
+        }
 
     class Meta:
         model = SpotCheck
@@ -54,6 +65,7 @@ class SpotCheckListSerializer(serializers.ModelSerializer):
             'topic_summary',
             'average_score',
             'items',
+            'actions',
             'created_at',
             'updated_at',
         ]
@@ -83,6 +95,16 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
     topic_count = serializers.IntegerField(read_only=True)
     topic_summary = serializers.CharField(read_only=True)
     average_score = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True, allow_null=True)
+    actions = serializers.SerializerMethodField()
+
+    def get_actions(self, obj):
+        request = self.context.get('request')
+        if request is None:
+            return {'update': False, 'delete': False}
+        return {
+            'update': authorize('spot_check.update', request, resource=obj).allowed,
+            'delete': authorize('spot_check.delete', request, resource=obj).allowed,
+        }
 
     class Meta:
         model = SpotCheck
@@ -100,6 +122,7 @@ class SpotCheckDetailSerializer(serializers.ModelSerializer):
             'topic_summary',
             'average_score',
             'items',
+            'actions',
             'created_at',
             'updated_at',
         ]

@@ -5,7 +5,7 @@ from apps.grading.selectors import (
     calculate_question_pass_rate,
     get_latest_quiz_answers,
 )
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce
 from apps.grading.serializers import (
     GradingAnswerResponseSerializer,
     GradingQuestionSerializer,
@@ -26,12 +26,13 @@ class GradingBaseView(BaseAPIView):
     service_class = TaskService
 
     def _get_task(self, task_id, permission_code: str, error_message: str):
-        AuthorizationService(self.request).enforce(
+        task = self.service.get_task_by_id(task_id)
+        enforce(
             permission_code,
+            self.request,
+            resource=task,
             error_message=error_message,
         )
-        task = self.service.get_task_by_id(task_id)
-        self.service.check_task_read_permission(task)
         return task
 
     def _validate_quiz_in_task(self, task, quiz_id):
@@ -305,10 +306,7 @@ class PendingQuizzesView(GradingBaseView):
         tags=['阅卷中心']
     )
     def get(self, request):
-        AuthorizationService(request).enforce(
-            'grading.view',
-            error_message='无权访问阅卷中心',
-        )
+        enforce('grading.view', request, error_message='无权访问阅卷中心')
         user = request.user
         quiz_type = request.query_params.get('quiz_type')
 

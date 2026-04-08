@@ -7,13 +7,13 @@ Implements:
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
+from apps.authorization.engine import enforce
 from apps.dashboard.serializers import (
     PeerRankingSerializer,
     StudentDashboardSerializer,
 )
 from apps.dashboard.services import StudentDashboardService
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes
 from core.query_params import parse_int_query_param
 from core.responses import list_response, success_response
 
@@ -37,12 +37,11 @@ class StudentDashboardView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request):
-        current_role = self.service.get_current_role()
-        if current_role != 'STUDENT':
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='只有学员可以访问此仪表盘'
-            )
+        enforce(
+            'dashboard.student.view',
+            request,
+            error_message='只有学员可以访问此仪表盘',
+        )
         user = request.user
         task_limit = parse_int_query_param(
             request=request,
@@ -83,6 +82,11 @@ class TaskParticipantsView(BaseAPIView):
         tags=['学员仪表盘']
     )
     def get(self, request, task_id: int):
+        enforce(
+            'dashboard.student.view',
+            request,
+            error_message='只有学员可以访问此接口',
+        )
         user = request.user
         participants = self.service.get_task_participants(user, task_id)
         return list_response(PeerRankingSerializer(participants, many=True).data)

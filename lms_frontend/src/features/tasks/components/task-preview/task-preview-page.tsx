@@ -27,12 +27,13 @@ export const TaskPreviewPage: React.FC = () => {
   const { id, role } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { hasPermission } = useAuth();
+  const { hasCapability } = useAuth();
   const taskId = Number(id);
   const isTaskManagementEntry = searchParams.get('entry') === 'task-management';
 
-  const canViewProgress = hasPermission('task.update') || hasPermission('task.analytics.view');
-  const canViewGrading = hasPermission('grading.view');
+  const { data: task, isLoading } = useTaskDetail(taskId);
+  const canViewProgress = !!task && (task.actions.update || task.actions.analytics);
+  const canViewGrading = !!task && task.actions.view && hasCapability('grading.view');
   const availableTabs = React.useMemo(
     () => [
       canViewProgress ? 'progress' : null,
@@ -45,8 +46,6 @@ export const TaskPreviewPage: React.FC = () => {
     return availableTabs.includes(requestedTab) ? requestedTab : (availableTabs[0] ?? 'progress');
   });
   const [selectedQuizId, setSelectedQuizId] = React.useState<number | null>(null);
-
-  const { data: task, isLoading } = useTaskDetail(taskId);
 
   const quizzes = React.useMemo(() => task?.quizzes || [], [task]);
   const hasMultipleQuizzes = quizzes.length > 0;

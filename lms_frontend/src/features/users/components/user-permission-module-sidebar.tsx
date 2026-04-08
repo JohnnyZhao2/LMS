@@ -35,7 +35,7 @@ export const UserPermissionModuleSidebar: React.FC<UserPermissionModuleSidebarPr
             type="button"
             onClick={() => onSelectModule(moduleName)}
             className={cn(
-              'flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-colors duration-200',
+              'flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors duration-200',
               active
                 ? 'bg-primary-50/85 text-foreground'
                 : 'text-text-muted hover:bg-muted/55 hover:text-foreground',

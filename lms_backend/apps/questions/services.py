@@ -9,7 +9,7 @@
 from typing import Optional
 
 from django.db import transaction
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce
 from apps.tags.models import Tag
 from core.base_service import BaseService
 from core.decorators import log_content_action
@@ -100,18 +100,8 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果权限不足
         """
-        authorization_service = AuthorizationService(self.request)
-        if authorization_service.has_deny_override(permission_code):
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message='无权操作此题目',
-            )
-        if authorization_service.can(permission_code):
-            return True
-        raise BusinessError(
-            code=ErrorCodes.PERMISSION_DENIED,
-            message=error_message,
-        )
+        enforce(permission_code, self.request, error_message=error_message)
+        return True
 
     @transaction.atomic
     @log_content_action('question', 'create', '{question_type_label}，{score_text} 分')

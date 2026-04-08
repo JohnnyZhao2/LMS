@@ -49,10 +49,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const location = useLocation();
     const { id: routeKnowledgeId } = useParams<{ id?: string }>();
     const incrementViewCount = useIncrementViewCount();
-    const { hasPermission } = useAuth();
-    const canCreateKnowledge = hasPermission('knowledge.create');
-    const canUpdateKnowledge = hasPermission('knowledge.update');
-    const canDeleteKnowledge = hasPermission('knowledge.delete');
+    const { hasCapability } = useAuth();
+    const canCreateKnowledge = hasCapability('knowledge.create');
+    const canUpdateKnowledge = hasCapability('knowledge.update');
+    const canDeleteKnowledge = hasCapability('knowledge.delete');
     const isManagementView = isAdmin || canCreateKnowledge || canUpdateKnowledge || canDeleteKnowledge;
 
     const deleteKnowledge = useDeleteKnowledge();

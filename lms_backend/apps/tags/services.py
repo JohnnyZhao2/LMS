@@ -3,7 +3,7 @@ from typing import List, Optional
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import authorize, enforce
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from core.base_service import BaseService
@@ -365,16 +365,15 @@ def enforce_tag_view_permission(
     *,
     tag_type: Optional[str] = None,
 ) -> None:
-    authorization_service = AuthorizationService(request)
-    if authorization_service.can('tag.view'):
+    if authorize('tag.view', request).allowed:
         return
     if (
         tag_type == 'SPACE'
-        and authorization_service.can('knowledge.view')
+        and authorize('knowledge.view', request).allowed
     ):
         return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
 
 
 def enforce_tag_action_permission(request, permission_code: str, error_message: str) -> None:
-    AuthorizationService(request).enforce(permission_code, error_message=error_message)
+    enforce(permission_code, request, error_message=error_message)

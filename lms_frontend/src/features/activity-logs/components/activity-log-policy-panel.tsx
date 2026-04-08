@@ -14,9 +14,9 @@ const CATEGORY_LABELS: Record<ActivityLogType, string> = {
 };
 
 export const ActivityLogPolicyPanel: React.FC = () => {
-  const { hasPermission } = useAuth();
-  const canUpdatePolicies = hasPermission('activity_log.policy.update');
-  const canViewPolicies = hasPermission('activity_log.view') || canUpdatePolicies;
+  const { hasCapability } = useAuth();
+  const canUpdatePolicies = hasCapability('activity_log.policy.update');
+  const canViewPolicies = hasCapability('activity_log.view') || canUpdatePolicies;
 
   const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();
@@ -102,14 +102,14 @@ export const ActivityLogPolicyPanel: React.FC = () => {
   return (
     <div className="space-y-5">
       {isLoading ? (
-        <div className="flex items-center gap-3 rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] px-5 py-8 text-sm font-semibold text-text-muted">
+        <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] px-5 py-8 text-sm font-semibold text-text-muted">
           <Zap className="animate-spin duration-1000" size={16} />
           正在同步审计策略架构...
         </div>
       ) : (
         activeCategorySummary ? (
           <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-            <section className="rounded-[20px] border border-border/70 bg-white p-3">
+            <section className="rounded-2xl border border-border/70 bg-white p-3">
               <UserPermissionModuleSidebar
                 permissionModules={categoryModules}
                 activePermissionModule={resolvedActiveCategory ?? ''}
@@ -119,7 +119,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
               />
             </section>
 
-            <section className="rounded-[20px] border border-border/70 bg-white">
+            <section className="rounded-2xl border border-border/70 bg-white">
               <div className="px-5 py-4">
                 <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
                   {CATEGORY_LABELS[activeCategorySummary.category]}

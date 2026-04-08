@@ -8,6 +8,7 @@ Implements URL routing for:
 """
 from django.urls import path
 
+from .views.admin import AdminDashboardView
 from .views.mentor import MentorDashboardView
 from .views.student import StudentDashboardView, TaskParticipantsView
 from .views.team_manager import TeamManagerDashboardView
@@ -19,6 +20,8 @@ urlpatterns = [
     path('student/task/<int:task_id>/participants/', TaskParticipantsView.as_view(), name='task-participants'),
     # Mentor/Department manager dashboard
     path('mentor/', MentorDashboardView.as_view(), name='mentor-dashboard'),
+    # Admin dashboard
+    path('admin/', AdminDashboardView.as_view(), name='admin-dashboard'),
     # Team manager dashboard
     path('team-manager/', TeamManagerDashboardView.as_view(), name='team-manager-dashboard'),
 ]

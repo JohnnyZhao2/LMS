@@ -18,9 +18,6 @@ interface SpotCheckRecordListProps {
   page: number;
   pageSize: number;
   isLoading: boolean;
-  canUpdateSpotCheck: boolean;
-  canDeleteSpotCheck: boolean;
-  canManageRecord: (record: SpotCheck) => boolean;
   onEditRecord: (record: SpotCheck) => void;
   onDeleteRecord: (record: SpotCheck) => void;
   onPageChange: (page: number) => void;
@@ -122,9 +119,6 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
   page,
   pageSize,
   isLoading,
-  canUpdateSpotCheck,
-  canDeleteSpotCheck,
-  canManageRecord,
   onEditRecord,
   onDeleteRecord,
   onPageChange,
@@ -174,8 +168,8 @@ export const SpotCheckRecordList: React.FC<SpotCheckRecordListProps> = ({
                 {records.map((record) => {
                   const score = record.average_score === null ? null : Number(record.average_score);
                   const scoreDisplay = formatScore(record.average_score);
-                  const canEditRecord = canUpdateSpotCheck && canManageRecord(record);
-                  const canDeleteRecord = canDeleteSpotCheck && canManageRecord(record);
+                  const canEditRecord = record.actions.update;
+                  const canDeleteRecord = record.actions.delete;
 
                   return (
                     <article

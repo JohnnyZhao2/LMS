@@ -3,9 +3,16 @@
  * 角色前缀下的路由配置
  * 所有路由都在 /:role 下，路径不需要开头的 /
  */
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { ROUTES } from '@/config/routes';
+import {
+  getAccessibleWorkspaceHome,
+  getWorkspaceConfig,
+  normalizeRoleCode,
+} from '../workspace-config';
 
 // Dashboard
 const StudentDashboard = lazy(() => import('@/features/dashboard/components/student-dashboard').then(m => ({ default: m.StudentDashboard })));
@@ -35,6 +42,7 @@ const SpotCheckForm = lazy(() => import('@/features/spot-checks/components/spot-
 
 // Users
 const UserList = lazy(() => import('@/features/users/components/user-list').then(m => ({ default: m.UserList })));
+const UserAuthorizationPage = lazy(() => import('@/features/users/pages/user-authorization-page').then(m => ({ default: m.UserAuthorizationPage })));
 
 const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
 const ActivityLogsPage = lazy(() => import('@/features/activity-logs/pages/activity-logs-page').then(m => ({ default: m.ActivityLogsPage })));
@@ -55,26 +63,40 @@ const Analytics = () => <div>团队数据看板（开发中）</div>;
  * 根据 URL 中的角色渲染对应的仪表盘
  */
 import { useParams } from 'react-router-dom';
-import type { RoleCode } from '@/types/api';
 
 const Dashboard = () => {
   const { role } = useParams<{ role: string }>();
-  const currentRole = role?.toUpperCase() as RoleCode;
+  const { hasCapability, availableRoles } = useAuth();
+  const routeRole = normalizeRoleCode(role);
+  const workspace = getWorkspaceConfig(routeRole);
+  const fallbackPath = getAccessibleWorkspaceHome(
+    availableRoles.map((item) => item.code),
+    hasCapability,
+    routeRole,
+  ) ?? ROUTES.LOGIN;
 
-  if (currentRole === 'STUDENT') {
+  if (!workspace) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  if (!hasCapability(workspace.requiredCapability)) {
+    return <Navigate to={fallbackPath === workspace.home ? ROUTES.LOGIN : fallbackPath} replace />;
+  }
+
+  if (workspace.dashboardVariant === 'student') {
     return <StudentDashboard />;
   }
-  if (currentRole === 'MENTOR' || currentRole === 'DEPT_MANAGER') {
+  if (workspace.dashboardVariant === 'mentor') {
     return <MentorDashboard />;
   }
-  if (currentRole === 'TEAM_MANAGER') {
+  if (workspace.dashboardVariant === 'team_manager') {
     return <TeamManagerDashboard />;
   }
-  if (currentRole === 'ADMIN' || currentRole === 'SUPER_ADMIN') {
+  if (workspace.dashboardVariant === 'admin') {
     return <AdminDashboard />;
   }
 
-  return <StudentDashboard />;
+  return <Navigate to={fallbackPath} replace />;
 };
 
 export const roleRoutes = [
@@ -290,6 +312,15 @@ export const roleRoutes = [
       </ProtectedRoute>
     }
   />,
+  <Route
+    key="user-authorization"
+    path="users/authorization"
+    element={
+      <ProtectedRoute requiredPermissions={['user.authorize']}>
+        <UserAuthorizationPage />
+      </ProtectedRoute>
+    }
+  />,
 
   // Authorization Center
   <Route
@@ -328,7 +359,7 @@ export const roleRoutes = [
     key="quiz"
     path="quiz/:id"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']}>
+      <ProtectedRoute requiredPermissions={['submission.answer']}>
         <QuizPlayer />
       </ProtectedRoute>
     }
@@ -337,7 +368,7 @@ export const roleRoutes = [
     key="review-practice"
     path="review/practice"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']}>
+      <ProtectedRoute requiredPermissions={['submission.review']}>
         <AnswerReview type="practice" />
       </ProtectedRoute>
     }
@@ -346,7 +377,7 @@ export const roleRoutes = [
     key="review-exam"
     path="review/exam"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']}>
+      <ProtectedRoute requiredPermissions={['submission.review']}>
         <AnswerReview type="exam" />
       </ProtectedRoute>
     }
@@ -368,7 +399,7 @@ export const roleRoutes = [
     key="personal"
     path="personal"
     element={
-      <ProtectedRoute allowedRoles={['STUDENT']}>
+      <ProtectedRoute requiredPermissions={['profile.student.view', 'profile.student.update']} permissionMode="any">
         <Personal />
       </ProtectedRoute>
     }
@@ -377,7 +408,7 @@ export const roleRoutes = [
     key="analytics"
     path="analytics"
     element={
-      <ProtectedRoute allowedRoles={['TEAM_MANAGER']} requiredPermissions={['analytics.view']}>
+      <ProtectedRoute requiredPermissions={['dashboard.team_manager.view']}>
         <Analytics />
       </ProtectedRoute>
     }

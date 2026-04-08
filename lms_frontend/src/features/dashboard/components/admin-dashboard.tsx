@@ -6,7 +6,7 @@ import {
   ClipboardCheck,
   // Activity / Database / FileCheck 在移除“快捷指令”区块后不再使用
 } from 'lucide-react';
-import { useMentorDashboard } from '../api/mentor-dashboard';
+import { useAdminDashboard } from '../api/admin-dashboard';
 
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * - hover:scale 交互反馈
  */
 export const AdminDashboard: React.FC = () => {
-  const { data, isLoading } = useMentorDashboard();
+  const { data, isLoading } = useAdminDashboard();
 
   if (isLoading) {
     return (

@@ -52,13 +52,21 @@ def _authenticate(client: APIClient, *, employee_id: str) -> dict:
     return payload
 
 
+def _allowed_capabilities(payload: dict) -> set[str]:
+    return {
+        permission_code
+        for permission_code, meta in payload['capabilities'].items()
+        if meta.get('allowed')
+    }
+
+
 @pytest.mark.django_db
-def test_admin_effective_permissions_follow_default_menu_and_system_rules():
+def test_admin_capabilities_follow_default_menu_and_system_rules():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_ADMIN', username='Admin User', role_code='ADMIN')
 
     payload = _login_and_get_payload(client, employee_id='EMP_AUTH_ADMIN')
-    permissions = set(payload['effective_permissions'])
+    permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
     assert 'knowledge.create' in permissions
@@ -82,7 +90,7 @@ def test_admin_effective_permissions_follow_default_menu_and_system_rules():
     assert 'task.delete' in permissions
     assert 'task.assign' in permissions
 
-    assert 'dashboard.admin.view' not in permissions
+    assert 'dashboard.admin.view' in permissions
     assert 'dashboard.student.view' not in permissions
     assert 'dashboard.mentor.view' not in permissions
     assert 'dashboard.team_manager.view' not in permissions
@@ -99,12 +107,12 @@ def test_admin_effective_permissions_follow_default_menu_and_system_rules():
 
 
 @pytest.mark.django_db
-def test_mentor_effective_permissions_follow_default_menu():
+def test_mentor_capabilities_follow_default_menu():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_MENTOR', username='Mentor User', role_code='MENTOR')
 
     payload = _login_and_get_payload(client, employee_id='EMP_AUTH_MENTOR')
-    permissions = set(payload['effective_permissions'])
+    permissions = _allowed_capabilities(payload)
 
     assert 'quiz.view' in permissions
     assert 'quiz.create' in permissions
@@ -128,41 +136,42 @@ def test_mentor_effective_permissions_follow_default_menu():
     assert 'grading.view' in permissions
     assert 'grading.score' in permissions
 
-    assert 'dashboard.mentor.view' not in permissions
+    assert 'dashboard.mentor.view' in permissions
     assert 'knowledge.view' not in permissions
     assert 'activity_log.view' not in permissions
 
 
 @pytest.mark.django_db
-def test_student_effective_permissions_follow_default_menu_and_system_rules():
+def test_student_capabilities_follow_default_menu_and_system_rules():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_STUDENT', username='Student User', role_code='STUDENT')
 
     payload = _login_and_get_payload(client, employee_id='EMP_AUTH_STUDENT')
-    permissions = set(payload['effective_permissions'])
+    permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
     assert 'task.view' in permissions
     assert 'submission.answer' in permissions
     assert 'submission.review' in permissions
-    assert 'profile.view' in permissions
-    assert 'profile.update' in permissions
+    assert 'profile.student.view' in permissions
+    assert 'profile.student.update' in permissions
+    assert 'dashboard.student.view' in permissions
     assert 'analytics.view' not in permissions
     assert 'activity_log.view' not in permissions
 
 
 @pytest.mark.django_db
-def test_team_manager_effective_permissions_follow_default_menu():
+def test_team_manager_capabilities_follow_default_menu():
     client = APIClient()
     _create_user_with_role(employee_id='EMP_AUTH_TM', username='Team Manager User', role_code='TEAM_MANAGER')
 
     payload = _login_and_get_payload(client, employee_id='EMP_AUTH_TM')
-    permissions = set(payload['effective_permissions'])
+    permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
     assert 'analytics.view' in permissions
     assert 'task.view' not in permissions
-    assert 'dashboard.team_manager.view' not in permissions
+    assert 'dashboard.team_manager.view' in permissions
     assert 'activity_log.view' not in permissions
 
 
@@ -185,11 +194,13 @@ def test_permission_catalog_excludes_system_managed_permissions_but_includes_con
     assert 'dashboard.mentor.view' not in permission_codes
     assert 'dashboard.team_manager.view' not in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
-    assert 'profile.view' not in permission_codes
-    assert 'profile.update' not in permission_codes
+    assert 'profile.student.view' not in permission_codes
+    assert 'profile.student.update' not in permission_codes
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
     assert permission_map['analytics.view']['constraint_summary']
+    assert permission_map['analytics.view']['role_template_visible'] is False
+    assert permission_map['task.view']['role_template_visible'] is True
 
 
 @pytest.mark.django_db
@@ -253,7 +264,7 @@ def test_non_scope_permission_override_is_normalized_to_all_and_takes_effect():
     assert override_response.data['data']['scope_user_ids'] == []
 
     payload = _authenticate(client, employee_id=mentor_user.employee_id)
-    assert 'knowledge.update' in set(payload['effective_permissions'])
+    assert payload['capabilities']['knowledge.update']['allowed'] is True
 
     knowledge = Knowledge.objects.create(
         title='Scope Normalize Knowledge',
@@ -346,7 +357,7 @@ def test_student_current_role_ignores_user_permission_overrides():
 
     mentor_payload = _authenticate(client, employee_id=mentor_user.employee_id)
     assert mentor_payload['current_role'] == 'MENTOR'
-    assert 'knowledge.update' in set(mentor_payload['effective_permissions'])
+    assert mentor_payload['capabilities']['knowledge.update']['allowed'] is True
 
     switch_response = client.post(
         '/api/auth/switch-role/',
@@ -355,7 +366,7 @@ def test_student_current_role_ignores_user_permission_overrides():
     )
     assert switch_response.status_code == 200
     assert switch_response.data['data']['current_role'] == 'STUDENT'
-    assert 'knowledge.update' not in set(switch_response.data['data']['effective_permissions'])
+    assert switch_response.data['data']['capabilities']['knowledge.update']['allowed'] is False
 
 
 @pytest.mark.django_db
@@ -507,7 +518,7 @@ def test_non_admin_role_cannot_create_config_permission_override():
 
 
 @pytest.mark.django_db
-def test_dashboard_endpoints_are_guarded_by_current_role_not_permission_codes():
+def test_dashboard_endpoints_follow_current_role_system_permissions():
     client = APIClient()
     mentor_user = _create_user_with_role(employee_id='EMP_AUTH_M_DASH', username='Mentor Dash', role_code='MENTOR')
     _authenticate(client, employee_id=mentor_user.employee_id)
@@ -522,7 +533,7 @@ def test_dashboard_endpoints_are_guarded_by_current_role_not_permission_codes():
 
 
 @pytest.mark.django_db
-def test_super_admin_effective_permissions_include_all_system_managed_codes():
+def test_super_admin_capabilities_include_all_system_managed_codes():
     client = APIClient()
     department = Department.objects.create(name='Dept Super Auth', code='D_SUPER_AUTH')
     User.objects.create_user(
@@ -535,7 +546,7 @@ def test_super_admin_effective_permissions_include_all_system_managed_codes():
     )
 
     payload = _login_and_get_payload(client, employee_id='EMP_AUTH_SUPER')
-    permissions = set(payload['effective_permissions'])
+    permissions = _allowed_capabilities(payload)
 
     assert payload['current_role'] == 'SUPER_ADMIN'
     assert 'user.view' in permissions

@@ -141,10 +141,10 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   onCreated,
   onUpdated,
 }) => {
-  const { currentRole, hasPermission } = useAuth();
+  const { currentRole, hasCapability } = useAuth();
   const isStudent = currentRole === 'STUDENT';
-  const canUpdateKnowledge = hasPermission('knowledge.update');
-  const canDeleteKnowledge = hasPermission('knowledge.delete');
+  const canUpdateKnowledge = hasCapability('knowledge.update');
+  const canDeleteKnowledge = hasCapability('knowledge.delete');
   const isDraftMode = !knowledgeId;
   const normalizedDraftContent = draftInitialContent
     ? (draftInitialContent.includes('<') ? draftInitialContent : textToKnowledgeHtml(draftInitialContent))

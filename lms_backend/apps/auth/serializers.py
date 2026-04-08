@@ -31,9 +31,9 @@ class LoginResponseSerializer(serializers.Serializer):
     user = UserInfoSerializer(help_text='用户信息')
     available_roles = RoleSerializer(many=True, help_text='可用角色列表')
     current_role = serializers.CharField(help_text='当前生效角色')
-    effective_permissions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text='当前生效角色下的最终权限编码列表',
+    capabilities = serializers.DictField(
+        child=serializers.DictField(),
+        help_text='当前生效角色下的能力映射',
     )
 
 
@@ -77,10 +77,14 @@ class MeResponseSerializer(serializers.Serializer):
     user = UserInfoSerializer(help_text='用户信息')
     available_roles = RoleSerializer(many=True, help_text='可用角色列表')
     current_role = serializers.CharField(help_text='当前生效角色')
-    effective_permissions = serializers.ListField(
-        child=serializers.CharField(),
-        help_text='当前生效角色下的最终权限编码列表',
+    capabilities = serializers.DictField(
+        child=serializers.DictField(),
+        help_text='当前生效角色下的能力映射',
     )
+
+
+class CapabilitiesResponseSerializer(serializers.DictField):
+    child = serializers.DictField()
 
 
 class ResetPasswordRequestSerializer(serializers.Serializer):

@@ -176,6 +176,15 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   'user.delete': {
     detail: '彻底删除离职用户。',
   },
+  'user.avatar.update': {
+    detail: '修改其他用户头像。',
+  },
+  'user.mentee.view': {
+    detail: '查看当前导师名下学员列表。',
+  },
+  'user.department_member.view': {
+    detail: '查看当前室经理所在部门成员列表。',
+  },
   'authorization.role_template.view': {
     detail: '查看角色权限模板配置。',
   },
@@ -197,11 +206,11 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   'analytics.view': {
     detail: '查看团队数据看板。',
   },
-  'profile.view': {
-    detail: '查看个人中心。',
+  'profile.student.view': {
+    detail: '查看学员个人中心。',
   },
-  'profile.update': {
-    detail: '更新个人资料。',
+  'profile.student.update': {
+    detail: '更新学员个人资料。',
   },
 };
 

@@ -10,7 +10,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.services import AuthorizationService
+from apps.authorization.engine import enforce, scope_filter
 from apps.tasks.serializers import (
     TaskCreateSerializer,
     TaskDetailSerializer,
@@ -18,9 +18,7 @@ from apps.tasks.serializers import (
     TaskUpdateSerializer,
 )
 from apps.tasks.task_service import TaskService
-from apps.users.permissions import (
-    get_accessible_students,
-)
+from apps.users.models import User
 from apps.users.serializers import UserListSerializer
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
@@ -55,14 +53,11 @@ class AssignableUserListView(APIView):
         tags=['任务管理']
     )
     def get(self, request):
-        AuthorizationService(request).enforce(
+        enforce('task.assign', request, error_message='无权查看可分配学员列表')
+        queryset = scope_filter(
             'task.assign',
-            error_message='无权查看可分配学员列表',
-        )
-        queryset = get_accessible_students(
-            request.user,
             request,
-            permission_code='task.assign',
+            resource_model=User,
         ).filter(
             roles__code='STUDENT'
         ).select_related(
@@ -111,17 +106,14 @@ class TaskCreateView(APIView):
         tags=['任务管理']
     )
     def post(self, request):
-        AuthorizationService(request).enforce(
-            'task.create',
-            error_message='无权创建任务',
-        )
+        enforce('task.create', request, error_message='无权创建任务')
         serializer = TaskCreateSerializer(
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         task = serializer.save()
-        response_serializer = TaskDetailSerializer(task)
+        response_serializer = TaskDetailSerializer(task, context={'request': request})
         return created_response(response_serializer.data)
 
 
@@ -155,10 +147,7 @@ class TaskListView(BaseAPIView):
         tags=['任务管理']
     )
     def get(self, request):
-        AuthorizationService(request).enforce(
-            'task.view',
-            error_message='无权查看任务列表',
-        )
+        enforce('task.view', request, error_message='无权查看任务列表')
         # Use TaskService to get queryset based on user role
         queryset = self.service.get_task_queryset_for_user()
 
@@ -183,11 +172,11 @@ class TaskListView(BaseAPIView):
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
         if page is not None:
-            serializer = TaskListSerializer(page, many=True)
+            serializer = TaskListSerializer(page, many=True, context={'request': request})
             return paginated_response(page, serializer.data, paginator)
         
         # Fallback to non-paginated response
-        serializer = TaskListSerializer(queryset, many=True)
+        serializer = TaskListSerializer(queryset, many=True, context={'request': request})
         return list_response(serializer.data)
 
 
@@ -208,7 +197,7 @@ class TaskDetailView(BaseAPIView):
     def get(self, request, pk):
         task = self.service.get_task_by_id(pk)
         self.service.check_task_read_permission(task)
-        serializer = TaskDetailSerializer(task)
+        serializer = TaskDetailSerializer(task, context={'request': request})
         return success_response(serializer.data)
 
     @extend_schema(
@@ -241,7 +230,7 @@ class TaskDetailView(BaseAPIView):
         )
         serializer.is_valid(raise_exception=True)
         updated_task = serializer.save()
-        response_serializer = TaskDetailSerializer(updated_task)
+        response_serializer = TaskDetailSerializer(updated_task, context={'request': request})
         return success_response(response_serializer.data)
 
     @extend_schema(

@@ -23,13 +23,19 @@ import {
 } from '@/config/role-constants'
 import type { RoleCode } from '@/types/api'
 import { toast } from 'sonner'
+import {
+  getRoleFromPathname,
+  getRolePathPrefix,
+  getWorkspacePath,
+  stripWorkspacePathPrefix,
+} from '@/app/workspace-config'
 
 interface SidebarProps {
   onClose?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { user, availableRoles, logout, switchRole, hasAnyPermission, refreshUser } = useAuth()
+  const { user, availableRoles, logout, switchRole, hasAnyCapability, refreshUser } = useAuth()
   const currentRole = useCurrentRole()
   const updateMyAvatar = useUpdateMyAvatar()
   const navigate = useNavigate()
@@ -42,9 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }
 
   const getPathWithoutRole = () => {
-    const pathParts = location.pathname.split('/').filter(Boolean)
-    if (pathParts.length <= 1) return 'dashboard'
-    return pathParts.slice(1).join('/')
+    return stripWorkspacePathPrefix(location.pathname)
   }
 
   const handleRoleChange = async (roleCode: RoleCode) => {
@@ -53,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       await switchRole(roleCode)
       const currentPath = getPathWithoutRole()
       const suffix = `${location.search}${location.hash}`
-      navigate(`/${roleCode.toLowerCase()}/${currentPath}${suffix}`)
+      navigate(`${getWorkspacePath(roleCode, currentPath) ?? '/'}${suffix}`)
     } catch (error) {
       showApiError(error, '角色切换失败')
     }
@@ -75,11 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }
 
   const rolePrefix = React.useMemo(() => {
-    const pathParts = location.pathname.split('/').filter(Boolean)
-    if (pathParts.length > 0) {
-      return `/${pathParts[0]}`
-    }
-    return currentRole ? `/${currentRole.toLowerCase()}` : ''
+    return getRolePathPrefix(getRoleFromPathname(location.pathname) ?? currentRole)
   }, [currentRole, location.pathname])
 
   const isMenuItemActive = React.useCallback(function checkMenuItemActive(item: MenuItem): boolean {
@@ -136,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
     const items = []
 
-    if (hasAnyPermission(['authorization.role_template.view', 'authorization.role_template.update'])) {
+    if (hasAnyCapability(['authorization.role_template.view', 'authorization.role_template.update'])) {
       items.push({
         key: 'role-template',
         label: '角色模板',
@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       })
     }
 
-    if (hasAnyPermission(['activity_log.policy.update'])) {
+    if (hasAnyCapability(['activity_log.policy.update'])) {
       items.push({
         key: 'log-policy',
         label: '日志策略',
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     }
 
     return items
-  }, [hasAnyPermission, location.pathname, location.search, rolePrefix])
+  }, [hasAnyCapability, location.pathname, rolePrefix])
 
   const hasActiveSettingsItem = settingsItems.some((item) => item.isActive)
   const [isSettingsExpanded, setIsSettingsExpanded] = React.useState(hasActiveSettingsItem)

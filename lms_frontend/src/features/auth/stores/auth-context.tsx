@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { tokenStorage } from '@/lib/token-storage';
-import type { AuthSessionPayload, LoginRequest, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
+import type { AuthSessionPayload, CapabilityMap, LoginRequest, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
 import { loginApi } from '../api/login';
 import { logoutApi } from '../api/logout';
 import { switchRoleApi } from '../api/switch-role';
@@ -12,7 +12,7 @@ export interface AuthState {
   user: UserInfo | null;
   currentRole: RoleCode | null;
   availableRoles: Role[];
-  effectivePermissions: string[];
+  capabilities: CapabilityMap;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSwitching: boolean;
@@ -24,8 +24,8 @@ interface AuthContextValue extends AuthState {
   logout: () => Promise<void>;
   switchRole: (roleCode: RoleCode) => Promise<void>;
   refreshUser: () => Promise<void>;
-  hasPermission: (permissionCode: string) => boolean;
-  hasAnyPermission: (permissionCodes: string[]) => boolean;
+  hasCapability: (permissionCode: string) => boolean;
+  hasAnyCapability: (permissionCodes: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -45,7 +45,7 @@ const buildLoggedOutState = (): AuthState => ({
   user: null,
   currentRole: null,
   availableRoles: [],
-  effectivePermissions: [],
+  capabilities: {},
   isAuthenticated: false,
   isLoading: false,
   isSwitching: false,
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = tokenStorage.getUserInfo();
     const currentRole = tokenStorage.getCurrentRole();
     const availableRoles = tokenStorage.getAvailableRoles();
-    const effectivePermissions = tokenStorage.getEffectivePermissions();
+    const capabilities = tokenStorage.getCapabilities();
     const hasTokens = tokenStorage.hasTokens();
 
     const isAuthenticated = hasTokens && !!user;
@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       currentRole,
       availableRoles,
-      effectivePermissions,
+      capabilities,
       isAuthenticated,
       isLoading: hasTokens,
       isSwitching: false,
@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user: session.user,
         currentRole: session.current_role,
         availableRoles: session.available_roles,
-        effectivePermissions: session.effective_permissions,
+        capabilities: session.capabilities,
         isAuthenticated: true,
         isLoading: false,
         isSwitching: options?.isSwitching ?? prev.isSwitching,
@@ -171,25 +171,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [applyAuthSession]);
 
-  const hasPermission = useCallback((permissionCode: string) => {
+  const hasCapability = useCallback((permissionCode: string) => {
     if (!permissionCode) {
       return false;
     }
-    if (state.currentRole === 'SUPER_ADMIN' || state.user?.is_superuser) {
-      return true;
-    }
-    return state.effectivePermissions.includes(permissionCode);
-  }, [state.currentRole, state.effectivePermissions, state.user?.is_superuser]);
+    return !!state.capabilities[permissionCode]?.allowed;
+  }, [state.capabilities]);
 
-  const hasAnyPermission = useCallback((permissionCodes: string[]) => {
+  const hasAnyCapability = useCallback((permissionCodes: string[]) => {
     if (!permissionCodes.length) {
       return false;
     }
-    if (state.currentRole === 'SUPER_ADMIN' || state.user?.is_superuser) {
-      return true;
-    }
-    return permissionCodes.some((permissionCode) => state.effectivePermissions.includes(permissionCode));
-  }, [state.currentRole, state.effectivePermissions, state.user?.is_superuser]);
+    return permissionCodes.some((permissionCode) => !!state.capabilities[permissionCode]?.allowed);
+  }, [state.capabilities]);
 
   useEffect(() => {
     refreshUser();
@@ -222,8 +216,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     switchRole,
     refreshUser,
-    hasPermission,
-    hasAnyPermission,
+    hasCapability,
+    hasAnyCapability,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -31,10 +31,10 @@ interface MergeTagPayload {
 
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { hasPermission, isLoading: isAuthLoading } = useAuth();
+  const { hasCapability, isLoading: isAuthLoading } = useAuth();
   const { tag_type, search, limit = 50, applicable_to } = params;
-  const canViewTags = hasPermission('tag.view');
-  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasPermission('knowledge.view');
+  const canViewTags = hasCapability('tag.view');
+  const canViewKnowledgeSpaces = tag_type === 'SPACE' && hasCapability('knowledge.view');
   const canQueryTags = canViewTags || canViewKnowledgeSpaces;
 
   return useQuery({

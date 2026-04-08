@@ -15,11 +15,9 @@ import { StatusDot } from '@/components/common/status-dot';
 
 import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
 import { useDeleteTask } from '../api/delete-task';
-import { useAuth } from '@/features/auth/hooks/use-auth';
 import { showApiError } from '@/utils/error-handler';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import { isAdminLikeRole } from '@/lib/role-utils';
 
 type TaskCardProps =
   | { variant: 'student'; task: StudentTaskCenterItem }
@@ -43,7 +41,6 @@ export const TaskCard: React.FC<TaskCardProps> = (props) => (
 
 const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const { roleNavigate } = useRoleNavigate();
-  const { user, currentRole } = useAuth();
   const deleteTask = useDeleteTask();
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 
@@ -84,7 +81,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
   const deadline = dayjs(task.deadline);
   const isUrgent = !managerClosed && deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
 
-  const canEditTask = !isStudentView && (isAdminLikeRole(currentRole) || managerTask?.created_by === user?.id);
+  const canEditTask = !isStudentView && !!managerTask && (managerTask.actions.update || managerTask.actions.delete);
 
   return (
     <div
@@ -126,11 +123,13 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
                   {
                     icon: Pencil,
                     label: '编辑任务',
+                    disabled: !managerTask?.actions.update,
                     onClick: () => roleNavigate(`tasks/${targetTaskId}/edit`),
                   },
                   {
                     icon: Trash2,
                     label: '彻底删除',
+                    disabled: !managerTask?.actions.delete,
                     onClick: () => setDeleteModalOpen(true),
                     variant: 'destructive' as const,
                   },

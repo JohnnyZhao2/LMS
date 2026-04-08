@@ -7,8 +7,8 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.services import AuthorizationService
-from apps.users.permissions import get_accessible_students
+from apps.authorization.engine import enforce, scope_filter
+from apps.users.models import User
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, get_status_code_for_error
 from core.pagination import StandardResultsSetPagination
@@ -64,10 +64,7 @@ class SpotCheckListCreateView(BaseAPIView):
     )
     def get(self, request):
         """获取抽查记录列表。"""
-        AuthorizationService(request).enforce(
-            'spot_check.view',
-            error_message='无权查看抽查记录',
-        )
+        enforce('spot_check.view', request, error_message='无权查看抽查记录')
         student_id = parse_int_query_param(
             request=request,
             name='student_id',
@@ -85,10 +82,10 @@ class SpotCheckListCreateView(BaseAPIView):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(spot_checks, request)
         if page is not None:
-            serializer = SpotCheckListSerializer(page, many=True)
+            serializer = SpotCheckListSerializer(page, many=True, context={'request': request})
             return paginator.get_paginated_response(serializer.data)
 
-        serializer = SpotCheckListSerializer(spot_checks, many=True)
+        serializer = SpotCheckListSerializer(spot_checks, many=True, context={'request': request})
         return list_response(serializer.data)
 
     @extend_schema(
@@ -104,19 +101,21 @@ class SpotCheckListCreateView(BaseAPIView):
     )
     def post(self, request):
         """创建抽查记录。"""
-        AuthorizationService(request).enforce(
-            'spot_check.create',
-            error_message='无权创建抽查记录',
-        )
         serializer = SpotCheckCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        enforce(
+            'spot_check.create',
+            request,
+            context={'student': serializer.validated_data.get('student')},
+            error_message='无权创建抽查记录',
+        )
 
         try:
             spot_check = self.service.create(data=serializer.validated_data)
         except BusinessError as error:
             return _handle_business_error(error)
 
-        response_serializer = SpotCheckDetailSerializer(spot_check)
+        response_serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
         return created_response(response_serializer.data)
 
 
@@ -135,15 +134,12 @@ class SpotCheckStudentListView(BaseAPIView):
         tags=['抽查管理'],
     )
     def get(self, request):
-        AuthorizationService(request).enforce(
-            'spot_check.view',
-            error_message='无权查看抽查学员列表',
-        )
+        enforce('spot_check.view', request, error_message='无权查看抽查学员列表')
 
-        queryset = get_accessible_students(
-            request.user,
-            request=request,
-            permission_code='spot_check.view',
+        queryset = scope_filter(
+            'spot_check.view',
+            request,
+            resource_model=User,
         ).filter(roles__code='STUDENT').select_related('department').distinct()
 
         search = (request.query_params.get('search') or '').strip()
@@ -175,15 +171,11 @@ class SpotCheckDetailView(BaseAPIView):
     )
     def get(self, request, pk):
         """获取抽查记录详情。"""
-        AuthorizationService(request).enforce(
-            'spot_check.view',
-            error_message='无权查看抽查记录详情',
-        )
         try:
             spot_check = self.service.get_by_id(pk)
         except BusinessError as error:
             return _handle_business_error(error)
-        serializer = SpotCheckDetailSerializer(spot_check)
+        serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
         return success_response(serializer.data)
 
     @extend_schema(
@@ -200,10 +192,6 @@ class SpotCheckDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         """更新抽查记录。"""
-        AuthorizationService(request).enforce(
-            'spot_check.update',
-            error_message='无权更新抽查记录',
-        )
         serializer = SpotCheckUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
@@ -212,7 +200,7 @@ class SpotCheckDetailView(BaseAPIView):
         except BusinessError as error:
             return _handle_business_error(error)
 
-        response_serializer = SpotCheckDetailSerializer(spot_check)
+        response_serializer = SpotCheckDetailSerializer(spot_check, context={'request': request})
         return success_response(response_serializer.data)
 
     @extend_schema(
@@ -227,10 +215,6 @@ class SpotCheckDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         """删除抽查记录。"""
-        AuthorizationService(request).enforce(
-            'spot_check.delete',
-            error_message='无权删除抽查记录',
-        )
         try:
             self.service.delete(pk)
         except BusinessError as error:
