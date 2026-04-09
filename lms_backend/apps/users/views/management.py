@@ -24,9 +24,7 @@ from apps.users.serializers import (
     AssignMentorSerializer,
     AssignRolesSerializer,
     AvatarUpdateSerializer,
-    DepartmentMemberListSerializer,
     DepartmentSerializer,
-    MenteeListSerializer,
     MentorSerializer,
     RoleSerializer,
     UserCreateSerializer,
@@ -66,7 +64,7 @@ class UserListCreateView(APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
         summary='获取用户列表',
-        description='获取所有用户列表（仅管理员）',
+        description='获取当前角色在用户查看权限作用范围内的用户列表',
         parameters=[
             OpenApiParameter(name='is_active', type=bool, description='按激活状态筛选'),
             OpenApiParameter(name='department_id', type=int, description='按部门筛选'),
@@ -80,7 +78,7 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        enforce_user_permission(request, 'user.view', '只有管理员可以查看用户列表')
+        enforce_user_permission(request, 'user.view', '无权查看用户列表')
         is_active_bool = parse_bool_query_param(
             request=request,
             name='is_active',
@@ -102,6 +100,12 @@ class UserListCreateView(APIView):
             department_id=department_id,
             mentor_id=mentor_id,
             search=search,
+        )
+        queryset = scope_filter(
+            'user.view',
+            request,
+            resource_model=User,
+            base_queryset=queryset,
         )
         serializer = UserListSerializer(queryset, many=True)
         return list_response(serializer.data)
@@ -140,7 +144,7 @@ class UserDetailView(APIView):
         return user
     @extend_schema(
         summary='获取用户详情',
-        description='获取指定用户的详细信息',
+        description='获取指定用户的详细信息（需在用户查看权限作用范围内）',
         responses={
             200: UserDetailSerializer,
             403: OpenApiResponse(description='无权限'),
@@ -149,8 +153,18 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def get(self, request, pk):
-        enforce_user_permission(request, 'user.view', '只有管理员可以查看用户详情')
         user = self.get_object(pk)
+        enforce_user_permission(request, 'user.view', '无权查看用户详情')
+        if not scope_filter(
+            'user.view',
+            request,
+            resource_model=User,
+            base_queryset=User.objects.filter(pk=user.pk),
+        ).exists():
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权查看该用户详情',
+            )
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
     @extend_schema(
@@ -350,50 +364,6 @@ class UserAssignMentorView(BaseAPIView):
         )
         response_serializer = UserDetailSerializer(user)
         return success_response(response_serializer.data)
-class MenteesListView(APIView):
-    """List mentees for the current mentor."""
-    permission_classes = [IsAuthenticated]
-    @extend_schema(
-        summary='获取名下学员',
-        description='获取当前导师名下的所有学员',
-        responses={
-            200: MenteeListSerializer(many=True),
-            403: OpenApiResponse(description='无权限'),
-        },
-        tags=['用户管理']
-    )
-    def get(self, request):
-        enforce_user_permission(request, 'user.mentee.view', '只有导师可以查看名下学员')
-        mentees = scope_filter(
-            'user.mentee.view',
-            request,
-            resource_model=User,
-            base_queryset=User.objects.select_related('department', 'mentor').prefetch_related('roles'),
-        )
-        serializer = MenteeListSerializer(mentees, many=True)
-        return list_response(serializer.data)
-class DepartmentMembersListView(APIView):
-    """List department members for the current department manager."""
-    permission_classes = [IsAuthenticated]
-    @extend_schema(
-        summary='获取本室成员',
-        description='获取当前室经理所在室的所有成员',
-        responses={
-            200: DepartmentMemberListSerializer(many=True),
-            403: OpenApiResponse(description='无权限'),
-        },
-        tags=['用户管理']
-    )
-    def get(self, request):
-        enforce_user_permission(request, 'user.department_member.view', '只有室经理可以查看本室成员')
-        members = scope_filter(
-            'user.department_member.view',
-            request,
-            resource_model=User,
-            base_queryset=User.objects.select_related('department', 'mentor').prefetch_related('roles'),
-        )
-        serializer = DepartmentMemberListSerializer(members, many=True)
-        return list_response(serializer.data)
 class MentorsListView(APIView):
     """List all mentors (users with MENTOR role)."""
     permission_classes = [IsAuthenticated]

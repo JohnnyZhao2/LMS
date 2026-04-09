@@ -65,8 +65,7 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, role_code: str):
-        if not authorize('authorization.role_template.view', request).allowed:
-            enforce('authorization.role_template.update', request, error_message='只有管理员可以查看角色权限模板')
+        enforce('authorization.role_template.view', request, error_message='无权查看角色权限模板')
 
         permission_codes = self.service.get_role_permission_codes(role_code)
         return success_response(
@@ -89,7 +88,7 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def put(self, request, role_code: str):
-        enforce('authorization.role_template.update', request, error_message='只有管理员可以配置角色权限模板')
+        enforce('authorization.role_template.update', request, error_message='无权配置角色权限模板')
 
         serializer = RolePermissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

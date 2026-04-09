@@ -94,7 +94,6 @@ ROLE_PERMISSION_DEFAULTS = {
     ],
     'TEAM_MANAGER': [
         'knowledge.view',
-        'analytics.view',
     ],
     'ADMIN': [
         'knowledge.view',

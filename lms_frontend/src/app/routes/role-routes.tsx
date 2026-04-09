@@ -57,7 +57,6 @@ const GradingCenterPage = lazy(() => import('@/features/grading/components/gradi
 
 // Other
 const Personal = () => <div>个人中心（开发中）</div>;
-const Analytics = () => <div>团队数据看板（开发中）</div>;
 
 /**
  * 根据 URL 中的角色渲染对应的仪表盘
@@ -401,15 +400,6 @@ export const roleRoutes = [
     element={
       <ProtectedRoute requiredPermissions={['profile.student.view', 'profile.student.update']} permissionMode="any">
         <Personal />
-      </ProtectedRoute>
-    }
-  />,
-  <Route
-    key="analytics"
-    path="analytics"
-    element={
-      <ProtectedRoute requiredPermissions={['dashboard.team_manager.view']}>
-        <Analytics />
       </ProtectedRoute>
     }
   />,

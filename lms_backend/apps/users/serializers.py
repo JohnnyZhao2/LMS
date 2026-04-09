@@ -405,28 +405,3 @@ class AssignMentorSerializer(serializers.Serializer):
         """Validate mentor exists and has MENTOR role."""
         validate_mentor(value)
         return value
-
-
-class MenteeListSerializer(serializers.ModelSerializer):
-    """Serializer for listing mentees."""
-    department = DepartmentSerializer(read_only=True)
-    class Meta:
-        model = User
-        fields = [
-            'id', 'employee_id', 'username',
-            'department', 'is_active'
-        ]
-class DepartmentMemberListSerializer(serializers.ModelSerializer):
-    """Serializer for listing department members."""
-    mentor = MentorSerializer(read_only=True)
-    roles = serializers.SerializerMethodField()
-    class Meta:
-        model = User
-        fields = [
-            'id', 'employee_id', 'username',
-            'mentor', 'roles', 'is_active'
-        ]
-
-    @extend_schema_field(RoleSerializer(many=True))
-    def get_roles(self, obj):
-        return _serialize_user_roles(obj)

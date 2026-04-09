@@ -35,22 +35,25 @@ interface UseUserPermissionScopeStateParams {
   hasConfigurablePermissionRoles: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
+  scopePermissionCode?: string | null;
   shouldLoadUserOverrides: boolean;
   isLoadingUserOverrides: boolean;
   scopeUsers: UserList[];
-  effectiveDraftOverrides: UserPermissionOverride[];
-  initialDraftOverrides: UserPermissionOverride[];
-  isDraftOverridesActive: boolean;
+  userOverrides: UserPermissionOverride[];
   selectedPermissionScopes: PermissionOverrideScope[];
   setSelectedPermissionScopes: Dispatch<SetStateAction<PermissionOverrideScope[]>>;
   selectedScopeUserIds: number[];
   setSelectedScopeUserIds: Dispatch<SetStateAction<number[]>>;
 }
 
+const STUDENT_ONLY_SCOPE_PERMISSION_CODES = new Set<string>([
+  'task.assign',
+  'task.analytics.view',
+  'spot_check.view',
+  'spot_check.create',
+]);
+
 interface UseUserPermissionScopeStateResult {
-  selectedPermissionScopes: PermissionOverrideScope[];
-  selectedScopeUserIds: number[];
-  selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
   scopeUserSearch: string;
   showScopeAdjustPanel: boolean;
   scopeUserFilter: string;
@@ -67,7 +70,6 @@ interface UseUserPermissionScopeStateResult {
     scopeUserIds?: number[],
   ) => string;
   handleScopeFilterChange: (filterValue: string) => void;
-  handleFilterDoubleClick: (filterValue: string) => void;
   toggleSelectAllFilteredScopeUsers: () => void;
   applyDefaultScopePreset: () => void;
   toggleScopeUser: (scopeUserId: number) => void;
@@ -83,12 +85,11 @@ export const useUserPermissionScopeState = ({
   hasConfigurablePermissionRoles,
   normalizedSelectedPermissionRole,
   selectedRoleDefaultScopeTypes,
+  scopePermissionCode,
   shouldLoadUserOverrides,
   isLoadingUserOverrides,
   scopeUsers,
-  effectiveDraftOverrides,
-  initialDraftOverrides,
-  isDraftOverridesActive,
+  userOverrides,
   selectedPermissionScopes,
   setSelectedPermissionScopes,
   selectedScopeUserIds,
@@ -99,6 +100,28 @@ export const useUserPermissionScopeState = ({
   const [scopeUserSearch, setScopeUserSearch] = useState('');
   const [showScopeAdjustPanel, setShowScopeAdjustPanel] = useState(false);
   const [scopeUserFilter, setScopeUserFilterState] = useState<string>('all');
+  const shouldRestrictToStudents = useMemo(
+    () => Boolean(scopePermissionCode && STUDENT_ONLY_SCOPE_PERMISSION_CODES.has(scopePermissionCode)),
+    [scopePermissionCode],
+  );
+  const selectableScopeUsers = useMemo(
+    () => scopeUsers.filter((scopeUser) => (
+      !scopeUser.is_superuser
+      && (!shouldRestrictToStudents || scopeUser.roles.some((role) => role.code === 'STUDENT'))
+    )),
+    [scopeUsers, shouldRestrictToStudents],
+  );
+  const selectableScopeUserIdSet = useMemo(
+    () => new Set(selectableScopeUsers.map((scopeUser) => scopeUser.id)),
+    [selectableScopeUsers],
+  );
+
+  useEffect(() => {
+    setSelectedScopeUserIds((prev) => {
+      const filtered = normalizeScopeUserIds(prev.filter((scopeUserId) => selectableScopeUserIdSet.has(scopeUserId)));
+      return sameScopeUserIds(prev, filtered) ? prev : filtered;
+    });
+  }, [selectableScopeUserIdSet, setSelectedScopeUserIds]);
 
   const getPresetMatchedScopeUserIds = useCallback((scopeTypes: PermissionOverrideScope[]): number[] => {
     const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
@@ -112,12 +135,12 @@ export const useUserPermissionScopeState = ({
 
     for (const scopeType of normalizedScopeTypes) {
       if (scopeType === 'ALL') {
-        scopeUsers.forEach((scopeUser) => matchedUserIds.add(scopeUser.id));
+        selectableScopeUsers.forEach((scopeUser) => matchedUserIds.add(scopeUser.id));
         continue;
       }
 
       if (scopeType === 'MENTEES' && ownerUserId) {
-        scopeUsers.forEach((scopeUser) => {
+        selectableScopeUsers.forEach((scopeUser) => {
           if (scopeUser.mentor?.id === ownerUserId) {
             matchedUserIds.add(scopeUser.id);
           }
@@ -126,7 +149,7 @@ export const useUserPermissionScopeState = ({
       }
 
       if (scopeType === 'DEPARTMENT' && ownerDepartmentId) {
-        scopeUsers.forEach((scopeUser) => {
+        selectableScopeUsers.forEach((scopeUser) => {
           if (scopeUser.department.id === ownerDepartmentId) {
             matchedUserIds.add(scopeUser.id);
           }
@@ -134,7 +157,7 @@ export const useUserPermissionScopeState = ({
         continue;
       }
 
-      if (scopeType === 'SELF' && ownerUserId) {
+      if (scopeType === 'SELF' && ownerUserId && selectableScopeUserIdSet.has(ownerUserId)) {
         matchedUserIds.add(ownerUserId);
       }
     }
@@ -142,22 +165,20 @@ export const useUserPermissionScopeState = ({
     return normalizeScopeUserIds(Array.from(matchedUserIds));
   }, [
     departmentId,
-    scopeUsers,
+    selectableScopeUserIdSet,
+    selectableScopeUsers,
     userDetail?.department?.id,
     userDetail?.id,
     userId,
   ]);
 
   useEffect(() => {
-    if (isDraftOverridesActive) {
-      return;
-    }
     scopeSelectionByRoleRef.current = {};
     lastAppliedRoleSelectionRef.current = null;
-  }, [initialDraftOverrides, isDraftOverridesActive]);
+  }, [userOverrides]);
 
   const getRoleScopeSelectionFromOverrides = useCallback((roleCode: RoleCode): RoleScopeSelection | null => {
-    const scopedOverrides = effectiveDraftOverrides.filter((override) => (
+    const scopedOverrides = userOverrides.filter((override) => (
       override.is_active && override.applies_to_role === roleCode
     ));
     if (scopedOverrides.length === 0) {
@@ -193,7 +214,7 @@ export const useUserPermissionScopeState = ({
         ? explicitScopeUserIds
         : getPresetMatchedScopeUserIds(scopeTypes),
     };
-  }, [effectiveDraftOverrides, getPresetMatchedScopeUserIds]);
+  }, [getPresetMatchedScopeUserIds, userOverrides]);
 
   const syncSelectionWithLatestPresetUsers = useCallback((selection: RoleScopeSelection): RoleScopeSelection => {
     const normalizedScopeTypes = normalizeScopeTypes(selection.scopeTypes);
@@ -218,7 +239,7 @@ export const useUserPermissionScopeState = ({
       return;
     }
 
-    if (shouldLoadUserOverrides && isLoadingUserOverrides && effectiveDraftOverrides.length === 0) {
+    if (shouldLoadUserOverrides && isLoadingUserOverrides && userOverrides.length === 0) {
       return;
     }
 
@@ -278,7 +299,6 @@ export const useUserPermissionScopeState = ({
     setShowScopeAdjustPanel((prev) => (prev ? false : prev));
     setScopeUserFilterState((prev) => (prev !== 'all' ? 'all' : prev));
   }, [
-    effectiveDraftOverrides.length,
     getPresetMatchedScopeUserIds,
     getRoleScopeSelectionFromOverrides,
     hasConfigurablePermissionRoles,
@@ -289,6 +309,7 @@ export const useUserPermissionScopeState = ({
     selectedRoleDefaultScopeTypes,
     shouldLoadUserOverrides,
     syncSelectionWithLatestPresetUsers,
+    userOverrides.length,
   ]);
 
   useEffect(() => {
@@ -340,14 +361,14 @@ export const useUserPermissionScopeState = ({
   ): string => {
     const normalizedScopeTypes = normalizeScopeTypes(scopeTypes);
     const normalizedScopeUserIds = normalizeScopeUserIds(scopeUserIds);
-    const allScopeUserIds = scopeUsers.map((scopeUser) => scopeUser.id);
+    const allScopeUserIds = selectableScopeUsers.map((scopeUser) => scopeUser.id);
     const resolveExplicitUsersAlias = (): string | null => {
       if (normalizedScopeUserIds.length === 0) {
         return null;
       }
 
       for (const department of departments) {
-        const departmentUserIds = scopeUsers
+        const departmentUserIds = selectableScopeUsers
           .filter((scopeUser) => scopeUser.department?.id === department.id)
           .map((scopeUser) => scopeUser.id);
         if (departmentUserIds.length > 0 && sameScopeUserIds(normalizedScopeUserIds, departmentUserIds)) {
@@ -382,15 +403,20 @@ export const useUserPermissionScopeState = ({
   };
 
   const scopeFilterOptions = useMemo<ScopeFilterOption[]>(() => {
+    const selectableDepartmentIds = new Set(
+      selectableScopeUsers.map((scopeUser) => scopeUser.department?.id).filter((value): value is number => Boolean(value)),
+    );
     const options: ScopeFilterOption[] = [
       { value: 'all', label: '全部' },
-      { value: 'mentees', label: '学员' },
+      { value: 'mentees', label: shouldRestrictToStudents ? '学生' : '名下' },
     ];
-    departments.forEach((dept) => {
+    departments
+      .filter((dept) => selectableDepartmentIds.has(dept.id))
+      .forEach((dept) => {
       options.push({ value: `dept_${dept.id}`, label: dept.name });
-    });
+      });
     return options;
-  }, [departments]);
+  }, [departments, selectableScopeUsers, shouldRestrictToStudents]);
 
   const handleScopeFilterChange = (filterValue: string) => {
     setScopeUserFilterState((prev) => (prev === filterValue ? 'all' : filterValue));
@@ -399,14 +425,19 @@ export const useUserPermissionScopeState = ({
   const filteredScopeUsers = useMemo<UserList[]>(() => {
     const keyword = scopeUserSearch.trim().toLowerCase();
     const ownerUserId = userId ?? userDetail?.id ?? null;
-
-    return scopeUsers.filter((scopeUser) => {
-      if (scopeUserFilter === 'mentees') {
-        if (!ownerUserId || scopeUser.mentor?.id !== ownerUserId) return false;
-      } else if (scopeUserFilter !== 'all') {
-        const deptId = Number(scopeUserFilter.replace('dept_', ''));
-        if (scopeUser.department?.id !== deptId) return false;
+    const matchesScopeFilter = (scopeUser: UserList, filterValue: string): boolean => {
+      if (filterValue === 'mentees') {
+        return ownerUserId != null && scopeUser.mentor?.id === ownerUserId;
       }
+      if (filterValue === 'all') {
+        return true;
+      }
+      const deptId = Number(filterValue.replace('dept_', ''));
+      return scopeUser.department?.id === deptId;
+    };
+
+    return selectableScopeUsers.filter((scopeUser) => {
+      if (!matchesScopeFilter(scopeUser, scopeUserFilter)) return false;
 
       if (!keyword) return true;
 
@@ -415,7 +446,7 @@ export const useUserPermissionScopeState = ({
         || scopeUser.employee_id.toLowerCase().includes(keyword)
       );
     });
-  }, [scopeUserFilter, scopeUserSearch, scopeUsers, userId, userDetail]);
+  }, [scopeUserFilter, scopeUserSearch, selectableScopeUsers, userId, userDetail]);
 
   const filteredScopeUserIds = useMemo(
     () => filteredScopeUsers.map((scopeUser) => scopeUser.id),
@@ -453,43 +484,6 @@ export const useUserPermissionScopeState = ({
     }
   };
 
-  const handleFilterDoubleClick = (filterValue: string) => {
-    const ownerUserId = userId ?? userDetail?.id ?? null;
-    const targetUserIds = scopeUsers
-      .filter((scopeUser) => {
-        if (filterValue === 'mentees') {
-          return ownerUserId != null && scopeUser.mentor?.id === ownerUserId;
-        }
-        if (filterValue !== 'all') {
-          const deptId = Number(filterValue.replace('dept_', ''));
-          return scopeUser.department?.id === deptId;
-        }
-        return true;
-      })
-      .map((scopeUser) => scopeUser.id);
-
-    if (targetUserIds.length === 0) return;
-
-    setScopeUserFilterState(filterValue);
-
-    setSelectedScopeUserIds((prev) => {
-      const nextUserIdSet = new Set(prev);
-      const shouldUnselectAll = targetUserIds.every((id) => nextUserIdSet.has(id));
-
-      if (shouldUnselectAll) {
-        targetUserIds.forEach((id) => nextUserIdSet.delete(id));
-      } else {
-        targetUserIds.forEach((id) => nextUserIdSet.add(id));
-      }
-
-      return Array.from(nextUserIdSet).sort((left, right) => left - right);
-    });
-
-    if (!selectedPermissionScopes.includes('EXPLICIT_USERS')) {
-      setSelectedPermissionScopes((prev) => normalizeScopeTypes([...prev, 'EXPLICIT_USERS']));
-    }
-  };
-
   const applyDefaultScopePreset = () => {
     applyScopePresetWithAutoSelection(selectedRoleDefaultScopeTypes);
     setScopeUserSearch('');
@@ -510,9 +504,6 @@ export const useUserPermissionScopeState = ({
   };
 
   return {
-    selectedPermissionScopes,
-    selectedScopeUserIds,
-    selectedRoleDefaultScopeTypes,
     scopeUserSearch,
     showScopeAdjustPanel,
     scopeUserFilter,
@@ -525,7 +516,6 @@ export const useUserPermissionScopeState = ({
     setScopeUserSearch,
     formatScopeSummaryForDisplay,
     handleScopeFilterChange,
-    handleFilterDoubleClick,
     toggleSelectAllFilteredScopeUsers,
     applyDefaultScopePreset,
     toggleScopeUser,

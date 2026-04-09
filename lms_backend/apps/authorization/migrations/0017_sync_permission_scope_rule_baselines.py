@@ -6,7 +6,6 @@ SCOPE_RULE_ROWS = {
     'task.analytics.view': ['MENTEES:MENTOR', 'DEPARTMENT:DEPT_MANAGER', 'ALL:ADMIN'],
     'spot_check.view': ['MENTEES:MENTOR', 'DEPARTMENT:DEPT_MANAGER'],
     'spot_check.create': ['MENTEES:MENTOR', 'DEPARTMENT:DEPT_MANAGER'],
-    'analytics.view': ['MENTEES:MENTOR', 'DEPARTMENT:DEPT_MANAGER', 'ALL:TEAM_MANAGER', 'ALL:ADMIN'],
     'user.mentee.view': ['MENTEES:MENTOR'],
     'user.department_member.view': ['DEPARTMENT:DEPT_MANAGER'],
 }

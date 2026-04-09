@@ -5,8 +5,6 @@ import type {
   RoleCode,
 } from '@/types/api';
 
-import type { PermissionState } from './user-permission-section.types';
-
 interface OverrideSignatureParts {
   permissionCode: string;
   effect: PermissionOverrideEffect;
@@ -42,19 +40,4 @@ export const getOverrideSignature = (override: Pick<
   appliesToRole: override.applies_to_role,
   scopeType: override.scope_type,
   scopeUserIds: override.scope_user_ids,
-});
-
-export const createUncheckedPermissionState = (): PermissionState => ({
-  checked: false,
-  fromTemplate: false,
-  allowOverrides: [],
-  denyOverrides: [],
-  selectedAllowOverrides: [],
-  selectedDenyOverrides: [],
-  inheritedSelectedScopeTypes: [],
-  isSelfOnlySelection: false,
-  hasSelfAllow: false,
-  hasNonSelfAllow: false,
-  hasExactExplicitAllow: false,
-  missingSelectedAllowScopeTypes: [],
 });

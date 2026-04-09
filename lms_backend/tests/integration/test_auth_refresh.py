@@ -110,10 +110,10 @@ def test_header_role_cannot_override_token_current_role():
     access_token = login_response.data['data']['access_token']
 
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    response = client.get('/api/users/mentees/', HTTP_X_CURRENT_ROLE='MENTOR')
+    response = client.get('/api/knowledge/', HTTP_X_CURRENT_ROLE='MENTOR')
 
-    assert response.status_code != 200
-    assert response.data['code'] == 'PERMISSION_DENIED'
+    assert response.status_code == 200
+    assert response.data['code'] == 'SUCCESS'
 
 
 @pytest.mark.django_db

@@ -7,7 +7,6 @@ import {
   HelpCircle,
   FileSearch,
   Tags,
-  BarChart3,
   SquareCheck,
   SquareTerminal,
 } from 'lucide-react';
@@ -153,14 +152,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         key: `${rolePrefix}/audit-logs`,
         icon: <SquareTerminal className="w-4 h-4" />,
         label: '日志审计',
-      });
-    }
-
-    if (workspace.dashboardVariant === 'team_manager' && hasCapability('dashboard.team_manager.view')) {
-      menu.push({
-        key: `${rolePrefix}/analytics`,
-        icon: <BarChart3 className="w-4 h-4" />,
-        label: '数据看板',
       });
     }
 

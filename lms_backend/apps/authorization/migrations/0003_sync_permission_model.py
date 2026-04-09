@@ -44,7 +44,6 @@ PERMISSION_CATALOG = [
     ('authorization.user_override.view', '查看用户权限覆盖', 'authorization', '查看用户级权限覆盖规则'),
     ('authorization.user_override.create', '创建用户权限覆盖', 'authorization', '新增用户级权限覆盖规则'),
     ('authorization.user_override.revoke', '撤销用户权限覆盖', 'authorization', '撤销用户级权限覆盖规则'),
-    ('analytics.view', '查看数据看板', 'analytics', '查看团队数据看板'),
     ('profile.view', '查看个人中心', 'profile', '查看个人中心'),
     ('profile.update', '更新个人资料', 'profile', '更新个人资料'),
     ('activity_log.view', '查看活动日志', 'activity_log', '查看用户日志、内容日志和操作日志'),
@@ -111,7 +110,6 @@ ROLE_PERMISSION_DEFAULTS = {
     ],
     'TEAM_MANAGER': [
         'knowledge.view',
-        'analytics.view',
     ],
     'ADMIN': [
         'knowledge.view',

@@ -19,5 +19,9 @@ AUTHORIZATION_SPECS = (
                 description='更新角色权限模板',
             ),
         ),
+        system_managed_codes=(
+            'authorization.role_template.view',
+            'authorization.role_template.update',
+        ),
     ),
 )

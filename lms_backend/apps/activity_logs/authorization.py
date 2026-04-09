@@ -19,5 +19,8 @@ AUTHORIZATION_SPECS = (
                 description='更新活动日志记录策略',
             ),
         ),
+        system_managed_codes=(
+            'activity_log.policy.update',
+        ),
     ),
 )

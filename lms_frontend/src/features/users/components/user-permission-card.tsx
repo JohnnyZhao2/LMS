@@ -1,74 +1,24 @@
-import { Loader2 } from 'lucide-react';
-
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/lib/utils';
-import type { PermissionCatalogItem, PermissionOverrideScope } from '@/types/api';
+import type { PermissionCatalogItem } from '@/types/api';
 
 import type { PermissionState } from './user-permission-section.types';
 
 interface UserPermissionCardProps {
   permission: PermissionCatalogItem;
   permissionState: PermissionState;
-  loading: boolean;
-  forcedDisabled?: boolean;
-  canCreateOverride: boolean;
-  canRevokeOverride: boolean;
-  hasValidScopeSelection: boolean;
-  selectedPermissionScopes: PermissionOverrideScope[];
-  selectedScopeUserIds: number[];
-  onToggle: (nextChecked: boolean) => void;
+  isSaving?: boolean;
+  onToggle: (nextChecked: boolean) => void | Promise<void>;
 }
 
 export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
   permission,
   permissionState,
-  loading,
-  forcedDisabled = false,
-  canCreateOverride,
-  canRevokeOverride,
-  hasValidScopeSelection,
-  selectedPermissionScopes,
-  selectedScopeUserIds,
+  isSaving = false,
   onToggle,
 }) => {
   const checked = permissionState.checked;
-  const needsCreateToEnable = permissionState.missingSelectedAllowScopeTypes.length > 0
-    || (
-      permissionState.isSelfOnlySelection
-      && !permissionState.fromTemplate
-      && !permissionState.hasSelfAllow
-      && !permissionState.hasNonSelfAllow
-    )
-    || (
-      selectedPermissionScopes.includes('EXPLICIT_USERS')
-      && selectedScopeUserIds.length > 0
-      && !permissionState.hasExactExplicitAllow
-    );
-  const needsCreateToDisable = (
-    permissionState.isSelfOnlySelection
-    && (permissionState.fromTemplate || permissionState.hasNonSelfAllow)
-  ) || (
-    permissionState.fromTemplate
-    && permissionState.inheritedSelectedScopeTypes.length > 0
-  );
-  const needsRevokeToEnable = permissionState.selectedDenyOverrides.length > 0;
-  const needsRevokeToDisable = permissionState.selectedAllowOverrides.length > 0;
-  const disabled = (
-    forcedDisabled
-    || loading
-    || !hasValidScopeSelection
-    || (
-      checked
-        ? (
-          (needsRevokeToDisable && !canRevokeOverride)
-          || (needsCreateToDisable && !canCreateOverride)
-        )
-        : (
-          (needsRevokeToEnable && !canRevokeOverride)
-          || (needsCreateToEnable && !canCreateOverride)
-        )
-    )
-  );
+  const disabled = isSaving || Boolean(checked ? permissionState.disableBlockedReason : permissionState.enableBlockedReason);
   const handleToggle = () => {
     if (disabled) return;
     onToggle(!checked);
@@ -108,17 +58,13 @@ export const UserPermissionCard: React.FC<UserPermissionCardProps> = ({
           ) : null}
         </div>
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
-          {loading && <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />}
           <ToggleSwitch
             checked={checked}
             disabled={disabled}
-            onCheckedChange={onToggle}
+            onCheckedChange={(nextChecked) => { void onToggle(nextChecked); }}
           />
         </div>
       </div>
-      {forcedDisabled && (
-        <p className="text-[11px] font-medium text-slate-400">仅管理员角色可配置此权限</p>
-      )}
     </div>
   );
 };

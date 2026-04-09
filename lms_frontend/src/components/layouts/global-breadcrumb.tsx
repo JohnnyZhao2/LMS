@@ -73,7 +73,6 @@ const createBreadcrumbs = (
     { pattern: '/:role/review/practice', items: [{ title: taskLabel, path: tasksPath }, { title: '测验回顾' }] },
     { pattern: '/:role/review/exam', items: [{ title: taskLabel, path: tasksPath }, { title: '考试回顾' }] },
     { pattern: '/:role/personal', items: [{ title: '个人中心' }] },
-    { pattern: '/:role/analytics', items: [{ title: '数据看板' }] },
   ]
 
   const matchedRoute = routePatterns.find((route) => matchPath({ path: route.pattern, end: true }, pathname))

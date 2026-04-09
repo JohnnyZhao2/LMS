@@ -9,7 +9,7 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import authorize, enforce
+from apps.authorization.engine import enforce
 from apps.users.models import User
 from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
@@ -49,12 +49,7 @@ def enforce_activity_log_policy_update_permission(request, error_message: str) -
 
 
 def enforce_activity_log_policy_access_permission(request, error_message: str) -> None:
-    if authorize('activity_log.view', request).allowed or authorize('activity_log.policy.update', request).allowed:
-        return
-    raise BusinessError(
-        code=ErrorCodes.PERMISSION_DENIED,
-        message=error_message,
-    )
+    enforce('activity_log.policy.update', request, error_message=error_message)
 
 
 def enforce_activity_log_delete_permission(request, error_message: str) -> None:

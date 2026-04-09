@@ -11,6 +11,11 @@ interface ModulePresentationMeta {
 }
 
 export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
+  dashboard: {
+    label: '仪表盘',
+    summary: '系统托管的仪表盘入口权限，用于角色工作台首页访问控制。',
+    order: 5,
+  },
   task: {
     label: '任务管理',
     summary: '管理员菜单中的任务管理页，覆盖任务列表、任务配置、学员分配与进度监控。',
@@ -61,19 +66,17 @@ export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
     summary: '学员端答题和结果查看能力。',
     order: 90,
   },
-  analytics: {
-    label: '数据看板',
-    summary: '团队经理菜单中的数据看板入口。',
-    order: 100,
-  },
   profile: {
     label: '个人中心',
     summary: '学员菜单中的个人中心入口。',
-    order: 110,
+    order: 100,
   },
 };
 
 export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta> = {
+  'dashboard.team_manager.view': {
+    detail: '访问团队经理仪表盘入口（系统托管）。',
+  },
   'task.view': {
     detail: '进入任务管理页并查看任务详情。',
   },
@@ -179,12 +182,6 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   'user.avatar.update': {
     detail: '修改其他用户头像。',
   },
-  'user.mentee.view': {
-    detail: '查看当前导师名下学员列表。',
-  },
-  'user.department_member.view': {
-    detail: '查看当前室经理所在部门成员列表。',
-  },
   'authorization.role_template.view': {
     detail: '查看角色权限模板配置。',
   },
@@ -202,9 +199,6 @@ export const PERMISSION_PRESENTATION: Record<string, PermissionPresentationMeta>
   },
   'submission.review': {
     detail: '查看作答结果、成绩和答题详情。',
-  },
-  'analytics.view': {
-    detail: '查看团队数据看板。',
   },
   'profile.student.view': {
     detail: '查看学员个人中心。',

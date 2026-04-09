@@ -9,17 +9,17 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { SearchInput, DESKTOP_SEARCH_INPUT_CLASSNAME } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { ASSIGNABLE_ROLES, getRoleColor } from '@/lib/role-config';
 import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
 
-import { useDepartments, useUserDetail, useUsers } from '../api/get-users';
+import { useDepartments, useRoles, useUserDetail, useUsers } from '../api/get-users';
+import { useAssignRoles } from '../api/manage-users';
 import {
   UserPermissionSection,
-  type UserPermissionSectionHandle,
 } from '../components/user-permission-section';
 
 export const UserAuthorizationPage: React.FC = () => {
@@ -27,9 +27,9 @@ export const UserAuthorizationPage: React.FC = () => {
   const [search, setSearch] = React.useState('');
   const [selectedDepartmentId, setSelectedDepartmentId] = React.useState<string>('all');
   const [pageContainerElement, setPageContainerElement] = React.useState<HTMLDivElement | null>(null);
-  const [hasPendingChanges, setHasPendingChanges] = React.useState(false);
-  const permissionSectionRef = React.useRef<UserPermissionSectionHandle | null>(null);
+  const [isAssigningRole, setIsAssigningRole] = React.useState(false);
   const { hasCapability } = useAuth();
+  const assignRoles = useAssignRoles();
 
   const selectedUserIdParam = searchParams.get('user_id');
   const selectedUserId = selectedUserIdParam ? Number(selectedUserIdParam) : null;
@@ -51,16 +51,26 @@ export const UserAuthorizationPage: React.FC = () => {
     search: search.trim() || undefined,
     departmentId,
   });
+  const { data: roles = [] } = useRoles();
+
+  const authorizationUsers = React.useMemo(
+    () => users.filter((user) => !user.is_superuser),
+    [users],
+  );
+  const roleNameMap = React.useMemo(
+    () => new Map(roles.map((role) => [role.code, role.name])),
+    [roles],
+  );
 
   const resolvedSelectedUserId = React.useMemo(() => {
-    if (users.length === 0) {
+    if (authorizationUsers.length === 0) {
       return null;
     }
-    if (selectedUserId && users.some((user) => user.id === selectedUserId)) {
+    if (selectedUserId && authorizationUsers.some((user) => user.id === selectedUserId)) {
       return selectedUserId;
     }
-    return users[0]?.id ?? null;
-  }, [selectedUserId, users]);
+    return authorizationUsers[0]?.id ?? null;
+  }, [authorizationUsers, selectedUserId]);
 
   const { data: selectedUserDetail, isLoading: userDetailLoading } = useUserDetail(resolvedSelectedUserId ?? 0);
   const isLoading = resolvedSelectedUserId !== null && userDetailLoading;
@@ -77,35 +87,28 @@ export const UserAuthorizationPage: React.FC = () => {
     setSearchParams(nextSearchParams, { replace: true });
   }, [resolvedSelectedUserId, searchParams, selectedUserIdParam, setSearchParams]);
 
-  React.useEffect(() => {
-    setHasPendingChanges(false);
-  }, [resolvedSelectedUserId]);
-
   const handleSelectUser = (userId: number) => {
     const nextSearchParams = new URLSearchParams(searchParams);
     nextSearchParams.set('user_id', String(userId));
     setSearchParams(nextSearchParams);
   };
 
-  const handleSave = async () => {
-    if (!selectedUserDetail || !hasPendingChanges) {
-      return;
-    }
-    try {
-      await permissionSectionRef.current?.submitChanges(selectedUserDetail.id);
-    } catch (error) {
-      showApiError(error);
-    }
-  };
-
   const selectedRoleCodes = React.useMemo<RoleCode[]>(
     () => selectedUserDetail?.roles
-      .filter((role) => role.code !== 'STUDENT')
+      .filter((role) => role.code !== 'STUDENT' && role.code !== 'SUPER_ADMIN')
       .map((role) => role.code as RoleCode) ?? [],
     [selectedUserDetail],
   );
+  const selectedBusinessRoleCode = React.useMemo<RoleCode | null>(
+    () => selectedRoleCodes[0] ?? null,
+    [selectedRoleCodes],
+  );
+  const hasStudentRole = React.useMemo(
+    () => selectedUserDetail?.roles.some((role) => role.code === 'STUDENT') ?? false,
+    [selectedUserDetail],
+  );
   const panelItems = React.useMemo(
-    () => users.map((user) => ({
+    () => authorizationUsers.map((user) => ({
       id: user.id,
       name: user.username,
       avatarKey: user.avatar_key,
@@ -113,23 +116,38 @@ export const UserAuthorizationPage: React.FC = () => {
         ? `${user.employee_id || '未填写工号'} · ${user.department.name}`
         : (user.employee_id || '未填写工号'),
     })),
-    [users],
+    [authorizationUsers],
   );
+  const handleRoleToggle = async (roleCode: RoleCode) => {
+    if (!selectedUserDetail) {
+      return;
+    }
+    const nextRoles = selectedBusinessRoleCode === roleCode ? [] : [roleCode];
+    if (
+      nextRoles.length === selectedRoleCodes.length
+      && nextRoles.every((code) => selectedRoleCodes.includes(code))
+    ) {
+      return;
+    }
+
+    setIsAssigningRole(true);
+    try {
+      await assignRoles.mutateAsync({
+        id: selectedUserDetail.id,
+        roles: nextRoles,
+      });
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setIsAssigningRole(false);
+    }
+  };
 
   return (
     <PageFillShell ref={setPageContainerElement} className="animate-fadeIn">
       <PageHeader
         title="用户授权"
         icon={<ShieldCheck className="h-5 w-5" />}
-        extra={(
-          <Button
-            onClick={handleSave}
-            disabled={!selectedUserDetail || !hasPendingChanges || !hasCapability('user.authorize')}
-            className="h-10 rounded-full px-5"
-          >
-            保存权限
-          </Button>
-        )}
       />
 
       <PageWorkbench>
@@ -164,7 +182,7 @@ export const UserAuthorizationPage: React.FC = () => {
               onSelect={handleSelectUser}
               selectionMode="single"
               appearance="panel"
-              emptyText="当前筛选下没有可配置权限的用户。"
+              emptyText="当前筛选下没有可授权用户。"
               isLoading={usersLoading}
               loadingText="加载用户中..."
               className="max-h-none"
@@ -183,7 +201,7 @@ export const UserAuthorizationPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex h-[52px] shrink-0 items-center border-b border-border/60 px-6">
+                  <div className="flex h-[70px] shrink-0 items-center justify-between gap-4 border-b border-border/60 px-6">
                     <div className="flex min-w-0 items-center gap-3">
                       <UserAvatar
                         avatarKey={selectedUserDetail.avatar_key}
@@ -199,12 +217,40 @@ export const UserAuthorizationPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {hasStudentRole ? (
+                        <span className="inline-flex h-7 items-center rounded-full bg-primary-100 px-3 text-xs font-semibold text-primary">
+                          学员
+                        </span>
+                      ) : null}
+                      {ASSIGNABLE_ROLES.map((roleCode) => {
+                        const active = selectedBusinessRoleCode === roleCode;
+                        const color = getRoleColor(roleCode);
+                        const roleName = roleNameMap.get(roleCode) ?? roleCode;
+                        return (
+                          <button
+                            key={roleCode}
+                            type="button"
+                            disabled={!hasCapability('user.authorize') || isAssigningRole}
+                            onClick={() => { void handleRoleToggle(roleCode); }}
+                            className={cn(
+                              'inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold transition-colors',
+                              active
+                                ? `${color.bgClass} ${color.textClass}`
+                                : 'bg-white text-text-muted hover:bg-muted/35',
+                              (!hasCapability('user.authorize') || isAssigningRole) && 'cursor-not-allowed opacity-55',
+                            )}
+                          >
+                            {roleName}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-6">
                     <UserPermissionSection
                       key={selectedUserDetail.id}
-                      ref={permissionSectionRef}
                       userId={selectedUserDetail.id}
                       userDetail={selectedUserDetail}
                       departments={departments}
@@ -212,7 +258,6 @@ export const UserAuthorizationPage: React.FC = () => {
                       departmentId={selectedUserDetail.department?.id}
                       isSuperuserAccount={Boolean(selectedUserDetail.is_superuser)}
                       dialogContentElement={pageContainerElement}
-                      onPendingChangesChange={setHasPendingChanges}
                     />
                   </div>
                 </div>

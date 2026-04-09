@@ -93,7 +93,6 @@ def test_admin_capabilities_follow_default_menu_and_system_rules():
     assert 'dashboard.admin.view' in permissions
     assert 'dashboard.student.view' not in permissions
     assert 'dashboard.mentor.view' not in permissions
-    assert 'dashboard.team_manager.view' not in permissions
     assert 'task.analytics.view' not in permissions
     assert 'spot_check.view' not in permissions
     assert 'spot_check.create' not in permissions
@@ -156,7 +155,6 @@ def test_student_capabilities_follow_default_menu_and_system_rules():
     assert 'profile.student.view' in permissions
     assert 'profile.student.update' in permissions
     assert 'dashboard.student.view' in permissions
-    assert 'analytics.view' not in permissions
     assert 'activity_log.view' not in permissions
 
 
@@ -169,14 +167,12 @@ def test_team_manager_capabilities_follow_default_menu():
     permissions = _allowed_capabilities(payload)
 
     assert 'knowledge.view' in permissions
-    assert 'analytics.view' in permissions
     assert 'task.view' not in permissions
-    assert 'dashboard.team_manager.view' in permissions
     assert 'activity_log.view' not in permissions
 
 
 @pytest.mark.django_db
-def test_permission_catalog_excludes_system_managed_permissions_but_includes_configurable_analytics():
+def test_permission_catalog_excludes_system_managed_permissions():
     client = APIClient()
     super_user = _create_superuser(employee_id='EMP_AUTH_CAT', username='Catalog Super')
     _authenticate(client, employee_id=super_user.employee_id)
@@ -189,18 +185,19 @@ def test_permission_catalog_excludes_system_managed_permissions_but_includes_con
     assert 'task.view' in permission_codes
     assert 'tag.view' in permission_codes
     assert 'tag.create' in permission_codes
-    assert 'analytics.view' in permission_codes
+    assert 'authorization.role_template.view' not in permission_codes
+    assert 'authorization.role_template.update' not in permission_codes
+    assert 'activity_log.policy.update' not in permission_codes
     assert 'dashboard.student.view' not in permission_codes
     assert 'dashboard.mentor.view' not in permission_codes
-    assert 'dashboard.team_manager.view' not in permission_codes
     assert 'dashboard.admin.view' not in permission_codes
     assert 'profile.student.view' not in permission_codes
     assert 'profile.student.update' not in permission_codes
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
-    assert permission_map['analytics.view']['constraint_summary']
-    assert permission_map['analytics.view']['role_template_visible'] is False
     assert permission_map['task.view']['role_template_visible'] is True
+    assert permission_map['activity_log.view']['role_template_visible'] is False
+    assert permission_map['activity_log.view']['user_authorization_visible'] is False
 
 
 @pytest.mark.django_db
@@ -213,6 +210,40 @@ def test_role_permission_template_unknown_role_returns_not_found():
 
     assert response.status_code == 404
     assert response.data['code'] == 'RESOURCE_NOT_FOUND'
+
+
+@pytest.mark.django_db
+def test_admin_cannot_access_role_permission_template():
+    client = APIClient()
+    admin_user = _create_user_with_role(
+        employee_id='EMP_AUTH_ROLE_TM_ADMIN',
+        username='Role Template Admin',
+        role_code='ADMIN',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.get('/api/authorization/roles/MENTOR/permissions/')
+
+    assert response.status_code == 403
+    assert response.data['code'] == 'PERMISSION_DENIED'
+    assert '仅超级管理员可以查看角色权限模板' in response.data['message']
+
+
+@pytest.mark.django_db
+def test_admin_cannot_access_activity_log_policy():
+    client = APIClient()
+    admin_user = _create_user_with_role(
+        employee_id='EMP_AUTH_POLICY_ADMIN',
+        username='Policy Admin',
+        role_code='ADMIN',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.get('/api/activity-logs/policies/')
+
+    assert response.status_code == 403
+    assert response.data['code'] == 'PERMISSION_DENIED'
+    assert '无权查看日志策略' in response.data['message']
 
 
 @pytest.mark.django_db
@@ -501,14 +532,14 @@ def test_non_admin_role_cannot_create_config_permission_override():
             'effect': 'ALLOW',
             'applies_to_role': 'MENTOR',
             'scope_type': 'ALL',
-            'reason': 'should reject non-admin role',
+            'reason': 'config should not be in user authorization scope',
         },
         format='json',
     )
 
     assert response.status_code == 400
     assert response.data['code'] == 'VALIDATION_ERROR'
-    assert '配置管理权限仅支持管理员角色' in response.data['message']
+    assert '配置管理模块不在用户授权范围内' in response.data['message']
     assert not UserPermissionOverride.objects.filter(
         user=mentor_user,
         permission__code='activity_log.view',
@@ -524,12 +555,9 @@ def test_dashboard_endpoints_follow_current_role_system_permissions():
     _authenticate(client, employee_id=mentor_user.employee_id)
 
     student_dashboard_response = client.get('/api/dashboard/student/')
-    team_manager_dashboard_response = client.get('/api/dashboard/team-manager/')
 
     assert student_dashboard_response.status_code == 403
     assert student_dashboard_response.data['code'] == 'PERMISSION_DENIED'
-    assert team_manager_dashboard_response.status_code == 403
-    assert team_manager_dashboard_response.data['code'] == 'PERMISSION_DENIED'
 
 
 @pytest.mark.django_db
@@ -554,6 +582,5 @@ def test_super_admin_capabilities_include_all_system_managed_codes():
     assert 'dashboard.admin.view' in permissions
     assert 'dashboard.student.view' in permissions
     assert 'dashboard.mentor.view' in permissions
-    assert 'dashboard.team_manager.view' in permissions
     assert 'submission.answer' in permissions
     assert 'activity_log.view' in permissions

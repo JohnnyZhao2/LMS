@@ -21,6 +21,7 @@ interface UserSelectListProps {
   selectionMode?: 'single' | 'multiple';
   appearance?: 'panel' | 'plain';
   layout?: 'list' | 'grid';
+  density?: 'regular' | 'compact';
   emptyText?: string;
   isLoading?: boolean;
   loadingText?: string;
@@ -96,6 +97,7 @@ export function UserSelectList({
   selectionMode = 'multiple',
   appearance = 'plain',
   layout = 'list',
+  density = 'regular',
   emptyText = '暂无成员',
   isLoading = false,
   loadingText = '加载中...',
@@ -110,7 +112,9 @@ export function UserSelectList({
         appearance === 'panel'
           ? layout === 'grid'
             ? 'px-0 py-0'
-            : 'p-2'
+            : density === 'compact'
+              ? 'p-1.5'
+              : 'p-2'
           : 'overscroll-contain px-2.5 py-2',
         className,
       )}
@@ -168,11 +172,13 @@ export function UserSelectList({
                   onSelect(item.id);
                 }}
                 className={cn(
-                  'group relative flex w-full items-center gap-3 text-left transition-all duration-150',
+                  'group relative flex w-full items-center text-left transition-all duration-150',
                   layout === 'grid'
                     ? 'min-h-[68px] rounded-xl border border-border/70 px-3 py-2.5'
                     : appearance === 'panel'
-                      ? 'rounded-lg px-3 py-2.5'
+                      ? density === 'compact'
+                        ? 'gap-2.5 rounded-md px-2.5 py-1.5'
+                        : 'gap-3 rounded-lg px-3 py-2.5'
                       : 'rounded-lg border px-2.5 py-2',
                   appearance === 'panel'
                     ? layout === 'grid'
@@ -227,15 +233,22 @@ export function UserSelectList({
                     <UserAvatar
                       avatarKey={item.avatarKey}
                       name={item.name}
-                      size={appearance === 'panel' ? 'md' : 'sm'}
-                      className={cn('shrink-0', appearance === 'panel' && 'h-9 w-9')}
+                      size={appearance === 'panel' ? (density === 'compact' ? 'sm' : 'md') : 'sm'}
+                      className={cn(
+                        'shrink-0',
+                        appearance === 'panel' && (density === 'compact' ? 'h-8 w-8' : 'h-9 w-9'),
+                      )}
                     />
 
                     <div className="min-w-0 flex-1">
                       <p
                         className={cn(
                           'truncate font-medium leading-tight',
-                          appearance === 'panel' ? 'text-[13px] text-foreground' : 'text-[12px]',
+                          appearance === 'panel'
+                            ? density === 'compact'
+                              ? 'text-[12px] text-foreground'
+                              : 'text-[13px] text-foreground'
+                            : 'text-[12px]',
                           checked && appearance === 'plain' ? 'text-primary' : '',
                         )}
                       >
@@ -244,7 +257,11 @@ export function UserSelectList({
                       <p
                         className={cn(
                           'truncate leading-tight',
-                          appearance === 'panel' ? 'text-[11px] text-text-muted' : 'text-[10px] text-slate-400',
+                          appearance === 'panel'
+                            ? density === 'compact'
+                              ? 'text-[10px] text-text-muted'
+                              : 'text-[11px] text-text-muted'
+                            : 'text-[10px] text-slate-400',
                         )}
                       >
                         {item.meta ?? '未填写工号'}

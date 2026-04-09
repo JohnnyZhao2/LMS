@@ -1,4 +1,4 @@
-import { Check, Loader2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
 import { isPermissionLockedForRole } from '@/features/authorization/constants/permission-constraints';
 import { cn } from '@/lib/utils';
@@ -83,12 +83,6 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
           <h3 className="text-lg font-semibold tracking-[-0.03em] text-foreground">
             {activeGroup.modulePresentation.label}
           </h3>
-          {savingRoleCodes.length > 0 ? (
-            <div className="inline-flex items-center gap-1.5 text-xs text-text-muted">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>正在同步</span>
-            </div>
-          ) : null}
         </div>
 
         <div className="border-t border-border/60">

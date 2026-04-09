@@ -68,10 +68,12 @@ export const useReplaceRolePermissionTemplate = () => {
         role_code: roleCode,
         permission_codes: permissionCodes,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['authorization', 'role-template'] });
-      queryClient.invalidateQueries({ queryKey: ['authorization', 'permission-catalog'] });
-      queryClient.invalidateQueries({ queryKey: ['authorization', 'user-overrides'] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['authorization', 'role-template'] }),
+        queryClient.invalidateQueries({ queryKey: ['authorization', 'permission-catalog'] }),
+        queryClient.invalidateQueries({ queryKey: ['authorization', 'user-overrides'] }),
+      ]);
     },
   });
 };
@@ -96,28 +98,18 @@ export const useUserPermissionOverrides = (
 };
 
 export const useCreateUserPermissionOverride = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ userId, data }: CreateUserOverridePayload) =>
       apiClient.post<UserPermissionOverride>(`/authorization/users/${userId}/overrides/`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['authorization', 'user-overrides'] });
-    },
   });
 };
 
 export const useRevokeUserPermissionOverride = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
       apiClient.post<UserPermissionOverride>(
         `/authorization/users/${userId}/overrides/${overrideId}/revoke/`,
         { revoke_reason: revokeReason ?? '' },
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['authorization', 'user-overrides'] });
-    },
   });
 };

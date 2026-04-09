@@ -19,7 +19,6 @@ export const AuthorizationCenterPage: React.FC = () => {
   const canViewRoleTemplate = hasCapability('authorization.role_template.view') || hasCapability('authorization.role_template.update');
   const canUpdateRoleTemplate = hasCapability('authorization.role_template.update');
 
-  const [draftPermissionCodes, setDraftPermissionCodes] = useState<Partial<Record<RoleCode, string[]>>>({});
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
@@ -40,10 +39,10 @@ export const AuthorizationCenterPage: React.FC = () => {
     () => Object.fromEntries(
       ROLE_TEMPLATE_ORDER.map((roleCode, index) => [
         roleCode,
-        draftPermissionCodes[roleCode] ?? roleTemplateQueries[index]?.data?.permission_codes ?? [],
+        roleTemplateQueries[index]?.data?.permission_codes ?? [],
       ]),
     ) as Partial<Record<RoleCode, string[]>>,
-    [draftPermissionCodes, roleTemplateQueries],
+    [roleTemplateQueries],
   );
   const isLoadingTemplates = roleTemplateQueries.some((query) => query.isLoading);
   const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
@@ -65,10 +64,6 @@ export const AuthorizationCenterPage: React.FC = () => {
       return;
     }
 
-    setDraftPermissionCodes((previousDrafts) => ({
-      ...previousDrafts,
-      [roleCode]: normalizedNextCodes,
-    }));
     setSavingRoleCodes((previous) => (previous.includes(roleCode) ? previous : [...previous, roleCode]));
 
     try {
@@ -76,12 +71,12 @@ export const AuthorizationCenterPage: React.FC = () => {
         roleCode,
         permissionCodes: normalizedNextCodes,
       });
-      await refreshUser();
+      const roleIndex = ROLE_TEMPLATE_ORDER.indexOf(roleCode);
+      await Promise.all([
+        refreshUser(),
+        roleIndex >= 0 ? roleTemplateQueries[roleIndex]?.refetch() : Promise.resolve(),
+      ]);
     } catch (error) {
-      setDraftPermissionCodes((previousDrafts) => ({
-        ...previousDrafts,
-        [roleCode]: previousCodes,
-      }));
       showApiError(error);
     } finally {
       setSavingRoleCodes((previous) => previous.filter((code) => code !== roleCode));

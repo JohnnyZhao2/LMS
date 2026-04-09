@@ -16,7 +16,7 @@ const CATEGORY_LABELS: Record<ActivityLogType, string> = {
 export const ActivityLogPolicyPanel: React.FC = () => {
   const { hasCapability } = useAuth();
   const canUpdatePolicies = hasCapability('activity_log.policy.update');
-  const canViewPolicies = hasCapability('activity_log.view') || canUpdatePolicies;
+  const canViewPolicies = canUpdatePolicies;
 
   const { data: policies = [], isLoading } = useActivityLogPolicies(canViewPolicies);
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateActivityLogPolicy();

@@ -290,7 +290,7 @@ export const UserList: React.FC = () => {
               >
                 <Pencil className="mr-2 h-4 w-4" /> 编辑资料
               </DropdownMenuItem>
-              {canManageUserAuthorization && (
+              {canManageUserAuthorization && !row.original.is_superuser && (
                 <DropdownMenuItem
                   className="rounded-md px-3 py-2 text-sm font-medium cursor-pointer"
                   onClick={() => roleNavigate(`users/authorization?user_id=${row.original.id}`)}

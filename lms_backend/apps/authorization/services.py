@@ -40,6 +40,8 @@ from .selectors import (
     list_role_scope_types,
 )
 
+REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
+
 
 class AuthorizationService(BaseService):
     """Unified authorization service."""
@@ -51,17 +53,6 @@ class AuthorizationService(BaseService):
     @staticmethod
     def _can_manage_config_permissions(role_code: Optional[str]) -> bool:
         return role_code == CONFIG_PERMISSION_MANAGEABLE_ROLE
-
-    @classmethod
-    def _is_config_permission_locked_for_role(
-        cls,
-        permission_code: str,
-        role_code: Optional[str],
-    ) -> bool:
-        return (
-            permission_code in CONFIG_MODULE_PERMISSION_CODES
-            and not cls._can_manage_config_permissions(role_code)
-        )
 
     @staticmethod
     def _get_system_role_permission_code_set(role_code: str) -> Set[str]:
@@ -185,7 +176,7 @@ class AuthorizationService(BaseService):
     ) -> Optional[str]:
         if permission_code in SYSTEM_MANAGED_PERMISSION_CODES:
             return None
-        if self._is_config_permission_locked_for_role(permission_code, current_role):
+        if permission_code in CONFIG_MODULE_PERMISSION_CODES:
             return None
 
         if not acting_user:
@@ -390,14 +381,17 @@ class AuthorizationService(BaseService):
         role = self.validate_not_none(self.validate_role_code(role_code), f'角色 {role_code} 不存在')
 
         normalized_codes = sorted(self._normalize_role_permission_codes(role_code, requested_codes))
-        permission_objects = get_permissions_by_codes(normalized_codes)
+        system_codes = set(normalized_codes) & set(SYSTEM_MANAGED_PERMISSION_CODES)
+        persisted_codes = sorted(set(normalized_codes) - system_codes)
+        permission_objects = get_permissions_by_codes(persisted_codes)
         resolved_codes = {item.code for item in permission_objects}
-        missing_codes = sorted(set(normalized_codes) - resolved_codes)
+        missing_codes = sorted(set(persisted_codes) - resolved_codes)
         if missing_codes:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message=f'存在无效权限编码: {missing_codes}',
             )
+        resolved_codes |= system_codes
 
         default_codes = self._get_role_configurable_default_permission_code_set(role_code)
         requested_configurable_codes = resolved_codes - self._get_system_role_permission_code_set(role_code)
@@ -449,9 +443,9 @@ class AuthorizationService(BaseService):
         return [
             override
             for override in overrides
-            if not self._is_config_permission_locked_for_role(
-                override.permission.code,
-                override.applies_to_role or None,
+            if (
+                override.permission.code in REGISTERED_PERMISSION_CODES
+                and override.permission.code not in CONFIG_MODULE_PERMISSION_CODES
             )
         ]
 
@@ -477,6 +471,11 @@ class AuthorizationService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='超管账号为专有角色，不支持配置用户权限覆盖',
             )
+        if permission_code not in REGISTERED_PERMISSION_CODES:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'权限 {permission_code} 已移除或未注册，不支持配置用户权限覆盖',
+            )
         permission = self.validate_not_none(
             Permission.objects.filter(code=permission_code, is_active=True).first(),
             f'权限 {permission_code} 不存在',
@@ -486,17 +485,17 @@ class AuthorizationService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message=f'权限 {permission.code} 属于系统保留权限，不支持手动覆盖',
             )
+        if permission.code in CONFIG_MODULE_PERMISSION_CODES:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='配置管理模块不在用户授权范围内，请通过超管入口配置',
+            )
 
         normalized_applies_to_role = applies_to_role or None
         if normalized_applies_to_role == 'STUDENT':
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='学员角色为固定工作台角色，不支持配置用户权限覆盖',
-            )
-        if self._is_config_permission_locked_for_role(permission.code, normalized_applies_to_role):
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='配置管理权限仅支持管理员角色下配置',
             )
 
         normalized_scope_type = scope_type

@@ -4,9 +4,7 @@ Split into:
 - management.py: User management views (CRUD, roles, mentors, departments)
 """
 from .management import (
-    DepartmentMembersListView,
     DepartmentsListView,
-    MenteesListView,
     MentorsListView,
     RolesListView,
     UserActivateView,
@@ -28,8 +26,6 @@ __all__ = [
     'UserAvatarUpdateView',
     'UserAssignRolesView',
     'UserAssignMentorView',
-    'MenteesListView',
-    'DepartmentMembersListView',
     'MentorsListView',
     'DepartmentsListView',
     'RolesListView',

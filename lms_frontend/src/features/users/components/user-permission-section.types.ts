@@ -10,6 +10,8 @@ export interface ScopeFilterOption {
 
 export interface PermissionState {
   checked: boolean;
+  enableBlockedReason: string | null;
+  disableBlockedReason: string | null;
   fromTemplate: boolean;
   allowOverrides: UserPermissionOverride[];
   denyOverrides: UserPermissionOverride[];

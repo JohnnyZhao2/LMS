@@ -2,7 +2,7 @@ import pytest
 from rest_framework.test import APIClient
 from typing import Optional
 
-from apps.authorization.models import Permission, UserPermissionOverride
+from apps.authorization.models import Permission, RolePermission, UserPermissionOverride
 from apps.spot_checks.models import SpotCheck, SpotCheckItem
 from apps.users.models import Department, Role, User, UserRole
 
@@ -29,6 +29,35 @@ def _create_superuser(*, employee_id: str, username: str, department: Department
         is_staff=True,
         is_superuser=True,
     )
+
+
+def _grant_role_permissions(*, role_codes: list[str], permission_codes: list[str]) -> None:
+    permissions = list(Permission.objects.filter(code__in=permission_codes))
+    for role_code in role_codes:
+        role, _ = Role.objects.get_or_create(code=role_code, defaults={'name': role_code})
+        for permission in permissions:
+            RolePermission.objects.get_or_create(role=role, permission=permission)
+
+
+def _remove_student_role(user: User) -> None:
+    UserRole.objects.filter(user=user, role__code='STUDENT').delete()
+
+
+def _create_non_student_user(
+    *,
+    employee_id: str,
+    username: str,
+    department: Department,
+    role_code: str,
+) -> User:
+    user = _create_user(
+        employee_id=employee_id,
+        username=username,
+        department=department,
+        role_codes=[role_code],
+    )
+    _remove_student_role(user)
+    return user
 
 
 def _extract_list_items(response):
@@ -119,6 +148,131 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
     student_ids = {item['id'] for item in response.data['data']}
     assert mentee.id not in student_ids
     assert extra_student.id in student_ids
+
+
+@pytest.mark.django_db
+def test_user_view_scope_supports_mentees_and_non_student_overrides():
+    client = APIClient()
+    department = Department.objects.create(name='用户查看范围部门', code='SCOPE_RANGE_D5')
+
+    _grant_role_permissions(role_codes=['MENTOR', 'ADMIN'], permission_codes=['user.view'])
+
+    mentor = _create_user(
+        employee_id='SCOPE_USER_VIEW_MENTOR',
+        username='用户查看导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    admin = _create_user(
+        employee_id='SCOPE_USER_VIEW_ADMIN',
+        username='用户查看管理员',
+        department=department,
+        role_codes=['ADMIN'],
+    )
+    mentee = _create_user(
+        employee_id='SCOPE_USER_VIEW_STUDENT',
+        username='名下学生',
+        department=department,
+    )
+    mentee_non_student = _create_non_student_user(
+        employee_id='SCOPE_USER_VIEW_NST_1',
+        username='名下管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+    outsider_non_student = _create_non_student_user(
+        employee_id='SCOPE_USER_VIEW_NST_2',
+        username='额外管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+
+    mentee.mentor = mentor
+    mentee.save(update_fields=['mentor'])
+    mentee_non_student.mentor = mentor
+    mentee_non_student.save(update_fields=['mentor'])
+
+    client.force_authenticate(user=mentor)
+
+    response = client.get('/api/users/')
+    assert response.status_code == 200
+    visible_user_ids = {item['id'] for item in response.data['data']}
+    assert mentee.id in visible_user_ids
+    assert mentee_non_student.id in visible_user_ids
+    assert outsider_non_student.id not in visible_user_ids
+
+    user_view_permission = Permission.objects.get(code='user.view')
+    UserPermissionOverride.objects.create(
+        user=mentor,
+        permission=user_view_permission,
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='EXPLICIT_USERS',
+        scope_user_ids=[outsider_non_student.id],
+        granted_by=admin,
+    )
+
+    response = client.get('/api/users/')
+    assert response.status_code == 200
+    visible_user_ids = {item['id'] for item in response.data['data']}
+    assert outsider_non_student.id in visible_user_ids
+
+    UserPermissionOverride.objects.create(
+        user=mentor,
+        permission=user_view_permission,
+        effect='DENY',
+        applies_to_role='MENTOR',
+        scope_type='EXPLICIT_USERS',
+        scope_user_ids=[mentee_non_student.id],
+        granted_by=admin,
+    )
+
+    response = client.get('/api/users/')
+    assert response.status_code == 200
+    visible_user_ids = {item['id'] for item in response.data['data']}
+    assert mentee.id in visible_user_ids
+    assert mentee_non_student.id not in visible_user_ids
+    assert outsider_non_student.id in visible_user_ids
+
+
+@pytest.mark.django_db
+def test_user_view_detail_respects_mentee_scope_for_non_student_users():
+    client = APIClient()
+    department = Department.objects.create(name='用户详情范围部门', code='SCOPE_RANGE_D6')
+
+    _grant_role_permissions(role_codes=['MENTOR'], permission_codes=['user.view'])
+
+    mentor = _create_user(
+        employee_id='SCOPE_USER_DETAIL_MENTOR',
+        username='详情导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    mentee_non_student = _create_non_student_user(
+        employee_id='SCOPE_USER_DETAIL_NST_1',
+        username='详情名下管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+    outsider_non_student = _create_non_student_user(
+        employee_id='SCOPE_USER_DETAIL_NST_2',
+        username='详情额外管理员',
+        department=department,
+        role_code='ADMIN',
+    )
+
+    mentee_non_student.mentor = mentor
+    mentee_non_student.save(update_fields=['mentor'])
+
+    client.force_authenticate(user=mentor)
+
+    response = client.get(f'/api/users/{mentee_non_student.id}/')
+    assert response.status_code == 200
+    assert response.data['data']['id'] == mentee_non_student.id
+
+    response = client.get(f'/api/users/{outsider_non_student.id}/')
+    assert response.status_code == 403
+    assert response.data['code'] == 'PERMISSION_DENIED'
 
 
 @pytest.mark.django_db

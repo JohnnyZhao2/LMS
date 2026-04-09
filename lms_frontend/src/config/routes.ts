@@ -17,7 +17,6 @@ export const ROUTES = {
   QUESTIONS: '/questions',
   USERS: '/users',
   USER_AUTHORIZATION: '/users/authorization',
-  ANALYTICS: '/analytics',
   QUIZ: '/quiz',
   GRADING_CENTER: '/grading-center',
 } as const;

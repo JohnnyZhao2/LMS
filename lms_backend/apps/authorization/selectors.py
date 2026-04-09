@@ -5,12 +5,17 @@ from typing import Iterable, List, Optional
 from django.db.models import Q
 from django.utils import timezone
 
-from .constants import SYSTEM_MANAGED_PERMISSION_CODES
+from .constants import PERMISSION_CATALOG, SYSTEM_MANAGED_PERMISSION_CODES
 from .models import Permission, PermissionScopeRule, UserPermissionOverride
+
+REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
 
 
 def list_permissions(module: Optional[str] = None, include_system_managed: bool = False) -> List[Permission]:
-    queryset = Permission.objects.filter(is_active=True)
+    queryset = Permission.objects.filter(
+        is_active=True,
+        code__in=REGISTERED_PERMISSION_CODES,
+    )
     if module:
         queryset = queryset.filter(module=module)
     if not include_system_managed:
@@ -52,7 +57,13 @@ def get_permissions_by_codes(permission_codes: Iterable[str]) -> List[Permission
     codes = [code for code in permission_codes if code]
     if not codes:
         return []
-    return list(Permission.objects.filter(code__in=codes, is_active=True))
+    registered_codes = [code for code in codes if code in REGISTERED_PERMISSION_CODES]
+    if not registered_codes:
+        return []
+    return list(Permission.objects.filter(
+        code__in=registered_codes,
+        is_active=True,
+    ))
 
 
 def list_permission_scope_types(*, permission_code: str, role_code: str) -> List[str]:
