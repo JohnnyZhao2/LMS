@@ -1,8 +1,15 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Tag
+
+TagScope = Literal['knowledge', 'question']
+
+TAG_SCOPE_CONFIG: dict[TagScope, tuple[Literal['allow_knowledge', 'allow_question'], str, str]] = {
+    'knowledge': ('allow_knowledge', 'tag_ids', '包含无效的知识标签ID'),
+    'question': ('allow_question', 'tag_ids', '包含无效的题目标签ID'),
+}
 
 
 def get_space_tag_or_error(space_tag_id: int) -> Tag:
@@ -50,3 +57,30 @@ def get_tag_ids_or_error(
         seen_ids.add(tag_id)
         deduped_tag_ids.append(tag_id)
     return deduped_tag_ids
+
+
+def get_scoped_tag_ids_or_error(tag_ids: list[int], *, scope: TagScope) -> list[int]:
+    applicable_field, field_name, invalid_message = TAG_SCOPE_CONFIG[scope]
+    return get_tag_ids_or_error(
+        tag_ids,
+        applicable_field=applicable_field,
+        invalid_message=f'{field_name} {invalid_message}',
+    )
+
+
+def assign_space_tag(resource, space_tag_id: Optional[int], *, clear_when_none: bool = False) -> None:
+    if space_tag_id is None:
+        if not clear_when_none or resource.space_tag_id is None:
+            return
+        resource.space_tag = None
+        resource.save(update_fields=['space_tag'])
+        return
+
+    resource.space_tag = get_space_tag_or_error(space_tag_id)
+    resource.save(update_fields=['space_tag'])
+
+
+def assign_scoped_tags(resource, tag_ids: list[int], *, scope: TagScope) -> list[int]:
+    normalized_tag_ids = get_scoped_tag_ids_or_error(tag_ids, scope=scope)
+    resource.tags.set(normalized_tag_ids)
+    return normalized_tag_ids

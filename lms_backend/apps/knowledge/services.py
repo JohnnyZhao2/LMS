@@ -13,7 +13,11 @@ from django.db import transaction
 from django.utils.html import strip_tags
 from django.utils.html import escape
 
-from apps.tags.validators import get_space_tag_or_error, get_tag_ids_or_error
+from apps.tags.validators import (
+    assign_scoped_tags,
+    assign_space_tag,
+    get_scoped_tag_ids_or_error,
+)
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -62,7 +66,7 @@ class KnowledgeService(BaseService):
         filters: dict = None,
         search: str = None,
         ordering: str = '-updated_at'
-    ) -> List[Knowledge]:
+    ):
         """
         获取所有知识文档（只返回当前版本）
         Args:
@@ -72,8 +76,7 @@ class KnowledgeService(BaseService):
         Returns:
             知识文档列表
         """
-        qs = get_knowledge_queryset(filters=filters, search=search, ordering=ordering)
-        return list(qs)
+        return get_knowledge_queryset(filters=filters, search=search, ordering=ordering)
 
     @transaction.atomic
     @log_content_action('knowledge', 'create', 'v{version_number}')
@@ -99,7 +102,8 @@ class KnowledgeService(BaseService):
         # 3. 创建知识
         knowledge = Knowledge.objects.create(**data)
         # 4. 设置标签
-        self._set_tags(knowledge, space_tag_id, tag_ids)
+        assign_space_tag(knowledge, space_tag_id)
+        assign_scoped_tags(knowledge, tag_ids, scope='knowledge')
         return knowledge
 
     @transaction.atomic
@@ -133,6 +137,7 @@ class KnowledgeService(BaseService):
         tag_ids_provided = 'tag_ids' in data
         space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
         tag_ids = data.pop('tag_ids', None) if tag_ids_provided else None
+        current_tag_ids = list(knowledge.tags.values_list('id', flat=True))
 
         changed_fields = {
             key: value
@@ -140,14 +145,14 @@ class KnowledgeService(BaseService):
             if getattr(knowledge, key, None) != value
         }
         normalized_tag_ids = (
-            self._get_tag_ids_or_error(tag_ids or [])
+            get_scoped_tag_ids_or_error(tag_ids or [], scope='knowledge')
             if tag_ids_provided
-            else list(knowledge.tags.values_list('id', flat=True))
+            else current_tag_ids
         )
         space_changed = space_tag_provided and space_tag_id != knowledge.space_tag_id
         tags_changed = (
             tag_ids_provided
-            and set(normalized_tag_ids) != set(knowledge.tags.values_list('id', flat=True))
+            and set(normalized_tag_ids) != set(current_tag_ids)
         )
         has_changes = bool(changed_fields or space_changed or tags_changed)
         if not has_changes:
@@ -168,12 +173,7 @@ class KnowledgeService(BaseService):
         knowledge.save(update_fields=list(changed_fields.keys()))
 
         if space_changed:
-            if space_tag_id is None:
-                knowledge.space_tag = None
-                knowledge.save(update_fields=['space_tag'])
-            else:
-                knowledge.space_tag = get_space_tag_or_error(space_tag_id)
-                knowledge.save(update_fields=['space_tag'])
+            assign_space_tag(knowledge, space_tag_id, clear_when_none=True)
         if tags_changed:
             knowledge.tags.set(normalized_tag_ids)
         return knowledge
@@ -213,11 +213,7 @@ class KnowledgeService(BaseService):
         Returns:
             更新后的阅读次数
         """
-        knowledge = get_knowledge_by_id(pk)
-        self.validate_not_none(
-            knowledge,
-            f'知识文档 {pk} 不存在'
-        )
+        knowledge = self.get_by_id(pk)
         return knowledge.increment_view_count()
 
     def _validate_knowledge_data(
@@ -232,26 +228,6 @@ class KnowledgeService(BaseService):
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='知识文档必须填写正文内容'
             )
-
-    def _set_tags(
-        self,
-        knowledge: Knowledge,
-        space_tag_id: Optional[int],
-        tag_ids: Optional[List[int]],
-    ) -> None:
-        """设置标签"""
-        if space_tag_id is not None:
-            knowledge.space_tag = get_space_tag_or_error(space_tag_id)
-            knowledge.save(update_fields=['space_tag'])
-        if tag_ids is not None:
-            knowledge.tags.set(self._get_tag_ids_or_error(tag_ids))
-
-    def _get_tag_ids_or_error(self, tag_ids: List[int]) -> List[int]:
-        return get_tag_ids_or_error(
-            tag_ids,
-            applicable_field='allow_knowledge',
-            invalid_message='包含无效的知识标签ID',
-        )
 
     def _is_referenced_by_task(self, knowledge_id: int) -> bool:
         """检查知识文档是否被任务引用"""
@@ -285,11 +261,8 @@ class KnowledgeService(BaseService):
         )
         deactivate_current_version(Knowledge, source.resource_uuid)
         new_version = Knowledge.objects.create(**new_version_data)
-        self._set_tags(
-            new_version,
-            space_tag_id,
-            tag_ids,
-        )
+        assign_space_tag(new_version, space_tag_id, clear_when_none=True)
+        assign_scoped_tags(new_version, tag_ids, scope='knowledge')
         return new_version
 
 

@@ -3,7 +3,6 @@ Knowledge models for LMS.
 Implements:
 - Knowledge: 统一知识文档
 """
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils.html import strip_tags
@@ -75,13 +74,6 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
         ]
     def __str__(self):
         return self.title
-    def clean(self):
-        """验证知识文档数据"""
-        super().clean()
-        if not strip_tags(self.content).strip():
-            raise ValidationError({
-                'content': '知识文档必须填写正文内容'
-            })
     def increment_view_count(self):
         """
         增加知识文档的阅读次数
@@ -115,24 +107,3 @@ class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResource
                 return preview_text[:150] + '...'
             return preview_text
         return ''
-    @property
-    def table_of_contents(self):
-        """
-        从 HTML 内容中提取目录结构（用于卡片预览显示）
-        返回格式: [{"level": 1, "text": "标题1"}, {"level": 2, "text": "标题2"}, ...]
-        从 HTML 内容中解析 h1/h2/h3 标签。
-        """
-        import re
-        if not self.content:
-            return []
-        toc = []
-        # 匹配 HTML 标题标签 <h1>~<h3>
-        pattern = r'<h([1-3])[^>]*>(.*?)</h\1>'
-        matches = re.findall(pattern, self.content, re.IGNORECASE | re.DOTALL)
-        for level_str, text in matches:
-            level = int(level_str)
-            # 清除 HTML 标签，只保留纯文本
-            clean_text = strip_tags(text).strip()
-            if clean_text and len(toc) < 10:
-                toc.append({'level': level, 'text': clean_text})
-        return toc

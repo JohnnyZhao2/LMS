@@ -497,47 +497,55 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             )}
 
             {focusState && (
-                <KnowledgeFocusModal
-                    mode={focusState.mode}
-                    knowledgeId={focusState.mode === 'detail' ? focusState.knowledgeId : undefined}
-                    closeOnExitFocus={focusState.mode === 'detail' ? focusState.closeOnExitFocus : undefined}
-                    initialContent={focusState.mode === 'create' ? focusState.initialContent : undefined}
-                    initialSpaceTagId={focusState.mode === 'create' ? focusState.initialSpaceTagId : undefined}
-                    taskId={taskId || undefined}
-                    taskKnowledgeId={taskKnowledgeId || undefined}
-                    onClose={() => {
-                        const currentState = focusState;
-                        setFocusState(null);
-                        if (isCreateRoute) {
-                            roleNavigate('knowledge');
-                            return;
-                        }
-                        if (currentState.mode === 'detail' && currentState.closeOnExitFocus) {
+                focusState.mode === 'create' ? (
+                    <KnowledgeFocusModal
+                        initialContent={focusState.initialContent}
+                        initialSpaceTagId={focusState.initialSpaceTagId}
+                        onClose={() => {
+                            setFocusState(null);
+                            if (isCreateRoute) {
+                                roleNavigate('knowledge');
+                            }
+                        }}
+                        onCreated={(id) => {
+                            refetch();
+                            setFocusState(null);
+                            setDetailStartEditing(false);
+                            setDetailId(id);
+                            if (isCreateRoute) {
+                                roleNavigate(`knowledge#${id}`);
+                                return;
+                            }
+                            syncDetailHash(id);
+                        }}
+                    />
+                ) : (
+                    <KnowledgeDetailModal
+                        knowledgeId={focusState.knowledgeId}
+                        startInFocus
+                        forceFocus
+                        closeOnExitFocus={focusState.closeOnExitFocus}
+                        taskId={taskId || undefined}
+                        taskKnowledgeId={taskKnowledgeId || undefined}
+                        onClose={() => {
+                            const currentState = focusState;
+                            setFocusState(null);
+                            if (currentState.closeOnExitFocus) {
+                                syncDetailHash(null);
+                            }
+                        }}
+                        onDelete={(id) => {
+                            setDeleteTarget(id);
+                            setFocusState(null);
+                            if (routeKnowledgeIdNumber) {
+                                navigateFromLegacyRoute();
+                                return;
+                            }
                             syncDetailHash(null);
-                        }
-                    }}
-                    onDelete={(id) => {
-                        setDeleteTarget(id);
-                        setFocusState(null);
-                        if (routeKnowledgeIdNumber) {
-                            navigateFromLegacyRoute();
-                            return;
-                        }
-                        syncDetailHash(null);
-                    }}
-                    onCreated={(id) => {
-                        refetch();
-                        setFocusState(null);
-                        setDetailStartEditing(false);
-                        setDetailId(id);
-                        if (isCreateRoute) {
-                            roleNavigate(`knowledge#${id}`);
-                            return;
-                        }
-                        syncDetailHash(id);
-                    }}
-                    onUpdated={() => refetch()}
-                />
+                        }}
+                        onUpdated={() => refetch()}
+                    />
+                )
             )}
 
             <SpaceTagQuickCreateDialog

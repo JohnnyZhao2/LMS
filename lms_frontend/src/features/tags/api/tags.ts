@@ -31,7 +31,6 @@ interface MergeTagPayload {
 
 const invalidateTagRelatedQueries = (
   queryClient: ReturnType<typeof useQueryClient>,
-  { includeKnowledgeVariants = false }: { includeKnowledgeVariants?: boolean } = {},
 ) => {
   queryClient.invalidateQueries({ queryKey: ['tags'] });
   queryClient.invalidateQueries({ queryKey: ['questions'] });
@@ -39,11 +38,6 @@ const invalidateTagRelatedQueries = (
   queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
   queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
   queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
-  if (!includeKnowledgeVariants) {
-    return;
-  }
-  queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
-  queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
 };
 
 export const useTags = (params: GetTagsParams = {}) => {
@@ -100,7 +94,7 @@ export const useMergeTag = () => {
     mutationFn: (data: MergeTagPayload) =>
       apiClient.post<Tag>('/tags/merge/', data),
     onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient, { includeKnowledgeVariants: true });
+      invalidateTagRelatedQueries(queryClient);
     },
   });
 };
@@ -111,7 +105,7 @@ export const useDeleteTag = () => {
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/tags/${id}/`),
     onSuccess: () => {
-      invalidateTagRelatedQueries(queryClient, { includeKnowledgeVariants: true });
+      invalidateTagRelatedQueries(queryClient);
     },
   });
 };

@@ -59,7 +59,6 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     content_preview = serializers.CharField(read_only=True)
-    table_of_contents = serializers.ListField(read_only=True)
     related_links = RelatedLinkSerializer(many=True, read_only=True)
     class Meta:
         model = Knowledge
@@ -69,8 +68,8 @@ class KnowledgeListSerializer(serializers.ModelSerializer):
             'is_current',
             'space_tag',
             'content', 'related_links',
-            'view_count', 'content_preview', 'table_of_contents',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at'
+            'view_count', 'content_preview',
+            'created_by_name', 'updated_by_name', 'created_at', 'updated_at'
         ]
 
 
@@ -83,7 +82,6 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
     tags = TagSimpleSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
-    table_of_contents = serializers.ListField(read_only=True)
     related_links = RelatedLinkSerializer(many=True, read_only=True)
     class Meta:
         model = Knowledge
@@ -94,9 +92,9 @@ class KnowledgeDetailSerializer(serializers.ModelSerializer):
             'space_tag', 'tags',
             'content', 'related_links',
             # 元数据
-            'view_count', 'table_of_contents',
-            'created_by', 'created_by_name', 'created_at',
-            'updated_by', 'updated_by_name', 'updated_at'
+            'view_count',
+            'created_by_name', 'created_at',
+            'updated_by_name', 'updated_at'
         ]
 
 

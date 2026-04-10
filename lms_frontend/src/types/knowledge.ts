@@ -10,39 +10,6 @@ export interface RelatedLink {
 }
 
 /**
- * 学员知识列表项
- */
-export interface StudentKnowledgeList {
-  id: number;
-  title: string;
-  content_preview?: string;
-  space_tag_name?: string;
-  updated_by_name?: string;
-  created_by_name?: string;
-  updated_at: string;
-  view_count: number;
-}
-
-/**
- * 学员知识详情
- */
-export interface StudentKnowledgeDetail {
-  id: number;
-  title: string;
-  content?: string;
-  content_preview?: string;
-  table_of_contents?: TableOfContentsItem[];
-  space_tag?: SimpleTag | null;
-  tags?: SimpleTag[];
-  created_by_name?: string;
-  updated_by_name?: string;
-  related_links?: RelatedLink[];
-  view_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
  * 最新知识
  */
 export interface LatestKnowledge {
@@ -50,14 +17,6 @@ export interface LatestKnowledge {
   title: string;
   content_preview?: string;
   updated_at: string;
-}
-
-/**
- * 目录项
- */
-export interface TableOfContentsItem {
-  level: number;
-  text: string;
 }
 
 /**
@@ -72,10 +31,7 @@ export interface KnowledgeListItem {
   space_tag?: SimpleTag | null;
   content: string;
   content_preview?: string;
-  table_of_contents?: TableOfContentsItem[];
-  created_by?: number;
   created_by_name?: string;
-  updated_by?: number;
   updated_by_name?: string;
   view_count: number;
   related_links?: RelatedLink[];
@@ -94,11 +50,8 @@ export interface KnowledgeDetail {
   is_current: boolean;
   space_tag?: SimpleTag | null;
   content: string;
-  table_of_contents?: TableOfContentsItem[];
   tags: SimpleTag[];
-  created_by?: number;
   created_by_name?: string;
-  updated_by?: number;
   updated_by_name?: string;
   view_count: number;
   related_links?: RelatedLink[];
@@ -112,7 +65,6 @@ export interface KnowledgeDetail {
 export interface KnowledgeCreateRequest {
   title?: string;
   space_tag_id?: number;
-  space_tag_name?: string;
   content: string;
   related_links?: RelatedLink[];
   tag_ids?: number[];

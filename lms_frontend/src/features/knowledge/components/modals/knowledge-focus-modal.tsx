@@ -2,10 +2,10 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { Upload, Plus, X } from 'lucide-react';
-import type { Tag as TagType } from '@/types/api';
 import type { RelatedLink } from '@/types/knowledge';
 
 import { useTags } from '@/features/tags/api/tags';
+import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
 import { useCreateKnowledge } from '../../api/manage-knowledge';
 import { useParseDocument } from '../../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
@@ -15,36 +15,20 @@ import {
   textToKnowledgeHtml,
 } from '../../utils/slash-shortcuts';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
-import { KnowledgeDetailModal } from './knowledge-detail-modal';
+import {
+  createEmptyRelatedLink,
+  sanitizeRelatedLinks,
+} from '../../utils/related-links';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 
-type KnowledgeFocusMode = 'create' | 'detail';
-
 interface KnowledgeFocusModalProps {
-  mode: KnowledgeFocusMode;
-  knowledgeId?: number;
   initialContent?: string;
   initialSpaceTagId?: number;
-  closeOnExitFocus?: boolean;
-  taskId?: number;
-  taskKnowledgeId?: number;
   onClose: () => void;
-  onDelete?: (id: number) => void;
   onCreated?: (id: number) => void;
-  onUpdated?: () => void;
 }
 
-const createEmptyRelatedLink = (): RelatedLink => ({
-  title: '',
-  url: '',
-});
-
-const CreateKnowledgeFocus: React.FC<{
-  initialContent?: string;
-  initialSpaceTagId?: number;
-  onClose: () => void;
-  onCreated?: (id: number) => void;
-}> = ({
+export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
   initialContent = '',
   initialSpaceTagId,
   onClose,
@@ -78,49 +62,12 @@ const CreateKnowledgeFocus: React.FC<{
     setSpaceTagId(hasPreferredSpaceTag ? initialSpaceTagId : undefined);
   }, [initialContent, initialSpaceTagId, spaces]);
 
-  React.useEffect(() => {
-    const htmlStyle = document.documentElement.style;
-    const bodyStyle = document.body.style;
-    const previousHtmlOverflow = htmlStyle.overflow;
-    const previousBodyOverflow = bodyStyle.overflow;
-    const previousHtmlOverscrollBehavior = htmlStyle.overscrollBehavior;
-    const previousBodyOverscrollBehavior = bodyStyle.overscrollBehavior;
-    const previousHtmlScrollbarGutter = htmlStyle.scrollbarGutter;
-    const previousBodyScrollbarGutter = bodyStyle.scrollbarGutter;
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        void handleSave();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    htmlStyle.overflow = 'hidden';
-    bodyStyle.overflow = 'hidden';
-    htmlStyle.overscrollBehavior = 'none';
-    bodyStyle.overscrollBehavior = 'none';
-    htmlStyle.scrollbarGutter = 'stable';
-    bodyStyle.scrollbarGutter = 'stable';
-
-    return () => {
-      window.removeEventListener('keydown', handler);
-      htmlStyle.overflow = previousHtmlOverflow;
-      bodyStyle.overflow = previousBodyOverflow;
-      htmlStyle.overscrollBehavior = previousHtmlOverscrollBehavior;
-      bodyStyle.overscrollBehavior = previousBodyOverscrollBehavior;
-      htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
-      bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
-    };
-  }, [onClose, content, title, spaceTagId, selectedTags]);
-
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
   const keepBottomToolsVisible = showTagPanel || showRelatedLinksPanel;
   const sanitizedRelatedLinks = React.useMemo(
-    () => relatedLinks.filter((item) => item.url.trim()),
+    () => sanitizeRelatedLinks(relatedLinks),
     [relatedLinks],
   );
 
@@ -166,6 +113,13 @@ const CreateKnowledgeFocus: React.FC<{
       showApiError(error, '创建失败');
     }
   };
+
+  useKnowledgeModalInteractions({
+    onEscape: onClose,
+    onSubmit: () => {
+      void handleSave();
+    },
+  });
 
   const handleRelatedLinkChange = React.useCallback((
     index: number,
@@ -225,7 +179,7 @@ const CreateKnowledgeFocus: React.FC<{
               className="akm-select"
             >
               <option value="">space</option>
-              {spaces.map((tag: TagType) => (
+              {spaces.map((tag) => (
                 <option key={tag.id} value={tag.id}>{tag.name}</option>
               ))}
             </select>
@@ -631,45 +585,4 @@ const CreateKnowledgeFocus: React.FC<{
   );
 
   return createPortal(modalContent, document.body);
-};
-
-export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
-  mode,
-  knowledgeId,
-  initialContent,
-  initialSpaceTagId,
-  closeOnExitFocus = true,
-  taskId,
-  taskKnowledgeId,
-  onClose,
-  onDelete,
-  onCreated,
-  onUpdated,
-}) => {
-  if (mode === 'create') {
-    return (
-      <CreateKnowledgeFocus
-        initialContent={initialContent}
-        initialSpaceTagId={initialSpaceTagId}
-        onClose={onClose}
-        onCreated={onCreated}
-      />
-    );
-  }
-
-  if (!knowledgeId) return null;
-
-  return (
-    <KnowledgeDetailModal
-      knowledgeId={knowledgeId}
-      startInFocus
-      forceFocus
-      closeOnExitFocus={closeOnExitFocus ?? true}
-      taskId={taskId}
-      taskKnowledgeId={taskKnowledgeId}
-      onClose={onClose}
-      onDelete={onDelete}
-      onUpdated={onUpdated}
-    />
-  );
 };

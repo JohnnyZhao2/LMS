@@ -12,34 +12,6 @@ interface GetKnowledgeListParams {
   pageSize?: number;
 }
 
-export const useKnowledgeList = (params: GetKnowledgeListParams = {}) => {
-  const currentRole = useCurrentRole();
-  const { space_tag_id, tag_id, search, page = 1, pageSize = 20 } = params;
-
-  return useQuery({
-    queryKey: [
-      'knowledge-list',
-      currentRole ?? 'UNKNOWN',
-      space_tag_id,
-      tag_id,
-      search,
-      page,
-      pageSize,
-    ],
-    queryFn: () => {
-      const queryParams = {
-        ...buildPaginationParams(page, pageSize),
-        ...(space_tag_id && { space_tag_id: String(space_tag_id) }),
-        ...(tag_id && { tag_id: String(tag_id) }),
-        ...(search && { search }),
-      };
-      const queryString = buildQueryString(queryParams);
-      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
-    },
-    enabled: currentRole !== null,
-  });
-};
-
 export const useInfiniteKnowledgeList = (params: GetKnowledgeListParams = {}) => {
   const currentRole = useCurrentRole();
   const { space_tag_id, tag_id, search, pageSize = 20 } = params;

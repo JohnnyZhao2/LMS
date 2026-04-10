@@ -17,14 +17,13 @@ from apps.knowledge.serializers import (
     KnowledgeUpdateSerializer,
 )
 from apps.knowledge.services import KnowledgeService
-from apps.tasks.models import TaskAssignment, TaskKnowledge
+from apps.tasks.models import TaskKnowledge
 from core.base_view import BaseAPIView
-from core.exceptions import BusinessError, ErrorCodes, get_status_code_for_error
+from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import (
     created_response,
-    error_response,
     list_response,
     no_content_response,
     success_response,
@@ -68,16 +67,6 @@ def _build_knowledge_filters(request):
     return filters, search
 
 
-def _handle_business_error(error: BusinessError):
-    """统一业务异常响应映射。"""
-    return error_response(
-        code=error.code,
-        message=error.message,
-        details=error.details,
-        status_code=get_status_code_for_error(error.code),
-    )
-
-
 class KnowledgeListCreateView(BaseAPIView):
     """
     Knowledge list and create endpoint.
@@ -89,18 +78,18 @@ class KnowledgeListCreateView(BaseAPIView):
         """共享的知识列表获取逻辑"""
         filters, search = _build_knowledge_filters(request)
 
-        knowledge_list = self.service.get_all_with_filters(
+        knowledge_queryset = self.service.get_all_with_filters(
             filters=filters,
             search=search
         )
 
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(knowledge_list, request)
+        page = paginator.paginate_queryset(knowledge_queryset, request)
         if page is not None:
             serializer = KnowledgeListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
-        serializer = KnowledgeListSerializer(knowledge_list, many=True)
+        serializer = KnowledgeListSerializer(knowledge_queryset, many=True)
         return list_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
@@ -140,13 +129,9 @@ class KnowledgeListCreateView(BaseAPIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        # 4. 调用 Service
-        try:
-            knowledge = self.service.create(
-                data=serializer.validated_data
-            )
-        except BusinessError as e:
-            return _handle_business_error(e)
+        knowledge = self.service.create(
+            data=serializer.validated_data
+        )
         # 5. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return created_response(response_serializer.data)
@@ -168,11 +153,7 @@ class KnowledgeDetailView(BaseAPIView):
     )
     def get(self, request, pk):
         _enforce_knowledge_view_permission(request, '无权查看知识详情')
-        # 1. 调用 Service
-        try:
-            knowledge = self.service.get_by_id(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
+        knowledge = self.service.get_by_id(pk)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(serializer.data)
@@ -190,26 +171,16 @@ class KnowledgeDetailView(BaseAPIView):
     )
     def patch(self, request, pk):
         _enforce_knowledge_action_permission(request, 'knowledge.update', '无权更新知识文档')
-        # 2. 获取对象（用于序列化校验的 instance）
-        try:
-            knowledge = self.service.get_by_id(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
-        # 3. 反序列化输入
+        # 2. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
-            instance=knowledge,
             data=request.data, partial=True,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        # 4. 调用 Service
-        try:
-            knowledge = self.service.update(
-                pk=pk,
-                data=serializer.validated_data
-            )
-        except BusinessError as e:
-            return _handle_business_error(e)
+        knowledge = self.service.update(
+            pk=pk,
+            data=serializer.validated_data
+        )
         # 4. 序列化输出
         response_serializer = KnowledgeDetailSerializer(knowledge)
         return success_response(response_serializer.data)
@@ -226,11 +197,7 @@ class KnowledgeDetailView(BaseAPIView):
     )
     def delete(self, request, pk):
         _enforce_knowledge_action_permission(request, 'knowledge.delete', '无权删除知识文档')
-        # 2. 调用 Service
-        try:
-            self.service.delete(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
+        self.service.delete(pk)
         return no_content_response()
 class StudentTaskKnowledgeDetailView(BaseAPIView):
     """学员任务知识详情端点 - 允许访问任务锁定版本"""
@@ -253,10 +220,9 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
             id=task_knowledge_id
         ).first()
         if not task_knowledge:
-            return error_response(
+            raise BusinessError(
                 code=ErrorCodes.RESOURCE_NOT_FOUND,
                 message='任务知识不存在',
-                status_code=status.HTTP_404_NOT_FOUND,
             )
         knowledge = task_knowledge.knowledge
         serializer = KnowledgeDetailSerializer(knowledge)
@@ -277,14 +243,5 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
     )
     def post(self, request, pk):
         _enforce_knowledge_view_permission(request, '无权记录知识阅读')
-        # 1. 权限检查（先获取知识文档）
-        try:
-            self.service.get_by_id(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
-        # 2. 调用 Service
-        try:
-            view_count = self.service.increment_view_count(pk)
-        except BusinessError as e:
-            return _handle_business_error(e)
+        view_count = self.service.increment_view_count(pk)
         return success_response({'view_count': view_count})

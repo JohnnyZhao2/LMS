@@ -453,7 +453,7 @@ class TestQuestionApiContracts:
 
         assert response.status_code == 400, response.data
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'tag_ids' in str(response.data['message'])
+        assert response.data['message'] == 'tag_ids 包含无效的题目标签ID'
 
     def test_question_patch_allows_clearing_space_tag(self, api_client, mentor_user, sample_question):
         api_client.force_authenticate(user=mentor_user)
@@ -1019,7 +1019,28 @@ class TestKnowledgeApiContracts:
 
         assert response.status_code == 400, response.data
         assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'content' in response.data['message']
+        assert response.data['message'] == '知识文档必须填写正文内容'
+
+    def test_knowledge_create_rejects_non_knowledge_scope_tags(
+        self,
+        api_client,
+        admin_user,
+        question_tag,
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            '/api/knowledge/',
+            {
+                'title': '错误标签知识',
+                'content': '<p>正文</p>',
+                'tag_ids': [question_tag.id],
+            },
+            format='json',
+        )
+
+        assert response.status_code == 400, response.data
+        assert response.data['code'] == 'VALIDATION_ERROR'
+        assert response.data['message'] == 'tag_ids 包含无效的知识标签ID'
 
     def test_knowledge_patch_allows_blank_title(self, api_client, admin_user, sample_knowledge):
         api_client.force_authenticate(user=admin_user)

@@ -19,7 +19,8 @@ import { ScrollContainer } from '@/components/ui/scroll-container';
 import { useTags } from '@/features/tags/api/tags';
 import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
 import { useKnowledgeDetail } from '../../api/knowledge';
-import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowledge';
+import { useUpdateKnowledge } from '../../api/manage-knowledge';
+import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-interactions';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/stores/auth-context';
@@ -30,7 +31,11 @@ import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
-import { hasMeaningfulKnowledgeHtml, textToKnowledgeHtml } from '../../utils/slash-shortcuts';
+import {
+  createEmptyRelatedLink,
+  getRelatedLinkDisplayText,
+  sanitizeRelatedLinks,
+} from '../../utils/related-links';
 import dayjs from '@/lib/dayjs';
 
 function relTime(dateStr: string): string {
@@ -39,36 +44,6 @@ function relTime(dateStr: string): string {
   if (d === 1) return '昨天';
   if (d < 30) return `${d} 天前`;
   return `${Math.floor(d / 30)} 个月前`;
-}
-
-function createEmptyRelatedLink(): RelatedLink {
-  return {
-    title: '',
-    url: '',
-  };
-}
-
-const RELATED_LINK_DISPLAY_MAX_LENGTH = 42;
-
-function normalizeRelatedLinkUrl(url: string): string {
-  return url.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-}
-
-function truncateRelatedLinkText(text: string): string {
-  if (text.length <= RELATED_LINK_DISPLAY_MAX_LENGTH) {
-    return text;
-  }
-
-  return `${text.slice(0, RELATED_LINK_DISPLAY_MAX_LENGTH).trimEnd()}...`;
-}
-
-function getRelatedLinkDisplayText(link: RelatedLink): string {
-  const title = link.title?.trim();
-  if (title) {
-    return truncateRelatedLinkText(title);
-  }
-
-  return truncateRelatedLinkText(normalizeRelatedLinkUrl(link.url) || '相关链接');
 }
 
 function placeCaretAtPoint(container: HTMLElement, clientX: number, clientY: number) {
@@ -109,19 +84,16 @@ function placeCaretAtPoint(container: HTMLElement, clientX: number, clientY: num
 }
 
 interface KnowledgeDetailModalProps {
-  knowledgeId?: number;
+  knowledgeId: number;
   startEditing?: boolean;
   startInFocus?: boolean;
   closeOnExitFocus?: boolean;
   forceFocus?: boolean;
-  draftInitialContent?: string;
-  draftInitialSpaceTagId?: number;
   taskId?: number;
   taskKnowledgeId?: number;
   onClose: () => void;
   onFocusOpen?: (id: number) => void;
   onDelete?: (id: number) => void;
-  onCreated?: (id: number) => void;
   onUpdated?: () => void;
 }
 
@@ -131,30 +103,22 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   startInFocus = false,
   closeOnExitFocus = false,
   forceFocus = false,
-  draftInitialContent,
-  draftInitialSpaceTagId,
   taskId,
   taskKnowledgeId,
   onClose,
   onFocusOpen,
   onDelete,
-  onCreated,
   onUpdated,
 }) => {
   const { currentRole, hasCapability } = useAuth();
   const isStudent = currentRole === 'STUDENT';
   const canUpdateKnowledge = hasCapability('knowledge.update');
   const canDeleteKnowledge = hasCapability('knowledge.delete');
-  const isDraftMode = !knowledgeId;
-  const normalizedDraftContent = draftInitialContent
-    ? (draftInitialContent.includes('<') ? draftInitialContent : textToKnowledgeHtml(draftInitialContent))
-    : '';
 
   const { data, isLoading } = useKnowledgeDetail({
     knowledgeId,
     taskKnowledgeId,
   });
-  const createKnowledge = useCreateKnowledge();
   const updateKnowledge = useUpdateKnowledge();
   const completeLearning = useCompleteLearning();
   const knowledgeFromQuery = data as KnowledgeDetailType | undefined;
@@ -163,13 +127,13 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     detail: KnowledgeDetailType;
   } | undefined>(undefined);
   const { data: learningDetail } = useStudentLearningTaskDetail(taskId || 0, {
-    enabled: isStudent && !!taskId && !isDraftMode,
+    enabled: isStudent && !!taskId,
   });
   const hasLocalSnapshot = Boolean(localKnowledgeSnapshot && localKnowledgeSnapshot.knowledgeId === knowledgeId);
   const fetchedKnowledge = hasLocalSnapshot
     ? localKnowledgeSnapshot!.detail
     : knowledgeFromQuery;
-  const knowledge = isDraftMode ? undefined : fetchedKnowledge;
+  const knowledge = fetchedKnowledge;
 
   // space列表
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
@@ -190,9 +154,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
   const canEditInFocus = isFocusMode && canUpdateKnowledge;
-  const isSaving = isDraftMode ? createKnowledge.isPending : updateKnowledge.isPending;
+  const isSaving = updateKnowledge.isPending;
 
-  const activeContent = editContent ?? knowledge?.content ?? normalizedDraftContent;
+  const activeContent = editContent ?? knowledge?.content ?? '';
 
   // 实际使用的值
   const activeTitle = editTitle ?? knowledge?.title ?? '';
@@ -211,27 +175,25 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const isCompleted = taskKnowledgeItem?.is_completed;
 
   useEffect(() => {
-    setEditing(isDraftMode ? true : startEditing);
-    setIsFocusMode(forceFocus || startInFocus || isDraftMode);
-    setEditContent(isDraftMode ? normalizedDraftContent : undefined);
-    setEditTitle(isDraftMode ? getKnowledgeTitleFromHtml(normalizedDraftContent) : undefined);
-    setEditTags(isDraftMode ? [] : undefined);
-    setEditSpaceTagId(isDraftMode ? (draftInitialSpaceTagId ?? null) : undefined);
-    setEditRelatedLinks(isDraftMode ? [] : undefined);
+    setEditing(startEditing);
+    setIsFocusMode(forceFocus || startInFocus);
+    setEditContent(undefined);
+    setEditTitle(undefined);
+    setEditTags(undefined);
+    setEditSpaceTagId(undefined);
+    setEditRelatedLinks(undefined);
     setShowTagInput(false);
     setShowSpaceTags(false);
-  }, [draftInitialSpaceTagId, forceFocus, isDraftMode, knowledgeId, normalizedDraftContent, startEditing, startInFocus]);
+  }, [forceFocus, knowledgeId, startEditing, startInFocus]);
 
   // 判断是否有改动
-  const hasChanges = isDraftMode
-    ? hasMeaningfulKnowledgeHtml(activeContent)
-    : (knowledge && (
-      (editContent !== undefined && editContent !== knowledge.content) ||
-      (editTitle !== undefined && editTitle !== knowledge.title) ||
-      (editTags !== undefined) ||
-      (editSpaceTagId !== undefined) ||
-      (editRelatedLinks !== undefined)
-    ));
+  const hasChanges = Boolean(knowledge && (
+    (editContent !== undefined && editContent !== knowledge.content) ||
+    (editTitle !== undefined && editTitle !== knowledge.title) ||
+    (editTags !== undefined) ||
+    (editSpaceTagId !== undefined) ||
+    (editRelatedLinks !== undefined)
+  ));
   const canSubmit = Boolean(hasChanges);
 
   // 标签操作
@@ -277,50 +239,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setIsFocusMode(false);
   }, [closeOnExitFocus, forceFocus, onClose]);
 
-  // Esc 关闭 + 禁止背景滚动
-  useEffect(() => {
-    const htmlStyle = document.documentElement.style;
-    const bodyStyle = document.body.style;
-    const previousHtmlOverflow = htmlStyle.overflow;
-    const previousBodyOverflow = bodyStyle.overflow;
-    const previousHtmlOverscrollBehavior = htmlStyle.overscrollBehavior;
-    const previousBodyOverscrollBehavior = bodyStyle.overscrollBehavior;
-    const previousHtmlScrollbarGutter = htmlStyle.scrollbarGutter;
-    const previousBodyScrollbarGutter = bodyStyle.scrollbarGutter;
-
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isFocusMode) {
-          handleExitFocusMode();
-        } else if (showSpaceTags) {
-          setShowSpaceTags(false);
-        } else if (editing) {
-          setEditing(false);
-        } else {
-          onClose();
-        }
+  useKnowledgeModalInteractions({
+    onEscape: () => {
+      if (isFocusMode) {
+        handleExitFocusMode();
+      } else if (showSpaceTags) {
+        setShowSpaceTags(false);
+      } else if (editing) {
+        setEditing(false);
+      } else {
+        onClose();
       }
-    };
-    window.addEventListener('keydown', handler);
-    htmlStyle.overflow = 'hidden';
-    bodyStyle.overflow = 'hidden';
-    htmlStyle.overscrollBehavior = 'none';
-    bodyStyle.overscrollBehavior = 'none';
-    htmlStyle.scrollbarGutter = 'stable';
-    bodyStyle.scrollbarGutter = 'stable';
-    return () => {
-      window.removeEventListener('keydown', handler);
-      htmlStyle.overflow = previousHtmlOverflow;
-      bodyStyle.overflow = previousBodyOverflow;
-      htmlStyle.overscrollBehavior = previousHtmlOverscrollBehavior;
-      bodyStyle.overscrollBehavior = previousBodyOverscrollBehavior;
-      htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
-      bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
-    };
-  }, [onClose, editing, showSpaceTags, isFocusMode, handleExitFocusMode]);
+    },
+  });
 
   const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
-    if (!knowledgeId) return;
     setLocalKnowledgeSnapshot({
       knowledgeId,
       detail: updatedKnowledge,
@@ -329,41 +262,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
-    if (!isDraftMode && !knowledge) return;
+    if (!knowledge) return;
     try {
-      const sanitizedRelatedLinks = activeRelatedLinks
-        .filter((item) => item.url.trim())
-        .map((item) => ({
-          title: item.title?.trim() ?? '',
-          url: item.url.trim(),
-        }));
-      const createDerivedTitle = getKnowledgeTitleFromHtml(activeContent);
-      const createTitle = (createDerivedTitle || activeTitle || '未命名知识').trim();
-
-      if (isDraftMode) {
-        const created = await createKnowledge.mutateAsync({
-          ...(createTitle && { title: createTitle }),
-          ...(activeSpaceTagId ? { space_tag_id: activeSpaceTagId } : {}),
-          content: activeContent,
-          ...(sanitizedRelatedLinks.length > 0 ? { related_links: sanitizedRelatedLinks } : {}),
-          ...(activeTags.length > 0 ? { tag_ids: activeTags.map((item) => item.id) } : {}),
-        });
-        toast.success('知识创建成功');
-        onCreated?.(created.id);
-        onUpdated?.();
-        return;
-      }
-
       const updateDerivedTitle = editContent !== undefined ? getKnowledgeTitleFromHtml(editContent) : '';
       const updateTitle = editContent !== undefined
-        ? (updateDerivedTitle || editTitle || knowledge!.title)
-        : (editTitle ?? knowledge!.title);
-      const detailRelatedLinks = editRelatedLinks?.filter((item) => item.url.trim()).map((item) => ({
-        title: item.title?.trim() ?? '',
-        url: item.url.trim(),
-      }));
+        ? (updateDerivedTitle || editTitle || knowledge.title)
+        : (editTitle ?? knowledge.title);
+      const detailRelatedLinks = sanitizeRelatedLinks(editRelatedLinks ?? []);
       const updatedKnowledge = await updateKnowledge.mutateAsync({
-        id: knowledgeId!,
+        id: knowledgeId,
         data: {
           title: updateTitle,
           ...(editContent !== undefined && { content: editContent }),
@@ -384,9 +291,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditRelatedLinks(undefined);
       onUpdated?.();
     } catch {
-      toast.error(isDraftMode ? '创建失败' : '保存失败');
+      toast.error('保存失败');
     }
-  }, [knowledge, hasChanges, activeRelatedLinks, activeContent, activeTitle, isDraftMode, createKnowledge, activeSpaceTagId, activeTags, onCreated, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
+  }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
 
   const handleContentChange = useCallback((nextContent: string) => {
     setEditContent(nextContent);
@@ -398,7 +305,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, []);
 
   const handleDelete = () => {
-    if (!knowledgeId) return;
     onDelete?.(knowledgeId);
     onClose();
   };
@@ -421,11 +327,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       return;
     }
 
-    if (isDraftMode || !knowledgeId) {
-      setEditSpaceTagId(nextSpaceTagId);
-      return;
-    }
-
     try {
       const updatedKnowledge = await updateKnowledge.mutateAsync({
         id: knowledgeId,
@@ -438,7 +339,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     } catch {
       toast.error('空间更新失败');
     }
-  }, [activeSpaceTagId, applyKnowledgeSnapshot, isDraftMode, knowledgeId, onUpdated, updateKnowledge]);
+  }, [activeSpaceTagId, applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
 
   const handleComplete = useCallback(async () => {
     if (!taskId || !taskKnowledgeId) return;
@@ -493,7 +394,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (onFocusOpen && knowledgeId) {
+              if (onFocusOpen) {
                 onFocusOpen(knowledgeId);
                 return;
               }
@@ -512,7 +413,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
           </button>
         )}
 
-        {isLoading && !isDraftMode ? (
+        {isLoading ? (
           <>
             <div className="kd-left">
               <Skeleton className="h-10 w-3/4 mb-8" />
@@ -532,7 +433,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               </div>
             </div>
           </>
-        ) : !knowledge && !isDraftMode ? (
+        ) : !knowledge ? (
           <div className="kd-left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <p style={{ color: '#aaa', fontSize: 15, fontStyle: 'italic' }}>知识文档不存在</p>
           </div>
@@ -617,7 +518,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 ) : (
                   <h2 className="kd-title">{activeTitle || '未命名知识'}</h2>
                 )}
-                <p className="kd-time">{isDraftMode ? '未保存' : relTime(knowledge?.updated_at ?? new Date().toISOString())}</p>
+                <p className="kd-time">{relTime(knowledge?.updated_at ?? new Date().toISOString())}</p>
               </div>
 
               {/* body */}
@@ -648,24 +549,20 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 <div className="kd-section">
                   <p className="kd-label">详细信息</p>
                   <div className="kd-meta-list">
-                    {!isDraftMode && (knowledge?.updated_by_name || knowledge?.created_by_name) && (
+                    {(knowledge?.updated_by_name || knowledge?.created_by_name) && (
                       <div className="kd-meta-item">
                         <User className="kd-meta-icon" />
                         <span>{knowledge?.updated_by_name || knowledge?.created_by_name}</span>
                       </div>
                     )}
-                    {!isDraftMode && (
-                      <div className="kd-meta-item">
-                        <Calendar className="kd-meta-icon" />
-                        <span>{dayjs(knowledge?.updated_at ?? new Date()).format('YYYY-MM-DD HH:mm')}</span>
-                      </div>
-                    )}
-                    {!isDraftMode && (
-                      <div className="kd-meta-item">
-                        <Eye className="kd-meta-icon" />
-                        <span>{knowledge?.view_count ?? 0} 次阅读</span>
-                      </div>
-                    )}
+                    <div className="kd-meta-item">
+                      <Calendar className="kd-meta-icon" />
+                      <span>{dayjs(knowledge?.updated_at ?? new Date()).format('YYYY-MM-DD HH:mm')}</span>
+                    </div>
+                    <div className="kd-meta-item">
+                      <Eye className="kd-meta-icon" />
+                      <span>{knowledge?.view_count ?? 0} 次阅读</span>
+                    </div>
                   </div>
                 </div>
 
@@ -822,7 +719,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                         <Edit style={{ width: 15, height: 15 }} />
                       </button>
                     )}
-                    {canDeleteKnowledge && !isDraftMode && (
+                    {canDeleteKnowledge && (
                       <button
                         onClick={handleDelete}
                         className="kd-action-btn kd-action-danger"

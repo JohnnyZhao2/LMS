@@ -10,7 +10,11 @@ from typing import Optional
 
 from django.db import transaction
 from apps.authorization.engine import enforce
-from apps.tags.validators import get_space_tag_or_error, get_tag_ids_or_error
+from apps.tags.validators import (
+    assign_scoped_tags,
+    assign_space_tag,
+    get_scoped_tag_ids_or_error,
+)
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -139,11 +143,9 @@ class QuestionService(BaseService):
         tag_ids = data.pop('tag_ids', [])
         # 3. 创建题目
         question = Question.objects.create(**data)
-        # 4. 设置space
-        if space_tag_id is not None:
-            self._set_space_tag(question, space_tag_id)
-        if tag_ids is not None:
-            question.tags.set(self._get_tag_ids_or_error(tag_ids))
+        # 4. 设置标签
+        assign_space_tag(question, space_tag_id)
+        assign_scoped_tags(question, tag_ids, scope='question')
 
         return question
 
@@ -191,7 +193,7 @@ class QuestionService(BaseService):
             if getattr(question, key, None) != value
         }
         normalized_tag_ids = (
-            self._get_tag_ids_or_error(tag_ids or [])
+            get_scoped_tag_ids_or_error(tag_ids or [], scope='question')
             if tag_ids_provided
             else current_tag_ids
         )
@@ -317,17 +319,6 @@ class QuestionService(BaseService):
                     message='简答题答案必须是字符串'
                 )
 
-    def _set_space_tag(self, question: Question, space_tag_id: int) -> None:
-        question.space_tag = get_space_tag_or_error(space_tag_id)
-        question.save(update_fields=['space_tag'])
-
-    def _get_tag_ids_or_error(self, tag_ids: list[int]) -> list[int]:
-        return get_tag_ids_or_error(
-            tag_ids,
-            applicable_field='allow_question',
-            invalid_message='包含无效的题目标签ID',
-        )
-
     def _apply_space_tag_change(
         self,
         question: Question,
@@ -340,10 +331,9 @@ class QuestionService(BaseService):
         if space_tag_id is None:
             if question.space_tag_id is None:
                 return
-            question.space_tag = None
-            question.save(update_fields=['space_tag'])
+            assign_space_tag(question, None, clear_when_none=True)
             return
-        self._set_space_tag(question, space_tag_id)
+        assign_space_tag(question, space_tag_id)
 
     def _prepare_version_data(self, data: dict, *, sync_to_bank: bool = True) -> None:
         """
@@ -396,7 +386,7 @@ class QuestionService(BaseService):
         version_data = dict(data)
         space_tag_id = version_data.pop('space_tag_id', source.space_tag_id)
         tag_ids = version_data.pop('tag_ids', self._list_question_tag_ids(source))
-        return version_data, space_tag_id, self._get_tag_ids_or_error(tag_ids)
+        return version_data, space_tag_id, get_scoped_tag_ids_or_error(tag_ids, scope='question')
 
     def _list_question_tag_ids(self, question: Question) -> list[int]:
         return list(question.tags.values_list('id', flat=True))
