@@ -106,7 +106,7 @@ export const useResetPassword = () => {
 
   return useMutation({
     mutationFn: (userId: number) =>
-      apiClient.post<{ temporary_password: string; message: string }>('/auth/reset-password/', {
+      apiClient.post<{ temporary_password: string }>('/auth/reset-password/', {
         user_id: userId,
       }),
     onSuccess: () => invalidateUserQueries(queryClient),

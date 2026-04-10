@@ -41,6 +41,13 @@ def admin_role():
 
 
 @pytest.fixture
+def team_manager_role(grant_role_permissions):
+    role, _ = Role.objects.get_or_create(code='TEAM_MANAGER', defaults={'name': '团队经理'})
+    grant_role_permissions(role, ['dashboard.team_manager.view'])
+    return role
+
+
+@pytest.fixture
 def mentor(department, mentor_role, student_role):
     user = User.objects.create_user(
         employee_id='MENTOR001',
@@ -86,6 +93,18 @@ def admin(department, admin_role, student_role):
         department=department,
     )
     UserRole.objects.create(user=user, role=admin_role)
+    return user
+
+
+@pytest.fixture
+def team_manager(department, team_manager_role, student_role):
+    user = User.objects.create_user(
+        employee_id='TM001',
+        username='测试团队经理',
+        password='password123',
+        department=department,
+    )
+    UserRole.objects.create(user=user, role=team_manager_role)
     return user
 
 
@@ -369,6 +388,25 @@ class TestMentorDashboardAPI:
         assert student.id not in student_ids
         assert student2.id in student_ids
         assert extra_student.id in student_ids
+
+
+@pytest.mark.django_db
+class TestTeamManagerDashboardAPI:
+    """团队经理仪表盘 API 测试"""
+
+    def test_get_dashboard_returns_platform_knowledge_count(
+        self,
+        api_client,
+        unwrap_response_data,
+        team_manager,
+        knowledge,
+    ):
+        api_client.force_authenticate(user=team_manager)
+        response = api_client.get('/api/dashboard/team-manager/')
+        data = unwrap_response_data(response)
+
+        assert response.status_code == 200
+        assert data['summary']['total_knowledge'] == 1
 
 # ============================================
 # Selectors 单元测试

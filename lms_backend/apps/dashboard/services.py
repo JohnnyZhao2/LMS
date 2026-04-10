@@ -8,7 +8,7 @@ Dashboard 应用服务
 """
 from typing import Any, Dict, List, Optional, Set
 
-from django.db.models import QuerySet
+from django.db.models import Case, IntegerField, QuerySet, Value, When
 
 from apps.knowledge.models import Knowledge
 from apps.authorization.engine import scope_filter
@@ -262,10 +262,7 @@ class TeamManagerDashboardService(BaseService):
         ).exclude(
             roles__code='DEPT_MANAGER'
         ).distinct().count()
-        platform_knowledge_count = Knowledge.objects.filter(
-            is_deleted=False,
-            is_current=True
-        ).count()
+        platform_knowledge_count = Knowledge.objects.filter(is_current=True).count()
 
         return {
             'summary': {
