@@ -16,9 +16,10 @@ import { toast } from 'sonner';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollContainer } from '@/components/ui/scroll-container';
+import { useTags } from '@/features/tags/api/tags';
+import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
 import { useKnowledgeDetail } from '../../api/knowledge';
 import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowledge';
-import { useSpaceTypeTags } from '../../api/get-tags';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/stores/auth-context';
@@ -27,7 +28,6 @@ import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
-import { TagInput } from '../shared/tag-input';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml, textToKnowledgeHtml } from '../../utils/slash-shortcuts';
@@ -172,7 +172,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const knowledge = isDraftMode ? undefined : fetchedKnowledge;
 
   // space列表
-  const { data: allSpaceTypes = [] } = useSpaceTypeTags();
+  const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
   // 编辑状态
   const [editing, setEditing] = useState(startEditing);
@@ -186,7 +186,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   // 标签输入展开
   const [showTagInput, setShowTagInput] = useState(false);
   // space选择
-  const [showSpaceTypes, setShowSpaceTypes] = useState(false);
+  const [showSpaceTags, setShowSpaceTags] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
   const canEditInFocus = isFocusMode && canUpdateKnowledge;
@@ -219,7 +219,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditSpaceTagId(isDraftMode ? (draftInitialSpaceTagId ?? null) : undefined);
     setEditRelatedLinks(isDraftMode ? [] : undefined);
     setShowTagInput(false);
-    setShowSpaceTypes(false);
+    setShowSpaceTags(false);
   }, [draftInitialSpaceTagId, forceFocus, isDraftMode, knowledgeId, normalizedDraftContent, startEditing, startInFocus]);
 
   // 判断是否有改动
@@ -292,8 +292,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       if (e.key === 'Escape') {
         if (isFocusMode) {
           handleExitFocusMode();
-        } else if (showSpaceTypes) {
-          setShowSpaceTypes(false);
+        } else if (showSpaceTags) {
+          setShowSpaceTags(false);
         } else if (editing) {
           setEditing(false);
         } else {
@@ -317,7 +317,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       htmlStyle.scrollbarGutter = previousHtmlScrollbarGutter;
       bodyStyle.scrollbarGutter = previousBodyScrollbarGutter;
     };
-  }, [onClose, editing, showSpaceTypes, isFocusMode, handleExitFocusMode]);
+  }, [onClose, editing, showSpaceTags, isFocusMode, handleExitFocusMode]);
 
   const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
     if (!knowledgeId) return;
@@ -411,11 +411,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditSpaceTagId(undefined);
     setEditRelatedLinks(undefined);
     setShowTagInput(false);
-    setShowSpaceTypes(false);
+    setShowSpaceTags(false);
   }, []);
 
   const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
-    setShowSpaceTypes(false);
+    setShowSpaceTags(false);
 
     if (activeSpaceTagId === nextSpaceTagId) {
       return;
@@ -626,40 +626,21 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 {/* ── 系统标签 ── */}
                 {shouldShowSystemTagsSection && (
                   <div className="kd-section">
-                    <p className="kd-label">系统标签</p>
-
-                    {/* 点击展开标签输入 */}
-                    {canUpdateKnowledge && showTagInput && (
-                      <TagInput
-                        applicableTo="knowledge"
-                        selectedTags={activeTags}
-                        onAdd={addTag}
-                        onRemove={removeTag}
-                        hideChips
-                      />
-                    )}
-
-                    <div className="kd-tags">
-                      {canUpdateKnowledge && (
-                        <button
-                          onClick={() => setShowTagInput((v) => !v)}
-                          className="kd-add-tag-btn"
-                        >
-                          <Plus style={{ width: 12, height: 12 }} />
-                          添加标签
-                        </button>
-                      )}
-                      {activeTags.map(t => (
-                        <span key={t.id} className="kd-tag">
-                          {t.name}
-                          {canUpdateKnowledge && (
-                            <button onClick={() => removeTag(t.id)} className="kd-tag-remove">
-                              <X style={{ width: 10, height: 10 }} />
-                            </button>
-                          )}
-                        </span>
-                      ))}
-                    </div>
+                    <TagAssignmentSection
+                      applicableTo="knowledge"
+                      title="系统标签"
+                      canEdit={canUpdateKnowledge}
+                      selectedTags={activeTags}
+                      expanded={showTagInput}
+                      onExpandedChange={setShowTagInput}
+                      onAdd={addTag}
+                      onRemove={removeTag}
+                      labelClassName="kd-label"
+                      addButtonClassName="kd-add-tag-btn"
+                      tagsWrapClassName="kd-tags"
+                      tagClassName="kd-tag"
+                      removeButtonClassName="kd-tag-remove"
+                    />
                   </div>
                 )}
 
@@ -762,9 +743,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
               {/* 底部操作 */}
               <div className="kd-bottom" style={{ position: 'relative' }}>
                 {/* space选择弹窗 */}
-                {showSpaceTypes && (
+                {showSpaceTags && (
                   <div className="kd-linetype-popover">
-                    {allSpaceTypes.map(lt => (
+                    {spaces.map(lt => (
                       <button
                         key={lt.id}
                         onClick={() => { void handleSpaceTagSelect(lt.id); }}
@@ -823,7 +804,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                   <div className="kd-action-group">
                     {canUpdateKnowledge && (
                       <button
-                        onClick={() => setShowSpaceTypes(!showSpaceTypes)}
+                        onClick={() => setShowSpaceTags(!showSpaceTags)}
                         className="kd-action-btn"
                         title="切换 space"
                         >

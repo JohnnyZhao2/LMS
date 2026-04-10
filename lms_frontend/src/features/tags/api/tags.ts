@@ -29,6 +29,23 @@ interface MergeTagPayload {
   merged_name: string;
 }
 
+const invalidateTagRelatedQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  { includeKnowledgeVariants = false }: { includeKnowledgeVariants?: boolean } = {},
+) => {
+  queryClient.invalidateQueries({ queryKey: ['tags'] });
+  queryClient.invalidateQueries({ queryKey: ['questions'] });
+  queryClient.invalidateQueries({ queryKey: ['question-detail'] });
+  queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
+  queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+  queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
+  if (!includeKnowledgeVariants) {
+    return;
+  }
+  queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
+  queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
+};
+
 export const useTags = (params: GetTagsParams = {}) => {
   const currentRole = useCurrentRole();
   const { hasCapability, isLoading: isAuthLoading } = useAuth();
@@ -59,12 +76,7 @@ export const useCreateTag = () => {
   return useMutation({
     mutationFn: (data: TagMutationPayload) => apiClient.post<Tag>('/tags/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
+      invalidateTagRelatedQueries(queryClient);
     },
   });
 };
@@ -76,12 +88,7 @@ export const useUpdateTag = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<TagMutationPayload> }) =>
       apiClient.patch<Tag>(`/tags/${id}/`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
+      invalidateTagRelatedQueries(queryClient);
     },
   });
 };
@@ -93,14 +100,7 @@ export const useMergeTag = () => {
     mutationFn: (data: MergeTagPayload) =>
       apiClient.post<Tag>('/tags/merge/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
+      invalidateTagRelatedQueries(queryClient, { includeKnowledgeVariants: true });
     },
   });
 };
@@ -111,14 +111,7 @@ export const useDeleteTag = () => {
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/tags/${id}/`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tags'] });
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
-      queryClient.invalidateQueries({ queryKey: ['question-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
+      invalidateTagRelatedQueries(queryClient, { includeKnowledgeVariants: true });
     },
   });
 };

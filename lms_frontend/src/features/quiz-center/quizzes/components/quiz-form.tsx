@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { EditorPageShell } from '@/components/ui/page-shell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ROUTES } from '@/config/routes';
+import { useTags } from '@/features/tags/api/tags';
 import { useCreateQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
@@ -24,7 +25,6 @@ import {
   questionToEditableItem,
   syncEditableQuestionItem,
 } from '@/features/questions/components/question-editor-helpers';
-import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
@@ -80,7 +80,7 @@ export const QuizForm: React.FC = () => {
   const [items, setItems] = useState<InlineQuestionItem[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [resourceSearch, setResourceSearch] = useState('');
-  const [filterSpaceTypeId, setFilterSpaceTypeId] = useState<string>('all');
+  const [filterSpaceTagId, setFilterSpaceTagId] = useState<string>('all');
   const [filterQuestionType, setFilterQuestionType] = useState<string>('all');
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -93,11 +93,11 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   const { data: quizData } = useQuizDetail(Number(id));
-  const { data: spaceTypes } = useSpaceTypeTags();
+  const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
   const { data: questionsData, isLoading: questionsLoading } = useQuestions({
     pageSize: 1000,
     search: resourceSearch || undefined,
-    spaceTypeId: filterSpaceTypeId === 'all' ? undefined : Number(filterSpaceTypeId),
+    spaceTagId: filterSpaceTagId === 'all' ? undefined : Number(filterSpaceTagId),
     questionType: filterQuestionType === 'all' ? undefined : filterQuestionType as QuestionType,
   });
 
@@ -342,10 +342,10 @@ export const QuizForm: React.FC = () => {
     appendItemPreservingFocus(
       createBlankEditableQuestion(
         questionType,
-        filterSpaceTypeId !== 'all' ? Number(filterSpaceTypeId) : null,
+        filterSpaceTagId !== 'all' ? Number(filterSpaceTagId) : null,
       ),
     );
-  }, [appendItemPreservingFocus, filterSpaceTypeId]);
+  }, [appendItemPreservingFocus, filterSpaceTagId]);
 
   const handleUpdateItem = useCallback((key: string, patch: Partial<InlineQuestionItem>) => {
     setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch, saved: false } : item)));
@@ -564,7 +564,7 @@ export const QuizForm: React.FC = () => {
               <QuizDocumentEditor
                 items={items}
                 activeKey={activeKey}
-                spaceTypes={spaceTypes}
+                spaceTags={spaceTags}
                 onUpdateItem={handleUpdateItem}
                 onSaveItem={handleSaveItem}
                 onRemoveItem={handleRemoveItem}
@@ -582,11 +582,11 @@ export const QuizForm: React.FC = () => {
             <QuestionBankPanel
               resourceSearch={resourceSearch}
               onResourceSearchChange={setResourceSearch}
-              filterSpaceTypeId={filterSpaceTypeId}
-              onFilterSpaceTypeIdChange={setFilterSpaceTypeId}
+              filterSpaceTagId={filterSpaceTagId}
+              onFilterSpaceTagIdChange={setFilterSpaceTagId}
               filterQuestionType={filterQuestionType}
               onFilterQuestionTypeChange={setFilterQuestionType}
-              spaceTypes={spaceTypes}
+              spaceTags={spaceTags}
               questionsData={filteredQuestionsData}
               questionsLoading={questionsLoading}
               onPreview={handlePreviewQuestion}

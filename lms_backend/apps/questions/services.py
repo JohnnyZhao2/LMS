@@ -10,7 +10,7 @@ from typing import Optional
 
 from django.db import transaction
 from apps.authorization.engine import enforce
-from apps.tags.models import Tag
+from apps.tags.validators import get_space_tag_or_error, get_tag_ids_or_error
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -318,53 +318,15 @@ class QuestionService(BaseService):
                 )
 
     def _set_space_tag(self, question: Question, space_tag_id: int) -> None:
-        """
-        设置space
-        Args:
-            question: 题目对象
-            space_tag_id: space ID
-        Raises:
-            BusinessError: 如果space无效
-        """
-        space_tag = Tag.objects.filter(
-            id=space_tag_id,
-            tag_type='SPACE',
-        ).first()
-        if not space_tag:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的 space ID'
-            )
-        question.space_tag = space_tag
+        question.space_tag = get_space_tag_or_error(space_tag_id)
         question.save(update_fields=['space_tag'])
 
     def _get_tag_ids_or_error(self, tag_ids: list[int]) -> list[int]:
-        if not tag_ids:
-            return []
-
-        valid_tag_ids = set(
-            Tag.objects.filter(
-                id__in=tag_ids,
-                tag_type='TAG',
-                allow_question=True,
-            ).values_list('id', flat=True)
+        return get_tag_ids_or_error(
+            tag_ids,
+            applicable_field='allow_question',
+            invalid_message='包含无效的题目标签ID',
         )
-        invalid_tag_ids = [tag_id for tag_id in tag_ids if tag_id not in valid_tag_ids]
-        if invalid_tag_ids:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='包含无效的题目标签ID',
-                details={'invalid_tag_ids': invalid_tag_ids},
-            )
-
-        deduped_tag_ids = []
-        seen_ids = set()
-        for tag_id in tag_ids:
-            if tag_id in seen_ids:
-                continue
-            seen_ids.add(tag_id)
-            deduped_tag_ids.append(tag_id)
-        return deduped_tag_ids
 
     def _apply_space_tag_change(
         self,

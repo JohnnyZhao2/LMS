@@ -14,11 +14,11 @@ import type { PaginatedResponse, Question, Tag } from '@/types/api';
 interface QuestionBankPanelProps {
   resourceSearch: string;
   onResourceSearchChange: (value: string) => void;
-  filterSpaceTypeId: string;
-  onFilterSpaceTypeIdChange: (value: string) => void;
+  filterSpaceTagId: string;
+  onFilterSpaceTagIdChange: (value: string) => void;
   filterQuestionType: string;
   onFilterQuestionTypeChange: (value: string) => void;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   questionsData?: PaginatedResponse<Question>;
   questionsLoading: boolean;
   onPreview: (question: Question) => void;
@@ -28,11 +28,11 @@ interface QuestionBankPanelProps {
 export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
   resourceSearch,
   onResourceSearchChange,
-  filterSpaceTypeId,
-  onFilterSpaceTypeIdChange,
+  filterSpaceTagId,
+  onFilterSpaceTagIdChange,
   filterQuestionType,
   onFilterQuestionTypeChange,
-  spaceTypes,
+  spaceTags,
   questionsData,
   questionsLoading,
   onPreview,
@@ -62,11 +62,11 @@ export const QuestionBankPanel: React.FC<QuestionBankPanelProps> = ({
         </div>
         <div className="flex gap-2">
           <div className="flex-1">
-            <Select value={filterSpaceTypeId} onValueChange={onFilterSpaceTypeIdChange}>
+            <Select value={filterSpaceTagId} onValueChange={onFilterSpaceTagIdChange}>
               <SelectTrigger><SelectValue placeholder="全部" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部</SelectItem>
-                {spaceTypes?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
+                {spaceTags?.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

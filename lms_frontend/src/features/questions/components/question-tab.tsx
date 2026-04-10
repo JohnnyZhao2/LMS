@@ -4,7 +4,7 @@ import { useQuestions } from '@/features/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/questions/api/create-question';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import type { Question, QuestionType, Tag } from '@/types/api';
+import type { Question, QuestionType } from '@/types/api';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
@@ -26,14 +26,13 @@ import { type ColumnDef } from '@tanstack/react-table';
 interface QuestionTabProps {
     search?: string;
     filterQuestionType?: QuestionType | 'all';
-    filterSpaceTypeId?: string;
-    spaceTypes?: Tag[];
+    filterSpaceTagId?: string;
 }
 
 export const QuestionTab: React.FC<QuestionTabProps> = ({
     search = '',
     filterQuestionType = 'all',
-    filterSpaceTypeId = 'all',
+    filterSpaceTagId = 'all',
 }) => {
     const [pagination, setPagination] = useState({
         page: 1,
@@ -44,7 +43,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
     const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
     const { roleNavigate } = useRoleNavigate();
 
-    const currentScopeKey = `${search}|${filterQuestionType}|${filterSpaceTypeId}`;
+    const currentScopeKey = `${search}|${filterQuestionType}|${filterSpaceTagId}`;
     const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
     const pageSize = pagination.pageSize;
 
@@ -53,7 +52,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
         pageSize,
         search: search || undefined,
         questionType: filterQuestionType === 'all' ? undefined : filterQuestionType,
-        spaceTypeId: filterSpaceTypeId === 'all' ? undefined : Number(filterSpaceTypeId),
+        spaceTagId: filterSpaceTagId === 'all' ? undefined : Number(filterSpaceTagId),
     });
     const deleteQuestion = useDeleteQuestion();
 

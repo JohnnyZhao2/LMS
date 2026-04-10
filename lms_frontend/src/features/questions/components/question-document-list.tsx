@@ -34,7 +34,7 @@ type QuestionListItem = QuestionEditCardValue & {
 interface QuestionDocumentListProps {
   items: QuestionListItem[];
   activeKey: string | null;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   showScore?: boolean;
   onChangeItem: (key: string, patch: Partial<QuestionEditCardValue>) => void;
   onSelectItem: (key: string) => void;
@@ -55,7 +55,7 @@ interface SortableQuestionListItemProps {
   item: QuestionListItem;
   index: number;
   isActive: boolean;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   showScore: boolean;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
   onSave?: () => void;
@@ -83,7 +83,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
   item,
   index,
   isActive,
-  spaceTypes,
+  spaceTags,
   showScore,
   onChange,
   onSave,
@@ -144,7 +144,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
         <QuestionEditCard
           item={item}
           index={index}
-          spaceTypes={spaceTypes}
+          spaceTags={spaceTags}
           showScore={showScore}
           onChange={onChange}
           onFocus={onFocus}
@@ -163,7 +163,7 @@ const SortableQuestionListItem: React.FC<SortableQuestionListItemProps> = ({
 export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
   items,
   activeKey,
-  spaceTypes,
+  spaceTags,
   showScore = false,
   onChangeItem,
   onSelectItem,
@@ -272,7 +272,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     item={item}
                     index={index}
                     isActive={item.key === activeKey}
-                    spaceTypes={spaceTypes}
+                    spaceTags={spaceTags}
                     showScore={showScore}
                     onChange={(patch) => onChangeItem(item.key, patch)}
                     onSave={onSaveItem ? () => onSaveItem(item.key) : undefined}
@@ -325,7 +325,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
                     item={draggingItem}
                     index={items.findIndex((item) => item.key === draggingItem.key)}
                     isActive={draggingItem.key === activeKey}
-                    spaceTypes={spaceTypes}
+                    spaceTags={spaceTags}
                     showScore={showScore}
                     onChange={() => undefined}
                     onSave={undefined}

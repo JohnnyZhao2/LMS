@@ -3,12 +3,11 @@ import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QUIET_OUTLINE_FIELD_CLASSNAME } from '@/components/ui/interactive-styles';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TagInput } from '@/features/knowledge/components/shared/tag-input';
 import { getQuestionTypePresentation, QUESTION_TYPE_PICKER_OPTIONS } from '@/features/questions/constants';
 import { CompactNumberInput } from '@/features/quiz-center/quizzes/components/compact-number-input';
 import { cn } from '@/lib/utils';
 import type { QuestionType, SimpleTag, Tag } from '@/types/api';
-
-import { QuestionTagInput } from './question-tag-input';
 
 type MetaSpaceTag = Pick<SimpleTag, 'id' | 'name' | 'color'>;
 
@@ -107,7 +106,7 @@ interface QuestionMetaToolbarProps {
   showScore?: boolean;
   showSpace?: boolean;
   showTags?: boolean;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   spaceTag?: MetaSpaceTag | null;
   spaceTagId?: number | null;
   onSpaceTagIdChange?: (value: number | null) => void;
@@ -128,7 +127,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
   showScore = false,
   showSpace = false,
   showTags = false,
-  spaceTypes,
+  spaceTags,
   spaceTag,
   spaceTagId,
   onSpaceTagIdChange,
@@ -139,7 +138,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
   trailingContent,
 }) => {
   const [tagPopoverOpen, setTagPopoverOpen] = React.useState(false);
-  const currentSpace = spaceTag ?? spaceTypes?.find((item) => item.id === spaceTagId) ?? null;
+  const currentSpace = spaceTag ?? spaceTags?.find((item) => item.id === spaceTagId) ?? null;
 
   return (
     <div className="flex items-center justify-between gap-3">
@@ -211,7 +210,7 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
                 <SelectItem value="__none__">
                   <SpaceItem />
                 </SelectItem>
-                {spaceTypes?.map((item) => (
+                {spaceTags?.map((item) => (
                   <SelectItem key={item.id} value={item.id.toString()}>
                     <SpaceItem space={item} />
                   </SelectItem>
@@ -246,10 +245,12 @@ export const QuestionMetaToolbar: React.FC<QuestionMetaToolbarProps> = ({
                 sideOffset={14}
                 className="w-[340px] rounded-[16px] border-[rgba(255,255,255,0.5)] bg-[rgba(255,255,255,0.42)] p-[16px_18px] text-foreground shadow-[0_4px_24px_rgba(0,0,0,0.06)] backdrop-blur-[20px]"
               >
-                <QuestionTagInput
-                  selectedTagIds={selectedTagIds}
+                <TagInput
+                  applicableTo="question"
+                  selectedTags={selectedTagIds.map((id) => ({ id }))}
                   onAdd={onTagAdd}
                   onRemove={onTagRemove}
+                  extendScope={false}
                 />
               </PopoverContent>
             </Popover>

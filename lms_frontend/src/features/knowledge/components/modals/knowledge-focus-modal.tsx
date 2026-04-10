@@ -5,7 +5,7 @@ import { Upload, Plus, X } from 'lucide-react';
 import type { Tag as TagType } from '@/types/api';
 import type { RelatedLink } from '@/types/knowledge';
 
-import { useSpaceTypeTags } from '../../api/get-tags';
+import { useTags } from '@/features/tags/api/tags';
 import { useCreateKnowledge } from '../../api/manage-knowledge';
 import { useParseDocument } from '../../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
@@ -59,7 +59,7 @@ const CreateKnowledgeFocus: React.FC<{
   const [showTagPanel, setShowTagPanel] = React.useState(false);
   const [showRelatedLinksPanel, setShowRelatedLinksPanel] = React.useState(false);
 
-  const { data: spaceTypeTags = [] } = useSpaceTypeTags();
+  const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
   const createKnowledge = useCreateKnowledge();
   const parseDocument = useParseDocument();
 
@@ -74,9 +74,9 @@ const CreateKnowledgeFocus: React.FC<{
     setSelectedTags([]);
     setShowTagPanel(false);
     setShowRelatedLinksPanel(false);
-    const hasPreferredSpaceTag = typeof initialSpaceTagId === 'number' && spaceTypeTags.some((tag) => tag.id === initialSpaceTagId);
+    const hasPreferredSpaceTag = typeof initialSpaceTagId === 'number' && spaces.some((tag) => tag.id === initialSpaceTagId);
     setSpaceTagId(hasPreferredSpaceTag ? initialSpaceTagId : undefined);
-  }, [initialContent, initialSpaceTagId, spaceTypeTags]);
+  }, [initialContent, initialSpaceTagId, spaces]);
 
   React.useEffect(() => {
     const htmlStyle = document.documentElement.style;
@@ -225,7 +225,7 @@ const CreateKnowledgeFocus: React.FC<{
               className="akm-select"
             >
               <option value="">space</option>
-              {spaceTypeTags.map((tag: TagType) => (
+              {spaces.map((tag: TagType) => (
                 <option key={tag.id} value={tag.id}>{tag.name}</option>
               ))}
             </select>

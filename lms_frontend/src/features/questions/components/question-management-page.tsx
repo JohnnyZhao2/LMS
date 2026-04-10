@@ -6,8 +6,8 @@ import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/sea
 import { CircleButton } from '@/components/ui/circle-button';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTags } from '@/features/tags/api/tags';
 import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
-import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import type { QuestionType } from '@/types/api';
 import { QuestionTab } from './question-tab';
@@ -23,8 +23,8 @@ const QUESTION_TYPE_FILTER_OPTIONS: Array<{ value: QuestionType | 'all'; label: 
 export const QuestionManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [filterQuestionType, setFilterQuestionType] = useState<QuestionType | 'all'>('all');
-  const [filterSpaceTypeId, setFilterSpaceTypeId] = useState<string>('all');
-  const { data: spaceTypes } = useSpaceTypeTags();
+  const [filterSpaceTagId, setFilterSpaceTagId] = useState<string>('all');
+  const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
   const { roleNavigate } = useRoleNavigate();
 
   return (
@@ -45,13 +45,13 @@ export const QuestionManagementPage: React.FC = () => {
             />
 
             <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
-              <Select value={filterSpaceTypeId} onValueChange={setFilterSpaceTypeId}>
+              <Select value={filterSpaceTagId} onValueChange={setFilterSpaceTagId}>
                 <SelectTrigger>
                   <SelectValue placeholder="全部空间" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部</SelectItem>
-                  {spaceTypes?.map((space) => (
+                  {spaceTags?.map((space) => (
                     <SelectItem key={space.id} value={space.id.toString()}>
                       {space.name}
                     </SelectItem>
@@ -80,8 +80,7 @@ export const QuestionManagementPage: React.FC = () => {
           <QuestionTab
             search={search}
             filterQuestionType={filterQuestionType}
-            filterSpaceTypeId={filterSpaceTypeId}
-            spaceTypes={spaceTypes}
+            filterSpaceTagId={filterSpaceTagId}
           />
         </div>
       </PageViewport>

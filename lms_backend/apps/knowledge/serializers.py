@@ -1,7 +1,6 @@
 """
 Serializers for knowledge management.
 """
-from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from apps.tags.serializers import TagSimpleSerializer
@@ -41,6 +40,16 @@ def _normalize_related_links(related_links):
         })
 
     return normalized_links
+
+
+def _normalize_knowledge_payload(attrs, *, normalize_missing_title: bool = False):
+    if 'title' in attrs and attrs['title'] is None:
+        attrs['title'] = ''
+    elif normalize_missing_title and attrs.get('title') is None:
+        attrs['title'] = ''
+    if 'related_links' in attrs:
+        attrs['related_links'] = _normalize_related_links(attrs['related_links'])
+    return attrs
 class KnowledgeListSerializer(serializers.ModelSerializer):
     """
     Serializer for knowledge list view.
@@ -121,19 +130,7 @@ class KnowledgeCreateSerializer(serializers.ModelSerializer):
             'content',
         ]
     def validate(self, attrs):
-        """
-        Validate knowledge document.
-        """
-        if attrs.get('title') is None:
-            attrs['title'] = ''
-        content = attrs.get('content', '')
-        if not content or not strip_tags(str(content)).strip():
-            raise serializers.ValidationError({
-                'content': '必须填写正文内容'
-            })
-        if 'related_links' in attrs:
-            attrs['related_links'] = _normalize_related_links(attrs['related_links'])
-        return attrs
+        return _normalize_knowledge_payload(attrs, normalize_missing_title=True)
 
 class KnowledgeUpdateSerializer(serializers.ModelSerializer):
     """
@@ -162,17 +159,4 @@ class KnowledgeUpdateSerializer(serializers.ModelSerializer):
             'content',
         ]
     def validate(self, attrs):
-        """
-        Validate knowledge document.
-        """
-        if 'title' in attrs and attrs['title'] is None:
-            attrs['title'] = ''
-        instance = self.instance
-        content = attrs.get('content', instance.content if instance else '')
-        if not content or not strip_tags(str(content)).strip():
-            raise serializers.ValidationError({
-                'content': '必须填写正文内容'
-            })
-        if 'related_links' in attrs:
-            attrs['related_links'] = _normalize_related_links(attrs['related_links'])
-        return attrs
+        return _normalize_knowledge_payload(attrs)

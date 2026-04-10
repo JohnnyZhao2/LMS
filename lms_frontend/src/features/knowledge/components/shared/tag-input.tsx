@@ -93,17 +93,19 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
 
   return (
-    <div className="taginput-root">
-      {/* 已选标签 */}
+    <div className="mb-[14px] flex flex-col gap-2">
       {!hideChips && selectedTags.length > 0 && (
-        <div className="taginput-chips">
+        <div className="flex flex-wrap gap-1.5">
           {selectedTags.map((t) => (
-            <span key={t.id} className="taginput-chip">
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-[5px] rounded-full bg-[#e0e3e8] px-[11px] py-1 text-[12px] text-[#555]"
+            >
               {t.name || scopedTags.find((item) => item.id === t.id)?.name || `#${t.id}`}
               <button
                 type="button"
                 onClick={() => onRemove(t.id)}
-                className="taginput-chip-x"
+                className="flex p-0 text-[#98a4b5] transition hover:text-[#666]"
               >
                 <X style={{ width: 10, height: 10 }} />
               </button>
@@ -112,8 +114,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         </div>
       )}
 
-      {/* 输入框 + 添加按钮 */}
-      <div className="taginput-row">
+      <div className="flex overflow-hidden rounded-[7px] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.08),0_2px_6px_rgba(15,23,42,0.06)] transition focus-within:shadow-[0_12px_28px_rgba(15,23,42,0.12),0_3px_8px_rgba(15,23,42,0.08)]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -124,27 +125,26 @@ export const TagInput: React.FC<TagInputProps> = ({
             }
           }}
           placeholder="输入标签名…"
-          className="taginput-field"
+          className="flex-1 bg-transparent px-[14px] py-[10px] text-[14px] text-[#333] outline-none placeholder:text-[#bbb]"
         />
         <button
           type="button"
           onClick={() => void handleAdd()}
           disabled={!trimmedInput || createTag.isPending}
-          className="taginput-add-btn"
+          className="flex h-auto w-11 shrink-0 items-center justify-center border-0 bg-[#e8793a] text-white transition hover:bg-[#d66b2e] disabled:cursor-not-allowed disabled:bg-[#ddd] disabled:text-[#aaa]"
         >
           <Plus style={{ width: 18, height: 18 }} />
         </button>
       </div>
 
-      {/* 输入时的匹配建议 */}
       {matchedTags.length > 0 && (
-        <div className="taginput-suggestions">
+        <div className="flex flex-col overflow-hidden rounded-[6px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           {matchedTags.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => void handleSelectSuggestion(t)}
-              className="taginput-suggestion-item"
+              className="flex items-center gap-1.5 px-[14px] py-[9px] text-left text-[12px] text-[#333] transition hover:bg-[#f5f5f5]"
             >
               {t.name}
             </button>
@@ -152,150 +152,21 @@ export const TagInput: React.FC<TagInputProps> = ({
         </div>
       )}
 
-      {/* 没有输入时展示最近标签 */}
       {recentTags.length > 0 && (
-        <div className="taginput-recent">
-          <span className="taginput-recent-label">最近:</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-[#aaa]">最近:</span>
           {recentTags.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => void handleSelectSuggestion(t)}
-              className="taginput-recent-item"
+              className="border-0 bg-transparent p-0 text-[12px] text-[#e8793a] underline decoration-transparent transition hover:decoration-[#e8793a]"
             >
               {t.name}
             </button>
           ))}
         </div>
       )}
-
-      <style>{`
-        .taginput-root {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 14px;
-        }
-        .taginput-chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-        .taginput-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          background: #e0e3e8;
-          border-radius: 100px;
-          padding: 4px 11px;
-          font-size: 12px;
-          color: #555;
-        }
-        .taginput-chip-x {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #aaa;
-          display: flex;
-          padding: 0;
-          transition: color 0.15s;
-        }
-        .taginput-chip-x:hover { color: #666; }
-        .taginput-row {
-          display: flex;
-          border-radius: 7px;
-          overflow: hidden;
-          background: #fff;
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.06);
-          transition: box-shadow 0.2s ease;
-        }
-        .taginput-row:focus-within {
-          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12), 0 3px 8px rgba(15, 23, 42, 0.08);
-        }
-        .taginput-field {
-          flex: 1;
-          border: none;
-          outline: none;
-          padding: 10px 14px;
-          font-size: 14px;
-          color: #333;
-          font-family: inherit;
-          background: none;
-        }
-        .taginput-field::placeholder { color: #bbb; }
-        .taginput-add-btn {
-          width: 44px;
-          border: none;
-          border-radius: 0 7px 7px 0;
-          background: #e8793a;
-          color: #fff;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          transition: background 0.15s;
-        }
-        .taginput-add-btn:hover { background: #d66b2e; }
-        .taginput-add-btn:disabled {
-          background: #ddd;
-          color: #aaa;
-          cursor: not-allowed;
-        }
-        .taginput-suggestions {
-          display: flex;
-          flex-direction: column;
-          background: #fff;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-          overflow: hidden;
-        }
-        .taginput-suggestion-item {
-          width: 100%;
-          text-align: left;
-          border: none;
-          background: none;
-          padding: 9px 14px;
-          font-size: 12px;
-          color: #333;
-          cursor: pointer;
-          font-family: inherit;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .taginput-suggestion-item:hover { background: #f5f5f5; }
-        .taginput-suggestion-create {
-          color: #e8793a;
-          font-weight: 500;
-          border-top: 1px solid #f0f0f0;
-        }
-        .taginput-recent {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-        .taginput-recent-label {
-          font-size: 12px;
-          color: #aaa;
-        }
-        .taginput-recent-item {
-          background: none;
-          border: none;
-          font-size: 12px;
-          color: #e8793a;
-          cursor: pointer;
-          font-family: inherit;
-          padding: 0;
-          text-decoration: underline;
-          text-decoration-color: transparent;
-          transition: text-decoration-color 0.15s;
-        }
-        .taginput-recent-item:hover {
-          text-decoration-color: #e8793a;
-        }
-      `}</style>
     </div>
   );
 };

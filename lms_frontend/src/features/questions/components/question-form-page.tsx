@@ -6,11 +6,11 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { EditorPageShell, PageFillShell } from '@/components/ui/page-shell';
+import { useTags } from '@/features/tags/api/tags';
 import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/features/questions/api/create-question';
 import { useQuestionDetail } from '@/features/questions/api/get-questions';
 import { QuestionBatchEditor } from '@/features/questions/components/question-batch-editor';
 import { createBlankEditableQuestion, questionToEditableItem } from '@/features/questions/components/question-editor-helpers';
-import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 
 export const QuestionFormPage: React.FC = () => {
@@ -18,7 +18,7 @@ export const QuestionFormPage: React.FC = () => {
   const questionId = id ? Number(id) : null;
   const isEdit = Boolean(questionId);
   const { roleNavigate } = useRoleNavigate();
-  const { data: spaceTypes } = useSpaceTypeTags();
+  const { data: spaceTags } = useTags({ tag_type: 'SPACE' });
   const { data: questionDetail, isLoading } = useQuestionDetail(questionId ?? 0);
   const createQuestion = useCreateQuestion();
   const updateQuestion = useUpdateQuestion();
@@ -49,7 +49,7 @@ export const QuestionFormPage: React.FC = () => {
             <QuestionBatchEditor
               key={isEdit ? `question-edit-${questionId}` : 'question-create-page'}
               initialItems={initialItems}
-              spaceTypes={spaceTypes}
+              spaceTags={spaceTags}
               allowAdd={!isEdit}
               onCreateQuestion={async (data) => {
                 const created = await createQuestion.mutateAsync(data);

@@ -24,7 +24,7 @@ export interface QuestionEditCardValue {
 interface QuestionEditCardProps {
   item: QuestionEditCardValue;
   index: number;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   showScore?: boolean;
   leadingSlot?: React.ReactNode;
   onChange: (patch: Partial<QuestionEditCardValue>) => void;
@@ -40,7 +40,7 @@ interface QuestionEditCardProps {
 export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
   item,
   index,
-  spaceTypes,
+  spaceTags,
   showScore = false,
   leadingSlot,
   onChange,
@@ -143,7 +143,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
                 showScore={showScore}
                 showSpace
                 showTags
-                spaceTypes={spaceTypes}
+                spaceTags={spaceTags}
                 spaceTagId={item.spaceTagId}
                 selectedTagIds={item.tagIds ?? []}
                 onSpaceTagIdChange={(value) => onChange({ spaceTagId: value })}

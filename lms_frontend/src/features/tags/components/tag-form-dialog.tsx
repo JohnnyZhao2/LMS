@@ -78,9 +78,9 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
     });
   };
 
-  const isSpaceType = tagType === 'SPACE';
+  const isSpaceTag = tagType === 'SPACE';
   const dialogTitle = mode === 'create' ? '新建标签' : '编辑标签';
-  const dialogDescription = isSpaceType
+  const dialogDescription = isSpaceTag
     ? '用于单选归类。'
     : '用于补充语义。';
 
@@ -101,7 +101,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
           </DialogHeader>
 
           <div className="mt-7 space-y-5">
-            <div className={`grid gap-4 ${isSpaceType ? 'md:grid-cols-[180px_minmax(0,1fr)_112px]' : 'md:grid-cols-[200px_minmax(0,1fr)]'}`}>
+            <div className={`grid gap-4 ${isSpaceTag ? 'md:grid-cols-[180px_minmax(0,1fr)_112px]' : 'md:grid-cols-[200px_minmax(0,1fr)]'}`}>
               <div className="space-y-2">
                 <Label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                   标签类型
@@ -125,12 +125,12 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
                   id="tag-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder={isSpaceType ? '例如：风控空间' : '例如：高频考点'}
+                  placeholder={isSpaceTag ? '例如：风控空间' : '例如：高频考点'}
                   className="h-12 rounded-lg border-border/70 bg-white/90 px-4 text-[15px] font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.04)] placeholder:text-text-muted/80"
                 />
               </div>
 
-              {isSpaceType ? (
+              {isSpaceTag ? (
                 <div className="space-y-2">
                   <Label htmlFor="tag-sort" className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                     排序
@@ -146,7 +146,7 @@ export const TagFormDialog: React.FC<TagFormDialogProps> = ({
               ) : null}
             </div>
 
-            {isSpaceType ? (
+            {isSpaceTag ? (
               <div className="flex flex-col items-center space-y-2 pt-1">
                 <Label className="block text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                   颜色

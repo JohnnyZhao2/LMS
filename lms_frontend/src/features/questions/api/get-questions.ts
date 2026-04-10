@@ -9,7 +9,7 @@ interface GetQuestionsParams {
   pageSize?: number;
   questionType?: QuestionType;
   search?: string;
-  spaceTypeId?: number;
+  spaceTagId?: number;
   tagId?: number;
 }
 
@@ -18,16 +18,16 @@ interface GetQuestionsParams {
  */
 export const useQuestions = (params: GetQuestionsParams = {}) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, questionType, search, spaceTypeId, tagId } = params;
+  const { page = 1, pageSize = 20, questionType, search, spaceTagId, tagId } = params;
 
   return useQuery({
-    queryKey: ['questions', currentRole ?? 'UNKNOWN', page, pageSize, questionType, search, spaceTypeId, tagId],
+    queryKey: ['questions', currentRole ?? 'UNKNOWN', page, pageSize, questionType, search, spaceTagId, tagId],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(questionType && { question_type: questionType }),
         ...(search && { search }),
-        ...(spaceTypeId && { space_tag_id: String(spaceTypeId) }),
+        ...(spaceTagId && { space_tag_id: String(spaceTagId) }),
         ...(tagId && { tag_id: String(tagId) }),
       };
       const queryString = buildQueryString(queryParams);

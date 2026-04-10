@@ -5,18 +5,11 @@ import {
     Inbox,
     Search,
 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { SpaceColorRingPicker, SPACE_THEME_COLORS } from '@/components/common/space-color-ring-picker';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { toast } from 'sonner';
 import type { Tag as TagType } from '@/types/api';
@@ -27,8 +20,8 @@ import { useIncrementViewCount } from '../api/increment-view-count';
 import { useKnowledgeFilters } from '../hooks/use-knowledge-filters';
 import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
-import { useCreateTag, useDeleteTag } from '@/features/tags/api/tags';
-import { useSpaceTypeTags } from '../api/get-tags';
+import { useCreateTag, useDeleteTag, useTags } from '@/features/tags/api/tags';
+import { SpaceTagQuickCreateDialog } from '@/features/tags/components/space-tag-quick-create-dialog';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
@@ -60,16 +53,13 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const createTag = useCreateTag();
     const deleteTag = useDeleteTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
-    const [deleteSpaceTypeTarget, setDeleteSpaceTypeTarget] = React.useState<number | null>(null);
+    const [deleteSpaceTagTarget, setDeleteSpaceTagTarget] = React.useState<number | null>(null);
     const [focusState, setFocusState] = React.useState<FocusState | null>(null);
     const [detailId, setDetailId] = React.useState<number | null>(null);
     const [detailStartEditing, setDetailStartEditing] = React.useState(false);
-    const [hoveredSpaceTypeId, setHoveredSpaceTypeId] = React.useState<number | null>(null);
-    const [isTypeActionHovered, setIsTypeActionHovered] = React.useState(false);
-    const [isCreateSpaceTypeOpen, setIsCreateSpaceTypeOpen] = React.useState(false);
-    const [createSpaceTypeStep, setCreateSpaceTypeStep] = React.useState<1 | 2>(1);
-    const [newSpaceTypeName, setNewSpaceTypeName] = React.useState('');
-    const [selectedSpaceTypeColor, setSelectedSpaceTypeColor] = React.useState<string>(SPACE_THEME_COLORS[0]);
+    const [hoveredSpaceTagId, setHoveredSpaceTagId] = React.useState<number | null>(null);
+    const [isSpaceTagActionHovered, setIsSpaceTagActionHovered] = React.useState(false);
+    const [isCreateSpaceTagOpen, setIsCreateSpaceTagOpen] = React.useState(false);
 
     const searchParams = React.useMemo(() => new URLSearchParams(location.search), [location.search]);
     const routeKnowledgeIdNumber = routeKnowledgeId ? Number(routeKnowledgeId) : null;
@@ -90,17 +80,17 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         searchValue,
         setSearchValue,
         submitSearch,
-        selectedSpaceTypeId,
-        handleSpaceTypeSelect,
+        selectedSpaceTagId,
+        handleSpaceTagSelect,
         pageSize,
     } = useKnowledgeFilters({ defaultPageSize: 24 });
 
-    const { data: spaceTypeTags = [] } = useSpaceTypeTags();
-    const selectedSpaceType = React.useMemo(
-        () => spaceTypeTags.find((tag) => tag.id === selectedSpaceTypeId),
-        [spaceTypeTags, selectedSpaceTypeId],
+    const { data: spaceTags = [] } = useTags({ tag_type: 'SPACE' });
+    const selectedSpaceTag = React.useMemo(
+        () => spaceTags.find((tag) => tag.id === selectedSpaceTagId),
+        [spaceTags, selectedSpaceTagId],
     );
-    const isDeleteSpaceTypeMode = canDeleteKnowledge && !!selectedSpaceType;
+    const isDeleteSpaceTagMode = canDeleteKnowledge && !!selectedSpaceTag;
 
     const {
         data,
@@ -111,7 +101,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         isFetchingNextPage,
     } = useInfiniteKnowledgeList({
         search: search || undefined,
-        space_tag_id: selectedSpaceTypeId,
+        space_tag_id: selectedSpaceTagId,
         pageSize,
     });
     const knowledgeItems = React.useMemo(
@@ -146,7 +136,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             setFocusState((prev) => (
                 prev?.mode === 'create'
                     ? prev
-                    : { mode: 'create', initialContent: '', initialSpaceTagId: selectedSpaceTypeId }
+                    : { mode: 'create', initialContent: '', initialSpaceTagId: selectedSpaceTagId }
             ));
             return;
         }
@@ -165,7 +155,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         setFocusState(null);
         setDetailId(null);
         setDetailStartEditing(false);
-    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId, selectedSpaceTypeId]);
+    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId, selectedSpaceTagId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
@@ -226,7 +216,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             await createKnowledge.mutateAsync({
                 content,
                 ...(derivedTitle && { title: derivedTitle }),
-                ...(selectedSpaceTypeId !== undefined && { space_tag_id: selectedSpaceTypeId }),
+                ...(selectedSpaceTagId !== undefined && { space_tag_id: selectedSpaceTagId }),
             });
 
             toast.success('知识创建成功');
@@ -235,44 +225,35 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             toast.error('创建失败');
             throw error;
         }
-    }, [createKnowledge, selectedSpaceTypeId, refetch]);
+    }, [createKnowledge, selectedSpaceTagId, refetch]);
 
-    const handleCreateSpaceType = React.useCallback(async () => {
-        const name = newSpaceTypeName.trim();
-        if (!name) {
-            toast.error('请输入类型名称');
-            return;
-        }
-
+    const handleCreateSpaceTag = React.useCallback(async ({ name, color }: { name: string; color: string }) => {
         try {
             await createTag.mutateAsync({
                 name,
                 tag_type: 'SPACE',
-                color: selectedSpaceTypeColor,
+                color,
             });
             toast.success('space 已添加');
-            setIsCreateSpaceTypeOpen(false);
-            setCreateSpaceTypeStep(1);
-            setNewSpaceTypeName('');
-            setSelectedSpaceTypeColor(SPACE_THEME_COLORS[0]);
+            setIsCreateSpaceTagOpen(false);
         } catch {
             toast.error('添加失败');
         }
-    }, [createTag, newSpaceTypeName, selectedSpaceTypeColor]);
+    }, [createTag]);
 
-            const handleDeleteSpaceType = React.useCallback(async () => {
-        if (!deleteSpaceTypeTarget) return;
+    const handleDeleteSpaceTag = React.useCallback(async () => {
+        if (!deleteSpaceTagTarget) return;
 
         try {
-            await deleteTag.mutateAsync(deleteSpaceTypeTarget);
-            handleSpaceTypeSelect(undefined);
+            await deleteTag.mutateAsync(deleteSpaceTagTarget);
+            handleSpaceTagSelect(undefined);
             toast.success('space 已删除');
         } catch {
             toast.error('删除失败');
         } finally {
-            setDeleteSpaceTypeTarget(null);
+            setDeleteSpaceTagTarget(null);
         }
-    }, [deleteSpaceTypeTarget, deleteTag, handleSpaceTypeSelect]);
+    }, [deleteSpaceTagTarget, deleteTag, handleSpaceTagSelect]);
 
     return (
         <PageShell
@@ -303,21 +284,21 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             />
 
             {/* space筛选标签 — 白色卡片 */}
-            {(spaceTypeTags.length > 0 || isManagementView) && (
+            {(spaceTags.length > 0 || isManagementView) && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-2">
-                        {spaceTypeTags.map((tag: TagType) => (
+                        {spaceTags.map((tag: TagType) => (
                             <button
                                 key={tag.id}
-                                onClick={() => handleSpaceTypeSelect(
-                                    selectedSpaceTypeId === tag.id ? undefined : tag.id
+                                onClick={() => handleSpaceTagSelect(
+                                    selectedSpaceTagId === tag.id ? undefined : tag.id
                                 )}
-                                onMouseEnter={() => setHoveredSpaceTypeId(tag.id)}
-                                onMouseLeave={() => setHoveredSpaceTypeId((current) => (current === tag.id ? null : current))}
+                                onMouseEnter={() => setHoveredSpaceTagId(tag.id)}
+                                onMouseLeave={() => setHoveredSpaceTagId((current) => (current === tag.id ? null : current))}
                                 className="inline-flex items-center gap-3 rounded-[6px] bg-white px-3 py-2 font-medium transition-[box-shadow] duration-200"
                                 style={{
                                     fontSize: 12.5,
-                                    boxShadow: hoveredSpaceTypeId === tag.id
+                                    boxShadow: hoveredSpaceTagId === tag.id
                                         ? '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
                                         : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
                                 }}
@@ -326,10 +307,10 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                     className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
                                     style={{
                                         borderColor: tag.color || 'var(--theme-primary)',
-                                        backgroundColor: selectedSpaceTypeId === tag.id ? (tag.color || 'var(--theme-primary)') : 'transparent',
+                                        backgroundColor: selectedSpaceTagId === tag.id ? (tag.color || 'var(--theme-primary)') : 'transparent',
                                     }}
                                 >
-                                    {selectedSpaceTypeId === tag.id && (
+                                    {selectedSpaceTagId === tag.id && (
                                         <span className="w-1.5 h-1.5 rounded-full bg-white" />
                                     )}
                                 </span>
@@ -339,7 +320,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             </button>
                         ))}
 
-                        {spaceTypeTags.length === 0 && isManagementView && (
+                        {spaceTags.length === 0 && isManagementView && (
                             <span className="px-4 py-2 text-sm text-text-muted">
                                 暂无space
                             </span>
@@ -350,39 +331,39 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                         <button
                             type="button"
                             onClick={() => {
-                                if (isDeleteSpaceTypeMode && selectedSpaceType) {
-                                    setDeleteSpaceTypeTarget(selectedSpaceType.id);
+                                if (isDeleteSpaceTagMode && selectedSpaceTag) {
+                                    setDeleteSpaceTagTarget(selectedSpaceTag.id);
                                     return;
                                 }
-                                setIsCreateSpaceTypeOpen(true);
+                                setIsCreateSpaceTagOpen(true);
                             }}
-                            onMouseEnter={() => setIsTypeActionHovered(true)}
-                            onMouseLeave={() => setIsTypeActionHovered(false)}
+                            onMouseEnter={() => setIsSpaceTagActionHovered(true)}
+                            onMouseLeave={() => setIsSpaceTagActionHovered(false)}
                             className={cn(
                                 'inline-flex items-center rounded-full px-4 py-2 font-medium transition-[background-color,box-shadow,color] duration-200',
-                                isDeleteSpaceTypeMode
+                                isDeleteSpaceTagMode
                                     ? 'bg-destructive text-white'
                                     : 'gap-3 bg-white text-foreground',
                             )}
                             style={{
                                 fontSize: 12.5,
-                                boxShadow: isTypeActionHovered
+                                boxShadow: isSpaceTagActionHovered
                                     ? (
-                                        isDeleteSpaceTypeMode
+                                        isDeleteSpaceTagMode
                                             ? '0 14px 28px rgba(220,38,38,0.26)'
                                             : '0 14px 24px rgba(0,0,0,0.13), 10px 14px 24px rgba(0,0,0,0.10)'
                                     )
                                     : (
-                                        isDeleteSpaceTypeMode
+                                        isDeleteSpaceTagMode
                                             ? '0 10px 24px rgba(220,38,38,0.18)'
                                             : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)'
                                     ),
                             }}
                         >
-                            {!isDeleteSpaceTypeMode && (
+                            {!isDeleteSpaceTagMode && (
                                 <span className="h-4 w-4 rounded-full border-2 border-accent" />
                             )}
-                            {isDeleteSpaceTypeMode ? '删除此类型' : '添加空间'}
+                            {isDeleteSpaceTagMode ? '删除此类型' : '添加空间'}
                         </button>
                     )}
                 </div>
@@ -417,7 +398,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         setFocusState({
                                             mode: 'create',
                                             initialContent: content,
-                                            initialSpaceTagId: selectedSpaceTypeId,
+                                            initialSpaceTagId: selectedSpaceTagId,
                                         });
                                     }}
                                     isSaving={createKnowledge.isPending}
@@ -471,16 +452,16 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             />
 
             <ConfirmDialog
-                open={deleteSpaceTypeTarget !== null}
-                onOpenChange={(open) => { if (!open) setDeleteSpaceTypeTarget(null); }}
+                open={deleteSpaceTagTarget !== null}
+                onOpenChange={(open) => { if (!open) setDeleteSpaceTagTarget(null); }}
                 title="确认删除此类型吗？"
-                description={selectedSpaceType
-                    ? `删除“${selectedSpaceType.name}”不会删除知识卡片，只会删除此类型。`
+                description={selectedSpaceTag
+                    ? `删除“${selectedSpaceTag.name}”不会删除知识卡片，只会删除此类型。`
                     : '删除此类型不会删除知识卡片，只会删除此类型。'}
                 confirmText="删除此类型"
                 confirmVariant="destructive"
                 isConfirming={deleteTag.isPending}
-                onConfirm={handleDeleteSpaceType}
+                onConfirm={handleDeleteSpaceTag}
             />
 
             {detailId !== null && (
@@ -559,116 +540,12 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 />
             )}
 
-            <Dialog
-                open={isCreateSpaceTypeOpen}
-                onOpenChange={(open) => {
-                    setIsCreateSpaceTypeOpen(open);
-                    if (open) {
-                        setCreateSpaceTypeStep(1);
-                    } else {
-                        setCreateSpaceTypeStep(1);
-                        setNewSpaceTypeName('');
-                        setSelectedSpaceTypeColor(SPACE_THEME_COLORS[0]);
-                    }
-                }}
-            >
-                <DialogContent className="max-w-[560px] overflow-hidden border border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(232,121,58,0.08),transparent_26%),radial-gradient(circle_at_top_right,rgba(37,99,235,0.06),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(251,251,250,0.99))] p-0 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
-                    <div className="relative px-7 py-8 sm:px-10 sm:py-9">
-                        <div className="pointer-events-none absolute -left-10 top-0 h-24 w-24 rounded-full bg-[rgba(232,121,58,0.08)] blur-2xl" />
-                        <div className="pointer-events-none absolute right-0 top-6 h-20 w-20 rounded-full bg-[rgba(37,99,235,0.06)] blur-2xl" />
-                        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,rgba(232,121,58,0),rgba(232,121,58,0.55),rgba(37,99,235,0.32),rgba(37,99,235,0))]" />
-                        {createSpaceTypeStep === 1 ? (
-                            <div className="flex flex-col items-center text-center">
-                                <div className="relative mb-5 h-12 w-12">
-                                    <span className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-primary-300" />
-                                    <span className="absolute left-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-secondary-300" />
-                                    <span className="absolute right-0 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-[2.5px] border-destructive-300" />
-                                    <span className="absolute bottom-0 left-1/2 h-5 w-5 -translate-x-1/2 rounded-full border-[2.5px] border-primary-600" />
-                                </div>
-
-                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-foreground sm:text-[34px]">
-                                    创建新类型
-                                </DialogTitle>
-                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-text-muted sm:text-[15px]">
-                                    空间是你脑海中卡片的集合。你可以直接上传卡片到空间中，也可以从概览中选择一张卡片。
-                                </DialogDescription>
-
-                                <div className="mt-7 w-full max-w-[360px]">
-                                    <input
-                                        id="line-type-name"
-                                        value={newSpaceTypeName}
-                                        onChange={(e) => setNewSpaceTypeName(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && newSpaceTypeName.trim()) {
-                                                e.preventDefault();
-                                                setCreateSpaceTypeStep(2);
-                                            }
-                                        }}
-                                        placeholder="输入类型名称"
-                                        maxLength={20}
-                                        autoFocus
-                                        className="h-14 w-full rounded-lg border border-border bg-transparent px-5 text-center text-[16px] text-foreground outline-none transition-colors placeholder:text-text-muted focus:border-primary"
-                                    />
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setCreateSpaceTypeStep(2)}
-                                    disabled={!newSpaceTypeName.trim()}
-                                    className={cn(
-                                        'mt-7 rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-70',
-                                        !newSpaceTypeName.trim()
-                                            ? 'bg-muted text-foreground'
-                                            : 'bg-[#E8793A] text-white hover:bg-[#D96C2F]',
-                                    )}
-                                >
-                                    下一步
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center text-center">
-                                <DialogTitle className="text-center text-[30px] font-medium leading-none tracking-[-0.03em] text-foreground sm:text-[34px]">
-                                    选择主题色
-                                </DialogTitle>
-                                <DialogDescription className="mt-4 max-w-[360px] text-center text-[14px] leading-[1.8] text-text-muted sm:text-[15px]">
-                                    颜色会帮助你更快识别这个类型。先选一个你最顺眼的标记色。
-                                </DialogDescription>
-
-                                <SpaceColorRingPicker
-                                    value={selectedSpaceTypeColor}
-                                    onChange={setSelectedSpaceTypeColor}
-                                    className="mt-5"
-                                />
-
-                                <div className="mt-5 flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setCreateSpaceTypeStep(1)}
-                                        className={cn(
-                                            'w-[110px] rounded-full border border-border px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] text-text-muted transition-colors hover:bg-muted',
-                                        )}
-                                    >
-                                        上一步
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleCreateSpaceType()}
-                                        disabled={createTag.isPending || !newSpaceTypeName.trim()}
-                                        className={cn(
-                                            'w-[110px] rounded-full px-7 py-2.5 text-[14px] font-medium tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-70',
-                                            createTag.isPending || !newSpaceTypeName.trim()
-                                                ? 'bg-muted text-foreground'
-                                                : 'bg-[#E8793A] text-white hover:bg-[#D96C2F]',
-                                        )}
-                                    >
-                                        {createTag.isPending ? '保存中' : '保存'}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <SpaceTagQuickCreateDialog
+                open={isCreateSpaceTagOpen}
+                onOpenChange={setIsCreateSpaceTagOpen}
+                onSubmit={handleCreateSpaceTag}
+                isSubmitting={createTag.isPending}
+            />
         </PageShell>
     );
 };

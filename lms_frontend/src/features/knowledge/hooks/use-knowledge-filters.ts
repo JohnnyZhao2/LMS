@@ -17,7 +17,7 @@ export interface KnowledgeFilterState {
   /** 搜索输入值（实时） */
   searchValue: string;
   /** 选中的space ID */
-  selectedSpaceTypeId: number | undefined;
+  selectedSpaceTagId: number | undefined;
   /** 当前页码 */
   page: number;
   /** 每页数量 */
@@ -35,7 +35,7 @@ export interface KnowledgeFilterActions {
   /** 直接搜索（用于 Search 组件） */
   searchDirectly: (value: string) => void;
   /** 选择/取消space */
-  handleSpaceTypeSelect: (id: number | undefined) => void;
+  handleSpaceTagSelect: (id: number | undefined) => void;
   /** 处理分页变化 */
   handlePageChange: (page: number, pageSize: number) => void;
   /** 重置所有筛选 */
@@ -57,7 +57,7 @@ export const useKnowledgeFilters = (
   // 状态
   const [search, setSearch] = useState('');
   const [searchValue, setSearchValue] = useState('');
-  const [selectedSpaceTypeId, setSelectedSpaceTypeId] = useState<number | undefined>();
+  const [selectedSpaceTagId, setSelectedSpaceTagId] = useState<number | undefined>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(defaultPageSize);
 
@@ -81,8 +81,8 @@ export const useKnowledgeFilters = (
   /**
    * 选择/取消space
    */
-  const handleSpaceTypeSelect = useCallback((id: number | undefined) => {
-    setSelectedSpaceTypeId(prev => (prev === id ? undefined : id));
+  const handleSpaceTagSelect = useCallback((id: number | undefined) => {
+    setSelectedSpaceTagId(prev => (prev === id ? undefined : id));
     setPage(1);
   }, []);
 
@@ -100,7 +100,7 @@ export const useKnowledgeFilters = (
   const resetFilters = useCallback(() => {
     setSearch('');
     setSearchValue('');
-    setSelectedSpaceTypeId(undefined);
+    setSelectedSpaceTagId(undefined);
     setPage(1);
     setPageSize(defaultPageSize);
   }, [defaultPageSize]);
@@ -109,14 +109,14 @@ export const useKnowledgeFilters = (
     // 状态
     search,
     searchValue,
-    selectedSpaceTypeId,
+    selectedSpaceTagId,
     page,
     pageSize,
     // 操作
     setSearchValue,
     submitSearch,
     searchDirectly,
-    handleSpaceTypeSelect,
+    handleSpaceTagSelect,
     handlePageChange,
     resetFilters,
   };

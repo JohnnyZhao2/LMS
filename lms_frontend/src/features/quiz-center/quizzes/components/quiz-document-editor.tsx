@@ -8,7 +8,7 @@ import type { InlineQuestionItem } from '../types';
 interface QuizDocumentEditorProps {
   items: InlineQuestionItem[];
   activeKey: string | null;
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   onUpdateItem: (key: string, patch: Partial<InlineQuestionItem>) => void;
   onSaveItem: (key: string) => void;
   onRemoveItem: (key: string) => void;
@@ -26,7 +26,7 @@ interface QuizDocumentEditorProps {
 export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
   items,
   activeKey,
-  spaceTypes,
+  spaceTags,
   onUpdateItem,
   onSaveItem,
   onRemoveItem,
@@ -43,7 +43,7 @@ export const QuizDocumentEditor: React.FC<QuizDocumentEditorProps> = ({
     <QuestionDocumentList
       items={items}
       activeKey={activeKey}
-      spaceTypes={spaceTypes}
+      spaceTags={spaceTags}
       showScore
       onChangeItem={(key, patch) => onUpdateItem(key, patch as Partial<InlineQuestionItem>)}
       onSelectItem={onFocusItem}

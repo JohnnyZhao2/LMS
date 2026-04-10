@@ -19,7 +19,7 @@ import {
 
 interface QuestionBatchEditorProps {
   initialItems: EditableQuestionItem[];
-  spaceTypes?: Tag[];
+  spaceTags?: Tag[];
   allowAdd?: boolean;
   onCreateQuestion: (data: QuestionCreateRequest) => Promise<Question>;
   onUpdateQuestion: (id: number, data: Partial<QuestionCreateRequest>) => Promise<Question>;
@@ -30,7 +30,7 @@ interface QuestionBatchEditorProps {
 
 export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
   initialItems,
-  spaceTypes,
+  spaceTags,
   allowAdd = false,
   onCreateQuestion,
   onUpdateQuestion,
@@ -171,7 +171,7 @@ export const QuestionBatchEditor: React.FC<QuestionBatchEditorProps> = ({
           <QuestionDocumentList
             items={items}
             activeKey={activeKey}
-            spaceTypes={spaceTypes}
+            spaceTags={spaceTags}
             showScore={false}
             onChangeItem={(key, patch) => replaceItem(key, (current) => ({ ...current, ...patch, saved: false }))}
             onSelectItem={setActiveKey}

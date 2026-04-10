@@ -208,8 +208,7 @@ class TagService(BaseService):
             Question.objects.filter(space_tag_id=tag.id).update(space_tag=None)
         else:
             tag.knowledge_items.clear()
-            if hasattr(tag, 'question_items'):
-                tag.question_items.clear()
+            tag.question_items.clear()
 
         tag.delete()
         return tag
@@ -283,8 +282,6 @@ class TagService(BaseService):
             tag.name = data['name']
         if 'color' in data:
             tag.color = data['color']
-        elif tag.tag_type != 'SPACE' and not tag.color:
-            tag.color = '#4A90E2'
         if 'sort_order' in data:
             tag.sort_order = data['sort_order']
 

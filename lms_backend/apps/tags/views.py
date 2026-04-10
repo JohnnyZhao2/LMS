@@ -7,7 +7,6 @@ from core.exceptions import BusinessError, get_status_code_for_error
 from core.query_params import parse_int_query_param
 from core.responses import created_response, error_response, list_response, no_content_response, success_response
 
-from .models import Tag
 from .serializers import TagSerializer
 from .services import (
     TagService,
@@ -94,7 +93,7 @@ class TagDetailView(APIView):
     )
     def patch(self, request, pk):
         enforce_tag_action_permission(request, 'tag.update', '无权更新标签')
-        serializer = TagSerializer(instance=Tag.objects.filter(pk=pk).first(), data=request.data, partial=True)
+        serializer = TagSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
         try:

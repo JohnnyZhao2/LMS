@@ -1,11 +1,11 @@
 import React from 'react';
-import { Calendar, Circle, PencilLine, Plus, Trash2, User } from 'lucide-react';
+import { Calendar, Circle, PencilLine, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useTags } from '@/features/tags/api/tags';
+import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
 import { useUpdateQuestion } from '@/features/questions/api/create-question';
-import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
 import { QuestionPreviewSurface } from '@/features/questions/components/question-preview-surface';
-import { TagInput } from '@/features/knowledge/components/shared/tag-input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
@@ -34,7 +34,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
   const [activeTags, setActiveTags] = React.useState(() => question?.tags ?? []);
   const [activeSpaceTag, setActiveSpaceTag] = React.useState<Question['space_tag'] | null>(() => question?.space_tag ?? null);
   const updateQuestion = useUpdateQuestion();
-  const { data: spaceTypes = [] } = useSpaceTypeTags();
+  const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
 
   React.useEffect(() => {
     setPreviewQuestion(question);
@@ -72,7 +72,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
         id: question.id,
         data: { space_tag_id: spaceTagId },
       });
-      setActiveSpaceTag(spaceTypes.find((item) => item.id === spaceTagId) ?? null);
+      setActiveSpaceTag(spaces.find((item) => item.id === spaceTagId) ?? null);
       setShowSpaceInfo(false);
       toast.success('空间已更新');
     } catch (error) {
@@ -136,57 +136,24 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
           <ScrollContainer className="flex-1">
             <div className="flex h-full flex-col px-5 py-[18px]">
               <div className="mb-[18px]">
-                <p className="mb-[10px] text-[10px] font-bold uppercase tracking-[0.1em] text-[#a0a8b0]">标签</p>
-                {showTagInput ? (
-                  <TagInput
-                    applicableTo="question"
-                    selectedTags={activeTags}
-                    onAdd={(tag) => {
-                      void syncTags(
-                        [...new Set([...activeTags.map((item) => item.id), tag.id])],
-                        [...activeTags, tag],
-                      );
-                    }}
-                    onRemove={(tagId) => {
-                      void syncTags(
-                        activeTags.filter((item) => item.id !== tagId).map((item) => item.id),
-                        activeTags.filter((item) => item.id !== tagId),
-                      );
-                    }}
-                    hideChips
-                  />
-                ) : null}
-
-                <div className="flex flex-wrap items-center gap-[7px]">
-                  <button
-                    type="button"
-                    onClick={() => setShowTagInput((value) => !value)}
-                    className="inline-flex items-center gap-1 rounded-[100px] bg-[#e8793a] px-[14px] py-[5px] text-[12px] font-semibold text-white transition hover:bg-[#d66b2e]"
-                  >
-                    <Plus className="h-3 w-3" strokeWidth={2.2} />
-                    添加标签
-                  </button>
-                  {activeTags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-flex items-center gap-[5px] rounded-[100px] bg-[#e0e3e8] px-[11px] py-1 text-[12px] text-[#555]"
-                    >
-                      {tag.name}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void syncTags(
-                            activeTags.filter((item) => item.id !== tag.id).map((item) => item.id),
-                            activeTags.filter((item) => item.id !== tag.id),
-                          );
-                        }}
-                        className="ml-[2px] text-[#98a4b5] transition hover:text-[#666]"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                <TagAssignmentSection
+                  applicableTo="question"
+                  selectedTags={activeTags}
+                  expanded={showTagInput}
+                  onExpandedChange={setShowTagInput}
+                  onAdd={(tag) => {
+                    void syncTags(
+                      [...new Set([...activeTags.map((item) => item.id), tag.id])],
+                      [...activeTags, tag],
+                    );
+                  }}
+                  onRemove={(tagId) => {
+                    void syncTags(
+                      activeTags.filter((item) => item.id !== tagId).map((item) => item.id),
+                      activeTags.filter((item) => item.id !== tagId),
+                    );
+                  }}
+                />
               </div>
 
               <div className="mb-[18px]">
@@ -228,7 +195,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   </span>
                   未设置空间
                 </button>
-                {spaceTypes.map((space) => (
+                {spaces.map((space) => (
                   <button
                     key={space.id}
                     type="button"
