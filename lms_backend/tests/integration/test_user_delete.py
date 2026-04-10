@@ -3,22 +3,16 @@ from unittest.mock import patch
 
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
-from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, RolePermission
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz, QuizQuestion
-from apps.spot_checks.models import SpotCheck, SpotCheckItem
+from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Answer, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 @pytest.fixture
@@ -68,22 +62,8 @@ def active_user(department):
         is_active=True,
     )
 
-
-def _create_spot_check(student, checker, *, topic: str, score: str) -> SpotCheck:
-    spot_check = SpotCheck.objects.create(student=student, checker=checker)
-    SpotCheckItem.objects.create(
-        spot_check=spot_check,
-        topic=topic,
-        score=score,
-        comment='',
-        content='',
-        order=0,
-    )
-    return spot_check
-
-
 @pytest.mark.django_db
-def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, inactive_user, department):
+def test_delete_inactive_user_hard_deletes_related_data(api_client, create_spot_check, admin_user, inactive_user, department):
     api_client.force_authenticate(user=admin_user)
 
     other_user = User.objects.create_user(
@@ -168,13 +148,13 @@ def test_delete_inactive_user_hard_deletes_related_data(api_client, admin_user, 
         status='IN_PROGRESS',
     )
 
-    spot_check_as_student = _create_spot_check(
+    spot_check_as_student = create_spot_check(
         student=inactive_user,
         checker=admin_user,
         topic='抽查A',
         score='90',
     )
-    spot_check_as_checker = _create_spot_check(
+    spot_check_as_checker = create_spot_check(
         student=other_user,
         checker=inactive_user,
         topic='抽查B',

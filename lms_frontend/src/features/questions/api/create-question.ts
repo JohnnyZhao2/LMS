@@ -1,6 +1,20 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { QuestionCreateRequest, Question } from '@/types/api';
+import type { PaginatedResponse, QuestionCreateRequest, Question } from '@/types/api';
+
+const patchQuestionListCache = (
+  current: PaginatedResponse<Question> | undefined,
+  nextQuestion: Question,
+) => {
+  if (!current) {
+    return current;
+  }
+
+  return {
+    ...current,
+    results: current.results.map((item) => (item.id === nextQuestion.id ? nextQuestion : item)),
+  };
+};
 
 /**
  * 创建题目
@@ -25,7 +39,15 @@ export const useUpdateQuestion = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<QuestionCreateRequest> }) =>
       apiClient.patch<Question>(`/questions/${id}/`, data),
-    onSuccess: () => {
+    onSuccess: (updatedQuestion) => {
+      queryClient.setQueriesData(
+        { queryKey: ['questions'] },
+        (current: PaginatedResponse<Question> | undefined) => patchQuestionListCache(current, updatedQuestion),
+      );
+      queryClient.setQueriesData(
+        { queryKey: ['question-detail'] },
+        (current: Question | undefined) => (current?.id === updatedQuestion.id ? updatedQuestion : current),
+      );
       queryClient.invalidateQueries({ queryKey: ['questions'] });
       queryClient.invalidateQueries({ queryKey: ['question-detail'] });
     },
@@ -45,5 +67,4 @@ export const useDeleteQuestion = () => {
     },
   });
 };
-
 

@@ -8,7 +8,6 @@ Dashboard 模块集成测试
 """
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, UserPermissionOverride
 from apps.knowledge.models import Knowledge
@@ -16,18 +15,6 @@ from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskKnowledge, TaskQuiz
 from apps.users.models import Department, Role, User, UserRole
-
-
-def unwrap_response_data(response):
-    payload = response.data
-    if isinstance(payload, dict) and 'code' in payload and 'data' in payload:
-        return payload['data']
-    return payload
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 @pytest.fixture
@@ -162,7 +149,7 @@ def task_assignment2(task, student2):
 class TestStudentDashboardAPI:
     """学员仪表盘 API 测试"""
 
-    def test_get_dashboard_success(self, api_client, student, knowledge, task_assignment):
+    def test_get_dashboard_success(self, api_client, unwrap_response_data, student, knowledge, task_assignment):
         """测试学员获取仪表盘数据成功"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/')
@@ -174,7 +161,7 @@ class TestStudentDashboardAPI:
         assert 'tasks' in data
         assert 'latest_knowledge' in data
 
-    def test_get_dashboard_stats_fields(self, api_client, student, task_assignment):
+    def test_get_dashboard_stats_fields(self, api_client, unwrap_response_data, student, task_assignment):
         """测试仪表盘统计字段完整性"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/')
@@ -223,7 +210,7 @@ class TestStudentDashboardAPI:
 class TestTaskParticipantsAPI:
     """任务参与者进度 API 测试"""
 
-    def test_get_participants_success(self, api_client, student, task, task_assignment, task_assignment2):
+    def test_get_participants_success(self, api_client, unwrap_response_data, student, task, task_assignment, task_assignment2):
         """测试获取任务参与者进度成功"""
         api_client.force_authenticate(user=student)
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
@@ -232,7 +219,7 @@ class TestTaskParticipantsAPI:
         assert response.status_code == 200
         assert isinstance(data, list)
 
-    def test_get_participants_includes_current_user(self, api_client, student, task, task_assignment, task_assignment2):
+    def test_get_participants_includes_current_user(self, api_client, unwrap_response_data, student, task, task_assignment, task_assignment2):
         """测试参与者列表包含当前用户标记"""
         api_client.force_authenticate(user=student)
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
@@ -247,7 +234,7 @@ class TestTaskParticipantsAPI:
         response = api_client.get(f'/api/dashboard/student/task/{task.id}/participants/')
         assert response.status_code == 401
 
-    def test_get_participants_nonexistent_task(self, api_client, student):
+    def test_get_participants_nonexistent_task(self, api_client, unwrap_response_data, student):
         """测试访问不存在的任务"""
         api_client.force_authenticate(user=student)
         response = api_client.get('/api/dashboard/student/task/99999/participants/')
@@ -265,7 +252,7 @@ class TestTaskParticipantsAPI:
 class TestMentorDashboardAPI:
     """导师仪表盘 API 测试"""
 
-    def test_get_dashboard_as_mentor(self, api_client, mentor, student, task_assignment):
+    def test_get_dashboard_as_mentor(self, api_client, unwrap_response_data, mentor, student, task_assignment):
         """测试导师获取仪表盘数据"""
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/mentor/')
@@ -279,7 +266,7 @@ class TestMentorDashboardAPI:
     def test_get_dashboard_as_admin(self, api_client, admin):
         """测试管理员获取仪表盘数据"""
         api_client.force_authenticate(user=admin)
-        response = api_client.get('/api/dashboard/mentor/')
+        response = api_client.get('/api/dashboard/admin/')
 
         assert response.status_code == 200
 
@@ -295,7 +282,7 @@ class TestMentorDashboardAPI:
         response = api_client.get('/api/dashboard/mentor/')
         assert response.status_code == 401
 
-    def test_dashboard_summary_fields(self, api_client, mentor, student, task_assignment):
+    def test_dashboard_summary_fields(self, api_client, unwrap_response_data, mentor, student, task_assignment):
         """测试仪表盘摘要字段完整性"""
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/mentor/')
@@ -307,7 +294,7 @@ class TestMentorDashboardAPI:
         assert 'monthly_tasks' in summary
         assert 'overall_completion_rate' in summary
 
-    def test_dashboard_student_stats_query_count_is_bounded(self, api_client, mentor, department, task):
+    def test_dashboard_student_stats_query_count_is_bounded(self, api_client, unwrap_response_data, mentor, department, task):
         """测试导师看板的学员统计查询次数不会随学员数量线性爆炸"""
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
@@ -335,7 +322,7 @@ class TestMentorDashboardAPI:
         assert len(data['students']) >= 8
         assert len(context.captured_queries) < 25, f"查询次数过多: {len(context.captured_queries)}"
 
-    def test_dashboard_scope_follows_permission_overrides(self, api_client, mentor, student, student2, department):
+    def test_dashboard_scope_follows_permission_overrides(self, api_client, unwrap_response_data, mentor, student, student2, department):
         """导师看板学员范围应遵循 task.analytics.view 的 ALLOW/DENY 覆盖"""
         extra_student = User.objects.create_user(
             employee_id='MENTOR_DASH_EXTRA_001',

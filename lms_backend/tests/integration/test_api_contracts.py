@@ -2,14 +2,11 @@ from datetime import datetime
 
 import pytest
 from django.utils import timezone
-from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, RolePermission
 from apps.activity_logs.models import ContentLog, OperationLog, UserLog
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
-from apps.spot_checks.models import SpotCheck, SpotCheckItem
 from apps.submissions.models import Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
@@ -17,38 +14,14 @@ from apps.users.models import Department, Role, User, UserRole
 
 
 @pytest.fixture
-def api_client():
-    return APIClient()
-
-
-@pytest.fixture
 def department():
     return Department.objects.create(name='契约测试部门', code='CONTRACT_DEPT')
 
 
-def _create_spot_check(student, checker, *, topic='契约测试抽查', content='', score='88.00', comment='表现稳定'):
-    spot_check = SpotCheck.objects.create(student=student, checker=checker)
-    SpotCheckItem.objects.create(
-        spot_check=spot_check,
-        topic=topic,
-        content=content,
-        score=score,
-        comment=comment,
-        order=0,
-    )
-    return spot_check
-
-
-def _grant_role_permissions(role, permission_codes):
-    permissions = Permission.objects.filter(code__in=permission_codes)
-    for permission in permissions:
-        RolePermission.objects.get_or_create(role=role, permission=permission)
-
-
 @pytest.fixture
-def mentor_role():
+def mentor_role(grant_role_permissions):
     role, _ = Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
-    _grant_role_permissions(
+    grant_role_permissions(
         role,
         [
             'question.view',
@@ -80,9 +53,9 @@ def mentor_role():
 
 
 @pytest.fixture
-def admin_role():
+def admin_role(grant_role_permissions):
     role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    _grant_role_permissions(
+    grant_role_permissions(
         role,
         [
             'knowledge.view',
@@ -287,8 +260,8 @@ def submitted_exam_submission(student_assignment, exam_task_quiz):
 
 
 @pytest.fixture
-def sample_spot_check(student_user, mentor_user):
-    return _create_spot_check(student_user, mentor_user)
+def sample_spot_check(student_user, mentor_user, create_spot_check):
+    return create_spot_check(student_user, mentor_user)
 
 
 @pytest.mark.django_db
@@ -1192,17 +1165,17 @@ class TestStudentTaskApiContracts:
         api_client.force_authenticate(user=student_user)
         response = api_client.get('/api/tasks/my-assignments/?page=abc')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'page' in response.data['message']
+        assert response.status_code == 404
+        assert response.data['code'] == 'RESOURCE_NOT_FOUND'
+        assert response.data['message'] == '无效页面。'
 
-    def test_student_assignment_list_rejects_invalid_page_size(self, api_client, student_user):
+    def test_student_assignment_list_caps_oversized_page_size(self, api_client, student_user):
         api_client.force_authenticate(user=student_user)
         response = api_client.get('/api/tasks/my-assignments/?page_size=999')
 
-        assert response.status_code == 400
-        assert response.data['code'] == 'VALIDATION_ERROR'
-        assert 'page_size' in response.data['message']
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['data']['page_size'] == 100
 
 
 @pytest.mark.django_db
@@ -1438,6 +1411,7 @@ class TestSpotCheckApiContracts:
     def test_spot_check_student_list_includes_students_without_records(
         self,
         api_client,
+        create_spot_check,
         mentor_user,
         student_user,
         department,
@@ -1449,7 +1423,7 @@ class TestSpotCheckApiContracts:
             department=department,
             mentor=mentor_user,
         )
-        _create_spot_check(student_user, mentor_user)
+        create_spot_check(student_user, mentor_user)
 
         api_client.force_authenticate(user=mentor_user)
         response = api_client.get('/api/spot-checks/students/')

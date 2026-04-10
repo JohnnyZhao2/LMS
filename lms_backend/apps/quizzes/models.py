@@ -155,15 +155,6 @@ class Quiz(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin
             for item in counts
         }
 
-    def get_ordered_questions(self):
-        """
-        获取按顺序排列的题目列表
-        注意：这是一个便捷查询方法，不包含业务逻辑。
-        业务逻辑应在 Service 层处理。
-        Returns:
-            QuerySet: 按 order 排序的 QuizQuestion 查询集
-        """
-        return self.quiz_questions.select_related('question').order_by('order')
 class QuizQuestion(TimestampMixin, models.Model):
     """
     试卷题目关联模型
@@ -201,16 +192,3 @@ class QuizQuestion(TimestampMixin, models.Model):
         ordering = ['quiz', 'order']
     def __str__(self):
         return f"{self.quiz.title} - Q{self.order}: {self.question}"
-    def save(self, *args, **kwargs):
-        """
-        保存时自动设置顺序号
-        """
-        if not self.order:
-            # 获取当前试卷的最大顺序号
-            max_order = QuizQuestion.objects.filter(
-                quiz=self.quiz
-            ).aggregate(
-                max_order=models.Max('order')
-            )['max_order']
-            self.order = (max_order or 0) + 1
-        super().save(*args, **kwargs)

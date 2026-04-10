@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { QuestionCreateRequest, QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/api';
 
 type QuestionTypePresentation = {
   value: QuestionType;
@@ -83,8 +83,13 @@ export const ensureChoiceOptions = (options?: Array<{ key: string; value: string
   ];
 };
 
+interface QuestionTypeFields {
+  options?: Array<{ key: string; value: string }>;
+  answer?: string | string[];
+}
+
 export const normalizeQuestionTypeFields = (
-  prev: Partial<QuestionCreateRequest>,
+  prev: QuestionTypeFields,
   nextType: QuestionType,
 ) => {
   if (nextType === 'SINGLE_CHOICE') {

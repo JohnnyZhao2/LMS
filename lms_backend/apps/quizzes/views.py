@@ -83,7 +83,7 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
 
     @extend_schema(
         summary='创建试卷',
-        description='创建新试卷（导师/室经理/管理员）',
+        description='创建新试卷（导师/室经理/管理员），题目绑定统一使用 question_versions',
         request=QuizCreateSerializer,
         responses={
             201: QuizDetailSerializer,
@@ -107,16 +107,12 @@ class QuizListCreateView(BusinessErrorHandlerMixin, BaseAPIView):
         # 2. 提取数据
         validated_data = serializer.validated_data
         question_versions = validated_data.pop('question_versions', [])
-        existing_question_ids = validated_data.pop('existing_question_ids', [])
-        new_questions_data = validated_data.pop('new_questions', [])
-        
-        # 3. 调用 Service（不再传user参数）
+
+        # 3. 调用 Service
         try:
             quiz = self.service.create(
                 data=validated_data,
                 question_versions=question_versions,
-                existing_question_ids=existing_question_ids,
-                new_questions_data=new_questions_data
             )
         except BusinessError as e:
             return self.handle_business_error(e)
@@ -157,13 +153,7 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
 
     @extend_schema(
         summary='更新试卷',
-        description='''更新试卷信息（仅创建者或管理员）。
-        支持在一个请求中完成：
-        - 更新试卷基本信息（title, quiz_type, duration, pass_score）
-        - 同步题目顺序（existing_question_ids）
-        - 添加新题目（add_question_ids, new_questions）
-        - 移除题目（remove_question_ids）
-        ''',
+        description='更新试卷信息（仅创建者或管理员），题目绑定统一使用 question_versions',
         request=QuizUpdateSerializer,
         responses={
             200: QuizDetailSerializer,
@@ -179,28 +169,25 @@ class QuizDetailView(BusinessErrorHandlerMixin, BaseAPIView):
         Property 16: 试卷所有权编辑控制
         """
         enforce('quiz.update', request, error_message='无权更新试卷')
+        try:
+            quiz = self.service.get_by_id(pk)
+        except BusinessError as e:
+            return self.handle_business_error(e)
+
         # 1. 反序列化输入
-        serializer = QuizUpdateSerializer(data=request.data, partial=True)
+        serializer = QuizUpdateSerializer(instance=quiz, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         # 2. 提取数据
         validated_data = serializer.validated_data
         question_versions = validated_data.pop('question_versions', None)
-        question_ids = validated_data.pop('existing_question_ids', None)
-        add_question_ids = validated_data.pop('add_question_ids', [])
-        new_questions_data = validated_data.pop('new_questions', [])
-        remove_question_ids = validated_data.pop('remove_question_ids', [])
 
-        # 3. 调用 Service（不再传user参数）
+        # 3. 调用 Service
         try:
             quiz = self.service.update(
                 pk=pk,
                 data=validated_data,
                 question_versions=question_versions,
-                question_ids=question_ids,
-                add_question_ids=add_question_ids,
-                new_questions_data=new_questions_data,
-                remove_question_ids=remove_question_ids
             )
         except BusinessError as e:
             return self.handle_business_error(e)

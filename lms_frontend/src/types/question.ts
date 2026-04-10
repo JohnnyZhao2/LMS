@@ -17,7 +17,6 @@ export interface Question {
   options?: Array<{ key: string; value: string }>;
   answer?: string | string[];
   explanation?: string;
-  score?: string;
   space_tag?: SimpleTag;
   tags?: SimpleTag[];
   is_objective?: boolean;
@@ -40,7 +39,6 @@ export interface QuestionCreateRequest {
   options?: Array<{ key: string; value: string }>;
   answer?: string | string[];
   explanation?: string;
-  score?: string | number;
   space_tag_id?: number | null;
   tag_ids?: number[];
   source_question_id?: number;

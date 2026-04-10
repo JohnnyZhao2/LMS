@@ -1,30 +1,16 @@
 import pytest
-from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, RolePermission
 from apps.users.models import Department, Role, User, UserRole
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 @pytest.fixture
 def department():
     return Department.objects.create(name='头像测试部门', code='AVATAR_DEPT')
 
-
-def _grant_role_permissions(role, permission_codes):
-    permissions = Permission.objects.filter(code__in=permission_codes)
-    for permission in permissions:
-        RolePermission.objects.get_or_create(role=role, permission=permission)
-
-
 @pytest.fixture
-def admin_role():
+def admin_role(grant_role_permissions):
     role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-    _grant_role_permissions(role, ['user.view'])
+    grant_role_permissions(role, ['user.view'])
     return role
 
 

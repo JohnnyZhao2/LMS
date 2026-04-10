@@ -8,10 +8,10 @@ from django.db.models import Q
 from django.utils.html import strip_tags
 
 from apps.tags.models import Tag
-from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin, VersionedResourceMixin
+from core.mixins import CreatorMixin, TimestampMixin, VersionedResourceMixin
 
 
-class Knowledge(TimestampMixin, SoftDeleteMixin, CreatorMixin, VersionedResourceMixin, models.Model):
+class Knowledge(TimestampMixin, CreatorMixin, VersionedResourceMixin, models.Model):
     """
     统一知识文档模型
     所有知识都使用富文本正文 content，不再区分知识类型或结构化子字段。

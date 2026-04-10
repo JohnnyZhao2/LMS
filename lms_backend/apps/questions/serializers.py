@@ -35,7 +35,7 @@ QuestionDetailSerializer = QuestionSerializer
 class QuestionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating questions.
-    业务验证（选项/答案格式）由 Service._validate_question_data 统一处理。
+    业务验证（选项/答案格式）由 QuestionService.validate_question_payload 统一处理。
     """
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, default=list)
@@ -53,7 +53,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 class QuestionUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating questions.
-    业务验证（选项/答案格式）由 Service._validate_question_data 统一处理。
+    业务验证（选项/答案格式）由 QuestionService.validate_question_payload 统一处理。
     """
     space_tag_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)

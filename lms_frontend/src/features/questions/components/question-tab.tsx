@@ -47,7 +47,7 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
     const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
     const pageSize = pagination.pageSize;
 
-    const { data, isLoading, refetch } = useQuestions({
+    const { data, isLoading } = useQuestions({
         page,
         pageSize,
         search: search || undefined,
@@ -62,7 +62,6 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
             await deleteQuestion.mutateAsync(deleteId);
             toast.success('题目已从系统库清除');
             setDeleteId(null);
-            refetch();
         } catch (error) {
             showApiError(error);
         }

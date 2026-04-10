@@ -12,14 +12,14 @@ export interface SlashTrigger {
   query: string;
 }
 
-export interface SlashApplyResult {
+interface SlashApplyResult {
   nextValue: string;
   cursor: number;
 }
 
 const DIVIDER_MARKERS = new Set(['---', '***', '___']);
 
-export const SLASH_SHORTCUTS: SlashShortcut[] = [
+const SLASH_SHORTCUTS: SlashShortcut[] = [
   {
     id: 'heading',
     label: '标题',

@@ -4,12 +4,15 @@
 
 import type { SimpleTag } from './common';
 import type { QuestionType } from './common';
-import type { QuestionCreateRequest } from './question';
-
 /**
  * 试卷类型
  */
 export type QuizType = 'PRACTICE' | 'EXAM';
+
+export interface QuizQuestionVersionInput {
+  question_id: number;
+  score: string | number;
+}
 
 /**
  * 试卷题目关联
@@ -84,14 +87,5 @@ export interface QuizCreateRequest {
   quiz_type: QuizType;
   duration?: number;       // 考试类型必填
   pass_score?: number;     // 考试类型必填
-  existing_question_ids?: number[];
-  question_versions?: Array<{ question_id: number; score: string | number }>;
-  new_questions?: QuestionCreateRequest[];
-}
-
-/**
- * 添加题目到试卷请求
- */
-export interface AddQuestionsToQuizRequest {
-  question_ids: number[];
+  question_versions?: QuizQuestionVersionInput[];
 }

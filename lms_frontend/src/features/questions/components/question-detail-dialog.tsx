@@ -3,9 +3,10 @@ import { Calendar, Circle, PencilLine, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useTags } from '@/features/tags/api/tags';
+import { useQuestionDetail } from '@/features/questions/api/get-questions';
 import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
 import { useUpdateQuestion } from '@/features/questions/api/create-question';
-import { QuestionPreviewSurface } from '@/features/questions/components/question-preview-surface';
+import { QuestionDetailPreview } from '@/features/questions/components/question-detail-preview';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
@@ -30,17 +31,9 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
 }) => {
   const [showSpaceInfo, setShowSpaceInfo] = React.useState(false);
   const [showTagInput, setShowTagInput] = React.useState(false);
-  const [previewQuestion, setPreviewQuestion] = React.useState<Question | null>(question);
-  const [activeTags, setActiveTags] = React.useState(() => question?.tags ?? []);
-  const [activeSpaceTag, setActiveSpaceTag] = React.useState<Question['space_tag'] | null>(() => question?.space_tag ?? null);
   const updateQuestion = useUpdateQuestion();
   const { data: spaces = [] } = useTags({ tag_type: 'SPACE' });
-
-  React.useEffect(() => {
-    setPreviewQuestion(question);
-    setActiveTags(question?.tags ?? []);
-    setActiveSpaceTag(question?.space_tag ?? null);
-  }, [question]);
+  const { data: detailQuestion } = useQuestionDetail(question?.id ?? 0);
 
   React.useEffect(() => {
     if (!open) {
@@ -53,13 +46,16 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
     return null;
   }
 
-  const syncTags = async (nextTagIds: number[], nextTags: typeof activeTags) => {
+  const activeQuestion = detailQuestion ?? question;
+  const activeTags = activeQuestion.tags ?? [];
+  const activeSpaceTag = activeQuestion.space_tag ?? null;
+
+  const syncTags = async (nextTagIds: number[]) => {
     try {
       await updateQuestion.mutateAsync({
         id: question.id,
         data: { tag_ids: nextTagIds },
       });
-      setActiveTags(nextTags);
       toast.success('标签已更新');
     } catch (error) {
       showApiError(error);
@@ -72,7 +68,6 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
         id: question.id,
         data: { space_tag_id: spaceTagId },
       });
-      setActiveSpaceTag(spaces.find((item) => item.id === spaceTagId) ?? null);
       setShowSpaceInfo(false);
       toast.success('空间已更新');
     } catch (error) {
@@ -86,14 +81,11 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
         id: question.id,
         data,
       });
-      setPreviewQuestion((current) => (current ? { ...current, ...data } : current));
       toast.success('题目已更新');
     } catch (error) {
       showApiError(error);
     }
   };
-
-  const activeQuestion = previewQuestion ?? question;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -103,9 +95,8 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
       >
         <ScrollContainer className="flex min-h-0 flex-1 flex-col rounded-[6px] bg-white px-[40px] py-[32px] shadow-[0_10px_24px_rgba(21,38,61,0.07)]">
           <div className="mx-auto flex min-h-full w-full max-w-[960px] items-center justify-center">
-            <QuestionPreviewSurface
+            <QuestionDetailPreview
               question={activeQuestion}
-              editable
               saving={updateQuestion.isPending}
               className="w-full"
               onSaveContent={async (content) => {
@@ -128,7 +119,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
           <div className="bg-[linear-gradient(160deg,#dce4ee_0%,#eef0f3_100%)] px-5 pb-4 pt-[22px]">
             <div className="flex items-center justify-between">
               <h2 className="m-0 text-[16px] font-normal leading-[1.3] tracking-[-0.01em] text-[#6a7a8a]">
-                {getQuestionTypeLabel(question.question_type)}
+                {getQuestionTypeLabel(activeQuestion.question_type)}
               </h2>
             </div>
           </div>
@@ -144,13 +135,11 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   onAdd={(tag) => {
                     void syncTags(
                       [...new Set([...activeTags.map((item) => item.id), tag.id])],
-                      [...activeTags, tag],
                     );
                   }}
                   onRemove={(tagId) => {
                     void syncTags(
                       activeTags.filter((item) => item.id !== tagId).map((item) => item.id),
-                      activeTags.filter((item) => item.id !== tagId),
                     );
                   }}
                 />
@@ -165,15 +154,15 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="h-[14px] w-[14px] shrink-0 text-[#aaa]" />
-                    <span>{question.created_by_name || '系统'}</span>
+                    <span>{activeQuestion.created_by_name || '系统'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="h-[14px] w-[14px] shrink-0 text-[#aaa]" />
-                    <span>{question.updated_by_name || question.created_by_name || '系统'}</span>
+                    <span>{activeQuestion.updated_by_name || activeQuestion.created_by_name || '系统'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-[14px] w-[14px] shrink-0 text-[#aaa]" />
-                    <span>{dayjs(question.updated_at).format('YYYY-MM-DD HH:mm')}</span>
+                    <span>{dayjs(activeQuestion.updated_at).format('YYYY-MM-DD HH:mm')}</span>
                   </div>
                 </div>
               </div>
@@ -228,7 +217,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                 type="button"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white p-0 text-[#9aa0aa] transition hover:text-[#555]"
                 title="编辑题目"
-                onClick={() => onEdit(question)}
+                onClick={() => onEdit(activeQuestion)}
               >
                 <PencilLine className="h-[15px] w-[15px]" strokeWidth={1.8} />
               </button>
@@ -236,7 +225,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                 type="button"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white p-0 text-[#e44] transition hover:text-[#e44]"
                 title="删除题目"
-                onClick={() => onDelete(question)}
+                onClick={() => onDelete(activeQuestion)}
               >
                 <Trash2 className="h-[15px] w-[15px]" strokeWidth={1.8} />
               </button>

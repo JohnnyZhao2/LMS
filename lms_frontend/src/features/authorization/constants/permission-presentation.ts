@@ -3,7 +3,7 @@ interface ModulePresentationMeta {
   order: number;
 }
 
-export const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
+const MODULE_PRESENTATION: Record<string, ModulePresentationMeta> = {
   dashboard: {
     label: '仪表盘',
     order: 5,

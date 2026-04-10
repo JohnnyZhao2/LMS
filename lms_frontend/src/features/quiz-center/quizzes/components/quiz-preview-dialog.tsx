@@ -7,7 +7,6 @@ interface QuizPreviewDialogProps {
   quizId: number | null;
   onOpenChange: (open: boolean) => void;
   onPrimaryAction?: (quizId: number) => void;
-  primaryActionLabel?: string;
 }
 
 export function QuizPreviewDialog({
@@ -15,7 +14,6 @@ export function QuizPreviewDialog({
   quizId,
   onOpenChange,
   onPrimaryAction,
-  primaryActionLabel,
 }: QuizPreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -30,7 +28,6 @@ export function QuizPreviewDialog({
           <QuizPreviewWorkbench
             quizId={quizId}
             onPrimaryAction={onPrimaryAction}
-            primaryActionLabel={primaryActionLabel}
             className="h-full"
           />
         ) : null}

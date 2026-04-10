@@ -1,9 +1,9 @@
 import pytest
-from rest_framework.test import APIClient
 from typing import Optional
 
-from apps.authorization.models import Permission, RolePermission, UserPermissionOverride
-from apps.spot_checks.models import SpotCheck, SpotCheckItem
+from rest_framework.test import APIClient
+
+from apps.authorization.models import Permission, UserPermissionOverride
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -30,15 +30,6 @@ def _create_superuser(*, employee_id: str, username: str, department: Department
         is_superuser=True,
     )
 
-
-def _grant_role_permissions(*, role_codes: list[str], permission_codes: list[str]) -> None:
-    permissions = list(Permission.objects.filter(code__in=permission_codes))
-    for role_code in role_codes:
-        role, _ = Role.objects.get_or_create(code=role_code, defaults={'name': role_code})
-        for permission in permissions:
-            RolePermission.objects.get_or_create(role=role, permission=permission)
-
-
 def _remove_student_role(user: User) -> None:
     UserRole.objects.filter(user=user, role__code='STUDENT').delete()
 
@@ -62,20 +53,6 @@ def _create_non_student_user(
 
 def _extract_list_items(response):
     return response.data['data']['results']
-
-
-def _create_spot_check(student, checker, *, topic: str, score: str, comment: str = 'ok', content: str = '') -> SpotCheck:
-    spot_check = SpotCheck.objects.create(student=student, checker=checker)
-    SpotCheckItem.objects.create(
-        spot_check=spot_check,
-        topic=topic,
-        content=content,
-        score=score,
-        comment=comment,
-        order=0,
-    )
-    return spot_check
-
 
 @pytest.mark.django_db
 def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
@@ -151,11 +128,11 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
 
 
 @pytest.mark.django_db
-def test_user_view_scope_supports_mentees_and_non_student_overrides():
+def test_user_view_scope_supports_mentees_and_non_student_overrides(grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='用户查看范围部门', code='SCOPE_RANGE_D5')
 
-    _grant_role_permissions(role_codes=['MENTOR', 'ADMIN'], permission_codes=['user.view'])
+    grant_permissions_to_roles(role_codes=['MENTOR', 'ADMIN'], permission_codes=['user.view'])
 
     mentor = _create_user(
         employee_id='SCOPE_USER_VIEW_MENTOR',
@@ -236,11 +213,11 @@ def test_user_view_scope_supports_mentees_and_non_student_overrides():
 
 
 @pytest.mark.django_db
-def test_user_view_detail_respects_mentee_scope_for_non_student_users():
+def test_user_view_detail_respects_mentee_scope_for_non_student_users(grant_permissions_to_roles):
     client = APIClient()
     department = Department.objects.create(name='用户详情范围部门', code='SCOPE_RANGE_D6')
 
-    _grant_role_permissions(role_codes=['MENTOR'], permission_codes=['user.view'])
+    grant_permissions_to_roles(role_codes=['MENTOR'], permission_codes=['user.view'])
 
     mentor = _create_user(
         employee_id='SCOPE_USER_DETAIL_MENTOR',
@@ -304,7 +281,7 @@ def test_task_assign_scope_includes_mentee_with_admin_and_student_roles():
 
 
 @pytest.mark.django_db
-def test_super_admin_scope_is_not_constrained_by_user_overrides():
+def test_super_admin_scope_is_not_constrained_by_user_overrides(create_spot_check):
     client = APIClient()
     department = Department.objects.create(name='超管范围部门', code='SCOPE_RANGE_D3')
 
@@ -338,8 +315,8 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides():
             granted_by=super_admin,
         )
 
-    _create_spot_check(student=mentee, checker=super_admin, topic='超管范围记录1', score='88.00')
-    _create_spot_check(student=extra_student, checker=super_admin, topic='超管范围记录2', score='86.00')
+    create_spot_check(student=mentee, checker=super_admin, topic='超管范围记录1', score='88.00')
+    create_spot_check(student=extra_student, checker=super_admin, topic='超管范围记录2', score='86.00')
 
     client.force_authenticate(user=super_admin)
 
@@ -357,7 +334,7 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides():
 
 
 @pytest.mark.django_db
-def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny():
+def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(create_spot_check):
     client = APIClient()
     department = Department.objects.create(name='抽查范围部门', code='SCOPE_RANGE_D2')
 
@@ -387,8 +364,8 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
     mentee.mentor = mentor
     mentee.save(update_fields=['mentor'])
 
-    _create_spot_check(student=mentee, checker=mentor, topic='默认范围可见', score='88.00')
-    _create_spot_check(student=extra_student, checker=mentor, topic='默认范围不可见', score='86.00')
+    create_spot_check(student=mentee, checker=mentor, topic='默认范围可见', score='88.00')
+    create_spot_check(student=extra_student, checker=mentor, topic='默认范围不可见', score='86.00')
 
     client.force_authenticate(user=mentor)
 

@@ -18,6 +18,7 @@ import { useQuestions } from '@/features/questions/api/get-questions';
 import { QuestionBankPanel } from '@/features/questions/components/question-bank-panel';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import {
+  buildQuestionCreatePayload,
   buildQuestionPatchPayload,
   createBlankEditableQuestion,
   hasQuestionAnswer,
@@ -29,7 +30,7 @@ import { useAuth } from '@/features/auth/stores/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { PaginatedResponse, Question, QuestionType, QuizCreateRequest, QuizType } from '@/types/api';
+import type { PaginatedResponse, Question, QuestionType, QuizCreateRequest, QuizQuestion, QuizType } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';
@@ -40,23 +41,12 @@ import { QuizDocumentEditor } from './quiz-document-editor';
 import { QuizOutlinePanel } from './quiz-outline-panel';
 import { QuizPreviewWorkbench } from './quiz-preview-workbench';
 
-const buildQuizQuestionLibraryPayload = (item: InlineQuestionItem) => ({
-  question_type: item.questionType,
-  content: item.content,
-  options: item.options,
-  answer: item.answer,
-  explanation: item.explanation,
-  space_tag_id: item.spaceTagId ?? null,
-  tag_ids: item.tagIds,
-});
-
 const applyScoreOverride = (item: InlineQuestionItem, score: string | number | null | undefined): InlineQuestionItem => {
   const normalizedScore = normalizeQuestionScore(score);
 
   return {
     ...item,
     score: normalizedScore,
-    original: item.original ? { ...item.original, score: normalizedScore } : item.original,
   };
 };
 
@@ -108,13 +98,13 @@ export const QuizForm: React.FC = () => {
   const isSubmitting = createQuiz.isPending || updateQuiz.isPending;
 
   const buildSavedLocalItem = useCallback((item: InlineQuestionItem): InlineQuestionItem => {
-    const payload = buildQuizQuestionLibraryPayload(item);
+    const payload = buildQuestionCreatePayload(item);
     const normalizedScore = normalizeQuestionScore(item.score);
 
     return {
       ...item,
       score: normalizedScore,
-      original: { ...payload, score: normalizedScore },
+      original: payload,
       saved: true,
     };
   }, []);
@@ -142,21 +132,7 @@ export const QuizForm: React.FC = () => {
   }, []);
 
   const loadQuizQuestionItem = useCallback(async (
-    quizQuestion: {
-      question: number;
-      resource_uuid: string;
-      version_number: number;
-      is_current: boolean;
-      score: string;
-      question_content: string;
-      question_type: QuestionType;
-      question_type_display: string;
-      options?: Array<{ key: string; value: string }>;
-      answer?: string | string[];
-      explanation?: string;
-      space_tag?: Question['space_tag'];
-      tags?: Question['tags'];
-    },
+    quizQuestion: QuizQuestion,
   ) => {
     const question: Question = {
       id: quizQuestion.question,
@@ -169,7 +145,6 @@ export const QuizForm: React.FC = () => {
       options: quizQuestion.options ?? [],
       answer: quizQuestion.answer ?? '',
       explanation: quizQuestion.explanation ?? '',
-      score: quizQuestion.score,
       space_tag: quizQuestion.space_tag,
       tags: quizQuestion.tags ?? [],
       created_at: '',
@@ -181,14 +156,13 @@ export const QuizForm: React.FC = () => {
 
   const persistItemToLibrary = useCallback(async (item: InlineQuestionItem) => {
     const currentItem = item;
-    const payload = buildQuizQuestionLibraryPayload(currentItem);
+    const payload = buildQuestionCreatePayload(currentItem);
 
     if (currentItem.questionId) {
       const patchData = buildQuestionPatchPayload(
         currentItem.original ?? {},
         payload,
       );
-      delete patchData.score;
       if (Object.keys(patchData).length === 0) {
         if (!currentItem.isCurrent && currentItem.syncToBank) {
           const created = await createQuestion.mutateAsync({

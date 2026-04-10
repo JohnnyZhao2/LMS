@@ -9,15 +9,9 @@ import io
 import pytest
 from unittest.mock import MagicMock, patch
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIClient
 
 from apps.knowledge.services import DocumentParserService
 from apps.users.models import Department, User
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 @pytest.fixture

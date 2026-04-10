@@ -9,21 +9,18 @@ from django.db.models import Q, QuerySet
 from .models import Knowledge
 
 
-def knowledge_base_queryset(include_deleted: bool = False) -> QuerySet:
-    qs = Knowledge.objects.select_related(
+def knowledge_base_queryset() -> QuerySet:
+    return Knowledge.objects.select_related(
         'created_by',
         'updated_by',
         'space_tag',
     ).prefetch_related(
         'tags'
     )
-    if not include_deleted:
-        qs = qs.filter(is_deleted=False)
-    return qs
 
 
-def get_knowledge_by_id(pk: int, include_deleted: bool = False) -> Optional[Knowledge]:
-    return knowledge_base_queryset(include_deleted=include_deleted).filter(pk=pk).first()
+def get_knowledge_by_id(pk: int) -> Optional[Knowledge]:
+    return knowledge_base_queryset().filter(pk=pk).first()
 
 
 def get_knowledge_queryset(
@@ -31,7 +28,7 @@ def get_knowledge_queryset(
     search: str = None,
     ordering: str = '-updated_at'
 ) -> QuerySet:
-    qs = knowledge_base_queryset(include_deleted=False).filter(is_current=True)
+    qs = knowledge_base_queryset().filter(is_current=True)
     if filters:
         if filters.get('space_tag_id') is not None:
             qs = qs.filter(space_tag_id=filters['space_tag_id'])

@@ -3,9 +3,9 @@ import { Loader2, Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { normalizeQuestionTypeFields } from '@/features/questions/constants';
-import type { QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
+import type { QuestionType, Tag } from '@/types/api';
 
-import { QuestionDocumentBody } from './question-document-core';
+import { QuestionDocumentEditMode } from './question-document-edit-mode';
 import { QuestionMetaToolbar } from './question-meta-toolbar';
 
 export interface QuestionEditCardValue {
@@ -96,8 +96,7 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
       <div onClick={onFocus} className="min-w-0 flex-1">
         <div className="space-y-2">
           <div className="pl-1 text-[11px] font-medium text-text-muted">第 {index + 1} 题</div>
-          <QuestionDocumentBody
-            mode="edit"
+          <QuestionDocumentEditMode
             questionType={item.questionType}
             content={item.content}
             options={item.options}
@@ -121,15 +120,9 @@ export const QuestionEditCard: React.FC<QuestionEditCardProps> = ({
                 staticType={!!item.questionId}
                 onQuestionTypeChange={(value) => {
                   const normalized = normalizeQuestionTypeFields({
-                    question_type: item.questionType,
-                    content: item.content,
                     options: item.options,
                     answer: item.answer,
-                    explanation: item.explanation,
-                    score: item.score,
-                    space_tag_id: item.spaceTagId ?? null,
-                    tag_ids: item.tagIds ?? [],
-                  } satisfies Partial<QuestionCreateRequest>, value);
+                  }, value);
 
                   onChange({
                     questionType: value,

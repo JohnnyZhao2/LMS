@@ -1,20 +1,7 @@
 import pytest
-from rest_framework.test import APIClient
 
 from apps.authorization.models import Permission, RolePermission
 from apps.users.models import Department, Role, User, UserRole
-
-
-def unwrap_response_data(response):
-    payload = response.data
-    if isinstance(payload, dict) and 'code' in payload and 'data' in payload:
-        return payload['data']
-    return payload
-
-
-@pytest.fixture
-def api_client():
-    return APIClient()
 
 
 @pytest.fixture
@@ -101,7 +88,7 @@ def test_assign_multiple_non_student_roles_rejected(api_client, admin_user, norm
 
 
 @pytest.mark.django_db
-def test_assign_admin_role_for_non_superuser_allowed(api_client, admin_user, normal_user):
+def test_assign_admin_role_for_non_superuser_allowed(api_client, unwrap_response_data, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -117,7 +104,7 @@ def test_assign_admin_role_for_non_superuser_allowed(api_client, admin_user, nor
 
 
 @pytest.mark.django_db
-def test_create_user_with_admin_role_keeps_student(api_client, admin_user, department):
+def test_create_user_with_admin_role_keeps_student(api_client, unwrap_response_data, admin_user, department):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -139,7 +126,7 @@ def test_create_user_with_admin_role_keeps_student(api_client, admin_user, depar
 
 
 @pytest.mark.django_db
-def test_create_user_with_mentor_role_keeps_student(api_client, admin_user, department):
+def test_create_user_with_mentor_role_keeps_student(api_client, unwrap_response_data, admin_user, department):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -181,7 +168,7 @@ def test_create_user_with_multiple_non_student_roles_rejected(api_client, admin_
 
 
 @pytest.mark.django_db
-def test_create_user_allows_duplicate_username(api_client, admin_user, department):
+def test_create_user_allows_duplicate_username(api_client, unwrap_response_data, admin_user, department):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -248,7 +235,7 @@ def test_assign_admin_role_for_superuser_rejected(api_client, admin_user, super_
 
 
 @pytest.mark.django_db
-def test_assign_team_manager_role_keeps_only_team_manager(api_client, admin_user, normal_user):
+def test_assign_team_manager_role_keeps_only_team_manager(api_client, unwrap_response_data, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -269,7 +256,7 @@ def test_assign_team_manager_role_keeps_only_team_manager(api_client, admin_user
 
 
 @pytest.mark.django_db
-def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, admin_user, normal_user):
+def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, unwrap_response_data, admin_user, normal_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.post(
@@ -285,7 +272,7 @@ def test_assign_mentor_role_for_non_superuser_keeps_student(api_client, admin_us
 
 
 @pytest.mark.django_db
-def test_superuser_detail_exposes_dedicated_super_admin_role(api_client, admin_user, super_admin_user):
+def test_superuser_detail_exposes_dedicated_super_admin_role(api_client, unwrap_response_data, admin_user, super_admin_user):
     api_client.force_authenticate(user=admin_user)
 
     response = api_client.get(f'/api/users/{super_admin_user.id}/')

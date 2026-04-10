@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft, FilePenLine } from 'lucide-react';
 import { useParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
@@ -51,19 +50,10 @@ export const QuestionFormPage: React.FC = () => {
               initialItems={initialItems}
               spaceTags={spaceTags}
               allowAdd={!isEdit}
-              onCreateQuestion={async (data) => {
-                const created = await createQuestion.mutateAsync(data);
-                toast.success('题目创建成功');
-                return created;
-              }}
-              onUpdateQuestion={async (targetId, data) => {
-                const updated = await updateQuestion.mutateAsync({ id: targetId, data });
-                toast.success('题目保存成功');
-                return updated;
-              }}
+              onCreateQuestion={(data) => createQuestion.mutateAsync(data)}
+              onUpdateQuestion={(targetId, data) => updateQuestion.mutateAsync({ id: targetId, data })}
               onDeleteQuestion={async (targetId) => {
                 await deleteQuestion.mutateAsync(targetId);
-                toast.success('题目已删除');
               }}
               onEmpty={() => roleNavigate('/questions')}
             />

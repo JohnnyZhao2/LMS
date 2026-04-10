@@ -63,6 +63,7 @@ interface QuestionDocumentResponsePanelProps {
   options: QuestionChoiceOption[];
   answer: string | string[];
   response?: string | string[];
+  optionLabelRenderer?: (option: QuestionChoiceOption, index: number) => React.ReactNode;
   disabled?: boolean;
   interactive?: boolean;
   onResponseChange?: (value: string | string[]) => void;
@@ -73,6 +74,7 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
   options,
   answer,
   response,
+  optionLabelRenderer,
   disabled = false,
   interactive = false,
   onResponseChange,
@@ -155,11 +157,11 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
 
   return (
     <div className="space-y-3">
-      {options.map((option) => (
+      {options.map((option, index) => (
         <QuestionChoiceRow
           key={option.key}
           optionKey={option.key}
-          label={option.value}
+          label={optionLabelRenderer ? optionLabelRenderer(option, index) : option.value}
           selected={activeValues.includes(option.key)}
           interactive={interactive}
           disabled={disabled}

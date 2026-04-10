@@ -5,8 +5,14 @@ import { cn } from '@/lib/utils';
 
 import { QuestionDocumentResponsePanel } from './question-document-answer-panels';
 import { QuestionDocumentDivider } from './question-document-shared';
-import type { QuestionDocumentBodyProps } from './question-document-types';
+import type { QuestionChoiceOption, QuestionDocumentBodyProps } from './question-document-types';
 import { useQuestionDocumentSplitLayout } from './question-document-utils';
+
+interface QuestionDocumentReadRendererProps {
+  value: string;
+  placeholder: string;
+  className: string;
+}
 
 type QuestionDocumentReadModeProps = Pick<
   QuestionDocumentBodyProps,
@@ -24,12 +30,20 @@ type QuestionDocumentReadModeProps = Pick<
   | 'disabled'
   | 'questionNumber'
   | 'onResponseChange'
->;
+> & {
+  compactWidth?: number;
+  saving?: boolean;
+  contentRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
+  explanationRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
+  optionLabelRenderer?: (option: QuestionChoiceOption, index: number) => React.ReactNode;
+};
 
 export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> = ({
   mode = 'preview',
   className,
+  compactWidth,
   footerActions,
+  saving = false,
   score,
   questionType,
   content,
@@ -41,9 +55,12 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
   disabled = false,
   questionNumber,
   onResponseChange,
+  contentRenderer,
+  explanationRenderer,
+  optionLabelRenderer,
 }) => {
   const { rootRef, isCompact, splitLayoutStyle, dividerPositionStyle, startResize } =
-    useQuestionDocumentSplitLayout();
+    useQuestionDocumentSplitLayout(compactWidth);
   const isAnswerMode = mode === 'answer';
   const isChoiceType = questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE';
   const plainContent = richTextToPlainText(content || '').trim();
@@ -53,11 +70,17 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
     : showExplanation
       ? 'min-h-[120px]'
       : 'min-h-[164px]';
+  const contentClassName = 'whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-foreground';
+  const explanationClassName = 'min-h-[108px] whitespace-pre-wrap break-words text-[14px] leading-7 text-foreground';
 
   return (
     <div
       ref={rootRef}
-      className={cn('overflow-hidden rounded-xl border border-border bg-background', className)}
+      className={cn(
+        'overflow-hidden rounded-xl border border-border bg-background',
+        saving && 'opacity-70',
+        className,
+      )}
     >
       <div
         className={cn('relative grid', isCompact ? 'grid-cols-1' : '')}
@@ -71,9 +94,17 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
                 {score != null ? <span className="shrink-0">{String(score)} 分</span> : null}
               </div>
             ) : null}
-            <div className="whitespace-pre-wrap break-words text-[15px] font-semibold leading-7 text-foreground">
-              {plainContent || '暂无题目内容'}
-            </div>
+            {contentRenderer
+              ? contentRenderer({
+                value: plainContent,
+                placeholder: '暂无题目内容',
+                className: contentClassName,
+              })
+              : (
+                <div className={contentClassName}>
+                  {plainContent || '暂无题目内容'}
+                </div>
+              )}
           </div>
 
           {!isAnswerMode && showExplanation ? (
@@ -81,9 +112,19 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                 答案解析
               </div>
-              <div className="mt-3 min-h-[108px] whitespace-pre-wrap break-words rounded-[14px] border border-border bg-muted/20 px-4 py-3 text-[14px] leading-7 text-foreground">
-                {plainExplanation || '暂无答案解析'}
-              </div>
+              {explanationRenderer
+                ? explanationRenderer({
+                  value: plainExplanation,
+                  placeholder: '暂无答案解析',
+                  className: explanationClassName,
+                })
+                : (
+                  <div className="mt-3 rounded-[14px] border border-border bg-muted/20 px-4 py-3">
+                    <div className={explanationClassName}>
+                      {plainExplanation || '暂无答案解析'}
+                    </div>
+                  </div>
+                )}
             </div>
           ) : null}
         </div>
@@ -97,6 +138,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
             options={options}
             answer={answer}
             response={response}
+            optionLabelRenderer={optionLabelRenderer}
             disabled={disabled}
             interactive={isAnswerMode}
             onResponseChange={onResponseChange}

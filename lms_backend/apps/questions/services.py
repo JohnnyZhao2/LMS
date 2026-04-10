@@ -1,17 +1,9 @@
-"""
-题目应用服务
-编排业务逻辑。
-
-使用方式（构造器注入）:
-    service = QuestionService(request)
-    question = service.get_by_id(pk=123)
-"""
+"""题目应用服务。"""
 from typing import Optional
 
 from django.db import transaction
 from apps.authorization.engine import enforce
 from apps.tags.validators import (
-    assign_scoped_tags,
     assign_space_tag,
     get_scoped_tag_ids_or_error,
 )
@@ -55,7 +47,7 @@ class QuestionService(BaseService):
         """
         question = get_question_by_id(pk)
         self.validate_not_none(question, f'题目 {pk} 不存在')
-        # 权限检查：非管理员只能访问已发布的题目
+        # 非管理员只能访问当前版本
         self.check_published_resource_access(question, resource_name='题目')
         return question
 
@@ -87,26 +79,6 @@ class QuestionService(BaseService):
 
         return queryset
 
-    def check_edit_permission(
-        self,
-        _question: Question,
-        *,
-        permission_code: str,
-        error_message: str,
-    ) -> bool:
-        """
-        检查用户是否有编辑/删除权限
-        Property 15: 题目所有权编辑控制
-        Args:
-            question: 题目对象
-        Returns:
-            True 如果有权限
-        Raises:
-            BusinessError: 如果权限不足
-        """
-        enforce(permission_code, self.request, error_message=error_message)
-        return True
-
     @transaction.atomic
     @log_content_action('question', 'create', '{question_type_label}，{score_text} 分')
     def create(self, data: dict) -> Question:
@@ -119,35 +91,28 @@ class QuestionService(BaseService):
         Raises:
             BusinessError: 如果验证失败
         """
-        source_question_id = data.pop('source_question_id', None)
-        sync_to_bank = data.pop('sync_to_bank', True)
+        payload = dict(data)
+        source_question_id = payload.pop('source_question_id', None)
+        sync_to_bank = payload.pop('sync_to_bank', True)
         if source_question_id is not None:
             source = get_question_by_id(source_question_id)
             self.validate_not_none(source, f'题目 {source_question_id} 不存在')
-            self._validate_merged_question_data(source, data)
+            self.validate_question_payload(payload, source=source)
             return self._spawn_question_version(
                 source,
-                data,
+                payload,
                 sync_to_bank=sync_to_bank,
             )
 
-        # 1. 业务验证
-        self._validate_question_data(data)
-        # 2. 准备数据
-        data['created_by'] = self.user
-        data['updated_by'] = self.user
-        # 处理版本号
-        self._prepare_version_data(data, sync_to_bank=sync_to_bank)
-        # 提取space数据
-        space_tag_id = data.pop('space_tag_id', None)
-        tag_ids = data.pop('tag_ids', [])
-        # 3. 创建题目
-        question = Question.objects.create(**data)
-        # 4. 设置标签
-        assign_space_tag(question, space_tag_id)
-        assign_scoped_tags(question, tag_ids, scope='question')
-
-        return question
+        question_data, space_tag_id, tag_ids = self._prepare_create_payload(
+            payload,
+            sync_to_bank=sync_to_bank,
+        )
+        return self._create_question_record(
+            question_data,
+            space_tag_id=space_tag_id,
+            tag_ids=tag_ids,
+        )
 
     @transaction.atomic
     @log_content_action(
@@ -168,18 +133,13 @@ class QuestionService(BaseService):
         """
         question = self.get_by_id(pk)
         sync_to_bank = data.pop('sync_to_bank', True)
-        # 检查编辑权限
-        self.check_edit_permission(
-            question,
-            permission_code='question.update',
-            error_message='无权编辑此题目',
-        )
+        enforce('question.update', self.request, error_message='无权编辑此题目')
         if not question.is_current:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
                 message='历史版本不可修改'
             )
-        self._validate_merged_question_data(question, data)
+        self.validate_question_payload(data, source=question)
         # 提取space数据
         space_tag_provided = 'space_tag_id' in data
         space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
@@ -241,12 +201,7 @@ class QuestionService(BaseService):
         """
         question = get_question_by_id(pk)
         self.validate_not_none(question, f'题目 {pk} 不存在')
-        # 检查编辑权限
-        self.check_edit_permission(
-            question,
-            permission_code='question.delete',
-            error_message='无权删除此题目',
-        )
+        enforce('question.delete', self.request, error_message='无权删除此题目')
         # 检查是否被引用
         if self._is_referenced_by_quiz(pk):
             raise BusinessError(
@@ -258,8 +213,42 @@ class QuestionService(BaseService):
         question.soft_delete()
         return question
 
-    def _validate_question_data(self, data: dict) -> None:
-        """验证题目数据"""
+    @classmethod
+    def validate_question_ids(cls, question_ids: list[int]) -> None:
+        """校验题目 ID 全部存在。"""
+        if not question_ids:
+            return
+        existing_ids = set(
+            Question.objects.filter(
+                id__in=question_ids,
+                is_deleted=False,
+            ).values_list('id', flat=True)
+        )
+        invalid_ids = sorted(set(question_ids) - existing_ids)
+        if invalid_ids:
+            raise BusinessError(
+                code=ErrorCodes.RESOURCE_NOT_FOUND,
+                message=f'题目不存在: {invalid_ids}',
+            )
+
+    @classmethod
+    def validate_question_payload(
+        cls,
+        data: dict,
+        *,
+        source: Optional[Question] = None,
+    ) -> None:
+        """校验题目内容；传入 source 时按合并后的结果校验。"""
+        merged_data = {
+            'question_type': data.get('question_type', source.question_type if source else None),
+            'options': data.get('options', source.options if source else []),
+            'answer': data.get('answer', source.answer if source else None),
+        }
+        cls._validate_question_content(merged_data)
+
+    @classmethod
+    def _validate_question_content(cls, data: dict) -> None:
+        """验证题目内容字段。"""
         question_type = data.get('question_type')
         options = data.get('options', [])
         answer = data.get('answer')
@@ -319,6 +308,38 @@ class QuestionService(BaseService):
                     message='简答题答案必须是字符串'
                 )
 
+    def _prepare_create_payload(
+        self,
+        data: dict,
+        *,
+        sync_to_bank: bool,
+    ) -> tuple[dict, Optional[int], list[int]]:
+        """整理创建题目所需字段，并提前完成校验。"""
+        question_data = dict(data)
+        self.validate_question_payload(question_data)
+        question_data['created_by'] = self.user
+        question_data['updated_by'] = self.user
+        self._prepare_version_data(question_data, sync_to_bank=sync_to_bank)
+        space_tag_id = question_data.pop('space_tag_id', None)
+        tag_ids = get_scoped_tag_ids_or_error(
+            question_data.pop('tag_ids', []),
+            scope='question',
+        )
+        return question_data, space_tag_id, tag_ids
+
+    def _create_question_record(
+        self,
+        question_data: dict,
+        *,
+        space_tag_id: Optional[int],
+        tag_ids: list[int],
+    ) -> Question:
+        """落库题目并写入标签。"""
+        question = Question.objects.create(**question_data)
+        self._apply_space_tag_change(question, space_tag_id, True)
+        question.tags.set(tag_ids)
+        return question
+
     def _apply_space_tag_change(
         self,
         question: Question,
@@ -344,15 +365,6 @@ class QuestionService(BaseService):
         initialize_new_resource_version(data)
         if not sync_to_bank:
             data['is_current'] = False
-
-    def _validate_merged_question_data(self, source: Question, data: dict) -> None:
-        """校验 source 叠加本次改动后的题目数据。"""
-        merged_data = {
-            'question_type': data.get('question_type', source.question_type),
-            'options': data.get('options', source.options),
-            'answer': data.get('answer', source.answer),
-        }
-        self._validate_question_data(merged_data)
 
     def _spawn_question_version(
         self,

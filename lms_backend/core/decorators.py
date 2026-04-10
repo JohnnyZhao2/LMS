@@ -121,9 +121,6 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         ('quiz_ids', 'quiz_count'),
         ('assignee_ids', 'assignee_count'),
         ('question_ids', 'input_question_count'),
-        ('add_question_ids', 'add_question_count'),
-        ('remove_question_ids', 'remove_question_count'),
-        ('new_questions_data', 'new_question_count'),
     ):
         field_value = template_vars.get(field_name)
         if field_value is not None:

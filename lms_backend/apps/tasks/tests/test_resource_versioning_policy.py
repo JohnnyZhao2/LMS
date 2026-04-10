@@ -112,7 +112,7 @@ def test_question_update_in_place_when_not_quiz_referenced(monkeypatch):
     user = UserFactory()
     question = _create_question(created_by=user, content='旧题干')
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
 
     updated = service.update(question.id, {'content': '新题干'})
 
@@ -134,7 +134,7 @@ def test_question_historical_version_update_blocked(monkeypatch):
         is_current=False,
     )
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
     monkeypatch.setattr(service, 'check_published_resource_access', lambda *args, **kwargs: None)
 
     with pytest.raises(BusinessError) as exc:
@@ -153,7 +153,7 @@ def test_question_update_in_place_when_only_one_unfrozen_quiz_referenced(monkeyp
     quiz = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
     QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
 
     updated = service.update(question.id, {'content': '新题干'})
 
@@ -173,7 +173,7 @@ def test_question_update_creates_new_version_when_shared_by_quizzes(monkeypatch)
     QuizQuestion.objects.create(quiz=quiz_a, question=question, order=1)
     QuizQuestion.objects.create(quiz=quiz_b, question=question, order=1)
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
 
     updated = service.update(question.id, {'content': '新题干'})
 
@@ -194,7 +194,7 @@ def test_question_update_creates_new_version_when_task_bound_quiz_referenced(mon
     QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
     TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
 
     updated = service.update(question.id, {'content': '新题干'})
 
@@ -211,7 +211,7 @@ def test_question_update_without_sync_to_bank_keeps_current_version(monkeypatch)
     user = UserFactory()
     question = _create_question(created_by=user, content='旧题干')
     service = QuestionService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
 
     updated = service.update(question.id, {'content': '试卷内修改', 'sync_to_bank': False})
 
@@ -263,11 +263,10 @@ def test_question_create_from_source_with_sync_to_bank_promotes_new_current():
 
 
 @pytest.mark.django_db
-def test_quiz_update_in_place_when_not_task_referenced(monkeypatch):
+def test_quiz_update_in_place_when_not_task_referenced():
     user = UserFactory()
     quiz = QuizFactory(created_by=user, updated_by=user, title='旧试卷', is_current=True, version_number=1)
     service = QuizService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
     updated = service.update(quiz.id, {'title': '新试卷'})
 
@@ -278,7 +277,7 @@ def test_quiz_update_in_place_when_not_task_referenced(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_quiz_historical_version_update_blocked(monkeypatch):
+def test_quiz_historical_version_update_blocked():
     user = UserFactory()
     current = QuizFactory(
         created_by=user,
@@ -296,7 +295,6 @@ def test_quiz_historical_version_update_blocked(monkeypatch):
         is_current=False,
     )
     service = QuizService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
     with pytest.raises(BusinessError) as exc:
         service.update(old.id, {'title': '非法修改'})
@@ -308,13 +306,12 @@ def test_quiz_historical_version_update_blocked(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_quiz_update_creates_new_version_when_task_referenced(monkeypatch):
+def test_quiz_update_creates_new_version_when_task_referenced():
     user = UserFactory()
     quiz = QuizFactory(created_by=user, updated_by=user, title='旧试卷', is_current=True, version_number=1)
     task = TaskFactory(created_by=user)
     TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
     service = QuizService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
     updated = service.update(quiz.id, {'title': '新试卷'})
 
@@ -327,7 +324,7 @@ def test_quiz_update_creates_new_version_when_task_referenced(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_quiz_update_question_bindings_create_new_version_when_task_referenced(monkeypatch):
+def test_quiz_update_question_bindings_create_new_version_when_task_referenced():
     user = UserFactory()
     quiz = QuizFactory(created_by=user, updated_by=user, title='旧试卷', is_current=True, version_number=1)
     question_a = _create_question(created_by=user, content='题目A')
@@ -335,7 +332,6 @@ def test_quiz_update_question_bindings_create_new_version_when_task_referenced(m
     TaskQuiz.objects.create(task=TaskFactory(created_by=user), quiz=quiz, order=1)
     QuizQuestion.objects.create(quiz=quiz, question=question_a, order=1, score=2)
     service = QuizService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
     updated = service.update(
         quiz.id,
@@ -365,13 +361,12 @@ def test_quiz_update_question_bindings_create_new_version_when_task_referenced(m
 
 
 @pytest.mark.django_db
-def test_quiz_update_referenced_no_change_keeps_single_version(monkeypatch):
+def test_quiz_update_referenced_no_change_keeps_single_version():
     user = UserFactory()
     quiz = QuizFactory(created_by=user, updated_by=user, title='不变试卷', is_current=True, version_number=1)
     task = TaskFactory(created_by=user)
     TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
     service = QuizService(_build_request(user))
-    monkeypatch.setattr(service, 'check_edit_permission', lambda *args, **kwargs: True)
 
     updated = service.update(quiz.id, {})
 

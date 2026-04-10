@@ -19,7 +19,6 @@ from apps.users.models import User
 
 def get_latest_knowledge(limit: int = 6) -> QuerySet:
     return Knowledge.objects.filter(
-        is_deleted=False,
         is_current=True
     ).select_related(
         'created_by', 'updated_by'

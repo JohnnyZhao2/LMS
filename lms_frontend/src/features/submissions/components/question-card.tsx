@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
 
-import { QuestionDocumentBody } from '@/features/questions/components/question-document-core';
+import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { cn } from '@/lib/utils';
 import type { Answer } from '@/types/api';
@@ -86,7 +86,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   return (
     <div className="space-y-5">
-      <QuestionDocumentBody
+      <QuestionDocumentReadMode
         mode="answer"
         score={answer.question_score ?? '0'}
         questionNumber={questionNumber}

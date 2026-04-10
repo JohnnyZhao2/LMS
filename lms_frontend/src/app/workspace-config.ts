@@ -3,10 +3,10 @@ import { StudentLayout } from '@/components/layouts/student-layout';
 import { isRoleCode } from '@/config/role-constants';
 import type { RoleCode } from '@/types/api';
 
-export type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
-export type MenuVariant = 'student' | 'manager' | 'admin';
+type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
+type MenuVariant = 'student' | 'manager' | 'admin';
 
-export interface WorkspaceConfig {
+interface WorkspaceConfig {
   home: string;
   layout: typeof AppLayout;
   requiredCapability: string;
@@ -14,7 +14,7 @@ export interface WorkspaceConfig {
   menuVariant: MenuVariant;
 }
 
-export const WORKSPACE_CONFIG: Record<RoleCode, WorkspaceConfig> = {
+const WORKSPACE_CONFIG: Record<RoleCode, WorkspaceConfig> = {
   STUDENT: {
     home: '/student/dashboard',
     layout: StudentLayout,

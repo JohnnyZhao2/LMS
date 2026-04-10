@@ -1,10 +1,4 @@
-"""
-Views for question management.
-Implements question CRUD endpoints with ownership control.
-Properties:
-- Property 13: 被引用题目删除保护
-- Property 15: 题目所有权编辑控制
-"""
+"""题目视图。"""
 import uuid
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -27,9 +21,7 @@ from .services import QuestionService
 
 
 class QuestionListCreateView(BaseAPIView):
-    """
-    Question list and create endpoint.
-    """
+    """题目列表与创建。"""
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     service_class = QuestionService
@@ -94,21 +86,18 @@ class QuestionListCreateView(BaseAPIView):
 
         search = request.query_params.get('search')
 
-        # 使用 Service 获取 QuerySet（不再传分页参数）
         queryset = self.service.get_queryset(
             filters=filters if filters else None,
             search=search,
             ordering='-created_at'
         )
 
-        # 使用 DRF 分页器处理分页
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         if page is not None:
             serializer = QuestionListSerializer(page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
-        # 如果不分页，直接返回
         serializer = QuestionListSerializer(queryset, many=True)
         return list_response(serializer.data)
 
@@ -133,20 +122,13 @@ class QuestionListCreateView(BaseAPIView):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        
-        # 使用Service创建题目（不再传user参数）
         question = self.service.create(data=serializer.validated_data)
         response_serializer = QuestionDetailSerializer(question)
         return created_response(response_serializer.data)
 
 
 class QuestionDetailView(BaseAPIView):
-    """
-    Question detail, update, delete endpoint.
-    Properties:
-    - Property 13: 被引用题目删除保护
-    - Property 15: 题目所有权编辑控制
-    """
+    """题目详情、更新、删除。"""
     permission_classes = [IsAuthenticated]
     service_class = QuestionService
 
@@ -168,7 +150,7 @@ class QuestionDetailView(BaseAPIView):
 
     @extend_schema(
         summary='更新题目',
-        description='更新题目信息（仅创建者或管理员）',
+        description='更新题目信息',
         request=QuestionUpdateSerializer,
         responses={
             200: QuestionDetailSerializer,
@@ -179,12 +161,7 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理']
     )
     def patch(self, request, pk):
-        """
-        Update question.
-        Property 15: 题目所有权编辑控制
-        """
-        enforce('question.update', request, error_message='无权更新题目')
-        # 先获取题目对象用于验证
+        """更新题目。"""
         question = self.service.get_by_id(pk)
         serializer = QuestionUpdateSerializer(
             instance=question,
@@ -192,8 +169,7 @@ class QuestionDetailView(BaseAPIView):
             partial=True
         )
         serializer.is_valid(raise_exception=True)
-        
-        # 使用Service更新题目（权限检查在Service中完成，不再传user/request参数）
+
         updated_question = self.service.update(
             pk=pk,
             data=serializer.validated_data
@@ -203,7 +179,7 @@ class QuestionDetailView(BaseAPIView):
 
     @extend_schema(
         summary='删除题目',
-        description='删除题目（仅创建者或管理员，被试卷引用时禁止删除）',
+        description='删除题目，被试卷引用时禁止删除',
         responses={
             200: OpenApiResponse(description='删除成功'),
             400: OpenApiResponse(description='题目被试卷引用，无法删除'),
@@ -213,12 +189,6 @@ class QuestionDetailView(BaseAPIView):
         tags=['题库管理']
     )
     def delete(self, request, pk):
-        """
-        Delete question.
-        Property 13: 被引用题目删除保护
-        Property 15: 题目所有权编辑控制
-        """
-        enforce('question.delete', request, error_message='无权删除题目')
-        # 使用Service删除题目（权限检查和引用检查在Service中完成，不再传user/request参数）
+        """删除题目。"""
         self.service.delete(pk=pk)
         return no_content_response()

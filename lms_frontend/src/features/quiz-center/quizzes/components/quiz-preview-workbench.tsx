@@ -7,11 +7,9 @@ import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Skeleton } from '@/components/ui/skeleton';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
-import { QuestionDocumentBody } from '@/features/questions/components/question-document-core';
+import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { Question } from '@/types/api';
-
 import { useQuizDetail } from '../api/get-quizzes';
 import type { InlineQuestionItem, QuizDraftState } from '../types';
 
@@ -22,7 +20,6 @@ interface QuizPreviewWorkbenchProps {
   quizDraft?: QuizDraftState;
   onEdit?: (quizId: number) => void;
   onPrimaryAction?: (quizId: number) => void;
-  primaryActionLabel?: string;
   className?: string;
 }
 
@@ -60,7 +57,6 @@ export function QuizPreviewWorkbench({
   quizDraft,
   onEdit,
   onPrimaryAction,
-  primaryActionLabel = '添加到任务',
   className,
 }: QuizPreviewWorkbenchProps) {
   const [activeQuestionId, setActiveQuestionId] = React.useState<number | null>(null);
@@ -105,38 +101,16 @@ export function QuizPreviewWorkbench({
     [effectiveQuiz?.questions],
   );
 
-  const previewQuestions = React.useMemo<Question[]>(
-    () =>
-      orderedQuestions.map((item) => ({
-        id: item.question,
-        resource_uuid: item.resource_uuid,
-        version_number: item.version_number,
-        content: item.question_content,
-        question_type: item.question_type,
-        question_type_display: item.question_type_display,
-        options: item.options ?? [],
-        answer: item.answer ?? '',
-        explanation: item.explanation ?? '',
-        score: item.score,
-        space_tag: item.space_tag,
-        tags: item.tags ?? [],
-        is_current: item.is_current,
-        created_at: '',
-        updated_at: '',
-      })),
-    [orderedQuestions],
-  );
-
   React.useEffect(() => {
-    if (!previewQuestions.length) {
+    if (!orderedQuestions.length) {
       setActiveQuestionId(null);
       return;
     }
 
-    if (!activeQuestionId || !previewQuestions.some((item) => item.id === activeQuestionId)) {
-      setActiveQuestionId(previewQuestions[0].id);
+    if (!activeQuestionId || !orderedQuestions.some((item) => item.question === activeQuestionId)) {
+      setActiveQuestionId(orderedQuestions[0].question);
     }
-  }, [activeQuestionId, previewQuestions]);
+  }, [activeQuestionId, orderedQuestions]);
 
   const isExam = effectiveQuiz?.quiz_type === 'EXAM';
 
@@ -173,7 +147,7 @@ export function QuizPreviewWorkbench({
     let runningNumber = 1;
     const sections = questionSectionConfig
       .map((section) => {
-        const questions = previewQuestions
+        const questions = orderedQuestions
           .filter((question) => question.question_type === section.type)
           .map((question) => ({
             question,
@@ -190,14 +164,14 @@ export function QuizPreviewWorkbench({
       .filter((section): section is {
         type: typeof questionSectionConfig[number]['type'];
         label: string;
-        questions: Array<{ question: Question; number: number }>;
+        questions: Array<{ question: typeof orderedQuestions[number]; number: number }>;
       } => section !== null);
 
     return sections.map((section, index) => ({
       ...section,
       sectionTitle: `第${index + 1}部分：${section.label}`,
     }));
-  }, [previewQuestions]);
+  }, [orderedQuestions]);
 
   React.useEffect(() => {
     if (!activeQuestionId) {
@@ -298,19 +272,19 @@ export function QuizPreviewWorkbench({
                           key={question.id}
                           ref={(node) => {
                             if (node) {
-                              questionRefs.current.set(question.id, node);
+                              questionRefs.current.set(question.question, node);
                             } else {
-                              questionRefs.current.delete(question.id);
+                              questionRefs.current.delete(question.question);
                             }
                           }}
                           className="scroll-mt-6 py-1"
                         >
-                          <QuestionDocumentBody
+                          <QuestionDocumentReadMode
                             mode="preview"
                             className="w-full"
                             score={question.score}
                             questionType={question.question_type}
-                            content={question.content}
+                            content={question.question_content}
                             options={question.options ?? []}
                             answer={question.answer ?? ''}
                             explanation={question.explanation ?? ''}
@@ -385,7 +359,7 @@ export function QuizPreviewWorkbench({
           <div className="border-t border-border px-4 py-4">
             <Button className="h-9 w-full rounded-lg" onClick={() => onPrimaryAction(effectiveQuiz.id)}>
               <FileText className="h-4 w-4" />
-              {primaryActionLabel}
+              添加到任务
             </Button>
           </div>
         ) : null}

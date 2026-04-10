@@ -33,7 +33,7 @@ class MentorDashboardView(BaseAPIView):
         enforce(
             'dashboard.mentor.view',
             request,
-            error_message='只有导师、室经理、管理员或超管可以访问此仪表盘',
+            error_message='只有导师、室经理或超管可以访问此仪表盘',
         )
         data = self.service.get_dashboard_data()
         return success_response(data)

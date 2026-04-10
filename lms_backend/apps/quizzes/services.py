@@ -6,14 +6,12 @@
     service = QuizService(request)
     quiz = service.get_by_id(pk=123)
 """
-from typing import Any, List, Optional
+from typing import Any, List
 
 from django.db import transaction
 from django.db.models import Max
 
-from apps.authorization.engine import enforce
 from apps.questions.models import Question
-from apps.tags.models import Tag
 from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
@@ -25,7 +23,6 @@ from core.versioning import (
 )
 
 from .models import Quiz, QuizQuestion
-from .selectors import get_quiz_by_id, list_quiz_questions
 
 
 class QuizService(BaseService):
@@ -62,12 +59,11 @@ class QuizService(BaseService):
             score=score,
         )
 
-    def _remove_questions(self, quiz_id: int, question_ids: List[int]) -> int:
-        deleted_count, _ = QuizQuestion.objects.filter(
+    def _remove_questions(self, quiz_id: int, question_ids: List[int]) -> None:
+        QuizQuestion.objects.filter(
             quiz_id=quiz_id,
             question_id__in=question_ids
         ).delete()
-        return deleted_count
 
     def get_by_id(self, pk: int) -> Quiz:
         """
@@ -79,7 +75,10 @@ class QuizService(BaseService):
         Raises:
             BusinessError: 如果不存在
         """
-        quiz = get_quiz_by_id(pk)
+        quiz = Quiz.objects.select_related('created_by', 'updated_by').filter(
+            pk=pk,
+            is_deleted=False,
+        ).first()
         self.validate_not_none(quiz, f'试卷 {pk} 不存在')
         return quiz
 
@@ -123,23 +122,6 @@ class QuizService(BaseService):
             qs = qs[offset:offset+limit] if offset else qs[:limit]
         return list(qs)
 
-    def check_edit_permission(
-        self,
-        *,
-        permission_code: str,
-        error_message: str,
-    ) -> bool:
-        """
-        检查用户是否有编辑/删除权限
-        Property 16: 试卷所有权编辑控制
-        Returns:
-            True 如果有权限
-        Raises:
-            BusinessError: 如果权限不足
-        """
-        enforce(permission_code, self.request, error_message=error_message)
-        return True
-
     @transaction.atomic
     @log_content_action(
         'quiz',
@@ -150,48 +132,32 @@ class QuizService(BaseService):
         self,
         data: dict,
         question_versions: List[dict] = None,
-        existing_question_ids: List[int] = None,
-        new_questions_data: List[dict] = None
     ) -> Quiz:
         """
         创建试卷
         Args:
             data: 试卷数据
             question_versions: 已有题目与分值列表
-            existing_question_ids: 已有题目 ID 列表
-            new_questions_data: 新建题目数据列表
         Returns:
             创建的试卷对象
         Raises:
             BusinessError: 如果验证失败
         """
-        # 1. 业务验证
-        self._validate_quiz_data(data)
-        # 2. 准备数据
+        # 1. 准备数据
         data['created_by'] = self.user
         data['updated_by'] = self.user
         # 处理版本号
         initialize_new_resource_version(data)
-        # 3. 创建试卷
+        # 2. 创建试卷
         quiz = Quiz.objects.create(**data)
-        # 4. 添加题目
+        # 3. 添加题目
         question_versions = question_versions or []
-        existing_question_ids = existing_question_ids or []
-        new_questions_data = new_questions_data or []
-        normalized_question_versions = self._normalize_question_versions(
-            question_versions=question_versions,
-            question_ids=existing_question_ids,
-        )
-        # 添加已有题目
-        for binding in normalized_question_versions:
+        for binding in question_versions:
             self._add_question(
                 quiz_id=quiz.id,
                 question_id=binding['question_id'],
                 score=binding['score'],
             )
-        # 创建并添加新题目
-        for question_data in new_questions_data:
-            self._create_and_add_question(quiz, question_data)
         quiz.updated_by = self.user
         quiz.save(update_fields=['updated_by'])
 
@@ -208,10 +174,6 @@ class QuizService(BaseService):
         pk: int,
         data: dict,
         question_versions: List[dict] = None,
-        question_ids: List[int] = None,
-        add_question_ids: List[int] = None,
-        new_questions_data: List[dict] = None,
-        remove_question_ids: List[int] = None
     ) -> Quiz:
         """
         更新试卷（支持原子性操作）
@@ -220,41 +182,18 @@ class QuizService(BaseService):
             pk: 主键
             data: 更新数据
             question_versions: 新的题目与分值列表（可选，会覆盖现有顺序）
-            question_ids: 新的题目 ID 顺序列表（可选，会覆盖现有顺序）
-            add_question_ids: 要添加的已有题目 ID 列表
-            new_questions_data: 要新建的题目数据列表
-            remove_question_ids: 要移除的题目 ID 列表
         Returns:
             更新后的试卷对象
         Raises:
             BusinessError: 如果验证失败或无法更新
         """
         quiz = self.get_by_id(pk)
-        # 检查权限
-        self.check_edit_permission(
-            permission_code='quiz.update',
-            error_message='无权编辑此试卷',
-        )
         if not quiz.is_current:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
                 message='历史版本不可修改'
             )
-        # 处理题目操作（在同一个事务中）
-        normalized_question_versions = self._normalize_question_versions(
-            question_versions=question_versions,
-            question_ids=question_ids,
-        )
-        add_question_ids = add_question_ids or []
-        new_questions_data = new_questions_data or []
-        remove_question_ids = remove_question_ids or []
-        has_question_changes = (
-            normalized_question_versions is not None
-            or question_ids is not None
-            or bool(add_question_ids)
-            or bool(new_questions_data)
-            or bool(remove_question_ids)
-        )
+        has_question_changes = question_versions is not None
         changed_fields = {
             field: value
             for field, value in data.items()
@@ -263,13 +202,6 @@ class QuizService(BaseService):
         has_base_changes = bool(changed_fields)
         if not has_base_changes and not has_question_changes:
             return quiz
-        if has_base_changes:
-            merged_quiz_data = {
-                'quiz_type': changed_fields.get('quiz_type', quiz.quiz_type),
-                'duration': changed_fields.get('duration', quiz.duration),
-                'pass_score': changed_fields.get('pass_score', quiz.pass_score),
-            }
-            self._validate_quiz_data(merged_quiz_data)
 
         should_create_new_version = quiz.is_current and self._is_referenced_by_task(quiz.id)
         if should_create_new_version:
@@ -280,36 +212,8 @@ class QuizService(BaseService):
                 setattr(quiz, key, value)
             quiz.save(update_fields=list(changed_fields.keys()))
 
-        # 1. 先移除题目
-        if remove_question_ids:
-            self._remove_questions(quiz_id=quiz.id, question_ids=remove_question_ids)
-
-        # 2. 添加已有题目
-        existing_quiz_question_ids = set(
-            QuizQuestion.objects.filter(quiz_id=quiz.id).values_list('question_id', flat=True)
-        )
-        for question_id in add_question_ids:
-            if question_id not in existing_quiz_question_ids:
-                question = Question.objects.filter(pk=question_id).first()
-                if not question:
-                    raise BusinessError(
-                        code=ErrorCodes.RESOURCE_NOT_FOUND,
-                        message=f'题目 {question_id} 不存在'
-                    )
-                self._add_question(quiz_id=quiz.id, question_id=question_id)
-
-        # 3. 创建并添加新题目
-        for question_data in new_questions_data:
-            self._create_and_add_question(quiz, question_data)
-
-        # 4. 更新题目顺序（如果提供）
-        if normalized_question_versions is not None:
-            self._sync_question_bindings(quiz, normalized_question_versions)
-        elif question_ids is not None:
-            self._sync_question_bindings(
-                quiz,
-                self._normalize_question_versions(question_ids=question_ids),
-            )
+        if question_versions is not None:
+            self._sync_question_bindings(quiz, question_versions)
 
         if has_question_changes and not should_create_new_version and not has_base_changes:
             quiz.updated_by = self.user
@@ -335,11 +239,6 @@ class QuizService(BaseService):
             BusinessError: 如果被引用无法删除或无权限
         """
         quiz = self.get_by_id(pk)
-        # 检查权限
-        self.check_edit_permission(
-            permission_code='quiz.delete',
-            error_message='无权删除此试卷',
-        )
         # 检查是否被引用
         if self._is_referenced_by_task(quiz.id):
             raise BusinessError(
@@ -351,85 +250,10 @@ class QuizService(BaseService):
         quiz.soft_delete()
         return quiz
 
-    def _create_and_add_question(
-        self,
-        quiz: Quiz,
-        question_data: dict
-    ) -> Question:
-        """
-        创建题目并添加到试卷
-        Args:
-            quiz: 试卷对象
-            question_data: 题目数据字典（会被修改，space_tag_id 会被弹出）
-        Returns:
-            创建的题目对象
-        """
-        relation_score = question_data.get('score')
-        space_tag_id = question_data.pop('space_tag_id', None)
-        tag_ids = question_data.pop('tag_ids', [])
-        # 准备版本数据
-        initialize_new_resource_version(question_data)
-        # 准备题目属性
-        question_attrs = {
-            'created_by': self.user,
-            **question_data,
-        }
-        # 创建题目
-        question = Question.objects.create(**question_attrs)
-        # 设置space
-        if space_tag_id is not None:
-            self._set_question_space_tag(question, space_tag_id)
-        if tag_ids:
-            question.tags.set(tag_ids)
-        # 添加到试卷
-        self._add_question(
-            quiz_id=quiz.id,
-            question_id=question.id,
-            score=relation_score,
-        )
-        return question
-
-    def _set_question_space_tag(self, question: Question, space_tag_id: int) -> None:
-        """
-        设置题目的space
-        Args:
-            question: 题目对象
-            space_tag_id: space ID
-        Raises:
-            BusinessError: 如果space无效
-        """
-        space_tag = Tag.objects.filter(
-            id=space_tag_id,
-            tag_type='SPACE',
-        ).first()
-        if not space_tag:
-            raise BusinessError(
-                code=ErrorCodes.VALIDATION_ERROR,
-                message='无效的 space ID'
-            )
-        question.space_tag = space_tag
-        question.save(update_fields=['space_tag'])
-
-    def _validate_quiz_data(self, data: dict) -> None:
-        """验证试卷数据"""
-        quiz_type = data.get('quiz_type', 'PRACTICE')
-        if quiz_type == 'EXAM':
-            if not data.get('duration'):
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='考试类型必须设置考试时长'
-                )
-            if not data.get('pass_score'):
-                raise BusinessError(
-                    code=ErrorCodes.VALIDATION_ERROR,
-                    message='考试类型必须设置及格分数'
-                )
-
     def _create_new_version(
         self,
         source: Quiz,
         data: dict,
-        question_ids: Optional[List[int]] = None
     ) -> Quiz:
         """
         基于已发布版本创建新版本
@@ -448,22 +272,14 @@ class QuizService(BaseService):
         deactivate_current_version(Quiz, source.resource_uuid)
         new_quiz = Quiz.objects.create(**new_quiz_data)
         # 复制题目顺序
-        if question_ids is None:
-            source_questions = list_quiz_questions(source.id)
-            for relation in source_questions:
-                self._add_question(
-                    quiz_id=new_quiz.id,
-                    question_id=relation.question_id,
-                    order=relation.order,
-                    score=relation.score,
-                )
-        else:
-            for order, question_id in enumerate(question_ids, start=1):
-                self._add_question(
-                    quiz_id=new_quiz.id,
-                    question_id=question_id,
-                    order=order
-                )
+        source_questions = source.quiz_questions.select_related('question', 'quiz').order_by('order')
+        for relation in source_questions:
+            self._add_question(
+                quiz_id=new_quiz.id,
+                question_id=relation.question_id,
+                order=relation.order,
+                score=relation.score,
+            )
         return new_quiz
 
     def _sync_question_bindings(
@@ -497,7 +313,7 @@ class QuizService(BaseService):
 
         current_relations = {
             qq.question_id: qq
-            for qq in list_quiz_questions(quiz.id)
+            for qq in quiz.quiz_questions.select_related('question', 'quiz').order_by('order')
         }
         new_id_set = {item['question_id'] for item in deduped_question_versions}
         # 移除不再存在的题目
@@ -526,9 +342,7 @@ class QuizService(BaseService):
                 if changed_fields:
                     relation.save(update_fields=changed_fields)
             else:
-                # 验证题目存在
-                question = Question.objects.filter(pk=question_id).first()
-                if not question:
+                if question_id not in question_map:
                     raise BusinessError(
                         code=ErrorCodes.RESOURCE_NOT_FOUND,
                         message=f'题目 {question_id} 不存在'
@@ -544,32 +358,3 @@ class QuizService(BaseService):
         """检查试卷是否被任务引用"""
         from apps.tasks.models import TaskQuiz
         return is_referenced(quiz_id, TaskQuiz, 'quiz_id')
-
-    def _normalize_question_versions(
-        self,
-        *,
-        question_versions: Optional[List[dict]] = None,
-        question_ids: Optional[List[int]] = None,
-    ) -> Optional[List[dict[str, Any]]]:
-        if question_versions is None:
-            if question_ids is None:
-                return None
-            return [
-                {
-                    'question_id': question_id,
-                    'score': (
-                        Question.objects.filter(pk=question_id)
-                        .values_list('score', flat=True)
-                        .first()
-                        or 1
-                    ),
-                }
-                for question_id in question_ids
-            ]
-        return [
-            {
-                'question_id': item['question_id'],
-                'score': item['score'],
-            }
-            for item in question_versions
-        ]

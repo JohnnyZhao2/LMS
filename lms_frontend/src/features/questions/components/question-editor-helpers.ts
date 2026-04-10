@@ -124,7 +124,7 @@ export const questionToEditableItem = (question: Question, key = nextQuestionEdi
     answer: question.answer || '',
     explanation: question.explanation || '',
     showExplanation: Boolean(question.explanation?.trim()),
-    score: normalizeQuestionScore(question.score ?? '1'),
+    score: '1',
     tagIds: question.tags?.map((tag) => tag.id) ?? [],
     original: form,
     saved: true,

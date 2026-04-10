@@ -257,12 +257,12 @@ class SubmissionService(BaseService):
         if is_exam and quiz.duration:
             remaining_seconds = quiz.duration * 60
         # Prepare answer data
-        questions = quiz.get_ordered_questions()
+        questions = quiz.quiz_questions.order_by('order').values_list('question_id', flat=True)
         answers_data = [
             {
-                'question_id': relation.question_id,
+                'question_id': question_id,
             }
-            for relation in questions
+            for question_id in questions
         ]
         # Create submission with answers
         submission = self._create_with_answers(

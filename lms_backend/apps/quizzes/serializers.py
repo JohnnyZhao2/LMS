@@ -1,15 +1,11 @@
 """
 Serializers for quiz management.
-Implements quiz CRUD serializers with ownership control.
-Properties:
-- Property 14: 被引用试卷删除保护
-- Property 16: 试卷所有权编辑控制
 """
 from rest_framework import serializers
 
-from apps.questions.models import Question
-from apps.questions.serializers import QuestionCreateSerializer
+from apps.questions.services import QuestionService
 from apps.tags.serializers import TagSimpleSerializer
+from core.exceptions import BusinessError
 
 from .models import Quiz, QuizQuestion
 
@@ -84,243 +80,83 @@ class QuizDetailSerializer(serializers.ModelSerializer):
         ]
     def get_questions(self, obj):
         """Get ordered questions with details."""
-        quiz_questions = obj.get_ordered_questions()
+        quiz_questions = obj.quiz_questions.select_related('question').order_by('order')
         return QuizQuestionSerializer(quiz_questions, many=True).data
-class AddNewQuestionSerializer(serializers.Serializer):
-    """
-    Serializer for adding a new question to a quiz.
-    """
-    content = serializers.CharField()
-    question_type = serializers.ChoiceField(choices=Question.QUESTION_TYPE_CHOICES)
-    options = serializers.JSONField(required=False, default=list)
-    answer = serializers.JSONField()
-    explanation = serializers.CharField(required=False, default='')
-    score = serializers.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    space_tag_id = serializers.IntegerField(required=False, allow_null=True)
-    tag_ids = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
-    def validate(self, attrs):
-        """Validate question data based on question type."""
-        question_type = attrs.get('question_type')
-        options = attrs.get('options', [])
-        answer = attrs.get('answer')
-        # Validate choice questions have options
-        if question_type in ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']:
-            if not options:
-                raise serializers.ValidationError({
-                    'options': '选择题必须设置选项'
-                })
-            # Validate options format
-            option_keys = []
-            for opt in options:
-                if not isinstance(opt, dict) or 'key' not in opt or 'value' not in opt:
-                    raise serializers.ValidationError({
-                        'options': '选项格式错误，必须包含 key 和 value'
-                    })
-                option_keys.append(opt['key'])
-            # Validate answer is in options
-            if question_type == 'SINGLE_CHOICE':
-                if not isinstance(answer, str):
-                    raise serializers.ValidationError({
-                        'answer': '单选题答案必须是字符串'
-                    })
-                if answer not in option_keys:
-                    raise serializers.ValidationError({
-                        'answer': '单选题答案必须是有效的选项'
-                    })
-            else:  # MULTIPLE_CHOICE
-                if not isinstance(answer, list):
-                    raise serializers.ValidationError({
-                        'answer': '多选题答案必须是列表'
-                    })
-                for ans in answer:
-                    if ans not in option_keys:
-                        raise serializers.ValidationError({
-                            'answer': f'多选题答案 {ans} 不是有效的选项'
-                        })
-        # Validate true/false questions
-        elif question_type == 'TRUE_FALSE':
-            if answer not in ['TRUE', 'FALSE']:
-                raise serializers.ValidationError({
-                    'answer': '判断题答案必须是 TRUE 或 FALSE'
-                })
-        # Validate short answer questions
-        elif question_type == 'SHORT_ANSWER':
-            if not isinstance(answer, str):
-                raise serializers.ValidationError({
-                    'answer': '简答题答案必须是字符串'
-                })
-        return attrs
 class QuizQuestionBindingSerializer(serializers.Serializer):
     question_id = serializers.IntegerField()
     score = serializers.DecimalField(max_digits=5, decimal_places=2)
 
 
-class QuizCreateSerializer(serializers.ModelSerializer):
+class QuizQuestionBindingValidationMixin:
+    def _validate_exam_fields(self, attrs):
+        quiz_type = attrs.get('quiz_type', self.instance.quiz_type if self.instance else 'PRACTICE')
+        if quiz_type != 'EXAM':
+            return attrs
+
+        duration = attrs.get('duration', getattr(self.instance, 'duration', None))
+        pass_score = attrs.get('pass_score', getattr(self.instance, 'pass_score', None))
+        if not duration:
+            raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
+        if not pass_score:
+            raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
+        return attrs
+
+    def _validate_question_versions(self, value):
+        if value is None:
+            return value
+        try:
+            QuestionService.validate_question_ids(
+                [item['question_id'] for item in value]
+            )
+        except BusinessError as exc:
+            raise serializers.ValidationError(exc.message) from exc
+        return value
+
+
+class QuizCreateSerializer(QuizQuestionBindingValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating quizzes.
     """
-    existing_question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        default=list,
-        help_text='要添加的已有题目ID列表'
-    )
     question_versions = QuizQuestionBindingSerializer(
         many=True,
         required=False,
         default=list,
         help_text='试卷题目与分值列表'
     )
-    new_questions = AddNewQuestionSerializer(
-        many=True,
-        required=False,
-        default=list,
-        help_text='要新建的题目列表'
-    )
     class Meta:
         model = Quiz
         fields = [
             'title', 'quiz_type', 'duration', 'pass_score',
-            'existing_question_ids', 'question_versions', 'new_questions'
+            'question_versions'
         ]
+
     def validate(self, attrs):
-        """Validate quiz_type specific fields."""
-        quiz_type = attrs.get('quiz_type', 'PRACTICE')
-        if quiz_type == 'EXAM':
-            if not attrs.get('duration'):
-                raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
-            if not attrs.get('pass_score'):
-                raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
-        return attrs
-    def validate_existing_question_ids(self, value):
-        """Validate that all question IDs exist and are not deleted."""
-        if not value:
-            return value
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
+        return self._validate_exam_fields(attrs)
 
     def validate_question_versions(self, value):
-        if not value:
-            return value
-        question_ids = [item['question_id'] for item in value]
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=question_ids,
-                is_deleted=False,
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(question_ids) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
-class QuizUpdateSerializer(serializers.ModelSerializer):
+        return self._validate_question_versions(value)
+
+
+class QuizUpdateSerializer(QuizQuestionBindingValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating quizzes.
-    支持在一个请求中完成：
-    - 更新试卷基本信息（title, quiz_type, duration, pass_score）
-    - 同步题目顺序（existing_question_ids）
-    - 添加新题目（add_question_ids, new_questions）
-    - 移除题目（remove_question_ids）
+    支持更新试卷基本信息与题目顺序/分值。
     """
-    existing_question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        allow_empty=True,
-        help_text='新的题目 ID 顺序列表（会覆盖现有顺序）'
-    )
     question_versions = QuizQuestionBindingSerializer(
         many=True,
         required=False,
         help_text='新的题目与分值列表（会覆盖现有顺序）'
     )
-    add_question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        default=list,
-        help_text='要添加的已有题目ID列表'
-    )
-    new_questions = AddNewQuestionSerializer(
-        many=True,
-        required=False,
-        default=list,
-        help_text='要新建的题目列表'
-    )
-    remove_question_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        required=False,
-        default=list,
-        help_text='要移除的题目ID列表'
-    )
 
     class Meta:
         model = Quiz
         fields = [
             'title', 'quiz_type', 'duration', 'pass_score',
-            'existing_question_ids', 'question_versions',
-            'add_question_ids', 'new_questions', 'remove_question_ids'
+            'question_versions',
         ]
 
     def validate(self, attrs):
-        """Validate quiz_type specific fields."""
-        quiz_type = attrs.get('quiz_type', self.instance.quiz_type if self.instance else 'PRACTICE')
-        if quiz_type == 'EXAM':
-            duration = attrs.get('duration', getattr(self.instance, 'duration', None))
-            pass_score = attrs.get('pass_score', getattr(self.instance, 'pass_score', None))
-            if not duration:
-                raise serializers.ValidationError({'duration': '考试类型必须设置考试时长'})
-            if not pass_score:
-                raise serializers.ValidationError({'pass_score': '考试类型必须设置及格分数'})
-        return attrs
-
-    def validate_existing_question_ids(self, value):
-        """Validate provided question ids."""
-        if value is None:
-            return value
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
-
-    def validate_add_question_ids(self, value):
-        """Validate question ids to add."""
-        if not value:
-            return value
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=value,
-                is_deleted=False
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(value) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
+        return self._validate_exam_fields(attrs)
 
     def validate_question_versions(self, value):
-        if value is None:
-            return value
-        question_ids = [item['question_id'] for item in value]
-        existing_ids = set(
-            Question.objects.filter(
-                id__in=question_ids,
-                is_deleted=False,
-            ).values_list('id', flat=True)
-        )
-        invalid_ids = set(question_ids) - existing_ids
-        if invalid_ids:
-            raise serializers.ValidationError(f'题目不存在: {list(invalid_ids)}')
-        return value
+        return self._validate_question_versions(value)
