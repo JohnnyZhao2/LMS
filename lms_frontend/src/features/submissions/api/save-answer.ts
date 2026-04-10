@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { SaveAnswerRequest } from '@/types/api';
+import type { SaveAnswerRequest } from '@/types/submission';
 
 interface SaveAnswerParams {
   submissionId: number;

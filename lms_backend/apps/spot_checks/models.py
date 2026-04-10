@@ -58,11 +58,6 @@ class SpotCheck(TimestampMixin, models.Model):
             return None
 
     @property
-    def checked_at(self):
-        """兼容日志等读取，抽查时间统一取系统创建时间。"""
-        return self.created_at
-
-    @property
     def topic_count(self) -> int:
         return len(self._resolved_items())
 
@@ -91,16 +86,6 @@ class SpotCheck(TimestampMixin, models.Model):
             return None
         average = sum(scores) / Decimal(len(scores))
         return average.quantize(Decimal('0.01'))
-
-    @property
-    def score(self):
-        """兼容日志模板，映射为抽查均分。"""
-        return self.average_score
-
-    @property
-    def content(self):
-        """兼容日志模板，映射为主题摘要。"""
-        return self.topic_summary
 
 
 class SpotCheckItem(models.Model):

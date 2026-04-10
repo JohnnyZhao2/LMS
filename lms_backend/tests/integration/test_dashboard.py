@@ -426,6 +426,30 @@ class TestDashboardSelectors:
         assert progress['quiz_total'] == 1
         assert progress['quiz_completed'] == 1
 
+    def test_calculate_assignment_progress_ignores_in_progress_submission(
+        self,
+        task,
+        task_assignment,
+        quiz,
+        student,
+    ):
+        """答题中的提交不应计入已完成测验。"""
+        from apps.dashboard.selectors import calculate_assignment_progress
+
+        TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
+        Submission.objects.create(
+            task_assignment=task_assignment,
+            quiz=quiz,
+            user=student,
+            status='IN_PROGRESS',
+        )
+
+        progress = calculate_assignment_progress(task_assignment)
+
+        assert progress['quiz_total'] == 1
+        assert progress['quiz_completed'] == 0
+        assert progress['completed'] == 0
+
     def test_get_task_participants_progress_no_n_plus_one(self, task, task_assignment, task_assignment2, quiz, student, student2):
         """测试 get_task_participants_progress 没有 N+1 查询问题"""
         from django.test.utils import CaptureQueriesContext

@@ -1,6 +1,6 @@
 import type { MutableRefObject } from 'react';
 
-import type { SubmissionDetail } from '@/types/api';
+import type { SubmissionDetail } from '@/types/submission';
 
 import { QuestionCard } from './question-card';
 

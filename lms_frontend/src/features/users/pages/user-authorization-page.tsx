@@ -7,17 +7,16 @@ import { UserSelectList } from '@/components/common/user-select-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
-import { SearchInput, DESKTOP_SEARCH_INPUT_CLASSNAME } from '@/components/ui/search-input';
-import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { ASSIGNABLE_ROLES, getRoleColor } from '@/lib/role-config';
 import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 
 import { useDepartments, useRoles, useUserDetail, useUsers } from '../api/get-users';
 import { useAssignRoles } from '../api/manage-users';
+import { UserDirectoryFilters } from '../components/user-directory-filters';
 import {
   UserPermissionSection,
 } from '../components/user-permission-section';
@@ -160,21 +159,16 @@ export const UserAuthorizationPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-3 px-4 py-4">
-              <SegmentedControl
-                options={departmentSegmentOptions}
-                value={selectedDepartmentId}
-                onChange={setSelectedDepartmentId}
-                fill
-                className="w-full"
-              />
-              <SearchInput
-                className={cn(DESKTOP_SEARCH_INPUT_CLASSNAME, 'w-full')}
-                placeholder="检索姓名、工号"
-                value={search}
-                onChange={setSearch}
-              />
-            </div>
+            <UserDirectoryFilters
+              departmentOptions={departmentSegmentOptions}
+              selectedDepartmentId={selectedDepartmentId}
+              onDepartmentChange={setSelectedDepartmentId}
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="检索姓名、工号"
+              layout="stacked"
+              className="space-y-0 px-4 py-4"
+            />
 
             <UserSelectList
               items={panelItems}

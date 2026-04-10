@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Eye, Pencil, Trash2, Layout } from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
+import { useScopedPagination } from '@/hooks/use-scoped-pagination';
 import { useQuizzes } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import { useDeleteQuiz } from '@/features/quiz-center/quizzes/api/create-quiz';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
 import { ROUTES } from '@/config/routes';
-import type { QuizListItem } from '@/types/api';
+import type { QuestionType } from '@/types/common';
+import type { QuizListItem } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
 import dayjs from '@/lib/dayjs';
@@ -23,16 +25,16 @@ interface QuizTabProps {
 }
 
 export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 10,
-    scopeKey: `${search}::${quizType ?? 'ALL'}`,
-  });
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = React.useState<number | null>(null);
 
   const currentScopeKey = `${search}::${quizType ?? 'ALL'}`;
-  const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
-  const pageSize = pagination.pageSize;
+  const {
+    page,
+    pageIndex,
+    pageSize,
+    onPageChange,
+    onPageSizeChange,
+  } = useScopedPagination({ scopeKey: currentScopeKey });
 
   const { data, isLoading } = useQuizzes({ page, pageSize, search: search || undefined, quizType });
   const deleteQuiz = useDeleteQuiz();
@@ -130,7 +132,7 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
                     return (
                       <Tooltip
                         key={type}
-                        title={`${getQuestionTypeLabel(type as import('@/types/api').QuestionType)}: ${count}题`}
+                        title={`${getQuestionTypeLabel(type as QuestionType)}: ${count}题`}
                       >
                         <div className="flex items-center gap-1 cursor-help hover:opacity-80 transition-opacity">
                           <span className={`flex items-center justify-center w-4 h-4 rounded-[3px] text-[10px] font-medium ${colorClass}`}>
@@ -234,25 +236,13 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
         isLoading={isLoading}
         fillHeight
         pagination={{
-          pageIndex: page - 1,
-          pageSize: pageSize,
+          pageIndex,
+          pageSize,
           defaultPageSize: 10,
           pageCount: Math.ceil((data?.count || 0) / pageSize),
           totalCount: data?.count || 0,
-          onPageChange: (p: number) =>
-            setPagination((prev) => ({
-              ...prev,
-              page: p + 1,
-              scopeKey: currentScopeKey,
-            })),
-          onPageSizeChange: (size: number) => {
-            setPagination((prev) => ({
-              ...prev,
-              pageSize: size,
-              page: 1,
-              scopeKey: currentScopeKey,
-            }));
-          },
+          onPageChange,
+          onPageSizeChange,
         }}
         rowClassName="group"
         onRowClick={(row: QuizListItem) => roleNavigate(`${ROUTES.QUIZZES}/${row.id}/preview`)}
@@ -276,5 +266,3 @@ export const QuizTab: React.FC<QuizTabProps> = ({ search = '', quizType }) => {
     </>
   );
 };
-
-export default QuizTab;

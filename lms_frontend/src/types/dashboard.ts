@@ -7,7 +7,7 @@ import type { LatestKnowledge } from './knowledge';
 /**
  * 学员统计数据
  */
-export interface StudentStats {
+interface StudentStats {
   in_progress_count: number;
   urgent_count: number;
   completion_rate: number;
@@ -98,7 +98,7 @@ export interface MentorDashboardScoreDistribution {
   total: number;
 }
 
-export interface MentorDashboardRadarMetrics {
+interface MentorDashboardRadarMetrics {
   completion_rate: number;
   overdue_rate: number;
   avg_score: number;
@@ -153,7 +153,7 @@ export interface TeamManagerDepartmentMetrics {
   weekly_active_rate: number;
 }
 
-export interface TeamManagerDepartmentGap {
+interface TeamManagerDepartmentGap {
   student_count: number;
   mentor_count: number;
   completion_rate: number;
@@ -167,7 +167,7 @@ export interface TeamManagerDepartmentComparison {
   gap: TeamManagerDepartmentGap;
 }
 
-export interface TeamManagerDepartmentStudent {
+interface TeamManagerDepartmentStudent {
   student_id: number;
   student_name: string;
   mentor_name: string | null;

@@ -3,7 +3,7 @@ from typing import List, Optional
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from apps.authorization.engine import authorize, enforce
+from apps.authorization.engine import authorize
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from core.base_service import BaseService
@@ -202,8 +202,6 @@ class TagService(BaseService):
         self.validate_not_none(tag, f'标签 {pk} 不存在')
 
         if tag.tag_type == 'SPACE':
-            from apps.knowledge.models import Knowledge
-
             Knowledge.objects.filter(space_tag_id=tag.id).update(space_tag=None)
             Question.objects.filter(space_tag_id=tag.id).update(space_tag=None)
         else:
@@ -370,7 +368,3 @@ def enforce_tag_view_permission(
     ):
         return
     raise BusinessError(code=ErrorCodes.PERMISSION_DENIED, message=error_message)
-
-
-def enforce_tag_action_permission(request, permission_code: str, error_message: str) -> None:
-    enforce(permission_code, request, error_message=error_message)

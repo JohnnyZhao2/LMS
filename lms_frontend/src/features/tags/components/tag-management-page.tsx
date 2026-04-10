@@ -22,7 +22,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { cn } from '@/lib/utils';
 import { ApiError } from '@/lib/api-client';
-import type { Tag, TagType } from '@/types/api';
+import type { Tag, TagType } from '@/types/common';
 
 import { useCreateTag, useDeleteTag, useMergeTag, useTags, useUpdateTag } from '../api/tags';
 import { TagFormDialog } from './tag-form-dialog';

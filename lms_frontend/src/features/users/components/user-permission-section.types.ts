@@ -1,7 +1,4 @@
-import type {
-  PermissionOverrideScope,
-  UserPermissionOverride,
-} from '@/types/api';
+import type { PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
 
 export interface ScopeFilterOption {
   value: string;

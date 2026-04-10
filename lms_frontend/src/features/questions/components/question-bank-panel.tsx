@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
 import { QUESTION_TYPE_PICKER_OPTIONS, getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
-import type { PaginatedResponse, Question, Tag } from '@/types/api';
+import type { PaginatedResponse, Tag } from '@/types/common';
+import type { Question } from '@/types/question';
 
 interface QuestionBankPanelProps {
   resourceSearch: string;

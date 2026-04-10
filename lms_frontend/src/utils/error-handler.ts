@@ -18,7 +18,7 @@ interface ErrorResponse {
  * @param errorData 后端返回的错误数据
  * @returns 用户友好的错误消息字符串
  */
-export function extractErrorMessage(errorData: unknown): string {
+function extractErrorMessage(errorData: unknown): string {
   if (!errorData || typeof errorData !== 'object') {
     return '操作失败，请稍后重试';
   }
@@ -73,4 +73,3 @@ export function showApiError(error: unknown, defaultMessage?: string): void {
     toast.error(defaultMessage || '网络错误，请稍后重试');
   }
 }
-

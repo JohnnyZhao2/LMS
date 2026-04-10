@@ -2,14 +2,8 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type {
-  CreateUserPermissionOverrideRequest,
-  PermissionCatalogItem,
-  PermissionCatalogView,
-  RoleCode,
-  RolePermissionTemplate,
-  UserPermissionOverride,
-} from '@/types/api';
+import type { CreateUserPermissionOverrideRequest, PermissionCatalogItem, PermissionCatalogView, RolePermissionTemplate, UserPermissionOverride } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 
 interface PermissionCatalogQuery {
   module?: string;
@@ -44,10 +38,6 @@ export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled
     enabled: currentRole !== null && enabled,
   });
 };
-
-export const useVisiblePermissionCatalog = (view: PermissionCatalogView, enabled = true) => (
-  usePermissionCatalog({ view }, enabled)
-);
 
 export const useRolePermissionTemplates = (roleCodes: RoleCode[], enabled = true) => {
   const currentRole = useCurrentRole();

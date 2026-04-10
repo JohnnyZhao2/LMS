@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { StudentLearningTaskDetail, TaskDetail } from '@/types/api';
+import type { StudentLearningTaskDetail, TaskDetail } from '@/types/task';
 
 interface UseTaskDetailOptions {
   enabled?: boolean;

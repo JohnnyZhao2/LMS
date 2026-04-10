@@ -24,10 +24,8 @@ import { getRoleColor } from "@/lib/role-config"
 import { useAuth } from "@/features/auth/stores/auth-context"
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
-import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from "@/components/ui/search-input"
 import { CircleButton } from "@/components/ui/circle-button"
 import { Button } from "@/components/ui/button"
-import { SegmentedControl } from "@/components/ui/segmented-control"
 import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -38,7 +36,8 @@ import { toast } from "sonner"
 import { showApiError } from "@/utils/error-handler"
 import { cn } from "@/lib/utils"
 import { useRoleNavigate } from "@/hooks/use-role-navigate"
-import type { UserList as UserListType, Role } from "@/types/api"
+import type { UserList as UserListType, Role } from '@/types/common';
+import { UserDirectoryFilters } from "./user-directory-filters"
 
 export const UserList: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -355,15 +354,14 @@ export const UserList: React.FC = () => {
 
         <PageWorkbench>
           <div className="flex min-h-0 flex-1 flex-col self-stretch">
-            <div className="mb-1 flex min-w-0 flex-col gap-3 pb-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center">
-                <SegmentedControl
-                  options={departmentSegmentOptions}
-                  value={selectedDepartmentId}
-                  onChange={setSelectedDepartmentId}
-                  className="w-full md:w-auto md:shrink-0"
-                />
-
+            <UserDirectoryFilters
+              departmentOptions={departmentSegmentOptions}
+              selectedDepartmentId={selectedDepartmentId}
+              onDepartmentChange={setSelectedDepartmentId}
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="检索姓名、工号、部位..."
+              leftExtra={(
                 <div className={COMPACT_FILTER_SELECT_CLASSNAME}>
                   <Select value={selectedMentorId} onValueChange={setSelectedMentorId}>
                     <SelectTrigger>
@@ -379,27 +377,18 @@ export const UserList: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                <SearchInput
-                  className={DESKTOP_SEARCH_INPUT_CLASSNAME}
-                  placeholder="检索姓名、工号、部位..."
-                  value={search}
-                  onChange={setSearch}
+              )}
+              rightExtra={canCreateUser ? (
+                <CircleButton
+                  onClick={() => {
+                    setEditingUserId(undefined)
+                    setFormModalOpen(true)
+                  }}
+                  label="快速录入"
+                  className="shrink-0"
                 />
-                {canCreateUser && (
-                  <CircleButton
-                    onClick={() => {
-                      setEditingUserId(undefined)
-                      setFormModalOpen(true)
-                    }}
-                    label="快速录入"
-                    className="shrink-0"
-                  />
-                )}
-              </div>
-            </div>
+              ) : undefined}
+            />
 
             <div className="flex min-h-0 flex-1 flex-col">
               <DataTable

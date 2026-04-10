@@ -6,7 +6,7 @@ import { Route, Navigate, createBrowserRouter, createRoutesFromElements } from '
 import { Suspense } from 'react';
 import { Agentation } from 'agentation';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
-import { RoleRouteWrapper } from '@/components/role-route-wrapper';
+import { RoleRouteWrapper } from '@/components/route-guard';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { roleRoutes } from './routes/role-routes';
 import { authRoutes } from './routes/auth';

@@ -9,7 +9,7 @@ import { COMPACT_FILTER_SELECT_CLASSNAME, Select, SelectContent, SelectItem, Sel
 import { useTags } from '@/features/tags/api/tags';
 import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 import { QuestionTab } from './question-tab';
 
 const QUESTION_TYPE_FILTER_OPTIONS: Array<{ value: QuestionType | 'all'; label: string }> = [
@@ -87,5 +87,3 @@ export const QuestionManagementPage: React.FC = () => {
     </PageFillShell>
   );
 };
-
-export default QuestionManagementPage;

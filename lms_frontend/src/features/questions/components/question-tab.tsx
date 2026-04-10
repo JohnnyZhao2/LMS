@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trash2, MoreHorizontal, FileText, Eye, PencilLine } from 'lucide-react';
 import { useQuestions } from '@/features/questions/api/get-questions';
 import { useDeleteQuestion } from '@/features/questions/api/create-question';
 import { QuestionDetailDialog } from '@/features/questions/components/question-detail-dialog';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import type { Question, QuestionType } from '@/types/api';
+import { useScopedPagination } from '@/hooks/use-scoped-pagination';
+import type { QuestionType } from '@/types/common';
+import type { Question } from '@/types/question';
 import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import { showApiError } from '@/utils/error-handler';
 import { toast } from 'sonner';
@@ -34,18 +36,18 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
     filterQuestionType = 'all',
     filterSpaceTagId = 'all',
 }) => {
-    const [pagination, setPagination] = useState({
-        page: 1,
-        pageSize: 10,
-        scopeKey: search,
-    });
-    const [deleteId, setDeleteId] = useState<number | null>(null);
-    const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
+    const [deleteId, setDeleteId] = React.useState<number | null>(null);
+    const [previewQuestion, setPreviewQuestion] = React.useState<Question | null>(null);
     const { roleNavigate } = useRoleNavigate();
 
     const currentScopeKey = `${search}|${filterQuestionType}|${filterSpaceTagId}`;
-    const page = pagination.scopeKey === currentScopeKey ? pagination.page : 1;
-    const pageSize = pagination.pageSize;
+    const {
+        page,
+        pageIndex,
+        pageSize,
+        onPageChange,
+        onPageSizeChange,
+    } = useScopedPagination({ scopeKey: currentScopeKey });
 
     const { data, isLoading } = useQuestions({
         page,
@@ -189,25 +191,13 @@ export const QuestionTab: React.FC<QuestionTabProps> = ({
                 isLoading={isLoading}
                 fillHeight
                 pagination={{
-                    pageIndex: page - 1,
-                    pageSize: pageSize,
+                    pageIndex,
+                    pageSize,
                     defaultPageSize: 10,
                     pageCount: Math.ceil((data?.count || 0) / pageSize),
                     totalCount: data?.count || 0,
-                    onPageChange: (p: number) =>
-                        setPagination((prev) => ({
-                            ...prev,
-                            page: p + 1,
-                            scopeKey: currentScopeKey,
-                        })),
-                    onPageSizeChange: (size: number) => {
-                        setPagination((prev) => ({
-                            ...prev,
-                            pageSize: size,
-                            page: 1,
-                            scopeKey: currentScopeKey,
-                        }));
-                    },
+                    onPageChange,
+                    onPageSizeChange,
                 }}
                 rowClassName="group"
                 onRowClick={(row: Question) => setPreviewQuestion(row)}

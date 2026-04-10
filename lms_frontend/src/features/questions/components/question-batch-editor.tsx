@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { QuizOutlinePanel } from '@/features/quiz-center/quizzes/components/quiz-outline-panel';
 import { showApiError } from '@/utils/error-handler';
-import type { Question, QuestionCreateRequest, QuestionType, Tag } from '@/types/api';
+import type { QuestionType, Tag } from '@/types/common';
+import type { Question, QuestionCreateRequest } from '@/types/question';
 
 import { QuestionDocumentList } from './question-document-list';
 import {

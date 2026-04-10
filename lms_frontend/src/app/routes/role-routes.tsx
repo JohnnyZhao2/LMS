@@ -3,9 +3,12 @@
  * 角色前缀下的路由配置
  * 所有路由都在 /:role 下，路径不需要开头的 /
  */
+import { Activity, Settings } from 'lucide-react';
 import { Navigate, Route } from 'react-router-dom';
 import { lazy } from 'react';
-import { ProtectedRoute } from '@/components/protected-route';
+import { PageHeader } from '@/components/ui/page-header';
+import { PageFillShell, PageShell } from '@/components/ui/page-shell';
+import { ProtectedRoute } from '@/components/route-guard';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { ROUTES } from '@/config/routes';
 import {
@@ -21,7 +24,8 @@ const TeamManagerDashboard = lazy(() => import('@/features/dashboard/components/
 const AdminDashboard = lazy(() => import('@/features/dashboard/components/admin-dashboard').then(m => ({ default: m.AdminDashboard })));
 
 // Tasks
-const TaskList = lazy(() => import('@/features/tasks/components/task-list').then(m => ({ default: m.TaskList })));
+const StudentTaskList = lazy(() => import('@/features/tasks/components/student-task-list').then(m => ({ default: m.StudentTaskList })));
+const TaskManagement = lazy(() => import('@/features/tasks/components/task-management').then(m => ({ default: m.TaskManagement })));
 const TaskDetail = lazy(() => import('@/features/tasks/components/task-detail').then(m => ({ default: m.TaskDetail })));
 const TaskForm = lazy(() => import('@/features/tasks/components/task-form/task-form').then(m => ({ default: m.TaskForm })));
 const TaskPreviewPage = lazy(() => import('@/features/tasks/components/task-preview').then(m => ({ default: m.TaskPreviewPage })));
@@ -45,8 +49,8 @@ const UserList = lazy(() => import('@/features/users/components/user-list').then
 const UserAuthorizationPage = lazy(() => import('@/features/users/pages/user-authorization-page').then(m => ({ default: m.UserAuthorizationPage })));
 
 const AuthorizationCenterPage = lazy(() => import('@/features/authorization/pages/authorization-center-page').then(m => ({ default: m.AuthorizationCenterPage })));
-const ActivityLogsPage = lazy(() => import('@/features/activity-logs/pages/activity-logs-page').then(m => ({ default: m.ActivityLogsPage })));
-const ActivityLogPolicyPage = lazy(() => import('@/features/activity-logs/pages/activity-log-policy-page').then(m => ({ default: m.ActivityLogPolicyPage })));
+const ActivityLogsPanel = lazy(() => import('@/features/activity-logs/components/activity-logs-panel').then(m => ({ default: m.ActivityLogsPanel })));
+const ActivityLogPolicyPanel = lazy(() => import('@/features/activity-logs/components/activity-log-policy-panel').then(m => ({ default: m.ActivityLogPolicyPanel })));
 
 // Submissions
 const QuizPlayer = lazy(() => import('@/features/submissions/components/quiz-player').then(m => ({ default: m.QuizPlayer })));
@@ -54,9 +58,6 @@ const AnswerReview = lazy(() => import('@/features/submissions/components/answer
 
 // Grading Center
 const GradingCenterPage = lazy(() => import('@/features/grading/components/grading-center-page').then(m => ({ default: m.GradingCenterPage })));
-
-// Other
-const Personal = () => <div>个人中心（开发中）</div>;
 
 /**
  * 根据 URL 中的角色渲染对应的仪表盘
@@ -98,6 +99,34 @@ const Dashboard = () => {
   return <Navigate to={fallbackPath} replace />;
 };
 
+const TasksPage = () => {
+  const { role } = useParams<{ role: string }>();
+
+  if (normalizeRoleCode(role) === 'STUDENT') {
+    return <StudentTaskList />;
+  }
+
+  return <TaskManagement />;
+};
+
+const ActivityLogsRoutePage = () => {
+  return (
+    <PageFillShell>
+      <PageHeader title="日志审计" icon={<Activity />} />
+      <ActivityLogsPanel />
+    </PageFillShell>
+  );
+};
+
+const ActivityLogPolicyRoutePage = () => {
+  return (
+    <PageShell>
+      <PageHeader title="日志策略" icon={<Settings />} />
+      <ActivityLogPolicyPanel />
+    </PageShell>
+  );
+};
+
 export const roleRoutes = [
   // Dashboard
   <Route key="dashboard" path="dashboard" element={<Dashboard />} />,
@@ -109,7 +138,7 @@ export const roleRoutes = [
     path="tasks"
     element={
       <ProtectedRoute requiredPermissions={['task.view']}>
-        <TaskList />
+        <TasksPage />
       </ProtectedRoute>
     }
   />,
@@ -327,7 +356,7 @@ export const roleRoutes = [
     path="audit-logs/policy"
     element={
       <ProtectedRoute requiredPermissions={['activity_log.policy.update']}>
-        <ActivityLogPolicyPage />
+        <ActivityLogPolicyRoutePage />
       </ProtectedRoute>
     }
   />,
@@ -336,7 +365,7 @@ export const roleRoutes = [
     path="audit-logs"
     element={
       <ProtectedRoute requiredPermissions={['activity_log.view']}>
-        <ActivityLogsPage />
+        <ActivityLogsRoutePage />
       </ProtectedRoute>
     }
   />,
@@ -389,17 +418,6 @@ export const roleRoutes = [
     element={
       <ProtectedRoute requiredPermissions={['grading.view']}>
         <GradingCenterPage />
-      </ProtectedRoute>
-    }
-  />,
-
-  // Other
-  <Route
-    key="personal"
-    path="personal"
-    element={
-      <ProtectedRoute requiredPermissions={['profile.student.view', 'profile.student.update']} permissionMode="any">
-        <Personal />
       </ProtectedRoute>
     }
   />,

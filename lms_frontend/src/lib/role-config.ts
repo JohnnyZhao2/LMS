@@ -1,9 +1,9 @@
 /**
  * 角色配置 - 统一管理角色颜色和图标配置
  */
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 
-export interface RoleColorConfig {
+interface RoleColorConfig {
   bgClass: string;
   textClass: string;
   iconBgClass?: string;

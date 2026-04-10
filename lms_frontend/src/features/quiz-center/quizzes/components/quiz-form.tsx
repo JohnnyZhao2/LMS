@@ -30,7 +30,9 @@ import { useAuth } from '@/features/auth/stores/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
-import type { PaginatedResponse, Question, QuestionType, QuizCreateRequest, QuizQuestion, QuizType } from '@/types/api';
+import type { PaginatedResponse, QuestionType } from '@/types/common';
+import type { Question } from '@/types/question';
+import type { QuizCreateRequest, QuizQuestion, QuizType } from '@/types/quiz';
 import { showApiError } from '@/utils/error-handler';
 
 import { useCreateQuiz, useUpdateQuiz } from '../api/create-quiz';

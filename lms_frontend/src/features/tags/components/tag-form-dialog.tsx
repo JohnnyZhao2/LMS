@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { Tag, TagType } from '@/types/api';
+import type { Tag, TagType } from '@/types/common';
 
 interface TagFormDialogProps {
   open: boolean;

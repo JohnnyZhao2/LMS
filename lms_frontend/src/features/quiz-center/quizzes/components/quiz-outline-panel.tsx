@@ -1,21 +1,18 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
   closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Clock3, FileText, Target } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
-import type { QuestionType, QuizType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
+import type { QuizType } from '@/types/quiz';
 import type { InlineQuestionItem } from '../types';
 import { CompactNumberInput } from './compact-number-input';
 import { SortableOutlineItem } from './sortable-outline-item';
@@ -47,43 +44,24 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
   onDurationChange,
   onPassScoreChange,
 }) => {
-  const [draggingItemKey, setDraggingItemKey] = useState<string | null>(null);
-  const [draggingItemWidth, setDraggingItemWidth] = useState<number | null>(null);
-  const dragCleanupFrameRef = useRef<number | null>(null);
-
-  const clearDragState = () => {
-    if (dragCleanupFrameRef.current !== null) {
-      cancelAnimationFrame(dragCleanupFrameRef.current);
-      dragCleanupFrameRef.current = null;
-    }
-    setDraggingItemKey(null);
-    setDraggingItemWidth(null);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (dragCleanupFrameRef.current !== null) {
-        cancelAnimationFrame(dragCleanupFrameRef.current);
-      }
-    };
-  }, []);
-
   const parseIntegerValue = (value: string) => {
     if (!value) return undefined;
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const {
+    sensors,
+    draggingItem,
+    draggingItemWidth,
+    clearDragState,
+    handleDragStart,
+    handleDragEnd,
+  } = useSortableListDnd({
+    items,
+    onSelectItem,
+    onReorderItems,
+  });
   const stats = useMemo(() => {
     let totalScore = 0;
     let single = 0, multi = 0, tf = 0, short = 0;
@@ -148,24 +126,6 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         percentText: totalItems > 0 ? `${((item.count / totalItems) * 100).toFixed(1).replace(/\.0$/, '')}%` : '0%',
       }));
   }, [items.length, stats.multi, stats.short, stats.single, stats.tf]);
-
-  const draggingItem = useMemo(
-    () => items.find((item) => item.key === draggingItemKey) ?? null,
-    [draggingItemKey, items],
-  );
-
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) {
-      clearDragState();
-      return;
-    }
-
-    onReorderItems(String(active.id), String(over.id));
-
-    dragCleanupFrameRef.current = requestAnimationFrame(() => {
-      clearDragState();
-    });
-  };
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col bg-background">
@@ -245,14 +205,8 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={({ active }) => {
-              setDraggingItemKey(String(active.id));
-              setDraggingItemWidth(active.rect.current.initial?.width ?? null);
-              onSelectItem(String(active.id));
-            }}
-            onDragCancel={() => {
-              clearDragState();
-            }}
+            onDragStart={handleDragStart}
+            onDragCancel={clearDragState}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>

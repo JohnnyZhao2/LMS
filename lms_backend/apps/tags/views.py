@@ -3,25 +3,15 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from core.exceptions import BusinessError, get_status_code_for_error
+from apps.authorization.engine import enforce
 from core.query_params import parse_int_query_param
-from core.responses import created_response, error_response, list_response, no_content_response, success_response
+from core.responses import created_response, list_response, no_content_response, success_response
 
 from .serializers import TagSerializer
 from .services import (
     TagService,
-    enforce_tag_action_permission,
     enforce_tag_view_permission,
 )
-
-
-def _handle_business_error(error: BusinessError):
-    return error_response(
-        code=error.code,
-        message=error.message,
-        details=error.details,
-        status_code=get_status_code_for_error(error.code),
-    )
 
 
 class TagListCreateView(APIView):
@@ -71,14 +61,11 @@ class TagListCreateView(APIView):
         tags=['标签管理'],
     )
     def post(self, request):
-        enforce_tag_action_permission(request, 'tag.create', '无权创建标签')
+        enforce('tag.create', request, error_message='无权创建标签')
         serializer = TagSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
-        try:
-            tag = service.create(serializer.validated_data)
-        except BusinessError as error:
-            return _handle_business_error(error)
+        tag = service.create(serializer.validated_data)
         return created_response(TagSerializer(tag).data)
 
 
@@ -92,14 +79,11 @@ class TagDetailView(APIView):
         tags=['标签管理'],
     )
     def patch(self, request, pk):
-        enforce_tag_action_permission(request, 'tag.update', '无权更新标签')
+        enforce('tag.update', request, error_message='无权更新标签')
         serializer = TagSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
-        try:
-            tag = service.update(pk, serializer.validated_data)
-        except BusinessError as error:
-            return _handle_business_error(error)
+        tag = service.update(pk, serializer.validated_data)
         return success_response(TagSerializer(tag).data)
 
     @extend_schema(
@@ -108,12 +92,9 @@ class TagDetailView(APIView):
         tags=['标签管理'],
     )
     def delete(self, request, pk):
-        enforce_tag_action_permission(request, 'tag.delete', '无权删除标签')
+        enforce('tag.delete', request, error_message='无权删除标签')
         service = TagService(request)
-        try:
-            service.delete(pk)
-        except BusinessError as error:
-            return _handle_business_error(error)
+        service.delete(pk)
         return no_content_response()
 
 
@@ -135,15 +116,12 @@ class TagMergeView(APIView):
         tags=['标签管理'],
     )
     def post(self, request):
-        enforce_tag_action_permission(request, 'tag.update', '无权合并标签')
+        enforce('tag.update', request, error_message='无权合并标签')
         serializer = TagMergeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         service = TagService(request)
-        try:
-            tag = service.merge(
-                serializer.validated_data['source_tag_ids'],
-                serializer.validated_data['merged_name'],
-            )
-        except BusinessError as error:
-            return _handle_business_error(error)
+        tag = service.merge(
+            serializer.validated_data['source_tag_ids'],
+            serializer.validated_data['merged_name'],
+        )
         return success_response(TagSerializer(tag).data)

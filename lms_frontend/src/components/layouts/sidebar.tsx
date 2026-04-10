@@ -4,7 +4,8 @@ import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-
 import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
-import { RoleIndicatorDot, useWorkspaceUserControls } from '@/components/layouts/workspace-user-controls'
+import { RoleIndicatorDot } from '@/components/layouts/workspace-user-controls'
+import { useWorkspaceUserControls } from '@/components/layouts/use-workspace-user-controls'
 import { cn } from '@/lib/utils'
 import { ROUTES } from '@/config/routes'
 import {
@@ -134,17 +135,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }, [hasActiveSettingsItem])
 
   const selectedNavKey = getSelectedNavKey()
-  const navSections = React.useMemo(() => {
-    const profileItems = menuItems.filter((item) => item.key?.endsWith('/personal'))
-    const workItems = menuItems.filter(
-      (item) => !profileItems.some((profileItem) => profileItem.key === item.key)
-    )
-
-    return [
-      { title: '工作台', items: workItems },
-      { title: 'PERSONAL', items: profileItems },
-    ].filter((section) => section.items.length > 0)
-  }, [menuItems])
 
   const [expandedMenuKeys, setExpandedMenuKeys] = React.useState<Record<string, boolean>>({})
 
@@ -318,13 +308,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
           <ScrollContainer as="nav" className="mt-8 flex-1 overflow-y-auto">
             <div className="space-y-1">
-              {navSections.map((section) => (
-                <section key={section.title} className="space-y-1">
-                  <div className="space-y-1">
-                    {section.items.map((item) => renderWorkspaceItem(item))}
-                  </div>
-                </section>
-              ))}
+              <section className="space-y-1">
+                <div className="space-y-1">
+                  {menuItems.map((item) => renderWorkspaceItem(item))}
+                </div>
+              </section>
 
               {settingsItems.length > 0 && (
                 <section className="space-y-1">

@@ -6,7 +6,8 @@ import type { DragEndEvent } from '@dnd-kit/core';
 
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
-import type { PaginatedResponse, TaskResourceOption } from '@/types/api';
+import type { PaginatedResponse } from '@/types/common';
+import type { TaskResourceOption } from '@/types/task';
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
 import { useAssignableUsers } from '../../api/get-assignable-users';
 import { useTaskDetail } from '../../api/get-task-detail';

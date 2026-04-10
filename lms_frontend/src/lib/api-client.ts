@@ -5,7 +5,7 @@ import { ROUTES } from '@/config/routes';
 /**
  * 统一 API 响应格式
  */
-export interface ApiResponse<T> {
+interface ApiResponse<T> {
   code: string;
   message: string;
   data: T;
@@ -45,7 +45,7 @@ export class ApiError extends Error {
 /**
  * API 请求选项
  */
-export interface ApiRequestOptions extends RequestInit {
+interface ApiRequestOptions extends RequestInit {
   skipAuth?: boolean;
 }
 

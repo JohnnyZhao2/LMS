@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
-import type { TaskDetail } from '@/types/api';
+import type { TaskDetail } from '@/types/task';
 
 /**
  * 更新任务请求
  */
-export interface TaskUpdateRequest {
+interface TaskUpdateRequest {
   title?: string;
   description?: string;
   deadline?: string;
@@ -37,4 +37,3 @@ export const useUpdateTask = () => {
     },
   });
 };
-

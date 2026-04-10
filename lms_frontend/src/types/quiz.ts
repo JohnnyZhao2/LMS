@@ -9,7 +9,7 @@ import type { QuestionType } from './common';
  */
 export type QuizType = 'PRACTICE' | 'EXAM';
 
-export interface QuizQuestionVersionInput {
+interface QuizQuestionVersionInput {
   question_id: number;
   score: string | number;
 }

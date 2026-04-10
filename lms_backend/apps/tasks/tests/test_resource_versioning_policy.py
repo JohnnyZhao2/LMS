@@ -8,6 +8,7 @@ from apps.questions.models import Question
 from apps.questions.services import QuestionService
 from apps.quizzes.models import Quiz, QuizQuestion
 from apps.quizzes.services import QuizService
+from apps.tags.models import Tag
 from apps.tasks.models import TaskKnowledge, TaskQuiz
 from apps.tasks.tests.factories import KnowledgeFactory, QuizFactory, TaskFactory, UserFactory
 from core.exceptions import BusinessError, ErrorCodes
@@ -35,6 +36,15 @@ def _create_question(created_by, **overrides):
     }
     data.update(overrides)
     return Question.objects.create(**data)
+
+
+def _create_scope_tag(name: str, *, allow_knowledge: bool = False, allow_question: bool = False) -> Tag:
+    return Tag.objects.create(
+        name=name,
+        tag_type='TAG',
+        allow_knowledge=allow_knowledge,
+        allow_question=allow_question,
+    )
 
 
 @pytest.mark.django_db
@@ -67,6 +77,25 @@ def test_knowledge_update_creates_new_version_when_task_referenced():
     assert updated.is_current is True
     assert knowledge.is_current is False
     assert Knowledge.objects.filter(resource_uuid=knowledge.resource_uuid).count() == 2
+
+
+@pytest.mark.django_db
+def test_knowledge_tag_change_creates_new_version_when_task_referenced():
+    user = UserFactory()
+    knowledge = KnowledgeFactory(created_by=user, updated_by=user, version_number=1, is_current=True)
+    old_tag = _create_scope_tag('旧知识标签', allow_knowledge=True)
+    new_tag = _create_scope_tag('新知识标签', allow_knowledge=True)
+    knowledge.tags.set([old_tag.id])
+    task = TaskFactory(created_by=user)
+    TaskKnowledge.objects.create(task=task, knowledge=knowledge, order=1)
+    service = KnowledgeService(_build_request(user))
+
+    updated = service.update(knowledge.id, {'tag_ids': [new_tag.id]})
+
+    knowledge.refresh_from_db()
+    assert updated.id != knowledge.id
+    assert list(updated.tags.values_list('id', flat=True)) == [new_tag.id]
+    assert list(knowledge.tags.values_list('id', flat=True)) == [old_tag.id]
 
 
 @pytest.mark.django_db
@@ -183,6 +212,28 @@ def test_question_update_creates_new_version_when_shared_by_quizzes(monkeypatch)
     assert updated.is_current is True
     assert question.is_current is False
     assert Question.objects.filter(resource_uuid=question.resource_uuid).count() == 2
+
+
+@pytest.mark.django_db
+def test_question_tag_change_creates_new_version_when_quiz_is_task_bound(monkeypatch):
+    user = UserFactory()
+    question = _create_question(created_by=user, content='旧题干')
+    old_tag = _create_scope_tag('旧题目标签', allow_question=True)
+    new_tag = _create_scope_tag('新题目标签', allow_question=True)
+    question.tags.set([old_tag.id])
+    quiz = QuizFactory(created_by=user, updated_by=user, is_current=True, version_number=1)
+    task = TaskFactory(created_by=user)
+    QuizQuestion.objects.create(quiz=quiz, question=question, order=1)
+    TaskQuiz.objects.create(task=task, quiz=quiz, order=1)
+    service = QuestionService(_build_request(user))
+    monkeypatch.setattr('apps.questions.services.enforce', lambda *args, **kwargs: True)
+
+    updated = service.update(question.id, {'tag_ids': [new_tag.id]})
+
+    question.refresh_from_db()
+    assert updated.id != question.id
+    assert list(updated.tags.values_list('id', flat=True)) == [new_tag.id]
+    assert list(question.tags.values_list('id', flat=True)) == [old_tag.id]
 
 
 @pytest.mark.django_db

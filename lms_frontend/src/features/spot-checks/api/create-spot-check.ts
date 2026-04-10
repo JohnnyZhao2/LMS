@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { SpotCheckCreateRequest, SpotCheck } from '@/types/api';
+import type { SpotCheckCreateRequest, SpotCheck } from '@/types/spot-check';
 
 /**
  * 创建抽查记录

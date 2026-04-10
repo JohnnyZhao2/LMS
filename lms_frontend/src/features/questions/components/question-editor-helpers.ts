@@ -1,6 +1,7 @@
 import { ensureChoiceOptions } from '@/features/questions/constants';
 
-import type { Question, QuestionCreateRequest, QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
+import type { Question, QuestionCreateRequest } from '@/types/question';
 
 let questionEditorKeyCounter = 0;
 

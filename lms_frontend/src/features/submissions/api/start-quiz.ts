@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { SubmissionDetail } from '@/types/api';
+import type { SubmissionDetail } from '@/types/submission';
 
 interface StartQuizPayload {
     assignmentId: number;

@@ -3,11 +3,7 @@ import { queryClient } from '@/lib/react-query';
 import { AuthProvider } from '@/features/auth/stores/auth-context';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import dayjs from '@/lib/dayjs';
-import 'dayjs/locale/zh-cn';
-
-// 配置 dayjs 中文
-dayjs.locale('zh-cn');
+import '@/lib/dayjs';
 
 /**
  * 全局 Provider

@@ -6,14 +6,15 @@ from datetime import datetime, time, timedelta
 from typing import Any, Dict, List, Optional, Set
 
 from django.conf import settings
-from django.db.models import Avg, Case, Count, IntegerField, OuterRef, QuerySet, Subquery, Sum, Value, When
+from django.db.models import Avg, Case, Count, IntegerField, Prefetch, QuerySet, Sum, Value, When
 from django.utils import timezone
 
 from apps.activity_logs.models import UserLog
 from apps.knowledge.models import Knowledge
 from apps.spot_checks.models import SpotCheck
 from apps.submissions.models import Submission
-from apps.tasks.models import TaskAssignment
+from apps.tasks.models import TaskAssignment, TaskQuiz
+from apps.tasks.progress import build_assignment_progress, get_assignment_quiz_progress_map
 from apps.users.models import User
 
 
@@ -315,40 +316,12 @@ def calculate_assignment_progress(
     Returns:
         进度字典，包含 completed, total, percentage, knowledge_total, knowledge_completed, quiz_total, quiz_completed
     """
-    task = assignment.task
-    total_k = task.task_knowledge.count()
-    total_q = task.task_quizzes.count()
-    total = total_k + total_q
-
-    if total == 0:
-        return {
-            'completed': 0,
-            'total': 0,
-            'percentage': 0,
-            'knowledge_total': 0,
-            'knowledge_completed': 0,
-            'quiz_total': 0,
-            'quiz_completed': 0
-        }
-
-    completed_k = assignment.knowledge_progress.filter(is_completed=True).count()
-    if quiz_completed is None:
-        completed_q = Submission.objects.filter(
-            task_assignment=assignment
-        ).values_list('quiz_id', flat=True).distinct().count()
-    else:
-        completed_q = quiz_completed
-    completed = completed_k + completed_q
-
-    return {
-        'completed': completed,
-        'total': total,
-        'percentage': round(completed / total * 100, 1),
-        'knowledge_total': total_k,
-        'knowledge_completed': completed_k,
-        'quiz_total': total_q,
-        'quiz_completed': completed_q
-    }
+    quiz_progress = get_assignment_quiz_progress_map([assignment.id]).get(assignment.id)
+    return build_assignment_progress(
+        assignment,
+        quiz_completed=quiz_completed,
+        quiz_progress=quiz_progress,
+    )
 
 
 def get_pending_grading_count(student_ids: List[int]) -> int:
@@ -490,14 +463,6 @@ def get_task_participants_progress(
     Returns:
         参与者进度列表
     """
-    # 子查询：计算每个 assignment 的已完成测验数量
-    quiz_completed_subquery = Submission.objects.filter(
-        task_assignment=OuterRef('pk')
-    ).values('task_assignment').annotate(
-        cnt=Count('quiz_id', distinct=True)
-    ).values('cnt')
-
-    # 获取该任务的所有分配，并预计算已完成测验数量
     assignments = TaskAssignment.objects.filter(
         task_id=task_id,
         task__is_deleted=False
@@ -505,16 +470,17 @@ def get_task_participants_progress(
         'assignee', 'task'
     ).prefetch_related(
         'task__task_knowledge',
-        'task__task_quizzes',
+        Prefetch('task__task_quizzes', queryset=TaskQuiz.objects.select_related('quiz')),
         'knowledge_progress'
-    ).annotate(
-        quiz_completed_count=Subquery(quiz_completed_subquery)
     )
+    quiz_progress_map = get_assignment_quiz_progress_map([assignment.id for assignment in assignments])
 
     participants = []
     for assignment in assignments:
-        quiz_completed = assignment.quiz_completed_count or 0
-        progress_data = calculate_assignment_progress(assignment, quiz_completed)
+        progress_data = build_assignment_progress(
+            assignment,
+            quiz_progress=quiz_progress_map.get(assignment.id),
+        )
         participants.append({
             'id': assignment.assignee.id,
             'name': assignment.assignee.username,

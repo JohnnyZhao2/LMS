@@ -8,12 +8,10 @@ Dashboard 应用服务
 """
 from typing import Any, Dict, List, Optional, Set
 
-from django.db.models import Avg, Case, Count, IntegerField, QuerySet, Sum, Value, When
+from django.db.models import QuerySet
 
 from apps.knowledge.models import Knowledge
 from apps.authorization.engine import scope_filter
-from apps.submissions.models import Submission
-from apps.tasks.models import TaskAssignment
 from core.base_service import BaseService
 from apps.users.models import Department, User
 
@@ -424,45 +422,18 @@ class TeamManagerDashboardService(BaseService):
     @staticmethod
     def _build_student_metrics_map(student_ids: List[int]) -> Dict[int, Dict[str, Any]]:
         """批量构建学员指标映射（完成率 + 平均分）"""
-        if not student_ids:
-            return {}
-
-        metrics_map: Dict[int, Dict[str, Any]] = {
-            student_id: {'completion_rate': 0.0, 'avg_score': None}
-            for student_id in student_ids
+        dashboard_metrics_map = get_student_dashboard_metrics(student_ids)
+        return {
+            student_id: {
+                'completion_rate': metrics['completion_rate'],
+                'avg_score': (
+                    round(metrics['avg_score'], 1)
+                    if metrics['avg_score'] is not None
+                    else None
+                ),
+            }
+            for student_id, metrics in dashboard_metrics_map.items()
         }
-
-        assignment_rows = TaskAssignment.objects.filter(
-            assignee_id__in=student_ids,
-            task__is_deleted=False
-        ).values('assignee_id').annotate(
-            total=Count('id'),
-            completed=Sum(
-                Case(
-                    When(status='COMPLETED', then=Value(1)),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            )
-        )
-
-        for row in assignment_rows:
-            total = row['total'] or 0
-            completed = row['completed'] or 0
-            completion_rate = round((completed / total * 100), 1) if total > 0 else 0.0
-            metrics_map[row['assignee_id']]['completion_rate'] = completion_rate
-
-        score_rows = Submission.objects.filter(
-            user_id__in=student_ids,
-            status='GRADED',
-            task_assignment__task__is_deleted=False
-        ).values('user_id').annotate(avg_score=Avg('obtained_score'))
-
-        for row in score_rows:
-            avg_score = float(row['avg_score']) if row['avg_score'] is not None else None
-            metrics_map[row['user_id']]['avg_score'] = round(avg_score, 1) if avg_score is not None else None
-
-        return metrics_map
 
     def _build_department_student_view(
         self,

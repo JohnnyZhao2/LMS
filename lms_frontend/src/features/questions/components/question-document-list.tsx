@@ -2,16 +2,10 @@ import React from 'react';
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
   closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -19,8 +13,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { FileText, GripVertical } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
+import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
-import type { QuestionType, Tag } from '@/types/api';
+import type { QuestionType, Tag } from '@/types/common';
 
 import { QuestionAddMenu } from './question-add-menu';
 import { QuestionEditCard, type QuestionEditCardValue } from './question-edit-card';
@@ -181,19 +176,18 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
-  const dragCleanupFrameRef = React.useRef<number | null>(null);
-  const [draggingItemKey, setDraggingItemKey] = React.useState<string | null>(null);
-  const [draggingItemWidth, setDraggingItemWidth] = React.useState<number | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const {
+    sensors,
+    draggingItem,
+    draggingItemWidth,
+    clearDragState,
+    handleDragStart,
+    handleDragEnd,
+  } = useSortableListDnd({
+    items,
+    onSelectItem,
+    onReorderItems,
+  });
 
   React.useEffect(() => {
     if (!addMenuOpen || !onAddMenuOpenChange) return undefined;
@@ -208,12 +202,6 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [addMenuOpen, onAddMenuOpenChange]);
 
-  React.useEffect(() => () => {
-    if (dragCleanupFrameRef.current !== null) {
-      cancelAnimationFrame(dragCleanupFrameRef.current);
-    }
-  }, []);
-
   React.useEffect(() => {
     if (!activeKey) return;
 
@@ -223,32 +211,6 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
     node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeKey]);
 
-  const draggingItem = React.useMemo(
-    () => items.find((item) => item.key === draggingItemKey) ?? null,
-    [draggingItemKey, items],
-  );
-
-  const clearDragState = React.useCallback(() => {
-    if (dragCleanupFrameRef.current !== null) {
-      cancelAnimationFrame(dragCleanupFrameRef.current);
-      dragCleanupFrameRef.current = null;
-    }
-    setDraggingItemKey(null);
-    setDraggingItemWidth(null);
-  }, []);
-
-  const handleDragEnd = React.useCallback(({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) {
-      clearDragState();
-      return;
-    }
-
-    onReorderItems(String(active.id), String(over.id));
-    dragCleanupFrameRef.current = requestAnimationFrame(() => {
-      clearDragState();
-    });
-  }, [clearDragState, onReorderItems]);
-
   return (
     <div ref={containerRef} className="relative flex h-full min-w-0 flex-1 flex-col bg-background">
       <ScrollContainer className="flex-1 overflow-y-auto px-8 py-8">
@@ -256,11 +218,7 @@ export const QuestionDocumentList: React.FC<QuestionDocumentListProps> = ({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragStart={({ active }) => {
-              setDraggingItemKey(String(active.id));
-              setDraggingItemWidth(active.rect.current.initial?.width ?? null);
-              onSelectItem(String(active.id));
-            }}
+            onDragStart={handleDragStart}
             onDragCancel={clearDragState}
             onDragEnd={handleDragEnd}
           >

@@ -10,7 +10,7 @@ export interface SpotCheckItem {
   order?: number;
 }
 
-export interface SpotCheckActions {
+interface SpotCheckActions {
   update: boolean;
   delete: boolean;
 }

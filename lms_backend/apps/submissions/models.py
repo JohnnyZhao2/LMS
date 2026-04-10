@@ -172,23 +172,15 @@ class Submission(TimestampMixin, models.Model):
 
     def refresh_obtained_score(self):
         """重算当前提交得分"""
-        self.obtained_score = self.answers.aggregate(
-            total=models.Sum('obtained_score')
-        )['total'] or Decimal('0')
-        self.save(update_fields=['obtained_score'])
+        from .scoring import refresh_submission_obtained_score
+
+        refresh_submission_obtained_score(self)
 
     def refresh_assignment_score(self):
         """同步任务分配成绩为当前最高分"""
-        assignment = self.task_assignment
-        max_score = Submission.objects.filter(
-            task_assignment_id=assignment.id,
-            status__in=['SUBMITTED', 'GRADED'],
-            obtained_score__isnull=False
-        ).aggregate(
-            max_score=models.Max('obtained_score')
-        )['max_score']
-        assignment.score = max_score
-        assignment.save(update_fields=['score'])
+        from .scoring import refresh_assignment_score
+
+        refresh_assignment_score(self.task_assignment, self.__class__)
 class Answer(TimestampMixin, models.Model):
     """
     答案记录模型

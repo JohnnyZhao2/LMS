@@ -4,12 +4,12 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { showApiError } from '@/utils/error-handler';
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 import { ROLE_ORDER } from '@/config/role-constants';
 import {
   useReplaceRolePermissionTemplate,
   useRolePermissionTemplates,
-  useVisiblePermissionCatalog,
+  usePermissionCatalog,
 } from '../api/authorization';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
 
@@ -23,7 +23,7 @@ export const AuthorizationCenterPage: React.FC = () => {
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
-  const { data: permissionCatalog = [] } = useVisiblePermissionCatalog('role_template', shouldLoadData);
+  const { data: permissionCatalog = [] } = usePermissionCatalog({ view: 'role_template' }, shouldLoadData);
   const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
   const permissionCodesByRole = useMemo(
     () => Object.fromEntries(

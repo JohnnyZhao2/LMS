@@ -19,11 +19,7 @@ import {
 import { ROUTES } from '@/config/routes';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
-import type {
-  MentorDashboardScoreDistribution,
-  MentorDashboardSpotCheckStats,
-  MentorDashboardStudent,
-} from '@/types/api';
+import type { MentorDashboardScoreDistribution, MentorDashboardSpotCheckStats, MentorDashboardStudent } from '@/types/dashboard';
 
 const cardTitleClass = 'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/80';
 const cardTitleNoteClass = 'ml-2 text-[9px] font-medium text-text-muted/80 normal-case tracking-normal';

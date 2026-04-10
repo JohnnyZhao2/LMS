@@ -20,7 +20,7 @@ export interface TaskAnalytics {
   pass_rate: number | null;
 }
 
-export interface TaskNodeProgress {
+interface TaskNodeProgress {
   node_id: number;
   node_name: string;
   category: 'KNOWLEDGE' | 'PRACTICE' | 'EXAM';
@@ -29,7 +29,7 @@ export interface TaskNodeProgress {
   percentage: number;
 }
 
-export interface DistributionItem {
+interface DistributionItem {
   range: string;
   count: number;
 }

@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { toast } from 'sonner';
-import type { Tag as TagType } from '@/types/api';
+import type { Tag as TagType } from '@/types/common';
 
 import { useInfiniteKnowledgeList } from '../api/knowledge';
 import { useCreateKnowledge, useDeleteKnowledge } from '../api/manage-knowledge';
@@ -28,9 +28,10 @@ import { AddKnowledgeCard } from './cards/knowledge-add-card';
 import { KnowledgeFocusModal } from './modals/knowledge-focus-modal';
 import { KnowledgeDetailModal } from './modals/knowledge-detail-modal';
 
-type FocusState =
-    | { mode: 'create'; initialContent: string; initialSpaceTagId?: number }
-    | { mode: 'detail'; knowledgeId: number; closeOnExitFocus: boolean };
+type KnowledgeModalState =
+    | { kind: 'create'; initialContent: string; initialSpaceTagId?: number }
+    | { kind: 'detail'; knowledgeId: number; startEditing: boolean; presentation: 'modal' }
+    | { kind: 'detail'; knowledgeId: number; startEditing: false; presentation: 'focus'; onFocusExit: 'detail' | 'close' };
 
 interface KnowledgeCenterProps {
     isAdmin?: boolean;
@@ -54,9 +55,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
     const deleteTag = useDeleteTag();
     const [deleteTarget, setDeleteTarget] = React.useState<number | null>(null);
     const [deleteSpaceTagTarget, setDeleteSpaceTagTarget] = React.useState<number | null>(null);
-    const [focusState, setFocusState] = React.useState<FocusState | null>(null);
-    const [detailId, setDetailId] = React.useState<number | null>(null);
-    const [detailStartEditing, setDetailStartEditing] = React.useState(false);
+    const [modalState, setModalState] = React.useState<KnowledgeModalState | null>(null);
     const [hoveredSpaceTagId, setHoveredSpaceTagId] = React.useState<number | null>(null);
     const [isSpaceTagActionHovered, setIsSpaceTagActionHovered] = React.useState(false);
     const [isCreateSpaceTagOpen, setIsCreateSpaceTagOpen] = React.useState(false);
@@ -118,6 +117,25 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         }
     };
 
+    const openDetailModal = React.useCallback((knowledgeId: number, startEditing = false) => {
+        setModalState({
+            kind: 'detail',
+            knowledgeId,
+            startEditing,
+            presentation: 'modal',
+        });
+    }, []);
+
+    const openFocusedDetail = React.useCallback((knowledgeId: number, onFocusExit: 'detail' | 'close') => {
+        setModalState({
+            kind: 'detail',
+            knowledgeId,
+            startEditing: false,
+            presentation: 'focus',
+            onFocusExit,
+        });
+    }, []);
+
     const syncDetailHash = React.useCallback((knowledgeId: number | null) => {
         const nextHash = knowledgeId ? `#${knowledgeId}` : '';
         if (location.hash === nextHash) return;
@@ -133,29 +151,23 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
     React.useEffect(() => {
         if (isCreateRoute) {
-            setFocusState((prev) => (
-                prev?.mode === 'create'
+            setModalState((prev) => (
+                prev?.kind === 'create'
                     ? prev
-                    : { mode: 'create', initialContent: '', initialSpaceTagId: selectedSpaceTagId }
+                    : { kind: 'create', initialContent: '', initialSpaceTagId: selectedSpaceTagId }
             ));
             return;
         }
         if (routeKnowledgeIdNumber && Number.isFinite(routeKnowledgeIdNumber)) {
-            setFocusState(null);
-            setDetailId(routeKnowledgeIdNumber);
-            setDetailStartEditing(isEditRoute);
+            openDetailModal(routeKnowledgeIdNumber, isEditRoute);
             return;
         }
         if (hashKnowledgeId && Number.isFinite(hashKnowledgeId)) {
-            setFocusState(null);
-            setDetailId(hashKnowledgeId);
-            setDetailStartEditing(false);
+            openDetailModal(hashKnowledgeId);
             return;
         }
-        setFocusState(null);
-        setDetailId(null);
-        setDetailStartEditing(false);
-    }, [isCreateRoute, routeKnowledgeIdNumber, isEditRoute, hashKnowledgeId, selectedSpaceTagId]);
+        setModalState(null);
+    }, [hashKnowledgeId, isCreateRoute, isEditRoute, openDetailModal, routeKnowledgeIdNumber, selectedSpaceTagId]);
 
     const navigateFromLegacyRoute = React.useCallback(() => {
         if (fromDashboard) {
@@ -177,9 +189,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 },
             });
         }
-        setFocusState(null);
-        setDetailStartEditing(false);
-        setDetailId(id);
+        openDetailModal(id);
         syncDetailHash(id);
     };
 
@@ -191,10 +201,29 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 },
             });
         }
-        setDetailId(null);
-        setDetailStartEditing(false);
-        setFocusState({ mode: 'detail', knowledgeId: id, closeOnExitFocus: true });
+        openFocusedDetail(id, 'close');
     };
+
+    const closeDetailModal = React.useCallback(() => {
+        setModalState(null);
+        if (routeKnowledgeIdNumber) {
+            navigateFromLegacyRoute();
+            return;
+        }
+        syncDetailHash(null);
+    }, [navigateFromLegacyRoute, routeKnowledgeIdNumber, syncDetailHash]);
+
+    const handleDeleteFromModal = React.useCallback((id: number) => {
+        setDeleteTarget(id);
+        setModalState(null);
+        if (routeKnowledgeIdNumber) {
+            navigateFromLegacyRoute();
+            return;
+        }
+        syncDetailHash(null);
+    }, [navigateFromLegacyRoute, routeKnowledgeIdNumber, syncDetailHash]);
+
+    const detailModalState = modalState?.kind === 'detail' ? modalState : null;
 
     const confirmDelete = async () => {
         if (deleteTarget === null) return;
@@ -393,10 +422,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 <AddKnowledgeCard
                                     onSave={handleQuickSave}
                                     onExpand={(content) => {
-                                        setDetailId(null);
-                                        setDetailStartEditing(false);
-                                        setFocusState({
-                                            mode: 'create',
+                                        setModalState({
+                                            kind: 'create',
                                             initialContent: content,
                                             initialSpaceTagId: selectedSpaceTagId,
                                         });
@@ -464,90 +491,49 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                 onConfirm={handleDeleteSpaceTag}
             />
 
-            {detailId !== null && (
+            {detailModalState && (
                 <KnowledgeDetailModal
-                    key={`detail-${detailId}-${detailStartEditing ? 'edit' : 'view'}`}
-                    knowledgeId={detailId}
-                    startEditing={detailStartEditing}
+                    key={`${detailModalState.presentation}-${detailModalState.knowledgeId}-${detailModalState.startEditing ? 'edit' : 'view'}`}
+                    knowledgeId={detailModalState.knowledgeId}
+                    startEditing={detailModalState.startEditing}
+                    startInFocus={detailModalState.presentation === 'focus'}
+                    forceFocus={detailModalState.presentation === 'focus'}
+                    closeOnExitFocus={detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'close'}
                     taskId={taskId || undefined}
                     taskKnowledgeId={taskKnowledgeId || undefined}
-                    onFocusOpen={(id) => {
-                        setFocusState({ mode: 'detail', knowledgeId: id, closeOnExitFocus: false });
-                    }}
+                    onFocusOpen={(id) => openFocusedDetail(id, 'detail')}
                     onClose={() => {
-                        setDetailId(null);
-                        setDetailStartEditing(false);
-                        if (routeKnowledgeIdNumber) {
-                            navigateFromLegacyRoute();
+                        if (detailModalState.presentation === 'focus' && detailModalState.onFocusExit === 'detail') {
+                            openDetailModal(detailModalState.knowledgeId);
                             return;
                         }
-                        syncDetailHash(null);
+                        closeDetailModal();
                     }}
-                    onDelete={(id) => {
-                        setDeleteTarget(id);
-                        setDetailId(null);
-                        setDetailStartEditing(false);
-                        if (routeKnowledgeIdNumber) {
-                            navigateFromLegacyRoute();
-                            return;
-                        }
-                        syncDetailHash(null);
-                    }}
+                    onDelete={handleDeleteFromModal}
                     onUpdated={() => refetch()}
                 />
             )}
 
-            {focusState && (
-                focusState.mode === 'create' ? (
+            {modalState?.kind === 'create' && (
                     <KnowledgeFocusModal
-                        initialContent={focusState.initialContent}
-                        initialSpaceTagId={focusState.initialSpaceTagId}
+                        initialContent={modalState.initialContent}
+                        initialSpaceTagId={modalState.initialSpaceTagId}
                         onClose={() => {
-                            setFocusState(null);
+                            setModalState(null);
                             if (isCreateRoute) {
                                 roleNavigate('knowledge');
                             }
                         }}
                         onCreated={(id) => {
                             refetch();
-                            setFocusState(null);
-                            setDetailStartEditing(false);
-                            setDetailId(id);
                             if (isCreateRoute) {
                                 roleNavigate(`knowledge#${id}`);
                                 return;
                             }
+                            openDetailModal(id);
                             syncDetailHash(id);
                         }}
                     />
-                ) : (
-                    <KnowledgeDetailModal
-                        key={`focus-${focusState.knowledgeId}-${focusState.closeOnExitFocus ? 'close' : 'stay'}`}
-                        knowledgeId={focusState.knowledgeId}
-                        startInFocus
-                        forceFocus
-                        closeOnExitFocus={focusState.closeOnExitFocus}
-                        taskId={taskId || undefined}
-                        taskKnowledgeId={taskKnowledgeId || undefined}
-                        onClose={() => {
-                            const currentState = focusState;
-                            setFocusState(null);
-                            if (currentState.closeOnExitFocus) {
-                                syncDetailHash(null);
-                            }
-                        }}
-                        onDelete={(id) => {
-                            setDeleteTarget(id);
-                            setFocusState(null);
-                            if (routeKnowledgeIdNumber) {
-                                navigateFromLegacyRoute();
-                                return;
-                            }
-                            syncDetailHash(null);
-                        }}
-                        onUpdated={() => refetch()}
-                    />
-                )
             )}
 
             <SpaceTagQuickCreateDialog

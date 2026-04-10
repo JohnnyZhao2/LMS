@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 export type QuestionDocumentMode = 'edit' | 'preview' | 'answer';
 

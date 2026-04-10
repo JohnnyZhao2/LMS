@@ -2,7 +2,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { tokenStorage } from '@/lib/token-storage';
-import type { AuthSessionPayload, CapabilityMap, LoginRequest, LoginResponse, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
+import type { AuthSessionPayload, LoginRequest, LoginResponse, SwitchRoleResponse } from '@/types/auth';
+import type { CapabilityMap } from '@/types/authorization';
+import type { Role, RoleCode, UserInfo } from '@/types/common';
 import { oidcApi } from '../api/oidc';
 
 interface AuthState {

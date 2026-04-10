@@ -3,7 +3,7 @@ import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { ensureChoiceOptions } from '@/features/questions/constants';
 import { cn } from '@/lib/utils';
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 import {
   QuestionChoiceRow,

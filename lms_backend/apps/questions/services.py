@@ -3,9 +3,10 @@ from typing import Optional
 
 from django.db import transaction
 from apps.authorization.engine import enforce
-from apps.tags.validators import (
-    assign_space_tag,
-    get_scoped_tag_ids_or_error,
+from apps.tags.resource_sync import (
+    apply_resource_tag_changes,
+    build_resource_update_plan,
+    pop_resource_tag_payload,
 )
 from core.base_service import BaseService
 from core.decorators import log_content_action
@@ -131,59 +132,50 @@ class QuestionService(BaseService):
             BusinessError: 如果验证失败或无法更新
         """
         question = self.get_by_id(pk)
-        sync_to_bank = data.pop('sync_to_bank', True)
         enforce('question.update', self.request, error_message='无权编辑此题目')
         if not question.is_current:
             raise BusinessError(
                 code=ErrorCodes.INVALID_OPERATION,
                 message='历史版本不可修改'
             )
-        self.validate_question_payload(data, source=question)
+        payload = dict(data)
+        self.validate_question_payload(payload, source=question)
+        sync_to_bank = payload.pop('sync_to_bank', True)
         # 提取space数据
-        space_tag_provided = 'space_tag_id' in data
-        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
-        tag_ids_provided = 'tag_ids' in data
-        tag_ids = data.pop('tag_ids', None) if tag_ids_provided else None
         current_tag_ids = self._list_question_tag_ids(question)
-
-        changed_fields = {
-            key: value
-            for key, value in data.items()
-            if getattr(question, key, None) != value
-        }
-        normalized_tag_ids = (
-            get_scoped_tag_ids_or_error(tag_ids or [], scope='question')
-            if tag_ids_provided
-            else current_tag_ids
+        update_plan = build_resource_update_plan(
+            question,
+            payload,
+            scope='question',
+            current_tag_ids=current_tag_ids,
         )
-        space_changed = space_tag_provided and space_tag_id != question.space_tag_id
-        tags_changed = (
-            tag_ids_provided
-            and set(normalized_tag_ids) != set(current_tag_ids)
-        )
-        has_changes = bool(changed_fields or space_changed or tags_changed)
-        if not has_changes:
+        if not update_plan.has_changes:
             return question
 
         if self._should_fork_question_version(question, sync_to_bank=sync_to_bank):
-            new_version_data = dict(changed_fields)
-            if space_tag_provided:
-                new_version_data['space_tag_id'] = space_tag_id
-            if tag_ids_provided:
-                new_version_data['tag_ids'] = normalized_tag_ids
+            new_version_data = dict(update_plan.changed_fields)
+            if update_plan.space_tag_provided:
+                new_version_data['space_tag_id'] = update_plan.space_tag_id
+            if update_plan.tag_ids_provided:
+                new_version_data['tag_ids'] = update_plan.tag_ids
             return self._spawn_question_version(
                 question,
                 new_version_data,
                 sync_to_bank=sync_to_bank,
             )
 
+        changed_fields = dict(update_plan.changed_fields)
         changed_fields['updated_by'] = self.user
         for key, value in changed_fields.items():
             setattr(question, key, value)
         question.save(update_fields=list(changed_fields.keys()))
-        self._apply_space_tag_change(question, space_tag_id, space_changed)
-        if tags_changed:
-            question.tags.set(normalized_tag_ids)
+        apply_resource_tag_changes(
+            question,
+            space_tag_id=update_plan.space_tag_id,
+            tag_ids=update_plan.tag_ids,
+            space_tag_provided=update_plan.space_changed,
+            tag_ids_provided=update_plan.tags_changed,
+        )
         return question
 
     @transaction.atomic
@@ -319,12 +311,8 @@ class QuestionService(BaseService):
         question_data['created_by'] = self.user
         question_data['updated_by'] = self.user
         self._prepare_version_data(question_data, sync_to_bank=sync_to_bank)
-        space_tag_id = question_data.pop('space_tag_id', None)
-        tag_ids = get_scoped_tag_ids_or_error(
-            question_data.pop('tag_ids', []),
-            scope='question',
-        )
-        return question_data, space_tag_id, tag_ids
+        tag_payload = pop_resource_tag_payload(question_data, scope='question')
+        return question_data, tag_payload.space_tag_id, tag_payload.tag_ids
 
     def _create_question_record(
         self,
@@ -335,25 +323,14 @@ class QuestionService(BaseService):
     ) -> Question:
         """落库题目并写入标签。"""
         question = Question.objects.create(**question_data)
-        self._apply_space_tag_change(question, space_tag_id, True)
-        question.tags.set(tag_ids)
+        apply_resource_tag_changes(
+            question,
+            space_tag_id=space_tag_id,
+            tag_ids=tag_ids,
+            space_tag_provided=True,
+            tag_ids_provided=True,
+        )
         return question
-
-    def _apply_space_tag_change(
-        self,
-        question: Question,
-        space_tag_id: Optional[int],
-        space_tag_provided: bool,
-    ) -> None:
-        """根据请求显式设置或清空space。"""
-        if not space_tag_provided:
-            return
-        if space_tag_id is None:
-            if question.space_tag_id is None:
-                return
-            assign_space_tag(question, None, clear_when_none=True)
-            return
-        assign_space_tag(question, space_tag_id)
 
     def _prepare_version_data(self, data: dict, *, sync_to_bank: bool = True) -> None:
         """
@@ -376,8 +353,13 @@ class QuestionService(BaseService):
         version_data, space_tag_id, tag_ids = self._extract_version_payload(source, data)
 
         def finalize_new_question(new_question: Question) -> None:
-            self._apply_space_tag_change(new_question, space_tag_id, True)
-            new_question.tags.set(tag_ids)
+            apply_resource_tag_changes(
+                new_question,
+                space_tag_id=space_tag_id,
+                tag_ids=tag_ids,
+                space_tag_provided=True,
+                tag_ids_provided=True,
+            )
 
         return derive_resource_version(
             source,
@@ -396,9 +378,13 @@ class QuestionService(BaseService):
     ) -> tuple[dict, Optional[int], list[int]]:
         """拆分版本字段与标签字段，并补齐继承值。"""
         version_data = dict(data)
-        space_tag_id = version_data.pop('space_tag_id', source.space_tag_id)
-        tag_ids = version_data.pop('tag_ids', self._list_question_tag_ids(source))
-        return version_data, space_tag_id, get_scoped_tag_ids_or_error(tag_ids, scope='question')
+        tag_payload = pop_resource_tag_payload(
+            version_data,
+            scope='question',
+            default_space_tag_id=source.space_tag_id,
+            default_tag_ids=self._list_question_tag_ids(source),
+        )
+        return version_data, tag_payload.space_tag_id, tag_payload.tag_ids
 
     def _list_question_tag_ids(self, question: Question) -> list[int]:
         return list(question.tags.values_list('id', flat=True))

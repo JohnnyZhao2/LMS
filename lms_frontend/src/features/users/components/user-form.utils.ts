@@ -1,4 +1,5 @@
-import type { PermissionOverrideScope, RoleCode } from '@/types/api';
+import type { PermissionOverrideScope } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 
 const PERMISSION_SCOPE_ORDER: PermissionOverrideScope[] = [
   'SELF',

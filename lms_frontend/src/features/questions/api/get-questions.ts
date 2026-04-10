@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { Question, QuestionType, PaginatedResponse } from '@/types/api';
+import type { QuestionType, PaginatedResponse } from '@/types/common';
+import type { Question } from '@/types/question';
 
 interface GetQuestionsParams {
   page?: number;

@@ -1,9 +1,5 @@
-import type {
-  PermissionOverrideEffect,
-  PermissionOverrideScope,
-  UserPermissionOverride,
-  RoleCode,
-} from '@/types/api';
+import type { PermissionOverrideEffect, PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 
 interface OverrideSignatureParts {
   permissionCode: string;

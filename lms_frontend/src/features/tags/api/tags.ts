@@ -4,7 +4,7 @@ import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { useAuth } from '@/features/auth/stores/auth-context';
-import type { Tag, TagType } from '@/types/api';
+import type { Tag, TagType } from '@/types/common';
 
 interface GetTagsParams {
   tag_type?: TagType;
@@ -13,7 +13,7 @@ interface GetTagsParams {
   applicable_to?: 'knowledge' | 'question';
 }
 
-export interface TagMutationPayload {
+interface TagMutationPayload {
   name: string;
   tag_type: TagType;
   color?: string;

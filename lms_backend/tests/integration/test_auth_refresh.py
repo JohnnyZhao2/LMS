@@ -52,7 +52,7 @@ def test_refresh_token_should_rotate_and_invalidate_old_token():
 
 
 @pytest.mark.django_db
-def test_header_role_cannot_override_token_current_role():
+def test_token_current_role_is_request_source_of_truth():
     client = APIClient()
 
     department = Department.objects.create(name='Dept 3', code='DEPT3')
@@ -77,7 +77,7 @@ def test_header_role_cannot_override_token_current_role():
     access_token = login_response.data['data']['access_token']
 
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-    response = client.get('/api/knowledge/', HTTP_X_CURRENT_ROLE='MENTOR')
+    response = client.get('/api/knowledge/')
 
     assert response.status_code == 200
     assert response.data['code'] == 'SUCCESS'

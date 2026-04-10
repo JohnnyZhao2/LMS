@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { QuestionDocumentList } from '@/features/questions/components/question-document-list';
-import type { QuestionType, Tag } from '@/types/api';
+import type { QuestionType, Tag } from '@/types/common';
 
 import type { InlineQuestionItem } from '../types';
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { UserList, Mentor, Role, Department } from '@/types/api';
+import type { UserList, Mentor, Role, Department } from '@/types/common';
 
 const allowedDepartmentOrder: Department['code'][] = ['DEPT1', 'DEPT2'];
 const allowedDepartmentCodes = new Set(allowedDepartmentOrder);

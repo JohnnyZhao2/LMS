@@ -40,22 +40,6 @@ LOG_MODEL_MAP = {
 }
 
 
-def enforce_activity_log_view_permission(request, error_message: str) -> None:
-    enforce('activity_log.view', request, error_message=error_message)
-
-
-def enforce_activity_log_policy_update_permission(request, error_message: str) -> None:
-    enforce('activity_log.policy.update', request, error_message=error_message)
-
-
-def enforce_activity_log_policy_access_permission(request, error_message: str) -> None:
-    enforce('activity_log.policy.update', request, error_message=error_message)
-
-
-def enforce_activity_log_delete_permission(request, error_message: str) -> None:
-    enforce('activity_log.view', request, error_message=error_message)
-
-
 class ActivityLogListView(BaseAPIView):
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
@@ -78,7 +62,7 @@ class ActivityLogListView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce_activity_log_view_permission(request, '无权查看活动日志')
+        enforce('activity_log.view', request, error_message='无权查看活动日志')
 
         params = self._validated_query_params(request.query_params)
         log_type = params['type']
@@ -137,7 +121,7 @@ class ActivityLogUserListView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce_activity_log_view_permission(request, '无权查看活动日志成员列表')
+        enforce('activity_log.view', request, error_message='无权查看活动日志成员列表')
 
         queryset = (
             User.objects.filter(is_active=True)
@@ -168,7 +152,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def get(self, request):
-        enforce_activity_log_policy_access_permission(request, '无权查看日志策略')
+        enforce('activity_log.policy.update', request, error_message='无权查看日志策略')
         ActivityLogService.sync_policies()
         queryset = ActivityLogPolicy.objects.all().order_by('category', 'group', 'label')
         serializer = ActivityLogPolicySerializer(queryset, many=True)
@@ -185,7 +169,7 @@ class ActivityLogPolicyView(BaseAPIView):
         tags=['活动日志']
     )
     def patch(self, request):
-        enforce_activity_log_policy_update_permission(request, '无权更新日志策略')
+        enforce('activity_log.policy.update', request, error_message='无权更新日志策略')
         serializer = ActivityLogPolicyUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         key = serializer.validated_data['key']
@@ -211,7 +195,7 @@ class ActivityLogItemView(BaseAPIView):
         tags=['活动日志']
     )
     def delete(self, request, log_item_id: str):
-        enforce_activity_log_delete_permission(request, '无权删除活动日志')
+        enforce('activity_log.view', request, error_message='无权删除活动日志')
 
         log_type, record_id = _parse_log_item_id(log_item_id)
         log = LOG_MODEL_MAP[log_type].objects.filter(pk=record_id).first()
@@ -240,7 +224,7 @@ class ActivityLogBulkDeleteView(BaseAPIView):
         tags=['活动日志']
     )
     def post(self, request):
-        enforce_activity_log_delete_permission(request, '无权删除活动日志')
+        enforce('activity_log.view', request, error_message='无权删除活动日志')
 
         serializer = ActivityLogBulkDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

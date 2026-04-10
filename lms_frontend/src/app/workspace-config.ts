@@ -1,7 +1,7 @@
 import { AppLayout } from '@/components/layouts/app-layout';
 import { StudentLayout } from '@/components/layouts/student-layout';
 import { isRoleCode } from '@/config/role-constants';
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 
 type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
 type MenuVariant = 'student' | 'manager' | 'admin';

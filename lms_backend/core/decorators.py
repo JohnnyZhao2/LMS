@@ -138,6 +138,8 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         template_vars['version_number'] = result.version_number
     if hasattr(result, 'score'):
         template_vars['score_text'] = _format_number(result.score)
+    if hasattr(result, 'average_score'):
+        template_vars['average_score_text'] = _format_number(result.average_score)
     if hasattr(result, 'total_score'):
         template_vars['total_score_text'] = _format_number(result.total_score)
     if hasattr(result, 'obtained_score'):
@@ -154,11 +156,14 @@ def _augment_template_vars(template_vars: dict[str, Any]) -> None:
         template_vars['subjective_question_count'] = result.subjective_question_count
     if hasattr(result, 'attempt_number'):
         template_vars['attempt_number'] = result.attempt_number
-    if hasattr(result, 'checked_at'):
-        template_vars['checked_at_text'] = _format_datetime(result.checked_at)
     if hasattr(result, 'content'):
         content_text = str(result.content or '').strip().replace('\n', ' ')
         template_vars['content_preview'] = content_text[:24] + ('...' if len(content_text) > 24 else '')
+    if hasattr(result, 'topic_summary'):
+        topic_summary = str(result.topic_summary or '').strip().replace('\n', ' ')
+        template_vars['topic_summary_preview'] = (
+            topic_summary[:24] + ('...' if len(topic_summary) > 24 else '')
+        )
     if hasattr(result, 'student'):
         template_vars['student_label'] = _build_user_label(result.student)
     if hasattr(result, 'checker'):

@@ -41,7 +41,7 @@ import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
-import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
+import type { LearningTaskQuizItem, TaskQuiz } from '@/types/task';
 
 const assignmentStatusLabelMap: Record<string, string> = {
   IN_PROGRESS: '进行中',

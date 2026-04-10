@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { TaskDetail } from '@/types/api';
+import type { TaskDetail } from '@/types/task';
 
 /**
  * 统一的任务创建请求

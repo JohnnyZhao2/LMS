@@ -3,7 +3,7 @@ import { Loader2, Save, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { normalizeQuestionTypeFields } from '@/features/questions/constants';
-import type { QuestionType, Tag } from '@/types/api';
+import type { QuestionType, Tag } from '@/types/common';
 
 import { QuestionDocumentEditMode } from './question-document-edit-mode';
 import { QuestionMetaToolbar } from './question-meta-toolbar';

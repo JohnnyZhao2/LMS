@@ -14,6 +14,7 @@ from django.db import models
 from django.utils import timezone
 
 from core.mixins import CreatorMixin, SoftDeleteMixin, TimestampMixin
+from .progress import build_assignment_progress, is_assignment_completed
 
 
 class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
@@ -210,63 +211,14 @@ class TaskAssignment(TimestampMixin, models.Model):
         """
         计算详细进度数据，包括知识点和测验。
         """
-        task = self.task
-        total_knowledge = task.task_knowledge.count()
-        total_quizzes = task.task_quizzes.count()
-        total = total_knowledge + total_quizzes
-        if total == 0:
-            return {
-                'completed': 0,
-                'total': 0,
-                'percentage': 100,
-                'knowledge_total': 0,
-                'knowledge_completed': 0,
-                'quiz_total': 0,
-                'quiz_completed': 0
-            }
-        # 1. 知识文档进度
-        completed_knowledge = self.knowledge_progress.filter(is_completed=True).count()
-        # 2. 试卷完成统计
-        # 每个关联的试卷只要有至少一个非答题中的 submission 就算该项完成
-        from apps.submissions.models import Submission
-        all_completed_quiz_ids = Submission.objects.filter(
-            task_assignment=self,
-            status__in=['SUBMITTED', 'GRADING', 'GRADED']
-        ).values_list('quiz_id', flat=True).distinct()
-        completed_quizzes = len(all_completed_quiz_ids)
-        
-        # 统计考试和练习的完成情况
-        total_exams = task.task_quizzes.filter(quiz__quiz_type='EXAM').count()
-        total_practices = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').count()
-        
-        # 获取考试和练习的 ID 列表以便计算完成数
-        exam_ids = task.task_quizzes.filter(quiz__quiz_type='EXAM').values_list('quiz_id', flat=True)
-        practice_ids = task.task_quizzes.filter(quiz__quiz_type='PRACTICE').values_list('quiz_id', flat=True)
-        
-        completed_exams = len(set(all_completed_quiz_ids) & set(exam_ids))
-        completed_practices = len(set(all_completed_quiz_ids) & set(practice_ids))
-
-        completed = completed_knowledge + completed_quizzes
-        return {
-            'completed': completed,
-            'total': total,
-            'knowledge_total': total_knowledge,
-            'knowledge_completed': completed_knowledge,
-            'quiz_total': total_quizzes,
-            'quiz_completed': completed_quizzes,
-            'exam_total': total_exams,
-            'exam_completed': completed_exams,
-            'practice_total': total_practices,
-            'practice_completed': completed_practices,
-            'percentage': round(completed / total * 100, 1)
-        }
+        return build_assignment_progress(self)
     def check_completion(self):
         """
         检查并更新任务完成状态。
         如果所有子项（知识点+测验）都已完成，则标记任务为已完成。
         """
         progress = self.get_progress_data()
-        if progress['completed'] >= progress['total'] and progress['total'] > 0:
+        if is_assignment_completed(progress):
             if self.status != 'COMPLETED':
                 self.mark_completed()
             return True

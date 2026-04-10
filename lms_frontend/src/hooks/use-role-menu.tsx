@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import {
   LayoutGrid,
   BookOpen,
-  User,
   Users,
   HelpCircle,
   FileSearch,
@@ -10,7 +9,7 @@ import {
   SquareCheck,
   SquareTerminal,
 } from 'lucide-react';
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { getWorkspaceConfig, getRolePathPrefix } from '@/app/workspace-config';
 
@@ -25,7 +24,7 @@ export interface MenuItem {
  * 根据当前角色 + 生效权限生成顶部菜单
  */
 export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
-  const { hasAnyCapability, hasCapability } = useAuth();
+  const { hasAnyCapability } = useAuth();
 
   return useMemo(() => {
     if (!currentRole) {
@@ -154,18 +153,6 @@ export const useRoleMenu = (currentRole: RoleCode | null): MenuItem[] => {
         label: '日志审计',
       });
     }
-
-    if (
-      workspace.dashboardVariant === 'student'
-      && (hasCapability('profile.student.view') || hasCapability('profile.student.update'))
-    ) {
-      menu.push({
-        key: `${rolePrefix}/personal`,
-        icon: <User className="w-4 h-4" />,
-        label: '个人中心',
-      });
-    }
-
     return menu;
-  }, [currentRole, hasAnyCapability, hasCapability]);
+  }, [currentRole, hasAnyCapability]);
 };

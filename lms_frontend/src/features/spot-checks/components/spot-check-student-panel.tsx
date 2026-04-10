@@ -3,7 +3,7 @@ import { Search, Users } from 'lucide-react';
 import { UserSelectList } from '@/components/common/user-select-list';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import type { SpotCheckStudent } from '@/types/api';
+import type { SpotCheckStudent } from '@/types/spot-check';
 
 export type SpotCheckDepartmentFilter = 'all' | 'room1' | 'room2';
 

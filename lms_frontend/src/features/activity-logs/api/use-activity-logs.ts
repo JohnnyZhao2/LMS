@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { buildQueryString } from '@/lib/api-utils';
 import type {
   ActivityLogListResponse,
   ActivityLogPolicy,
@@ -7,38 +8,21 @@ import type {
   ActivityLogUser,
 } from '../types';
 
-const buildActivityLogsQueryString = (params: ActivityLogsQuery) => {
-  const query = new URLSearchParams({
-    type: params.type,
-    page: String(params.page),
-    page_size: String(params.pageSize),
-  });
-
-  if (params.memberIds && params.memberIds.length > 0) {
-    query.set('member_ids', params.memberIds.join(','));
-  }
-  if (params.search) {
-    query.set('search', params.search);
-  }
-  if (params.dateFrom) {
-    query.set('date_from', params.dateFrom);
-  }
-  if (params.dateTo) {
-    query.set('date_to', params.dateTo);
-  }
-  if (params.status) {
-    query.set('status', params.status);
-  }
-
-  return query.toString();
-};
-
 export const useActivityLogs = (params: ActivityLogsQuery, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['activity-logs', params],
     queryFn: async () => {
-      const queryString = buildActivityLogsQueryString(params);
-      return await apiClient.get<ActivityLogListResponse>(`/logs/?${queryString}`);
+      const queryString = buildQueryString({
+        type: params.type,
+        page: params.page,
+        page_size: params.pageSize,
+        member_ids: params.memberIds?.length ? params.memberIds.join(',') : undefined,
+        search: params.search,
+        date_from: params.dateFrom,
+        date_to: params.dateTo,
+        status: params.status,
+      });
+      return await apiClient.get<ActivityLogListResponse>(`/logs/${queryString}`);
     },
     enabled,
     staleTime: 0,

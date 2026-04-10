@@ -2,7 +2,7 @@ import React from 'react';
 import { matchPath, useLocation } from 'react-router-dom';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { ROUTES } from '@/config/routes';
-import type { RoleCode } from '@/types/api';
+import type { RoleCode } from '@/types/common';
 import { getWorkspaceConfig, getWorkspaceHome, getWorkspacePath } from '@/app/workspace-config';
 import { useCurrentRole } from '@/hooks/use-current-role';
 
@@ -69,7 +69,6 @@ const createBreadcrumbs = (
     { pattern: '/:role/quiz/:id', items: [{ title: taskLabel, path: tasksPath }, { title: '在线答题' }] },
     { pattern: '/:role/review/practice', items: [{ title: taskLabel, path: tasksPath }, { title: '测验回顾' }] },
     { pattern: '/:role/review/exam', items: [{ title: taskLabel, path: tasksPath }, { title: '考试回顾' }] },
-    { pattern: '/:role/personal', items: [{ title: '个人中心' }] },
   ]
 
   const matchedRoute = routePatterns.find((route) => matchPath({ path: route.pattern, end: true }, pathname))

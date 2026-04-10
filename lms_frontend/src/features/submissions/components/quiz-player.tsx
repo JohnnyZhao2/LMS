@@ -7,7 +7,7 @@ import { useSaveAnswer } from '../api/save-answer';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Spinner } from '@/components/ui/spinner';
 import { showApiError } from '@/utils/error-handler';
-import type { SubmissionDetail } from '@/types/api';
+import type { SubmissionDetail } from '@/types/submission';
 
 import { QuizSubmitDialog, QuizTimeUpDialog } from './quiz-player-dialogs';
 import { QuizPlayerMainPanel } from './quiz-player-main-panel';

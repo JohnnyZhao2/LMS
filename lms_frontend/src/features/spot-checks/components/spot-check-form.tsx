@@ -12,7 +12,7 @@ import { ROUTES } from '@/config/routes';
 import { useAssignableUsers } from '@/features/tasks/api/get-assignable-users';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import dayjs from '@/lib/dayjs';
-import type { SpotCheckItem } from '@/types/api';
+import type { SpotCheckItem } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
 import { useCreateSpotCheck, useUpdateSpotCheck } from '../api/create-spot-check';
 import { useSpotCheckDetail } from '../api/get-spot-checks';

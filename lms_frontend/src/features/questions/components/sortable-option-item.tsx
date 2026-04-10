@@ -5,7 +5,7 @@ import { Check, GripVertical, X } from 'lucide-react';
 
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 interface SortableOptionItemProps {
   id: string;

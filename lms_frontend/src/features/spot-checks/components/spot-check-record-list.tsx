@@ -9,7 +9,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tooltip } from '@/components/ui/tooltip';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { SpotCheck, SpotCheckStudent } from '@/types/api';
+import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
 
 interface SpotCheckRecordListProps {
   selectedStudent: SpotCheckStudent | null;

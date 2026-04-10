@@ -11,7 +11,6 @@ export const ROUTES = {
   KNOWLEDGE: '/knowledge',
   TAGS: '/tags',
   TASKS: '/tasks',
-  PERSONAL: '/personal',
   SPOT_CHECKS: '/spot-checks',
   QUIZZES: '/quizzes',
   QUESTIONS: '/questions',

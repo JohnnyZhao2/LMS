@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { StudentDashboard, TaskParticipant } from '@/types/api';
+import type { StudentDashboard, TaskParticipant } from '@/types/dashboard';
 
 /**
  * 获取学员仪表盘数据

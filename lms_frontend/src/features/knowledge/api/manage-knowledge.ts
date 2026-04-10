@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { KnowledgeDetail, KnowledgeCreateRequest, KnowledgeUpdateRequest } from '@/types/api';
+import type { KnowledgeDetail, KnowledgeCreateRequest, KnowledgeUpdateRequest } from '@/types/knowledge';
 
 /**
  * 创建知识文档

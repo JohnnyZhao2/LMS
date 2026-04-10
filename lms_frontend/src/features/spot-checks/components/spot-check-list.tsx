@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { SpotCheck, SpotCheckStudent } from '@/types/api';
+import type { SpotCheck, SpotCheckStudent } from '@/types/spot-check';
 import { showApiError } from '@/utils/error-handler';
 import { useDeleteSpotCheck } from '../api/create-spot-check';
 import { useSpotChecks, useSpotCheckStudents } from '../api/get-spot-checks';

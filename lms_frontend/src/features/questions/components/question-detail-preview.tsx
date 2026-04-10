@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { Question } from '@/types/api';
+import type { Question } from '@/types/question';
 import { cn } from '@/lib/utils';
 
 import { QuestionDocumentReadMode } from './question-document-read-mode';

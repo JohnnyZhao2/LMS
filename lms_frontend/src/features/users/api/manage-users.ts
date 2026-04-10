@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { UserInfo, UserList, RoleCode } from '@/types/api';
+import type { UserInfo, UserList, RoleCode } from '@/types/common';
 
 const invalidateUserQueries = (
   queryClient: ReturnType<typeof useQueryClient>,

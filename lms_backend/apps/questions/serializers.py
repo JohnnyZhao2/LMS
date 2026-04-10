@@ -27,11 +27,6 @@ class QuestionSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
 
-
-QuestionListSerializer = QuestionSerializer
-QuestionDetailSerializer = QuestionSerializer
-
-
 class QuestionCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating questions.

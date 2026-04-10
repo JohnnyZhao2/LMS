@@ -2,7 +2,8 @@ import { Check } from 'lucide-react';
 import { ROLE_FULL_LABELS } from '@/config/role-constants';
 import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
 import { cn } from '@/lib/utils';
-import type { PermissionCatalogItem, RoleCode } from '@/types/api';
+import type { PermissionCatalogItem } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 
 interface PermissionGroup {
   module: string;

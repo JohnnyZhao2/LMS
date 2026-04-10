@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { buildQueryString } from '@/lib/api-utils';
 import { apiClient } from '@/lib/api-client';
-import type { PaginatedResponse, TaskResourceOption } from '@/types/api';
+import type { PaginatedResponse } from '@/types/common';
+import type { TaskResourceOption } from '@/types/task';
 
 interface UseTaskResourceOptions {
   search?: string;

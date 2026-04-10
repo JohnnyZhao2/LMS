@@ -86,7 +86,7 @@ def paginated_response(
     Args:
         page: 分页后的数据列表
         serialized_data: 序列化后的数据
-        paginator: 分页器实例（StandardResultsSetPagination 或 SmallResultsSetPagination）
+        paginator: 分页器实例（如 StandardResultsSetPagination）
     Returns:
         Response 对象
     Example:

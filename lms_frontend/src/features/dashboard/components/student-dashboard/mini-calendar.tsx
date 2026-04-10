@@ -4,7 +4,7 @@ import dayjs from '@/lib/dayjs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { StudentDashboardTask } from '@/types/api';
+import type { StudentDashboardTask } from '@/types/dashboard';
 
 interface MiniCalendarProps {
   className?: string;

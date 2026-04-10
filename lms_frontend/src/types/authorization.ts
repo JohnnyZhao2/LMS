@@ -22,7 +22,7 @@ export interface RolePermissionTemplate {
 export type PermissionOverrideEffect = 'ALLOW' | 'DENY';
 export type PermissionOverrideScope = 'ALL' | 'SELF' | 'MENTEES' | 'DEPARTMENT' | 'EXPLICIT_USERS';
 
-export interface PermissionScopeOption {
+interface PermissionScopeOption {
   code: PermissionOverrideScope;
   label: string;
   description: string;
@@ -58,7 +58,7 @@ export interface CreateUserPermissionOverrideRequest {
   expires_at?: string | null;
 }
 
-export interface PermissionCapability {
+interface PermissionCapability {
   allowed: boolean;
   conditional: boolean;
   scope_types: PermissionOverrideScope[];

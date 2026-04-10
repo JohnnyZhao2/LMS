@@ -15,7 +15,6 @@ from .models import Permission, PermissionScopeRule, UserPermissionOverride
 
 def list_permissions(
     module: Optional[str] = None,
-    include_system_managed: bool = False,
     catalog_view: Optional[str] = None,
 ) -> List[Permission]:
     queryset = Permission.objects.filter(
@@ -26,8 +25,7 @@ def list_permissions(
         queryset = queryset.filter(module=module)
     if catalog_view in {'role_template', 'user_authorization'}:
         queryset = queryset.exclude(module=CONFIG_PERMISSION_MODULE)
-    if not include_system_managed:
-        queryset = queryset.exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
+    queryset = queryset.exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
     return list(queryset.order_by('module', 'code'))
 
 

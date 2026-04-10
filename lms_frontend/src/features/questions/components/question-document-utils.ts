@@ -1,6 +1,6 @@
 import React from 'react';
 
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 export const QUESTION_TRUE_FALSE_ITEMS = [
   { key: 'TRUE', label: '正确' },

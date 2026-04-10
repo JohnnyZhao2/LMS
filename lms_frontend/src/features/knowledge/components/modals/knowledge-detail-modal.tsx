@@ -24,7 +24,7 @@ import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-i
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
 import { useAuth } from '@/features/auth/stores/auth-context';
-import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
+import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/knowledge';
 import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';

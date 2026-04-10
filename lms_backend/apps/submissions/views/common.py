@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce
 from core.base_view import BaseAPIView
+from core.exceptions import BusinessError, ErrorCodes
 from core.responses import created_response, success_response
 
 from ..serializers import (
@@ -31,6 +32,7 @@ class StartQuizView(APIView):
     - EXAM: 只能提交一次，检查时间窗口
     """
     permission_classes = [IsAuthenticated]
+
     @extend_schema(
         summary='开始答题',
         description='''
@@ -60,12 +62,15 @@ class StartQuizView(APIView):
         if serializer.validated_data.get('in_progress_submission'):
             return success_response(response_serializer.data)
         return created_response(response_serializer.data)
+
+
 class SubmitView(BaseAPIView):
     """
     统一的提交答卷接口，根据 quiz_type 自动判断行为。
     """
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
+
     @extend_schema(
         summary='提交答卷',
         description='''
@@ -83,17 +88,46 @@ class SubmitView(BaseAPIView):
     def post(self, request, pk):
         enforce_student_submission_role(request)
         submission = self.service.get_submission_by_id(pk, user=request.user)
-        # 根据 quiz_type 判断行为
-        is_practice = submission.quiz.quiz_type == 'PRACTICE'
-        submission = self.service.submit(submission, is_practice=is_practice)
+        submission = self.service.submit(submission)
         response_serializer = SubmissionDetailSerializer(submission)
         return success_response(response_serializer.data)
+
+
+class ResultView(BaseAPIView):
+    """统一的结果查看接口。"""
+
+    permission_classes = [IsAuthenticated]
+    service_class = SubmissionService
+
+    @extend_schema(
+        summary='查看答题结果',
+        description='查看已提交答卷的结果，适用于测验和考试。',
+        responses={
+            200: SubmissionDetailSerializer,
+            400: OpenApiResponse(description='答卷尚未提交'),
+            404: OpenApiResponse(description='答题记录不存在'),
+        },
+        tags=['答题']
+    )
+    def get(self, request, pk):
+        enforce_student_submission_role(request)
+        submission = self.service.get_submission_by_id(pk, user=request.user)
+        if submission.status == 'IN_PROGRESS':
+            raise BusinessError(
+                code=ErrorCodes.INVALID_OPERATION,
+                message='答卷尚未提交'
+            )
+        response_serializer = SubmissionDetailSerializer(submission)
+        return success_response(response_serializer.data)
+
+
 class SaveAnswerView(BaseAPIView):
     """
     Save an answer during practice/exam.
     """
     permission_classes = [IsAuthenticated]
     service_class = SubmissionService
+
     @extend_schema(
         summary='保存答案',
         description='''

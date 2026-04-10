@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { UserList } from '@/types/api';
+import type { UserList } from '@/types/common';
 
 /**
  * 获取可分配学员列表

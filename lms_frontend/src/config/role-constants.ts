@@ -1,4 +1,4 @@
-import type { RoleCode } from '@/types/api'
+import type { RoleCode } from '@/types/common';
 export { ROLE_INDICATOR_CLASSES } from '@/lib/role-config'
 
 const ROLE_CODES: RoleCode[] = [

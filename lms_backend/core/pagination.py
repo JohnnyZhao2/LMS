@@ -33,12 +33,3 @@ class StandardResultsSetPagination(PageNumberPagination):
                 'results': data,
             }
         })
-
-
-class SmallResultsSetPagination(StandardResultsSetPagination):
-    """
-    Small pagination for dashboard widgets.
-    默认每页 10 条，最大 50 条
-    """
-    page_size = 10
-    max_page_size = 50

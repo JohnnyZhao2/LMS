@@ -5,7 +5,7 @@
 import type { PaginatedResponse, TaskStatus } from './common';
 import type { QuizType } from './quiz';
 
-export interface TaskActions {
+interface TaskActions {
   view: boolean;
   update: boolean;
   delete: boolean;
@@ -15,7 +15,7 @@ export interface TaskActions {
 /**
  * 任务分配
  */
-export interface TaskAssignment {
+interface TaskAssignment {
   id: number;
   assignee: number;
   status: TaskStatus;
@@ -28,7 +28,7 @@ export interface TaskAssignment {
 /**
  * 任务知识项
  */
-export interface TaskKnowledge {
+interface TaskKnowledge {
   id: number;
   knowledge: number;
   knowledge_title: string;
@@ -90,7 +90,7 @@ export interface TaskDetail {
 /**
  * 学员学习任务进度
  */
-export interface TaskProgress {
+interface TaskProgress {
   completed: number;
   total: number;
   percentage: number;
@@ -107,7 +107,7 @@ export interface TaskProgress {
 /**
  * 学员学习任务知识项
  */
-export interface LearningTaskKnowledgeItem {
+interface LearningTaskKnowledgeItem {
   id: number;
   knowledge_id: number;
   title: string;

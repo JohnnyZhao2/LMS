@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
-import type { SubmissionDetail } from '@/types/api';
+import type { SubmissionDetail } from '@/types/submission';
 
 import { Timer } from './timer';
 import { isAnswerEmpty } from './quiz-player-utils';

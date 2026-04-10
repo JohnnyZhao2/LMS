@@ -3,7 +3,7 @@ import { useRoleNavigate } from '@/hooks/use-role-navigate';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
-import type { StudentTaskCenterItem } from '@/types/api';
+import type { StudentTaskCenterItem } from '@/types/task';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 

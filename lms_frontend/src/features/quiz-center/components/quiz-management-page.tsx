@@ -58,5 +58,3 @@ export const QuizManagementPage: React.FC = () => {
     </PageFillShell>
   );
 };
-
-export default QuizManagementPage;

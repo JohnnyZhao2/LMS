@@ -7,7 +7,7 @@ import { TagInput } from '@/features/knowledge/components/shared/tag-input';
 import { getQuestionTypePresentation, QUESTION_TYPE_PICKER_OPTIONS } from '@/features/questions/constants';
 import { CompactNumberInput } from '@/features/quiz-center/quizzes/components/compact-number-input';
 import { cn } from '@/lib/utils';
-import type { QuestionType, SimpleTag, Tag } from '@/types/api';
+import type { QuestionType, SimpleTag, Tag } from '@/types/common';
 
 type MetaSpaceTag = Pick<SimpleTag, 'id' | 'name' | 'color'>;
 

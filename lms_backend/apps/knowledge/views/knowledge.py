@@ -16,6 +16,7 @@ from apps.knowledge.serializers import (
     KnowledgeListSerializer,
     KnowledgeUpdateSerializer,
 )
+from apps.knowledge.selectors import get_knowledge_queryset
 from apps.knowledge.services import KnowledgeService
 from apps.tasks.models import TaskKnowledge
 from core.base_view import BaseAPIView
@@ -24,7 +25,6 @@ from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
 from core.responses import (
     created_response,
-    list_response,
     no_content_response,
     success_response,
 )
@@ -33,15 +33,6 @@ from core.responses import (
 class ViewCountResponseSerializer(drf_serializers.Serializer):
     """Serializer for view count response."""
     view_count = drf_serializers.IntegerField()
-
-
-def _enforce_knowledge_view_permission(request, error_message: str = '无权访问知识内容') -> None:
-    enforce('knowledge.view', request, error_message=error_message)
-
-
-def _enforce_knowledge_action_permission(request, permission_code: str, error_message: str) -> None:
-    enforce(permission_code, request, error_message=error_message)
-
 
 def _build_knowledge_filters(request):
     """构建并校验知识筛选参数。"""
@@ -78,19 +69,15 @@ class KnowledgeListCreateView(BaseAPIView):
         """共享的知识列表获取逻辑"""
         filters, search = _build_knowledge_filters(request)
 
-        knowledge_queryset = self.service.get_all_with_filters(
+        knowledge_queryset = get_knowledge_queryset(
             filters=filters,
             search=search
         )
 
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(knowledge_queryset, request)
-        if page is not None:
-            serializer = KnowledgeListSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        serializer = KnowledgeListSerializer(knowledge_queryset, many=True)
-        return list_response(serializer.data)
+        serializer = KnowledgeListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
     @extend_schema(
         summary='获取知识文档列表',
         description='''获取知识文档列表，支持按 space 和知识标签筛选。
@@ -108,7 +95,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request):
-        _enforce_knowledge_view_permission(request, '无权查看知识列表')
+        enforce('knowledge.view', request, error_message='无权查看知识列表')
         return self._get_knowledge_list(request)
     @extend_schema(
         summary='创建知识文档',
@@ -122,7 +109,7 @@ class KnowledgeListCreateView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request):
-        _enforce_knowledge_action_permission(request, 'knowledge.create', '无权创建知识文档')
+        enforce('knowledge.create', request, error_message='无权创建知识文档')
         # 3. 反序列化输入
         serializer = KnowledgeCreateSerializer(
             data=request.data,
@@ -152,7 +139,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, pk):
-        _enforce_knowledge_view_permission(request, '无权查看知识详情')
+        enforce('knowledge.view', request, error_message='无权查看知识详情')
         knowledge = self.service.get_by_id(pk)
         # 2. 序列化输出
         serializer = KnowledgeDetailSerializer(knowledge)
@@ -170,7 +157,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def patch(self, request, pk):
-        _enforce_knowledge_action_permission(request, 'knowledge.update', '无权更新知识文档')
+        enforce('knowledge.update', request, error_message='无权更新知识文档')
         # 2. 反序列化输入
         serializer = KnowledgeUpdateSerializer(
             data=request.data, partial=True,
@@ -196,7 +183,7 @@ class KnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def delete(self, request, pk):
-        _enforce_knowledge_action_permission(request, 'knowledge.delete', '无权删除知识文档')
+        enforce('knowledge.delete', request, error_message='无权删除知识文档')
         self.service.delete(pk)
         return no_content_response()
 class StudentTaskKnowledgeDetailView(BaseAPIView):
@@ -215,7 +202,7 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
         tags=['知识管理']
     )
     def get(self, request, task_knowledge_id):
-        _enforce_knowledge_view_permission(request, '无权查看任务知识详情')
+        enforce('knowledge.view', request, error_message='无权查看任务知识详情')
         task_knowledge = TaskKnowledge.objects.select_related('task', 'knowledge').filter(
             id=task_knowledge_id
         ).first()
@@ -230,7 +217,6 @@ class StudentTaskKnowledgeDetailView(BaseAPIView):
 class KnowledgeIncrementViewCountView(BaseAPIView):
     """Increment knowledge view count endpoint."""
     permission_classes = [IsAuthenticated]
-    serializer_class = ViewCountResponseSerializer
     service_class = KnowledgeService
     @extend_schema(
         summary='增加知识阅读次数',
@@ -242,6 +228,6 @@ class KnowledgeIncrementViewCountView(BaseAPIView):
         tags=['知识管理']
     )
     def post(self, request, pk):
-        _enforce_knowledge_view_permission(request, '无权记录知识阅读')
+        enforce('knowledge.view', request, error_message='无权记录知识阅读')
         view_count = self.service.increment_view_count(pk)
         return success_response({'view_count': view_count})

@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client';
-import type { LoginResponse, OidcAuthorizeUrlResponse, OidcCodeLoginRequest } from '@/types/api';
+import type { LoginResponse, OidcAuthorizeUrlResponse, OidcCodeLoginRequest } from '@/types/auth';
 
 export const oidcApi = {
   getAuthorizeUrl: async (): Promise<OidcAuthorizeUrlResponse> => {

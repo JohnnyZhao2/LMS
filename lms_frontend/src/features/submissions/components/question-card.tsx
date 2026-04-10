@@ -4,7 +4,7 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { cn } from '@/lib/utils';
-import type { Answer } from '@/types/api';
+import type { Answer } from '@/types/submission';
 
 const hasValueProp = (data: unknown): data is { value?: unknown } =>
   typeof data === 'object' && data !== null && 'value' in data;

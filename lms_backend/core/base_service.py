@@ -56,7 +56,7 @@ class BaseService:
         """
         if not self._user:
             return None
-        return _get_current_role(self._user, self._request)
+        return _get_current_role(self._user)
     
     def validate_not_none(self, value: Optional[T], error_message: str) -> T:
         """
@@ -75,20 +75,6 @@ class BaseService:
                 message=error_message
             )
         return value
-    def validate_permission(self, condition: bool, error_message: str):
-        """
-        验证权限
-        Args:
-            condition: 权限条件
-            error_message: 错误消息
-        Raises:
-            BusinessError: 如果权限不足
-        """
-        if not condition:
-            raise BusinessError(
-                code=ErrorCodes.PERMISSION_DENIED,
-                message=error_message
-            )
     def check_published_resource_access(
         self,
         resource,
@@ -107,7 +93,7 @@ class BaseService:
         effective_user = self.user
         effective_request = self.request
         
-        if effective_user and not _is_admin_like_role(_get_current_role(effective_user, effective_request)):
+        if effective_user and not _is_admin_like_role(_get_current_role(effective_user)):
             if not hasattr(resource, 'is_current'):
                 return  # 如果资源没有这些属性，跳过检查
             if not resource.is_current:

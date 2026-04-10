@@ -2,12 +2,8 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type {
-  PaginatedResponse,
-  StudentTaskCenterResponse,
-  TaskListItem,
-  TaskStatus,
-} from '@/types/api';
+import type { PaginatedResponse, TaskStatus } from '@/types/common';
+import type { StudentTaskCenterResponse, TaskListItem } from '@/types/task';
 
 interface GetTasksParams {
   page?: number;

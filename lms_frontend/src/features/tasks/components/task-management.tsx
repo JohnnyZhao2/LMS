@@ -27,7 +27,7 @@ import { showApiError } from "@/utils/error-handler"
 import dayjs from "@/lib/dayjs"
 import { cn } from "@/lib/utils"
 import { type ColumnDef } from "@tanstack/react-table"
-import type { TaskListItem } from "@/types/api"
+import type { TaskListItem } from '@/types/task';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageViewport } from '@/components/ui/page-shell';
 

@@ -1,4 +1,4 @@
-import type { TaskResourceOption } from '@/types/api';
+import type { TaskResourceOption } from '@/types/task';
 
 export type ResourceType = 'DOCUMENT' | 'QUIZ';
 

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { PaginatedResponse, QuestionCreateRequest, Question } from '@/types/api';
+import type { PaginatedResponse } from '@/types/common';
+import type { QuestionCreateRequest, Question } from '@/types/question';
 
 const patchQuestionListCache = (
   current: PaginatedResponse<Question> | undefined,

@@ -29,11 +29,6 @@ class SoftDeleteMixin(models.Model):
         self.is_deleted = True
         self.deleted_at = timezone.now()
         self.save(update_fields=['is_deleted', 'deleted_at'])
-    def restore(self):
-        """Restore a soft-deleted object."""
-        self.is_deleted = False
-        self.deleted_at = None
-        self.save(update_fields=['is_deleted', 'deleted_at'])
 class CreatorMixin(models.Model):
     """
     Mixin that tracks the creator of an object.
@@ -108,12 +103,3 @@ class BusinessErrorHandlerMixin:
             'details': error.details,
         }
         return Response(response_data, status=get_status_code_for_error(error.code))
-    def _get_status_code_for_error(self, error_code: str) -> int:
-        """
-        根据错误码返回相应的 HTTP 状态码
-        Args:
-            error_code: 错误码字符串
-        Returns:
-            int: HTTP 状态码
-        """
-        return get_status_code_for_error(error_code)

@@ -207,17 +207,12 @@ class TaskListView(BaseAPIView):
             )
             
         queryset = queryset.order_by('-created_at')
-        
+
         # Apply pagination
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request)
-        if page is not None:
-            serializer = TaskListSerializer(page, many=True, context={'request': request})
-            return paginated_response(page, serializer.data, paginator)
-        
-        # Fallback to non-paginated response
-        serializer = TaskListSerializer(queryset, many=True, context={'request': request})
-        return list_response(serializer.data)
+        serializer = TaskListSerializer(page, many=True, context={'request': request})
+        return paginated_response(page, serializer.data, paginator)
 
 
 class TaskDetailView(BaseAPIView):

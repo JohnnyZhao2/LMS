@@ -9,12 +9,11 @@ from core.base_view import BaseAPIView
 from core.exceptions import BusinessError, ErrorCodes
 from core.pagination import StandardResultsSetPagination
 from core.query_params import parse_int_query_param
-from core.responses import created_response, list_response, no_content_response, success_response
+from core.responses import created_response, no_content_response, success_response
 
 from .serializers import (
     QuestionCreateSerializer,
-    QuestionDetailSerializer,
-    QuestionListSerializer,
+    QuestionSerializer,
     QuestionUpdateSerializer,
 )
 from .services import QuestionService
@@ -39,7 +38,7 @@ class QuestionListCreateView(BaseAPIView):
             OpenApiParameter(name='page', type=int, description='页码'),
             OpenApiParameter(name='page_size', type=int, description='每页数量'),
         ],
-        responses={200: QuestionListSerializer(many=True)},
+        responses={200: QuestionSerializer(many=True)},
         tags=['题库管理']
     )
     def get(self, request):
@@ -94,19 +93,15 @@ class QuestionListCreateView(BaseAPIView):
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
-        if page is not None:
-            serializer = QuestionListSerializer(page, many=True)
-            return paginator.get_paginated_response(serializer.data)
-
-        serializer = QuestionListSerializer(queryset, many=True)
-        return list_response(serializer.data)
+        serializer = QuestionSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @extend_schema(
         summary='创建题目',
         description='创建新题目（导师/室经理/管理员）',
         request=QuestionCreateSerializer,
         responses={
-            201: QuestionDetailSerializer,
+            201: QuestionSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
         },
@@ -123,7 +118,7 @@ class QuestionListCreateView(BaseAPIView):
         )
         serializer.is_valid(raise_exception=True)
         question = self.service.create(data=serializer.validated_data)
-        response_serializer = QuestionDetailSerializer(question)
+        response_serializer = QuestionSerializer(question)
         return created_response(response_serializer.data)
 
 
@@ -136,7 +131,7 @@ class QuestionDetailView(BaseAPIView):
         summary='获取题目详情',
         description='获取指定题目的详细信息',
         responses={
-            200: QuestionDetailSerializer,
+            200: QuestionSerializer,
             404: OpenApiResponse(description='题目不存在'),
         },
         tags=['题库管理']
@@ -145,7 +140,7 @@ class QuestionDetailView(BaseAPIView):
         """Get question detail."""
         enforce('question.view', request, error_message='无权查看题目详情')
         question = self.service.get_by_id(pk)
-        serializer = QuestionDetailSerializer(question)
+        serializer = QuestionSerializer(question)
         return success_response(serializer.data)
 
     @extend_schema(
@@ -153,7 +148,7 @@ class QuestionDetailView(BaseAPIView):
         description='更新题目信息',
         request=QuestionUpdateSerializer,
         responses={
-            200: QuestionDetailSerializer,
+            200: QuestionSerializer,
             400: OpenApiResponse(description='参数错误'),
             403: OpenApiResponse(description='无权限'),
             404: OpenApiResponse(description='题目不存在'),
@@ -174,7 +169,7 @@ class QuestionDetailView(BaseAPIView):
             pk=pk,
             data=serializer.validated_data
         )
-        response_serializer = QuestionDetailSerializer(updated_question)
+        response_serializer = QuestionSerializer(updated_question)
         return success_response(response_serializer.data)
 
     @extend_schema(

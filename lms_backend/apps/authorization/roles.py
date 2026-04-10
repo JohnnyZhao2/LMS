@@ -40,7 +40,7 @@ def get_default_role(role_codes: Iterable[str]) -> str:
     return 'STUDENT'
 
 
-def get_current_role(user, request):
+def get_current_role(user):
     if not user or not user.is_authenticated:
         return None
 

@@ -7,7 +7,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
-import type { TaskStatus } from '@/types/api';
+import type { TaskStatus } from '@/types/common';
 
 const statusOptions = [
     { value: 'IN_PROGRESS', label: '进行中' },

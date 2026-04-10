@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { QuizDetail, QuizListItem, PaginatedResponse } from '@/types/api';
+import type { PaginatedResponse } from '@/types/common';
+import type { QuizDetail, QuizListItem } from '@/types/quiz';
 
 interface UseQuizzesParams {
   page?: number;

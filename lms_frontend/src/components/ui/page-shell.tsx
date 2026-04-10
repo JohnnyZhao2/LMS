@@ -81,7 +81,7 @@ const useViewportConstraint = ({
 
   React.useLayoutEffect(() => {
     updateHeight();
-  });
+  }, [updateHeight]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') {
@@ -129,12 +129,18 @@ export const EditorPageShell = React.forwardRef<HTMLDivElement, React.HTMLAttrib
 
 EditorPageShell.displayName = 'EditorPageShell';
 
-export const PageViewport = React.forwardRef<HTMLDivElement, PageViewportProps>(
-  ({ className, style, bottomGap, minHeight, desktopBreakpoint, ...props }, ref) => {
+interface PageConstrainedSurfaceProps extends PageViewportProps {
+  fixedHeight?: boolean;
+  baseClassName: string;
+}
+
+const PageConstrainedSurface = React.forwardRef<HTMLDivElement, PageConstrainedSurfaceProps>(
+  ({ className, style, bottomGap, minHeight, desktopBreakpoint, fixedHeight, baseClassName, ...props }, ref) => {
     const { elementRef, style: constrainedStyle } = useViewportConstraint({
       bottomGap,
       minHeight,
       desktopBreakpoint,
+      fixedHeight,
     });
 
     return (
@@ -147,42 +153,34 @@ export const PageViewport = React.forwardRef<HTMLDivElement, PageViewportProps>(
             ref.current = node;
           }
         }}
-        className={cn('flex w-full min-h-0 max-h-full self-start flex-col overflow-hidden', className)}
+        className={cn(baseClassName, className)}
         style={{ ...constrainedStyle, ...style }}
         {...props}
       />
     );
   },
 );
+
+PageConstrainedSurface.displayName = 'PageConstrainedSurface';
+
+export const PageViewport = React.forwardRef<HTMLDivElement, PageViewportProps>((props, ref) => (
+  <PageConstrainedSurface
+    ref={ref}
+    baseClassName="flex w-full min-h-0 max-h-full self-start flex-col overflow-hidden"
+    {...props}
+  />
+));
 
 PageViewport.displayName = 'PageViewport';
 
-export const PageWorkbench = React.forwardRef<HTMLDivElement, PageViewportProps>(
-  ({ className, style, bottomGap, minHeight, desktopBreakpoint, ...props }, ref) => {
-    const { elementRef, style: constrainedStyle } = useViewportConstraint({
-      bottomGap,
-      minHeight,
-      desktopBreakpoint,
-      fixedHeight: true,
-    });
-
-    return (
-      <div
-        ref={(node) => {
-          elementRef.current = node;
-          if (typeof ref === 'function') {
-            ref(node);
-          } else if (ref) {
-            ref.current = node;
-          }
-        }}
-        className={cn('flex h-full w-full min-h-0 flex-col overflow-hidden', className)}
-        style={{ ...constrainedStyle, ...style }}
-        {...props}
-      />
-    );
-  },
-);
+export const PageWorkbench = React.forwardRef<HTMLDivElement, PageViewportProps>((props, ref) => (
+  <PageConstrainedSurface
+    ref={ref}
+    fixedHeight
+    baseClassName="flex h-full w-full min-h-0 flex-col overflow-hidden"
+    {...props}
+  />
+));
 
 PageWorkbench.displayName = 'PageWorkbench';
 

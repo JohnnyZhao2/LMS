@@ -4,7 +4,7 @@ import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QUESTION_TYPE_PICKER_OPTIONS, getQuestionTypePresentation } from '@/features/questions/constants';
 import { cn } from '@/lib/utils';
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 const QUESTION_TYPE_ICON_ADJUSTMENTS: Partial<Record<QuestionType, string>> = {
   SINGLE_CHOICE: 'translate-y-[0.5px]',

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { PermissionCatalogItem, RoleCode } from '@/types/api';
+import type { PermissionCatalogItem } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 import { getModulePresentation } from '../constants/permission-presentation';
 import { RoleTemplateWorkbench } from './role-template-workbench';
 

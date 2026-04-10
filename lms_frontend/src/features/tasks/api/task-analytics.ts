@@ -1,13 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type {
-  TaskAnalytics,
-  StudentExecution,
-  GradingQuestion,
-  GradingAnswerResponse,
-  GradingSubmitRequest,
-} from '@/types/api';
+import type { TaskAnalytics, StudentExecution, GradingQuestion, GradingAnswerResponse, GradingSubmitRequest } from '@/types/task-analytics';
 
 /**
  * 获取任务分析数据

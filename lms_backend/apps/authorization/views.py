@@ -25,12 +25,6 @@ PERMISSION_CATALOG_ACCESS_CODES = (
     'authorization.role_template.update',
     'user.authorize',
 )
-
-
-def enforce_permission_catalog_access(request) -> None:
-    enforce_any(PERMISSION_CATALOG_ACCESS_CODES, request, error_message='无权查看权限目录')
-
-
 class PermissionCatalogView(BaseAPIView):
     """Permission catalog management."""
 
@@ -54,7 +48,7 @@ class PermissionCatalogView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request):
-        enforce_permission_catalog_access(request)
+        enforce_any(PERMISSION_CATALOG_ACCESS_CODES, request, error_message='无权查看权限目录')
         module = request.query_params.get('module')
         catalog_view = request.query_params.get('view') or None
         if catalog_view and catalog_view not in PERMISSION_CATALOG_VIEW_CHOICES:

@@ -2,7 +2,7 @@ import * as React from 'react';
 import {
   Link as LinkGlyph,
 } from 'lucide-react';
-import type { KnowledgeListItem } from '@/types/api';
+import type { KnowledgeListItem } from '@/types/knowledge';
 import { plain, isLong, bionicHtml } from '../../utils/content-utils';
 import { FocusOrbIcon } from '../shared/focus-icon';
 

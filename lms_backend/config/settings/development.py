@@ -8,20 +8,6 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # CORS - Allow all in development
 CORS_ALLOW_ALL_ORIGINS = True
-
-# Allow custom headers including X-Current-Role
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'x-current-role',  # 允许角色 header
-]
 # Logging
 LOGGING = {
     'version': 1,

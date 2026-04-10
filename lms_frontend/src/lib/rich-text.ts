@@ -23,7 +23,7 @@ function decodeHtmlEntity(entity: string): string {
   return HTML_ENTITY_MAP[normalized] ?? `&${entity};`;
 }
 
-export function decodeHtmlEntities(value: string): string {
+function decodeHtmlEntities(value: string): string {
   if (!value) return '';
   return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (_match, entity: string) => decodeHtmlEntity(entity));
 }

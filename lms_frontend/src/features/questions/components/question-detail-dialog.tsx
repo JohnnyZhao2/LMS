@@ -12,7 +12,7 @@ import { ScrollContainer } from '@/components/ui/scroll-container';
 import { getQuestionTypeLabel } from '@/features/questions/constants';
 import dayjs from '@/lib/dayjs';
 import { showApiError } from '@/utils/error-handler';
-import type { Question } from '@/types/api';
+import type { Question } from '@/types/question';
 
 interface QuestionDetailDialogProps {
   question: Question | null;

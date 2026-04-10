@@ -13,7 +13,7 @@ import { useStudentDashboard, useTaskParticipants } from '../../api/student-dash
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/ui/stat-card';
-import type { StudentDashboardTask } from '@/types/api';
+import type { StudentDashboardTask } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
 
 import { MiniCalendar } from './mini-calendar';

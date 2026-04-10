@@ -87,24 +87,6 @@ class SaveAnswerSerializer(serializers.Serializer):
             question_id=self.validated_data['question_id'],
             user_answer=self.validated_data['user_answer']
         )
-
-
-class PracticeResultSerializer(serializers.ModelSerializer):
-    """
-    Serializer for practice result view.
-    """
-    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
-    answers = AnswerSerializer(many=True, read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    class Meta:
-        model = Submission
-        fields = [
-            'id', 'quiz', 'quiz_title', 'attempt_number',
-            'status', 'status_display',
-            'total_score', 'obtained_score',
-            'started_at', 'submitted_at',
-            'answers', 'created_at'
-        ]
 class StartQuizSerializer(serializers.Serializer):
     """
     统一的开始答题 Serializer，根据 quiz_type 自动判断行为。

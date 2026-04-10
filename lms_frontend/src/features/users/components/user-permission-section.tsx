@@ -6,16 +6,13 @@ import {
 import { useAuth } from '@/features/auth/stores/auth-context';
 import {
   useCreateUserPermissionOverride,
+  usePermissionCatalog,
   useRevokeUserPermissionOverride,
   useRolePermissionTemplates,
   useUserPermissionOverrides,
-  useVisiblePermissionCatalog,
 } from '@/features/authorization/api/authorization';
-import type {
-  PermissionOverrideScope,
-  UserPermissionOverride,
-  RoleCode,
-} from '@/types/api';
+import type { PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
 import type { Department, UserList as UserDetail } from '@/types/common';
 import { KeyRound } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -59,13 +56,12 @@ export function UserPermissionSection({
     || hasCapability('authorization.role_template.update');
 
   const shouldLoadUserOverrides = Boolean(userId) && canManageUserAuthorization;
-  const { data: permissionCatalog = [] } = useVisiblePermissionCatalog(
-    'user_authorization',
+  const { data: permissionCatalog = [] } = usePermissionCatalog(
+    { view: 'user_authorization' },
     canManageUserAuthorization,
   );
   const {
     data: userOverrides = [],
-    isLoading: isLoadingUserOverrides,
     refetch: refetchUserOverrides,
   } = useUserPermissionOverrides(
     userId ?? null,
@@ -75,8 +71,6 @@ export function UserPermissionSection({
   const createUserOverride = useCreateUserPermissionOverride();
   const revokeUserOverride = useRevokeUserPermissionOverride();
   const [selectedPermissionModule, setSelectedPermissionModule] = useState('');
-  const [selectedPermissionScopes, setSelectedPermissionScopes] = useState<PermissionOverrideScope[]>([]);
-  const [selectedScopeUserIds, setSelectedScopeUserIds] = useState<number[]>([]);
 
   const { data: scopeUsers = [], isLoading: isScopeUsersLoading } = useUsers(
     {},
@@ -162,22 +156,6 @@ export function UserPermissionSection({
     }
     return new Set(roleTemplatePermissionCodeMap.get(normalizedSelectedPermissionRole) ?? []);
   }, [canViewRoleTemplate, normalizedSelectedPermissionRole, roleTemplatePermissionCodeMap]);
-
-  const { getPermissionState, handlePermissionToggle, isPermissionSaving } = useUserPermissionOverrideState({
-    userId,
-    canManageOverride: canManageUserAuthorization,
-    normalizedSelectedPermissionRole,
-    selectedRoleDefaultScopeTypes,
-    selectedPermissionScopes,
-    selectedScopeUserIds,
-    roleTemplatePermissionCodes,
-    userOverrides: userPermissionOverrides,
-    isScopeAwarePermission: (permissionCode) => scopeAwarePermissionCodeSet.has(permissionCode),
-    createOverride: createUserOverride.mutateAsync,
-    revokeOverride: revokeUserOverride.mutateAsync,
-    refreshUser,
-    refetchUserOverrides,
-  });
   const activePermissionModule = useMemo(() => {
     if (selectedPermissionModule && permissionModules.includes(selectedPermissionModule)) {
       return selectedPermissionModule;
@@ -194,6 +172,8 @@ export function UserPermissionSection({
   );
 
   const {
+    selectedPermissionScopes,
+    selectedScopeUserIds,
     scopeUserSearch,
     showScopeAdjustPanel,
     scopeUserFilter,
@@ -221,14 +201,24 @@ export function UserPermissionSection({
     normalizedSelectedPermissionRole,
     selectedRoleDefaultScopeTypes,
     scopePermissionCode: scopePoolPermissionCode,
-    shouldLoadUserOverrides,
-    isLoadingUserOverrides,
     scopeUsers,
     userOverrides: userPermissionOverrides,
+  });
+
+  const { getPermissionState, handlePermissionToggle, isPermissionSaving } = useUserPermissionOverrideState({
+    userId,
+    canManageOverride: canManageUserAuthorization,
+    normalizedSelectedPermissionRole,
+    selectedRoleDefaultScopeTypes,
     selectedPermissionScopes,
-    setSelectedPermissionScopes,
     selectedScopeUserIds,
-    setSelectedScopeUserIds,
+    roleTemplatePermissionCodes,
+    userOverrides: userPermissionOverrides,
+    isScopeAwarePermission: (permissionCode) => scopeAwarePermissionCodeSet.has(permissionCode),
+    createOverride: createUserOverride.mutateAsync,
+    revokeOverride: revokeUserOverride.mutateAsync,
+    refreshUser,
+    refetchUserOverrides,
   });
 
   useEffect(() => {

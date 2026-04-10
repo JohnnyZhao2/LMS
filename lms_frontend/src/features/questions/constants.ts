@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 
 type QuestionTypePresentation = {
   value: QuestionType;

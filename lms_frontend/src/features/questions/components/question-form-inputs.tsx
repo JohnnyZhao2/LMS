@@ -17,7 +17,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { QuestionType } from '@/types/api';
+import type { QuestionType } from '@/types/common';
 import { SortableOptionItem } from './sortable-option-item';
 
 /* ─────────────────────────────────────────────

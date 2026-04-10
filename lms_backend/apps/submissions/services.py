@@ -7,11 +7,10 @@ Provides business logic for:
 This service layer separates business logic from Views and Serializers,
 improving code reusability and testability.
 """
-from decimal import Decimal
 from typing import Any, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet
 from django.utils import timezone
 
 from apps.quizzes.models import Quiz
@@ -22,6 +21,7 @@ from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import Answer, Submission
+from .scoring import calculate_submission_obtained_score, refresh_assignment_score
 
 
 class SubmissionService(BaseService):
@@ -313,12 +313,11 @@ class SubmissionService(BaseService):
         target_type='quiz',
         target_title_template='{quiz_title}',
     )
-    def submit(self, submission: Submission, is_practice: bool = True) -> Submission:
+    def submit(self, submission: Submission) -> Submission:
         """
-        Submit a quiz/exam.
+        Submit a submission.
         Args:
             submission: The submission to submit
-            is_practice: Whether this is a practice (affects status)
         Returns:
             Updated Submission instance
         Raises:
@@ -366,18 +365,11 @@ class SubmissionService(BaseService):
 
     def _calculate_score(self, submission: Submission) -> None:
         """计算当前得分"""
-        total_score = Answer.objects.filter(
-            submission_id=submission.id
-        ).aggregate(total=Sum('obtained_score'))['total'] or Decimal('0')
-        submission.obtained_score = total_score
+        submission.obtained_score = calculate_submission_obtained_score(submission)
 
     def _update_task_assignment(self, submission: Submission) -> None:
         """更新任务分配的成绩"""
-        assignment = submission.task_assignment
-        # 更新成绩（取最高分）
-        if assignment.score is None or submission.obtained_score > assignment.score:
-            assignment.score = submission.obtained_score
-            assignment.save(update_fields=['score'])
+        refresh_assignment_score(submission.task_assignment, Submission)
 
     def _check_task_completion(self, submission: Submission) -> None:
         """

@@ -2,7 +2,8 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString, buildPaginationParams } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { KnowledgeListItem, KnowledgeDetail, PaginatedResponse } from '@/types/api';
+import type { PaginatedResponse } from '@/types/common';
+import type { KnowledgeListItem, KnowledgeDetail } from '@/types/knowledge';
 
 interface GetKnowledgeListParams {
   space_tag_id?: number;

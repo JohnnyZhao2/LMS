@@ -1493,7 +1493,7 @@ class TestSubmissionApiContracts:
 
     def test_exam_result_response_is_wrapped(self, api_client, student_user, submitted_exam_submission):
         api_client.force_authenticate(user=student_user)
-        response = api_client.get(f'/api/submissions/exam/{submitted_exam_submission.id}/result/')
+        response = api_client.get(f'/api/submissions/{submitted_exam_submission.id}/result/')
 
         assert response.status_code == 200
         assert response.data['code'] == 'SUCCESS'
@@ -1534,7 +1534,6 @@ class TestTaskAnalyticsApiContracts:
         api_client.force_authenticate(user=mentor)
         response = api_client.get(
             f'/api/tasks/{task.id}/analytics/',
-            HTTP_X_CURRENT_ROLE='MENTOR',
         )
 
         assert response.status_code == 200
@@ -1551,7 +1550,6 @@ class TestTaskAnalyticsApiContracts:
         api_client.force_authenticate(user=mentor)
         response = api_client.get(
             f'/api/tasks/{task.id}/student-executions/',
-            HTTP_X_CURRENT_ROLE='MENTOR',
         )
 
         assert response.status_code == 200
@@ -1585,7 +1583,6 @@ class TestGradingApiContracts:
         api_client.force_authenticate(user=mentor)
         response = api_client.get(
             f'/api/grading/tasks/{task.id}/questions/',
-            HTTP_X_CURRENT_ROLE='MENTOR',
         )
 
         assert response.status_code == 400
@@ -1599,7 +1596,6 @@ class TestGradingApiContracts:
         api_client.force_authenticate(user=mentor)
         response = api_client.get(
             f'/api/grading/tasks/{task.id}/answers/?quiz_id=1&question_id=bad',
-            HTTP_X_CURRENT_ROLE='MENTOR',
         )
 
         assert response.status_code == 400

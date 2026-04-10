@@ -13,10 +13,10 @@ from django.db import transaction
 from django.utils.html import strip_tags
 from django.utils.html import escape
 
-from apps.tags.validators import (
-    assign_scoped_tags,
-    assign_space_tag,
-    get_scoped_tag_ids_or_error,
+from apps.tags.resource_sync import (
+    apply_resource_tag_changes,
+    build_resource_update_plan,
+    pop_resource_tag_payload,
 )
 from core.base_service import BaseService
 from core.decorators import log_content_action
@@ -28,7 +28,7 @@ from core.versioning import (
 )
 
 from .models import Knowledge
-from .selectors import get_knowledge_by_id, get_knowledge_queryset
+from .selectors import get_knowledge_by_id
 
 
 class KnowledgeService(BaseService):
@@ -60,23 +60,6 @@ class KnowledgeService(BaseService):
         self.check_published_resource_access(knowledge, resource_name='知识文档')
         return knowledge
 
-    def get_all_with_filters(
-        self,
-        filters: dict = None,
-        search: str = None,
-        ordering: str = '-updated_at'
-    ):
-        """
-        获取所有知识文档（只返回当前版本）
-        Args:
-            filters: 过滤条件
-            search: 搜索关键词
-            ordering: 排序字段
-        Returns:
-            知识文档列表
-        """
-        return get_knowledge_queryset(filters=filters, search=search, ordering=ordering)
-
     @transaction.atomic
     @log_content_action('knowledge', 'create', 'v{version_number}')
     def create(self, data: dict) -> Knowledge:
@@ -95,14 +78,17 @@ class KnowledgeService(BaseService):
         data['created_by'] = self.user
         data['updated_by'] = self.user
         initialize_new_resource_version(data)
-        # 提取标签数据
-        space_tag_id = data.pop('space_tag_id', None)
-        tag_ids = data.pop('tag_ids', [])
+        tag_payload = pop_resource_tag_payload(data, scope='knowledge')
         # 3. 创建知识
         knowledge = Knowledge.objects.create(**data)
         # 4. 设置标签
-        assign_space_tag(knowledge, space_tag_id)
-        assign_scoped_tags(knowledge, tag_ids, scope='knowledge')
+        apply_resource_tag_changes(
+            knowledge,
+            space_tag_id=tag_payload.space_tag_id,
+            tag_ids=tag_payload.tag_ids,
+            space_tag_provided=tag_payload.space_tag_provided,
+            tag_ids_provided=True,
+        )
         return knowledge
 
     @transaction.atomic
@@ -132,49 +118,37 @@ class KnowledgeService(BaseService):
             data=data,
             fallback_content=knowledge.content,
         )
-        space_tag_provided = 'space_tag_id' in data
-        tag_ids_provided = 'tag_ids' in data
-        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else None
-        tag_ids = data.pop('tag_ids', None) if tag_ids_provided else None
         current_tag_ids = list(knowledge.tags.values_list('id', flat=True))
-
-        changed_fields = {
-            key: value
-            for key, value in data.items()
-            if getattr(knowledge, key, None) != value
-        }
-        normalized_tag_ids = (
-            get_scoped_tag_ids_or_error(tag_ids or [], scope='knowledge')
-            if tag_ids_provided
-            else current_tag_ids
+        update_plan = build_resource_update_plan(
+            knowledge,
+            data,
+            scope='knowledge',
+            current_tag_ids=current_tag_ids,
         )
-        space_changed = space_tag_provided and space_tag_id != knowledge.space_tag_id
-        tags_changed = (
-            tag_ids_provided
-            and set(normalized_tag_ids) != set(current_tag_ids)
-        )
-        has_changes = bool(changed_fields or space_changed or tags_changed)
-        if not has_changes:
+        if not update_plan.has_changes:
             return knowledge
 
         # 当前版本且被任务引用时，分叉新版本；否则原地更新
         if knowledge.is_current and self._is_referenced_by_task(knowledge.id):
-            new_version_data = dict(changed_fields)
-            if space_tag_provided:
-                new_version_data['space_tag_id'] = space_tag_id
-            if tag_ids_provided:
-                new_version_data['tag_ids'] = normalized_tag_ids
+            new_version_data = dict(update_plan.changed_fields)
+            if update_plan.space_tag_provided:
+                new_version_data['space_tag_id'] = update_plan.space_tag_id
+            if update_plan.tag_ids_provided:
+                new_version_data['tag_ids'] = update_plan.tag_ids
             return self._create_new_version(knowledge, new_version_data)
 
+        changed_fields = dict(update_plan.changed_fields)
         changed_fields['updated_by'] = self.user
         for key, value in changed_fields.items():
             setattr(knowledge, key, value)
         knowledge.save(update_fields=list(changed_fields.keys()))
-
-        if space_changed:
-            assign_space_tag(knowledge, space_tag_id, clear_when_none=True)
-        if tags_changed:
-            knowledge.tags.set(normalized_tag_ids)
+        apply_resource_tag_changes(
+            knowledge,
+            space_tag_id=update_plan.space_tag_id,
+            tag_ids=update_plan.tag_ids,
+            space_tag_provided=update_plan.space_changed,
+            tag_ids_provided=update_plan.tags_changed,
+        )
         return knowledge
 
     @transaction.atomic
@@ -240,19 +214,21 @@ class KnowledgeService(BaseService):
         data: dict
     ) -> Knowledge:
         """基于当前版本创建新版本"""
-        # 提取标签数据
-        space_tag_provided = 'space_tag_id' in data
-        tag_ids_provided = 'tag_ids' in data
-        space_tag_id = data.pop('space_tag_id', None) if space_tag_provided else source.space_tag_id
-        tag_ids = (
-            data.pop('tag_ids', None)
-            if tag_ids_provided
-            else list(source.tags.values_list('id', flat=True))
+        tag_payload = pop_resource_tag_payload(
+            data,
+            scope='knowledge',
+            default_space_tag_id=source.space_tag_id,
+            default_tag_ids=list(source.tags.values_list('id', flat=True)),
         )
 
         def finalize_new_version(new_version: Knowledge) -> None:
-            assign_space_tag(new_version, space_tag_id, clear_when_none=True)
-            assign_scoped_tags(new_version, tag_ids, scope='knowledge')
+            apply_resource_tag_changes(
+                new_version,
+                space_tag_id=tag_payload.space_tag_id,
+                tag_ids=tag_payload.tag_ids,
+                space_tag_provided=True,
+                tag_ids_provided=True,
+            )
 
         return derive_resource_version(
             source,

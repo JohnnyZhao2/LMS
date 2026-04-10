@@ -1,6 +1,6 @@
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { cn } from '@/lib/utils';
-import type { PermissionCatalogItem } from '@/types/api';
+import type { PermissionCatalogItem } from '@/types/authorization';
 
 import type { PermissionState } from './user-permission-section.types';
 
