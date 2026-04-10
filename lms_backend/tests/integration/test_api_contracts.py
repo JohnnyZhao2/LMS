@@ -1284,6 +1284,52 @@ class TestAssignableUserApiContracts:
 
 
 @pytest.mark.django_db
+class TestTaskResourceOptionApiContracts:
+    def test_task_resource_options_response_is_wrapped(self, api_client, mentor_user, sample_knowledge, sample_quiz):
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['message'] == 'success'
+        assert 'results' in response.data['data']
+        result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
+        assert ('DOCUMENT', sample_knowledge.id) in result_ids
+        assert ('QUIZ', sample_quiz.id) in result_ids
+
+    def test_task_resource_options_hide_historical_versions(self, api_client, mentor_user, sample_knowledge, sample_quiz):
+        historical_knowledge = Knowledge.objects.create(
+            title='历史知识版本',
+            content='历史知识正文',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            resource_uuid=sample_knowledge.resource_uuid,
+            version_number=2,
+            is_current=False,
+            space_tag=sample_knowledge.space_tag,
+        )
+        historical_quiz = Quiz.objects.create(
+            title='历史试卷版本',
+            quiz_type='PRACTICE',
+            created_by=mentor_user,
+            updated_by=mentor_user,
+            resource_uuid=sample_quiz.resource_uuid,
+            version_number=2,
+            is_current=False,
+        )
+
+        api_client.force_authenticate(user=mentor_user)
+        response = api_client.get('/api/tasks/resource-options/?resource_type=ALL&page=1&page_size=10')
+
+        assert response.status_code == 200, response.data
+        result_ids = {(item['resource_type'], item['id']) for item in response.data['data']['results']}
+        assert ('DOCUMENT', sample_knowledge.id) in result_ids
+        assert ('QUIZ', sample_quiz.id) in result_ids
+        assert ('DOCUMENT', historical_knowledge.id) not in result_ids
+        assert ('QUIZ', historical_quiz.id) not in result_ids
+
+
+@pytest.mark.django_db
 class TestSpotCheckApiContracts:
     def test_spot_check_create_response_is_wrapped(self, api_client, mentor_user, student_user):
         api_client.force_authenticate(user=mentor_user)

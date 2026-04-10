@@ -158,6 +158,54 @@ class AuthorizationEngine(BaseService):
             message=decision.message or error_message or f'缺少权限: {permission_code}',
         )
 
+    def authorize_any(
+        self,
+        permission_codes: Sequence[str],
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        if not permission_codes:
+            raise ValueError('permission_codes 不能为空')
+
+        for permission_code in permission_codes:
+            decision = self.authorize(
+                permission_code,
+                resource=resource,
+                context=context,
+                error_message=error_message,
+            )
+            if decision.allowed:
+                return decision
+
+        return AuthorizationDecision.deny(
+            permission_codes[0],
+            message=error_message or f"缺少任一权限: {', '.join(permission_codes)}",
+            reason='permission_denied',
+        )
+
+    def enforce_any(
+        self,
+        permission_codes: Sequence[str],
+        *,
+        resource: Optional[Any] = None,
+        context: Optional[dict[str, Any]] = None,
+        error_message: Optional[str] = None,
+    ) -> AuthorizationDecision:
+        decision = self.authorize_any(
+            permission_codes,
+            resource=resource,
+            context=context,
+            error_message=error_message,
+        )
+        if decision.allowed:
+            return decision
+        raise BusinessError(
+            code=ErrorCodes.PERMISSION_DENIED,
+            message=decision.message or error_message or '缺少权限',
+        )
+
     def scope_filter(
         self,
         permission_code: str,
@@ -375,6 +423,38 @@ def enforce(
 ) -> AuthorizationDecision:
     return AuthorizationEngine(request).enforce(
         permission_code,
+        resource=resource,
+        context=context,
+        error_message=error_message,
+    )
+
+
+def authorize_any(
+    permission_codes: Sequence[str],
+    request,
+    *,
+    resource: Optional[Any] = None,
+    context: Optional[dict[str, Any]] = None,
+    error_message: Optional[str] = None,
+) -> AuthorizationDecision:
+    return AuthorizationEngine(request).authorize_any(
+        permission_codes,
+        resource=resource,
+        context=context,
+        error_message=error_message,
+    )
+
+
+def enforce_any(
+    permission_codes: Sequence[str],
+    request,
+    *,
+    resource: Optional[Any] = None,
+    context: Optional[dict[str, Any]] = None,
+    error_message: Optional[str] = None,
+) -> AuthorizationDecision:
+    return AuthorizationEngine(request).enforce_any(
+        permission_codes,
         resource=resource,
         context=context,
         error_message=error_message,

@@ -12,7 +12,6 @@ from django.db.models import QuerySet
 
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
-from apps.submissions.models import Submission
 from apps.authorization.engine import authorize, enforce, scope_filter
 from apps.authorization.roles import SUPER_ADMIN_ROLE
 from apps.users.models import User
@@ -21,7 +20,6 @@ from core.decorators import log_operation
 from core.exceptions import BusinessError, ErrorCodes
 
 from .models import (
-    KnowledgeLearningProgress,
     Task,
     TaskAssignment,
     TaskKnowledge,
@@ -105,23 +103,6 @@ class TaskService(BaseService):
         """
         enforce('task.view', self.request, resource=task, error_message='无权访问此任务')
         return True
-
-    @staticmethod
-    def has_student_progress(task: Task) -> bool:
-        """
-        检查任务是否有学员学习进度
-        Args:
-            task: The task to check
-        Returns:
-            True if any student has started working on the task
-        """
-        has_knowledge_progress = KnowledgeLearningProgress.objects.filter(
-            assignment__task_id=task.id,
-            is_completed=True
-        ).exists()
-        if has_knowledge_progress:
-            return True
-        return Submission.objects.filter(task_assignment__task_id=task.id).exists()
 
     def check_task_edit_permission(self, task: Task, permission_code: str, error_message: str) -> bool:
         """
@@ -241,7 +222,7 @@ class TaskService(BaseService):
                 id__in=resource_ids,
                 is_deleted=False,
                 is_current=True
-            ).select_related('created_by', 'updated_by').prefetch_related('tags')
+            )
         else:
             queryset = resource_model.objects.filter(
                 id__in=resource_ids,
@@ -328,7 +309,7 @@ class TaskService(BaseService):
         Raises:
             BusinessError: If editing restricted fields with student progress
         """
-        has_progress = self.has_student_progress(task)
+        has_progress = task.has_student_progress
         if has_progress:
             if knowledge_ids is not None:
                 raise BusinessError(

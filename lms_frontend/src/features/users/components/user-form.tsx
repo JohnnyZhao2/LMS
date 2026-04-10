@@ -26,7 +26,7 @@ import {
 import { UserAvatar } from '@/components/common/user-avatar';
 import { cn } from '@/lib/utils';
 import { ROLE_COLORS } from '@/lib/role-config';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 
 import { useCreateUser, useUpdateUser, useAssignRoles, useAssignMentor } from '../api/manage-users';
 import { useUserDetail, useMentors, useDepartments, useRoles } from '../api/get-users';

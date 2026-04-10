@@ -41,10 +41,7 @@ export interface SwitchRoleRequest {
 /**
  * 切换角色响应
  */
-export interface SwitchRoleResponse extends AuthSessionPayload {
-  access_token: string;
-  refresh_token: string;
-}
+export type SwitchRoleResponse = LoginResponse;
 
 /**
  * 获取当前用户信息响应

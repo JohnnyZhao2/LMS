@@ -1,9 +1,8 @@
 import React from 'react';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { cn } from '@/lib/utils';
-import { useParams } from 'react-router-dom';
-import { getWorkspacePath, normalizeRoleCode } from '@/app/workspace-config';
-import { tokenStorage } from '@/lib/token-storage';
+import { getWorkspaceHome } from '@/app/workspace-config';
+import { useCurrentRole } from '@/hooks/use-current-role';
 
 export interface PageHeaderProps {
   /** 页面标题 */
@@ -27,12 +26,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   extra,
   className = '',
 }) => {
-  const { role: urlRole } = useParams<{ role: string }>();
-
-  const getDashboardPath = () => {
-    const role = normalizeRoleCode(urlRole) ?? tokenStorage.getCurrentRole();
-    return getWorkspacePath(role, 'dashboard') ?? '/dashboard';
-  };
+  const currentRole = useCurrentRole();
+  const dashboardPath = getWorkspaceHome(currentRole) ?? '/dashboard';
 
   return (
     <div className={cn(
@@ -44,7 +39,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {breadcrumbs && breadcrumbs.length > 0 && (
           <BreadcrumbNav
             items={breadcrumbs}
-            homePath={getDashboardPath()}
+            homePath={dashboardPath}
             className="mb-1"
           />
         )}

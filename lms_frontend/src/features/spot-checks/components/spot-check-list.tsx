@@ -7,7 +7,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import type { SpotCheck, SpotCheckStudent } from '@/types/api';
 import { showApiError } from '@/utils/error-handler';

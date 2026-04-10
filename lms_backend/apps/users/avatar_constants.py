@@ -1,8 +1,5 @@
 from core.exceptions import BusinessError, ErrorCodes
 
-
-DEFAULT_AVATAR_KEY = 'avatar-01'
-
 # 默认头像 (avatar-01, avatar-02)
 ORIGINAL_AVATAR_KEYS = (
     'avatar-01',
@@ -37,9 +34,10 @@ AVAILABLE_AVATAR_KEYS = (
 
 
 def validate_avatar_key(avatar_key: str) -> str:
-    if avatar_key not in AVAILABLE_AVATAR_KEYS:
+    normalized_avatar_key = avatar_key.strip()
+    if normalized_avatar_key not in AVAILABLE_AVATAR_KEYS:
         raise BusinessError(
             code=ErrorCodes.VALIDATION_ERROR,
             message='头像标识无效',
         )
-    return avatar_key
+    return normalized_avatar_key

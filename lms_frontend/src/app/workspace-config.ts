@@ -89,6 +89,31 @@ export const getRolePathPrefix = (
   return normalizedRole ? `/${normalizedRole.toLowerCase()}` : '';
 };
 
+export const resolveWorkspaceRole = (
+  primaryRole: string | RoleCode | null | undefined,
+  fallbackRole?: string | RoleCode | null,
+  availableRoles: readonly RoleCode[] = [],
+): RoleCode | null => {
+  const resolvedPrimaryRole = normalizeRoleCode(primaryRole);
+  if (resolvedPrimaryRole) {
+    return resolvedPrimaryRole;
+  }
+
+  const resolvedFallbackRole = normalizeRoleCode(fallbackRole);
+  if (resolvedFallbackRole) {
+    return resolvedFallbackRole;
+  }
+
+  for (const role of availableRoles) {
+    const normalizedRole = normalizeRoleCode(role);
+    if (normalizedRole) {
+      return normalizedRole;
+    }
+  }
+
+  return null;
+};
+
 export const getWorkspacePath = (
   role: string | RoleCode | null | undefined,
   path: string = 'dashboard',

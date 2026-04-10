@@ -1,7 +1,6 @@
 """Authorization models."""
 
 from django.db import models
-from django.utils import timezone
 
 from apps.users.models import Role, User
 from core.mixins import TimestampMixin
@@ -124,14 +123,6 @@ class UserPermissionOverride(TimestampMixin, models.Model):
     def __str__(self):
         role = self.applies_to_role or 'ALL_ROLES'
         return f'{self.user_id}:{role}:{self.effect}:{self.permission.code}'
-
-    @property
-    def is_effective(self) -> bool:
-        if not self.is_active or self.revoked_at is not None:
-            return False
-        if self.expires_at and self.expires_at <= timezone.now():
-            return False
-        return True
 
 
 class PermissionScopeRule(TimestampMixin, models.Model):

@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useNavigate, useParams, type NavigateOptions } from 'react-router-dom';
-import { tokenStorage } from '@/lib/token-storage';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import {
   getRoleFromPathname,
   getWorkspacePath,
-  normalizeRoleCode,
+  resolveWorkspaceRole,
 } from '@/app/workspace-config';
 
 /**
@@ -14,6 +14,13 @@ import {
 export function useRoleNavigate() {
   const navigate = useNavigate();
   const { role: urlRole } = useParams<{ role: string }>();
+  const { currentRole, availableRoles } = useAuth();
+
+  const resolvedRole = resolveWorkspaceRole(
+    urlRole,
+    currentRole,
+    availableRoles.map((role) => role.code),
+  );
 
   const roleNavigate = useCallback(
     (path: string, options?: NavigateOptions) => {
@@ -23,20 +30,18 @@ export function useRoleNavigate() {
         return;
       }
 
-      const targetRole = normalizeRoleCode(urlRole) ?? tokenStorage.getCurrentRole();
-      const nextPath = getWorkspacePath(targetRole, path);
+      const nextPath = getWorkspacePath(resolvedRole, path);
       navigate(nextPath ?? path, options);
     },
-    [navigate, urlRole]
+    [navigate, resolvedRole]
   );
 
   // 获取带角色前缀的路径（不导航）
   const getRolePath = useCallback(
     (path: string): string => {
-      const targetRole = normalizeRoleCode(urlRole) ?? tokenStorage.getCurrentRole();
-      return getWorkspacePath(targetRole, path) ?? path;
+      return getWorkspacePath(resolvedRole, path) ?? path;
     },
-    [urlRole]
+    [resolvedRole]
   );
 
   return { roleNavigate, getRolePath };

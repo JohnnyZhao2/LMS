@@ -25,7 +25,7 @@ import {
   syncEditableQuestionItem,
 } from '@/features/questions/components/question-editor-helpers';
 import { useSpaceTypeTags } from '@/features/knowledge/api/get-tags';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { apiClient } from '@/lib/api-client';
 import { cn } from '@/lib/utils';

@@ -30,7 +30,8 @@ import { ActionDropdown } from '@/components/common/action-dropdown';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
+import { useCurrentRole } from '@/hooks/use-current-role';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { cn } from '@/lib/utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
@@ -38,7 +39,6 @@ import type { LearningTaskQuizItem, TaskQuiz } from '@/types/api';
 
 const assignmentStatusLabelMap: Record<string, string> = {
   IN_PROGRESS: '进行中',
-  PENDING_EXAM: '待考试',
   COMPLETED: '已完成',
   OVERDUE: '已逾期',
 };
@@ -54,17 +54,17 @@ interface KnowledgeListViewItem {
 }
 
 export const TaskDetail: React.FC = () => {
-  const { id, role } = useParams<{ id: string; role: string }>();
+  const { id } = useParams<{ id: string; role: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { roleNavigate, getRolePath } = useRoleNavigate();
-  const { currentRole, user, isLoading: authLoading } = useAuth();
+  const currentRole = useCurrentRole();
+  const { user, isLoading: authLoading } = useAuth();
 
   const searchParams = new URLSearchParams(location.search);
   const fromDashboard = searchParams.get('from') === 'dashboard';
 
-  const effectiveRole = (role?.toUpperCase() as typeof currentRole) || currentRole;
-  const isStudent = !authLoading && effectiveRole === 'STUDENT';
+  const isStudent = !authLoading && currentRole === 'STUDENT';
 
   const taskId = Number(id);
   const isValidTaskId = Number.isFinite(taskId) && taskId > 0;

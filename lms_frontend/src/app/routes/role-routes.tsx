@@ -6,7 +6,7 @@
 import { Navigate, Route } from 'react-router-dom';
 import { lazy } from 'react';
 import { ProtectedRoute } from '@/components/protected-route';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { ROUTES } from '@/config/routes';
 import {
   getAccessibleWorkspaceHome,

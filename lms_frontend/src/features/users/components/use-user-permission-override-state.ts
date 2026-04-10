@@ -21,8 +21,7 @@ import type { PermissionState } from './user-permission-section.types';
 
 interface UseUserPermissionOverrideStateParams {
   userId?: number;
-  canCreateOverride: boolean;
-  canRevokeOverride: boolean;
+  canManageOverride: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
   selectedPermissionScopes: PermissionOverrideScope[];
@@ -70,8 +69,7 @@ function getToggleBlockedReason({
   hasSelectedExplicitUsers,
   needsCreate,
   needsRevoke,
-  canCreateOverride,
-  canRevokeOverride,
+  canManageOverride,
 }: {
   nextChecked: boolean;
   isScopeAware: boolean;
@@ -79,8 +77,7 @@ function getToggleBlockedReason({
   hasSelectedExplicitUsers: boolean;
   needsCreate: boolean;
   needsRevoke: boolean;
-  canCreateOverride: boolean;
-  canRevokeOverride: boolean;
+  canManageOverride: boolean;
 }): string | null {
   if (isScopeAware && !hasSelectedScopes) {
     return '请先选择扩展范围';
@@ -88,10 +85,10 @@ function getToggleBlockedReason({
   if (isScopeAware && !hasSelectedExplicitUsers) {
     return '请选择至少一个指定用户';
   }
-  if (needsRevoke && !canRevokeOverride) {
+  if (needsRevoke && !canManageOverride) {
     return nextChecked ? '当前账号没有撤销权限，无法启用该权限' : '当前账号没有撤销权限，无法禁用该权限';
   }
-  if (needsCreate && !canCreateOverride) {
+  if (needsCreate && !canManageOverride) {
     return nextChecked ? '当前账号没有创建权限，无法启用该权限' : '当前账号没有创建权限，无法禁用该权限';
   }
   return null;
@@ -99,8 +96,7 @@ function getToggleBlockedReason({
 
 export const useUserPermissionOverrideState = ({
   userId,
-  canCreateOverride,
-  canRevokeOverride,
+  canManageOverride,
   normalizedSelectedPermissionRole,
   selectedRoleDefaultScopeTypes,
   selectedPermissionScopes,
@@ -167,8 +163,7 @@ export const useUserPermissionOverrideState = ({
           hasSelectedExplicitUsers,
           needsCreate: needsCreateToEnable,
           needsRevoke: needsRevokeToEnable,
-          canCreateOverride,
-          canRevokeOverride,
+          canManageOverride,
         }),
         disableBlockedReason: getToggleBlockedReason({
           nextChecked: false,
@@ -177,8 +172,7 @@ export const useUserPermissionOverrideState = ({
           hasSelectedExplicitUsers,
           needsCreate: needsCreateToDisable,
           needsRevoke: needsRevokeToDisable,
-          canCreateOverride,
-          canRevokeOverride,
+          canManageOverride,
         }),
         fromTemplate,
         allowOverrides,
@@ -272,8 +266,7 @@ export const useUserPermissionOverrideState = ({
         hasSelectedExplicitUsers,
         needsCreate: needsCreateToEnable,
         needsRevoke: needsRevokeToEnable,
-        canCreateOverride,
-        canRevokeOverride,
+        canManageOverride,
       }),
       disableBlockedReason: getToggleBlockedReason({
         nextChecked: false,
@@ -282,8 +275,7 @@ export const useUserPermissionOverrideState = ({
         hasSelectedExplicitUsers,
         needsCreate: needsCreateToDisable,
         needsRevoke: needsRevokeToDisable,
-        canCreateOverride,
-        canRevokeOverride,
+        canManageOverride,
       }),
       fromTemplate,
       allowOverrides,
@@ -300,8 +292,7 @@ export const useUserPermissionOverrideState = ({
   }, [
     activeScopeAllowOverrides,
     activeScopeDenyOverrides,
-    canCreateOverride,
-    canRevokeOverride,
+    canManageOverride,
     isScopeAwarePermission,
     roleTemplatePermissionCodes,
     selectedPermissionScopes,

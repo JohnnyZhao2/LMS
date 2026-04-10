@@ -36,6 +36,7 @@ interface TaskResourceLibraryPanelProps {
   totalResourceCount: number;
   pageSize: number;
   safeCurrentPage: number;
+  showPagination: boolean;
   onPageChange: (page: number) => void;
 }
 
@@ -52,6 +53,7 @@ export function TaskResourceLibraryPanel({
   totalResourceCount,
   pageSize,
   safeCurrentPage,
+  showPagination,
   onPageChange,
 }: TaskResourceLibraryPanelProps) {
   return (
@@ -211,7 +213,7 @@ export function TaskResourceLibraryPanel({
           </ScrollContainer>
         </div>
 
-        {totalResourceCount > pageSize ? (
+        {showPagination && totalResourceCount > pageSize ? (
           <div className="border-t border-border px-5 py-4">
             <Pagination
               current={safeCurrentPage}

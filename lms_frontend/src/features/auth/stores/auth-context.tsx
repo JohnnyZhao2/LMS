@@ -1,14 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiClient } from '@/lib/api-client';
 import { tokenStorage } from '@/lib/token-storage';
-import type { AuthSessionPayload, CapabilityMap, LoginRequest, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
-import { loginApi } from '../api/login';
-import { logoutApi } from '../api/logout';
-import { switchRoleApi } from '../api/switch-role';
-import { meApi } from '../api/get-me';
+import type { AuthSessionPayload, CapabilityMap, LoginRequest, LoginResponse, Role, RoleCode, SwitchRoleResponse, UserInfo } from '@/types/api';
 import { oidcApi } from '../api/oidc';
 
-export interface AuthState {
+interface AuthState {
   user: UserInfo | null;
   currentRole: RoleCode | null;
   availableRoles: Role[];
@@ -53,20 +50,14 @@ const buildLoggedOutState = (): AuthState => ({
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>(() => {
-    const user = tokenStorage.getUserInfo();
-    const currentRole = tokenStorage.getCurrentRole();
-    const availableRoles = tokenStorage.getAvailableRoles();
-    const capabilities = tokenStorage.getCapabilities();
     const hasTokens = tokenStorage.hasTokens();
 
-    const isAuthenticated = hasTokens && !!user;
-
     return {
-      user,
-      currentRole,
-      availableRoles,
-      capabilities,
-      isAuthenticated,
+      user: null,
+      currentRole: null,
+      availableRoles: [],
+      capabilities: {},
+      isAuthenticated: false,
       isLoading: hasTokens,
       isSwitching: false,
     };
@@ -79,8 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const applyAuthSession = useCallback(
     (session: AuthSessionPayload, options?: { isSwitching?: boolean }) => {
-      tokenStorage.setAuthSession(session);
-
       setState((prev) => ({
         ...prev,
         user: session.user,
@@ -102,34 +91,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await meApi.getMe();
+      const response = await apiClient.get<AuthSessionPayload>('/auth/me/');
       applyAuthSession(response, { isSwitching: false });
     } catch {
       resetAuthState();
     }
   }, [applyAuthSession, resetAuthState]);
 
-  const login = useCallback(async (data: LoginRequest) => {
-    const response = await loginApi.login(data);
+  const completeLogin = useCallback((response: LoginResponse) => {
     tokenStorage.setTokens(response.access_token, response.refresh_token);
     applyAuthSession(response, { isSwitching: false });
     return response.current_role;
   }, [applyAuthSession]);
 
+  const login = useCallback(async (data: LoginRequest) => {
+    const response = await apiClient.post<LoginResponse>('/auth/login/', data, { skipAuth: true });
+    return completeLogin(response);
+  }, [completeLogin]);
 
   const loginByOidcCode = useCallback(async (code: string) => {
     const response = await oidcApi.codeLogin({ code });
-    tokenStorage.setTokens(response.access_token, response.refresh_token);
-    applyAuthSession(response, { isSwitching: false });
-    return response.current_role;
-  }, [applyAuthSession]);
+    return completeLogin(response);
+  }, [completeLogin]);
 
   const logout = useCallback(async () => {
     const refreshToken = tokenStorage.getRefreshToken();
     if (refreshToken) {
       try {
-        await logoutApi.logout({ refresh_token: refreshToken });
-      } catch {}
+        await apiClient.post('/auth/logout/', { refresh_token: refreshToken });
+      } catch {
+        void 0;
+      }
     }
     resetAuthState();
   }, [resetAuthState]);
@@ -143,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const request = {
             roleCode,
             startedAt: Date.now(),
-            promise: switchRoleApi.switchRole({ role_code: roleCode }),
+            promise: apiClient.post<SwitchRoleResponse>('/auth/switch-role/', { role_code: roleCode }),
           };
           activeRoleSwitchRequest = request;
           return request;

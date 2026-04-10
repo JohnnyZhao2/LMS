@@ -50,18 +50,8 @@ class StudentTaskService(BaseService):
             task__is_deleted=False
         ).first()
         self.validate_not_none(assignment, '任务不存在或未分配给您')
-        self._check_and_update_overdue(assignment)
+        assignment.check_and_update_overdue()
         return assignment
-
-    def _check_and_update_overdue(self, assignment: TaskAssignment) -> None:
-        """检查并更新任务分配的逾期状态"""
-        if assignment.status == 'COMPLETED':
-            return
-        current_time = timezone.now()
-        task_deadline = assignment.task.deadline
-        if current_time > task_deadline and assignment.status != 'OVERDUE':
-            assignment.status = 'OVERDUE'
-            assignment.save(update_fields=['status'])
 
     def ensure_knowledge_progress(self, assignment: TaskAssignment) -> None:
         """Ensure KnowledgeLearningProgress records exist for all task knowledge items."""

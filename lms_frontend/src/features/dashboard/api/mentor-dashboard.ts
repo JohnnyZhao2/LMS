@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import type { MentorDashboard } from '@/types/api';
 

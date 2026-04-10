@@ -28,7 +28,7 @@ def test_has_student_progress_no_progress():
     TaskAssignmentFactory(task=task)
 
     service = TaskService(_build_request())
-    result = service.has_student_progress(task)
+    result = task.has_student_progress
 
     assert result is False
 
@@ -46,7 +46,7 @@ def test_has_student_progress_with_knowledge_progress():
     )
 
     service = TaskService(_build_request())
-    result = service.has_student_progress(task)
+    result = task.has_student_progress
 
     assert result is True
 
@@ -59,7 +59,7 @@ def test_has_student_progress_with_quiz_submission():
     SubmissionFactory(task_assignment=assignment)
 
     service = TaskService(_build_request())
-    result = service.has_student_progress(task)
+    result = task.has_student_progress
 
     assert result is True
 

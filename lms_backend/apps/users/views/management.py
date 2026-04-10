@@ -7,17 +7,16 @@ Implements:
 - Mentor assignment
 - Reference data (mentors, departments, roles)
 """
+from typing import Union
+
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.authorization.engine import enforce, scope_filter
-from apps.users.models import User
+from apps.users.models import Department, Role, User
 from apps.users.selectors import (
     get_user_by_id,
-    list_departments,
-    list_mentors,
-    list_roles,
     list_users,
 )
 from apps.users.serializers import (
@@ -40,11 +39,14 @@ from core.query_params import parse_bool_query_param, parse_int_query_param
 from core.responses import created_response, list_response, no_content_response, success_response
 
 
-def enforce_user_permission(request, permission_code: str, error_message: str) -> None:
-    enforce(permission_code, request, error_message=error_message)
+USER_REFERENCE_PERMISSION_CODES = ['user.create', 'user.update', 'user.authorize', 'user.view']
 
 
-def enforce_any_user_permission(request, permission_codes: list[str], error_message: str) -> None:
+def enforce_user_permissions(request, permission_codes: Union[str, list[str]], error_message: str) -> None:
+    if isinstance(permission_codes, str):
+        enforce(permission_codes, request, error_message=error_message)
+        return
+
     for permission_code in permission_codes:
         try:
             enforce(permission_code, request, error_message=error_message)
@@ -78,7 +80,7 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        enforce_user_permission(request, 'user.view', '无权查看用户列表')
+        enforce_user_permissions(request, 'user.view', '无权查看用户列表')
         is_active_bool = parse_bool_query_param(
             request=request,
             name='is_active',
@@ -121,11 +123,11 @@ class UserListCreateView(APIView):
         tags=['用户管理']
     )
     def post(self, request):
-        enforce_user_permission(request, 'user.create', '只有管理员可以创建用户')
+        enforce_user_permissions(request, 'user.create', '只有管理员可以创建用户')
         serializer = UserCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes'):
-            enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
+            enforce_user_permissions(request, 'user.authorize', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return created_response(response_serializer.data)
@@ -154,7 +156,7 @@ class UserDetailView(APIView):
     )
     def get(self, request, pk):
         user = self.get_object(pk)
-        enforce_user_permission(request, 'user.view', '无权查看用户详情')
+        enforce_user_permissions(request, 'user.view', '无权查看用户详情')
         if not scope_filter(
             'user.view',
             request,
@@ -180,7 +182,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        enforce_user_permission(request, 'user.update', '只有管理员可以更新用户信息')
+        enforce_user_permissions(request, 'user.update', '只有管理员可以更新用户信息')
         user = self.get_object(pk)
         serializer = UserUpdateSerializer(
             user,
@@ -190,7 +192,7 @@ class UserDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data.get('role_codes') is not None:
-            enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
+            enforce_user_permissions(request, 'user.authorize', '只有管理员可以分配角色')
         user = serializer.save()
         response_serializer = UserDetailSerializer(user)
         return success_response(response_serializer.data)
@@ -207,7 +209,7 @@ class UserDetailView(APIView):
         tags=['用户管理']
     )
     def delete(self, request, pk):
-        enforce_user_permission(request, 'user.delete', '只有管理员可以删除用户')
+        enforce_user_permissions(request, 'user.delete', '只有管理员可以删除用户')
 
         service = UserManagementService(request)
         service.delete_user(pk)
@@ -256,7 +258,7 @@ class UserAvatarUpdateView(BaseAPIView):
         tags=['用户管理']
     )
     def patch(self, request, pk):
-        enforce_user_permission(request, 'user.avatar.update', '只有管理员可以修改其他用户头像')
+        enforce_user_permissions(request, 'user.avatar.update', '只有管理员可以修改其他用户头像')
 
         serializer = AvatarUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -281,7 +283,7 @@ class UserDeactivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.activate', '只有管理员可以停用用户')
+        enforce_user_permissions(request, 'user.activate', '只有管理员可以停用用户')
         user = self.service.deactivate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -303,7 +305,7 @@ class UserActivateView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.activate', '只有管理员可以启用用户')
+        enforce_user_permissions(request, 'user.activate', '只有管理员可以启用用户')
         user = self.service.activate_user(pk)
         serializer = UserDetailSerializer(user)
         return success_response(serializer.data)
@@ -326,7 +328,7 @@ class UserAssignRolesView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.authorize', '只有管理员可以分配角色')
+        enforce_user_permissions(request, 'user.authorize', '只有管理员可以分配角色')
         serializer = AssignRolesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_roles(
@@ -355,7 +357,7 @@ class UserAssignMentorView(BaseAPIView):
         tags=['用户管理']
     )
     def post(self, request, pk):
-        enforce_user_permission(request, 'user.update', '只有管理员可以指定导师')
+        enforce_user_permissions(request, 'user.update', '只有管理员可以指定导师')
         serializer = AssignMentorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = self.service.assign_mentor(
@@ -377,12 +379,15 @@ class MentorsListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        enforce_any_user_permission(
+        enforce_user_permissions(
             request,
-            ['user.create', 'user.update', 'user.authorize', 'user.view'],
+            USER_REFERENCE_PERMISSION_CODES,
             '无权查看导师列表',
         )
-        mentors = list_mentors()
+        mentors = User.objects.filter(
+            roles__code='MENTOR',
+            is_active=True,
+        ).distinct().order_by('username')
         serializer = MentorSerializer(mentors, many=True)
         return list_response(serializer.data)
 
@@ -400,12 +405,12 @@ class DepartmentsListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        enforce_any_user_permission(
+        enforce_user_permissions(
             request,
-            ['user.create', 'user.update', 'user.authorize', 'user.view'],
+            USER_REFERENCE_PERMISSION_CODES,
             '无权查看部门列表',
         )
-        departments = list_departments()
+        departments = Department.objects.order_by('code')
         serializer = DepartmentSerializer(departments, many=True)
         return list_response(serializer.data)
 
@@ -423,11 +428,11 @@ class RolesListView(APIView):
         tags=['用户管理']
     )
     def get(self, request):
-        enforce_any_user_permission(
+        enforce_user_permissions(
             request,
-            ['user.create', 'user.update', 'user.authorize', 'user.view'],
+            USER_REFERENCE_PERMISSION_CODES,
             '无权查看角色列表',
         )
-        roles = list_roles(exclude_student=True)
+        roles = Role.objects.exclude(code='STUDENT').order_by('code')
         serializer = RoleSerializer(roles, many=True)
         return list_response(serializer.data)

@@ -10,7 +10,7 @@ import { PageFillShell, PageSplit, PageWorkbench } from '@/components/ui/page-sh
 import { SearchInput, DESKTOP_SEARCH_INPUT_CLASSNAME } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Spinner } from '@/components/ui/spinner';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { ASSIGNABLE_ROLES, getRoleColor } from '@/lib/role-config';
 import { cn } from '@/lib/utils';
 import { showApiError } from '@/utils/error-handler';
@@ -269,5 +269,3 @@ export const UserAuthorizationPage: React.FC = () => {
     </PageFillShell>
   );
 };
-
-export default UserAuthorizationPage;

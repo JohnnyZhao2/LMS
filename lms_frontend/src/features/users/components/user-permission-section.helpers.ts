@@ -17,7 +17,7 @@ export const normalizeScopeUserIds = (scopeUserIds: number[]): number[] => (
   Array.from(new Set(scopeUserIds)).sort((left, right) => left - right)
 );
 
-export const buildOverrideSignature = ({
+const buildOverrideSignature = ({
   permissionCode,
   effect,
   appliesToRole,

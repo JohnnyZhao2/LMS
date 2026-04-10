@@ -5,19 +5,27 @@ from typing import Iterable, List, Optional
 from django.db.models import Q
 from django.utils import timezone
 
-from .constants import PERMISSION_CATALOG, SYSTEM_MANAGED_PERMISSION_CODES
+from .constants import (
+    CONFIG_PERMISSION_MODULE,
+    REGISTERED_PERMISSION_CODES,
+    SYSTEM_MANAGED_PERMISSION_CODES,
+)
 from .models import Permission, PermissionScopeRule, UserPermissionOverride
 
-REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
 
-
-def list_permissions(module: Optional[str] = None, include_system_managed: bool = False) -> List[Permission]:
+def list_permissions(
+    module: Optional[str] = None,
+    include_system_managed: bool = False,
+    catalog_view: Optional[str] = None,
+) -> List[Permission]:
     queryset = Permission.objects.filter(
         is_active=True,
         code__in=REGISTERED_PERMISSION_CODES,
     )
     if module:
         queryset = queryset.filter(module=module)
+    if catalog_view in {'role_template', 'user_authorization'}:
+        queryset = queryset.exclude(module=CONFIG_PERMISSION_MODULE)
     if not include_system_managed:
         queryset = queryset.exclude(code__in=SYSTEM_MANAGED_PERMISSION_CODES)
     return list(queryset.order_by('module', 'code'))

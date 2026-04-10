@@ -7,6 +7,8 @@ from typing import Any, Optional
 from django.db.models import Count, Max, Prefetch, QuerySet, Sum
 from django.utils import timezone
 
+from apps.knowledge.selectors import get_knowledge_queryset
+from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
 
 from .models import (
@@ -94,6 +96,74 @@ def task_quiz_queryset(task_id: int) -> QuerySet:
     return TaskQuiz.objects.filter(
         task_id=task_id
     ).select_related('quiz', 'task').order_by('order')
+
+
+def task_resource_options(
+    search: Optional[str] = None,
+    resource_type: str = 'ALL',
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+
+    if resource_type in {'ALL', 'DOCUMENT'}:
+        knowledge_rows = get_knowledge_queryset(
+            search=search,
+            ordering='-updated_at',
+        ).values(
+            'id',
+            'title',
+            'resource_uuid',
+            'is_current',
+            'updated_at',
+            'space_tag__name',
+        )
+        items.extend([
+            {
+                'id': row['id'],
+                'title': row['title'],
+                'resource_uuid': row['resource_uuid'],
+                'is_current': row['is_current'],
+                'resource_type': 'DOCUMENT',
+                'space_tag_name': row['space_tag__name'],
+                'updated_at': row['updated_at'],
+            }
+            for row in knowledge_rows
+        ])
+
+    if resource_type in {'ALL', 'QUIZ'}:
+        quiz_rows = Quiz.objects.filter(
+            is_deleted=False,
+            is_current=True,
+        ).annotate(
+            question_count_value=Count('quiz_questions'),
+        ).values(
+            'id',
+            'title',
+            'resource_uuid',
+            'is_current',
+            'updated_at',
+            'quiz_type',
+            'question_count_value',
+        ).order_by('-updated_at')
+        if search:
+            quiz_rows = quiz_rows.filter(title__icontains=search)
+        items.extend([
+            {
+                'id': row['id'],
+                'title': row['title'],
+                'resource_uuid': row['resource_uuid'],
+                'is_current': row['is_current'],
+                'resource_type': 'QUIZ',
+                'quiz_type': row['quiz_type'],
+                'question_count': row['question_count_value'],
+                'updated_at': row['updated_at'],
+            }
+            for row in quiz_rows
+        ])
+
+    items.sort(key=lambda item: item['updated_at'], reverse=True)
+    for item in items:
+        item.pop('updated_at', None)
+    return items
 
 
 def knowledge_progress_queryset(assignment_id: int) -> QuerySet:
@@ -398,7 +468,6 @@ def task_student_executions(task_id: int) -> list[dict[str, Any]]:
             'node_progress': f'{completed_nodes}/{total_nodes}',
             'score': score,
             'time_spent': time_spent,
-            'answer_details': '查看详情',
             'is_abnormal': abnormal,
         })
 

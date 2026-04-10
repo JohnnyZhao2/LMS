@@ -1,7 +1,7 @@
 import { Navigate, useParams, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { ROUTES } from '@/config/routes';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';

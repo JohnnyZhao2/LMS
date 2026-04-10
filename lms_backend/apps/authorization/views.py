@@ -7,7 +7,7 @@ from rest_framework import serializers
 from core.base_view import BaseAPIView
 from core.responses import created_response, list_response, success_response
 
-from .engine import authorize, enforce
+from .engine import enforce, enforce_any
 from .serializers import (
     PermissionSerializer,
     RevokeUserPermissionOverrideSerializer,
@@ -17,6 +17,18 @@ from .serializers import (
     UserPermissionOverrideSerializer,
 )
 from .services import AuthorizationService
+
+
+PERMISSION_CATALOG_VIEW_CHOICES = {'role_template', 'user_authorization'}
+PERMISSION_CATALOG_ACCESS_CODES = (
+    'authorization.role_template.view',
+    'authorization.role_template.update',
+    'user.authorize',
+)
+
+
+def enforce_permission_catalog_access(request) -> None:
+    enforce_any(PERMISSION_CATALOG_ACCESS_CODES, request, error_message='无权查看权限目录')
 
 
 class PermissionCatalogView(BaseAPIView):
@@ -29,6 +41,11 @@ class PermissionCatalogView(BaseAPIView):
         summary='获取权限目录',
         parameters=[
             OpenApiParameter(name='module', type=str, description='按模块筛选（可选）'),
+            OpenApiParameter(
+                name='view',
+                type=str,
+                description='按消费视图筛选（可选）：role_template 或 user_authorization',
+            ),
         ],
         responses={
             200: PermissionSerializer(many=True),
@@ -37,15 +54,12 @@ class PermissionCatalogView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request):
-        if not (
-            authorize('authorization.role_template.view', request).allowed
-            or authorize('authorization.role_template.update', request).allowed
-            or authorize('user.authorize', request).allowed
-        ):
-            enforce('authorization.role_template.view', request, error_message='无权查看权限目录')
-
+        enforce_permission_catalog_access(request)
         module = request.query_params.get('module')
-        permissions = self.service.list_permission_catalog(module=module)
+        catalog_view = request.query_params.get('view') or None
+        if catalog_view and catalog_view not in PERMISSION_CATALOG_VIEW_CHOICES:
+            raise serializers.ValidationError({'view': '无效的权限目录视图类型'})
+        permissions = self.service.list_permission_catalog(module=module, catalog_view=catalog_view)
         serializer = PermissionSerializer(permissions, many=True)
         return list_response(serializer.data)
 
@@ -65,7 +79,7 @@ class RolePermissionView(BaseAPIView):
         tags=['授权管理'],
     )
     def get(self, request, role_code: str):
-        enforce('authorization.role_template.view', request, error_message='无权查看角色权限模板')
+        enforce('authorization.role_template.view', request, error_message='仅超级管理员可以查看角色权限模板')
 
         permission_codes = self.service.get_role_permission_codes(role_code)
         return success_response(

@@ -4,13 +4,15 @@ from rest_framework import serializers
 
 from apps.users.models import Role
 
-from .constants import EFFECT_CHOICES, SCOPE_AWARE_PERMISSION_CODES, SCOPE_CHOICES, SCOPE_EXPLICIT_USERS, VISIBLE_SCOPE_CHOICES
-from .models import Permission, UserPermissionOverride
-from .policies import (
-    get_permission_constraint_summary,
-    is_permission_visible_in_role_template,
-    is_permission_visible_in_user_authorization,
+from .constants import (
+    EFFECT_CHOICES,
+    PERMISSION_CONSTRAINT_SUMMARIES,
+    SCOPE_AWARE_PERMISSION_CODES,
+    SCOPE_CHOICES,
+    SCOPE_EXPLICIT_USERS,
+    VISIBLE_SCOPE_CHOICES,
 )
+from .models import Permission, UserPermissionOverride
 
 
 NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'STUDENT']
@@ -18,18 +20,10 @@ NON_STUDENT_ROLE_CHOICES = [item for item in Role.ROLE_CHOICES if item[0] != 'ST
 
 class PermissionSerializer(serializers.ModelSerializer):
     constraint_summary = serializers.SerializerMethodField()
-    role_template_visible = serializers.SerializerMethodField()
-    user_authorization_visible = serializers.SerializerMethodField()
     scope_aware = serializers.SerializerMethodField()
 
     def get_constraint_summary(self, obj: Permission) -> str:
-        return get_permission_constraint_summary(obj.code)
-
-    def get_role_template_visible(self, obj: Permission) -> bool:
-        return obj.module != 'config' and is_permission_visible_in_role_template(obj.code)
-
-    def get_user_authorization_visible(self, obj: Permission) -> bool:
-        return obj.module != 'config' and is_permission_visible_in_user_authorization(obj.code)
+        return PERMISSION_CONSTRAINT_SUMMARIES.get(obj.code, '')
 
     def get_scope_aware(self, obj: Permission) -> bool:
         return obj.code in SCOPE_AWARE_PERMISSION_CODES
@@ -42,8 +36,6 @@ class PermissionSerializer(serializers.ModelSerializer):
             'module',
             'description',
             'constraint_summary',
-            'role_template_visible',
-            'user_authorization_visible',
             'scope_aware',
             'is_active',
         ]

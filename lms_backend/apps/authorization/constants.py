@@ -17,12 +17,7 @@ from .registry import (
 
 AUTHORIZATION_SPECS = load_authorization_specs()
 PERMISSION_CATALOG = build_permission_catalog(AUTHORIZATION_SPECS)
-
-DASHBOARD_PERMISSION_CODES = [
-    code
-    for code in build_system_managed_permission_codes(AUTHORIZATION_SPECS)
-    if code.startswith('dashboard.')
-]
+REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
 
 SYSTEM_MANAGED_PERMISSION_CODES = sorted(build_system_managed_permission_codes(AUTHORIZATION_SPECS))
 ROLE_SYSTEM_PERMISSION_DEFAULTS = build_role_system_permission_defaults(AUTHORIZATION_SPECS)

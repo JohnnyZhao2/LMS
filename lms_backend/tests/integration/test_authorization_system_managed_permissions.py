@@ -195,9 +195,26 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'profile.student.update' not in permission_codes
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
-    assert permission_map['task.view']['role_template_visible'] is True
-    assert permission_map['activity_log.view']['role_template_visible'] is False
-    assert permission_map['activity_log.view']['user_authorization_visible'] is False
+    assert 'scope_aware' in permission_map['task.view']
+    assert 'role_template_visible' not in permission_map['task.view']
+    assert 'user_authorization_visible' not in permission_map['task.view']
+
+
+@pytest.mark.django_db
+def test_permission_catalog_supports_view_filter():
+    client = APIClient()
+    super_user = _create_superuser(employee_id='EMP_AUTH_CAT_VIEW', username='Catalog View Super')
+    _authenticate(client, employee_id=super_user.employee_id)
+
+    role_template_response = client.get('/api/authorization/permissions/?view=role_template')
+    user_authorization_response = client.get('/api/authorization/permissions/?view=user_authorization')
+
+    assert role_template_response.status_code == 200
+    assert user_authorization_response.status_code == 200
+    assert 'task.view' in {item['code'] for item in role_template_response.data['data']}
+    assert 'task.view' in {item['code'] for item in user_authorization_response.data['data']}
+    assert 'activity_log.view' not in {item['code'] for item in role_template_response.data['data']}
+    assert 'activity_log.view' not in {item['code'] for item in user_authorization_response.data['data']}
 
 
 @pytest.mark.django_db
@@ -239,7 +256,7 @@ def test_admin_cannot_access_activity_log_policy():
     )
     _authenticate(client, employee_id=admin_user.employee_id)
 
-    response = client.get('/api/activity-logs/policies/')
+    response = client.get('/api/logs/policies/')
 
     assert response.status_code == 403
     assert response.data['code'] == 'PERMISSION_DENIED'

@@ -69,6 +69,7 @@ class TaskKnowledgeFactory(DjangoModelFactory):
 
     task = factory.SubFactory(TaskFactory)
     knowledge = factory.SubFactory(KnowledgeFactory)
+    order = 1
 
 
 class KnowledgeLearningProgressFactory(DjangoModelFactory):

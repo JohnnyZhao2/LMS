@@ -19,6 +19,7 @@ from .constants import (
     EFFECT_DENY,
     PERMISSION_CATALOG,
     PERMISSION_SCOPE_RULES,
+    REGISTERED_PERMISSION_CODES,
     ROLE_PERMISSION_DEFAULTS,
     ROLE_SYSTEM_PERMISSION_DEFAULTS,
     SCOPE_ALL,
@@ -39,9 +40,6 @@ from .selectors import (
     list_permissions,
     list_role_scope_types,
 )
-
-REGISTERED_PERMISSION_CODES = frozenset(item['code'] for item in PERMISSION_CATALOG)
-
 
 class AuthorizationService(BaseService):
     """Unified authorization service."""
@@ -223,26 +221,6 @@ class AuthorizationService(BaseService):
             == EFFECT_ALLOW
         )
 
-    def has_deny_override(
-        self,
-        permission_code: str,
-        *,
-        current_role: Optional[str] = None,
-        target_user: Optional[User] = None,
-        target_user_id: Optional[int] = None,
-    ) -> bool:
-        resolved_role = self._resolve_role(current_role)
-        resolved_target = self._resolve_target_user(target_user=target_user, target_user_id=target_user_id)
-        return (
-            self._resolve_override_effect(
-                acting_user=self.user,
-                permission_code=permission_code,
-                current_role=resolved_role,
-                target_user=resolved_target,
-            )
-            == EFFECT_DENY
-        )
-
     def _is_permission_granted(
         self,
         permission_code: str,
@@ -279,8 +257,12 @@ class AuthorizationService(BaseService):
         role_codes = self._get_role_permission_code_set(resolved_role)
         return permission_code in role_codes
 
-    def list_permission_catalog(self, module: Optional[str] = None) -> List[Permission]:
-        return list_permissions(module=module)
+    def list_permission_catalog(
+        self,
+        module: Optional[str] = None,
+        catalog_view: Optional[str] = None,
+    ) -> List[Permission]:
+        return list_permissions(module=module, catalog_view=catalog_view)
 
     def get_role_permission_codes(self, role_code: str) -> List[str]:
         if role_code == SUPER_ADMIN_ROLE:

@@ -68,13 +68,13 @@ import animals18 from '@/assets/avatars/animals/avatar_18.webp'
 import animals19 from '@/assets/avatars/animals/avatar_19.webp'
 import animals20 from '@/assets/avatars/animals/avatar_20.webp'
 
-export interface AvatarOption {
+interface AvatarOption {
   key: string
   label: string
   src: string
 }
 
-export interface AvatarCategory {
+interface AvatarCategory {
   id: string
   name: string
   avatars: AvatarOption[]
@@ -175,7 +175,7 @@ export const AVATAR_CATEGORIES: AvatarCategory[] = [
 ]
 
 // 所有头像的扁平列表（用于快速查找）
-export const ALL_AVATARS = AVATAR_CATEGORIES.flatMap(category => category.avatars)
+const ALL_AVATARS = AVATAR_CATEGORIES.flatMap(category => category.avatars)
 
 // 头像 key 到 src 的映射
 const avatarSrcMap = ALL_AVATARS.reduce(
@@ -187,9 +187,9 @@ const avatarSrcMap = ALL_AVATARS.reduce(
 )
 
 // 所有有效的头像 key
-export const VALID_AVATAR_KEYS = ALL_AVATARS.map(a => a.key)
+const VALID_AVATAR_KEYS = ALL_AVATARS.map(a => a.key)
 
-export const isValidAvatarKey = (value: string | null | undefined): value is string =>
+const isValidAvatarKey = (value: string | null | undefined): value is string =>
   typeof value === 'string' && VALID_AVATAR_KEYS.includes(value)
 
 export const getDefaultAvatarSrc = (avatarKey: string | null | undefined): string | null => {

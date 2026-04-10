@@ -113,6 +113,16 @@ class Task(TimestampMixin, SoftDeleteMixin, CreatorMixin, models.Model):
     def has_knowledge(self):
         """任务是否包含知识文档"""
         return self.knowledge_count > 0
+    @property
+    def has_student_progress(self):
+        """任务是否已有学员学习或答题进度"""
+        if KnowledgeLearningProgress.objects.filter(
+            assignment__task_id=self.id,
+            is_completed=True,
+        ).exists():
+            return True
+        from apps.submissions.models import Submission
+        return Submission.objects.filter(task_assignment__task_id=self.id).exists()
 
 class TaskAssignment(TimestampMixin, models.Model):
     """
@@ -290,16 +300,6 @@ class TaskKnowledge(TimestampMixin, models.Model):
         ordering = ['task', 'order']
     def __str__(self):
         return f"{self.task.title} - {self.knowledge.title}"
-    def save(self, *args, **kwargs):
-        """保存时自动设置顺序号"""
-        if not self.order:
-            max_order = TaskKnowledge.objects.filter(
-                task=self.task
-            ).aggregate(
-                max_order=models.Max('order')
-            )['max_order']
-            self.order = (max_order or 0) + 1
-        super().save(*args, **kwargs)
 class TaskQuiz(TimestampMixin, models.Model):
     """
     任务与试卷的关联模型
@@ -329,16 +329,6 @@ class TaskQuiz(TimestampMixin, models.Model):
         ordering = ['task', 'order']
     def __str__(self):
         return f"{self.task.title} - {self.quiz.title}"
-    def save(self, *args, **kwargs):
-        """保存时自动设置顺序号"""
-        if not self.order:
-            max_order = TaskQuiz.objects.filter(
-                task=self.task
-            ).aggregate(
-                max_order=models.Max('order')
-            )['max_order']
-            self.order = (max_order or 0) + 1
-        super().save(*args, **kwargs)
 class KnowledgeLearningProgress(TimestampMixin, models.Model):
     """
     知识学习进度模型
@@ -375,14 +365,3 @@ class KnowledgeLearningProgress(TimestampMixin, models.Model):
         status = '已完成' if self.is_completed else '未完成'
         title = self.task_knowledge.knowledge.title
         return f"{self.assignment} - {title} ({status})"
-    def mark_completed(self):
-        """标记知识学习为已完成"""
-        if not self.is_completed:
-            self.is_completed = True
-            self.completed_at = timezone.now()
-            self.save(update_fields=['is_completed', 'completed_at'])
-            # 检查是否所有知识都已完成，如果是则自动完成任务
-            self._check_task_completion()
-    def _check_task_completion(self):
-        """检查任务是否应该自动完成"""
-        self.assignment.check_completion()

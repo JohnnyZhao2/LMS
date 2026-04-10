@@ -14,39 +14,6 @@ def clear_auth_throttle_cache():
 
 
 @pytest.mark.django_db
-def test_refresh_token_contract_fields():
-    client = APIClient()
-
-    department = Department.objects.create(name='Dept 1', code='DEPT1')
-    User.objects.create_user(
-        employee_id='EMP001',
-        username='Test User',
-        password='password123',
-        department=department,
-    )
-
-    login_response = client.post(
-        '/api/auth/login/',
-        {'employee_id': 'EMP001', 'password': 'password123'},
-        format='json',
-    )
-    assert login_response.status_code == 200
-    assert login_response.data['code'] == 'SUCCESS'
-    assert 'data' in login_response.data
-    refresh_token = login_response.data['data']['refresh_token']
-
-    refresh_response = client.post(
-        '/api/auth/refresh/',
-        {'refresh_token': refresh_token},
-        format='json',
-    )
-    assert refresh_response.status_code == 200
-    assert refresh_response.data['code'] == 'SUCCESS'
-    assert 'access_token' in refresh_response.data['data']
-    assert 'refresh_token' in refresh_response.data['data']
-
-
-@pytest.mark.django_db
 def test_refresh_token_should_rotate_and_invalidate_old_token():
     client = APIClient()
 
@@ -114,34 +81,6 @@ def test_header_role_cannot_override_token_current_role():
 
     assert response.status_code == 200
     assert response.data['code'] == 'SUCCESS'
-
-
-@pytest.mark.django_db
-def test_login_response_contains_capabilities():
-    client = APIClient()
-
-    department = Department.objects.create(name='Dept 4', code='DEPT4')
-    admin_role, _ = Role.objects.get_or_create(code='ADMIN', defaults={'name': '管理员'})
-
-    user = User.objects.create_user(
-        employee_id='EMP004',
-        username='Permission User',
-        password='password123',
-        department=department,
-    )
-    UserRole.objects.get_or_create(user=user, role=admin_role)
-
-    login_response = client.post(
-        '/api/auth/login/',
-        {'employee_id': 'EMP004', 'password': 'password123'},
-        format='json',
-    )
-
-    assert login_response.status_code == 200
-    assert login_response.data['code'] == 'SUCCESS'
-    capabilities = login_response.data['data'].get('capabilities')
-    assert isinstance(capabilities, dict)
-    assert capabilities['knowledge.view']['allowed'] is True
 
 
 @pytest.mark.django_db

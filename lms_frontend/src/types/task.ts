@@ -2,7 +2,7 @@
  * 任务相关类型定义
  */
 
-import type { TaskStatus } from './common';
+import type { PaginatedResponse, TaskStatus } from './common';
 import type { QuizType } from './quiz';
 
 export interface TaskActions {
@@ -18,8 +18,6 @@ export interface TaskActions {
 export interface TaskAssignment {
   id: number;
   assignee: number;
-  assignee_name: string;
-  assignee_employee_id: string;
   status: TaskStatus;
   completed_at?: string;
   score?: string;
@@ -50,8 +48,6 @@ export interface TaskQuiz {
   quiz_title: string;
   question_count: number;
   total_score: number;
-  subjective_question_count: number;
-  objective_question_count: number;
   order: number;
   resource_uuid: string;
   is_current: boolean;
@@ -59,6 +55,17 @@ export interface TaskQuiz {
   quiz_type_display: string;
   duration?: number | null;
   pass_score?: string | null;
+}
+
+export interface TaskResourceOption {
+  id: number;
+  title: string;
+  resource_uuid: string;
+  is_current: boolean;
+  resource_type: 'DOCUMENT' | 'QUIZ';
+  space_tag_name?: string | null;
+  question_count?: number;
+  quiz_type?: QuizType;
 }
 
 /**
@@ -73,7 +80,6 @@ export interface TaskDetail {
   quizzes: TaskQuiz[];
   assignments: TaskAssignment[];
   created_by_name: string;
-  updated_by?: number;
   updated_by_name?: string;
   created_at: string;
   updated_at: string;
@@ -84,7 +90,7 @@ export interface TaskDetail {
 /**
  * 学员学习任务进度
  */
-export interface LearningTaskProgress {
+export interface TaskProgress {
   completed: number;
   total: number;
   percentage: number;
@@ -146,33 +152,13 @@ export interface StudentLearningTaskDetail {
   created_by_name: string;
   status: TaskStatus;
   status_display: string;
-  progress: LearningTaskProgress;
+  progress: TaskProgress;
   completed_at?: string;
   score?: string | number | null;
   knowledge_items: LearningTaskKnowledgeItem[];
   quiz_items: LearningTaskQuizItem[];
   created_at: string;
   updated_at: string;
-}
-
-/**
- * 学员待办任务
- */
-/**
- * 学员任务中心列表项
- */
-export interface TaskProgress {
-  completed: number;
-  total: number;
-  percentage: number;
-  knowledge_total?: number;
-  knowledge_completed?: number;
-  quiz_total?: number;
-  quiz_completed?: number;
-  exam_total?: number;
-  exam_completed?: number;
-  practice_total?: number;
-  practice_completed?: number;
 }
 
 export interface StudentTaskCenterItem {
@@ -192,13 +178,7 @@ export interface StudentTaskCenterItem {
   created_at: string;
 }
 
-export interface StudentTaskCenterResponse {
-  results: StudentTaskCenterItem[];
-  count: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
+export type StudentTaskCenterResponse = PaginatedResponse<StudentTaskCenterItem>;
 
 export interface TaskListItem {
   id: number;
@@ -212,12 +192,9 @@ export interface TaskListItem {
   assignee_count: number;
   /** 已完成的学员数量 */
   completed_count: number;
-  created_by?: number;
   created_by_name: string;
-  updated_by?: number;
   updated_by_name?: string;
   created_at: string;
   updated_at: string;
-  has_progress: boolean;
   actions: TaskActions;
 }

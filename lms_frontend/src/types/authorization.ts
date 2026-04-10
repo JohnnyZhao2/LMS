@@ -6,11 +6,11 @@ export interface PermissionCatalogItem {
   module: string;
   description: string;
   constraint_summary: string;
-  role_template_visible: boolean;
-  user_authorization_visible: boolean;
   scope_aware: boolean;
   is_active: boolean;
 }
+
+export type PermissionCatalogView = 'role_template' | 'user_authorization';
 
 export interface RolePermissionTemplate {
   role_code: RoleCode;

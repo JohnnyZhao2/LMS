@@ -12,11 +12,10 @@ import {
 } from "lucide-react"
 import { useTaskList } from "../api/get-tasks"
 import { useDeleteTask } from "../api/delete-task"
-import { useAuth } from "@/features/auth/hooks/use-auth"
+import { useAuth } from "@/features/auth/stores/auth-context"
 import { ROUTES } from "@/config/routes"
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
-import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
@@ -45,7 +44,6 @@ const TrendingUp = ({ className }: { className?: string }) => (
 export const TaskManagement: React.FC = () => {
     const { roleNavigate } = useRoleNavigate()
     const { hasCapability } = useAuth()
-    const [searchTerm, setSearchTerm] = React.useState("")
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
@@ -284,12 +282,6 @@ export const TaskManagement: React.FC = () => {
                         />
                     </div>
                     <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
-                        <SearchInput
-                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
-                            placeholder="搜索任务标题或编号..."
-                            value={searchTerm}
-                            onChange={setSearchTerm}
-                        />
                         <CircleButton
                             onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                             label="发布新任务"
@@ -310,10 +302,7 @@ export const TaskManagement: React.FC = () => {
                         <div className="flex flex-1 min-h-0 flex-col">
                             <DataTable
                                 columns={columns}
-                                data={tasksData?.results?.filter((t: TaskListItem) => {
-                                    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-                                    return matchesSearch;
-                                }) || []}
+                                data={tasksData?.results || []}
                                 fillHeight
                                 pagination={{
                                     pageIndex: page - 1,

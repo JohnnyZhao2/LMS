@@ -161,17 +161,6 @@ export const ProgressMonitoringTab: React.FC<ProgressMonitoringTabProps> = ({ ta
         </span>
       ),
     },
-    {
-      header: '答题情况',
-      id: 'answer_details',
-      size: 104,
-      minSize: 96,
-      cell: ({ row }) => (
-        <button className="cursor-pointer text-sm font-medium text-primary-600 transition-colors duration-150 hover:text-primary-700">
-          {row.original.answer_details}
-        </button>
-      ),
-    },
   ], []);
 
   if (isLoading || !analytics) {

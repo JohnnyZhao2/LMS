@@ -1,9 +1,10 @@
 import React from 'react';
-import { matchPath, useLocation, useParams } from 'react-router-dom';
+import { matchPath, useLocation } from 'react-router-dom';
 import { BreadcrumbNav, type BreadcrumbItem } from '@/components/ui/breadcrumb-nav';
 import { ROUTES } from '@/config/routes';
 import type { RoleCode } from '@/types/api';
-import { getWorkspaceConfig } from '@/app/workspace-config';
+import { getWorkspaceConfig, getWorkspaceHome, getWorkspacePath } from '@/app/workspace-config';
+import { useCurrentRole } from '@/hooks/use-current-role';
 
 const resolveTaskLabel = (role: RoleCode | null) => {
   const workspace = getWorkspaceConfig(role);
@@ -15,23 +16,19 @@ const resolveKnowledgeLabel = (role: RoleCode | null) => {
   return workspace?.menuVariant === 'student' ? '知识中心' : '知识管理';
 }
 
-const buildRolePath = (role: string | undefined, route: string) => (
-  role ? `/${role}${route}` : route
-)
-
 const createBreadcrumbs = (
   pathname: string,
-  role: string | undefined,
   roleCode: RoleCode | null,
   entry: string | null,
 ): BreadcrumbItem[] => {
+  const buildWorkspaceRoute = (route: string) => getWorkspacePath(roleCode, route) ?? route
   const taskLabel = resolveTaskLabel(roleCode)
   const knowledgeLabel = resolveKnowledgeLabel(roleCode)
-  const tasksPath = buildRolePath(role, ROUTES.TASKS)
-  const knowledgePath = buildRolePath(role, ROUTES.KNOWLEDGE)
-  const quizzesPath = buildRolePath(role, ROUTES.QUIZZES)
-  const auditLogsPath = buildRolePath(role, ROUTES.AUDIT_LOGS)
-  const spotChecksPath = buildRolePath(role, ROUTES.SPOT_CHECKS)
+  const tasksPath = buildWorkspaceRoute(ROUTES.TASKS)
+  const knowledgePath = buildWorkspaceRoute(ROUTES.KNOWLEDGE)
+  const quizzesPath = buildWorkspaceRoute(ROUTES.QUIZZES)
+  const auditLogsPath = buildWorkspaceRoute(ROUTES.AUDIT_LOGS)
+  const spotChecksPath = buildWorkspaceRoute(ROUTES.SPOT_CHECKS)
 
   const routePatterns: Array<{
     pattern: string
@@ -47,8 +44,8 @@ const createBreadcrumbs = (
     { pattern: '/:role/quizzes/:id/edit', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理', path: quizzesPath }, { title: '编辑试卷' }] },
     { pattern: '/:role/quizzes/:id/preview', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理', path: quizzesPath }, { title: '试卷预览' }] },
     { pattern: '/:role/quizzes', items: [{ title: '测评管理', path: quizzesPath }, { title: '试卷管理' }] },
-    { pattern: '/:role/questions/create', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildRolePath(role, ROUTES.QUESTIONS) }, { title: '新建题目' }] },
-    { pattern: '/:role/questions/:id/edit', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildRolePath(role, ROUTES.QUESTIONS) }, { title: '编辑题目' }] },
+    { pattern: '/:role/questions/create', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildWorkspaceRoute(ROUTES.QUESTIONS) }, { title: '新建题目' }] },
+    { pattern: '/:role/questions/:id/edit', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理', path: buildWorkspaceRoute(ROUTES.QUESTIONS) }, { title: '编辑题目' }] },
     { pattern: '/:role/questions', items: [{ title: '测评管理', path: quizzesPath }, { title: '题目管理' }] },
     {
       pattern: '/:role/grading-center',
@@ -64,7 +61,7 @@ const createBreadcrumbs = (
     { pattern: '/:role/spot-checks/create', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '发起抽查' }] },
     { pattern: '/:role/spot-checks/:id/edit', items: [{ title: '抽查管理', path: spotChecksPath }, { title: '编辑抽查' }] },
     { pattern: '/:role/spot-checks', items: [{ title: '抽查管理' }] },
-    { pattern: '/:role/users/authorization', items: [{ title: '用户管理', path: buildRolePath(role, ROUTES.USERS) }, { title: '用户授权' }] },
+    { pattern: '/:role/users/authorization', items: [{ title: '用户管理', path: buildWorkspaceRoute(ROUTES.USERS) }, { title: '用户授权' }] },
     { pattern: '/:role/users', items: [{ title: '用户管理' }, { title: '用户列表' }] },
     { pattern: '/:role/authorization', items: [{ title: '角色模板' }] },
     { pattern: '/:role/audit-logs/policy', items: [{ title: '日志审计', path: auditLogsPath }, { title: '日志策略' }] },
@@ -81,14 +78,13 @@ const createBreadcrumbs = (
 
 export const GlobalBreadcrumb: React.FC = () => {
   const location = useLocation()
-  const { role } = useParams<{ role: string }>()
-  const roleCode = role?.toUpperCase() as RoleCode | undefined
-  const homePath = buildRolePath(role, ROUTES.DASHBOARD)
+  const currentRole = useCurrentRole()
+  const homePath = getWorkspaceHome(currentRole) ?? ROUTES.DASHBOARD
   const entry = React.useMemo(() => new URLSearchParams(location.search).get('entry'), [location.search])
 
   const items = React.useMemo(
-    () => createBreadcrumbs(location.pathname, role, roleCode ?? null, entry),
-    [entry, location.pathname, role, roleCode],
+    () => createBreadcrumbs(location.pathname, currentRole, entry),
+    [currentRole, entry, location.pathname],
   )
 
   if (items.length === 0) {

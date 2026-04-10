@@ -6,15 +6,15 @@ import type { DragEndEvent } from '@dnd-kit/core';
 
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { showApiError } from '@/utils/error-handler';
-import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
+import type { PaginatedResponse, TaskResourceOption } from '@/types/api';
 import { useCreateTask, type TaskCreateRequest } from '../../api/create-task';
 import { useAssignableUsers } from '../../api/get-assignable-users';
 import { useTaskDetail } from '../../api/get-task-detail';
-import { useTaskKnowledgeOptions, useTaskQuizOptions } from '../../api/get-task-resources';
+import { useTaskResourceOptions } from '../../api/get-task-resources';
 import { useUpdateTask } from '../../api/update-task';
 import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
-import { mapKnowledgeToResource, mapQuizToResource } from './task-form.types';
+import { mapTaskResourceOptionToResource } from './task-form.types';
 
 const PAGE_SIZE = 7;
 
@@ -68,17 +68,11 @@ export const useTaskForm = () => {
     enabled: isEdit && Number.isFinite(taskId) && taskId > 0,
   });
   const { data: quizDetail } = useQuizDetail(paramQuizId);
-  const knowledgeQuery = useTaskKnowledgeOptions({
+  const resourceQuery = useTaskResourceOptions({
     search: resourceSearch,
-    page: 1,
-    page_size: 100,
-    enabled: resourceType === 'ALL' || resourceType === 'DOCUMENT'
-  });
-  const quizQuery = useTaskQuizOptions({
-    search: resourceSearch,
-    page: 1,
-    page_size: 100,
-    enabled: resourceType === 'ALL' || resourceType === 'QUIZ'
+    page: currentPage,
+    page_size: PAGE_SIZE,
+    resource_type: resourceType,
   });
   const { data: users, isLoading: isUsersLoading } = useAssignableUsers();
 
@@ -159,30 +153,15 @@ export const useTaskForm = () => {
 
   // Computed values for resources
   const filteredResources = useMemo(() => {
-    const kItems = getPaginatedResults<KnowledgeListItem>(knowledgeQuery.data);
-    const qItems = getPaginatedResults<QuizListItem>(quizQuery.data);
-
-    const mappedK: ResourceItem[] = kItems.map(mapKnowledgeToResource);
-    const mappedQ: ResourceItem[] = qItems.map(mapQuizToResource);
-
-    const combined = resourceType === 'DOCUMENT'
-      ? mappedK
-      : resourceType === 'QUIZ'
-        ? mappedQ
-        : [...mappedK, ...mappedQ];
-
+    const combined = getPaginatedResults<TaskResourceOption>(resourceQuery.data).map(mapTaskResourceOptionToResource);
     const selectedUuids = selectedResources.map(s => `${s.resourceType}-${s.resource_uuid}`);
     return combined.filter(r => !selectedUuids.includes(`${r.resourceType}-${r.resource_uuid}`));
-  }, [knowledgeQuery.data, quizQuery.data, resourceType, selectedResources]);
+  }, [resourceQuery.data, selectedResources]);
 
-  const totalCount = filteredResources.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-
-  const availableResources = useMemo(() => {
-    const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
-    return filteredResources.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredResources, safeCurrentPage]);
+  const totalCount = resourceQuery.data?.count ?? filteredResources.length;
+  const totalPages = resourceQuery.data?.total_pages ?? Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const safeCurrentPage = resourceQuery.data?.current_page ?? Math.min(currentPage, totalPages);
+  const availableResources = filteredResources;
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -225,11 +204,12 @@ export const useTaskForm = () => {
     const item = selectedResources[idx];
     if (!item) return;
 
-    const kItems = getPaginatedResults<KnowledgeListItem>(knowledgeQuery.data);
-    const qItems = getPaginatedResults<QuizListItem>(quizQuery.data);
+    const currentResources = getPaginatedResults<TaskResourceOption>(resourceQuery.data);
 
     if (item.resourceType === 'DOCUMENT') {
-      const latestResource = kItems.find((k) => k.resource_uuid === item.resource_uuid);
+      const latestResource = currentResources.find(
+        (resource) => resource.resource_type === 'DOCUMENT' && resource.resource_uuid === item.resource_uuid
+      );
       if (!latestResource) {
         toast.error('未找到最新版本');
         return;
@@ -241,11 +221,13 @@ export const useTaskForm = () => {
           id: latestResource.id,
           is_current: latestResource.is_current,
           title: latestResource.title,
-          category: latestResource.space_tag?.name || '未分类',
+          category: latestResource.space_tag_name || '未分类',
         };
       }));
     } else {
-      const latestResource = qItems.find((q) => q.resource_uuid === item.resource_uuid);
+      const latestResource = currentResources.find(
+        (resource) => resource.resource_type === 'QUIZ' && resource.resource_uuid === item.resource_uuid
+      );
       if (!latestResource) {
         toast.error('未找到最新版本');
         return;
@@ -257,7 +239,7 @@ export const useTaskForm = () => {
           id: latestResource.id,
           is_current: latestResource.is_current,
           title: latestResource.title,
-          category: `${latestResource.question_count} 个题目`,
+          category: `${latestResource.question_count || 0} 个题目`,
           quizType: latestResource.quiz_type,
         };
       }));
@@ -339,7 +321,7 @@ export const useTaskForm = () => {
   };
 
   // Computed values
-  const isLoading = knowledgeQuery.isLoading || quizQuery.isLoading || taskLoading;
+  const isLoading = resourceQuery.isLoading || taskLoading;
   const isSubmitting = createTask.isPending || updateTask.isPending;
   const canSubmit = Boolean(title.trim() && deadline && selectedResources.length > 0 && selectedUserIds.length > 0);
 
@@ -371,6 +353,7 @@ export const useTaskForm = () => {
     resourcePageSize: PAGE_SIZE,
     totalPages,
     safeCurrentPage,
+    shouldPaginateResources: totalPages > 1,
     filteredUsers,
     isUsersLoading,
     isLoading,

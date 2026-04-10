@@ -8,6 +8,7 @@ from .views.admin import (
     TaskCreateView,
     TaskDetailView,
     TaskListView,
+    TaskResourceOptionListView,
 )
 from .views.analytics import (
     StudentExecutionsView,
@@ -27,6 +28,7 @@ urlpatterns = [
     path('create/', TaskCreateView.as_view(), name='task-create'),
     # Assignable students
     path('assignable-users/', AssignableUserListView.as_view(), name='assignable-user-list'),
+    path('resource-options/', TaskResourceOptionListView.as_view(), name='task-resource-options'),
     # Student task execution
     path('my-assignments/', StudentAssignmentListView.as_view(), name='student-assignment-list'),
     path('<int:task_id>/detail/', StudentTaskDetailView.as_view(), name='student-task-detail'),

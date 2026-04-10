@@ -5,10 +5,16 @@ import { useCurrentRole } from '@/hooks/use-current-role';
 import type {
   CreateUserPermissionOverrideRequest,
   PermissionCatalogItem,
+  PermissionCatalogView,
   RoleCode,
   RolePermissionTemplate,
   UserPermissionOverride,
 } from '@/types/api';
+
+interface PermissionCatalogQuery {
+  module?: string;
+  view?: PermissionCatalogView;
+}
 
 interface ReplaceRolePermissionPayload {
   roleCode: RoleCode;
@@ -26,26 +32,22 @@ interface RevokeUserOverridePayload {
   revokeReason?: string;
 }
 
-export const usePermissionCatalog = (module?: string, enabled = true) => {
+export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled = true) => {
   const currentRole = useCurrentRole();
+  const { module, view } = query;
   return useQuery({
-    queryKey: ['authorization', 'permission-catalog', currentRole ?? 'UNKNOWN', module ?? 'ALL'],
+    queryKey: ['authorization', 'permission-catalog', currentRole ?? 'UNKNOWN', module ?? 'ALL', view ?? 'ALL'],
     queryFn: () => {
-      const queryString = buildQueryString({ module });
+      const queryString = buildQueryString({ module, view });
       return apiClient.get<PermissionCatalogItem[]>(`/authorization/permissions/${queryString}`);
     },
     enabled: currentRole !== null && enabled,
   });
 };
 
-export const useRolePermissionTemplate = (roleCode: RoleCode, enabled = true) => {
-  const currentRole = useCurrentRole();
-  return useQuery({
-    queryKey: ['authorization', 'role-template', currentRole ?? 'UNKNOWN', roleCode],
-    queryFn: () => apiClient.get<RolePermissionTemplate>(`/authorization/roles/${roleCode}/permissions/`),
-    enabled: currentRole !== null && enabled,
-  });
-};
+export const useVisiblePermissionCatalog = (view: PermissionCatalogView, enabled = true) => (
+  usePermissionCatalog({ view }, enabled)
+);
 
 export const useRolePermissionTemplates = (roleCodes: RoleCode[], enabled = true) => {
   const currentRole = useCurrentRole();

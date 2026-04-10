@@ -136,9 +136,6 @@ class User(TimestampMixin, AbstractBaseUser, PermissionsMixin):
     def role_codes(self) -> list:
         """获取用户所有角色代码列表"""
         return list(self.roles.values_list('code', flat=True))
-    def get_mentees(self):
-        """获取名下学员"""
-        return User.objects.filter(mentor=self, is_active=True)
 class UserRole(TimestampMixin, models.Model):
     """
     用户角色关联模型

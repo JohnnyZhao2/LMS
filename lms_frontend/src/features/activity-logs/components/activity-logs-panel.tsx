@@ -12,7 +12,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { PageWorkbench } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { cn } from '@/lib/utils';

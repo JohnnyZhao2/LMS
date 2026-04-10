@@ -3,13 +3,13 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import {
   useCreateUserPermissionOverride,
-  usePermissionCatalog,
   useRevokeUserPermissionOverride,
   useRolePermissionTemplates,
   useUserPermissionOverrides,
+  useVisiblePermissionCatalog,
 } from '@/features/authorization/api/authorization';
 import type {
   PermissionOverrideScope,
@@ -54,20 +54,14 @@ export function UserPermissionSection({
 }: UserPermissionSectionProps) {
   const { hasCapability, refreshUser } = useAuth();
   const canManageUserAuthorization = hasCapability('user.authorize');
-  const canViewOverride = canManageUserAuthorization;
-  const canCreateOverride = canManageUserAuthorization;
-  const canRevokeOverride = canManageUserAuthorization;
   const canViewRoleTemplate =
     hasCapability('authorization.role_template.view')
     || hasCapability('authorization.role_template.update');
-  const shouldLoadPermissionCatalog = canViewOverride;
-  const shouldLoadScopeUsers = canViewOverride;
-  const shouldLoadUserOverrides = Boolean(userId) && canViewOverride;
 
-  const { data: rawPermissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadPermissionCatalog);
-  const permissionCatalog = useMemo(
-    () => rawPermissionCatalog.filter((permission) => permission.user_authorization_visible),
-    [rawPermissionCatalog],
+  const shouldLoadUserOverrides = Boolean(userId) && canManageUserAuthorization;
+  const { data: permissionCatalog = [] } = useVisiblePermissionCatalog(
+    'user_authorization',
+    canManageUserAuthorization,
   );
   const {
     data: userOverrides = [],
@@ -86,7 +80,7 @@ export function UserPermissionSection({
 
   const { data: scopeUsers = [], isLoading: isScopeUsersLoading } = useUsers(
     {},
-    { enabled: shouldLoadScopeUsers },
+    { enabled: canManageUserAuthorization },
   );
 
   const previewRoleCodes = useMemo<RoleCode[]>(() => {
@@ -101,7 +95,7 @@ export function UserPermissionSection({
 
   const roleTemplateQueries = useRolePermissionTemplates(
     previewRoleCodes,
-    canViewOverride && canViewRoleTemplate,
+    canManageUserAuthorization && canViewRoleTemplate,
   );
 
   const roleTemplatePermissionCodeMap = useMemo(() => {
@@ -171,8 +165,7 @@ export function UserPermissionSection({
 
   const { getPermissionState, handlePermissionToggle, isPermissionSaving } = useUserPermissionOverrideState({
     userId,
-    canCreateOverride,
-    canRevokeOverride,
+    canManageOverride: canManageUserAuthorization,
     normalizedSelectedPermissionRole,
     selectedRoleDefaultScopeTypes,
     selectedPermissionScopes,
@@ -255,7 +248,7 @@ export function UserPermissionSection({
       modulePermissionCounts[permission.module].enabled += 1;
     }
   });
-  if (!canViewOverride) {
+  if (!canManageUserAuthorization) {
     return null;
   }
 

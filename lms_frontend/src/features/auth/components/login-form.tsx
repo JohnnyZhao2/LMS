@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useAuth } from '../hooks/use-auth';
+import { useAuth } from '../stores/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { oidcApi } from '../api/oidc';
 

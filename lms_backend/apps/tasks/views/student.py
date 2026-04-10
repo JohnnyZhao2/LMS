@@ -16,8 +16,8 @@ from apps.tasks.serializers import (
 )
 from apps.tasks.student_task_service import StudentTaskService
 from core.base_view import BaseAPIView
-from core.query_params import parse_int_query_param
-from core.responses import success_response
+from core.pagination import StandardResultsSetPagination
+from core.responses import paginated_response, success_response
 
 
 class StudentAssignmentListView(BaseAPIView):
@@ -34,6 +34,7 @@ class StudentAssignmentListView(BaseAPIView):
         ''',
         parameters=[
             OpenApiParameter(name='status', type=str, description='任务状态（IN_PROGRESS/COMPLETED/OVERDUE）'),
+            OpenApiParameter(name='search', type=str, description='按任务标题搜索'),
         ],
         responses={200: StudentAssignmentListSerializer(many=True)},
         tags=['学员任务执行']
@@ -47,35 +48,11 @@ class StudentAssignmentListView(BaseAPIView):
             status_filter=status_filter,
             search=search
         )
-        
-        # Pagination
-        page = parse_int_query_param(
-            request=request,
-            name='page',
-            default=1,
-            minimum=1,
-        )
-        page_size = parse_int_query_param(
-            request=request,
-            name='page_size',
-            default=20,
-            minimum=1,
-            maximum=100,
-        )
-        start = (page - 1) * page_size
-        end = start + page_size
-        
-        total_count = queryset.count()
-        task_list = queryset[start:end]
-        serializer = StudentAssignmentListSerializer(task_list, many=True)
-        
-        return success_response({
-            'results': serializer.data,
-            'count': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
-        })
+
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = StudentAssignmentListSerializer(page, many=True)
+        return paginated_response(page, serializer.data, paginator)
 
 
 class StudentTaskDetailView(BaseAPIView):

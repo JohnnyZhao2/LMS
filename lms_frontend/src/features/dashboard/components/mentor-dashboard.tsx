@@ -11,7 +11,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { StatCard } from '@/components/ui/stat-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';

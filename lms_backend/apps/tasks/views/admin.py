@@ -10,13 +10,15 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.authorization.engine import enforce, scope_filter
+from apps.authorization.engine import authorize, enforce, scope_filter
 from apps.tasks.serializers import (
     TaskCreateSerializer,
     TaskDetailSerializer,
     TaskListSerializer,
+    TaskResourceOptionSerializer,
     TaskUpdateSerializer,
 )
+from apps.tasks.selectors import task_resource_options
 from apps.tasks.task_service import TaskService
 from apps.users.models import User
 from apps.users.serializers import UserListSerializer
@@ -82,6 +84,44 @@ class AssignableUserListView(APIView):
         queryset = queryset.order_by('username', 'employee_id')
         serializer = UserListSerializer(queryset, many=True)
         return list_response(serializer.data)
+
+
+class TaskResourceOptionListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary='获取任务资源库选项',
+        description='获取任务表单可选择的资源，支持统一搜索与分页。',
+        parameters=[
+            OpenApiParameter(name='resource_type', type=str, description='资源类型：ALL / DOCUMENT / QUIZ'),
+            OpenApiParameter(name='search', type=str, description='搜索资源标题；知识同时支持内容搜索'),
+            OpenApiParameter(name='page', type=int, description='页码'),
+            OpenApiParameter(name='page_size', type=int, description='每页数量'),
+        ],
+        responses={200: TaskResourceOptionSerializer(many=True)},
+        tags=['任务管理']
+    )
+    def get(self, request):
+        if not (
+            authorize('task.create', request).allowed
+            or authorize('task.update', request).allowed
+        ):
+            raise BusinessError(
+                code=ErrorCodes.PERMISSION_DENIED,
+                message='无权查看任务资源库'
+            )
+        resource_type = (request.query_params.get('resource_type') or 'ALL').strip().upper()
+        if resource_type not in {'ALL', 'DOCUMENT', 'QUIZ'}:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='参数 resource_type 仅支持 ALL、DOCUMENT、QUIZ'
+            )
+        search = request.query_params.get('search')
+        items = task_resource_options(search=search, resource_type=resource_type)
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(items, request)
+        serializer = TaskResourceOptionSerializer(page, many=True)
+        return paginated_response(page, serializer.data, paginator)
 
 
 class TaskCreateView(APIView):
@@ -166,7 +206,7 @@ class TaskListView(BaseAPIView):
                 message='参数 status 仅支持 open、closed、all'
             )
             
-        queryset = queryset.select_related('created_by', 'updated_by').order_by('-created_at')
+        queryset = queryset.order_by('-created_at')
         
         # Apply pagination
         paginator = StandardResultsSetPagination()

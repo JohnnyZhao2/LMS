@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import type { Tag, TagType } from '@/types/api';
 
 interface GetTagsParams {
@@ -64,6 +64,7 @@ export const useCreateTag = () => {
       queryClient.invalidateQueries({ queryKey: ['question-detail'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };
@@ -80,6 +81,7 @@ export const useUpdateTag = () => {
       queryClient.invalidateQueries({ queryKey: ['question-detail'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };
@@ -98,7 +100,7 @@ export const useMergeTag = () => {
       queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };
@@ -116,7 +118,7 @@ export const useDeleteTag = () => {
       queryClient.invalidateQueries({ queryKey: ['knowledge-detail'] });
       queryClient.invalidateQueries({ queryKey: ['admin-knowledge-list'] });
       queryClient.invalidateQueries({ queryKey: ['student-knowledge-list'] });
-      queryClient.invalidateQueries({ queryKey: ['task-knowledge-options'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };

@@ -27,16 +27,14 @@ const statusOptions = [
  */
 export const StudentTaskList: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<string>("IN_PROGRESS");
-    const [searchTerm, setSearchTerm] = useState("");
+    const [search, setSearch] = useState('');
 
     const { data, isLoading } = useStudentTasks({
-        status: statusFilter === 'all' ? undefined : (statusFilter as TaskStatus)
+        status: statusFilter === 'all' ? undefined : (statusFilter as TaskStatus),
+        search,
     });
-    const allTasks = data?.results ?? [];
-
-    const filteredTasks = allTasks.filter(t =>
-        t.task_title.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const tasks = data?.results ?? [];
+    const totalCount = data?.count ?? tasks.length;
 
     return (
         <PageShell className="pb-4">
@@ -55,15 +53,15 @@ export const StudentTaskList: React.FC = () => {
                         activeColor="white"
                         className="w-full xl:w-auto xl:shrink-0"
                     />
-                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-end">
+                    <div className="flex w-full flex-col gap-3 xl:w-auto xl:flex-row xl:items-center">
                         <SearchInput
+                            value={search}
+                            onChange={setSearch}
+                            placeholder="搜索任务标题..."
                             className={DESKTOP_SEARCH_INPUT_CLASSNAME}
-                            placeholder="搜索任务..."
-                            value={searchTerm}
-                            onChange={setSearchTerm}
                         />
                         <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
-                            共找到 <span className="text-primary text-base ml-1">{filteredTasks.length}</span> 个任务
+                            当前共 <span className="text-primary text-base ml-1">{totalCount}</span> 个任务
                         </span>
                     </div>
                 </div>
@@ -76,10 +74,10 @@ export const StudentTaskList: React.FC = () => {
                                 <Skeleton key={i} className="h-80 rounded-lg" />
                             ))}
                         </div>
-                    ) : filteredTasks.length > 0 ? (
+                    ) : tasks.length > 0 ? (
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                            {filteredTasks.map((task) => (
-                                <TaskCard key={task.id} task={task} variant="student" />
+                            {tasks.map((task) => (
+                                <TaskCard key={task.id} task={task} />
                             ))}
                         </div>
                     ) : (
@@ -96,5 +94,3 @@ export const StudentTaskList: React.FC = () => {
         </PageShell>
     );
 };
-
-export default StudentTaskList;

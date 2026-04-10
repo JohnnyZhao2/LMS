@@ -1,69 +1,38 @@
 import * as React from 'react';
-import {
-  Pencil,
-  Trash2,
-  MoreHorizontal,
-} from 'lucide-react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
-import { toast } from 'sonner';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { ActionDropdown } from '@/components/common/action-dropdown';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { CategoryBadge } from '@/components/common/category-badge';
 import { StatusDot } from '@/components/common/status-dot';
 
-import type { StudentTaskCenterItem, TaskListItem } from '@/types/api';
-import { useDeleteTask } from '../api/delete-task';
-import { showApiError } from '@/utils/error-handler';
+import type { StudentTaskCenterItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 
-type TaskCardProps =
-  | { variant: 'student'; task: StudentTaskCenterItem }
-  | { variant: 'manager'; task: TaskListItem };
+interface TaskCardProps {
+  task: StudentTaskCenterItem;
+}
 
 /**
  * 任务卡片组件 - Flat Design 版本
- * 
+ *
  * 设计规范：
- * - 无阴影 
+ * - 无阴影
  * - 无渐变 (no gradient)
  * - 实心背景色
  * - hover:scale 交互反馈
  * - rounded-lg 圆角
  */
-export const TaskCard: React.FC<TaskCardProps> = (props) => (
+export const TaskCard: React.FC<TaskCardProps> = ({ task }) => (
   <ErrorBoundary>
-    <TaskCardContent {...props} />
+    <TaskCardContent task={task} />
   </ErrorBoundary>
 );
 
-const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
+const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   const { roleNavigate } = useRoleNavigate();
-  const deleteTask = useDeleteTask();
-  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
-
-  const handleDelete = () => {
-    if (!targetTaskId) return;
-
-    deleteTask.mutate(targetTaskId, {
-      onSuccess: () => {
-        toast.success("Task deleted successfully");
-        setDeleteModalOpen(false);
-      },
-      onError: (error: unknown) => {
-        showApiError(error);
-      }
-    });
-  };
-
-  const isStudentView = variant === 'student';
-  const studentTask = isStudentView ? (task as StudentTaskCenterItem) : null;
-  const managerTask = !isStudentView ? (task as TaskListItem) : null;
-
-  const hasQuiz = managerTask ? managerTask.quiz_count > 0 : (studentTask?.has_quiz ?? false);
-  const hasKnowledge = managerTask ? managerTask.knowledge_count > 0 : (studentTask?.has_knowledge ?? false);
+  const hasQuiz = task.has_quiz;
+  const hasKnowledge = task.has_knowledge;
 
   const missionConfig = hasQuiz && hasKnowledge
     ? { bgClass: 'bg-primary', label: '综合任务' }
@@ -71,35 +40,28 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
       ? { bgClass: 'bg-primary-500', label: '考核任务' }
       : { bgClass: 'bg-secondary', label: '知识任务' };
 
-  const targetTaskId = isStudentView ? studentTask!.task_id : managerTask!.id;
-
-  const title = isStudentView ? studentTask!.task_title : managerTask!.title;
-  const description = isStudentView ? studentTask!.task_description : managerTask!.description;
-  const progress = studentTask?.progress;
+  const targetTaskId = task.task_id;
+  const progress = task.progress;
   const now = dayjs();
-  const managerClosed = managerTask ? !dayjs(managerTask.deadline).isAfter(now) : false;
   const deadline = dayjs(task.deadline);
-  const isUrgent = !managerClosed && deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
-
-  const canEditTask = !isStudentView && !!managerTask && (managerTask.actions.update || managerTask.actions.delete);
+  const isUrgent = deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
 
   return (
     <div
       className={cn(
-        "group relative flex flex-col h-[210px] bg-background rounded-2xl p-6 transition-all duration-300 cursor-pointer border border-border/50 hover:-translate-y-1",
-        isStudentView && studentTask?.status === 'COMPLETED' && "bg-muted border-transparent"
+        'group relative flex h-[210px] cursor-pointer flex-col rounded-2xl border border-border/50 bg-background p-6 transition-all duration-300 hover:-translate-y-1',
+        task.status === 'COMPLETED' && 'border-transparent bg-muted'
       )}
       onClick={() => roleNavigate(`tasks/${targetTaskId}`)}
     >
-      {/* 顶部：状态、发布人、日期 */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <StatusDot
-              color={isUrgent ? "bg-destructive-500" : missionConfig.bgClass}
+              color={isUrgent ? 'bg-destructive-500' : missionConfig.bgClass}
               animate={isUrgent}
             />
-            <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
               {isUrgent ? '紧急任务' : missionConfig.label}
             </span>
           </div>
@@ -112,131 +74,58 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task, variant }) => {
           <div className="text-[11px] font-bold text-text-muted">
             {dayjs(task.deadline).format('YYYY-MM-DD')}
           </div>
-
-          {canEditTask && (
-            <div onClick={e => e.stopPropagation()} className="ml-1">
-              <ActionDropdown
-                triggerIcon={MoreHorizontal}
-                triggerSize="sm"
-                label="任务控制"
-                items={[
-                  {
-                    icon: Pencil,
-                    label: '编辑任务',
-                    disabled: !managerTask?.actions.update,
-                    onClick: () => roleNavigate(`tasks/${targetTaskId}/edit`),
-                  },
-                  {
-                    icon: Trash2,
-                    label: '彻底删除',
-                    disabled: !managerTask?.actions.delete,
-                    onClick: () => setDeleteModalOpen(true),
-                    variant: 'destructive' as const,
-                  },
-                ]}
-              />
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 中部：标题 & 描述 */}
-      <div className="flex-1 min-h-0">
-        <h3 className="text-xl font-black text-foreground leading-tight mb-1 truncate group-hover:text-primary-600 transition-colors">
-          {title}
+      <div className="min-h-0 flex-1">
+        <h3 className="mb-1 truncate text-xl font-black leading-tight text-foreground transition-colors group-hover:text-primary-600">
+          {task.task_title}
         </h3>
-        <p className="text-[14px] font-medium text-text-muted/80 truncate">
-          {description || '此任务暂无描述...'}
+        <p className="truncate text-[14px] font-medium text-text-muted/80">
+          {task.task_description || '此任务暂无描述...'}
         </p>
       </div>
 
-      {/* 底部：进度或统计 */}
-      <div className="mt-auto">
-        {isStudentView ? (
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {(studentTask?.progress.knowledge_total ?? 0) > 0 && (
-                  <CategoryBadge
-                    variant={(studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0) ? 'completed' : 'knowledge'}
-                    label={(studentTask?.progress.knowledge_completed ?? 0) >= (studentTask?.progress.knowledge_total ?? 0) ? '知识' : undefined}
-                    count={studentTask?.progress.knowledge_total}
-                  />
-                )}
-                {(studentTask?.progress.practice_total ?? 0) > 0 && (
-                  <CategoryBadge
-                    variant={(studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0) ? 'completed' : 'practice'}
-                    label={(studentTask?.progress.practice_completed ?? 0) >= (studentTask?.progress.practice_total ?? 0) ? '测验' : undefined}
-                    count={studentTask?.progress.practice_total}
-                  />
-                )}
-                {(studentTask?.progress.exam_total ?? 0) > 0 && (
-                  <CategoryBadge
-                    variant={(studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0) ? 'completed' : 'exam'}
-                    label={(studentTask?.progress.exam_completed ?? 0) >= (studentTask?.progress.exam_total ?? 0) ? '考试' : undefined}
-                    count={studentTask?.progress.exam_total}
-                  />
-                )}
-              </div>
-              <span className="text-base font-black text-foreground">{progress?.percentage ?? 0}<span className="text-xs ml-0.5">%</span></span>
-            </div>
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all duration-700 ease-out",
-                  missionConfig.bgClass
-                )}
-                style={{
-                  width: `${progress?.percentage ?? 0}%`,
-                }}
+      <div className="mt-auto space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            {(progress.knowledge_total ?? 0) > 0 && (
+              <CategoryBadge
+                variant={(progress.knowledge_completed ?? 0) >= (progress.knowledge_total ?? 0) ? 'completed' : 'knowledge'}
+                label={(progress.knowledge_completed ?? 0) >= (progress.knowledge_total ?? 0) ? '知识' : undefined}
+                count={progress.knowledge_total}
               />
-            </div>
+            )}
+            {(progress.practice_total ?? 0) > 0 && (
+              <CategoryBadge
+                variant={(progress.practice_completed ?? 0) >= (progress.practice_total ?? 0) ? 'completed' : 'practice'}
+                label={(progress.practice_completed ?? 0) >= (progress.practice_total ?? 0) ? '测验' : undefined}
+                count={progress.practice_total}
+              />
+            )}
+            {(progress.exam_total ?? 0) > 0 && (
+              <CategoryBadge
+                variant={(progress.exam_completed ?? 0) >= (progress.exam_total ?? 0) ? 'completed' : 'exam'}
+                label={(progress.exam_completed ?? 0) >= (progress.exam_total ?? 0) ? '考试' : undefined}
+                count={progress.exam_total}
+              />
+            )}
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {(managerTask?.knowledge_count ?? 0) > 0 && (
-                <CategoryBadge variant="knowledge" count={managerTask?.knowledge_count} />
-              )}
-              {(managerTask?.practice_count ?? 0) > 0 && (
-                <CategoryBadge variant="practice" count={managerTask?.practice_count} />
-              )}
-              {(managerTask?.exam_count ?? 0) > 0 && (
-                <CategoryBadge variant="exam" count={managerTask?.exam_count} />
-              )}
-            </div>
-            <div className="flex gap-4 p-4 bg-muted rounded-xl border border-border">
-              <div className="flex gap-4">
-                <div className="flex flex-col">
-                  <span className="text-base font-black text-foreground">{managerTask?.assignee_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-text-muted uppercase">学员</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-base font-black text-foreground">{managerTask?.completed_count ?? 0}</span>
-                  <span className="text-[10px] font-bold text-text-muted uppercase">完成</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          <span className="text-base font-black text-foreground">
+            {progress.percentage ?? 0}
+            <span className="ml-0.5 text-xs">%</span>
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-700 ease-out',
+              missionConfig.bgClass
+            )}
+            style={{ width: `${progress.percentage ?? 0}%` }}
+          />
+        </div>
       </div>
-
-      {/* 删除对话框 */}
-      <ConfirmDialog
-        open={deleteModalOpen}
-        onOpenChange={setDeleteModalOpen}
-        title="彻底清除任务？"
-        description={`确定要永久删除任务「${title}」吗？相关的所有提交记录和数据都将被删除。`}
-        icon={<Trash2 className="w-8 h-8" />}
-        iconBgColor="bg-destructive-100"
-        iconColor="text-destructive"
-        confirmText="删除任务"
-        cancelText="取消"
-        confirmVariant="destructive"
-        onConfirm={handleDelete}
-        isConfirming={deleteTask.isPending}
-        contentClassName="rounded-xl max-w-md p-8 border-2 border-border"
-      />
     </div>
   );
 };

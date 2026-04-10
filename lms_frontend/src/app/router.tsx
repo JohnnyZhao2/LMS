@@ -7,26 +7,29 @@ import { Suspense } from 'react';
 import { Agentation } from 'agentation';
 import { RouteSkeleton } from '@/components/ui/route-skeleton';
 import { RoleRouteWrapper } from '@/components/role-route-wrapper';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { roleRoutes } from './routes/role-routes';
 import { authRoutes } from './routes/auth';
 import { AppContent } from './app-content';
 import { AppProvider } from './provider';
-import { tokenStorage } from '@/lib/token-storage';
-import { getWorkspaceHome } from './workspace-config';
-
-/**
- * 获取默认角色路径
- */
-const getDefaultRolePath = () => {
-  const role = tokenStorage.getCurrentRole();
-  return getWorkspaceHome(role) ?? '/login';
-};
+import { ROUTES } from '@/config/routes';
+import { getAccessibleWorkspaceHome } from './workspace-config';
 
 /**
  * 默认重定向组件
  */
 const DefaultRedirect = () => {
-  return <Navigate to={getDefaultRolePath()} replace />;
+  const { isAuthenticated, availableRoles, currentRole, hasCapability } = useAuth();
+
+  const fallbackPath = isAuthenticated
+    ? getAccessibleWorkspaceHome(
+        availableRoles.map((role) => role.code),
+        hasCapability,
+        currentRole,
+      ) ?? ROUTES.LOGIN
+    : ROUTES.LOGIN;
+
+  return <Navigate to={fallbackPath} replace />;
 };
 
 /**

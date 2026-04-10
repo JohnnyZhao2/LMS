@@ -21,7 +21,7 @@ import { useCreateKnowledge, useUpdateKnowledge } from '../../api/manage-knowled
 import { useSpaceTypeTags } from '../../api/get-tags';
 import { useCompleteLearning } from '@/features/tasks/api/complete-learning';
 import { useStudentLearningTaskDetail } from '@/features/tasks/api/get-task-detail';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import type { KnowledgeDetail as KnowledgeDetailType } from '@/types/api';
 import type { SimpleTag } from '@/types/common';
 import type { RelatedLink } from '@/types/knowledge';

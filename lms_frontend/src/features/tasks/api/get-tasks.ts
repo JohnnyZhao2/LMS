@@ -13,6 +13,7 @@ interface GetTasksParams {
   page?: number;
   pageSize?: number;
   status?: TaskStatus;
+  search?: string;
   taskStatus?: 'open' | 'closed' | 'all';
   creatorSide?: 'all' | 'management' | 'non_management';
 }
@@ -29,15 +30,16 @@ export const useStudentTasks = (
   options: UseTasksOptions = {}
 ) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, status } = params;
+  const { page = 1, pageSize = 20, status, search = '' } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['student-tasks', currentRole ?? 'UNKNOWN', page, pageSize, status],
+    queryKey: ['student-tasks', currentRole ?? 'UNKNOWN', page, pageSize, status, search],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
         ...(status && { status }),
+        ...(search && { search }),
       };
       const queryString = buildQueryString(queryParams);
       return apiClient.get<StudentTaskCenterResponse>(

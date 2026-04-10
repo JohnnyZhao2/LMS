@@ -16,6 +16,7 @@ from .models import Role, User, UserRole
 from .role_constraints import validate_role_assignment_constraints
 from .selectors import (
     get_user_by_id,
+    get_valid_mentor_by_id,
     get_user_created_resource_ids,
     purge_user_related_business_data,
 )
@@ -165,16 +166,6 @@ class UserManagementService(BaseService):
             and leadership_roles.isdisjoint(set(role_codes))
         )
 
-        if should_keep_student:
-            # 普通用户必须保留 STUDENT
-            Role.objects.get_or_create(
-                code='STUDENT',
-                defaults={
-                    'name': '学员',
-                    'description': '系统默认角色'
-                }
-            )
-
         # Get all roles to assign
         roles_to_assign = set(role_codes)
         if should_keep_student:
@@ -197,19 +188,21 @@ class UserManagementService(BaseService):
                     user_id=user.id,
                     role__code__in=list(roles_to_remove)
                 ).delete()
+            roles_by_code = {
+                role.code: role
+                for role in Role.objects.filter(code__in=list(roles_to_add))
+            }
+            missing_role_codes = sorted(roles_to_add - set(roles_by_code))
+            if missing_role_codes:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f"角色不存在：{'、'.join(missing_role_codes)}",
+                )
             for role_code in roles_to_add:
-                role = Role.objects.filter(code=role_code).first()
-                if not role:
-                    role_name = dict(Role.ROLE_CHOICES).get(role_code, role_code)
-                    role = Role.objects.create(
-                        code=role_code,
-                        name=role_name,
-                        description=f'{role_name}角色'
-                    )
                 if not user.roles.filter(code=role_code).exists():
                     UserRole.objects.create(
                         user_id=user.id,
-                        role_id=role.id,
+                        role_id=roles_by_code[role_code].id,
                         assigned_by_id=assigned_by.id
                     )
         # Refresh user from database
@@ -259,19 +252,7 @@ class UserManagementService(BaseService):
             user.mentor_id = None
             user.save(update_fields=['mentor'])
         else:
-            # Validate mentor
-            mentor = self._get_user(mentor_id)
-            self.validate_not_none(mentor, f'导师 {mentor_id} 不存在')
-            if not mentor.has_role('MENTOR'):
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='指定的用户不是导师'
-                )
-            if not mentor.is_active:
-                raise BusinessError(
-                    code=ErrorCodes.PERMISSION_DENIED,
-                    message='指定的导师已被停用'
-                )
+            mentor = get_valid_mentor_by_id(mentor_id)
             if mentor.pk == user.pk:
                 raise BusinessError(
                     code=ErrorCodes.PERMISSION_DENIED,
@@ -307,7 +288,7 @@ class UserManagementService(BaseService):
         user = self._get_user(user_id)
         self.validate_not_none(user, f'用户 {user_id} 不存在')
 
-        normalized_avatar_key = validate_avatar_key(avatar_key.strip())
+        normalized_avatar_key = validate_avatar_key(avatar_key)
         if user.avatar_key == normalized_avatar_key:
             return user
 

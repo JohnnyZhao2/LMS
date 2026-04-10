@@ -4,12 +4,12 @@ Serializers for user management.
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.authorization.roles import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
+from apps.authorization.roles import serialize_user_roles
 from core.exceptions import BusinessError
 
 from .avatar_constants import validate_avatar_key
 from .models import Department, Role, User
-from .role_constraints import validate_role_assignment_constraints
+from .selectors import get_valid_mentor_by_id
 
 
 def validate_mentor(mentor_id):
@@ -18,23 +18,10 @@ def validate_mentor(mentor_id):
     Returns mentor User object if valid.
     Raises ValidationError if invalid.
     """
-    if mentor_id is None:
-        return None
     try:
-        mentor = User.objects.get(pk=mentor_id)
-        if not mentor.has_role('MENTOR'):
-            raise serializers.ValidationError('指定的用户不是导师')
-        if not mentor.is_active:
-            raise serializers.ValidationError('指定的导师已被停用')
-        return mentor
-    except User.DoesNotExist:
-        raise serializers.ValidationError('导师不存在')
-
-
-def _serialize_user_roles(user: User) -> list[dict]:
-    if user.is_superuser:
-        return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
-    return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
+        return get_valid_mentor_by_id(mentor_id)
+    except BusinessError as exc:
+        raise serializers.ValidationError(exc.message)
 
 
 class UserValidationMixin:
@@ -110,7 +97,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleSerializer(many=True))
     def get_roles(self, obj):
-        return _serialize_user_roles(obj)
+        return serialize_user_roles(obj)
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -136,7 +123,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(RoleSerializer(many=True))
     def get_roles(self, obj):
-        return _serialize_user_roles(obj)
+        return serialize_user_roles(obj)
 class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for creating new users.
@@ -193,21 +180,6 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
         validate_mentor(value)
         return value
 
-    def validate(self, attrs):
-        """验证角色和部门的约束。"""
-        role_codes = attrs.get('role_codes', [])
-        department_id = attrs.get('department_id')
-        try:
-            validate_role_assignment_constraints(
-                role_codes=role_codes,
-                department_id=department_id,
-                is_superuser=False,
-            )
-        except BusinessError as exc:
-            raise serializers.ValidationError({'role_codes': exc.message})
-
-        return attrs
-
     def create(self, validated_data):
         """
         创建用户并设置密码、导师和角色（在一个事务中）。
@@ -242,12 +214,8 @@ class UserCreateSerializer(UserValidationMixin, serializers.ModelSerializer):
 
             # 如果提供了导师ID，设置导师
             if mentor_id is not None:
-                try:
-                    mentor = User.objects.get(pk=mentor_id)
-                    user.mentor = mentor
-                    user.save(update_fields=['mentor'])
-                except User.DoesNotExist:
-                    pass
+                user.mentor = validate_mentor(mentor_id)
+                user.save(update_fields=['mentor'])
 
             # 分配角色（统一走 service，保证约束与日志一致）
             from .services import UserManagementService
@@ -270,7 +238,7 @@ class AvatarUpdateSerializer(serializers.Serializer):
     avatar_key = serializers.CharField(required=True, max_length=32, help_text='默认头像标识')
 
     def validate_avatar_key(self, value):
-        return validate_avatar_key(value.strip())
+        return validate_avatar_key(value)
 class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
     """
     Serializer for updating user information.
@@ -310,36 +278,6 @@ class UserUpdateSerializer(UserValidationMixin, serializers.ModelSerializer):
 
     def validate_department_id(self, value):
         return self.validate_department_id_field(value)
-
-    def validate(self, attrs):
-        """验证角色和部门的约束，同时考虑两者的变化。"""
-        role_codes = attrs.get('role_codes')
-        department_id = attrs.get('department_id')
-
-        # 确定最终的角色和部门（role_codes 省略时沿用现有非 STUDENT 角色）
-        final_role_codes = (
-            role_codes
-            if role_codes is not None
-            else list(
-                self.instance.roles.exclude(code='STUDENT').values_list('code', flat=True)
-            )
-        )
-        final_department_id = (
-            department_id if department_id is not None
-            else getattr(self.instance, 'department_id', None)
-        )
-        try:
-            validate_role_assignment_constraints(
-                role_codes=final_role_codes,
-                department_id=final_department_id,
-                is_superuser=self.instance.is_superuser if self.instance else False,
-                exclude_user_id=self.instance.pk if self.instance else None,
-                validate_dedicated_roles=role_codes is not None,
-            )
-        except BusinessError as exc:
-            raise serializers.ValidationError({'role_codes': exc.message})
-
-        return attrs
 
     def update(self, instance, validated_data):
         """Update user information including roles."""

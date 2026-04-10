@@ -39,6 +39,7 @@ export const TaskForm: React.FC = () => {
     totalResourceCount,
     resourcePageSize,
     safeCurrentPage,
+    shouldPaginateResources,
     filteredUsers,
     isUsersLoading,
     isLoading,
@@ -97,6 +98,7 @@ export const TaskForm: React.FC = () => {
             totalResourceCount={totalResourceCount}
             pageSize={resourcePageSize}
             safeCurrentPage={safeCurrentPage}
+            showPagination={shouldPaginateResources}
             onPageChange={setCurrentPage}
           />
 
@@ -170,5 +172,3 @@ export const TaskForm: React.FC = () => {
     </EditorPageShell>
   );
 };
-
-export default TaskForm;

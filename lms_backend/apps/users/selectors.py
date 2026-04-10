@@ -6,7 +6,9 @@ from typing import Dict, List, Optional
 
 from django.db.models import Case, Exists, IntegerField, OuterRef, Q, QuerySet, Value, When
 
-from .models import Department, Role, User, UserRole
+from core.exceptions import BusinessError, ErrorCodes
+
+from .models import User, UserRole
 
 
 def user_base_queryset() -> QuerySet:
@@ -30,6 +32,39 @@ def get_user_by_id(pk: int) -> Optional[User]:
         User instance or None
     """
     return user_base_queryset().filter(pk=pk).first()
+
+
+def get_user_by_employee_id(employee_id: str) -> Optional[User]:
+    """
+    Get a user by employee ID with related data.
+    """
+    return user_base_queryset().filter(employee_id=employee_id).first()
+
+
+def get_valid_mentor_by_id(mentor_id: Optional[int]) -> Optional[User]:
+    """
+    Get a valid mentor user.
+    """
+    if mentor_id is None:
+        return None
+
+    mentor = get_user_by_id(mentor_id)
+    if mentor is None:
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message='导师不存在',
+        )
+    if not mentor.has_role('MENTOR'):
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message='指定的用户不是导师',
+        )
+    if not mentor.is_active:
+        raise BusinessError(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message='指定的导师已被停用',
+        )
+    return mentor
 
 
 def list_users(
@@ -79,39 +114,6 @@ def list_users(
         qs = qs.order_by('employee_id')
 
     return qs
-def list_mentors() -> QuerySet:
-    """
-    List all active users with MENTOR role.
-    Returns:
-        QuerySet of mentor users
-    """
-    return User.objects.filter(
-        roles__code='MENTOR',
-        is_active=True
-    ).distinct().order_by('username')
-
-
-def list_departments() -> QuerySet:
-    """
-    List all departments.
-    Returns:
-        QuerySet of departments
-    """
-    return Department.objects.all().order_by('code')
-
-
-def list_roles(exclude_student: bool = True) -> QuerySet:
-    """
-    List all roles.
-    Args:
-        exclude_student: Whether to exclude STUDENT role
-    Returns:
-        QuerySet of roles
-    """
-    qs = Role.objects.all()
-    if exclude_student:
-        qs = qs.exclude(code='STUDENT')
-    return qs.order_by('code')
 
 
 def get_user_created_resource_ids(user_id: int) -> Dict[str, List[int]]:

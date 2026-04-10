@@ -1,6 +1,6 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { Spinner } from '@/components/ui/spinner';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { ROUTES } from '@/config/routes';
 import { getAccessibleWorkspaceHome, normalizeRoleCode } from '@/app/workspace-config';
 

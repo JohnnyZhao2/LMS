@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy, ActivityLogType } from '../types';
 import { ActivityLogPolicyCategorySection } from './activity-log-policy-category-section';

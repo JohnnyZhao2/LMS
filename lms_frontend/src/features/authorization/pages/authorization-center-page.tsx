@@ -2,17 +2,18 @@ import { useMemo, useState } from 'react';
 import { Layers3 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { showApiError } from '@/utils/error-handler';
 import type { RoleCode } from '@/types/api';
+import { ROLE_ORDER } from '@/config/role-constants';
 import {
-  usePermissionCatalog,
   useReplaceRolePermissionTemplate,
   useRolePermissionTemplates,
+  useVisiblePermissionCatalog,
 } from '../api/authorization';
-import { isPermissionLockedForRole } from '../constants/permission-constraints';
-import { ROLE_TEMPLATE_ORDER } from '../constants/role-template';
 import { RolePermissionTemplatePanel } from '../components/role-permission-template-panel';
+
+const ROLE_TEMPLATE_ORDER = ROLE_ORDER.filter((roleCode) => roleCode !== 'SUPER_ADMIN');
 
 export const AuthorizationCenterPage: React.FC = () => {
   const { hasCapability, refreshUser } = useAuth();
@@ -22,18 +23,7 @@ export const AuthorizationCenterPage: React.FC = () => {
   const [savingRoleCodes, setSavingRoleCodes] = useState<RoleCode[]>([]);
   const shouldLoadData = canViewRoleTemplate;
 
-  const { data: rawPermissionCatalog = [] } = usePermissionCatalog(undefined, shouldLoadData);
-  const permissionCatalog = useMemo(
-    () => rawPermissionCatalog.filter((permission) => permission.role_template_visible),
-    [rawPermissionCatalog],
-  );
-  const permissionByCode = useMemo(() => {
-    const permissionMap = new Map<string, { module: string }>();
-    permissionCatalog.forEach((permission) => {
-      permissionMap.set(permission.code, { module: permission.module });
-    });
-    return permissionMap;
-  }, [permissionCatalog]);
+  const { data: permissionCatalog = [] } = useVisiblePermissionCatalog('role_template', shouldLoadData);
   const roleTemplateQueries = useRolePermissionTemplates(ROLE_TEMPLATE_ORDER, canViewRoleTemplate);
   const permissionCodesByRole = useMemo(
     () => Object.fromEntries(
@@ -56,14 +46,6 @@ export const AuthorizationCenterPage: React.FC = () => {
       return;
     }
 
-    const hasLockedPermissionChange = normalizedNextCodes.some((permissionCode) => {
-      const permission = permissionByCode.get(permissionCode);
-      return permission ? isPermissionLockedForRole(roleCode, permission) : false;
-    });
-    if (hasLockedPermissionChange) {
-      return;
-    }
-
     setSavingRoleCodes((previous) => (previous.includes(roleCode) ? previous : [...previous, roleCode]));
 
     try {
@@ -71,7 +53,7 @@ export const AuthorizationCenterPage: React.FC = () => {
         roleCode,
         permissionCodes: normalizedNextCodes,
       });
-      const roleIndex = ROLE_TEMPLATE_ORDER.indexOf(roleCode);
+      const roleIndex = ROLE_TEMPLATE_ORDER.indexOf(roleCode as (typeof ROLE_TEMPLATE_ORDER)[number]);
       await Promise.all([
         refreshUser(),
         roleIndex >= 0 ? roleTemplateQueries[roleIndex]?.refetch() : Promise.resolve(),

@@ -44,13 +44,7 @@ export interface StudentExecution {
   node_progress: string;
   score: number | null;
   time_spent: number;
-  answer_details: string;
   is_abnormal: boolean;
-}
-
-export interface StudentExecutionsResponse {
-  results: StudentExecution[];
-  count: number;
 }
 
 type GradingQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';

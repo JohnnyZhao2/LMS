@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
-import { useAuth } from '@/features/auth/hooks/use-auth';
-import { getRoleFromPathname, normalizeRoleCode } from '@/app/workspace-config';
+import { useAuth } from '@/features/auth/stores/auth-context';
+import { getRoleFromPathname, resolveWorkspaceRole } from '@/app/workspace-config';
 
 /**
  * 获取当前角色
@@ -12,20 +12,11 @@ export function useCurrentRole() {
   const { currentRole: authCurrentRole, availableRoles } = useAuth();
 
   const resolvedRole = useMemo(() => {
-    // 1. 优先使用 token 同步后的角色
-    const normalizedAuthRole = normalizeRoleCode(authCurrentRole);
-    if (normalizedAuthRole) {
-      return normalizedAuthRole;
-    }
-
-    // 2. 回退到 URL path（用于初始渲染）
-    const pathnameRole = getRoleFromPathname(location.pathname);
-    if (pathnameRole) {
-      return pathnameRole;
-    }
-
-    // 3. 使用第一个可用角色
-    return availableRoles[0]?.code ?? null;
+    return resolveWorkspaceRole(
+      authCurrentRole,
+      getRoleFromPathname(location.pathname),
+      availableRoles.map((role) => role.code),
+    );
   }, [location.pathname, authCurrentRole, availableRoles]);
 
   return resolvedRole;

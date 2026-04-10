@@ -1,5 +1,5 @@
 import { AppLayout } from '@/components/layouts/app-layout';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';

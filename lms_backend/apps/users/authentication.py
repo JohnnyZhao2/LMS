@@ -4,7 +4,7 @@ Custom authentication helpers for user role awareness.
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps.authorization.roles import SUPER_ADMIN_ROLE, is_super_admin
+from apps.authorization.roles import SUPER_ADMIN_ROLE, get_default_role, is_super_admin
 
 
 class RoleAwareJWTAuthentication(JWTAuthentication):
@@ -27,10 +27,5 @@ class RoleAwareJWTAuthentication(JWTAuthentication):
         if current_role and current_role in role_codes:
             setattr(user, 'current_role', current_role)
         else:
-            # Fall back to default role if token role is missing or stale.
-            from .models import Role
-            for role_code in Role.ROLE_PRIORITY_ORDER:
-                if role_code in role_codes:
-                    setattr(user, 'current_role', role_code)
-                    break
+            setattr(user, 'current_role', get_default_role(role_codes))
         return user

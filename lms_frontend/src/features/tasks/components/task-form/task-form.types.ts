@@ -1,4 +1,4 @@
-import type { KnowledgeListItem, QuizListItem } from '@/types/api';
+import type { TaskResourceOption } from '@/types/api';
 
 export type ResourceType = 'DOCUMENT' | 'QUIZ';
 
@@ -16,21 +16,14 @@ export interface SelectedResource extends ResourceItem {
   uid: number;
 }
 
-export const mapKnowledgeToResource = (item: KnowledgeListItem): ResourceItem => ({
+export const mapTaskResourceOptionToResource = (item: TaskResourceOption): ResourceItem => ({
   id: item.id,
   resource_uuid: item.resource_uuid,
   is_current: item.is_current,
   title: item.title,
-  category: item.space_tag?.name || '未分类',
-  resourceType: 'DOCUMENT',
-});
-
-export const mapQuizToResource = (quiz: QuizListItem): ResourceItem => ({
-  id: quiz.id,
-  resource_uuid: quiz.resource_uuid,
-  is_current: quiz.is_current,
-  title: quiz.title,
-  category: `${quiz.question_count} 个题目`,
-  resourceType: 'QUIZ',
-  quizType: quiz.quiz_type,
+  category: item.resource_type === 'DOCUMENT'
+    ? item.space_tag_name || '未分类'
+    : `${item.question_count || 0} 个题目`,
+  resourceType: item.resource_type,
+  quizType: item.quiz_type,
 });

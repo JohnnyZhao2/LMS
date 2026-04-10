@@ -22,12 +22,8 @@ class LoginRequestSerializer(serializers.Serializer):
     )
 
 
-class LoginResponseSerializer(serializers.Serializer):
-    """
-    Serializer for login response.
-    """
-    access_token = serializers.CharField(help_text='访问令牌')
-    refresh_token = serializers.CharField(help_text='刷新令牌')
+class AuthSessionSerializer(serializers.Serializer):
+    """Shared session payload for authenticated responses."""
     user = UserInfoSerializer(help_text='用户信息')
     available_roles = RoleSerializer(many=True, help_text='可用角色列表')
     current_role = serializers.CharField(help_text='当前生效角色')
@@ -35,6 +31,14 @@ class LoginResponseSerializer(serializers.Serializer):
         child=serializers.DictField(),
         help_text='当前生效角色下的能力映射',
     )
+
+
+class LoginResponseSerializer(AuthSessionSerializer):
+    """
+    Serializer for login response.
+    """
+    access_token = serializers.CharField(help_text='访问令牌')
+    refresh_token = serializers.CharField(help_text='刷新令牌')
 
 
 class LogoutRequestSerializer(serializers.Serializer):
@@ -70,21 +74,10 @@ class SwitchRoleRequestSerializer(serializers.Serializer):
     )
 
 
-class MeResponseSerializer(serializers.Serializer):
+class MeResponseSerializer(AuthSessionSerializer):
     """
     Serializer for current user info response.
     """
-    user = UserInfoSerializer(help_text='用户信息')
-    available_roles = RoleSerializer(many=True, help_text='可用角色列表')
-    current_role = serializers.CharField(help_text='当前生效角色')
-    capabilities = serializers.DictField(
-        child=serializers.DictField(),
-        help_text='当前生效角色下的能力映射',
-    )
-
-
-class CapabilitiesResponseSerializer(serializers.DictField):
-    child = serializers.DictField()
 
 
 class ResetPasswordRequestSerializer(serializers.Serializer):
@@ -102,7 +95,6 @@ class ResetPasswordResponseSerializer(serializers.Serializer):
     Serializer for password reset response.
     """
     temporary_password = serializers.CharField(help_text='临时密码')
-    message = serializers.CharField(help_text='提示信息')
 
 
 class OidcAuthorizeUrlResponseSerializer(serializers.Serializer):

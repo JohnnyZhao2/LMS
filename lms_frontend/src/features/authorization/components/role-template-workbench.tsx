@@ -1,16 +1,14 @@
 import { Check } from 'lucide-react';
+import { ROLE_FULL_LABELS } from '@/config/role-constants';
 import { UserPermissionModuleSidebar } from '@/features/users/components/user-permission-module-sidebar';
-import { isPermissionLockedForRole } from '@/features/authorization/constants/permission-constraints';
 import { cn } from '@/lib/utils';
 import type { PermissionCatalogItem, RoleCode } from '@/types/api';
-import { ROLE_TEMPLATE_LABELS } from '@/features/authorization/constants/role-template';
 
 interface PermissionGroup {
   module: string;
   permissions: PermissionCatalogItem[];
   modulePresentation: {
     label: string;
-    summary: string;
   };
 }
 
@@ -107,7 +105,7 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
                     className="border-b border-l border-border/60 bg-white px-3 py-3 text-center"
                   >
                     <div className="text-sm font-semibold text-foreground">
-                      {ROLE_TEMPLATE_LABELS[roleCode] ?? roleCode}
+                      {ROLE_FULL_LABELS[roleCode] ?? roleCode}
                     </div>
                     <div className="mt-1 text-[11px] text-text-muted">
                       {activeRoleCounts[roleCode]}/{activeGroup.permissions.length}
@@ -138,8 +136,7 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
 
                   {roleCodes.map((roleCode) => {
                     const checked = permissionCodesByRole[roleCode]?.includes(permission.code) ?? false;
-                    const locked = isPermissionLockedForRole(roleCode, permission);
-                    const disabled = !canUpdateRoleTemplate || locked || savingRoleCodes.includes(roleCode);
+                    const disabled = !canUpdateRoleTemplate || savingRoleCodes.includes(roleCode);
                     const nextCodes = checked
                       ? (permissionCodesByRole[roleCode] ?? []).filter((code) => code !== permission.code)
                       : [...(permissionCodesByRole[roleCode] ?? []), permission.code];

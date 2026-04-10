@@ -1,6 +1,6 @@
 import type { PermissionOverrideScope, RoleCode } from '@/types/api';
 
-export const PERMISSION_SCOPE_ORDER: PermissionOverrideScope[] = [
+const PERMISSION_SCOPE_ORDER: PermissionOverrideScope[] = [
   'SELF',
   'MENTEES',
   'DEPARTMENT',

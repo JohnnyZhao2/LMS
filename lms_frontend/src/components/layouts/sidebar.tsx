@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-react'
-import { useAuth } from '@/features/auth/hooks/use-auth'
+import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
 import { useUpdateMyAvatar } from '@/features/users/api/manage-users'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'

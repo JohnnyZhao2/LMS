@@ -48,12 +48,6 @@ def _extract_module_presentation_codes() -> Set[str]:
     return set(re.findall(r'^\s*([a-z_]+):\s*\{', module_block, re.MULTILINE))
 
 
-def _extract_permission_presentation_codes() -> Set[str]:
-    source_text = FRONTEND_PRESENTATION_FILE.read_text(encoding='utf-8')
-    permission_block = _extract_object_body(source_text, 'PERMISSION_PRESENTATION')
-    return set(re.findall(r"^\s*'([a-z_]+(?:\.[a-z_]+)+)':\s*\{", permission_block, re.MULTILINE))
-
-
 def _iter_backend_source_files():
     for path in BACKEND_APPS_ROOT.rglob('*.py'):
         if 'migrations' in path.parts:
@@ -119,15 +113,6 @@ def validate_authorization_consistency() -> List[str]:
     unknown_used_codes = sorted(code for code in used_codes if code not in declared_codes)
     if unknown_used_codes:
         errors.append(f'前后端存在未登记到权限目录的权限码: {unknown_used_codes}')
-
-    presentation_codes = _extract_permission_presentation_codes()
-    missing_presentation_codes = sorted(set(catalog_codes) - presentation_codes)
-    if missing_presentation_codes:
-        errors.append(f'前端权限说明缺失: {missing_presentation_codes}')
-
-    stale_presentation_codes = sorted(code for code in presentation_codes if code not in declared_codes)
-    if stale_presentation_codes:
-        errors.append(f'前端权限说明存在废弃权限: {stale_presentation_codes}')
 
     module_presentation_codes = _extract_module_presentation_codes()
     missing_module_codes = sorted(declared_modules - module_presentation_codes)

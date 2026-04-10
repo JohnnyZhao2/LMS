@@ -21,7 +21,7 @@ import { UserForm } from "./user-form"
 import { AvatarPickerPopover } from "./avatar-picker-popover"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
-import { useAuth } from "@/features/auth/hooks/use-auth"
+import { useAuth } from "@/features/auth/stores/auth-context"
 import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
@@ -108,7 +108,7 @@ export const UserList: React.FC = () => {
   const mentorFilter = selectedMentorId !== 'all'
     ? Number(selectedMentorId)
     : undefined
-  const { data, isLoading, refetch } = useUsers({
+  const { data, isLoading } = useUsers({
     search,
     departmentId: departmentFilter,
     mentorId: mentorFilter,
@@ -141,7 +141,6 @@ export const UserList: React.FC = () => {
         await activateUser.mutateAsync(user.id)
         toast.success("账号已启用")
       }
-      refetch()
     } catch (error) {
       showApiError(error)
     }
@@ -176,7 +175,6 @@ export const UserList: React.FC = () => {
         setEditingUserId(undefined)
       }
       setDeleteUserDialog({ open: false })
-      refetch()
     } catch (error) {
       showApiError(error)
     }
@@ -440,9 +438,6 @@ export const UserList: React.FC = () => {
         onClose={() => {
           setFormModalOpen(false)
           setEditingUserId(undefined)
-        }}
-        onSuccess={() => {
-          refetch()
         }}
       />
 

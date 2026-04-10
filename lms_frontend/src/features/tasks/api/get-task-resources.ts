@@ -1,56 +1,38 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { buildQueryString } from '@/lib/api-utils';
-import { useCurrentRole } from '@/hooks/use-current-role';
-import type { KnowledgeListItem, PaginatedResponse, QuizListItem } from '@/types/api';
 
-interface UseResourceOptions {
+import { useCurrentRole } from '@/hooks/use-current-role';
+import { buildQueryString } from '@/lib/api-utils';
+import { apiClient } from '@/lib/api-client';
+import type { PaginatedResponse, TaskResourceOption } from '@/types/api';
+
+interface UseTaskResourceOptions {
   search?: string;
   page?: number;
   page_size?: number;
+  resource_type?: 'ALL' | 'DOCUMENT' | 'QUIZ';
   enabled?: boolean;
 }
 
-/**
- * 获取任务可选的知识文档列表（仅已发布版本）
- */
-export const useTaskKnowledgeOptions = (options: UseResourceOptions = {}) => {
+export const useTaskResourceOptions = (options: UseTaskResourceOptions = {}) => {
   const currentRole = useCurrentRole();
-  const { search = '', page = 1, page_size = 10, enabled = true } = options;
+  const {
+    search = '',
+    page = 1,
+    page_size = 10,
+    resource_type = 'ALL',
+    enabled = true,
+  } = options;
 
   return useQuery({
-    queryKey: ['task-knowledge-options', currentRole ?? 'UNKNOWN', search, page, page_size],
+    queryKey: ['task-resource-options', currentRole ?? 'UNKNOWN', resource_type, search, page, page_size],
     queryFn: () => {
-      const queryParams = {
+      const queryString = buildQueryString({
+        resource_type,
         page: String(page),
         page_size: String(page_size),
         ...(search && { search }),
-      };
-      const queryString = buildQueryString(queryParams);
-      return apiClient.get<PaginatedResponse<KnowledgeListItem>>(`/knowledge${queryString}`);
-    },
-    enabled: currentRole !== null && enabled,
-    staleTime: 60_000,
-  });
-};
-
-/**
- * 获取任务可选的试卷列表
- */
-export const useTaskQuizOptions = (options: UseResourceOptions = {}) => {
-  const currentRole = useCurrentRole();
-  const { search = '', page = 1, page_size = 10, enabled = true } = options;
-
-  return useQuery({
-    queryKey: ['task-quiz-options', currentRole ?? 'UNKNOWN', search, page, page_size],
-    queryFn: () => {
-      const queryParams = {
-        page: String(page),
-        page_size: String(page_size),
-        ...(search && { search }),
-      };
-      const queryString = buildQueryString(queryParams);
-      return apiClient.get<PaginatedResponse<QuizListItem>>(`/quizzes${queryString}`);
+      });
+      return apiClient.get<PaginatedResponse<TaskResourceOption>>(`/tasks/resource-options/${queryString}`);
     },
     enabled: currentRole !== null && enabled,
     staleTime: 60_000,

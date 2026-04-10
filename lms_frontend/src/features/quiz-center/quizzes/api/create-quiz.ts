@@ -12,7 +12,7 @@ export const useCreateQuiz = () => {
     mutationFn: (data: QuizCreateRequest) => apiClient.post<QuizDetail>('/quizzes/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-quiz-options'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };
@@ -28,7 +28,7 @@ export const useUpdateQuiz = () => {
       apiClient.patch<QuizDetail>(`/quizzes/${id}/`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-quiz-options'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
       queryClient.invalidateQueries({ queryKey: ['quiz-detail'] });
     },
   });
@@ -44,8 +44,7 @@ export const useDeleteQuiz = () => {
     mutationFn: (id: number) => apiClient.delete(`/quizzes/${id}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quizzes'] });
-      queryClient.invalidateQueries({ queryKey: ['task-quiz-options'] });
+      queryClient.invalidateQueries({ queryKey: ['task-resource-options'] });
     },
   });
 };
-

@@ -8,10 +8,9 @@ Implements:
 """
 import secrets
 import string
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from django.contrib.auth import authenticate
-from django.db.models import QuerySet
 from django.utils import timezone
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import (
@@ -26,9 +25,14 @@ from core.exceptions import BusinessError, ErrorCodes
 from apps.activity_logs.services import ActivityLogService
 from apps.auth.one_account import OneAccountClient
 from apps.authorization.engine import enforce
-from apps.authorization.roles import SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE_NAME
+from apps.authorization.roles import (
+    SUPER_ADMIN_ROLE,
+    get_default_role,
+    serialize_user_roles,
+)
 from apps.authorization.services import AuthorizationService
-from apps.users.models import Role, User
+from apps.users.models import User
+from apps.users.selectors import get_user_by_employee_id, get_user_by_id
 from apps.users.serializers import UserInfoSerializer
 
 
@@ -41,18 +45,6 @@ class AuthenticationService(BaseService):
     def __init__(self, request):
         super().__init__(request)
         self.one_account_client = OneAccountClient()
-
-    def _user_queryset(self) -> QuerySet[User]:
-        return User.objects.select_related(
-            'department',
-            'mentor'
-        ).prefetch_related('roles')
-
-    def _get_user_by_employee_id(self, employee_id: str) -> Optional[User]:
-        return self._user_queryset().filter(employee_id=employee_id).first()
-
-    def _get_user_by_id(self, user_id: int) -> Optional[User]:
-        return self._user_queryset().filter(pk=user_id).first()
 
     def _log_user_action_safely(
         self,
@@ -86,20 +78,20 @@ class AuthenticationService(BaseService):
 
     def _resolve_current_role(
         self,
-        available_roles: List[Dict[str, str]],
+        available_roles: list[dict[str, str]],
         requested_role: Optional[str] = None,
     ) -> str:
         role_codes = {role['code'] for role in available_roles}
         if requested_role and requested_role in role_codes:
             return requested_role
-        return self._get_default_role(available_roles)
+        return get_default_role(role_codes)
 
     def _build_user_payload(
         self,
         user: User,
         requested_role: Optional[str] = None,
     ) -> Dict[str, Any]:
-        available_roles = self._get_user_roles(user)
+        available_roles = serialize_user_roles(user)
         if user.is_superuser:
             current_role = SUPER_ADMIN_ROLE
         else:
@@ -132,6 +124,23 @@ class AuthenticationService(BaseService):
             **user_payload,
         }
 
+    def _finalize_login(
+        self,
+        user: User,
+        *,
+        description: str,
+        requested_role: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+        self._log_user_action_safely(
+            user=user,
+            action='login',
+            description=description,
+            status='success',
+        )
+        return self._build_auth_payload(user, requested_role=requested_role)
+
     def login(self, employee_id: str, password: str) -> Dict[str, Any]:
         """
         Authenticate user and generate JWT tokens.
@@ -143,7 +152,7 @@ class AuthenticationService(BaseService):
         Raises:
             BusinessError: If credentials are invalid or user is inactive
         """
-        user_obj = self._get_user_by_employee_id(employee_id)
+        user_obj = get_user_by_employee_id(employee_id)
         if user_obj and not user_obj.is_active:
             self._log_user_action_safely(
                 user=user_obj,
@@ -171,17 +180,10 @@ class AuthenticationService(BaseService):
             )
 
         authenticated_user = self._validate_active_user(user)
-        authenticated_user.last_login = timezone.now()
-        authenticated_user.save(update_fields=['last_login'])
-
-        self._log_user_action_safely(
-            user=authenticated_user,
-            action='login',
+        return self._finalize_login(
+            authenticated_user,
             description=f'账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
-            status='success',
         )
-        return self._build_auth_payload(authenticated_user)
-
 
     def get_oidc_authorize_url(self) -> Dict[str, str]:
         state = secrets.token_urlsafe(24)
@@ -194,27 +196,19 @@ class AuthenticationService(BaseService):
     def login_by_oidc_code(self, code: str) -> Dict[str, Any]:
         oidc_result = self.one_account_client.exchange_code(code=code)
         employee_id = oidc_result['employee_id']
-        user_obj = self._get_user_by_employee_id(employee_id)
+        user_obj = get_user_by_employee_id(employee_id)
         authenticated_user = self._validate_active_user(user_obj)
-        authenticated_user.last_login = timezone.now()
-        authenticated_user.save(update_fields=['last_login'])
-
-        self._log_user_action_safely(
-            user=authenticated_user,
-            action='login',
+        return self._finalize_login(
+            authenticated_user,
             description=f'统一认证扫码登录：账号：{authenticated_user.username}（{authenticated_user.employee_id}）',
-            status='success',
         )
-        return self._build_auth_payload(authenticated_user)
 
-    def logout(self, user: User, refresh_token: Optional[str] = None) -> bool:
+    def logout(self, user: User, refresh_token: Optional[str] = None) -> None:
         """
         Logout user by blacklisting their refresh token.
         Args:
             user: The user to logout
             refresh_token: Optional refresh token to blacklist
-        Returns:
-            True if logout successful
         """
         if refresh_token:
             try:
@@ -229,8 +223,6 @@ class AuthenticationService(BaseService):
             description=f'账号：{user.username}（{user.employee_id}）',
             status='success',
         )
-
-        return True
 
     def refresh_token(self, refresh_token: str) -> Dict[str, str]:
         """
@@ -251,7 +243,7 @@ class AuthenticationService(BaseService):
                     message='无效的刷新令牌',
                 )
 
-            user = self._validate_active_user(self._get_user_by_id(user_id))
+            user = self._validate_active_user(get_user_by_id(user_id))
             requested_role = incoming_token.get('current_role')
             tokens = self._build_auth_payload(user, requested_role=requested_role)
 
@@ -281,7 +273,7 @@ class AuthenticationService(BaseService):
         Raises:
             BusinessError: If user doesn't have the requested role
         """
-        active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        active_user = self._validate_active_user(get_user_by_id(user.id))
         if active_user.is_superuser:
             raise BusinessError(
                 code=ErrorCodes.AUTH_INVALID_ROLE,
@@ -295,13 +287,8 @@ class AuthenticationService(BaseService):
         return self._build_auth_payload(active_user, requested_role=role_code)
 
     def get_me(self, user: User, requested_role: Optional[str] = None) -> Dict[str, Any]:
-        active_user = self._validate_active_user(self._get_user_by_id(user.id))
+        active_user = self._validate_active_user(get_user_by_id(user.id))
         return self._build_user_payload(active_user, requested_role=requested_role)
-
-    def get_capabilities(self, user: User, requested_role: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
-        active_user = self._validate_active_user(self._get_user_by_id(user.id))
-        payload = self._build_user_payload(active_user, requested_role=requested_role)
-        return payload['capabilities']
 
     def reset_password(self, operator: User, target_user_id: int) -> Dict[str, str]:
         enforce(
@@ -311,7 +298,7 @@ class AuthenticationService(BaseService):
         )
 
         target_user = self.validate_not_none(
-            self._get_user_by_id(target_user_id),
+            get_user_by_id(target_user_id),
             '用户不存在',
         )
         temporary_password = self.generate_temporary_password()
@@ -352,55 +339,18 @@ class AuthenticationService(BaseService):
             if current_role:
                 refresh['current_role'] = current_role
             else:
-                refresh['current_role'] = self._get_default_role(
-                    self._get_user_roles(user)
-                )
+                refresh['current_role'] = get_default_role(user.role_codes)
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
         }
 
-    def _get_user_roles(self, user: User) -> List[Dict[str, str]]:
-        """
-        Get all roles for a user.
-        Args:
-            user: The user to get roles for
-        Returns:
-            List of role dicts with code and name
-        """
-        if user.is_superuser:
-            return [{'code': SUPER_ADMIN_ROLE, 'name': SUPER_ADMIN_ROLE_NAME}]
-        return [{'code': role.code, 'name': role.name} for role in user.roles.all()]
-
-    def _get_default_role(self, roles: List[Dict[str, str]]) -> str:
-        """
-        Determine the default role for a user based on role priority.
-        Uses Role.ROLE_PRIORITY_ORDER to determine priority.
-        Args:
-            roles: List of role dicts
-        Returns:
-            The highest priority role code
-        """
-        role_codes = {r['code'] for r in roles}
-        if SUPER_ADMIN_ROLE in role_codes:
-            return SUPER_ADMIN_ROLE
-        for role_code in Role.ROLE_PRIORITY_ORDER:
-            if role_code in role_codes:
-                return role_code
-        return 'STUDENT'
-
-    def blacklist_all_tokens(self, user: User) -> int:
+    def blacklist_all_tokens(self, user: User) -> None:
         """
         Blacklist all outstanding tokens for a user.
         Args:
             user: The user
-        Returns:
-            Number of tokens blacklisted
         """
         tokens = OutstandingToken.objects.filter(user=user)
-        count = 0
         for token in tokens:
-            _, created = BlacklistedToken.objects.get_or_create(token=token)
-            if created:
-                count += 1
-        return count
+            BlacklistedToken.objects.get_or_create(token=token)

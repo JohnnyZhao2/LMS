@@ -37,12 +37,10 @@ def validate_assignee_scope(user, assignee_ids: list[int], request) -> None:
 
 class TaskAssignmentSerializer(serializers.ModelSerializer):
     """Serializer for TaskAssignment model."""
-    assignee_name = serializers.CharField(source='assignee.username', read_only=True)
-    assignee_employee_id = serializers.CharField(source='assignee.employee_id', read_only=True)
     class Meta:
         model = TaskAssignment
         fields = [
-            'id', 'assignee', 'assignee_name', 'assignee_employee_id',
+            'id', 'assignee',
             'status', 'completed_at', 'score', 'created_at', 'updated_at'
         ]
         read_only_fields = ['status', 'completed_at', 'score', 'created_at', 'updated_at']
@@ -71,8 +69,6 @@ class TaskQuizSerializer(serializers.ModelSerializer):
     quiz_title = serializers.CharField(source='quiz.title', read_only=True)
     question_count = serializers.IntegerField(source='quiz.question_count', read_only=True)
     total_score = serializers.DecimalField(source='quiz.total_score', max_digits=6, decimal_places=2, read_only=True)
-    subjective_question_count = serializers.IntegerField(source='quiz.subjective_question_count', read_only=True)
-    objective_question_count = serializers.IntegerField(source='quiz.objective_question_count', read_only=True)
     # Quiz type info
     quiz_type = serializers.CharField(source='quiz.quiz_type', read_only=True)
     quiz_type_display = serializers.CharField(source='quiz.get_quiz_type_display', read_only=True)
@@ -84,16 +80,14 @@ class TaskQuizSerializer(serializers.ModelSerializer):
         model = TaskQuiz
         fields = [
             'id', 'quiz', 'quiz_title', 'question_count', 'total_score',
-            'subjective_question_count', 'objective_question_count', 'order',
+            'order',
             'quiz_type', 'quiz_type_display', 'duration', 'pass_score',
             'resource_uuid', 'is_current'
         ]
         read_only_fields = ['order']
 class TaskListSerializer(serializers.ModelSerializer):
     """Serializer for task list view."""
-    created_by = serializers.IntegerField(source='created_by.id', read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by = serializers.IntegerField(source='updated_by.id', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     knowledge_count = serializers.ReadOnlyField()
     quiz_count = serializers.ReadOnlyField()
@@ -121,13 +115,12 @@ class TaskListSerializer(serializers.ModelSerializer):
             'deadline',
             'knowledge_count', 'quiz_count', 'exam_count', 'practice_count',
             'assignee_count', 'completed_count',
-            'created_by', 'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
+            'created_by_name', 'updated_by_name', 'created_at', 'updated_at',
             'actions',
         ]
 class TaskDetailSerializer(serializers.ModelSerializer):
     """Serializer for task detail view."""
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    updated_by = serializers.IntegerField(source='updated_by.id', read_only=True, allow_null=True)
     updated_by_name = serializers.CharField(source='updated_by.username', read_only=True, allow_null=True)
     knowledge_items = TaskKnowledgeSerializer(source='task_knowledge', many=True, read_only=True)
     quizzes = TaskQuizSerializer(source='task_quizzes', many=True, read_only=True)
@@ -137,7 +130,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
     def get_has_progress(self, obj):
         """Check if task has student learning progress"""
-        return TaskService.has_student_progress(obj)
+        return obj.has_student_progress
 
     def get_actions(self, obj):
         request = self.context.get('request')
@@ -156,7 +149,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 'description',
             'deadline',
             'knowledge_items', 'quizzes', 'assignments',
-            'created_by_name', 'updated_by', 'updated_by_name', 'created_at', 'updated_at',
+            'created_by_name', 'updated_by_name', 'created_at', 'updated_at',
             'has_progress',
             'actions',
         ]
@@ -367,9 +360,9 @@ class StudentAssignmentListSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
     def get_has_quiz(self, obj):
-        return bool(obj.task.task_quizzes.all())
+        return obj.task.has_quiz
     def get_has_knowledge(self, obj):
-        return bool(obj.task.task_knowledge.all())
+        return obj.task.has_knowledge
     def get_progress(self, obj):
         """获取详细进度记录"""
         return obj.get_progress_data()
@@ -461,6 +454,17 @@ class TaskAnalyticsSerializer(serializers.Serializer):
     pass_rate = serializers.FloatField(allow_null=True)
 
 
+class TaskResourceOptionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    resource_uuid = serializers.UUIDField()
+    is_current = serializers.BooleanField()
+    resource_type = serializers.ChoiceField(choices=['DOCUMENT', 'QUIZ'])
+    space_tag_name = serializers.CharField(allow_null=True, required=False)
+    question_count = serializers.IntegerField(required=False)
+    quiz_type = serializers.CharField(required=False)
+
+
 class StudentExecutionSerializer(serializers.Serializer):
     """学员执行情况序列化器"""
     student_id = serializers.IntegerField()
@@ -474,5 +478,4 @@ class StudentExecutionSerializer(serializers.Serializer):
     node_progress = serializers.CharField()
     score = serializers.FloatField(allow_null=True)
     time_spent = serializers.IntegerField()
-    answer_details = serializers.CharField()
     is_abnormal = serializers.BooleanField()

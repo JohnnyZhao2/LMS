@@ -11,7 +11,7 @@ import {
   SquareTerminal,
 } from 'lucide-react';
 import type { RoleCode } from '@/types/api';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useAuth } from '@/features/auth/stores/auth-context';
 import { getWorkspaceConfig, getRolePathPrefix } from '@/app/workspace-config';
 
 export interface MenuItem {
