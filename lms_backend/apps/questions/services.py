@@ -11,8 +11,7 @@ from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 from core.versioning import (
-    build_next_version_data,
-    deactivate_current_version,
+    derive_resource_version,
     initialize_new_resource_version,
     is_referenced,
 )
@@ -375,19 +374,20 @@ class QuestionService(BaseService):
     ) -> Question:
         """基于 source 派生题目版本。"""
         version_data, space_tag_id, tag_ids = self._extract_version_payload(source, data)
-        new_question_data = build_next_version_data(
+
+        def finalize_new_question(new_question: Question) -> None:
+            self._apply_space_tag_change(new_question, space_tag_id, True)
+            new_question.tags.set(tag_ids)
+
+        return derive_resource_version(
             source,
             actor=self.user,
             copy_fields=self.VERSION_COPY_FIELDS,
             overrides=version_data,
+            is_current=sync_to_bank,
+            deactivate_current=sync_to_bank,
+            finalize=finalize_new_question,
         )
-        new_question_data['is_current'] = sync_to_bank
-        if sync_to_bank:
-            deactivate_current_version(Question, source.resource_uuid)
-        new_question = Question.objects.create(**new_question_data)
-        self._apply_space_tag_change(new_question, space_tag_id, True)
-        new_question.tags.set(tag_ids)
-        return new_question
 
     def _extract_version_payload(
         self,

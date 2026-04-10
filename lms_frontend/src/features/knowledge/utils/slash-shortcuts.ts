@@ -12,11 +12,6 @@ export interface SlashTrigger {
   query: string;
 }
 
-interface SlashApplyResult {
-  nextValue: string;
-  cursor: number;
-}
-
 const DIVIDER_MARKERS = new Set(['---', '***', '___']);
 
 const SLASH_SHORTCUTS: SlashShortcut[] = [
@@ -67,55 +62,6 @@ export function filterSlashShortcuts(query: string): SlashShortcut[] {
     shortcut.label.includes(normalizedQuery) ||
     shortcut.keywords.some((keyword) => keyword.toLowerCase().includes(normalizedQuery))
   ));
-}
-
-export function applySlashShortcut(
-  value: string,
-  trigger: SlashTrigger,
-  shortcutId: SlashShortcutId,
-): SlashApplyResult {
-  const start = Math.max(0, Math.min(trigger.start, value.length));
-  const end = Math.max(start, Math.min(trigger.end, value.length));
-  const before = value.slice(0, start);
-  const after = value.slice(end);
-
-  const prefixNeedsLineBreak = before.length > 0 && !before.endsWith('\n');
-  const suffixNeedsLineBreak = after.length > 0 && !after.startsWith('\n');
-
-  switch (shortcutId) {
-    case 'heading': {
-      const insert = '# ';
-      return {
-        nextValue: `${before}${insert}${after}`,
-        cursor: start + insert.length,
-      };
-    }
-    case 'divider': {
-      const insert = `${prefixNeedsLineBreak ? '\n' : ''}---${suffixNeedsLineBreak ? '\n' : ''}\n`;
-      return {
-        nextValue: `${before}${insert}${after}`,
-        cursor: start + insert.length,
-      };
-    }
-    case 'blockquote': {
-      const insert = '> ';
-      return {
-        nextValue: `${before}${insert}${after}`,
-        cursor: start + insert.length,
-      };
-    }
-    case 'code_block': {
-      const leading = prefixNeedsLineBreak ? '\n' : '';
-      const trailing = suffixNeedsLineBreak ? '\n' : '';
-      const insert = `${leading}\`\`\`\n\n\`\`\`${trailing}`;
-      return {
-        nextValue: `${before}${insert}${after}`,
-        cursor: start + leading.length + 4,
-      };
-    }
-    default:
-      return { nextValue: value, cursor: end };
-  }
 }
 
 function escapeHtml(value: string): string {

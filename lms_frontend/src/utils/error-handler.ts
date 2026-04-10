@@ -74,35 +74,3 @@ export function showApiError(error: unknown, defaultMessage?: string): void {
   }
 }
 
-/**
- * 获取字段级别的错误信息（用于表单验证）
- * 
- * @param errorData 后端返回的错误数据
- * @returns 字段名到错误消息数组的映射
- */
-export function extractFieldErrors(errorData: unknown): Record<string, string[]> {
-  if (!errorData || typeof errorData !== 'object') {
-    return {};
-  }
-
-  const error = errorData as ErrorResponse;
-  const fieldErrors: Record<string, string[]> = {};
-
-  // 从 details 字段提取字段错误
-  if (error.details && typeof error.details === 'object') {
-    for (const [field, messages] of Object.entries(error.details)) {
-      if (Array.isArray(messages)) {
-        fieldErrors[field] = messages.map((msg) => String(msg));
-      } else if (typeof messages === 'string') {
-        fieldErrors[field] = [messages];
-      }
-    }
-  }
-
-  return fieldErrors;
-}
-
-
-
-
-

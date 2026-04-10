@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import {
   Eye,
@@ -173,18 +173,6 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     ));
   }, [learningDetail, taskKnowledgeId, knowledgeId]);
   const isCompleted = taskKnowledgeItem?.is_completed;
-
-  useEffect(() => {
-    setEditing(startEditing);
-    setIsFocusMode(forceFocus || startInFocus);
-    setEditContent(undefined);
-    setEditTitle(undefined);
-    setEditTags(undefined);
-    setEditSpaceTagId(undefined);
-    setEditRelatedLinks(undefined);
-    setShowTagInput(false);
-    setShowSpaceTags(false);
-  }, [forceFocus, knowledgeId, startEditing, startInFocus]);
 
   // 判断是否有改动
   const hasChanges = Boolean(knowledge && (
@@ -493,6 +481,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
                 style={{ cursor: !editing && canUpdateKnowledge ? 'text' : 'default' }}
               >
                 <SlashQuillEditor
+                  key={editing ? 'editable' : 'readonly'}
                   value={activeContent}
                   onChange={handleContentChange}
                   placeholder="键入 / 调出快捷指令"

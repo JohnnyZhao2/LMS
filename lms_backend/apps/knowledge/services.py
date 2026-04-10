@@ -22,8 +22,7 @@ from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 from core.versioning import (
-    build_next_version_data,
-    deactivate_current_version,
+    derive_resource_version,
     initialize_new_resource_version,
     is_referenced,
 )
@@ -250,7 +249,12 @@ class KnowledgeService(BaseService):
             if tag_ids_provided
             else list(source.tags.values_list('id', flat=True))
         )
-        new_version_data = build_next_version_data(
+
+        def finalize_new_version(new_version: Knowledge) -> None:
+            assign_space_tag(new_version, space_tag_id, clear_when_none=True)
+            assign_scoped_tags(new_version, tag_ids, scope='knowledge')
+
+        return derive_resource_version(
             source,
             actor=self.user,
             copy_fields=self.VERSION_COPY_FIELDS,
@@ -258,12 +262,8 @@ class KnowledgeService(BaseService):
             extra_fields={
                 'view_count': source.view_count,
             },
+            finalize=finalize_new_version,
         )
-        deactivate_current_version(Knowledge, source.resource_uuid)
-        new_version = Knowledge.objects.create(**new_version_data)
-        assign_space_tag(new_version, space_tag_id, clear_when_none=True)
-        assign_scoped_tags(new_version, tag_ids, scope='knowledge')
-        return new_version
 
 
 class DocumentParserService:

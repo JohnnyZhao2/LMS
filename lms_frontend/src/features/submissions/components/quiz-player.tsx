@@ -11,7 +11,8 @@ import type { SubmissionDetail } from '@/types/api';
 
 import { QuizSubmitDialog, QuizTimeUpDialog } from './quiz-player-dialogs';
 import { QuizPlayerMainPanel } from './quiz-player-main-panel';
-import { QuizInfoPanel, QuizProgressPanel, isAnswerEmpty } from './quiz-player-panels';
+import { QuizInfoPanel, QuizProgressPanel } from './quiz-player-panels';
+import { isAnswerEmpty } from './quiz-player-utils';
 
 export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { SubmissionDetail } from '@/types/api';
 
 import { Timer } from './timer';
+import { isAnswerEmpty } from './quiz-player-utils';
 
 interface QuizProgressPanelProps {
   submission: SubmissionDetail;
@@ -25,12 +26,6 @@ interface QuizInfoPanelProps {
   onSubmit: () => void;
   onTimeUp: () => void;
 }
-
-export const isAnswerEmpty = (value: unknown) =>
-  value === null ||
-  value === undefined ||
-  value === '' ||
-  (Array.isArray(value) && value.length === 0);
 
 const InfoSectionLabel: React.FC<{ label: string }> = ({ label }) => (
   <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-text-muted">
@@ -192,7 +187,11 @@ export const QuizInfoPanel: React.FC<QuizInfoPanelProps> = ({
 
       {isExam && submission.remaining_seconds != null ? (
         <div className="mt-4">
-          <Timer remainingSeconds={submission.remaining_seconds} onTimeUp={onTimeUp} />
+          <Timer
+            key={`${submission.id}-${submission.remaining_seconds}`}
+            remainingSeconds={submission.remaining_seconds}
+            onTimeUp={onTimeUp}
+          />
         </div>
       ) : null}
     </div>

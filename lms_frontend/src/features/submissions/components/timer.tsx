@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,39 +12,40 @@ interface TimerProps {
  * 带有视觉警告效果
  */
 export const Timer: React.FC<TimerProps> = ({ remainingSeconds, onTimeUp }) => {
-  const [seconds, setSeconds] = useState(remainingSeconds);
+  const [deadline] = useState(() => Date.now() + (Math.max(remainingSeconds, 0) * 1000));
+  const [now, setNow] = useState(() => Date.now());
   const hasTriggeredRef = useRef(false);
+  const handleTimeUp = useEffectEvent(() => {
+    onTimeUp?.();
+  });
+  const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
 
   useEffect(() => {
-    hasTriggeredRef.current = false;
-    setSeconds(remainingSeconds);
-  }, [remainingSeconds]);
-
-  useEffect(() => {
-    if (seconds <= 0) {
+    if (remainingSeconds <= 0) {
       if (!hasTriggeredRef.current) {
         hasTriggeredRef.current = true;
-        onTimeUp?.();
+        handleTimeUp();
       }
       return;
     }
 
-    const timer = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          if (!hasTriggeredRef.current) {
-            hasTriggeredRef.current = true;
-            onTimeUp?.();
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
+    hasTriggeredRef.current = false;
+
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [seconds, onTimeUp]);
+    return () => window.clearInterval(timer);
+  }, [remainingSeconds]);
+
+  useEffect(() => {
+    if (seconds > 0 || hasTriggeredRef.current) {
+      return;
+    }
+
+    hasTriggeredRef.current = true;
+    handleTimeUp();
+  }, [seconds]);
 
   const formatTime = (secs: number) => {
     const hours = Math.floor(secs / 3600);

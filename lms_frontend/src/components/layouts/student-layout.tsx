@@ -3,21 +3,17 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { LogOut, ChevronDown, Menu, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
-import { useUpdateMyAvatar } from '@/features/users/api/manage-users'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
-import { useCurrentRole } from '@/hooks/use-current-role'
+import { RoleIndicatorDot, useWorkspaceUserControls } from '@/components/layouts/workspace-user-controls'
 import { cn } from '@/lib/utils'
 import { ROUTES } from '@/config/routes'
-import { showApiError } from '@/utils/error-handler'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ROLE_FULL_LABELS, ROLE_INDICATOR_CLASSES, ROLE_ORDER } from '@/config/role-constants'
-import type { RoleCode } from '@/types/api'
-import { toast } from 'sonner'
 
 interface StudentLayoutProps {
   children: React.ReactNode
@@ -26,9 +22,18 @@ interface StudentLayoutProps {
 const STUDENT_FRAME_CLASS = 'mx-auto w-full max-w-[1680px] px-6 md:px-8 xl:px-10'
 
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
-  const { user, availableRoles, logout, switchRole, refreshUser } = useAuth()
-  const currentRole = useCurrentRole()
-  const updateMyAvatar = useUpdateMyAvatar()
+  const { logout } = useAuth()
+  const {
+    currentRole,
+    handleMyAvatarSelect,
+    handleRoleChange,
+    isUpdatingAvatar,
+    roleLabel,
+    roleOptions,
+    user,
+    userInitials,
+    userLabel,
+  } = useWorkspaceUserControls()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -52,48 +57,6 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
     setMobileOpen(false)
   }
 
-  const handleRoleChange = async (roleCode: RoleCode) => {
-    if (roleCode === currentRole) return
-    try {
-      await switchRole(roleCode)
-      const pathParts = location.pathname.split('/').filter(Boolean)
-      const currentPath = pathParts.length <= 1 ? 'dashboard' : pathParts.slice(1).join('/')
-      navigate(`/${roleCode.toLowerCase()}/${currentPath}${location.search}${location.hash}`)
-    } catch (error) {
-      showApiError(error, '角色切换失败')
-    }
-  }
-
-  const handleMyAvatarSelect = async (avatarKey: string) => {
-    try {
-      await updateMyAvatar.mutateAsync({ avatar_key: avatarKey })
-      await refreshUser()
-      toast.success('头像已更新')
-    } catch (error) {
-      showApiError(error, '头像更新失败')
-    }
-  }
-
-  const roleLabel = currentRole ? (ROLE_FULL_LABELS[currentRole] || '未知角色') : '未登录'
-  const userLabel = user?.username || ''
-  const userInitials = React.useMemo(() => {
-    const source = (user?.username || roleLabel || 'L').trim()
-    return source.slice(0, 2).toUpperCase()
-  }, [roleLabel, user?.username])
-  const indicatorClasses = currentRole
-    ? ROLE_INDICATOR_CLASSES[currentRole]
-    : { bar: 'bg-slate-400', glow: 'bg-slate-400/70' }
-  const roleOptions = [...availableRoles]
-    .sort((a, b) => ROLE_ORDER.indexOf(a.code) - ROLE_ORDER.indexOf(b.code))
-    .map((r) => ({ label: ROLE_FULL_LABELS[r.code] || r.name, value: r.code }))
-
-  const RoleIndicator = () => (
-    <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
-      <span className={cn('absolute h-1.5 w-1.5 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
-      <span className={cn('relative h-1.5 w-1.5 rounded-full', indicatorClasses.bar)} />
-    </span>
-  )
-
   const renderNavItem = (item: MenuItem) => {
     const isActive = isMenuItemActive(item)
     if (!item.children?.length) {
@@ -103,23 +66,23 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           type="button"
           onClick={() => item.key && handleNavClick(item.key)}
           className={cn(
-            'relative inline-flex items-center rounded-lg px-3 py-1.5 text-[14px] font-medium transition-colors whitespace-nowrap',
-            isActive ? 'text-black bg-black/5' : 'text-text-muted hover:text-black hover:bg-black/5'
+            'relative inline-flex h-14 items-center px-2.5 text-[14px] font-medium tracking-[-0.015em] transition-colors whitespace-nowrap',
+            isActive ? 'text-black' : 'text-text-muted hover:text-black'
           )}
         >
           {item.label}
-          {isActive && <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-black rounded-full" />}
+          {isActive && <span className="absolute bottom-0 left-2.5 right-2.5 h-[2px] rounded-full bg-black" />}
         </button>
       )
     }
     return (
-      <DropdownMenu key={item.key ?? item.label}>
+      <DropdownMenu key={item.key ?? item.label} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             className={cn(
-              'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[14px] font-medium transition-colors whitespace-nowrap',
-              isActive ? 'text-black bg-black/5' : 'text-text-muted hover:text-black hover:bg-black/5'
+              'inline-flex h-14 items-center gap-1 px-2.5 text-[14px] font-medium tracking-[-0.015em] transition-colors whitespace-nowrap',
+              isActive ? 'text-black' : 'text-text-muted hover:text-black'
             )}
           >
             {item.label}
@@ -145,8 +108,8 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
   }
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F6F8FC]">
-      <header className="sticky top-0 z-30 h-14 shrink-0 border-b border-border/60 bg-white">
+    <div className="flex min-h-dvh flex-col bg-[#F6F8FC]">
+      <header className="sticky top-0 z-30 h-14 shrink-0 bg-[#F6F8FC]/92 backdrop-blur-xl supports-[backdrop-filter]:bg-[#F6F8FC]/78">
         <div className={cn(
           STUDENT_FRAME_CLASS,
           'grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4'
@@ -158,62 +121,77 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2.5">
+            <div className="hidden md:flex items-center gap-2">
               <AvatarPickerPopover
                 avatarKey={user?.avatar_key}
                 name={userLabel || userInitials}
                 size="sm"
                 canEdit={!!user}
-                isUpdating={updateMyAvatar.isPending}
+                isUpdating={isUpdatingAvatar}
                 align="end"
+                className="ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
                 onSelectAvatar={handleMyAvatarSelect}
               />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-medium text-black leading-4 truncate max-w-[100px]">{userLabel || 'LMS 用户'}</span>
-                {availableRoles.length > 1 && currentRole ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button type="button" className="inline-flex items-center gap-1 text-[11px] text-text-muted hover:text-black transition-colors outline-none mt-0.5">
-                        <span className="truncate">{roleLabel}</span>
-                        <RoleIndicator />
-                        <ChevronDown className="h-3 w-3 shrink-0" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" sideOffset={6} className="min-w-[132px] rounded-lg border border-border bg-white p-1 shadow-sm">
-                      {roleOptions.map((option) => (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px] text-black/88 transition-colors outline-none hover:bg-black/[0.04]"
+                  >
+                    <span className="max-w-[96px] truncate font-medium">{userLabel || 'LMS 用户'}</span>
+                    {currentRole && <RoleIndicatorDot role={currentRole} />}
+                    <ChevronDown className="h-3 w-3 shrink-0 text-black/40" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-[188px] rounded-[14px] border border-black/[0.06] bg-white/96 p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-xl"
+                >
+                  {currentRole && (
+                    <>
+                      <div className="rounded-[10px] px-3 py-2">
+                        <div className="text-[11px] text-text-muted">当前身份</div>
+                        <div className="mt-1 inline-flex items-center gap-2 text-[13px] font-medium text-black">
+                          <RoleIndicatorDot role={currentRole} />
+                          <span>{roleLabel}</span>
+                        </div>
+                      </div>
+                      {roleOptions.filter((option) => option.value !== currentRole).length > 0 && (
+                        <DropdownMenuSeparator className="my-1 h-px bg-black/[0.06]" />
+                      )}
+                    </>
+                  )}
+                  {roleOptions.filter((option) => option.value !== currentRole).length > 0 && (
+                    <>
+                      {roleOptions
+                        .filter((option) => option.value !== currentRole)
+                        .map((option) => (
                         <DropdownMenuItem
                           key={option.value}
                           onClick={() => handleRoleChange(option.value)}
                           className={cn(
-                            'cursor-pointer rounded-lg px-2.5 py-1.5 text-[13px] text-text-muted focus:bg-muted focus:text-black mb-1 last:mb-0',
-                            option.value === currentRole && 'bg-muted text-black'
+                            'mb-1 rounded-[10px] px-3 py-2 text-[13px] text-text-muted last:mb-0 focus:bg-black/[0.04] focus:text-black',
+                            option.value === currentRole && 'bg-black/[0.04] text-black'
                           )}
                         >
+                          <RoleIndicatorDot role={option.value} />
                           {option.label}
                         </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-text-muted mt-0.5">
-                    <span>{roleLabel}</span>
-                    <RoleIndicator />
-                  </span>
-                )}
-              </div>
+                        ))}
+                    </>
+                  )}
+                  <DropdownMenuSeparator className="my-1 h-px bg-black/[0.06]" />
+                  <DropdownMenuItem
+                    onClick={() => void handleLogout()}
+                    className="rounded-[10px] px-3 py-2 text-[13px] text-destructive focus:bg-destructive/8 focus:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    退出登录
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-
-            {user && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                aria-label="退出登录"
-                title="退出登录"
-                className="hidden md:inline-flex h-8 w-8 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive-50"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            )}
 
             <button
               type="button"
@@ -227,7 +205,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         </div>
 
         {mobileOpen && (
-          <div className="md:hidden border-t border-border/60 bg-white px-4 py-3 space-y-1">
+          <div className="md:hidden bg-[#F6F8FC]/96 px-4 py-3 space-y-1 backdrop-blur-xl supports-[backdrop-filter]:bg-[#F6F8FC]/84">
             {menuItems.map((item) => {
               const isActive = isMenuItemActive(item)
               if (item.children?.length) {
@@ -271,7 +249,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
                   name={userLabel || userInitials}
                   size="sm"
                   canEdit={!!user}
-                  isUpdating={updateMyAvatar.isPending}
+                  isUpdating={isUpdatingAvatar}
                   align="start"
                   onSelectAvatar={handleMyAvatarSelect}
                 />
@@ -291,12 +269,12 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
         )}
       </header>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col">
         <div className={cn(
           STUDENT_FRAME_CLASS,
-          'flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden py-6'
+          'flex w-full min-w-0 flex-1 flex-col py-6'
         )}>
-          <div className="scrollbar-subtle -mt-4 flex w-full min-h-0 flex-1 flex-col overflow-auto pt-4">
+          <div className="-mt-4 flex w-full flex-col pt-4">
             {children}
           </div>
         </div>

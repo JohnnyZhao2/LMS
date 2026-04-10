@@ -21,31 +21,6 @@ export function buildQueryString(params: Record<string, string | number | boolea
 }
 
 /**
- * 构建查询参数字符串（不包含?前缀）
- * @param params - 查询参数对象
- * @returns 查询参数字符串（不包含?前缀）
- */
-export function buildQueryParams(params: Record<string, string | number | boolean | undefined | null>): string {
-  const searchParams = new URLSearchParams();
-  
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.set(key, String(value));
-    }
-  });
-  
-  return searchParams.toString();
-}
-
-/**
- * 分页参数接口
- */
-export interface PaginationParams {
-  page?: number;
-  pageSize?: number;
-}
-
-/**
  * 构建标准分页查询参数
  * @param page - 页码（默认1）
  * @param pageSize - 每页数量（默认20）

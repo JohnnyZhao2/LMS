@@ -57,11 +57,16 @@ export const GradingCenterPage: React.FC = () => {
       return;
     }
 
+    const hasSelectedTask =
+      selectedTaskId !== null && tasks.some((task) => task.task_id === selectedTaskId);
+    const hasPreferredTask =
+      preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId);
+
     const nextTaskId =
-      preferredTaskId > 0 && tasks.some((task) => task.task_id === preferredTaskId)
-        ? preferredTaskId
-        : selectedTaskId && tasks.some((task) => task.task_id === selectedTaskId)
-          ? selectedTaskId
+      hasSelectedTask
+        ? selectedTaskId
+        : hasPreferredTask
+          ? preferredTaskId
           : tasks[0].task_id;
 
     if (nextTaskId !== selectedTaskId) {

@@ -3,12 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
-import { useUpdateMyAvatar } from '@/features/users/api/manage-users'
 import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
-import { useCurrentRole } from '@/hooks/use-current-role'
+import { RoleIndicatorDot, useWorkspaceUserControls } from '@/components/layouts/workspace-user-controls'
 import { cn } from '@/lib/utils'
 import { ROUTES } from '@/config/routes'
-import { showApiError } from '@/utils/error-handler'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,17 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollContainer } from '@/components/ui/scroll-container'
 import {
-  ROLE_FULL_LABELS,
-  ROLE_INDICATOR_CLASSES,
-  ROLE_ORDER,
-} from '@/config/role-constants'
-import type { RoleCode } from '@/types/api'
-import { toast } from 'sonner'
-import {
   getRoleFromPathname,
   getRolePathPrefix,
-  getWorkspacePath,
-  stripWorkspacePathPrefix,
 } from '@/app/workspace-config'
 
 interface SidebarProps {
@@ -35,9 +24,18 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { user, availableRoles, logout, switchRole, hasAnyCapability, refreshUser } = useAuth()
-  const currentRole = useCurrentRole()
-  const updateMyAvatar = useUpdateMyAvatar()
+  const { logout, hasAnyCapability } = useAuth()
+  const {
+    currentRole,
+    handleMyAvatarSelect,
+    handleRoleChange,
+    isUpdatingAvatar,
+    roleLabel,
+    roleOptions,
+    user,
+    userInitials,
+    userLabel,
+  } = useWorkspaceUserControls()
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
@@ -47,35 +45,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     navigate(ROUTES.LOGIN)
   }
 
-  const getPathWithoutRole = () => {
-    return stripWorkspacePathPrefix(location.pathname)
-  }
-
-  const handleRoleChange = async (roleCode: RoleCode) => {
-    if (roleCode === currentRole) return
-    try {
-      await switchRole(roleCode)
-      const currentPath = getPathWithoutRole()
-      const suffix = `${location.search}${location.hash}`
-      navigate(`${getWorkspacePath(roleCode, currentPath) ?? '/'}${suffix}`)
-    } catch (error) {
-      showApiError(error, '角色切换失败')
-    }
-  }
-
   const handleNavClick = (path: string) => {
     navigate(path)
     onClose?.()
-  }
-
-  const handleMyAvatarSelect = async (avatarKey: string) => {
-    try {
-      await updateMyAvatar.mutateAsync({ avatar_key: avatarKey })
-      await refreshUser()
-      toast.success('头像已更新')
-    } catch (error) {
-      showApiError(error, '头像更新失败')
-    }
   }
 
   const rolePrefix = React.useMemo(() => {
@@ -122,13 +94,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return findActiveKey(menuItems)
   }
 
-  const roleOptions = [...availableRoles]
-    .sort((a, b) => ROLE_ORDER.indexOf(a.code) - ROLE_ORDER.indexOf(b.code))
-    .map((role) => ({
-      label: ROLE_FULL_LABELS[role.code] || role.name,
-      value: role.code,
-    }))
-
   const settingsItems = React.useMemo(() => {
     if (!rolePrefix) {
       return []
@@ -169,15 +134,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }, [hasActiveSettingsItem])
 
   const selectedNavKey = getSelectedNavKey()
-  const roleLabel = currentRole ? (ROLE_FULL_LABELS[currentRole] || '未知角色') : '未登录'
-  const userLabel = user?.username || ''
-  const userInitials = React.useMemo(() => {
-    const source = (user?.username || roleLabel || 'L').trim()
-    return source.slice(0, 2).toUpperCase()
-  }, [roleLabel, user?.username])
-  const indicatorClasses = currentRole
-    ? ROLE_INDICATOR_CLASSES[currentRole]
-    : { bar: 'bg-slate-400', glow: 'bg-slate-400/70' }
   const navSections = React.useMemo(() => {
     const profileItems = menuItems.filter((item) => item.key?.endsWith('/personal'))
     const workItems = menuItems.filter(
@@ -428,7 +384,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 name={userLabel || userInitials}
                 size="lg"
                 canEdit={!!user}
-                isUpdating={updateMyAvatar.isPending}
+                isUpdating={isUpdatingAvatar}
                 align="start"
                 onSelectAvatar={handleMyAvatarSelect}
               />
@@ -436,7 +392,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 <div className="truncate text-[15px] font-medium leading-5 text-black">
                   {userLabel || 'LMS 用户'}
                 </div>
-                {availableRoles.length > 1 && currentRole ? (
+                {roleOptions.length > 1 && currentRole ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
@@ -446,10 +402,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       >
                         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                         <span className="truncate">{roleLabel}</span>
-                        <span className="relative inline-flex h-2 w-2 shrink-0 items-center justify-center">
-                          <span className={cn('absolute h-2 w-2 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
-                          <span className={cn('relative h-1.5 w-1.5 rounded-full', indicatorClasses.bar)} />
-                        </span>
+                        <RoleIndicatorDot role={currentRole} size="md" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -478,10 +431,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 ) : (
                   <div className="mt-0.5 inline-flex items-center gap-1.5 text-[12px] font-medium leading-4 text-text-muted">
                     <span className="truncate">{roleLabel}</span>
-                    <span className="relative inline-flex h-2 w-2 shrink-0 items-center justify-center">
-                      <span className={cn('absolute h-2 w-2 rounded-full blur-[2px] animate-pulse', indicatorClasses.glow)} />
-                      <span className={cn('relative h-1.5 w-1.5 rounded-full', indicatorClasses.bar)} />
-                    </span>
+                    <RoleIndicatorDot role={currentRole} size="md" />
                   </div>
                 )}
               </div>

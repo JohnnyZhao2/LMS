@@ -2,8 +2,6 @@ import * as React from 'react';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 
 import { ErrorBoundary } from '@/components/ui/error-boundary';
-import { CategoryBadge } from '@/components/common/category-badge';
-import { StatusDot } from '@/components/common/status-dot';
 
 import type { StudentTaskCenterItem } from '@/types/api';
 import dayjs from '@/lib/dayjs';
@@ -12,6 +10,41 @@ import { cn } from '@/lib/utils';
 interface TaskCardProps {
   task: StudentTaskCenterItem;
 }
+
+const taskCategoryBadgeClassMap = {
+  knowledge: 'text-secondary-600 bg-secondary-50',
+  practice: 'text-warning-600 bg-warning-50',
+  exam: 'text-primary-600 bg-primary-50',
+  completed: 'text-muted-foreground bg-muted',
+} as const;
+
+const TaskStatusDot: React.FC<{
+  color: string;
+  animate?: boolean;
+}> = ({ color, animate = false }) => (
+  <div
+    className={cn(
+      'h-2 w-2 rounded-full',
+      color,
+      animate && 'animate-pulse'
+    )}
+  />
+);
+
+const TaskCategoryBadge: React.FC<{
+  count: number;
+  label: string;
+  variant: keyof typeof taskCategoryBadgeClassMap;
+}> = ({ count, label, variant }) => (
+  <span
+    className={cn(
+      'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold transition-colors',
+      taskCategoryBadgeClassMap[variant]
+    )}
+  >
+    {count} {label}
+  </span>
+);
 
 /**
  * 任务卡片组件 - Flat Design 版本
@@ -45,6 +78,29 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
   const now = dayjs();
   const deadline = dayjs(task.deadline);
   const isUrgent = deadline.isAfter(now) && deadline.diff(now, 'hour') <= 48;
+  const progressBadges = [
+    {
+      key: 'knowledge',
+      total: progress.knowledge_total ?? 0,
+      completed: progress.knowledge_completed ?? 0,
+      label: '知识',
+      variant: 'knowledge' as const,
+    },
+    {
+      key: 'practice',
+      total: progress.practice_total ?? 0,
+      completed: progress.practice_completed ?? 0,
+      label: '测验',
+      variant: 'practice' as const,
+    },
+    {
+      key: 'exam',
+      total: progress.exam_total ?? 0,
+      completed: progress.exam_completed ?? 0,
+      label: '考试',
+      variant: 'exam' as const,
+    },
+  ].filter((item) => item.total > 0);
 
   return (
     <div
@@ -57,7 +113,7 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <StatusDot
+            <TaskStatusDot
               color={isUrgent ? 'bg-destructive-500' : missionConfig.bgClass}
               animate={isUrgent}
             />
@@ -89,27 +145,17 @@ const TaskCardContent: React.FC<TaskCardProps> = ({ task }) => {
       <div className="mt-auto space-y-2.5">
         <div className="flex items-center justify-between">
           <div className="flex flex-wrap gap-2">
-            {(progress.knowledge_total ?? 0) > 0 && (
-              <CategoryBadge
-                variant={(progress.knowledge_completed ?? 0) >= (progress.knowledge_total ?? 0) ? 'completed' : 'knowledge'}
-                label={(progress.knowledge_completed ?? 0) >= (progress.knowledge_total ?? 0) ? '知识' : undefined}
-                count={progress.knowledge_total}
-              />
-            )}
-            {(progress.practice_total ?? 0) > 0 && (
-              <CategoryBadge
-                variant={(progress.practice_completed ?? 0) >= (progress.practice_total ?? 0) ? 'completed' : 'practice'}
-                label={(progress.practice_completed ?? 0) >= (progress.practice_total ?? 0) ? '测验' : undefined}
-                count={progress.practice_total}
-              />
-            )}
-            {(progress.exam_total ?? 0) > 0 && (
-              <CategoryBadge
-                variant={(progress.exam_completed ?? 0) >= (progress.exam_total ?? 0) ? 'completed' : 'exam'}
-                label={(progress.exam_completed ?? 0) >= (progress.exam_total ?? 0) ? '考试' : undefined}
-                count={progress.exam_total}
-              />
-            )}
+            {progressBadges.map((item) => {
+              const isCompleted = item.completed >= item.total;
+              return (
+                <TaskCategoryBadge
+                  key={item.key}
+                  count={item.total}
+                  label={item.label}
+                  variant={isCompleted ? 'completed' : item.variant}
+                />
+              );
+            })}
           </div>
           <span className="text-base font-black text-foreground">
             {progress.percentage ?? 0}

@@ -4,21 +4,17 @@ Implements:
 - Admin dashboard API
 """
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework.permissions import IsAuthenticated
 
-from apps.authorization.engine import enforce
-from apps.dashboard.services import MentorDashboardService
-from core.base_view import BaseAPIView
-from core.responses import success_response
+from .base import MentorScopedDashboardView
 
 
-class AdminDashboardView(BaseAPIView):
+class AdminDashboardView(MentorScopedDashboardView):
     """
     管理员仪表盘 API 端点
     GET /api/dashboard/admin/
     """
-    permission_classes = [IsAuthenticated]
-    service_class = MentorDashboardService
+    permission_code = 'dashboard.admin.view'
+    permission_error_message = '只有管理员或超管可以访问此仪表盘'
 
     @extend_schema(
         summary='获取管理员仪表盘数据',
@@ -30,10 +26,4 @@ class AdminDashboardView(BaseAPIView):
         tags=['管理员仪表盘']
     )
     def get(self, request):
-        enforce(
-            'dashboard.admin.view',
-            request,
-            error_message='只有管理员或超管可以访问此仪表盘',
-        )
-        data = self.service.get_dashboard_data()
-        return success_response(data)
+        return super().get(request)

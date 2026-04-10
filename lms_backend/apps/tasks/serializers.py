@@ -21,6 +21,24 @@ from .models import (
 from .student_task_service import StudentTaskService, extract_knowledge_preview
 from .task_service import TaskService
 
+DEFAULT_TASK_ACTIONS = {
+    'view': False,
+    'update': False,
+    'delete': False,
+    'analytics': False,
+}
+
+
+def get_task_actions(request, obj) -> dict[str, bool]:
+    if request is None:
+        return dict(DEFAULT_TASK_ACTIONS)
+    return {
+        'view': authorize('task.view', request, resource=obj).allowed,
+        'update': authorize('task.update', request, resource=obj).allowed,
+        'delete': authorize('task.delete', request, resource=obj).allowed,
+        'analytics': authorize('task.analytics.view', request, resource=obj).allowed,
+    }
+
 
 def validate_assignee_scope(user, assignee_ids: list[int], request) -> None:
     accessible_ids = set(scope_filter(
@@ -98,15 +116,7 @@ class TaskListSerializer(serializers.ModelSerializer):
     actions = serializers.SerializerMethodField()
 
     def get_actions(self, obj):
-        request = self.context.get('request')
-        if request is None:
-            return {'view': False, 'update': False, 'delete': False, 'analytics': False}
-        return {
-            'view': authorize('task.view', request, resource=obj).allowed,
-            'update': authorize('task.update', request, resource=obj).allowed,
-            'delete': authorize('task.delete', request, resource=obj).allowed,
-            'analytics': authorize('task.analytics.view', request, resource=obj).allowed,
-        }
+        return get_task_actions(self.context.get('request'), obj)
 
     class Meta:
         model = Task
@@ -133,15 +143,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         return obj.has_student_progress
 
     def get_actions(self, obj):
-        request = self.context.get('request')
-        if request is None:
-            return {'view': False, 'update': False, 'delete': False, 'analytics': False}
-        return {
-            'view': authorize('task.view', request, resource=obj).allowed,
-            'update': authorize('task.update', request, resource=obj).allowed,
-            'delete': authorize('task.delete', request, resource=obj).allowed,
-            'analytics': authorize('task.analytics.view', request, resource=obj).allowed,
-        }
+        return get_task_actions(self.context.get('request'), obj)
 
     class Meta:
         model = Task

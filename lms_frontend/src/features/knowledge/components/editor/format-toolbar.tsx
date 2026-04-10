@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Bold,
   Link2,
@@ -22,7 +22,6 @@ interface FloatingFormatToolbarProps {
     left: number;
     top: number;
   };
-  visible: boolean;
   onApplyBackground: (value: string | null) => void;
   onApplyLink: (value: string | null) => void;
   onToggleBold: () => void;
@@ -166,7 +165,6 @@ function normalizeLink(value: string): string {
 export function FloatingFormatToolbar({
   activeFormats,
   position,
-  visible,
   onApplyBackground,
   onApplyLink,
   onToggleBold,
@@ -175,24 +173,10 @@ export function FloatingFormatToolbar({
   const [openPanel, setOpenPanel] = useState<'background' | 'link' | null>(null);
   const [linkValue, setLinkValue] = useState('');
 
-  useEffect(() => {
-    if (!visible) {
-      setOpenPanel(null);
-    }
-  }, [visible]);
-
-  useEffect(() => {
-    if (openPanel === 'link') {
-      setLinkValue(activeFormats.link ?? '');
-    }
-  }, [activeFormats.link, openPanel]);
-
   const normalizedBackground = activeFormats.background?.toLowerCase() ?? null;
   const hasActiveBackground = useMemo(() => (
     BACKGROUND_COLORS.some((item) => item.value.toLowerCase() === normalizedBackground)
   ), [normalizedBackground]);
-
-  if (!visible) return null;
 
   return (
     <>
@@ -235,7 +219,13 @@ export function FloatingFormatToolbar({
           className={cn('sqe-toolbar-btn', Boolean(activeFormats.link) && 'sqe-toolbar-btn-active')}
           aria-label="链接"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => setOpenPanel((current) => current === 'link' ? null : 'link')}
+          onClick={() => setOpenPanel((current) => {
+            const nextPanel = current === 'link' ? null : 'link';
+            if (nextPanel === 'link') {
+              setLinkValue(activeFormats.link ?? '');
+            }
+            return nextPanel;
+          })}
         >
           <Link2 size={16} />
         </button>

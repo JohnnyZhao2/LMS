@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -16,17 +16,23 @@ import {
   Layers,
   Calendar,
   GraduationCap,
-  ClipboardList
+  ClipboardList,
+  MoreVertical,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { PageShell } from '@/components/ui/page-shell';
-import { MetricBadge } from '@/components/common/metric-badge';
 import { MicroLabel } from '@/components/common/micro-label';
 import { IconBox } from '@/components/common/icon-box';
-import { ActionDropdown } from '@/components/common/action-dropdown';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import { useTaskDetail, useStudentLearningTaskDetail } from '../api/get-task-detail';
 import dayjs from '@/lib/dayjs';
@@ -52,6 +58,54 @@ interface KnowledgeListViewItem {
   isCompleted?: boolean;
   completedAt?: string | null;
 }
+
+const TaskDetailMetaBadge: React.FC<{
+  icon: ReactNode;
+  label: string;
+}> = ({ icon, label }) => (
+  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-foreground transition-colors">
+    <span className="text-muted-foreground">{icon}</span>
+    <span>{label}</span>
+  </div>
+);
+
+const TaskDetailActionMenu: React.FC<{
+  items: Array<{
+    icon?: LucideIcon;
+    label: string;
+    onClick: () => void;
+  }>;
+}> = ({ items }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <button
+        type="button"
+        aria-label="任务操作"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
+      align="end"
+      className="w-48 rounded-lg border border-border bg-background p-2"
+    >
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <DropdownMenuItem
+            key={item.label}
+            className="cursor-pointer rounded-lg px-3 py-2.5 font-semibold hover:bg-muted"
+            onClick={item.onClick}
+          >
+            {Icon && <Icon className="mr-2 h-4 w-4" />}
+            {item.label}
+          </DropdownMenuItem>
+        );
+      })}
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
 
 export const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string; role: string }>();
@@ -244,20 +298,18 @@ export const TaskDetail: React.FC = () => {
 
         <div className="flex w-full flex-wrap items-center gap-4 text-sm lg:w-auto lg:flex-shrink-0 lg:justify-end lg:gap-6">
           <div className="hidden md:flex items-center gap-6 text-text-muted">
-            <MetricBadge
+            <TaskDetailMetaBadge
               icon={<User className="w-3.5 h-3.5" />}
-              iconColor="text-muted-foreground"
               label={task.updated_by_name || task.created_by_name}
             />
-            <MetricBadge
+            <TaskDetailMetaBadge
               icon={<Calendar className="w-3.5 h-3.5" />}
-              iconColor="text-muted-foreground"
               label={`${dayjs(task.deadline).format('MM-DD HH:mm')} 截止`}
             />
           </div>
 
           {canEditTask && (
-            <ActionDropdown
+            <TaskDetailActionMenu
               items={[
                 {
                   icon: Edit,

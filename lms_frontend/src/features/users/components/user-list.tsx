@@ -22,7 +22,6 @@ import { AvatarPickerPopover } from "./avatar-picker-popover"
 import { Users as UsersIcon } from "lucide-react"
 import { getRoleColor } from "@/lib/role-config"
 import { useAuth } from "@/features/auth/stores/auth-context"
-import { AvatarCircle } from '@/components/common/avatar-circle';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithAvatar, CellTags, CellIconText, CellSmallAvatar, CellStatus } from '@/components/ui/data-table/data-table-cells';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from "@/components/ui/search-input"
@@ -489,9 +488,9 @@ export const UserList: React.FC = () => {
       >
         <DialogContent className="rounded-xl max-w-md p-8 border border-border">
           <DialogHeader>
-            <AvatarCircle size="lg" variant="secondary" className="mb-6 mx-auto">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-secondary-100 text-secondary">
               <ShieldCheck className="h-8 w-8" />
-            </AvatarCircle>
+            </div>
             <DialogTitle className="text-xl font-bold text-foreground text-center">重置成功</DialogTitle>
             <DialogDescription className="text-text-muted text-center text-sm">
               请务必将此密码<span className="text-foreground font-semibold">安全地</span>转交给用户

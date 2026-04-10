@@ -12,7 +12,6 @@
  * - @/types/quiz - 试卷相关
  * - @/types/submission - 答题相关
  * - @/types/spot-check - 抽查相关
- * - @/types/notification - 通知相关
  */
 
 // 导出通用类型
@@ -41,9 +40,6 @@ export * from './submission';
 
 // 导出抽查相关类型
 export * from './spot-check';
-
-// 导出通知相关类型
-export * from './notification';
 
 // 导出任务分析相关类型
 export * from './task-analytics';

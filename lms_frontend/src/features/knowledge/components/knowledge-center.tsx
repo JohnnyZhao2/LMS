@@ -466,6 +466,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
             {detailId !== null && (
                 <KnowledgeDetailModal
+                    key={`detail-${detailId}-${detailStartEditing ? 'edit' : 'view'}`}
                     knowledgeId={detailId}
                     startEditing={detailStartEditing}
                     taskId={taskId || undefined}
@@ -521,6 +522,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     />
                 ) : (
                     <KnowledgeDetailModal
+                        key={`focus-${focusState.knowledgeId}-${focusState.closeOnExitFocus ? 'close' : 'stay'}`}
                         knowledgeId={focusState.knowledgeId}
                         startInFocus
                         forceFocus

@@ -21,14 +21,6 @@ export const QUIET_OUTLINE_FIELD_CLASSNAME = [
   "focus:outline-none focus:border-primary-300 focus:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]",
 ].join(" ")
 
-export const QUIET_OUTLINE_FIELD_WITHIN_CLASSNAME = [
-  "border border-border/70 bg-white",
-  "shadow-none",
-  "transition-[border-color,box-shadow,background-color,color] duration-200",
-  "hover:border-border/70 hover:bg-white",
-  "focus-within:outline-none focus-within:border-primary-300 focus-within:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]",
-].join(" ")
-
 export const LIST_ROW_HOVER_CLASSNAME = [
   "transition-colors duration-150",
   "hover:bg-interaction-surface-strong",

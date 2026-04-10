@@ -608,7 +608,7 @@ export function SlashQuillEditor({
       }
       quillRef.current = null;
     };
-  }, [autoFocus, placeholder, readOnly]);
+  }, [autoFocus, placeholder, placeholderMode, readOnly]);
 
   useEffect(() => {
     const quill = quillRef.current;
@@ -631,18 +631,6 @@ export function SlashQuillEditor({
     isSyncingRef.current = false;
     lastValueRef.current = nextValue;
   }, [value]);
-
-  useEffect(() => {
-    const quill = quillRef.current;
-    if (!quill) return;
-
-    quill.enable(!readOnly);
-    if (readOnly) {
-      setSlashTrigger(null);
-      setToolbarVisible(false);
-      setInlinePlaceholderVisible(false);
-    }
-  }, [readOnly]);
 
   useEffect(() => {
     const quill = quillRef.current;
@@ -748,11 +736,10 @@ export function SlashQuillEditor({
           onSelect={handleApplyShortcut}
         />
       )}
-      {enableSelectionToolbar && !readOnly && (
+      {enableSelectionToolbar && !readOnly && toolbarVisible && (
         <FloatingFormatToolbar
           activeFormats={toolbarFormats}
           position={toolbarPosition}
-          visible={toolbarVisible}
           onApplyBackground={handleApplyBackground}
           onApplyLink={handleApplyLink}
           onToggleBold={handleToggleBold}

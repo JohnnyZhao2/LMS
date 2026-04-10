@@ -32,29 +32,9 @@ export interface LoginResponse extends AuthSessionPayload {
 }
 
 /**
- * 切换角色请求
- */
-export interface SwitchRoleRequest {
-  role_code: RoleCode;
-}
-
-/**
  * 切换角色响应
  */
 export type SwitchRoleResponse = LoginResponse;
-
-/**
- * 获取当前用户信息响应
- */
-export type MeResponse = AuthSessionPayload;
-
-/**
- * 登出请求
- */
-export interface LogoutRequest {
-  refresh_token?: string;
-}
-
 
 export interface OidcAuthorizeUrlResponse {
   authorize_url: string;

@@ -16,8 +16,7 @@ from core.base_service import BaseService
 from core.decorators import log_content_action
 from core.exceptions import BusinessError, ErrorCodes
 from core.versioning import (
-    build_next_version_data,
-    deactivate_current_version,
+    derive_resource_version,
     initialize_new_resource_version,
     is_referenced,
 )
@@ -263,24 +262,23 @@ class QuizService(BaseService):
         Returns:
             新版本的试卷对象
         """
-        new_quiz_data = build_next_version_data(
+        def finalize_new_quiz(new_quiz: Quiz) -> None:
+            source_questions = source.quiz_questions.select_related('question', 'quiz').order_by('order')
+            for relation in source_questions:
+                self._add_question(
+                    quiz_id=new_quiz.id,
+                    question_id=relation.question_id,
+                    order=relation.order,
+                    score=relation.score,
+                )
+
+        return derive_resource_version(
             source,
             actor=self.user,
             copy_fields=self.VERSION_COPY_FIELDS,
             overrides=data,
+            finalize=finalize_new_quiz,
         )
-        deactivate_current_version(Quiz, source.resource_uuid)
-        new_quiz = Quiz.objects.create(**new_quiz_data)
-        # 复制题目顺序
-        source_questions = source.quiz_questions.select_related('question', 'quiz').order_by('order')
-        for relation in source_questions:
-            self._add_question(
-                quiz_id=new_quiz.id,
-                question_id=relation.question_id,
-                order=relation.order,
-                score=relation.score,
-            )
-        return new_quiz
 
     def _sync_question_bindings(
         self,

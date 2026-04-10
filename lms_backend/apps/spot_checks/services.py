@@ -185,10 +185,6 @@ class SpotCheckService(BaseService):
 
         return normalized_items
 
-    def _validate_data_scope_access(self, spot_check: SpotCheck) -> None:
-        """验证用户是否有权限访问该抽查记录。"""
-        enforce('spot_check.view', self.request, resource=spot_check, error_message='无权访问该抽查记录')
-
     def _validate_student_scope(self, student: User) -> None:
         """验证用户是否有权限为指定学员创建抽查记录。"""
         enforce(
