@@ -1,4 +1,5 @@
 import React, { startTransition, useDeferredValue, useMemo, useState } from 'react';
+import { format } from 'date-fns';
 import {
   Activity,
   ShieldAlert,
@@ -7,7 +8,7 @@ import {
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { DateRangePicker } from '@/components/ui/date-picker';
 import { Pagination } from '@/components/ui/pagination';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
@@ -24,6 +25,7 @@ import {
 import { ActivityLogFeed } from './activity-log-feed';
 import { ActivityLogMemberList } from './activity-log-member-list';
 import type { ActivityLogItem, ActivityLogType } from '../types';
+import type { DateRange } from 'react-day-picker';
 
 const LOG_TYPE_META = {
   user: { label: '账号' },
@@ -41,13 +43,14 @@ export const ActivityLogsPanel: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
   const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search.trim());
+  const dateFrom = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined;
+  const dateTo = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined;
 
   const query = useMemo(
     () => ({
@@ -56,8 +59,8 @@ export const ActivityLogsPanel: React.FC = () => {
       pageSize,
       memberIds: selectedMemberIds,
       search: deferredSearch || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
+      dateFrom,
+      dateTo,
     }),
     [activeType, dateFrom, dateTo, deferredSearch, page, pageSize, selectedMemberIds]
   );
@@ -93,8 +96,8 @@ export const ActivityLogsPanel: React.FC = () => {
   const hasActiveFilters =
     selectedMemberIds.length > 0 ||
     search.trim().length > 0 ||
-    dateFrom !== '' ||
-    dateTo !== '';
+    Boolean(dateRange?.from) ||
+    Boolean(dateRange?.to);
   const totalCount = data?.count ?? 0;
   const shouldShowPagination = totalCount > pageSize;
 
@@ -124,8 +127,7 @@ export const ActivityLogsPanel: React.FC = () => {
       setActiveType(nextType);
       setPage(1);
       setSelectedLogIds([]);
-      setDateFrom('');
-      setDateTo('');
+      setDateRange(undefined);
       setSelectedMemberIds([]);
     });
   };
@@ -198,23 +200,22 @@ export const ActivityLogsPanel: React.FC = () => {
             onChange={(value) => { setSearch(value); setPage(1); setSelectedLogIds([]); }}
             placeholder="搜索日志"
           />
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); setPage(1); setSelectedLogIds([]); }}
-            className="h-10 w-[9rem] shrink-0 rounded-lg border-border/60 bg-background text-[13px] shadow-none"
-          />
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); setPage(1); setSelectedLogIds([]); }}
-            className="h-10 w-[9rem] shrink-0 rounded-lg border-border/60 bg-background text-[13px] shadow-none"
+          <DateRangePicker
+            dateRange={dateRange}
+            onDateRangeChange={(range) => {
+              setDateRange(range);
+              setPage(1);
+              setSelectedLogIds([]);
+            }}
+            placeholder="时间区间"
+            align="end"
+            className="h-10 w-[18.5rem] shrink-0"
           />
           {hasActiveFilters && (
             <button
               type="button"
               onClick={() => {
-                setSearch(''); setDateFrom(''); setDateTo('');
+                setSearch(''); setDateRange(undefined);
                 setSelectedMemberIds([]); setSelectedLogIds([]); setPage(1);
               }}
               className="h-10 shrink-0 rounded-lg border border-border/60 bg-background px-3.5 text-[13px] text-text-muted transition-colors hover:border-primary-200 hover:bg-primary-50/40 hover:text-foreground"

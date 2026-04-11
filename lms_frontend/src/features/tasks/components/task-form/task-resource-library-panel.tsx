@@ -102,7 +102,7 @@ export function TaskResourceLibraryPanel({
           <ScrollContainer className="h-full overflow-y-auto">
             {isLoading ? (
               <div className="space-y-3">
-                {Array.from({ length: 7 }).map((_, index) => (
+                {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={index}
                     className="flex h-[72px] items-center gap-3 rounded-xl border border-border bg-muted/70 px-4 animate-pulse"
@@ -214,13 +214,13 @@ export function TaskResourceLibraryPanel({
         </div>
 
         {showPagination && totalResourceCount > pageSize ? (
-          <div className="border-t border-border px-5 py-4">
+          <div className="border-t border-border px-5 py-3">
             <Pagination
               current={safeCurrentPage}
               total={totalResourceCount}
               pageSize={pageSize}
               onChange={(page) => onPageChange(page)}
-              showTotal={(total, [start, end]) => `第 ${start}-${end} 条 / 共 ${total} 条`}
+              variant="compact"
               className="text-[11px]"
             />
           </div>

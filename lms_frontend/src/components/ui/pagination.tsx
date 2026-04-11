@@ -22,6 +22,7 @@ export interface PaginationProps {
   pageSizeOptions?: (string | number)[];
   className?: string;
   disabled?: boolean;
+  variant?: 'default' | 'compact';
 }
 
 /**
@@ -39,6 +40,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   pageSizeOptions = [10, 20, 50, 100],
   className,
   disabled = false,
+  variant = 'default',
 }) => {
   const totalPages = Math.ceil(total / pageSize);
   const shouldShowPager = totalPages > 1;
@@ -46,6 +48,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const shouldRenderPagination = shouldShowPager || (showSizeChanger && pageSize !== resolvedDefaultPageSize);
   const startItem = (current - 1) * pageSize + 1;
   const endItem = Math.min(current * pageSize, total);
+  const isCompact = variant === 'compact';
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages || page === current || disabled) return;
@@ -100,34 +103,44 @@ export const Pagination: React.FC<PaginationProps> = ({
   if (total === 0 || !shouldRenderPagination) return null;
 
   return (
-    <div className={cn('flex items-center justify-between gap-4', className)}>
+    <div
+      className={cn(
+        'flex items-center',
+        isCompact ? 'gap-2.5' : 'gap-4',
+        showTotal ? 'justify-between' : 'justify-end',
+        className
+      )}
+    >
       {/* Total info */}
       {showTotal && (
-        <span className="text-sm text-text-muted">
+        <span className={cn('text-text-muted', isCompact ? 'text-xs' : 'text-sm')}>
           {showTotal(total, [startItem, endItem])}
         </span>
       )}
 
-      <div className="flex items-center gap-1">
+      <div className={cn('flex items-center', isCompact ? 'gap-0.5' : 'gap-1')}>
         {shouldShowPager && (
           <>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-8 p-0"
+              className={cn(isCompact ? 'h-7 w-7 rounded-md p-0' : 'h-8 w-8 p-0')}
               onClick={() => handlePageChange(current - 1)}
               disabled={current === 1 || disabled}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className={cn(isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
             </Button>
 
             {getPageNumbers().map((page, index) =>
               page === 'ellipsis' ? (
                 <span
                   key={`ellipsis-${index}`}
-                  className="flex h-8 w-8 items-center justify-center"
+                  className={cn(
+                    'flex items-center justify-center',
+                    isCompact ? 'h-7 w-7' : 'h-8 w-8',
+                  )}
                 >
-                  <MoreHorizontal className="h-4 w-4 text-text-muted" />
+                  <MoreHorizontal className={cn('text-text-muted', isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
                 </span>
               ) : (
                 <Button
@@ -135,7 +148,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                   variant={current === page ? 'default' : 'outline'}
                   size="sm"
                   className={cn(
-                    'h-8 w-8 p-0',
+                    isCompact ? 'h-7 w-7 rounded-md p-0 text-[12px]' : 'h-8 w-8 p-0',
                     current === page && 'bg-primary text-white hover:bg-primary-hover'
                   )}
                   onClick={() => handlePageChange(page)}
@@ -149,23 +162,23 @@ export const Pagination: React.FC<PaginationProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-8 p-0"
+              className={cn(isCompact ? 'h-7 w-7 rounded-md p-0' : 'h-8 w-8 p-0')}
               onClick={() => handlePageChange(current + 1)}
               disabled={current === totalPages || disabled}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className={cn(isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
             </Button>
           </>
         )}
 
         {showSizeChanger && (
-          <div className={cn('w-[110px]', shouldShowPager && 'ml-2')}>
+          <div className={cn(isCompact ? 'w-[96px]' : 'w-[110px]', shouldShowPager && (isCompact ? 'ml-1.5' : 'ml-2'))}>
             <Select
               value={pageSize.toString()}
               onValueChange={handlePageSizeChange}
               disabled={disabled}
             >
-              <SelectTrigger className="h-8 rounded-md px-3 text-sm">
+              <SelectTrigger className={cn(isCompact ? 'h-7 rounded-md px-2.5 text-xs' : 'h-8 rounded-md px-3 text-sm')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

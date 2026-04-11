@@ -106,6 +106,29 @@ export const UserAuthorizationPage: React.FC = () => {
     () => selectedUserDetail?.roles.some((role) => role.code === 'STUDENT') ?? false,
     [selectedUserDetail],
   );
+  const currentAssignedRoleTags = React.useMemo(
+    () => {
+      const tags: Array<{ code: RoleCode; name: string }> = [];
+      if (hasStudentRole) {
+        tags.push({
+          code: 'STUDENT',
+          name: roleNameMap.get('STUDENT') ?? '学员',
+        });
+      }
+      if (selectedBusinessRoleCode) {
+        tags.push({
+          code: selectedBusinessRoleCode,
+          name: roleNameMap.get(selectedBusinessRoleCode) ?? selectedBusinessRoleCode,
+        });
+      }
+      return tags;
+    },
+    [hasStudentRole, roleNameMap, selectedBusinessRoleCode],
+  );
+  const remainingAssignableRoles = React.useMemo(
+    () => ASSIGNABLE_ROLES.filter((roleCode) => roleCode !== selectedBusinessRoleCode),
+    [selectedBusinessRoleCode],
+  );
   const panelItems = React.useMemo(
     () => authorizationUsers.map((user) => ({
       id: user.id,
@@ -195,7 +218,7 @@ export const UserAuthorizationPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex h-[70px] shrink-0 items-center justify-between gap-4 border-b border-border/60 px-6">
+                  <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border/60 px-6 py-2">
                     <div className="flex min-w-0 items-center gap-3">
                       <UserAvatar
                         avatarKey={selectedUserDetail.avatar_key}
@@ -212,15 +235,30 @@ export const UserAuthorizationPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      {hasStudentRole ? (
-                        <span className="inline-flex h-7 items-center rounded-full bg-primary-100 px-3 text-xs font-semibold text-primary">
-                          学员
-                        </span>
+                      {currentAssignedRoleTags.map((role) => {
+                        const color = getRoleColor(role.code);
+                        return (
+                          <span
+                            key={role.code}
+                            className={cn(
+                              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold',
+                              color.bgClass,
+                              color.textClass,
+                            )}
+                          >
+                            <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
+                            {role.name}
+                          </span>
+                        );
+                      })}
+                      {currentAssignedRoleTags.length > 0 && remainingAssignableRoles.length > 0 ? (
+                        <span className="mx-1 h-4 w-px bg-border/80" />
                       ) : null}
-                      {ASSIGNABLE_ROLES.map((roleCode) => {
+                      {remainingAssignableRoles.map((roleCode) => {
                         const active = selectedBusinessRoleCode === roleCode;
                         const color = getRoleColor(roleCode);
                         const roleName = roleNameMap.get(roleCode) ?? roleCode;
+                        const mutuallyExclusive = selectedBusinessRoleCode !== null && !active;
                         return (
                           <button
                             key={roleCode}
@@ -228,13 +266,18 @@ export const UserAuthorizationPage: React.FC = () => {
                             disabled={!hasCapability('user.authorize') || isAssigningRole}
                             onClick={() => { void handleRoleToggle(roleCode); }}
                             className={cn(
-                              'inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold transition-colors',
+                              'inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors',
                               active
                                 ? `${color.bgClass} ${color.textClass}`
-                                : 'bg-white text-text-muted hover:bg-muted/35',
+                                : mutuallyExclusive
+                                  ? 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                                  : 'bg-white text-text-muted hover:bg-muted/35',
                               (!hasCapability('user.authorize') || isAssigningRole) && 'cursor-not-allowed opacity-55',
                             )}
                           >
+                            {active ? (
+                              <span className={cn('h-1.5 w-1.5 rounded-full', color.iconBgClass ?? 'bg-current')} />
+                            ) : null}
                             {roleName}
                           </button>
                         );

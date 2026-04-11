@@ -17,7 +17,7 @@ import { useQuizDetail } from '@/features/quiz-center/quizzes/api/get-quizzes';
 import type { ResourceItem, SelectedResource, ResourceType } from './task-form.types';
 import { mapTaskResourceOptionToResource } from './task-form.types';
 
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 8;
 
 const getPaginatedResults = <T,>(data?: PaginatedResponse<T> | T[]): T[] => {
   if (!data) return [];
