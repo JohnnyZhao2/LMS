@@ -55,14 +55,15 @@ export const useTaskList = (
   options: UseTasksOptions = {}
 ) => {
   const currentRole = useCurrentRole();
-  const { page = 1, pageSize = 20, taskStatus = 'all', creatorSide = 'all' } = params;
+  const { page = 1, pageSize = 20, search = '', taskStatus = 'all', creatorSide = 'all' } = params;
   const { enabled = true } = options;
 
   return useQuery({
-    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, taskStatus, creatorSide],
+    queryKey: ['tasks', currentRole ?? 'UNKNOWN', page, pageSize, search, taskStatus, creatorSide],
     queryFn: () => {
       const queryParams = {
         ...buildPaginationParams(page, pageSize),
+        ...(search && { search }),
         ...(taskStatus !== 'all' && { status: taskStatus }),
         ...(creatorSide !== 'all' && { creator_side: creatorSide }),
       };

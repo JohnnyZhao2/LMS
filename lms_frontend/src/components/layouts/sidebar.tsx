@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ScrollContainer } from '@/components/ui/scroll-container'
+import { BrandMark } from '@/components/layouts/brand-mark'
 import {
   getRoleFromPathname,
   getRolePathPrefix,
@@ -302,9 +303,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         )}
 
         <div className="flex h-full min-h-0 flex-col">
-          <div className="flex items-center px-1">
-            <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
-          </div>
+          <BrandMark />
 
           <ScrollContainer as="nav" className="mt-8 flex-1 overflow-y-auto">
             <div className="space-y-1">

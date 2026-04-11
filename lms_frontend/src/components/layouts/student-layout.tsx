@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { BrandMark } from '@/components/layouts/brand-mark'
 
 interface StudentLayoutProps {
   children: React.ReactNode
@@ -115,7 +116,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children }) => {
           STUDENT_FRAME_CLASS,
           'grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4'
         )}>
-          <img src="/logo.svg" alt="OPWiki" className="h-8 shrink-0 object-contain" />
+          <BrandMark />
 
           <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1.5 px-4 md:flex xl:gap-2">
             {menuItems.map((item) => renderNavItem(item))}

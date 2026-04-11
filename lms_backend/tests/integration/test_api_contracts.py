@@ -1222,6 +1222,41 @@ class TestTaskListApiContracts:
         assert expired_task.id in result_ids
         assert student_assignment.task_id not in result_ids
 
+    def test_task_list_supports_search_by_title(self, api_client, student_user, mentor_user):
+        matched_task = Task.objects.create(
+            title='搜索命中任务',
+            description='用于验证任务标题搜索',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        TaskAssignment.objects.create(
+            task=matched_task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+
+        unmatched_task = Task.objects.create(
+            title='另一条任务',
+            description='用于验证任务标题搜索',
+            deadline=timezone.now() + timezone.timedelta(days=3),
+            created_by=mentor_user,
+            updated_by=mentor_user,
+        )
+        TaskAssignment.objects.create(
+            task=unmatched_task,
+            assignee=student_user,
+            status='IN_PROGRESS',
+        )
+
+        api_client.force_authenticate(user=student_user)
+        response = api_client.get('/api/tasks/?search=命中&page=1&page_size=10')
+
+        assert response.status_code == 200
+        result_ids = [item['id'] for item in response.data['data']['results']]
+        assert matched_task.id in result_ids
+        assert len(result_ids) == 1
+
 
 @pytest.mark.django_db
 class TestUserManagementApiContracts:

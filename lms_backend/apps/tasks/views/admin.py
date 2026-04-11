@@ -178,6 +178,11 @@ class TaskListView(BaseAPIView):
                 description='任务状态筛选：open(未截止) / closed(已截止) / all(全部)'
             ),
             OpenApiParameter(
+                name='search',
+                type=str,
+                description='按任务标题搜索'
+            ),
+            OpenApiParameter(
                 name='creator_side',
                 type=str,
                 description='任务来源筛选（仅管理员有效）：all / management(ADMIN角色创建) / non_management(非ADMIN角色创建)'
@@ -190,6 +195,10 @@ class TaskListView(BaseAPIView):
         enforce('task.view', request, error_message='无权查看任务列表')
         # Use TaskService to get queryset based on user role
         queryset = self.service.get_task_queryset_for_user()
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(title__icontains=search)
 
         creator_side = request.query_params.get('creator_side')
         queryset = self.service.filter_task_queryset_by_creator_side(queryset, creator_side)

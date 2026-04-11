@@ -1,9 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
-  <!-- Three horizontal bars (icon) -->
-  <rect x="0" y="8" width="64" height="18" rx="6" fill="#5B5BD6"/>
-  <rect x="0" y="30" width="48" height="18" rx="6" fill="#2DD4BF"/>
-  <rect x="0" y="52" width="56" height="18" rx="6" fill="#A855F7"/>
-
-  <!-- OPWiki text -->
-  <text x="84" y="58" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="44" font-weight="700" fill="#1E2157" letter-spacing="1">OPWiki</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" width="64" height="80">
+  <rect x="0" y="8" width="64" height="18" rx="6" fill="#5B5BD6" />
+  <rect x="0" y="30" width="48" height="18" rx="6" fill="#2DD4BF" />
+  <rect x="0" y="52" width="56" height="18" rx="6" fill="#A855F7" />
 </svg>

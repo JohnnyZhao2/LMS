@@ -19,6 +19,7 @@ import { CircleButton } from '@/components/ui/circle-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
@@ -46,6 +47,7 @@ export const TaskManagement: React.FC = () => {
     const { hasCapability } = useAuth()
     const [statusFilter, setStatusFilter] = React.useState<string>("open")
     const [creatorSideFilter, setCreatorSideFilter] = React.useState<'all' | 'management' | 'non_management'>('all')
+    const [search, setSearch] = React.useState('')
     const [deleteId, setDeleteId] = React.useState<number | null>(null)
     const [page, setPage] = React.useState(1)
     const [pageSize, setPageSize] = React.useState(10)
@@ -54,6 +56,7 @@ export const TaskManagement: React.FC = () => {
     const { data: tasksData, isLoading } = useTaskList({
         page,
         pageSize,
+        search,
         taskStatus: statusFilter as 'open' | 'closed' | 'all',
         creatorSide: canFilterCreatorSide ? creatorSideFilter : 'all',
     })
@@ -66,6 +69,10 @@ export const TaskManagement: React.FC = () => {
     React.useEffect(() => {
         setPage(1)
     }, [statusFilter])
+
+    React.useEffect(() => {
+        setPage(1)
+    }, [search])
 
     const handleDeleteTask = async () => {
         if (!deleteId) return
@@ -282,6 +289,12 @@ export const TaskManagement: React.FC = () => {
                         />
                     </div>
                     <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+                        <SearchInput
+                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+                            placeholder="搜索任务标题..."
+                            value={search}
+                            onChange={setSearch}
+                        />
                         <CircleButton
                             onClick={() => roleNavigate(`${ROUTES.TASKS}/create`)}
                             label="发布新任务"
