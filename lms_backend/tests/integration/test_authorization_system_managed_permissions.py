@@ -466,6 +466,56 @@ def test_replace_role_permissions_strips_system_managed_requests():
 
 
 @pytest.mark.django_db
+def test_replace_role_permissions_keeps_role_owned_dashboard_permission():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_TEMPLATE_KEEP', username='Template Keep Super')
+    _create_user_with_role(employee_id='EMP_AUTH_TEMPLATE_KEEP_M', username='Template Keep Mentor', role_code='MENTOR')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.put(
+        '/api/authorization/roles/MENTOR/permissions/',
+        {
+            'role_code': 'MENTOR',
+            'permission_codes': [
+                'task.view',
+                'quiz.view',
+            ],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 200
+    permission_codes = set(response.data['data']['permission_codes'])
+    assert 'task.view' in permission_codes
+    assert 'quiz.view' in permission_codes
+    assert 'dashboard.mentor.view' in permission_codes
+
+
+@pytest.mark.django_db
+def test_replace_team_manager_permissions_keeps_team_manager_dashboard_permission():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_TM_KEEP', username='Team Manager Keep Super')
+    _create_user_with_role(employee_id='EMP_AUTH_TM_KEEP_USER', username='Team Manager Keep User', role_code='TEAM_MANAGER')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.put(
+        '/api/authorization/roles/TEAM_MANAGER/permissions/',
+        {
+            'role_code': 'TEAM_MANAGER',
+            'permission_codes': [
+                'knowledge.view',
+            ],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 200
+    permission_codes = set(response.data['data']['permission_codes'])
+    assert 'knowledge.view' in permission_codes
+    assert 'dashboard.team_manager.view' in permission_codes
+
+
+@pytest.mark.django_db
 def test_replace_non_admin_role_permissions_rejects_config_module_requests():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_CFG_TEMPLATE', username='Cfg Template Super')
@@ -575,6 +625,42 @@ def test_dashboard_endpoints_follow_current_role_system_permissions():
 
     assert student_dashboard_response.status_code == 403
     assert student_dashboard_response.data['code'] == 'PERMISSION_DENIED'
+
+
+@pytest.mark.django_db
+def test_dashboard_permissions_and_endpoints_switch_with_current_role():
+    client = APIClient()
+    user = _create_user_with_role(employee_id='EMP_AUTH_ROLE_SWITCH_DASH', username='Role Switch Dash', role_code='MENTOR')
+    student_role, _ = Role.objects.get_or_create(code='STUDENT', defaults={'name': 'STUDENT'})
+    UserRole.objects.get_or_create(user=user, role=student_role)
+
+    mentor_payload = _authenticate(client, employee_id=user.employee_id)
+    assert mentor_payload['current_role'] == 'MENTOR'
+    assert mentor_payload['capabilities']['dashboard.mentor.view']['allowed'] is True
+    assert mentor_payload['capabilities']['dashboard.student.view']['allowed'] is False
+
+    mentor_dashboard_response = client.get('/api/dashboard/mentor/')
+    student_dashboard_response = client.get('/api/dashboard/student/')
+    assert mentor_dashboard_response.status_code == 200
+    assert student_dashboard_response.status_code == 403
+
+    switch_response = client.post(
+        '/api/auth/switch-role/',
+        {'role_code': 'STUDENT'},
+        format='json',
+    )
+
+    assert switch_response.status_code == 200
+    switch_payload = switch_response.data['data']
+    assert switch_payload['current_role'] == 'STUDENT'
+    assert switch_payload['capabilities']['dashboard.student.view']['allowed'] is True
+    assert switch_payload['capabilities']['dashboard.mentor.view']['allowed'] is False
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {switch_payload['access_token']}")
+
+    switched_student_dashboard_response = client.get('/api/dashboard/student/')
+    switched_mentor_dashboard_response = client.get('/api/dashboard/mentor/')
+    assert switched_student_dashboard_response.status_code == 200
+    assert switched_mentor_dashboard_response.status_code == 403
 
 
 @pytest.mark.django_db

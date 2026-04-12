@@ -68,7 +68,12 @@ type MenuMeta = {
   section: MenuSection;
   label: MenuLabelResolver;
   icon?: LucideIcon;
-  group?: string;
+  group?: {
+    key: string;
+    label: string;
+    icon: LucideIcon;
+    order: number;
+  };
   order: number;
 };
 
@@ -82,12 +87,6 @@ type BaseRouteMeta = {
   menu?: MenuMeta;
   component?: ComponentType;
   render?: () => ReactElement;
-};
-
-export type WorkspaceRouteMeta = BaseRouteMeta & {
-  kind: 'workspace';
-  dashboardVariant: DashboardVariant;
-  allowedRoles: RoleCode[];
 };
 
 export type BusinessRouteMeta = BaseRouteMeta & {
@@ -105,78 +104,6 @@ type OrderedMenuItem = {
   order: number;
   item: MenuItem;
 };
-
-const MAIN_MENU_GROUPS: Record<string, { label: string; icon: LucideIcon; order: number }> = {
-  assessment: {
-    label: '测评管理',
-    icon: HelpCircle,
-    order: 40,
-  },
-  users: {
-    label: '用户管理',
-    icon: Users,
-    order: 70,
-  },
-};
-
-export const WORKSPACE_ROUTE_META: WorkspaceRouteMeta[] = [
-  {
-    key: 'student-dashboard',
-    kind: 'workspace',
-    path: 'dashboard',
-    allowedRoles: ['STUDENT'],
-    dashboardVariant: 'student',
-    showInMenu: true,
-    menu: {
-      section: 'main',
-      label: '概览',
-      icon: LayoutGrid,
-      order: 0,
-    },
-  },
-  {
-    key: 'mentor-dashboard',
-    kind: 'workspace',
-    path: 'dashboard',
-    allowedRoles: ['MENTOR', 'DEPT_MANAGER'],
-    dashboardVariant: 'mentor',
-    showInMenu: true,
-    menu: {
-      section: 'main',
-      label: '概览',
-      icon: LayoutGrid,
-      order: 0,
-    },
-  },
-  {
-    key: 'team-manager-dashboard',
-    kind: 'workspace',
-    path: 'dashboard',
-    allowedRoles: ['TEAM_MANAGER'],
-    dashboardVariant: 'team_manager',
-    showInMenu: true,
-    menu: {
-      section: 'main',
-      label: '概览',
-      icon: LayoutGrid,
-      order: 0,
-    },
-  },
-  {
-    key: 'admin-dashboard',
-    kind: 'workspace',
-    path: 'dashboard',
-    allowedRoles: ['ADMIN', 'SUPER_ADMIN'],
-    dashboardVariant: 'admin',
-    showInMenu: true,
-    menu: {
-      section: 'main',
-      label: '概览',
-      icon: LayoutGrid,
-      order: 0,
-    },
-  },
-];
 
 export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
   {
@@ -281,7 +208,12 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     menu: {
       section: 'main',
       label: '试卷管理',
-      group: 'assessment',
+      group: {
+        key: 'assessment',
+        label: '测评管理',
+        icon: HelpCircle,
+        order: 40,
+      },
       order: 10,
     },
     component: QuizManagementPage,
@@ -317,7 +249,12 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     menu: {
       section: 'main',
       label: '题目管理',
-      group: 'assessment',
+      group: {
+        key: 'assessment',
+        label: '测评管理',
+        icon: HelpCircle,
+        order: 40,
+      },
       order: 20,
     },
     component: QuestionManagementPage,
@@ -373,7 +310,12 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     menu: {
       section: 'main',
       label: '用户列表',
-      group: 'users',
+      group: {
+        key: 'users',
+        label: '用户管理',
+        icon: Users,
+        order: 70,
+      },
       order: 10,
     },
     component: UserList,
@@ -387,7 +329,12 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     menu: {
       section: 'main',
       label: '用户授权',
-      group: 'users',
+      group: {
+        key: 'users',
+        label: '用户管理',
+        icon: Users,
+        order: 70,
+      },
       order: 20,
     },
     component: UserAuthorizationPage,
@@ -475,7 +422,12 @@ export const BUSINESS_ROUTE_META: BusinessRouteMeta[] = [
     menu: {
       section: 'main',
       label: '阅卷中心',
-      group: 'assessment',
+      group: {
+        key: 'assessment',
+        label: '测评管理',
+        icon: HelpCircle,
+        order: 40,
+      },
       order: 30,
     },
     component: GradingCenterPage,
@@ -500,15 +452,6 @@ const isPermissionGranted = (
   return route.permissionMode === 'any'
     ? hasAnyCapability(route.requiredPermissions)
     : route.requiredPermissions.every((permissionCode) => hasCapability(permissionCode));
-};
-
-export const resolveWorkspaceRouteByRole = (
-  role: RoleCode | null | undefined,
-): WorkspaceRouteMeta | null => {
-  if (!role) {
-    return null;
-  }
-  return WORKSPACE_ROUTE_META.find((route) => route.allowedRoles.includes(role)) ?? null;
 };
 
 export const getWorkspaceDashboardElement = (
@@ -560,14 +503,13 @@ export const getMenuItemsBySection = (
   }
 
   const items: Array<MenuItem & { order: number; group?: string }> = [];
-  const workspaceRoute = resolveWorkspaceRouteByRole(role);
 
-  if (section === 'main' && workspaceRoute?.showInMenu && workspaceRoute.menu) {
+  if (section === 'main') {
     items.push({
-      key: `${rolePrefix}/${workspaceRoute.path}`,
-      icon: workspaceRoute.menu.icon ? <workspaceRoute.menu.icon className="w-4 h-4" /> : undefined,
-      label: resolveMenuLabel(workspaceRoute.menu.label, workspace, role),
-      order: workspaceRoute.menu.order,
+      key: `${rolePrefix}/dashboard`,
+      icon: <LayoutGrid className="w-4 h-4" />,
+      label: '概览',
+      order: 0,
     });
   }
 
@@ -587,7 +529,7 @@ export const getMenuItemsBySection = (
       icon: route.menu.icon ? <route.menu.icon className="w-4 h-4" /> : undefined,
       label: resolveMenuLabel(route.menu.label, workspace, role),
       order: route.menu.order,
-      group: route.menu.group,
+      group: route.menu.group?.key,
     });
   });
 
@@ -621,7 +563,9 @@ export const getMenuItemsBySection = (
 
   const groupItems = Object.entries(groupedItems).reduce<OrderedMenuItem[]>(
     (result, [groupKey, groupChildren]) => {
-      const groupMeta = MAIN_MENU_GROUPS[groupKey];
+      const groupMeta = BUSINESS_ROUTE_META.find(
+        (route) => route.menu?.group?.key === groupKey,
+      )?.menu?.group;
       if (!groupMeta) {
         return result;
       }

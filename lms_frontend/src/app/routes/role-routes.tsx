@@ -7,10 +7,10 @@ import {
   BUSINESS_ROUTE_META,
   getBusinessRouteElement,
   getWorkspaceDashboardElement,
-  resolveWorkspaceRouteByRole,
 } from '../app-route-meta';
 import {
   getAccessibleWorkspaceHome,
+  getWorkspaceConfig,
   normalizeRoleCode,
 } from '../workspace-config';
 
@@ -32,12 +32,12 @@ const Dashboard = () => {
     return <Navigate to={fallbackPath} replace />;
   }
 
-  const workspaceRoute = resolveWorkspaceRouteByRole(routeRole);
-  if (!workspaceRoute) {
+  const workspace = getWorkspaceConfig(routeRole);
+  if (!workspace) {
     return <Navigate to={fallbackPath} replace />;
   }
 
-  return getWorkspaceDashboardElement(workspaceRoute.dashboardVariant);
+  return getWorkspaceDashboardElement(workspace.dashboardVariant);
 };
 
 export const roleRoutes = [
