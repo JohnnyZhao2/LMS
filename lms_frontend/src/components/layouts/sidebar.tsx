@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, LogOut, Settings, ShieldCheck } from 'lucide-react'
+import { ChevronDown, ChevronLeft, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '@/features/auth/stores/auth-context'
 import { AvatarPickerPopover } from '@/features/users/components/avatar-picker-popover'
-import { type MenuItem, useRoleMenu } from '@/hooks/use-role-menu'
+import { type MenuItem, useRoleMenu, useRoleSettingsMenu } from '@/hooks/use-role-menu'
 import { RoleIndicatorDot } from '@/components/layouts/workspace-user-controls'
 import { useWorkspaceUserControls } from '@/components/layouts/use-workspace-user-controls'
 import { cn } from '@/lib/utils'
@@ -16,17 +16,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollContainer } from '@/components/ui/scroll-container'
 import { BrandMark } from '@/components/layouts/brand-mark'
-import {
-  getRoleFromPathname,
-  getRolePathPrefix,
-} from '@/app/workspace-config'
 
 interface SidebarProps {
   onClose?: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
-  const { logout, hasAnyCapability } = useAuth()
+  const { logout } = useAuth()
   const {
     currentRole,
     handleMyAvatarSelect,
@@ -41,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const menuItems = useRoleMenu(currentRole)
+  const settingsItems = useRoleSettingsMenu(currentRole)
 
   const handleLogout = async () => {
     await logout()
@@ -51,10 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     navigate(path)
     onClose?.()
   }
-
-  const rolePrefix = React.useMemo(() => {
-    return getRolePathPrefix(getRoleFromPathname(location.pathname) ?? currentRole)
-  }, [currentRole, location.pathname])
 
   const isMenuItemActive = React.useCallback(function checkMenuItemActive(item: MenuItem): boolean {
     if (item.children?.length) {
@@ -96,37 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     return findActiveKey(menuItems)
   }
 
-  const settingsItems = React.useMemo(() => {
-    if (!rolePrefix) {
-      return []
-    }
-
-    const items = []
-
-    if (hasAnyCapability(['authorization.role_template.view', 'authorization.role_template.update'])) {
-      items.push({
-        key: 'role-template',
-        label: '角色模板',
-        path: `${rolePrefix}${ROUTES.AUTHORIZATION}`,
-        icon: <ShieldCheck className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.AUTHORIZATION}`,
-      })
-    }
-
-    if (hasAnyCapability(['activity_log.policy.update'])) {
-      items.push({
-        key: 'log-policy',
-        label: '日志策略',
-        path: `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
-        icon: <Settings className="h-4 w-4" />,
-        isActive: location.pathname === `${rolePrefix}${ROUTES.AUDIT_LOG_POLICY}`,
-      })
-    }
-
-    return items
-  }, [hasAnyCapability, location.pathname, rolePrefix])
-
-  const hasActiveSettingsItem = settingsItems.some((item) => item.isActive)
+  const hasActiveSettingsItem = settingsItems.some((item) => isMenuItemActive(item))
   const [isSettingsExpanded, setIsSettingsExpanded] = React.useState(hasActiveSettingsItem)
 
   React.useEffect(() => {
@@ -353,8 +316,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                           settingsItems.map((item) => ({
                             key: item.key,
                             label: item.label,
-                            isActive: item.isActive,
-                            onClick: () => handleNavClick(item.path),
+                            isActive: isMenuItemActive(item),
+                            onClick: () => item.key && handleNavClick(item.key),
                           }))
                         )}
                       </div>

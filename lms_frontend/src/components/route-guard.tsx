@@ -14,6 +14,7 @@ import {
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: RoleCode[];
   requiredPermissions?: string[];
   permissionMode?: 'all' | 'any';
 }
@@ -37,6 +38,7 @@ const resolveFallbackRole = (
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
+  allowedRoles,
   requiredPermissions,
   permissionMode = 'all',
 }) => {
@@ -49,6 +51,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     hasCapability,
   } = useAuth();
   const { role: urlRole } = useParams<{ role: string }>();
+  const normalizedUrlRole = normalizeRoleCode(urlRole);
 
   if (isLoading) {
     return <RouteLoadingState />;
@@ -56,6 +59,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (!isAuthenticated) {
     return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  if (allowedRoles?.length && (!normalizedUrlRole || !allowedRoles.includes(normalizedUrlRole))) {
+    const fallbackPath = getAccessibleWorkspaceHome(
+      availableRoles.map((item) => item.code),
+      currentRole,
+    ) ?? ROUTES.LOGIN;
+    return <Navigate to={fallbackPath} replace />;
   }
 
   const hasRequiredPermissions = !requiredPermissions || requiredPermissions.length === 0
@@ -67,8 +78,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!hasRequiredPermissions) {
     const fallbackPath = getAccessibleWorkspaceHome(
       availableRoles.map((item) => item.code),
-      hasCapability,
-      normalizeRoleCode(urlRole) ?? currentRole,
+      normalizedUrlRole ?? currentRole,
     ) ?? ROUTES.LOGIN;
     return <Navigate to={fallbackPath} replace />;
   }

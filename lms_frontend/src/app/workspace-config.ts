@@ -3,13 +3,12 @@ import { StudentLayout } from '@/components/layouts/student-layout';
 import { isRoleCode } from '@/config/role-constants';
 import type { RoleCode } from '@/types/common';
 
-type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
-type MenuVariant = 'student' | 'manager' | 'admin';
+export type DashboardVariant = 'student' | 'mentor' | 'team_manager' | 'admin';
+export type MenuVariant = 'student' | 'manager' | 'admin';
 
-interface WorkspaceConfig {
+export interface WorkspaceConfig {
   home: string;
   layout: typeof AppLayout;
-  requiredCapability: string;
   dashboardVariant: DashboardVariant;
   menuVariant: MenuVariant;
 }
@@ -18,42 +17,36 @@ const WORKSPACE_CONFIG: Record<RoleCode, WorkspaceConfig> = {
   STUDENT: {
     home: '/student/dashboard',
     layout: StudentLayout,
-    requiredCapability: 'dashboard.student.view',
     dashboardVariant: 'student',
     menuVariant: 'student',
   },
   MENTOR: {
     home: '/mentor/dashboard',
     layout: AppLayout,
-    requiredCapability: 'dashboard.mentor.view',
     dashboardVariant: 'mentor',
     menuVariant: 'manager',
   },
   DEPT_MANAGER: {
     home: '/dept_manager/dashboard',
     layout: AppLayout,
-    requiredCapability: 'dashboard.mentor.view',
     dashboardVariant: 'mentor',
     menuVariant: 'manager',
   },
   TEAM_MANAGER: {
     home: '/team_manager/dashboard',
     layout: AppLayout,
-    requiredCapability: 'dashboard.team_manager.view',
     dashboardVariant: 'team_manager',
     menuVariant: 'student',
   },
   ADMIN: {
     home: '/admin/dashboard',
     layout: AppLayout,
-    requiredCapability: 'dashboard.admin.view',
     dashboardVariant: 'admin',
     menuVariant: 'admin',
   },
   SUPER_ADMIN: {
     home: '/super_admin/dashboard',
     layout: AppLayout,
-    requiredCapability: 'dashboard.admin.view',
     dashboardVariant: 'admin',
     menuVariant: 'admin',
   },
@@ -139,13 +132,10 @@ export const getWorkspaceHome = (role: RoleCode | null | undefined): string | nu
   return getWorkspaceConfig(role)?.home ?? null;
 };
 
-export const getFirstAccessibleWorkspaceHome = (
-  roles: RoleCode[],
-  hasCapability: (permissionCode: string) => boolean,
-): string | null => {
+export const getFirstAccessibleWorkspaceHome = (roles: RoleCode[]): string | null => {
   for (const role of roles) {
     const workspace = getWorkspaceConfig(role);
-    if (workspace && hasCapability(workspace.requiredCapability)) {
+    if (workspace) {
       return workspace.home;
     }
   }
@@ -154,16 +144,15 @@ export const getFirstAccessibleWorkspaceHome = (
 
 export const getAccessibleWorkspaceHome = (
   roles: RoleCode[],
-  hasCapability: (permissionCode: string) => boolean,
   preferredRole?: string | RoleCode | null,
 ): string | null => {
   const normalizedPreferredRole = normalizeRoleCode(preferredRole);
   if (normalizedPreferredRole && roles.includes(normalizedPreferredRole)) {
     const preferredWorkspace = getWorkspaceConfig(normalizedPreferredRole);
-    if (preferredWorkspace && hasCapability(preferredWorkspace.requiredCapability)) {
+    if (preferredWorkspace) {
       return preferredWorkspace.home;
     }
   }
 
-  return getFirstAccessibleWorkspaceHome(roles, hasCapability);
+  return getFirstAccessibleWorkspaceHome(roles);
 };

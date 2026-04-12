@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import { useAuth } from '@/features/auth/stores/auth-context';
 import { useCurrentRole } from '@/hooks/use-current-role';
 import type { TeamManagerDashboard } from '@/types/dashboard';
 
@@ -9,11 +8,10 @@ import type { TeamManagerDashboard } from '@/types/dashboard';
  */
 export const useTeamManagerDashboard = () => {
   const currentRole = useCurrentRole();
-  const { hasCapability } = useAuth();
   return useQuery({
     queryKey: ['team-manager-dashboard', currentRole ?? 'UNKNOWN'],
     queryFn: () => apiClient.get<TeamManagerDashboard>('/dashboard/team-manager/'),
-    enabled: hasCapability('dashboard.team_manager.view'),
+    enabled: currentRole === 'TEAM_MANAGER',
     staleTime: 0,
     refetchOnMount: 'always',
   });

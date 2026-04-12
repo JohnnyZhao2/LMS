@@ -19,12 +19,11 @@ import { getAccessibleWorkspaceHome } from './workspace-config';
  * 默认重定向组件
  */
 const DefaultRedirect = () => {
-  const { isAuthenticated, availableRoles, currentRole, hasCapability } = useAuth();
+  const { isAuthenticated, availableRoles, currentRole } = useAuth();
 
   const fallbackPath = isAuthenticated
     ? getAccessibleWorkspaceHome(
         availableRoles.map((role) => role.code),
-        hasCapability,
         currentRole,
       ) ?? ROUTES.LOGIN
     : ROUTES.LOGIN;
