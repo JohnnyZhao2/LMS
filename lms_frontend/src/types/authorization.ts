@@ -7,7 +7,15 @@ export interface PermissionCatalogItem {
   description: string;
   constraint_summary: string;
   scope_aware: boolean;
+  scope_group_key: string | null;
+  implies: string[];
   is_active: boolean;
+}
+
+export interface RoleScopeGroup {
+  key: string;
+  permission_codes: string[];
+  default_scope_types: PermissionOverrideScope[];
 }
 
 export type PermissionCatalogView = 'role_template' | 'user_authorization';
@@ -16,13 +24,14 @@ export interface RolePermissionTemplate {
   role_code: RoleCode;
   permission_codes: string[];
   default_scope_types: PermissionOverrideScope[];
+  scope_groups: RoleScopeGroup[];
   scope_options: PermissionScopeOption[];
 }
 
 export type PermissionOverrideEffect = 'ALLOW' | 'DENY';
 export type PermissionOverrideScope = 'ALL' | 'SELF' | 'MENTEES' | 'DEPARTMENT' | 'EXPLICIT_USERS';
 
-interface PermissionScopeOption {
+export interface PermissionScopeOption {
   code: PermissionOverrideScope;
   label: string;
   description: string;
@@ -50,6 +59,34 @@ export interface UserPermissionOverride {
 
 export interface CreateUserPermissionOverrideRequest {
   permission_code: string;
+  effect: PermissionOverrideEffect;
+  applies_to_role?: RoleCode | null;
+  scope_type: PermissionOverrideScope;
+  scope_user_ids?: number[];
+  reason?: string;
+  expires_at?: string | null;
+}
+
+export interface UserScopeGroupOverride {
+  id: number;
+  scope_group_key: string;
+  effect: PermissionOverrideEffect;
+  applies_to_role: RoleCode | null;
+  scope_type: PermissionOverrideScope;
+  scope_user_ids: number[];
+  reason: string;
+  expires_at: string | null;
+  is_active: boolean;
+  granted_by_name: string | null;
+  revoked_by_name: string | null;
+  revoked_at: string | null;
+  revoked_reason: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateUserScopeGroupOverrideRequest {
+  scope_group_key: string;
   effect: PermissionOverrideEffect;
   applies_to_role?: RoleCode | null;
   scope_type: PermissionOverrideScope;

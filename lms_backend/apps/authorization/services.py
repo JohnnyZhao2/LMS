@@ -18,6 +18,9 @@ from .constants import (
     EFFECT_ALLOW,
     EFFECT_DENY,
     PERMISSION_CATALOG,
+    PERMISSION_IMPLIES_MAP,
+    PERMISSION_SCOPE_GROUP_KEY_MAP,
+    PERMISSION_SCOPE_GROUPS,
     PERMISSION_SCOPE_RULES,
     REGISTERED_PERMISSION_CODES,
     ROLE_PERMISSION_DEFAULTS,
@@ -27,26 +30,94 @@ from .constants import (
     SCOPE_DESCRIPTIONS,
     SCOPE_DEPARTMENT,
     SCOPE_EXPLICIT_USERS,
+    SCOPE_GROUP_RULES,
     SCOPE_MENTEES,
     SCOPE_SELF,
     SYSTEM_MANAGED_PERMISSION_CODES,
     VISIBLE_SCOPE_CHOICES,
 )
-from .models import Permission, PermissionScopeRule, RolePermission, UserPermissionOverride
+from .models import (
+    Permission,
+    PermissionScopeRule,
+    RolePermission,
+    UserPermissionOverride,
+    UserScopeGroupOverride,
+)
 from .selectors import (
     get_permissions_by_codes,
-    list_permission_scope_types,
+    list_active_scope_group_overrides,
     list_active_user_overrides,
     list_permissions,
-    list_role_scope_types,
 )
 
 class AuthorizationService(BaseService):
     """Unified authorization service."""
 
+    REQUEST_CACHE_ATTR = '_authorization_service_cache'
+
+    def _get_request_cache(self) -> dict[str, dict]:
+        cache = getattr(self.request, self.REQUEST_CACHE_ATTR, None)
+        if cache is None:
+            cache = {
+                'user_overrides': {},
+                'scope_group_overrides': {},
+            }
+            setattr(self.request, self.REQUEST_CACHE_ATTR, cache)
+        return cache
+
+    def _list_active_user_overrides_cached(
+        self,
+        *,
+        user_id: int,
+        current_role: Optional[str],
+        permission_code: Optional[str] = None,
+    ):
+        cache_key = (user_id, current_role or '', permission_code or '')
+        cache = self._get_request_cache()['user_overrides']
+        if cache_key not in cache:
+            cache[cache_key] = list_active_user_overrides(
+                user_id=user_id,
+                current_role=current_role,
+                permission_code=permission_code,
+            )
+        return cache[cache_key]
+
+    def _list_active_scope_group_overrides_cached(
+        self,
+        *,
+        user_id: int,
+        current_role: Optional[str],
+        scope_group_key: Optional[str] = None,
+    ):
+        cache_key = (user_id, current_role or '', scope_group_key or '')
+        cache = self._get_request_cache()['scope_group_overrides']
+        if cache_key not in cache:
+            cache[cache_key] = list_active_scope_group_overrides(
+                user_id=user_id,
+                current_role=current_role,
+                scope_group_key=scope_group_key,
+            )
+        return cache[cache_key]
+
     @staticmethod
     def _supports_scope_override(permission_code: str) -> bool:
         return permission_code in SCOPE_AWARE_PERMISSION_CODES
+
+    @staticmethod
+    def _get_scope_group_key(permission_code: str) -> Optional[str]:
+        return PERMISSION_SCOPE_GROUP_KEY_MAP.get(permission_code)
+
+    @staticmethod
+    def _expand_permission_codes(permission_codes: Iterable[str]) -> List[str]:
+        expanded_codes: list[str] = []
+        pending_codes = [code for code in permission_codes if code]
+        while pending_codes:
+            permission_code = pending_codes.pop(0)
+            if permission_code in expanded_codes:
+                continue
+            expanded_codes.append(permission_code)
+            pending_codes.extend(PERMISSION_IMPLIES_MAP.get(permission_code, []))
+        return expanded_codes
 
     @staticmethod
     def _can_manage_config_permissions(role_code: Optional[str]) -> bool:
@@ -182,7 +253,7 @@ class AuthorizationService(BaseService):
         if acting_user.is_superuser:
             return None
 
-        overrides = list_active_user_overrides(
+        overrides = self._list_active_user_overrides_cached(
             user_id=acting_user.id,
             current_role=current_role,
             permission_code=permission_code,
@@ -200,6 +271,122 @@ class AuthorizationService(BaseService):
         if allow_matched:
             return EFFECT_ALLOW
         return None
+
+    def _get_scope_group_scope_types(
+        self,
+        *,
+        scope_group_key: str,
+        current_role: Optional[str] = None,
+    ) -> List[str]:
+        resolved_role = self._resolve_role(current_role)
+        if not resolved_role:
+            return []
+
+        return [
+            rule['scope_type']
+            for rule in SCOPE_GROUP_RULES
+            if rule['scope_group_key'] == scope_group_key and rule['role_code'] == resolved_role
+        ]
+
+    def _get_scope_group_effective_scope_state(
+        self,
+        *,
+        scope_group_key: str,
+        acting_user: Optional[User] = None,
+        current_role: Optional[str] = None,
+    ) -> tuple[set[str], set[int]]:
+        base_user = acting_user or self.user
+        if not base_user or not base_user.is_authenticated:
+            return set(), set()
+        if base_user.is_superuser:
+            return {SCOPE_ALL}, set()
+
+        resolved_role = self._resolve_role(current_role)
+        if not resolved_role:
+            return set(), set()
+
+        broad_allowed_scopes = set(
+            self._get_scope_group_scope_types(
+                scope_group_key=scope_group_key,
+                current_role=resolved_role,
+            )
+        )
+        explicit_allowed_user_ids: set[int] = set()
+
+        overrides = self._list_active_scope_group_overrides_cached(
+            user_id=base_user.id,
+            current_role=resolved_role,
+            scope_group_key=scope_group_key,
+        )
+        for override in overrides:
+            if override.effect == EFFECT_DENY:
+                if override.scope_type == SCOPE_ALL:
+                    return set(), set()
+                if override.scope_type == SCOPE_EXPLICIT_USERS:
+                    explicit_allowed_user_ids -= set(override.scope_user_ids or [])
+                else:
+                    broad_allowed_scopes.discard(override.scope_type)
+                continue
+
+            if override.scope_type == SCOPE_EXPLICIT_USERS:
+                explicit_allowed_user_ids |= set(override.scope_user_ids or [])
+            else:
+                broad_allowed_scopes.add(override.scope_type)
+
+        return broad_allowed_scopes, explicit_allowed_user_ids
+
+    def _is_scope_capability_granted(
+        self,
+        permission_code: str,
+        *,
+        acting_user: Optional[User] = None,
+        current_role: Optional[str] = None,
+    ) -> bool:
+        base_user = acting_user or self.user
+        if not base_user or not base_user.is_authenticated:
+            return False
+        if base_user.is_superuser:
+            return True
+
+        resolved_role = self._resolve_role(current_role)
+        if not resolved_role:
+            return False
+        if not self._is_permission_granted(
+            permission_code,
+            acting_user=base_user,
+            current_role=resolved_role,
+        ):
+            return False
+
+        scope_group_key = self._get_scope_group_key(permission_code)
+        if not scope_group_key:
+            return True
+
+        broad_allowed_scopes, explicit_allowed_user_ids = self._get_scope_group_effective_scope_state(
+            scope_group_key=scope_group_key,
+            acting_user=base_user,
+            current_role=resolved_role,
+        )
+        return bool(broad_allowed_scopes or explicit_allowed_user_ids)
+
+    def is_capability_granted(
+        self,
+        permission_code: str,
+        *,
+        acting_user: Optional[User] = None,
+        current_role: Optional[str] = None,
+    ) -> bool:
+        if permission_code in SCOPE_AWARE_PERMISSION_CODES:
+            return self._is_scope_capability_granted(
+                permission_code,
+                acting_user=acting_user,
+                current_role=current_role,
+            )
+        return self._is_permission_granted(
+            permission_code,
+            acting_user=acting_user,
+            current_role=current_role,
+        )
 
     def has_allow_override(
         self,
@@ -282,7 +469,41 @@ class AuthorizationService(BaseService):
             self.validate_role_code(role_code),
             f'角色 {role_code} 不存在',
         )
-        return list_role_scope_types(role_code=role_code)
+        scope_types: list[str] = []
+        for scope_group in self.get_role_scope_groups(role_code):
+            for scope_type in scope_group['default_scope_types']:
+                if scope_type not in scope_types:
+                    scope_types.append(scope_type)
+        return scope_types
+
+    def get_role_scope_groups(self, role_code: str) -> List[dict]:
+        if role_code == SUPER_ADMIN_ROLE:
+            return [
+                {
+                    'key': scope_group_key,
+                    'permission_codes': scope_group['permission_codes'],
+                    'default_scope_types': [SCOPE_ALL],
+                }
+                for scope_group_key, scope_group in sorted(PERMISSION_SCOPE_GROUPS.items())
+            ]
+
+        self.validate_not_none(
+            self.validate_role_code(role_code),
+            f'角色 {role_code} 不存在',
+        )
+
+        scope_groups: list[dict] = []
+        for scope_group_key, scope_group in sorted(PERMISSION_SCOPE_GROUPS.items()):
+            default_scope_types = self._get_scope_group_scope_types(
+                scope_group_key=scope_group_key,
+                current_role=role_code,
+            )
+            scope_groups.append({
+                'key': scope_group_key,
+                'permission_codes': scope_group['permission_codes'],
+                'default_scope_types': default_scope_types,
+            })
+        return scope_groups
 
     def get_role_scope_options(self, role_code: str) -> List[dict]:
         default_scope_types = set(self.get_role_default_scope_types(role_code))
@@ -306,13 +527,12 @@ class AuthorizationService(BaseService):
         if not resolved_role:
             return []
 
-        scope_types = list_permission_scope_types(
-            permission_code=permission_code,
-            role_code=resolved_role,
-        )
-        if scope_types:
-            return list(dict.fromkeys(scope_types))
-
+        scope_group_key = self._get_scope_group_key(permission_code)
+        if scope_group_key:
+            return self._get_scope_group_scope_types(
+                scope_group_key=scope_group_key,
+                current_role=resolved_role,
+            )
         if permission_code in SCOPE_AWARE_PERMISSION_CODES:
             return []
         return [SCOPE_ALL]
@@ -329,7 +549,7 @@ class AuthorizationService(BaseService):
 
         capability_map: dict[str, dict] = {}
         for permission_code in sorted(capability_codes):
-            allowed = self._is_permission_granted(
+            allowed = self.is_capability_granted(
                 permission_code,
                 acting_user=user,
                 current_role=resolved_role,
@@ -346,13 +566,17 @@ class AuthorizationService(BaseService):
         return capability_map
 
     @transaction.atomic
-    def replace_role_permissions(self, role_code: str, permission_codes: Iterable[str]) -> List[str]:
+    def replace_role_permissions(
+        self,
+        role_code: str,
+        permission_codes: Iterable[str],
+    ) -> List[str]:
         if role_code == SUPER_ADMIN_ROLE:
             raise BusinessError(
                 code=ErrorCodes.VALIDATION_ERROR,
                 message='超管为系统专有角色，不支持配置模板权限',
             )
-        requested_codes = [code for code in permission_codes if code]
+        requested_codes = self._expand_permission_codes(permission_codes)
         if not self._can_manage_config_permissions(role_code):
             forbidden_codes = sorted(set(requested_codes) & set(CONFIG_MODULE_PERMISSION_CODES))
             if forbidden_codes:
@@ -428,6 +652,10 @@ class AuthorizationService(BaseService):
             if (
                 override.permission.code in REGISTERED_PERMISSION_CODES
                 and override.permission.code not in CONFIG_MODULE_PERMISSION_CODES
+                and not (
+                    override.permission.code in SCOPE_AWARE_PERMISSION_CODES
+                    and override.scope_type != SCOPE_ALL
+                )
             )
         ]
 
@@ -482,6 +710,13 @@ class AuthorizationService(BaseService):
 
         normalized_scope_type = scope_type
         normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
+        if permission.code in SCOPE_AWARE_PERMISSION_CODES and (
+            normalized_scope_type != SCOPE_ALL or normalized_scope_user_ids
+        ):
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='范围感知权限不再支持通过旧权限覆盖接口配置对象范围，请改用范围组覆盖接口',
+            )
         if not self._supports_scope_override(permission.code):
             normalized_scope_type = SCOPE_ALL
             normalized_scope_user_ids = []
@@ -521,6 +756,111 @@ class AuthorizationService(BaseService):
             expires_at=expires_at,
             granted_by=self.user,
         )
+        return override
+
+    def list_user_scope_group_overrides(
+        self,
+        *,
+        user_id: int,
+        include_inactive: bool = False,
+    ) -> List[UserScopeGroupOverride]:
+        queryset = UserScopeGroupOverride.objects.select_related('granted_by', 'revoked_by').filter(user_id=user_id)
+        if not include_inactive:
+            queryset = queryset.filter(
+                is_active=True,
+                revoked_at__isnull=True,
+            ).filter(
+                Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+            )
+        overrides = list(queryset.order_by('-created_at', '-id'))
+        return [override for override in overrides if override.scope_group_key in PERMISSION_SCOPE_GROUPS]
+
+    @transaction.atomic
+    def create_user_scope_group_override(
+        self,
+        *,
+        user_id: int,
+        scope_group_key: str,
+        effect: str,
+        applies_to_role: Optional[str],
+        scope_type: str,
+        scope_user_ids: Optional[List[int]] = None,
+        reason: str = '',
+        expires_at=None,
+    ) -> UserScopeGroupOverride:
+        target_user = self.validate_not_none(
+            User.objects.filter(pk=user_id).first(),
+            f'用户 {user_id} 不存在',
+        )
+        if target_user.is_superuser:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='超管账号为专有角色，不支持配置范围组覆盖',
+            )
+        if scope_group_key not in PERMISSION_SCOPE_GROUPS:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=f'范围组 {scope_group_key} 不存在',
+            )
+
+        normalized_applies_to_role = applies_to_role or None
+        if normalized_applies_to_role == 'STUDENT':
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='学员角色为固定工作台角色，不支持配置范围组覆盖',
+            )
+
+        normalized_scope_user_ids = sorted({int(item) for item in (scope_user_ids or [])})
+        if scope_type == SCOPE_EXPLICIT_USERS:
+            if not normalized_scope_user_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message='指定用户范围必须至少选择一个用户',
+                )
+            valid_scope_user_ids = set(
+                User.objects.filter(id__in=normalized_scope_user_ids, is_active=True).values_list('id', flat=True)
+            )
+            invalid_scope_user_ids = sorted(set(normalized_scope_user_ids) - valid_scope_user_ids)
+            if invalid_scope_user_ids:
+                raise BusinessError(
+                    code=ErrorCodes.VALIDATION_ERROR,
+                    message=f'指定用户不存在或已停用: {invalid_scope_user_ids}',
+                )
+        elif normalized_scope_user_ids:
+            raise BusinessError(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message='仅当范围为指定用户时才允许传 scope_user_ids',
+            )
+
+        return UserScopeGroupOverride.objects.create(
+            user=target_user,
+            scope_group_key=scope_group_key,
+            effect=effect,
+            applies_to_role=normalized_applies_to_role,
+            scope_type=scope_type,
+            scope_user_ids=normalized_scope_user_ids,
+            reason=reason,
+            expires_at=expires_at,
+            granted_by=self.user,
+        )
+
+    @transaction.atomic
+    def revoke_user_scope_group_override(
+        self,
+        *,
+        user_id: int,
+        override_id: int,
+        revoke_reason: str = '',
+    ) -> UserScopeGroupOverride:
+        override = self.validate_not_none(
+            UserScopeGroupOverride.objects.filter(id=override_id, user_id=user_id).first(),
+            '范围组覆盖规则不存在',
+        )
+        override.is_active = False
+        override.revoked_at = timezone.now()
+        override.revoked_by = self.user
+        override.revoked_reason = revoke_reason
+        override.save(update_fields=['is_active', 'revoked_at', 'revoked_by', 'revoked_reason', 'updated_at'])
         return override
 
     @transaction.atomic

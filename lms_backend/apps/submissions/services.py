@@ -23,6 +23,8 @@ from core.exceptions import BusinessError, ErrorCodes
 from .models import Answer, Submission
 from .scoring import calculate_submission_obtained_score, refresh_assignment_score
 
+UNSET = object()
+
 
 class SubmissionService(BaseService):
     """
@@ -281,7 +283,8 @@ class SubmissionService(BaseService):
         self,
         submission: Submission,
         question_id: int,
-        user_answer: Any
+        user_answer: Any = UNSET,
+        is_marked: Any = UNSET,
     ) -> Answer:
         """
         Save an answer for a question.
@@ -301,8 +304,15 @@ class SubmissionService(BaseService):
             )
         answer = self._get_answer_by_submission_and_question(submission.id, question_id)
         self.validate_not_none(answer, '该题目不在此答卷中')
-        answer.user_answer = user_answer
-        answer.save(update_fields=['user_answer'])
+        update_fields = []
+        if user_answer is not UNSET:
+            answer.user_answer = user_answer
+            update_fields.append('user_answer')
+        if is_marked is not UNSET:
+            answer.is_marked = is_marked
+            update_fields.append('is_marked')
+        if update_fields:
+            answer.save(update_fields=update_fields)
         return answer
 
     @transaction.atomic

@@ -7,7 +7,7 @@ from apps.activity_logs.models import ContentLog, OperationLog, UserLog
 from apps.knowledge.models import Knowledge
 from apps.questions.models import Question
 from apps.quizzes.models import Quiz
-from apps.submissions.models import Submission
+from apps.submissions.models import Answer, Submission
 from apps.tasks.models import Task, TaskAssignment, TaskQuiz
 from apps.tags.models import Tag
 from apps.users.models import Department, Role, User, UserRole
@@ -1516,6 +1516,33 @@ class TestSubmissionApiContracts:
         assert response.status_code == 400
         assert response.data['code'] == 'VALIDATION_ERROR'
         assert 'question_id' in str(response.data['message'])
+
+    def test_save_answer_supports_marking_question(
+        self,
+        api_client,
+        student_user,
+        in_progress_submission,
+        sample_question,
+    ):
+        api_client.force_authenticate(user=student_user)
+        target_answer = Answer.objects.create(
+            submission=in_progress_submission,
+            question=sample_question,
+        )
+
+        response = api_client.post(
+            f'/api/submissions/{in_progress_submission.id}/save-answer/',
+            {'question_id': target_answer.question_id, 'is_marked': True},
+            format='json',
+        )
+
+        target_answer.refresh_from_db()
+
+        assert response.status_code == 200
+        assert response.data['code'] == 'SUCCESS'
+        assert response.data['data']['question_id'] == target_answer.question_id
+        assert response.data['data']['is_marked'] is True
+        assert target_answer.is_marked is True
 
     def test_practice_result_response_is_wrapped(self, api_client, student_user, submitted_practice_submission):
         api_client.force_authenticate(user=student_user)

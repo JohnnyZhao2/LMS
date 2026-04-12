@@ -12,6 +12,8 @@ class PermissionDefinition:
     code: str
     name: str
     description: str
+    scope_group_key: Optional[str] = None
+    implies: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -79,6 +81,11 @@ def _merge_sequence_map(specs: Iterable[AuthorizationSpec], attr_name: str) -> d
     return merged
 
 
+def _append_unique(target: list[str], value: str) -> None:
+    if value not in target:
+        target.append(value)
+
+
 @lru_cache(maxsize=1)
 def load_authorization_specs() -> tuple[AuthorizationSpec, ...]:
     specs: list[AuthorizationSpec] = []
@@ -88,7 +95,7 @@ def load_authorization_specs() -> tuple[AuthorizationSpec, ...]:
     return tuple(specs)
 
 
-def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None) -> list[dict[str, str]]:
+def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None) -> list[dict[str, Any]]:
     resolved_specs = tuple(specs or load_authorization_specs())
     catalog: list[dict[str, str]] = []
     seen_codes: set[str] = set()
@@ -105,11 +112,46 @@ def build_permission_catalog(specs: Optional[Iterable[AuthorizationSpec]] = None
                     'name': permission.name,
                     'module': spec.module,
                     'description': permission.description,
+                    'scope_group_key': permission.scope_group_key,
+                    'implies': [],
                 }
             )
+    implication_map = build_permission_implication_map(resolved_specs)
+    for item in catalog:
+        item['implies'] = implication_map.get(item['code'], [])
     return catalog
 
 
+def build_permission_implication_map(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> dict[str, list[str]]:
+    resolved_specs = tuple(specs or load_authorization_specs())
+    registered_codes = {
+        permission.code
+        for spec in resolved_specs
+        for permission in spec.permissions
+    }
+    implication_map: dict[str, list[str]] = {code: [] for code in registered_codes}
+
+    for spec in resolved_specs:
+        for permission in spec.permissions:
+            for implied_code in permission.implies:
+                if implied_code not in registered_codes:
+                    raise ValueError(f'权限 {permission.code} 依赖了未注册权限 {implied_code}')
+                _append_unique(implication_map[permission.code], implied_code)
+
+    for permission_code in registered_codes:
+        if not permission_code.endswith(('.create', '.update', '.delete')):
+            continue
+        view_code = f"{permission_code.rsplit('.', 1)[0]}.view"
+        if view_code in registered_codes:
+            _append_unique(implication_map[permission_code], view_code)
+
+    return {
+        permission_code: implied_codes
+        for permission_code, implied_codes in implication_map.items()
+        if implied_codes
+    }
 def build_system_managed_permission_codes(
     specs: Optional[Iterable[AuthorizationSpec]] = None,
 ) -> list[str]:
@@ -150,6 +192,36 @@ def build_permission_scope_rules(
 
 def build_scope_aware_permission_codes(specs: Optional[Iterable[AuthorizationSpec]] = None) -> set[str]:
     return {rule.permission_code for rule in build_permission_scope_rules(specs)}
+
+
+def build_scope_group_rules(
+    specs: Optional[Iterable[AuthorizationSpec]] = None,
+) -> list[dict[str, str]]:
+    resolved_specs = tuple(specs or load_authorization_specs())
+    permission_catalog = build_permission_catalog(resolved_specs)
+    permission_scope_group_map = {
+        item['code']: item.get('scope_group_key')
+        for item in permission_catalog
+        if item.get('scope_group_key')
+    }
+    rules: list[dict[str, str]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for rule in build_permission_scope_rules(resolved_specs):
+        scope_group_key = permission_scope_group_map.get(rule.permission_code)
+        if not scope_group_key:
+            continue
+        cache_key = (scope_group_key, rule.role_code, rule.scope_type)
+        if cache_key in seen_keys:
+            continue
+        seen_keys.add(cache_key)
+        rules.append(
+            {
+                'scope_group_key': scope_group_key,
+                'role_code': rule.role_code,
+                'scope_type': rule.scope_type,
+            }
+        )
+    return rules
 
 
 def build_resource_authorization_handlers(

@@ -9,6 +9,8 @@ import { Clock3, FileText, Target } from 'lucide-react';
 
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { Tooltip } from '@/components/ui/tooltip';
+import { getQuestionTypePresentation } from '@/features/questions/constants';
+import { buildQuestionSections } from '@/features/questions/question-sections';
 import { useSortableListDnd } from '@/hooks/use-sortable-list-dnd';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '@/types/common';
@@ -49,6 +51,24 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
   };
+  const groupedSections = useMemo(
+    () => buildQuestionSections(items, (item) => item.questionType),
+    [items],
+  );
+  const groupedItems = useMemo(
+    () => groupedSections.flatMap((section) => section.entries.map(({ item }) => item)),
+    [groupedSections],
+  );
+  const itemTypeMap = useMemo(
+    () => new Map(items.map((item) => [item.key, item.questionType])),
+    [items],
+  );
+  const handleGroupedReorder = (activeKey: string, overKey: string) => {
+    if (itemTypeMap.get(activeKey) !== itemTypeMap.get(overKey)) {
+      return;
+    }
+    onReorderItems(activeKey, overKey);
+  };
 
   const {
     sensors,
@@ -58,9 +78,9 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
     handleDragStart,
     handleDragEnd,
   } = useSortableListDnd({
-    items,
+    items: groupedItems,
     onSelectItem,
-    onReorderItems,
+    onReorderItems: handleGroupedReorder,
   });
   const stats = useMemo(() => {
     let totalScore = 0;
@@ -189,16 +209,26 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         {items.length === 0 ? (
           <div className="h-full" />
         ) : readOnly ? (
-          <div className="space-y-2.5 px-5 py-4">
-            {items.map((item, idx) => (
-              <SortableOutlineItem
-                key={item.key}
-                item={item}
-                index={idx}
-                isActive={item.key === activeKey}
-                onSelect={() => onSelectItem(item.key)}
-                dragDisabled
-              />
+          <div className="space-y-3 px-5 py-4">
+            {groupedSections.map((section, sectionIndex) => (
+              <div key={section.type} className="space-y-2">
+                <div className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
+                  <div className="min-w-0">
+                    <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+                  </div>
+                  <span className="shrink-0 text-[11px] font-medium text-text-muted">{section.entries.length} 题</span>
+                </div>
+                {section.entries.map(({ item, number }) => (
+                  <SortableOutlineItem
+                    key={item.key}
+                    item={item}
+                    index={number - 1}
+                    isActive={item.key === activeKey}
+                    onSelect={() => onSelectItem(item.key)}
+                    dragDisabled
+                  />
+                ))}
+              </div>
             ))}
           </div>
         ) : (
@@ -209,16 +239,26 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
             onDragCancel={clearDragState}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={items.map((item) => item.key)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2.5 px-5 py-4">
-                {items.map((item, idx) => (
-                  <SortableOutlineItem
-                    key={item.key}
-                    item={item}
-                    index={idx}
-                    isActive={item.key === activeKey}
-                    onSelect={() => onSelectItem(item.key)}
-                  />
+            <SortableContext items={groupedItems.map((item) => item.key)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3 px-5 py-4">
+                {groupedSections.map((section, sectionIndex) => (
+                  <div key={section.type} className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
+                      <div className="min-w-0">
+                        <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+                      </div>
+                      <span className="shrink-0 text-[11px] font-medium text-text-muted">{section.entries.length} 题</span>
+                    </div>
+                    {section.entries.map(({ item, number }) => (
+                      <SortableOutlineItem
+                        key={item.key}
+                        item={item}
+                        index={number - 1}
+                        isActive={item.key === activeKey}
+                        onSelect={() => onSelectItem(item.key)}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             </SortableContext>
@@ -227,7 +267,7 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
                 <div style={draggingItemWidth ? { width: draggingItemWidth } : undefined}>
                   <SortableOutlineItem
                     item={draggingItem}
-                    index={items.findIndex((item) => item.key === draggingItem.key)}
+                    index={groupedItems.findIndex((item) => item.key === draggingItem.key)}
                     isActive={draggingItem.key === activeKey}
                     onSelect={() => undefined}
                     isOverlay
@@ -286,5 +326,20 @@ export const QuizOutlinePanel: React.FC<QuizOutlinePanelProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+const SectionHeader: React.FC<{
+  sectionType: QuestionType;
+  sectionIndex: number;
+}> = ({ sectionType }) => {
+  const presentation = getQuestionTypePresentation(sectionType);
+  const Icon = presentation.icon;
+
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', presentation.bg, presentation.color)}>
+      <Icon className="h-3 w-3" />
+      {presentation.label}
+    </span>
   );
 };

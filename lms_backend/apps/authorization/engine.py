@@ -11,6 +11,7 @@ from apps.authorization.constants import (
     RESOURCE_AUTHORIZATION_HANDLERS,
     EFFECT_ALLOW,
     EFFECT_DENY,
+    SCOPE_AWARE_PERMISSION_CODES,
     SCOPE_FILTER_HANDLERS,
     SCOPE_ALL,
     SCOPE_DEPARTMENT,
@@ -24,8 +25,6 @@ from core.base_service import BaseService
 from core.exceptions import BusinessError, ErrorCodes
 
 from .decisions import AuthorizationDecision
-from .models import PermissionScopeRule
-from .selectors import list_active_user_overrides
 from .services import AuthorizationService
 
 
@@ -221,7 +220,11 @@ class AuthorizationEngine(BaseService):
                 raise ValueError('resource_model 和 base_queryset 不能同时为空')
             queryset = model.objects.all()
 
-        if not self._authorization_service._is_permission_granted(permission_code):
+        if permission_code in SCOPE_AWARE_PERMISSION_CODES:
+            has_capability = self._authorization_service.is_capability_granted(permission_code)
+        else:
+            has_capability = self._authorization_service._is_permission_granted(permission_code)
+        if not has_capability:
             return queryset.none()
 
         for handler in SCOPE_FILTER_HANDLERS:
@@ -245,7 +248,7 @@ class AuthorizationEngine(BaseService):
         if cached_decision is not None:
             return cached_decision
 
-        if self._authorization_service._is_permission_granted(permission_code):
+        if self._authorization_service.is_capability_granted(permission_code):
             decision = AuthorizationDecision.allow(permission_code)
         else:
             decision = AuthorizationDecision.deny(
@@ -296,11 +299,20 @@ class AuthorizationEngine(BaseService):
         )
         deny_ids: set[int] = set()
 
-        overrides = list_active_user_overrides(
-            user_id=self.user.id,
-            current_role=current_role,
-            permission_code=permission_code,
-        )
+        scope_group_key = self._authorization_service._get_scope_group_key(permission_code)
+        if scope_group_key:
+            overrides = self._authorization_service._list_active_scope_group_overrides_cached(
+                user_id=self.user.id,
+                current_role=current_role,
+                scope_group_key=scope_group_key,
+            )
+        else:
+            overrides = self._authorization_service._list_active_user_overrides_cached(
+                user_id=self.user.id,
+                current_role=current_role,
+                permission_code=permission_code,
+            )
+
         for override in overrides:
             scope_ids = self._resolve_single_scope_ids(
                 scope_type=override.scope_type,
@@ -337,11 +349,10 @@ class AuthorizationEngine(BaseService):
             return list(cached_scope_types)
 
         scope_types = list(
-            PermissionScopeRule.objects.filter(
-                permission__code=permission_code,
-                role_code=role_code,
-                is_active=True,
-            ).values_list('scope_type', flat=True)
+            self._authorization_service.get_permission_scope_types(
+                permission_code=permission_code,
+                current_role=role_code,
+            )
         )
         self._get_request_cache()['default_scope_types'][cache_key] = tuple(scope_types)
         return scope_types

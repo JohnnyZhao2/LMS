@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -55,6 +56,7 @@ export const QuestionChoiceRow: React.FC<{
   optionKey: string;
   label: React.ReactNode;
   selected: boolean;
+  indicatorShape?: 'circle' | 'square';
   interactive?: boolean;
   disabled?: boolean;
   onClick?: () => void;
@@ -62,6 +64,7 @@ export const QuestionChoiceRow: React.FC<{
   optionKey,
   label,
   selected,
+  indicatorShape = 'circle',
   interactive = false,
   disabled = false,
   onClick,
@@ -92,19 +95,29 @@ export const QuestionChoiceRow: React.FC<{
         </div>
         <span
           className={cn(
-            'mt-0.5 ml-auto inline-flex h-4 w-4 shrink-0 items-center justify-center self-start rounded-full border-2 transition-colors',
+            'mt-0.5 ml-auto inline-flex h-4 w-4 shrink-0 items-center justify-center self-start border-2 transition-colors',
+            indicatorShape === 'circle' ? 'rounded-full' : 'rounded-[4px]',
             selected
               ? 'border-primary-500 bg-primary-500'
               : 'border-border bg-background',
           )}
           aria-hidden="true"
         >
-          <span
-            className={cn(
-              'block rounded-full bg-white transition-all',
-              selected ? 'h-[6px] w-[6px]' : 'h-0 w-0',
-            )}
-          />
+          {indicatorShape === 'square' ? (
+            <Check
+              className={cn(
+                'h-[10px] w-[10px] text-white transition-all',
+                selected ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+          ) : (
+            <span
+              className={cn(
+                'block rounded-full bg-white transition-all',
+                selected ? 'h-[6px] w-[6px]' : 'h-0 w-0',
+              )}
+            />
+          )}
         </span>
       </div>
     </Comp>

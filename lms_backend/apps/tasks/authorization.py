@@ -144,11 +144,15 @@ AUTHORIZATION_SPECS = (
                 code='task.assign',
                 name='分配任务',
                 description='为任务分配学员',
+                scope_group_key='task_student_scope',
+                implies=('task.view',),
             ),
             PermissionDefinition(
                 code='task.analytics.view',
                 name='查看任务分析',
                 description='查看任务进度、执行情况和分析统计',
+                scope_group_key='task_student_scope',
+                implies=('task.view',),
             ),
         ),
         role_defaults={

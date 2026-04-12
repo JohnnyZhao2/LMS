@@ -1,6 +1,7 @@
 import React from 'react';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle, XCircle } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
 import { richTextToPlainText } from '@/lib/rich-text';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,8 @@ interface QuestionCardProps {
   disabled?: boolean;
   showResult?: boolean;
   questionNumber?: number;
+  isMarked?: boolean;
+  onToggleMark?: () => void;
 }
 
 const normalizeChoiceOptions = (questionOptions?: Answer['question_options']) => {
@@ -77,6 +80,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   disabled = false,
   showResult = false,
   questionNumber,
+  isMarked = false,
+  onToggleMark,
 }) => {
   const options = normalizeChoiceOptions(answer.question_options);
   const normalizedResponse =
@@ -88,6 +93,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     <div className="space-y-5">
       <QuestionDocumentReadMode
         mode="answer"
+        className={cn(isMarked && 'border-amber-200 bg-amber-50/10')}
         score={answer.question_score ?? '0'}
         questionNumber={questionNumber}
         questionType={answer.question_type}
@@ -98,6 +104,23 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         explanation=""
         showExplanation={false}
         disabled={disabled}
+        headerActions={onToggleMark ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onToggleMark}
+            className={cn(
+              'h-auto min-w-0 gap-1 rounded-none px-0 text-[13px] font-semibold leading-5 tracking-[0.01em] shadow-none',
+              isMarked
+                ? 'text-amber-700 hover:bg-transparent'
+                : 'text-text-muted hover:bg-transparent hover:text-foreground',
+            )}
+          >
+            <Bookmark className={cn('h-[13px] w-[13px]', isMarked && 'fill-current')} />
+            {isMarked ? '已标记' : '标记'}
+          </Button>
+        ) : null}
         onResponseChange={onAnswerChange}
       />
 

@@ -17,6 +17,7 @@ export interface Answer {
   question_options?: Record<string, string> | Array<{ key?: string; value?: string }>;
   question_score?: string;
   user_answer?: Record<string, unknown>;
+  is_marked?: boolean;
   correct_answer?: Record<string, unknown>;
   is_correct?: boolean;
   obtained_score?: string;
@@ -35,6 +36,7 @@ export interface Answer {
 export interface SaveAnswerRequest {
   question_id: number;
   user_answer?: unknown;
+  is_marked?: boolean;
 }
 
 /**

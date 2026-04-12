@@ -76,6 +76,7 @@ export const RolePermissionTemplatePanel: React.FC<RolePermissionTemplatePanelPr
         <RoleTemplateWorkbench
           permissionModules={permissionModules}
           roleCodes={roleCodes}
+          permissionCatalog={permissionCatalog}
           permissionCodesByRole={permissionCodesByRole}
           activeGroup={activeGroup}
           canUpdateRoleTemplate={canUpdateRoleTemplate}

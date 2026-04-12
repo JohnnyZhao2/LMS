@@ -3,10 +3,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { richTextToPreviewText } from '@/lib/rich-text';
-import { getQuestionTypeLabel, getQuestionTypeStyle } from '@/features/questions/constants';
 import type { InlineQuestionItem } from '../types';
 
 interface SortableOutlineItemProps {
@@ -30,7 +28,6 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
     id: item.key,
     disabled: isOverlay || dragDisabled,
   });
-  const style = getQuestionTypeStyle(item.questionType);
   const cardStyle = {
     transform: isOverlay ? undefined : CSS.Transform.toString(transform),
     transition: isOverlay ? undefined : transition,
@@ -48,7 +45,6 @@ export const SortableOutlineItem: React.FC<SortableOutlineItemProps> = ({
       dragButtonProps={isOverlay ? undefined : { ...attributes, ...listeners }}
       isDraggingSource={isDragging && !isOverlay}
       isOverlay={isOverlay}
-      style={style}
       dragDisabled={dragDisabled}
     />
   );
@@ -64,7 +60,6 @@ interface OutlineItemCardProps {
   dragButtonProps?: React.ButtonHTMLAttributes<HTMLButtonElement>;
   isDraggingSource?: boolean;
   isOverlay?: boolean;
-  style?: ReturnType<typeof getQuestionTypeStyle>;
   dragDisabled?: boolean;
 }
 
@@ -78,7 +73,6 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
   dragButtonProps,
   isDraggingSource = false,
   isOverlay = false,
-  style = getQuestionTypeStyle(item.questionType),
   dragDisabled = false,
 }) => (
     <div
@@ -96,11 +90,6 @@ const OutlineItemCard: React.FC<OutlineItemCardProps> = ({
         {index + 1}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-1.5">
-          <Badge variant="outline" className={cn('h-4 border-transparent px-1.5 text-[9px] font-medium leading-none', style.bg, style.color)}>
-            {getQuestionTypeLabel(item.questionType)}
-          </Badge>
-        </div>
         <p className={cn('line-clamp-2 text-[13px] leading-relaxed', isActive ? 'font-medium text-foreground' : 'text-foreground')}>
           {richTextToPreviewText(item.content || '') || '未填写题目'}
         </p>

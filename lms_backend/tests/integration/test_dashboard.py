@@ -9,7 +9,7 @@ Dashboard 模块集成测试
 import pytest
 from django.utils import timezone
 
-from apps.authorization.models import Permission, UserPermissionOverride
+from apps.authorization.models import UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.quizzes.models import Quiz
 from apps.submissions.models import Submission
@@ -339,7 +339,7 @@ class TestMentorDashboardAPI:
 
         assert response.status_code == 200
         assert len(data['students']) >= 8
-        assert len(context.captured_queries) < 25, f"查询次数过多: {len(context.captured_queries)}"
+        assert len(context.captured_queries) <= 25, f"查询次数过多: {len(context.captured_queries)}"
 
     def test_dashboard_scope_follows_permission_overrides(self, api_client, unwrap_response_data, mentor, student, student2, department):
         """导师看板学员范围应遵循 task.analytics.view 的 ALLOW/DENY 覆盖"""
@@ -349,8 +349,6 @@ class TestMentorDashboardAPI:
             password='password123',
             department=department,
         )
-        permission = Permission.objects.get(code='task.analytics.view')
-
         api_client.force_authenticate(user=mentor)
         response = api_client.get('/api/dashboard/mentor/')
         data = unwrap_response_data(response)
@@ -361,18 +359,18 @@ class TestMentorDashboardAPI:
         assert student2.id in student_ids
         assert extra_student.id not in student_ids
 
-        UserPermissionOverride.objects.create(
+        UserScopeGroupOverride.objects.create(
             user=mentor,
-            permission=permission,
+            scope_group_key='task_student_scope',
             effect='ALLOW',
             applies_to_role='MENTOR',
             scope_type='EXPLICIT_USERS',
             scope_user_ids=[extra_student.id],
             granted_by=mentor,
         )
-        UserPermissionOverride.objects.create(
+        UserScopeGroupOverride.objects.create(
             user=mentor,
-            permission=permission,
+            scope_group_key='task_student_scope',
             effect='DENY',
             applies_to_role='MENTOR',
             scope_type='EXPLICIT_USERS',

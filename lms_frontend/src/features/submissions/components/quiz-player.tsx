@@ -6,13 +6,16 @@ import { useStartQuiz, useSubmitQuiz } from '../api/start-quiz';
 import { useSaveAnswer } from '../api/save-answer';
 import { PageShell, PageWorkbench } from '@/components/ui/page-shell';
 import { Spinner } from '@/components/ui/spinner';
+import { buildQuestionSections } from '@/features/questions/question-sections';
 import { showApiError } from '@/utils/error-handler';
 import type { SubmissionDetail } from '@/types/submission';
 
-import { QuizSubmitDialog, QuizTimeUpDialog } from './quiz-player-dialogs';
+import { QuizAbandonDialog, QuizSubmitDialog, QuizTimeUpDialog } from './quiz-player-dialogs';
 import { QuizPlayerMainPanel } from './quiz-player-main-panel';
 import { QuizInfoPanel, QuizProgressPanel } from './quiz-player-panels';
 import { isAnswerEmpty } from './quiz-player-utils';
+
+const QUESTION_SCROLL_OFFSET = 16;
 
 export const QuizPlayer: React.FC = () => {
   const { id: quizIdStr } = useParams<{ id: string }>();
@@ -24,17 +27,35 @@ export const QuizPlayer: React.FC = () => {
 
   const [submission, setSubmission] = useState<SubmissionDetail | null>(null);
   const [answers, setAnswers] = useState<Record<number, unknown>>({});
+  const [markedQuestions, setMarkedQuestions] = useState<Record<number, boolean>>({});
+  const [showAbandonDialog, setShowAbandonDialog] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showTimeUpDialog, setShowTimeUpDialog] = useState(false);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const questionRefs = useRef<Record<number, HTMLElement | null>>({});
   const questionViewportRef = useRef<HTMLDivElement | null>(null);
+  const lockedQuestionIndexRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const releaseProgrammaticScrollFrameRef = useRef<number | null>(null);
 
   const { mutateAsync: startQuizMutation } = useStartQuiz();
   const { mutateAsync: saveAnswerMutation } = useSaveAnswer();
   const { mutateAsync: submitMutation, isPending: isSubmitPending } = useSubmitQuiz();
 
   const startAttemptKeyRef = useRef<string | null>(null);
+
+  const scheduleProgrammaticScrollRelease = () => {
+    if (releaseProgrammaticScrollFrameRef.current !== null) {
+      cancelAnimationFrame(releaseProgrammaticScrollFrameRef.current);
+    }
+    releaseProgrammaticScrollFrameRef.current = requestAnimationFrame(() => {
+      releaseProgrammaticScrollFrameRef.current = requestAnimationFrame(() => {
+        isProgrammaticScrollRef.current = false;
+        lockedQuestionIndexRef.current = null;
+        releaseProgrammaticScrollFrameRef.current = null;
+      });
+    });
+  };
 
   useEffect(() => {
     const key = `${assignmentId}-${quizId}`;
@@ -48,12 +69,17 @@ export const QuizPlayer: React.FC = () => {
         setSubmission(result);
 
         const existingAnswers: Record<number, unknown> = {};
+        const existingMarkedQuestions: Record<number, boolean> = {};
         result.answers.forEach((a) => {
           if (a.user_answer !== null && a.user_answer !== undefined) {
             existingAnswers[a.question] = a.user_answer;
           }
+          if (a.is_marked) {
+            existingMarkedQuestions[a.question] = true;
+          }
         });
         setAnswers(existingAnswers);
+        setMarkedQuestions(existingMarkedQuestions);
         setActiveQuestionIndex(0);
       } catch (error) {
         console.error('开始答题失败:', error);
@@ -128,15 +154,77 @@ export const QuizPlayer: React.FC = () => {
     roleNavigate('tasks');
   };
 
-  const scrollToQuestion = (index: number) => {
-    const questionId = submission?.answers[index]?.question;
-    if (questionId && questionRefs.current[questionId]) {
-      setActiveQuestionIndex(index);
-      questionRefs.current[questionId]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
+  const handleAbandonConfirm = () => {
+    setShowAbandonDialog(false);
+    roleNavigate('tasks');
+  };
+
+  const handleToggleMark = async (questionId: number) => {
+    if (!submission) {
+      return;
     }
+
+    const nextMarked = !markedQuestions[questionId];
+    setMarkedQuestions((prev) => {
+      const next = { ...prev };
+      if (nextMarked) {
+        next[questionId] = true;
+      } else {
+        delete next[questionId];
+      }
+      return next;
+    });
+
+    try {
+      await saveAnswerMutation({
+        submissionId: submission.id,
+        data: { question_id: questionId, is_marked: nextMarked },
+      });
+    } catch (error) {
+      setMarkedQuestions((prev) => {
+        const next = { ...prev };
+        if (nextMarked) {
+          delete next[questionId];
+        } else {
+          next[questionId] = true;
+        }
+        return next;
+      });
+      showApiError(error, nextMarked ? '标记题目失败' : '取消标记失败');
+    }
+  };
+
+  const scrollToQuestion = (index: number) => {
+    const questionId = submission
+      ? buildQuestionSections(submission.answers, (answer) => answer.question_type)
+        .flatMap((section) => section.entries)[index]?.item.question
+      : undefined;
+    const viewport = questionViewportRef.current;
+    const questionNode = questionId ? questionRefs.current[questionId] : null;
+    if (!questionId || !questionNode || !viewport) {
+      return;
+    }
+
+    if (releaseProgrammaticScrollFrameRef.current !== null) {
+      cancelAnimationFrame(releaseProgrammaticScrollFrameRef.current);
+      releaseProgrammaticScrollFrameRef.current = null;
+    }
+
+    isProgrammaticScrollRef.current = true;
+    lockedQuestionIndexRef.current = index;
+    setActiveQuestionIndex(index);
+
+    const maxScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    const viewportTop = viewport.getBoundingClientRect().top;
+    const questionTop = questionNode.getBoundingClientRect().top;
+    const relativeTop = questionTop - viewportTop;
+    const targetTop = Math.min(
+      Math.max(0, viewport.scrollTop + relativeTop - QUESTION_SCROLL_OFFSET),
+      maxScrollTop,
+    );
+
+    viewport.scrollTo({ top: targetTop });
+    scheduleProgrammaticScrollRelease();
   };
 
   useEffect(() => {
@@ -144,11 +232,21 @@ export const QuizPlayer: React.FC = () => {
       return;
     }
 
+    const displayEntries = buildQuestionSections(submission.answers, (answer) => answer.question_type)
+      .flatMap((section) => section.entries);
+
     const observer = new IntersectionObserver(
       (entries) => {
+        if (lockedQuestionIndexRef.current !== null) {
+          return;
+        }
+
         const topEntry = entries
           .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          .sort((a, b) => {
+            const rootTop = a.rootBounds?.top ?? 0;
+            return Math.abs(a.boundingClientRect.top - rootTop) - Math.abs(b.boundingClientRect.top - rootTop);
+          })[0];
 
         if (!topEntry) {
           return;
@@ -166,17 +264,40 @@ export const QuizPlayer: React.FC = () => {
       }
     );
 
-    submission.answers.forEach((answer, index) => {
+    displayEntries.forEach(({ item: answer, number }) => {
       const node = questionRefs.current[answer.question];
       if (!node) {
         return;
       }
-      node.dataset.questionIndex = String(index);
+      node.dataset.questionIndex = String(number - 1);
       observer.observe(node);
     });
 
     return () => observer.disconnect();
   }, [submission]);
+
+  useEffect(() => {
+    const viewport = questionViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const handleScroll = () => {
+      if (isProgrammaticScrollRef.current) {
+        return;
+      }
+      lockedQuestionIndexRef.current = null;
+    };
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [submission]);
+
+  useEffect(() => () => {
+    if (releaseProgrammaticScrollFrameRef.current !== null) {
+      cancelAnimationFrame(releaseProgrammaticScrollFrameRef.current);
+    }
+  }, []);
 
   if (!submission) {
     return (
@@ -186,11 +307,14 @@ export const QuizPlayer: React.FC = () => {
     );
   }
 
+  const questionSections = buildQuestionSections(submission.answers, (answer) => answer.question_type);
+  const displayQuestionEntries = questionSections.flatMap((section) => section.entries);
   const totalQuestions = submission.answers.length;
   const answeredCount = submission.answers.reduce(
     (count, answer) => count + (isAnswerEmpty(answers[answer.question]) ? 0 : 1),
     0
   );
+  const markedCount = Object.keys(markedQuestions).length;
   const progressPercent = totalQuestions === 0
     ? 0
     : Math.round((answeredCount / totalQuestions) * 100);
@@ -200,14 +324,16 @@ export const QuizPlayer: React.FC = () => {
   return (
     <PageShell className="min-h-0 flex-1 gap-4 pb-4">
       <PageWorkbench className="gap-0">
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)_300px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)_320px] 2xl:grid-cols-[344px_minmax(0,1fr)_344px]">
           <div className="min-h-0 xl:h-full">
             <QuizProgressPanel
               submission={submission}
+              sections={questionSections}
               answers={answers}
+              markedQuestions={markedQuestions}
               answeredCount={answeredCount}
+              markedCount={markedCount}
               progressPercent={progressPercent}
-              activeQuestionIndex={activeQuestionIndex}
               isExam={isExam}
               onJump={scrollToQuestion}
             />
@@ -215,17 +341,22 @@ export const QuizPlayer: React.FC = () => {
 
           <QuizPlayerMainPanel
             submission={submission}
+            sections={questionSections}
+            displayEntries={displayQuestionEntries}
             activeQuestionIndex={activeQuestionIndex}
             answers={answers}
+            markedQuestions={markedQuestions}
             questionRefs={questionRefs}
             scrollViewportRef={questionViewportRef}
             onAnswerChange={handleAnswerChange}
+            onToggleMark={handleToggleMark}
           />
 
           <div className="min-h-0 xl:h-full">
             <QuizInfoPanel
               submission={submission}
               isSubmitPending={isSubmitPending}
+              onAbandon={() => setShowAbandonDialog(true)}
               onSubmit={() => setShowSubmitDialog(true)}
               onTimeUp={handleTimeUp}
             />
@@ -240,6 +371,12 @@ export const QuizPlayer: React.FC = () => {
         isPending={isSubmitPending}
         onOpenChange={setShowSubmitDialog}
         onConfirm={handleSubmitConfirm}
+      />
+
+      <QuizAbandonDialog
+        open={showAbandonDialog}
+        onOpenChange={setShowAbandonDialog}
+        onConfirm={handleAbandonConfirm}
       />
 
       <QuizTimeUpDialog

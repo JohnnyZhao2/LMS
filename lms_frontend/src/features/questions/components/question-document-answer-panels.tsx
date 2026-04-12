@@ -163,6 +163,7 @@ export const QuestionDocumentResponsePanel: React.FC<QuestionDocumentResponsePan
           optionKey={option.key}
           label={optionLabelRenderer ? optionLabelRenderer(option, index) : option.value}
           selected={activeValues.includes(option.key)}
+          indicatorShape={questionType === 'MULTIPLE_CHOICE' ? 'square' : 'circle'}
           interactive={interactive}
           disabled={disabled}
           onClick={() => handleResponseToggle(option.key)}

@@ -10,7 +10,7 @@ from .constants import (
     REGISTERED_PERMISSION_CODES,
     SYSTEM_MANAGED_PERMISSION_CODES,
 )
-from .models import Permission, PermissionScopeRule, UserPermissionOverride
+from .models import Permission, UserPermissionOverride, UserScopeGroupOverride
 
 
 def list_permissions(
@@ -59,6 +59,36 @@ def list_active_user_overrides(
     return list(queryset.order_by('-created_at', '-id'))
 
 
+def list_active_scope_group_overrides(
+    *,
+    user_id: int,
+    current_role: Optional[str],
+    scope_group_key: Optional[str] = None,
+) -> List[UserScopeGroupOverride]:
+    if current_role in {'STUDENT', 'SUPER_ADMIN'}:
+        return []
+
+    queryset = UserScopeGroupOverride.objects.select_related('user').filter(
+        user_id=user_id,
+        is_active=True,
+        revoked_at__isnull=True,
+    ).exclude(
+        applies_to_role='STUDENT',
+    ).filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+    )
+
+    if current_role:
+        queryset = queryset.filter(
+            Q(applies_to_role__isnull=True) | Q(applies_to_role='') | Q(applies_to_role=current_role)
+        )
+
+    if scope_group_key:
+        queryset = queryset.filter(scope_group_key=scope_group_key)
+
+    return list(queryset.order_by('-created_at', '-id'))
+
+
 def get_permissions_by_codes(permission_codes: Iterable[str]) -> List[Permission]:
     codes = [code for code in permission_codes if code]
     if not codes:
@@ -70,24 +100,3 @@ def get_permissions_by_codes(permission_codes: Iterable[str]) -> List[Permission
         code__in=registered_codes,
         is_active=True,
     ))
-
-
-def list_permission_scope_types(*, permission_code: str, role_code: str) -> List[str]:
-    return list(
-        PermissionScopeRule.objects.filter(
-            permission__code=permission_code,
-            permission__is_active=True,
-            role_code=role_code,
-            is_active=True,
-        ).order_by('scope_type').values_list('scope_type', flat=True)
-    )
-
-
-def list_role_scope_types(*, role_code: str) -> List[str]:
-    return list(
-        PermissionScopeRule.objects.filter(
-            role_code=role_code,
-            permission__is_active=True,
-            is_active=True,
-        ).order_by('scope_type').values_list('scope_type', flat=True).distinct()
-    )

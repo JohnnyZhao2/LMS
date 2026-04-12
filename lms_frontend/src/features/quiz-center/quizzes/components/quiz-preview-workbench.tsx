@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { THREE_PANEL_EDITOR_WORKBENCH_CLASSNAME } from '@/components/ui/editor-layout';
 import { GHOST_ACCENT_HOVER_CLASSNAME } from '@/components/ui/interactive-styles';
 import { QuestionDocumentReadMode } from '@/features/questions/components/question-document-read-mode';
+import { getQuestionTypePresentation } from '@/features/questions/constants';
+import { buildQuestionSections } from '@/features/questions/question-sections';
 import dayjs from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 import { useQuizDetail } from '../api/get-quizzes';
@@ -29,13 +31,6 @@ const quizTypeBadgeVariant = {
   EXAM: 'error' as const,
   PRACTICE: 'info' as const,
 };
-
-const questionSectionConfig = [
-  { type: 'SINGLE_CHOICE' as const, label: '单选题' },
-  { type: 'MULTIPLE_CHOICE' as const, label: '多选题' },
-  { type: 'TRUE_FALSE' as const, label: '判断题' },
-  { type: 'SHORT_ANSWER' as const, label: '简答题' },
-];
 
 function MetaItem({
   icon,
@@ -144,30 +139,7 @@ export function QuizPreviewWorkbench({
   const isSameOperator = createdByName === updatedByName;
   const isSameTimestamp = createdAtText === updatedAtText;
   const previewSections = React.useMemo(() => {
-    let runningNumber = 1;
-    const sections = questionSectionConfig
-      .map((section) => {
-        const questions = orderedQuestions
-          .filter((question) => question.question_type === section.type)
-          .map((question) => ({
-            question,
-            number: runningNumber++,
-          }));
-
-        return questions.length > 0
-          ? {
-            ...section,
-            questions,
-          }
-          : null;
-      })
-      .filter((section): section is {
-        type: typeof questionSectionConfig[number]['type'];
-        label: string;
-        questions: Array<{ question: typeof orderedQuestions[number]; number: number }>;
-      } => section !== null);
-
-    return sections.map((section, index) => ({
+    return buildQuestionSections(orderedQuestions, (question) => question.question_type).map((section, index) => ({
       ...section,
       sectionTitle: `第${index + 1}部分：${section.label}`,
     }));
@@ -259,14 +231,15 @@ export function QuizPreviewWorkbench({
             <div className="flex h-full items-center justify-center px-6 text-sm text-text-muted">先添加题目，再进行预览。</div>
           ) : (
             <div className="space-y-10 px-8 py-6">
-              {previewSections.map((section) => (
-                <section key={section.type} className="mx-auto w-full max-w-[860px] space-y-5">
-                  <div className="border-b border-border pb-3">
-                    <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">{section.sectionTitle}</h3>
+              {previewSections.map((section, sectionIndex) => (
+                <section key={section.type} className="mx-auto w-full max-w-[860px] space-y-4">
+                  <div className="flex items-center justify-between gap-2 border-b border-border pb-2">
+                    <SectionHeader sectionType={section.type} sectionIndex={sectionIndex} />
+                    <span className="shrink-0 text-[11px] font-medium text-text-muted">{section.entries.length} 题</span>
                   </div>
 
                   <div className="space-y-8">
-                    {section.questions.map(({ question, number }) => {
+                    {section.entries.map(({ item: question, number }) => {
                       return (
                         <div
                           key={question.id}
@@ -365,5 +338,22 @@ export function QuizPreviewWorkbench({
         ) : null}
       </aside>
     </div>
+  );
+}
+
+function SectionHeader({
+  sectionType,
+}: {
+  sectionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+  sectionIndex: number;
+}) {
+  const presentation = getQuestionTypePresentation(sectionType);
+  const Icon = presentation.icon;
+
+  return (
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', presentation.bg, presentation.color)}>
+      <Icon className="h-3 w-3" />
+      {presentation.label}
+    </span>
   );
 }

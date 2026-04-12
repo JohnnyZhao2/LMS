@@ -212,6 +212,10 @@ class Answer(TimestampMixin, models.Model):
         blank=True,
         verbose_name='用户答案'
     )
+    is_marked = models.BooleanField(
+        default=False,
+        verbose_name='是否标记'
+    )
     # 是否正确（客观题自动判断，主观题由评分人判断）
     is_correct = models.BooleanField(
         null=True,
@@ -249,7 +253,7 @@ class Answer(TimestampMixin, models.Model):
         verbose_name = '答案记录'
         verbose_name_plural = '答案记录'
         unique_together = ['submission', 'question']
-        ordering = ['submission', 'question']
+        ordering = ['submission', 'id']
     def __str__(self):
         return f"{self.submission} - {self.question}"
     @property

@@ -1,4 +1,23 @@
-import type { PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
+import type { PermissionOverrideEffect, PermissionOverrideScope } from '@/types/authorization';
+import type { RoleCode } from '@/types/common';
+
+export interface PermissionOverrideEntry {
+  id: number;
+  permissionCode: string;
+  effect: PermissionOverrideEffect;
+  appliesToRole: RoleCode | null;
+  scopeType: PermissionOverrideScope;
+  scopeUserIds: number[];
+}
+
+export interface ScopeGroupOverrideEntry {
+  id: number;
+  scopeGroupKey: string;
+  effect: PermissionOverrideEffect;
+  appliesToRole: RoleCode | null;
+  scopeType: PermissionOverrideScope;
+  scopeUserIds: number[];
+}
 
 export interface ScopeFilterOption {
   value: string;
@@ -10,14 +29,6 @@ export interface PermissionState {
   enableBlockedReason: string | null;
   disableBlockedReason: string | null;
   fromTemplate: boolean;
-  allowOverrides: UserPermissionOverride[];
-  denyOverrides: UserPermissionOverride[];
-  selectedAllowOverrides: UserPermissionOverride[];
-  selectedDenyOverrides: UserPermissionOverride[];
-  inheritedSelectedScopeTypes: PermissionOverrideScope[];
-  isSelfOnlySelection: boolean;
-  hasSelfAllow: boolean;
-  hasNonSelfAllow: boolean;
-  hasExactExplicitAllow: boolean;
-  missingSelectedAllowScopeTypes: PermissionOverrideScope[];
+  allowOverrides: PermissionOverrideEntry[];
+  denyOverrides: PermissionOverrideEntry[];
 }

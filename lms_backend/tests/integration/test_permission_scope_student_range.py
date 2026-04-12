@@ -3,7 +3,7 @@ from typing import Optional
 
 from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, UserPermissionOverride
+from apps.authorization.models import UserScopeGroupOverride
 from apps.users.models import Department, Role, User, UserRole
 
 
@@ -93,10 +93,9 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
     assert mentee.id in student_ids
     assert extra_student.id not in student_ids
 
-    task_assign_permission = Permission.objects.get(code='task.assign')
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=task_assign_permission,
+        scope_group_key='task_student_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -110,9 +109,9 @@ def test_task_assign_scope_supports_default_plus_explicit_allow_and_deny():
     assert mentee.id in student_ids
     assert extra_student.id in student_ids
 
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=task_assign_permission,
+        scope_group_key='task_student_scope',
         effect='DENY',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -178,10 +177,9 @@ def test_user_view_scope_supports_mentees_and_non_student_overrides(grant_permis
     assert mentee_non_student.id in visible_user_ids
     assert outsider_non_student.id not in visible_user_ids
 
-    user_view_permission = Permission.objects.get(code='user.view')
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=user_view_permission,
+        scope_group_key='user_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -194,9 +192,9 @@ def test_user_view_scope_supports_mentees_and_non_student_overrides(grant_permis
     visible_user_ids = {item['id'] for item in response.data['data']}
     assert outsider_non_student.id in visible_user_ids
 
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=user_view_permission,
+        scope_group_key='user_scope',
         effect='DENY',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -305,10 +303,10 @@ def test_super_admin_scope_is_not_constrained_by_user_overrides(create_spot_chec
     mentee.save(update_fields=['mentor'])
 
     for permission_code in ('task.assign', 'spot_check.view'):
-        permission = Permission.objects.get(code=permission_code)
-        UserPermissionOverride.objects.create(
+        scope_group_key = 'task_student_scope' if permission_code == 'task.assign' else 'spot_check_student_scope'
+        UserScopeGroupOverride.objects.create(
             user=super_admin,
-            permission=permission,
+            scope_group_key=scope_group_key,
             effect='DENY',
             scope_type='EXPLICIT_USERS',
             scope_user_ids=[extra_student.id],
@@ -375,19 +373,18 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
     assert mentee.id in student_ids
     assert extra_student.id not in student_ids
 
-    spot_check_view_permission = Permission.objects.get(code='spot_check.view')
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=spot_check_view_permission,
+        scope_group_key='spot_check_student_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
         scope_user_ids=[extra_student.id],
         granted_by=admin,
     )
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=spot_check_view_permission,
+        scope_group_key='spot_check_student_scope',
         effect='DENY',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -401,10 +398,9 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
     assert mentee.id not in student_ids
     assert extra_student.id in student_ids
 
-    spot_check_create_permission = Permission.objects.get(code='spot_check.create')
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=spot_check_create_permission,
+        scope_group_key='spot_check_student_scope',
         effect='ALLOW',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',
@@ -428,9 +424,9 @@ def test_spot_check_scope_supports_view_and_create_with_explicit_allow_and_deny(
     )
     assert create_response.status_code == 201
 
-    UserPermissionOverride.objects.create(
+    UserScopeGroupOverride.objects.create(
         user=mentor,
-        permission=spot_check_create_permission,
+        scope_group_key='spot_check_student_scope',
         effect='DENY',
         applies_to_role='MENTOR',
         scope_type='EXPLICIT_USERS',

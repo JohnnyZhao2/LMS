@@ -26,6 +26,7 @@ AUTHORIZATION_SPECS = (
                 code='user.view',
                 name='查看用户',
                 description='查看用户列表和详情',
+                scope_group_key='user_scope',
             ),
             PermissionDefinition(
                 code='user.create',

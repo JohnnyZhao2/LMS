@@ -1,8 +1,11 @@
+import importlib
+
 import pytest
+from django.apps import apps
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from apps.authorization.models import Permission, UserPermissionOverride
+from apps.authorization.models import Permission, UserPermissionOverride, UserScopeGroupOverride
 from apps.knowledge.models import Knowledge
 from apps.users.models import Department, Role, User, UserRole
 
@@ -196,6 +199,11 @@ def test_permission_catalog_excludes_system_managed_permissions():
     assert 'submission.answer' not in permission_codes
     assert 'submission.review' not in permission_codes
     assert 'scope_aware' in permission_map['task.view']
+    assert permission_map['task.assign']['scope_group_key'] == 'task_student_scope'
+    assert permission_map['task.analytics.view']['scope_group_key'] == 'task_student_scope'
+    assert permission_map['spot_check.view']['scope_group_key'] == 'spot_check_student_scope'
+    assert permission_map['user.view']['scope_group_key'] == 'user_scope'
+    assert permission_map['task.view']['scope_group_key'] is None
     assert 'role_template_visible' not in permission_map['task.view']
     assert 'user_authorization_visible' not in permission_map['task.view']
 
@@ -492,6 +500,32 @@ def test_replace_role_permissions_keeps_role_owned_dashboard_permission():
 
 
 @pytest.mark.django_db
+def test_replace_role_permissions_auto_adds_implied_permissions():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_TEMPLATE_IMPLY', username='Template Imply Super')
+    _create_user_with_role(employee_id='EMP_AUTH_TEMPLATE_IMPLY_M', username='Template Imply Mentor', role_code='MENTOR')
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.put(
+        '/api/authorization/roles/MENTOR/permissions/',
+        {
+            'role_code': 'MENTOR',
+            'permission_codes': [
+                'grading.score',
+            ],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 200
+    permission_codes = set(response.data['data']['permission_codes'])
+    assert 'grading.score' in permission_codes
+    assert 'grading.view' in permission_codes
+    assert 'task.view' in permission_codes
+    assert 'dashboard.mentor.view' in permission_codes
+
+
+@pytest.mark.django_db
 def test_replace_team_manager_permissions_keeps_team_manager_dashboard_permission():
     client = APIClient()
     admin_user = _create_superuser(employee_id='EMP_AUTH_TM_KEEP', username='Team Manager Keep Super')
@@ -552,9 +586,30 @@ def test_role_permission_template_response_includes_default_scope_types():
     payload = response.data['data']
     assert payload['role_code'] == 'MENTOR'
     assert payload['default_scope_types'] == ['MENTEES']
+    scope_group_map = {item['key']: item for item in payload['scope_groups']}
+    assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
+    assert set(scope_group_map['task_student_scope']['permission_codes']) == {'task.assign', 'task.analytics.view'}
+    assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
+    assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
     assert any(option['code'] == 'MENTEES' and option['inherited_by_default'] for option in payload['scope_options'])
     assert any(option['code'] == 'EXPLICIT_USERS' and not option['inherited_by_default'] for option in payload['scope_options'])
     assert all(option['code'] != 'SELF' for option in payload['scope_options'])
+
+
+@pytest.mark.django_db
+def test_sync_authorization_restores_role_default_scope_groups():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_GROUP_SYNC', username='Scope Group Sync Super')
+    Role.objects.get_or_create(code='MENTOR', defaults={'name': '导师'})
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.get('/api/authorization/roles/MENTOR/permissions/')
+
+    assert response.status_code == 200
+    scope_group_map = {item['key']: item for item in response.data['data']['scope_groups']}
+    assert scope_group_map['task_student_scope']['default_scope_types'] == ['MENTEES']
+    assert scope_group_map['spot_check_student_scope']['default_scope_types'] == ['MENTEES']
+    assert scope_group_map['user_scope']['default_scope_types'] == ['MENTEES']
 
 
 @pytest.mark.django_db
@@ -613,6 +668,123 @@ def test_non_admin_role_cannot_create_config_permission_override():
         applies_to_role='MENTOR',
         is_active=True,
     ).exists()
+
+
+@pytest.mark.django_db
+def test_user_scope_group_override_api_creates_and_lists_records():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_GROUP_ADMIN', username='Scope Group Super')
+    mentor_user = _create_user_with_role(
+        employee_id='EMP_AUTH_SCOPE_GROUP_MENTOR',
+        username='Scope Group Mentor',
+        role_code='MENTOR',
+    )
+    extra_user = _create_user_with_role(
+        employee_id='EMP_AUTH_SCOPE_GROUP_EXTRA',
+        username='Scope Group Extra',
+        role_code='STUDENT',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    create_response = client.post(
+        f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/',
+        {
+            'scope_group_key': 'task_student_scope',
+            'effect': 'ALLOW',
+            'applies_to_role': 'MENTOR',
+            'scope_type': 'EXPLICIT_USERS',
+            'scope_user_ids': [extra_user.id],
+        },
+        format='json',
+    )
+
+    assert create_response.status_code == 201
+    assert create_response.data['data']['scope_group_key'] == 'task_student_scope'
+    assert create_response.data['data']['scope_user_ids'] == [extra_user.id]
+    assert UserScopeGroupOverride.objects.filter(
+        user=mentor_user,
+        scope_group_key='task_student_scope',
+        applies_to_role='MENTOR',
+        scope_type='EXPLICIT_USERS',
+        is_active=True,
+    ).exists()
+
+    list_response = client.get(f'/api/authorization/users/{mentor_user.id}/scope-group-overrides/')
+    assert list_response.status_code == 200
+    payload = list_response.data['data']
+    assert len(payload) == 1
+    assert payload[0]['scope_group_key'] == 'task_student_scope'
+
+
+@pytest.mark.django_db
+def test_scope_aware_permission_override_api_rejects_scoped_payload():
+    client = APIClient()
+    admin_user = _create_superuser(employee_id='EMP_AUTH_SCOPE_OVERRIDE_ADMIN', username='Scope Override Super')
+    mentor_user = _create_user_with_role(
+        employee_id='EMP_AUTH_SCOPE_OVERRIDE_MENTOR',
+        username='Scope Override Mentor',
+        role_code='MENTOR',
+    )
+    extra_user = _create_user_with_role(
+        employee_id='EMP_AUTH_SCOPE_OVERRIDE_EXTRA',
+        username='Scope Override Extra',
+        role_code='STUDENT',
+    )
+    _authenticate(client, employee_id=admin_user.employee_id)
+
+    response = client.post(
+        f'/api/authorization/users/{mentor_user.id}/overrides/',
+        {
+            'permission_code': 'task.assign',
+            'effect': 'ALLOW',
+            'applies_to_role': 'MENTOR',
+            'scope_type': 'EXPLICIT_USERS',
+            'scope_user_ids': [extra_user.id],
+        },
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert response.data['code'] == 'VALIDATION_ERROR'
+    assert '请改用范围组覆盖接口' in response.data['message']
+    assert not UserPermissionOverride.objects.filter(
+        user=mentor_user,
+        permission__code='task.assign',
+        applies_to_role='MENTOR',
+        is_active=True,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_scope_group_migration_preserves_legacy_all_scope_override():
+    migration_module = importlib.import_module('apps.authorization.migrations.0023_scope_group_overrides')
+
+    mentor_user = _create_user_with_role(
+        employee_id='EMP_AUTH_SCOPE_MIGRATION_MENTOR',
+        username='Scope Migration Mentor',
+        role_code='MENTOR',
+    )
+    permission = Permission.objects.get(code='user.view')
+    UserPermissionOverride.objects.create(
+        user=mentor_user,
+        permission=permission,
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='ALL',
+        scope_user_ids=[],
+        granted_by=mentor_user,
+    )
+
+    migration_module.migrate_scope_aware_user_overrides(apps, None)
+
+    migrated_override = UserScopeGroupOverride.objects.get(
+        user=mentor_user,
+        scope_group_key='user_scope',
+        effect='ALLOW',
+        applies_to_role='MENTOR',
+        scope_type='ALL',
+    )
+    assert migrated_override.scope_user_ids == []
 
 
 @pytest.mark.django_db

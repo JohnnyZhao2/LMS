@@ -17,6 +17,12 @@ interface QuizTimeUpDialogProps {
   onConfirm: () => void;
 }
 
+interface QuizAbandonDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}
+
 export const QuizSubmitDialog: React.FC<QuizSubmitDialogProps> = ({
   open,
   unansweredCount,
@@ -75,6 +81,31 @@ export const QuizTimeUpDialog: React.FC<QuizTimeUpDialogProps> = ({
       <DialogFooter>
         <Button onClick={onConfirm}>
           查看结果
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);
+
+export const QuizAbandonDialog: React.FC<QuizAbandonDialogProps> = ({
+  open,
+  onOpenChange,
+  onConfirm,
+}) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="rounded-lg">
+      <DialogHeader>
+        <DialogTitle>确认放弃作答</DialogTitle>
+        <DialogDescription>
+          当前已保存的答案会保留，再次进入后可继续作答。
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          继续答题
+        </Button>
+        <Button variant="destructive" onClick={onConfirm}>
+          暂时退出
         </Button>
       </DialogFooter>
     </DialogContent>

@@ -2,7 +2,15 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { apiClient } from '@/lib/api-client';
 import { buildQueryString } from '@/lib/api-utils';
 import { useCurrentRole } from '@/hooks/use-current-role';
-import type { CreateUserPermissionOverrideRequest, PermissionCatalogItem, PermissionCatalogView, RolePermissionTemplate, UserPermissionOverride } from '@/types/authorization';
+import type {
+  CreateUserPermissionOverrideRequest,
+  CreateUserScopeGroupOverrideRequest,
+  PermissionCatalogItem,
+  PermissionCatalogView,
+  RolePermissionTemplate,
+  UserPermissionOverride,
+  UserScopeGroupOverride,
+} from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 
 interface PermissionCatalogQuery {
@@ -24,6 +32,11 @@ interface RevokeUserOverridePayload {
   userId: number;
   overrideId: number;
   revokeReason?: string;
+}
+
+interface CreateUserScopeGroupOverridePayload {
+  userId: number;
+  data: CreateUserScopeGroupOverrideRequest;
 }
 
 export const usePermissionCatalog = (query: PermissionCatalogQuery = {}, enabled = true) => {
@@ -89,6 +102,25 @@ export const useUserPermissionOverrides = (
   });
 };
 
+export const useUserScopeGroupOverrides = (
+  userId: number | null,
+  includeInactive = false,
+  enabled = true,
+) => {
+  const currentRole = useCurrentRole();
+  return useQuery({
+    queryKey: ['authorization', 'user-scope-group-overrides', currentRole ?? 'UNKNOWN', userId ?? 'NONE', includeInactive],
+    queryFn: () => {
+      if (!userId) {
+        return Promise.resolve([] as UserScopeGroupOverride[]);
+      }
+      const queryString = buildQueryString({ include_inactive: includeInactive });
+      return apiClient.get<UserScopeGroupOverride[]>(`/authorization/users/${userId}/scope-group-overrides/${queryString}`);
+    },
+    enabled: currentRole !== null && !!userId && enabled,
+  });
+};
+
 export const useCreateUserPermissionOverride = () => {
   return useMutation({
     mutationFn: ({ userId, data }: CreateUserOverridePayload) =>
@@ -101,6 +133,23 @@ export const useRevokeUserPermissionOverride = () => {
     mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
       apiClient.post<UserPermissionOverride>(
         `/authorization/users/${userId}/overrides/${overrideId}/revoke/`,
+        { revoke_reason: revokeReason ?? '' },
+      ),
+  });
+};
+
+export const useCreateUserScopeGroupOverride = () => {
+  return useMutation({
+    mutationFn: ({ userId, data }: CreateUserScopeGroupOverridePayload) =>
+      apiClient.post<UserScopeGroupOverride>(`/authorization/users/${userId}/scope-group-overrides/`, data),
+  });
+};
+
+export const useRevokeUserScopeGroupOverride = () => {
+  return useMutation({
+    mutationFn: ({ userId, overrideId, revokeReason }: RevokeUserOverridePayload) =>
+      apiClient.post<UserScopeGroupOverride>(
+        `/authorization/users/${userId}/scope-group-overrides/${overrideId}/revoke/`,
         { revoke_reason: revokeReason ?? '' },
       ),
   });

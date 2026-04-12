@@ -4,7 +4,7 @@ import {
   useState,
 } from 'react';
 
-import type { PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
+import type { PermissionOverrideScope } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import type { Department, UserList, UserList as UserDetail } from '@/types/common';
 
@@ -19,6 +19,7 @@ import {
   syncRoleScopeSelection,
 } from './user-permission-scope.utils';
 import type { RoleScopeSelection } from './user-permission-scope.utils';
+import type { ScopeGroupOverrideEntry } from './user-permission-section.types';
 
 interface UseUserPermissionScopeStateParams {
   userId?: number;
@@ -29,9 +30,11 @@ interface UseUserPermissionScopeStateParams {
   hasConfigurablePermissionRoles: boolean;
   normalizedSelectedPermissionRole: RoleCode;
   selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
+  scopeGroupKey?: string;
   scopePermissionCode?: string | null;
   scopeUsers: UserList[];
-  userOverrides: UserPermissionOverride[];
+  scopeGroupOverrides: ScopeGroupOverrideEntry[];
+  onSelectionChange?: (selection: RoleScopeSelection) => void | Promise<void>;
 }
 
 interface UseUserPermissionScopeStateResult {
@@ -68,9 +71,11 @@ export const useUserPermissionScopeState = ({
   hasConfigurablePermissionRoles,
   normalizedSelectedPermissionRole,
   selectedRoleDefaultScopeTypes,
+  scopeGroupKey,
   scopePermissionCode,
   scopeUsers,
-  userOverrides,
+  scopeGroupOverrides,
+  onSelectionChange,
 }: UseUserPermissionScopeStateParams): UseUserPermissionScopeStateResult => {
   const [scopeSelectionsByKey, setScopeSelectionsByKey] = useState<Record<string, RoleScopeSelection>>({});
   const [scopeUserSearch, setScopeUserSearch] = useState('');
@@ -91,8 +96,8 @@ export const useUserPermissionScopeState = ({
     [selectableScopeUsers],
   );
   const selectionStateKey = useMemo(
-    () => `${ownerUserId ?? 'new'}:${normalizedSelectedPermissionRole}`,
-    [normalizedSelectedPermissionRole, ownerUserId],
+    () => `${ownerUserId ?? 'new'}:${normalizedSelectedPermissionRole}:${scopeGroupKey ?? 'none'}`,
+    [normalizedSelectedPermissionRole, ownerUserId, scopeGroupKey],
   );
   const getPresetMatchedScopeUserIdsForSelection = useCallback(
     (scopeTypes: PermissionOverrideScope[]) => getPresetMatchedScopeUserIds({
@@ -115,10 +120,11 @@ export const useUserPermissionScopeState = ({
     return resolveRoleScopeSelection({
       cachedSelection: scopeSelectionsByKey[selectionStateKey],
       getPresetMatchedScopeUserIdsForSelection,
+      scopeGroupKey,
       roleCode: normalizedSelectedPermissionRole,
       selectableScopeUserIdSet,
       selectedRoleDefaultScopeTypes,
-      userOverrides,
+      scopeGroupOverrides,
     });
   }, [
     getPresetMatchedScopeUserIdsForSelection,
@@ -126,9 +132,10 @@ export const useUserPermissionScopeState = ({
     normalizedSelectedPermissionRole,
     scopeSelectionsByKey,
     selectionStateKey,
+    scopeGroupKey,
     selectableScopeUserIdSet,
     selectedRoleDefaultScopeTypes,
-    userOverrides,
+    scopeGroupOverrides,
   ]);
 
   const updateCurrentRoleSelection = useCallback((
@@ -138,14 +145,16 @@ export const useUserPermissionScopeState = ({
       return;
     }
 
+    let changedSelection: RoleScopeSelection | null = null;
     setScopeSelectionsByKey((currentSelections) => {
       const currentSelection = resolveRoleScopeSelection({
         cachedSelection: currentSelections[selectionStateKey],
         getPresetMatchedScopeUserIdsForSelection,
+        scopeGroupKey,
         roleCode: normalizedSelectedPermissionRole,
         selectableScopeUserIdSet,
         selectedRoleDefaultScopeTypes,
-        userOverrides,
+        scopeGroupOverrides,
       });
       const nextSelection = syncRoleScopeSelection({
         getPresetMatchedScopeUserIdsForSelection,
@@ -161,19 +170,26 @@ export const useUserPermissionScopeState = ({
         return currentSelections;
       }
 
+      changedSelection = nextSelection;
+
       return {
         ...currentSelections,
         [selectionStateKey]: nextSelection,
       };
     });
+    if (changedSelection) {
+      void onSelectionChange?.(changedSelection);
+    }
   }, [
     getPresetMatchedScopeUserIdsForSelection,
     hasConfigurablePermissionRoles,
     normalizedSelectedPermissionRole,
+    onSelectionChange,
     selectionStateKey,
+    scopeGroupKey,
     selectableScopeUserIdSet,
     selectedRoleDefaultScopeTypes,
-    userOverrides,
+    scopeGroupOverrides,
   ]);
 
   const selectedPermissionScopes = currentRoleSelection.scopeTypes;

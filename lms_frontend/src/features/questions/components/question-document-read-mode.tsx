@@ -32,6 +32,7 @@ type QuestionDocumentReadModeProps = Pick<
   | 'onResponseChange'
 > & {
   compactWidth?: number;
+  headerActions?: React.ReactNode;
   saving?: boolean;
   contentRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
   explanationRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
@@ -42,6 +43,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
   mode = 'preview',
   className,
   compactWidth,
+  headerActions,
   footerActions,
   saving = false,
   score,
@@ -89,9 +91,12 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
         <div className={cn('flex min-h-full min-w-0 flex-col px-5 py-4', isCompact ? '' : 'pr-5')}>
           <div className={cn(previewContentMinHeightClass)}>
             {questionNumber ? (
-              <div className="mb-2 flex items-center justify-between gap-3 text-[12px] font-medium text-text-muted">
-                <span>第 {questionNumber} 题</span>
-                {score != null ? <span className="shrink-0">{String(score)} 分</span> : null}
+              <div className="mb-2 flex items-center justify-between gap-3 text-[13px] font-semibold leading-5 text-text-muted">
+                <div className="flex items-center gap-3.5">
+                  <span className="tabular-nums">第 {questionNumber} 题</span>
+                  {score != null ? <span className="shrink-0 tabular-nums">{String(score)} 分</span> : null}
+                </div>
+                {headerActions}
               </div>
             ) : null}
             {contentRenderer

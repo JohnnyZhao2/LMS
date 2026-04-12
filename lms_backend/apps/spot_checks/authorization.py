@@ -145,11 +145,14 @@ AUTHORIZATION_SPECS = (
                 code='spot_check.view',
                 name='查看抽查',
                 description='查看抽查记录列表和详情',
+                scope_group_key='spot_check_student_scope',
             ),
             PermissionDefinition(
                 code='spot_check.create',
                 name='创建抽查',
                 description='创建抽查记录',
+                scope_group_key='spot_check_student_scope',
+                implies=('spot_check.view',),
             ),
             PermissionDefinition(
                 code='spot_check.update',

@@ -1,12 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import type { CreateUserPermissionOverrideRequest, PermissionOverrideScope, UserPermissionOverride } from '@/types/authorization';
+import type {
+  CreateUserPermissionOverrideRequest,
+  PermissionCatalogItem,
+  PermissionOverrideScope,
+} from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
 import { showApiError } from '@/utils/error-handler';
 
+import { applyPermissionSelectionChange } from '@/features/authorization/utils/permission-dependencies';
 import { getOverrideSignature, normalizeScopeUserIds } from './user-permission-section.helpers';
-import type { PermissionState } from './user-permission-section.types';
+import type { PermissionOverrideEntry, PermissionState } from './user-permission-section.types';
 import {
   buildPermissionTogglePlan,
   getRolePermissionOverrideBuckets,
@@ -17,11 +22,11 @@ interface UseUserPermissionOverrideStateParams {
   userId?: number;
   canManageOverride: boolean;
   normalizedSelectedPermissionRole: RoleCode;
-  selectedRoleDefaultScopeTypes: PermissionOverrideScope[];
+  permissionCatalog: PermissionCatalogItem[];
   selectedPermissionScopes: PermissionOverrideScope[];
   selectedScopeUserIds: number[];
   roleTemplatePermissionCodes: Set<string>;
-  userOverrides: UserPermissionOverride[];
+  userOverrides: PermissionOverrideEntry[];
   isScopeAwarePermission: (permissionCode: string) => boolean;
   createOverride: (params: {
     userId: number;
@@ -45,7 +50,7 @@ export const useUserPermissionOverrideState = ({
   userId,
   canManageOverride,
   normalizedSelectedPermissionRole,
-  selectedRoleDefaultScopeTypes,
+  permissionCatalog,
   selectedPermissionScopes,
   selectedScopeUserIds,
   roleTemplatePermissionCodes,
@@ -77,7 +82,6 @@ export const useUserPermissionOverrideState = ({
       fromTemplate,
       isScopeAware: isScopeAwarePermission(permissionCode),
       selectedPermissionScopes,
-      selectedRoleDefaultScopeTypes,
       selectedScopeUserIds,
     });
   }, [
@@ -87,7 +91,6 @@ export const useUserPermissionOverrideState = ({
     isScopeAwarePermission,
     roleTemplatePermissionCodes,
     selectedPermissionScopes,
-    selectedRoleDefaultScopeTypes,
     selectedScopeUserIds,
   ]);
 
@@ -96,26 +99,58 @@ export const useUserPermissionOverrideState = ({
       return;
     }
 
-    const permissionState = getPermissionState(permissionCode);
-    const blockedReason = nextChecked ? permissionState.enableBlockedReason : permissionState.disableBlockedReason;
-    if (blockedReason) {
-      toast.error(blockedReason);
-      return;
+    const currentEnabledCodes = permissionCatalog
+      .filter((permission) => getPermissionState(permission.code).checked)
+      .map((permission) => permission.code);
+    const nextEnabledCodeSet = new Set(applyPermissionSelectionChange({
+      currentEnabledCodes,
+      nextChecked,
+      permissionCatalog,
+      permissionCode,
+    }));
+    const changedPermissions = permissionCatalog.filter((permission) => (
+      currentEnabledCodes.includes(permission.code) !== nextEnabledCodeSet.has(permission.code)
+    ));
+    const overridesToRevoke: PermissionOverrideEntry[] = [];
+    const payloadsToCreate: CreateUserPermissionOverrideRequest[] = [];
+
+    for (const changedPermission of changedPermissions) {
+      const permissionState = getPermissionState(changedPermission.code);
+      const changedNextChecked = nextEnabledCodeSet.has(changedPermission.code);
+      const blockedReason = changedNextChecked
+        ? permissionState.enableBlockedReason
+        : permissionState.disableBlockedReason;
+      if (blockedReason) {
+        toast.error(`${changedPermission.name}：${blockedReason}`);
+        return;
+      }
+
+      const plan = buildPermissionTogglePlan({
+        nextChecked: changedNextChecked,
+        permissionCode: changedPermission.code,
+        permissionState,
+        roleCode: normalizedSelectedPermissionRole,
+      });
+      overridesToRevoke.push(...plan.overridesToRevoke);
+      payloadsToCreate.push(...plan.payloadsToCreate);
     }
 
-    const { overridesToRevoke, payloadsToCreate } = buildPermissionTogglePlan({
-      isScopeAware: isScopeAwarePermission(permissionCode),
-      nextChecked,
-      permissionCode,
-      permissionState,
-      roleCode: normalizedSelectedPermissionRole,
-      selectedPermissionScopes,
-      selectedScopeUserIds,
-    });
     const uniqueOverridesToRevoke = Array.from(new Map(
       overridesToRevoke
         .filter((override) => override.id > 0)
         .map((override) => [getOverrideSignature(override), override]),
+    ).values());
+    const uniquePayloadsToCreate = Array.from(new Map(
+      payloadsToCreate.map((payload) => [
+        [
+          payload.permission_code,
+          payload.effect,
+          payload.applies_to_role ?? '',
+          payload.scope_type,
+          normalizeScopeUserIds(payload.scope_user_ids ?? []).join(','),
+        ].join('|'),
+        payload,
+      ]),
     ).values());
 
     setSavingPermissionCodes((prev) => [...prev, permissionCode]);
@@ -128,9 +163,9 @@ export const useUserPermissionOverrideState = ({
         );
       }
 
-      if (payloadsToCreate.length > 0) {
+      if (uniquePayloadsToCreate.length > 0) {
         await Promise.all(
-          payloadsToCreate.map((payload) =>
+          uniquePayloadsToCreate.map((payload) =>
             createOverride({
               userId,
               data: {
@@ -157,6 +192,7 @@ export const useUserPermissionOverrideState = ({
     isPermissionSaving,
     isScopeAwarePermission,
     normalizedSelectedPermissionRole,
+    permissionCatalog,
     refetchUserOverrides,
     refreshUser,
     revokeOverride,

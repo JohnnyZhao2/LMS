@@ -154,7 +154,8 @@ class SaveAnswerView(BaseAPIView):
         return success_response(
             data={
                 'question_id': answer.question_id,
-                'user_answer': answer.user_answer
+                'user_answer': answer.user_answer,
+                'is_marked': answer.is_marked,
             },
             message='保存成功'
         )

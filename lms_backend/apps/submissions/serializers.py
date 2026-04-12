@@ -11,7 +11,7 @@ Properties:
 from rest_framework import serializers
 
 from .models import Answer, Submission
-from .services import SubmissionService
+from .services import SubmissionService, UNSET
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -33,7 +33,7 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'question', 'question_content', 'question_type',
             'question_type_display', 'question_options', 'question_score',
-            'user_answer', 'is_correct', 'obtained_score',
+            'user_answer', 'is_marked', 'is_correct', 'obtained_score',
             'correct_answer', 'explanation',
             'graded_by', 'graded_by_name', 'graded_at', 'comment',
             'created_at', 'updated_at'
@@ -69,14 +69,19 @@ class SaveAnswerSerializer(serializers.Serializer):
     业务逻辑委托给 SubmissionService 处理。
     """
     question_id = serializers.IntegerField(help_text='题目ID')
-    user_answer = serializers.JSONField(help_text='用户答案', allow_null=True)
+    user_answer = serializers.JSONField(help_text='用户答案', allow_null=True, required=False)
+    is_marked = serializers.BooleanField(help_text='是否标记题目', required=False)
+
     def validate(self, attrs):
         """Validate the answer data."""
         submission = self.context.get('submission')
         question_id = attrs['question_id']
         if not Answer.objects.filter(submission=submission, question_id=question_id).exists():
             raise serializers.ValidationError({'question_id': '该题目不在此答卷中'})
+        if 'user_answer' not in attrs and 'is_marked' not in attrs:
+            raise serializers.ValidationError('至少提供一个要更新的字段')
         return attrs
+
     def save(self):
         """Save the answer - 委托给 SubmissionService"""
         request = self.context.get('request')
@@ -85,7 +90,8 @@ class SaveAnswerSerializer(serializers.Serializer):
         return service.save_answer(
             submission=submission,
             question_id=self.validated_data['question_id'],
-            user_answer=self.validated_data['user_answer']
+            user_answer=self.validated_data.get('user_answer', UNSET),
+            is_marked=self.validated_data.get('is_marked', UNSET),
         )
 class StartQuizSerializer(serializers.Serializer):
     """

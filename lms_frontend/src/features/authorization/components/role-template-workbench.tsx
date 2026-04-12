@@ -4,6 +4,7 @@ import { UserPermissionModuleSidebar } from '@/features/users/components/user-pe
 import { cn } from '@/lib/utils';
 import type { PermissionCatalogItem } from '@/types/authorization';
 import type { RoleCode } from '@/types/common';
+import { applyPermissionSelectionChange } from '../utils/permission-dependencies';
 
 interface PermissionGroup {
   module: string;
@@ -16,6 +17,7 @@ interface PermissionGroup {
 interface RoleTemplateWorkbenchProps {
   permissionModules: string[];
   roleCodes: RoleCode[];
+  permissionCatalog: PermissionCatalogItem[];
   permissionCodesByRole: Partial<Record<RoleCode, string[]>>;
   activeGroup: PermissionGroup;
   canUpdateRoleTemplate: boolean;
@@ -50,6 +52,7 @@ const RolePermissionCell: React.FC<{
 export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
   permissionModules,
   roleCodes,
+  permissionCatalog,
   permissionCodesByRole,
   activeGroup,
   canUpdateRoleTemplate,
@@ -65,6 +68,16 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
       )).length,
     ]),
   ) as Record<RoleCode, number>;
+
+  const toggleRolePermission = (roleCode: RoleCode, permissionCode: string, nextChecked: boolean) => {
+    const nextCodes = applyPermissionSelectionChange({
+      currentEnabledCodes: permissionCodesByRole[roleCode] ?? [],
+      nextChecked,
+      permissionCatalog,
+      permissionCode,
+    });
+    onToggleCode(roleCode, nextCodes);
+  };
 
   return (
     <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
@@ -138,9 +151,6 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
                   {roleCodes.map((roleCode) => {
                     const checked = permissionCodesByRole[roleCode]?.includes(permission.code) ?? false;
                     const disabled = !canUpdateRoleTemplate || savingRoleCodes.includes(roleCode);
-                    const nextCodes = checked
-                      ? (permissionCodesByRole[roleCode] ?? []).filter((code) => code !== permission.code)
-                      : [...(permissionCodesByRole[roleCode] ?? []), permission.code];
 
                     return (
                       <div
@@ -155,7 +165,7 @@ export const RoleTemplateWorkbench: React.FC<RoleTemplateWorkbenchProps> = ({
                         <RolePermissionCell
                           checked={checked}
                           disabled={disabled}
-                          onClick={() => onToggleCode(roleCode, nextCodes)}
+                          onClick={() => toggleRolePermission(roleCode, permission.code, !checked)}
                         />
                       </div>
                     );

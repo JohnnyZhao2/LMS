@@ -71,7 +71,7 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
       <Card>
         <CardContent className="p-6">
           <h3 className="text-xl font-semibold mb-6">{data.quiz_title}</h3>
-          <div className="grid grid-cols-3 gap-6">
+          <div className={`grid gap-6 ${isPractice ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <div>
               <div className="text-sm text-text-muted mb-1">总分</div>
               <div className="text-2xl font-bold">
@@ -86,10 +86,12 @@ export const AnswerReview: React.FC<AnswerReviewProps> = ({ type }) => {
                 <span className="text-text-muted text-lg font-normal"> / {data.answers.length}</span>
               </div>
             </div>
-            <div>
-              <div className="text-sm text-text-muted mb-1">答题次数</div>
-              <div className="text-2xl font-bold text-foreground">{data.attempt_number}</div>
-            </div>
+            {isPractice ? (
+              <div>
+                <div className="text-sm text-text-muted mb-1">答题次数</div>
+                <div className="text-2xl font-bold text-foreground">{data.attempt_number}</div>
+              </div>
+            ) : null}
           </div>
         </CardContent>
       </Card>

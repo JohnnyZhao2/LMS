@@ -37,7 +37,10 @@ export const AuthorizationCenterPage: React.FC = () => {
   const isLoadingTemplates = roleTemplateQueries.some((query) => query.isLoading);
   const replaceRoleTemplateMutation = useReplaceRolePermissionTemplate();
 
-  const handleChangeRoleTemplate = async (roleCode: RoleCode, nextCodes: string[]) => {
+  const handleChangeRoleTemplate = async (
+    roleCode: RoleCode,
+    nextCodes: string[],
+  ) => {
     if (!canUpdateRoleTemplate) return;
 
     const previousCodes = permissionCodesByRole[roleCode] ?? [];

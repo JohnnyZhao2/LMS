@@ -10,13 +10,24 @@
 - 数据表承载：
   - 代码默认权限同步到 `Permission`
   - 角色模板差异在 `RolePermission`
-  - 用户覆盖在 `UserPermissionOverride`
+  - 用户能力例外在 `UserPermissionOverride`
+  - 范围组默认规则来自代码注册表与角色默认规则
+  - 用户范围覆盖在 `UserScopeGroupOverride`
 - 前端说明：`lms_frontend/src/features/authorization/constants/permission-presentation.ts`
 
 现在已经没有 `policies.py` 这个运行时中心。附加约束走两条主链：
 
 - 资源级约束：各模块 `authorization.py` 里的 `resource_authorization_handlers`
 - 范围过滤：各模块 `authorization.py` 里的 `scope_filter_handlers` / `scope_rules`
+
+现在的范围模型已经不是“按模块共享”，而是：
+
+- 权限自己声明 `scope_group_key`
+- 默认范围按 `scope_group_key + role` 落库
+- 用户页面改的是 `scope_group`，不是单个 permission 的范围
+- `scope-aware permission` 的开关和范围分离：
+  - 能力开关看 `RolePermission / UserPermissionOverride`
+  - 默认范围看权限注册表，用户例外范围看 `UserScopeGroupOverride`
 
 ## 日常改动
 
@@ -28,6 +39,7 @@
 - `role_defaults`：角色默认权限
 - `role_system_defaults` / `system_managed_codes`：系统保留权限
 - `scope_rules`：默认范围规则
+- `scope_group_key`：该权限归属的范围组
 - `resource_authorization_handlers`：资源级条件约束
 - `scope_filter_handlers`：列表/查询过滤约束
 
