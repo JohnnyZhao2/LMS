@@ -27,32 +27,36 @@ export const BreadcrumbNav: React.FC<BreadcrumbNavProps> = ({
     <nav
       aria-label="页面路径"
       className={cn(
-        'flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-medium text-[#7B8698]',
+        'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-[#7B8698]',
         className,
       )}
     >
       <Link
         to={homePath}
         aria-label="返回首页"
-        className="inline-flex h-5 w-5 items-center justify-center rounded-md text-[#7B8698] transition-colors hover:bg-white/70 hover:text-foreground"
+        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-[#7B8698] transition-colors hover:bg-white/70 hover:text-foreground"
       >
-        <Home className="h-3.5 w-3.5" />
+        <Home className="h-4 w-4" />
       </Link>
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
 
         return (
           <React.Fragment key={`${item.title}-${index}`}>
-            <ChevronRight className="h-3 w-3 text-border" />
-            {item.path && !isLast ? (
+            <ChevronRight className={cn('text-border', isLast ? 'h-3.5 w-3.5' : 'h-3 w-3')} />
+            {!isLast && item.path ? (
               <Link
                 to={item.path}
-                className="truncate rounded-md px-1.5 py-0.5 text-[#7B8698] transition-colors hover:bg-white/70 hover:text-foreground"
+                className="truncate rounded-md px-1.5 py-0.5 text-[13px] text-[#7B8698] transition-colors hover:bg-white/70 hover:text-foreground"
               >
                 {item.title}
               </Link>
+            ) : !isLast ? (
+              <span className="truncate rounded-md px-1.5 py-0.5 text-[13px] text-[#7B8698]">
+                {item.title}
+              </span>
             ) : (
-              <span className="truncate rounded-md px-1.5 py-0.5 text-foreground">
+              <span className="truncate rounded-md px-1.5 py-0.5 text-[20px] font-semibold leading-tight tracking-[-0.03em] text-foreground md:text-[22px]">
                 {item.title}
               </span>
             )}

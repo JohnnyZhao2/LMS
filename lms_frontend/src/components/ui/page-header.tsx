@@ -21,40 +21,37 @@ export interface PageHeaderProps {
  * 页面头部组件
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
-  title,
   breadcrumbs,
   extra,
   className = '',
 }) => {
   const currentRole = useCurrentRole();
   const dashboardPath = getWorkspaceHome(currentRole) ?? '/dashboard';
+  const hasBreadcrumbs = Boolean(breadcrumbs?.length);
+
+  if (!hasBreadcrumbs && !extra) {
+    return null;
+  }
 
   return (
-    <div className={cn(
-      'flex flex-col justify-between gap-4 md:flex-row md:items-start',
-      className
-    )}>
-      <div className="flex min-w-0 flex-col gap-2.5">
-        {/* 面包屑导航 */}
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <BreadcrumbNav
-            items={breadcrumbs}
-            homePath={dashboardPath}
-            className="mb-1"
-          />
-        )}
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between',
+        className,
+      )}
+    >
+      {hasBreadcrumbs ? (
+        <BreadcrumbNav
+          items={breadcrumbs ?? []}
+          homePath={dashboardPath}
+          className="min-w-0"
+        />
+      ) : (
+        <div className="hidden md:block" />
+      )}
 
-        {/* 标题区域 */}
-        <div className="min-w-0">
-          <h1 className="truncate text-[28px] font-semibold leading-none tracking-[-0.045em] text-foreground md:text-[30px]">
-            {title}
-          </h1>
-        </div>
-      </div>
-
-      {/* 操作区 */}
       {extra && (
-        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:justify-end md:self-end">
+        <div className="flex w-full flex-wrap items-center justify-end gap-3 md:w-auto">
           {extra}
         </div>
       )}

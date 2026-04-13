@@ -87,7 +87,6 @@ export function TaskConfigurationPanel({
                 date={deadline}
                 onDateChange={onDeadlineChange}
                 placeholder="选择截止日期"
-                className="h-11 rounded-lg border-border/60 bg-muted text-sm"
               />
             </div>
 

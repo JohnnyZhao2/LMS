@@ -1,11 +1,45 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker, type DayPickerProps } from "react-day-picker"
+import {
+  DayButton as DayPickerDayButton,
+  DayPicker,
+  type DayButtonProps,
+  type DayPickerProps,
+} from "react-day-picker"
 import { zhCN } from "date-fns/locale/zh-CN"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 export type CalendarProps = DayPickerProps
+
+function CalendarDayButton({
+  className,
+  children,
+  day,
+  modifiers,
+  ...props
+}: DayButtonProps) {
+  return (
+    <DayPickerDayButton
+      className={cn(className, "relative overflow-hidden")}
+      day={day}
+      modifiers={modifiers}
+      {...props}
+    >
+      <span className="relative z-10">{children}</span>
+      {modifiers.today && !modifiers.outside ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary-500",
+            modifiers.selected && "bg-white/90",
+            modifiers.range_middle && "bg-primary-600"
+          )}
+        />
+      ) : null}
+    </DayPickerDayButton>
+  )
+}
 
 function Calendar({
   className,
@@ -44,7 +78,7 @@ function Calendar({
         ),
         selected:
           "[&>.rdp-day_button]:bg-primary-500 [&>.rdp-day_button]:text-white [&>.rdp-day_button]:shadow-[0_10px_22px_rgba(37,99,235,0.18)] [&>.rdp-day_button]:hover:bg-primary-600 [&>.rdp-day_button]:hover:text-white [&>.rdp-day_button]:focus:bg-primary-500 [&>.rdp-day_button]:focus:text-white",
-        today: "[&>.rdp-day_button]:bg-muted [&>.rdp-day_button]:text-foreground",
+        today: "[&>.rdp-day_button]:font-semibold [&>.rdp-day_button]:text-foreground [&>.rdp-day_button]:ring-1 [&>.rdp-day_button]:ring-primary-200/70",
         outside: "text-text-muted/70 aria-selected:bg-primary-50/60 aria-selected:text-text-muted",
         disabled: "text-text-muted opacity-35",
         range_start: "rounded-l-[18px] bg-primary-50/90",
@@ -58,6 +92,7 @@ function Calendar({
           const Icon = orientation === "left" ? ChevronLeft : ChevronRight
           return <Icon className="h-4 w-4" />
         },
+        DayButton: CalendarDayButton,
       }}
       {...props}
     />

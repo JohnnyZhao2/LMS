@@ -12,8 +12,8 @@ from apps.users.models import User
 def _filter_viewable_users(engine, *, queryset, context=None):
     return engine.get_scoped_user_queryset(
         'user.view',
-        queryset.filter(is_active=True).distinct(),
-        cache_key='active_users',
+        queryset.distinct(),
+        cache_key='viewable_users',
     )
 
 

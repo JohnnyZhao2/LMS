@@ -4,7 +4,7 @@ import { CalendarIcon, ChevronDown } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { QUIET_OUTLINE_FIELD_CLASSNAME } from "@/components/ui/interactive-styles"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -19,19 +19,24 @@ interface DatePickerProps {
   className?: string
   align?: "start" | "center" | "end"
   disabled?: boolean
+  appearance?: "default" | "search"
 }
 
 const DATE_PICKER_TRIGGER_CLASSNAME = [
-  "h-11 w-full justify-between rounded-xl border-border/60",
-  "bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))]",
-  "px-3.5 text-left text-[13px] font-medium shadow-none",
-  "hover:border-interaction-border hover:bg-white",
+  "flex h-10 w-full items-center justify-between rounded-lg px-3.5 text-left text-[12px] font-medium text-foreground",
+  QUIET_OUTLINE_FIELD_CLASSNAME,
+  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 ].join(" ")
 
 const DATE_PICKER_CONTENT_CLASSNAME = [
-  "w-auto rounded-[22px] border-border/70 p-2",
-  "bg-[linear-gradient(180deg,rgba(255,255,255,0.985),rgba(248,250,252,0.96))]",
-  "shadow-[0_24px_64px_rgba(15,23,42,0.16)]",
+  "w-auto rounded-xl border border-border/70 bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,0.12)]",
+].join(" ")
+
+const DATE_PICKER_SEARCH_TRIGGER_CLASSNAME = [
+  "flex h-11 w-full items-center justify-between rounded-xl border border-border/60 bg-background px-3.5 text-left text-[13px] font-medium text-foreground shadow-none transition-all duration-300",
+  "hover:border-interaction-border hover:bg-background hover:shadow-none",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+  "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 ].join(" ")
 
 function DatePicker({
@@ -41,29 +46,46 @@ function DatePicker({
   className,
   align = "start",
   disabled = false,
+  appearance = "default",
 }: DatePickerProps) {
+  const dateLabel = date ? format(date, "yyyy.MM.dd", { locale: zhCN }) : placeholder
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          className={cn(
-            DATE_PICKER_TRIGGER_CLASSNAME,
-            !date && "text-text-muted",
-            className
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary">
-              <CalendarIcon className="h-3.5 w-3.5" />
+        {appearance === "search" ? (
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              DATE_PICKER_SEARCH_TRIGGER_CLASSNAME,
+              !date && "text-text-muted",
+              className
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate">{dateLabel}</span>
             </span>
-            <span className="truncate">
-              {date ? format(date, "yyyy.MM.dd", { locale: zhCN }) : placeholder}
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              DATE_PICKER_TRIGGER_CLASSNAME,
+              !date && "text-text-muted",
+              className
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate">{dateLabel}</span>
             </span>
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-text-muted" />
-        </Button>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent className={DATE_PICKER_CONTENT_CLASSNAME} align={align} sideOffset={8}>
         <Calendar
@@ -84,6 +106,7 @@ interface DateRangePickerProps {
   className?: string
   align?: "start" | "center" | "end"
   disabled?: boolean
+  appearance?: "default" | "search"
 }
 
 function DateRangePicker({
@@ -93,37 +116,52 @@ function DateRangePicker({
   className,
   align = "start",
   disabled = false,
+  appearance = "default",
 }: DateRangePickerProps) {
+  const rangeLabel = dateRange?.from
+    ? (
+      dateRange.to
+        ? `${format(dateRange.from, "yyyy.MM.dd", { locale: zhCN })} - ${format(dateRange.to, "yyyy.MM.dd", { locale: zhCN })}`
+        : format(dateRange.from, "yyyy.MM.dd", { locale: zhCN })
+    )
+    : placeholder
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          className={cn(
-            DATE_PICKER_TRIGGER_CLASSNAME,
-            !dateRange?.from && "text-text-muted",
-            className
-          )}
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary">
-              <CalendarIcon className="h-3.5 w-3.5" />
+        {appearance === "search" ? (
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              DATE_PICKER_SEARCH_TRIGGER_CLASSNAME,
+              !dateRange?.from && "text-text-muted",
+              className
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate">{rangeLabel}</span>
             </span>
-            <span className="truncate">
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  `${format(dateRange.from, "yyyy.MM.dd", { locale: zhCN })} - ${format(dateRange.to, "yyyy.MM.dd", { locale: zhCN })}`
-                ) : (
-                  format(dateRange.from, "yyyy.MM.dd", { locale: zhCN })
-                )
-              ) : (
-                placeholder
-              )}
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              DATE_PICKER_TRIGGER_CLASSNAME,
+              !dateRange?.from && "text-text-muted",
+              className
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2.5">
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate">{rangeLabel}</span>
             </span>
-          </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-text-muted" />
-        </Button>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent className={DATE_PICKER_CONTENT_CLASSNAME} align={align} sideOffset={8}>
         <Calendar

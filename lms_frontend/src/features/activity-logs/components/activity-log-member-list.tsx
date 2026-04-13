@@ -3,6 +3,7 @@ import { Users } from 'lucide-react';
 
 import { UserSelectList } from '@/components/common/user-select-list';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { SearchInput } from '@/components/ui/search-input';
 import type { ActivityLogType, ActivityLogUser } from '../types';
 
 interface ActivityLogMemberListProps {
@@ -21,6 +22,14 @@ const TYPE_LABELS: Record<ActivityLogType, string> = {
 
 type ActivityLogDepartmentFilter = 'all' | 'room1' | 'room2';
 
+const resolveDepartmentLabel = (user: ActivityLogUser) => (
+  user.department_code === 'DEPT1'
+    ? '一室'
+    : user.department_code === 'DEPT2'
+      ? '二室'
+      : (user.department_name ?? '未分组')
+);
+
 const matchesDepartmentFilter = (user: ActivityLogUser, filter: ActivityLogDepartmentFilter) => {
   if (filter === 'all') {
     return true;
@@ -33,6 +42,25 @@ const matchesDepartmentFilter = (user: ActivityLogUser, filter: ActivityLogDepar
   return departmentCode === 'DEPT2';
 };
 
+const matchesSearch = (user: ActivityLogUser, keyword: string) => {
+  if (!keyword) {
+    return true;
+  }
+
+  const searchText = [
+    user.username,
+    user.employee_id,
+    user.department_name,
+    user.department_code,
+    resolveDepartmentLabel(user),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return searchText.includes(keyword);
+};
+
 export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
   users,
   memberActivityCountMap,
@@ -41,10 +69,14 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
   onToggleMember,
 }) => {
   const [departmentFilter, setDepartmentFilter] = useState<ActivityLogDepartmentFilter>('all');
+  const [search, setSearch] = useState('');
+  const normalizedSearch = search.trim().toLowerCase();
 
   const filteredMembers = useMemo(
-    () => users.filter((user) => matchesDepartmentFilter(user, departmentFilter)),
-    [departmentFilter, users],
+    () => users.filter((user) => (
+      matchesDepartmentFilter(user, departmentFilter) && matchesSearch(user, normalizedSearch)
+    )),
+    [departmentFilter, normalizedSearch, users],
   );
 
   const panelItems = filteredMembers.map((user) => {
@@ -55,35 +87,33 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
       name: user.username,
       employeeId: user.employee_id,
       avatarKey: user.avatar_key,
-      meta: `${user.employee_id} · ${
-        user.department_code === 'DEPT1'
-          ? '一室'
-          : user.department_code === 'DEPT2'
-            ? '二室'
-            : (user.department_name ?? '未分组')
-      }`,
+      meta: `${user.employee_id} · ${resolveDepartmentLabel(user)}`,
       count: activityCount,
       disabled: activityCount === 0 && !isSelected,
     };
   });
 
   const resolvedEmptyText = filteredMembers.length === 0
-    ? (departmentFilter === 'all'
+    ? (normalizedSearch
+      ? '没有匹配的成员'
+      : departmentFilter === 'all'
       ? '暂无可筛选成员'
       : '当前分组下没有成员')
     : `当前"${TYPE_LABELS[activeType]}"下没有成员记录`;
 
   return (
     <aside className="flex h-full min-h-[38rem] flex-col overflow-hidden rounded-xl border border-border/60 bg-background xl:max-h-full">
-      <div className="flex h-14 items-center justify-between border-b border-border/60 px-5">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-text-muted" />
-          <span className="text-[13px] font-semibold text-foreground">成员</span>
-          <span className="text-[12px] text-text-muted">({panelItems.length})</span>
+      <div className="border-b border-border/60 px-5">
+        <div className="flex h-14 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-text-muted" />
+            <span className="text-[13px] font-semibold text-foreground">成员</span>
+            <span className="text-[12px] text-text-muted">({panelItems.length})</span>
+          </div>
         </div>
       </div>
 
-      <div className="border-b border-border/60 px-3 py-2.5">
+      <div className="space-y-3 px-4 pb-3 pt-3">
         <SegmentedControl
           options={[
             { label: '全部', value: 'all' },
@@ -93,7 +123,13 @@ export const ActivityLogMemberList: React.FC<ActivityLogMemberListProps> = ({
           value={departmentFilter}
           onChange={(value) => setDepartmentFilter(value as ActivityLogDepartmentFilter)}
           size="sm"
-          className="w-full [&>div]:w-full [&>div]:grid [&>div]:grid-cols-3 [&_button]:px-0"
+          className="w-full [&>div]:grid [&>div]:h-10 [&>div]:w-full [&>div]:grid-cols-3 [&_button]:px-0"
+        />
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="检索姓名、工号"
+          className="w-full"
         />
       </div>
 

@@ -251,6 +251,41 @@ def test_user_view_detail_respects_mentee_scope_for_non_student_users(grant_perm
 
 
 @pytest.mark.django_db
+def test_user_view_includes_inactive_users_within_scope(grant_permissions_to_roles):
+    client = APIClient()
+    department = Department.objects.create(name='停用可见部门', code='SCOPE_RANGE_D7')
+
+    grant_permissions_to_roles(role_codes=['MENTOR'], permission_codes=['user.view'])
+
+    mentor = _create_user(
+        employee_id='SCOPE_USER_INACTIVE_MENTOR',
+        username='停用可见导师',
+        department=department,
+        role_codes=['MENTOR'],
+    )
+    inactive_mentee = _create_user(
+        employee_id='SCOPE_USER_INACTIVE_STUDENT',
+        username='停用学员',
+        department=department,
+    )
+    inactive_mentee.mentor = mentor
+    inactive_mentee.is_active = False
+    inactive_mentee.save(update_fields=['mentor', 'is_active'])
+
+    client.force_authenticate(user=mentor)
+
+    response = client.get('/api/users/')
+    assert response.status_code == 200
+    visible_user_ids = {item['id'] for item in response.data['data']}
+    assert inactive_mentee.id in visible_user_ids
+
+    response = client.get(f'/api/users/{inactive_mentee.id}/')
+    assert response.status_code == 200
+    assert response.data['data']['id'] == inactive_mentee.id
+    assert response.data['data']['is_active'] is False
+
+
+@pytest.mark.django_db
 def test_task_assign_scope_includes_mentee_with_admin_and_student_roles():
     client = APIClient()
     department = Department.objects.create(name='导师学员身份部门', code='SCOPE_RANGE_D4')

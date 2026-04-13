@@ -27,7 +27,6 @@ const createBreadcrumbs = (
   const tasksPath = buildWorkspaceRoute(ROUTES.TASKS)
   const knowledgePath = buildWorkspaceRoute(ROUTES.KNOWLEDGE)
   const quizzesPath = buildWorkspaceRoute(ROUTES.QUIZZES)
-  const auditLogsPath = buildWorkspaceRoute(ROUTES.AUDIT_LOGS)
   const spotChecksPath = buildWorkspaceRoute(ROUTES.SPOT_CHECKS)
 
   const routePatterns: Array<{
@@ -63,8 +62,8 @@ const createBreadcrumbs = (
     { pattern: '/:role/spot-checks', items: [{ title: '抽查管理' }] },
     { pattern: '/:role/users/authorization', items: [{ title: '用户管理', path: buildWorkspaceRoute(ROUTES.USERS) }, { title: '用户授权' }] },
     { pattern: '/:role/users', items: [{ title: '用户管理' }, { title: '用户列表' }] },
-    { pattern: '/:role/authorization', items: [{ title: '角色模板' }] },
-    { pattern: '/:role/audit-logs/policy', items: [{ title: '日志审计', path: auditLogsPath }, { title: '日志策略' }] },
+    { pattern: '/:role/authorization', items: [{ title: '设置' }, { title: '角色模板' }] },
+    { pattern: '/:role/audit-logs/policy', items: [{ title: '设置' }, { title: '日志策略' }] },
     { pattern: '/:role/audit-logs', items: [{ title: '日志审计' }] },
     { pattern: '/:role/quiz/:id', items: [{ title: taskLabel, path: tasksPath }, { title: '在线答题' }] },
     { pattern: '/:role/review/practice', items: [{ title: taskLabel, path: tasksPath }, { title: '测验回顾' }] },
@@ -91,7 +90,7 @@ export const GlobalBreadcrumb: React.FC = () => {
   }
 
   return (
-    <div className="mb-4 flex min-w-0 items-center md:mb-5">
+    <div className="mb-6 flex min-w-0 items-center md:mb-7">
       <BreadcrumbNav items={items} homePath={homePath} />
     </div>
   )
