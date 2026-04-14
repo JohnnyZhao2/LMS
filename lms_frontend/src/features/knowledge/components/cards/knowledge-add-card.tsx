@@ -149,8 +149,9 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
             }}
             placeholder="在这里输入，键入 / 调出快捷指令"
             placeholderMode="empty-only"
+            placeholderWrap
             className="akc-editor"
-            minHeight={28}
+            minHeight={46}
           />
         </div>
 
@@ -201,6 +202,10 @@ export const AddKnowledgeCard: React.FC<AddKnowledgeCardProps> = ({
         .akc-editor .ql-editor.ql-blank::before {
           color: #b8bec8;
           font-style: normal;
+        }
+
+        .akc-editor .sqe-inline-placeholder--wrap {
+          max-width: calc(100% - 8px);
         }
 
         .akc-editor .ql-editor h1 {

@@ -118,8 +118,20 @@ const EDITOR_STYLES = `
     pointer-events: none;
     color: color-mix(in srgb, var(--theme-text-muted) 72%, white);
     font-style: italic;
+    display: block;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
     transform: translateY(-50%);
+  }
+
+  .sqe-inline-placeholder--wrap {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.5;
+    transform: none;
   }
 `;
 
@@ -272,6 +284,7 @@ interface SlashQuillEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   placeholderMode?: 'empty-only' | 'follow-caret';
+  placeholderWrap?: boolean;
   className?: string;
   autoFocus?: boolean;
   minHeight?: number;
@@ -287,6 +300,7 @@ export function SlashQuillEditor({
   onChange,
   placeholder = '键入 / 调出快捷指令',
   placeholderMode = 'follow-caret',
+  placeholderWrap = placeholderMode === 'empty-only',
   className,
   autoFocus = false,
   minHeight = 120,
@@ -445,7 +459,7 @@ export function SlashQuillEditor({
         )
       ) {
         setInlinePlaceholderPosition({
-          top: caretBounds.top + (caretBounds.height / 2),
+          top: placeholderWrap ? caretBounds.top : caretBounds.top + (caretBounds.height / 2),
           left: caretBounds.left + 8,
         });
         setInlinePlaceholderVisible(true);
@@ -608,7 +622,7 @@ export function SlashQuillEditor({
       }
       quillRef.current = null;
     };
-  }, [autoFocus, placeholder, placeholderMode, readOnly]);
+  }, [autoFocus, placeholder, placeholderMode, placeholderWrap, readOnly]);
 
   useEffect(() => {
     const quill = quillRef.current;
@@ -718,7 +732,7 @@ export function SlashQuillEditor({
       <div ref={editorRef} />
       {inlinePlaceholderVisible && !slashTrigger && (
         <span
-          className="sqe-inline-placeholder"
+          className={cn('sqe-inline-placeholder', placeholderWrap && 'sqe-inline-placeholder--wrap')}
           style={{
             top: inlinePlaceholderPosition.top,
             left: inlinePlaceholderPosition.left,

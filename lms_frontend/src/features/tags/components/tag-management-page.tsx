@@ -2,6 +2,7 @@ import * as React from 'react';
 import { GitMerge, Hash, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { SelectionIndicator } from '@/components/common/selection-indicator';
 import { Button } from '@/components/ui/button';
 import { CircleButton } from '@/components/ui/circle-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -16,12 +17,12 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { PageShell } from '@/components/ui/page-shell';
-import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
+import { SearchInput } from '@/components/ui/search-input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useAuth } from '@/features/auth/stores/auth-context';
 import { cn } from '@/lib/utils';
-import { ApiError } from '@/lib/api-client';
 import type { Tag, TagType } from '@/types/common';
+import { showApiError } from '@/utils/error-handler';
 
 import { useCreateTag, useDeleteTag, useMergeTag, useTags, useUpdateTag } from '../api/tags';
 import { TagFormDialog } from './tag-form-dialog';
@@ -121,11 +122,7 @@ export const TagManagementPage: React.FC = () => {
       setActiveTab(payload.tag_type);
       setIsDialogOpen(false);
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error('保存失败');
-      }
+      showApiError(error, '保存失败');
     }
   };
 
@@ -149,11 +146,7 @@ export const TagManagementPage: React.FC = () => {
       setMergedName('');
       setIsMergeDialogOpen(false);
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error('合并失败');
-      }
+      showApiError(error, '合并失败');
     }
   };
 
@@ -164,11 +157,7 @@ export const TagManagementPage: React.FC = () => {
       toast.success('标签已删除');
       setDeleteTarget(null);
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error('删除失败');
-      }
+      showApiError(error, '删除失败');
     }
   };
 
@@ -191,7 +180,7 @@ export const TagManagementPage: React.FC = () => {
             />
           )}
         </div>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <SearchInput
             value={searchInput}
             onChange={setSearchInput}
@@ -201,7 +190,7 @@ export const TagManagementPage: React.FC = () => {
               }
             }}
             placeholder="搜索标签名称"
-            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+            className="w-full sm:w-[20rem] sm:max-w-full sm:shrink-0"
           />
           {canUpdate && selectedTagIds.length >= 2 && (
             <Button
@@ -270,17 +259,11 @@ export const TagManagementPage: React.FC = () => {
                   )}
                   style={accentColor ? { boxShadow: `0 12px 30px color-mix(in srgb, ${accentColor} 20%, transparent)` } : undefined}
                 >
-                  <span
-                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-                    style={{
-                      borderColor: accentColor,
-                      backgroundColor: isSelected ? accentColor : 'transparent',
-                    }}
-                  >
-                    {isSelected && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                    )}
-                  </span>
+                  <SelectionIndicator
+                    color={accentColor}
+                    selected={isSelected}
+                    className="transition-all"
+                  />
 
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     <h3 className="max-w-[14rem] truncate pr-1 text-[13px] font-semibold text-foreground">

@@ -1,15 +1,13 @@
 import * as React from 'react';
 import {
   BookOpen,
-  ClipboardList,
-  GraduationCap,
+  SquareCheck,
   ThumbsDown,
   ThumbsUp,
   Check,
   BarChart3,
   Filter,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,9 +15,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ScrollContainer } from '@/components/ui/scroll-container';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { QUESTION_TYPE_CONFIG } from '@/features/questions/constants';
 import { QuestionTypeBadge } from '@/features/questions/components/question-type-badge';
 import { buildQuestionSections } from '@/features/questions/question-sections';
+import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
+import type { QuestionType } from '@/types/common';
 import type { GradingAnswerResponse, GradingQuestion, GradingSubjectiveAnswer } from '@/types/task-analytics';
 import type { PendingTask, PendingQuiz } from '@/features/grading/api/pending-quizzes';
 import {
@@ -34,7 +35,7 @@ interface GradingCenterTabProps {
   selectorConfig?: GradingCenterSelectorConfig;
 }
 
-type QuestionFilter = 'all' | 'subjective';
+type QuestionFilter = QuestionType | null;
 
 export interface GradingCenterSelectorConfig {
   tasks: PendingTask[];
@@ -46,10 +47,12 @@ export interface GradingCenterSelectorConfig {
   onQuizSelect: (quiz: PendingQuiz) => void;
 }
 
-const questionFilters: { value: QuestionFilter; label: string }[] = [
-  { value: 'all', label: '全部题目' },
-  { value: 'subjective', label: '待批阅 (主观题)' },
-];
+const questionFilterTypes: QuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER'];
+
+const questionFilters: { value: QuestionFilter; label: string }[] = questionFilterTypes.map((type) => ({
+  value: type,
+  label: QUESTION_TYPE_CONFIG[type].label,
+}));
 
 // Utility: Format Percentage
 const formatPassRate = (rate?: number | null) => {
@@ -77,7 +80,7 @@ const buildScoreMap = (answers: GradingSubjectiveAnswer[] = []) =>
   }, {});
 
 export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quizId, selectorConfig }) => {
-  const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>('all');
+  const [questionFilter, setQuestionFilter] = React.useState<QuestionFilter>(null);
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<number | null>(null);
   const [displayedQuestionId, setDisplayedQuestionId] = React.useState<number | null>(null);
   const [displayedQuestionDetail, setDisplayedQuestionDetail] = React.useState<GradingAnswerResponse | null>(null);
@@ -86,21 +89,35 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
   const { data: questions, isLoading: questionsLoading } = useGradingQuestions(taskId || 0, quizId ?? null, {
     enabled: Boolean(taskId) && Boolean(quizId),
   });
-  const { data: questionDetail, isLoading: detailLoading } = useGradingAnswers(
-    taskId || 0,
-    selectedQuestionId,
-    quizId ?? null,
-    { enabled: Boolean(taskId) && Boolean(selectedQuestionId) && Boolean(quizId) }
-  );
-  const submitGrading = useSubmitGrading(taskId || 0);
+
+  React.useEffect(() => {
+    if (!questions || questions.length === 0) {
+      return;
+    }
+
+    if (questionFilter === null) {
+      return;
+    }
+
+    const hasCurrentType = questions.some((question) => question.question_type === questionFilter);
+    if (hasCurrentType) {
+      return;
+    }
+
+    setQuestionFilter(null);
+  }, [questionFilter, questions]);
 
   const filteredQuestions = React.useMemo(() => {
     if (!questions) return [];
-    if (questionFilter === 'subjective') {
-      return questions.filter((question) => question.question_type === 'SHORT_ANSWER');
+    if (questionFilter === null) {
+      return questions;
     }
-    return questions;
+    return questions.filter((question) => question.question_type === questionFilter);
   }, [questions, questionFilter]);
+  const availableQuestionTypes = React.useMemo(
+    () => new Set((questions ?? []).map((question) => question.question_type)),
+    [questions],
+  );
   const effectiveQuestionId = React.useMemo(() => {
     if (filteredQuestions.length === 0) {
       return null;
@@ -116,6 +133,13 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     () => buildQuestionSections(filteredQuestions, (question) => question.question_type),
     [filteredQuestions],
   );
+  const { data: questionDetail, isLoading: detailLoading } = useGradingAnswers(
+    taskId || 0,
+    effectiveQuestionId,
+    quizId ?? null,
+    { enabled: Boolean(taskId) && Boolean(effectiveQuestionId) && Boolean(quizId) }
+  );
+  const submitGrading = useSubmitGrading(taskId || 0);
 
   React.useEffect(() => {
     if (questionDetail && effectiveQuestionId !== null) {
@@ -166,7 +190,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
   };
 
   const commitScore = async (studentId: number, rawScore: string) => {
-    if (!selectedQuestion || selectedQuestionId === null || rawScore === '' || !quizId) return;
+    if (!selectedQuestion || effectiveQuestionId === null || rawScore === '' || !quizId) return;
     const parsedScore = Number(rawScore);
     if (Number.isNaN(parsedScore)) return;
     const normalizedScore = Math.min(Math.max(parsedScore, 0), selectedQuestion.max_score);
@@ -177,13 +201,13 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
     try {
       await submitGrading.mutateAsync({
         quiz_id: quizId,
-        question_id: selectedQuestionId,
+        question_id: effectiveQuestionId,
         student_id: studentId,
         score: normalizedScore,
         comments: '',
       });
-    } catch {
-      toast.error('评分保存失败，请重试');
+    } catch (error) {
+      showApiError(error, '评分保存失败，请重试');
     }
   };
 
@@ -235,20 +259,21 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
   const selectedTask = selectorConfig?.tasks.find((task) => task.task_id === selectorConfig.selectedTaskId) ?? null;
   const selectedQuiz =
     selectedTask?.quizzes.find((quiz) => quiz.quiz_id === selectorConfig?.selectedQuizId) ?? null;
+  const activeFilterMeta = questionFilter ? QUESTION_TYPE_CONFIG[questionFilter] : null;
   return (
-    <div className="grid h-full min-h-0 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
+    <div className="grid h-full min-h-0 gap-4 lg:gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
       {/* Left Column: Question List */}
       <div className="flex min-h-0 h-full flex-col overflow-hidden rounded-2xl border border-border bg-background">
-        <div className="space-y-4 border-b border-border bg-background p-4">
+        <div className="border-b border-border bg-background p-3 sm:p-4">
           {selectorConfig ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="min-w-0 space-y-1.5">
-                <div className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
-                  当前任务
+                <div className="flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
+                  <SquareCheck className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                  <span>任务</span>
                 </div>
                 {selectorConfig.isTaskLocked ? (
-                  <div className="flex h-10 items-center gap-2 rounded-xl border border-primary-100 bg-primary-50/70 px-3">
-                    <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
+                  <div className="flex h-10 min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-primary-100 bg-primary-50/70 px-3">
                     <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">
                       {selectorConfig.selectedTaskTitle}
                     </span>
@@ -266,11 +291,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                       }
                     }}
                   >
-                    <SelectTrigger className="bg-background">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <ClipboardList className="h-4 w-4 shrink-0 text-primary-500" />
-                        <SelectValue placeholder="选择任务" />
-                      </div>
+                    <SelectTrigger className="bg-background px-3">
+                      <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择任务" />
                     </SelectTrigger>
                     <SelectContent>
                       {selectorConfig.tasks.map((task) => (
@@ -284,8 +306,9 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
 
               <div className="min-w-0 space-y-1.5">
-                <div className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
-                  试卷
+                <div className="flex items-center gap-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted">
+                  <BookOpen className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                  <span>试卷</span>
                 </div>
                 <Select
                   value={selectedQuiz ? String(selectedQuiz.quiz_id) : undefined}
@@ -297,15 +320,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                   }}
                   disabled={!selectedTask || selectedTask.quizzes.length === 0}
                 >
-                  <SelectTrigger className="bg-background">
-                    <div className="flex min-w-0 items-center gap-2">
-                      {selectedQuiz?.quiz_type === 'EXAM' ? (
-                        <GraduationCap className="h-4 w-4 shrink-0 text-destructive-500" />
-                      ) : (
-                        <BookOpen className="h-4 w-4 shrink-0 text-primary-500" />
-                      )}
-                      <SelectValue placeholder="选择试卷" />
-                    </div>
+                  <SelectTrigger className="bg-background px-3">
+                    <SelectValue className="block min-w-0 flex-1 truncate text-left" placeholder="选择试卷" />
                   </SelectTrigger>
                   <SelectContent>
                     {(selectedTask?.quizzes ?? []).map((quiz) => (
@@ -318,14 +334,36 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
             </div>
           ) : null}
+        </div>
 
-          <SegmentedControl
-            value={questionFilter}
-            onChange={(value) => setQuestionFilter(value as QuestionFilter)}
-            options={questionFilters}
-            className="w-full"
-            fill
-          />
+        <div className="bg-background px-3 py-2.5">
+          <div className="space-y-2">
+            <SegmentedControl
+              value={questionFilter}
+              onChange={(value) => setQuestionFilter(value as QuestionType)}
+              onClear={() => setQuestionFilter(null)}
+              options={questionFilters.map((filter) => ({
+                ...filter,
+                disabled: filter.value ? !availableQuestionTypes.has(filter.value) : false,
+              }))}
+              className="w-full"
+              size="default"
+              fill
+              allowDeselect
+              showClearOnSelected
+              inactiveOptionClassName="text-foreground hover:text-foreground"
+              disabledOptionClassName="cursor-not-allowed text-text-muted"
+            />
+            {activeFilterMeta ? (
+              <span className="text-[12px] font-medium text-text-muted">
+                当前筛选: {activeFilterMeta.fullLabel}
+              </span>
+            ) : (
+              <span className="text-[12px] font-medium text-text-muted">
+                当前显示: 全部题目
+              </span>
+            )}
+          </div>
         </div>
 
         <ScrollContainer className="min-h-0 flex-1 overflow-y-auto">
@@ -389,10 +427,10 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
         {selectedQuestion ? (
           <div className="flex min-h-0 flex-1 flex-col">
               {/* Detail Header */}
-              <div className="p-6 border-b border-border bg-background backdrop-blur sticky top-0 z-20">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-3">
+              <div className="sticky top-0 z-20 border-b border-border bg-background p-4 backdrop-blur sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <div className="min-w-0">
+                    <div className="mb-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
                       <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
                         {selectedQuestion?.question_type_display || '题目详情'}
                       </span>
@@ -400,11 +438,11 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                         分值: {selectedQuestion?.max_score}
                       </span>
                     </div>
-                    <h2 className="text-lg font-semibold text-foreground leading-snug">
+                    <h2 className="text-lg font-semibold leading-snug text-foreground break-words">
                       {selectedQuestion?.question_text}
                     </h2>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
                     <span className="text-xs text-text-muted uppercase font-semibold tracking-wider">该题平均通过率</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-bold text-foreground tabular-nums">
@@ -415,7 +453,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                 </div>
 
                 {selectedQuestion?.question_analysis && (
-                  <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm leading-relaxed text-text-muted">
+                  <div className="mt-4 rounded-xl border border-border bg-background p-3 text-sm leading-relaxed text-text-muted sm:p-4">
                     <span className="font-semibold text-foreground mr-2">解析:</span>
                     {selectedQuestion.question_analysis}
                   </div>
@@ -423,7 +461,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
               </div>
 
               {/* Content Body */}
-              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-6">
+              <ScrollContainer className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
                         {detailLoading && !activeQuestionDetail ? (
                   <div className="space-y-4">
                     <Skeleton className="h-24 w-full rounded-lg" />
@@ -531,16 +569,16 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             className="rounded-xl border border-border bg-background overflow-hidden mb-4 group"
                           >
                             {/* Header: Student Info + Score */}
-                            <div className="flex items-center justify-between border-b border-border bg-background p-4">
-                              <div className="flex items-center gap-3">
+                            <div className="flex flex-col gap-3 border-b border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 items-center gap-3">
                                 <UserAvatar
                                   avatarKey={answer.avatar_key}
                                   name={answer.student_name}
                                   size="md"
                                   className="h-9 w-9"
                                 />
-                                <div>
-                                  <div className="font-bold text-foreground text-sm flex items-center gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
                                     {answer.student_name}
                                     <span className="font-normal text-xs text-text-muted font-mono px-1.5 py-0.5 bg-background border border-border rounded-full">
                                       {answer.department || '学员'}
@@ -549,7 +587,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-3">
+                              <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
                                 <div className="flex items-center">
                                   <span className="mr-2 text-xs font-bold text-text-muted uppercase">得分</span>
                                   <Input
@@ -559,7 +597,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                     value={scoresByStudent[answer.student_id] ?? ''}
                                     onChange={(e) => handleScoreChange(answer.student_id, e.target.value)}
                                     onBlur={(e) => commitScore(answer.student_id, e.target.value)}
-                                    className="w-20 h-9 font-mono text-base font-bold border-border focus:border-primary focus:ring-1 focus:ring-primary/20 text-right pr-2 bg-background"
+                                    className="h-9 w-16 border-border bg-background pr-2 text-right font-mono text-base font-bold focus:border-primary focus:ring-1 focus:ring-primary/20 sm:w-20"
                                   />
                                   <span className="ml-2 text-sm text-text-muted font-medium select-none">/ {selectedQuestion?.max_score}</span>
                                 </div>
@@ -567,7 +605,7 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                             </div>
 
                             {/* Body */}
-                            <div className="p-5">
+                            <div className="p-4 sm:p-5">
                               <div className="space-y-3">
                                 <div className="space-y-1">
                                   <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider ml-1">学员回答</span>
@@ -577,8 +615,8 @@ export const GradingCenterTab: React.FC<GradingCenterTabProps> = ({ taskId, quiz
                                 </div>
 
                                 {/* Quick Actions Footer */}
-                                <div className="flex justify-end pt-2">
-                                  <div className="flex gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <div className="flex justify-start pt-2 sm:justify-end">
+                                  <div className="flex flex-wrap gap-2 opacity-100 transition-opacity sm:opacity-50 sm:group-hover:opacity-100">
                                     <button onClick={() => handleQuickScore(answer.student_id, 1)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors border border-secondary-100">
                                       <ThumbsUp className="w-3.5 h-3.5" /> 满分
                                     </button>

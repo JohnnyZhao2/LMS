@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ROUTES } from '@/config/routes';
+import { showApiError } from '@/utils/error-handler';
 import { useAuth } from '../stores/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { beginOidcLogin } from '../utils/oidc-session';
@@ -63,9 +64,7 @@ export const LoginForm: React.FC = () => {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status !== 401 && error.status !== 403) {
-          const errorData = error.data as { message?: string; detail?: string };
-          const errorMessage = errorData?.message || errorData?.detail || '登录失败，请检查工号和密码';
-          toast.error(errorMessage);
+          showApiError(error, '登录失败，请检查工号和密码');
         } else {
           toast.error('登录失败，请检查工号和密码');
         }

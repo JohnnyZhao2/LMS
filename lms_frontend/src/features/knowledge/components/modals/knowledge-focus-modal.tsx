@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { Upload, Plus, X } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import type { RelatedLink } from '@/types/knowledge';
 
 import { useTags } from '@/features/tags/api/tags';
@@ -9,7 +9,6 @@ import { useKnowledgeModalInteractions } from '../../hooks/use-knowledge-modal-i
 import { useCreateKnowledge } from '../../api/manage-knowledge';
 import { useParseDocument } from '../../api/parse-document';
 import { showApiError } from '@/utils/error-handler';
-import { TagInput } from '../shared/tag-input';
 import {
   hasMeaningfulKnowledgeHtml,
   textToKnowledgeHtml,
@@ -20,6 +19,7 @@ import {
   sanitizeRelatedLinks,
 } from '../../utils/related-links';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
+import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
 
 interface KnowledgeFocusModalProps {
   initialContent?: string;
@@ -65,7 +65,6 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
   const canSave = hasMeaningfulKnowledgeHtml(content);
   const isUploading = parseDocument.isPending;
   const canSubmit = canSave && !createKnowledge.isPending && !isUploading;
-  const keepBottomToolsVisible = showTagPanel || showRelatedLinksPanel;
   const sanitizedRelatedLinks = React.useMemo(
     () => sanitizeRelatedLinks(relatedLinks),
     [relatedLinks],
@@ -155,110 +154,30 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
       editorMinHeight={380}
       minimizeIconSize={16}
     >
-      {showTagPanel && (
-        <div className="akm-tag-panel">
-          <TagInput
-            applicableTo="knowledge"
-            selectedTags={selectedTags}
-            onAdd={(tag) => setSelectedTags((prev) => (
-              prev.some((item) => item.id === tag.id) ? prev : [...prev, tag]
-            ))}
-            onRemove={(id) => setSelectedTags((prev) => prev.filter((t) => t.id !== id))}
-          />
-        </div>
-      )}
-
-      <div className="akm-bottom-bar">
-        <div className={`akm-bottom-tools-zone${keepBottomToolsVisible ? ' akm-bottom-tools-zone-open' : ''}`}>
-          <div className="akm-bottom-tools-trigger" aria-hidden="true" />
-
-          <div className="akm-bottom-tools">
-            <select
-              value={spaceTagId ?? ''}
-              onChange={(e) => setSpaceTagId(e.target.value ? Number(e.target.value) : undefined)}
-              className="akm-select"
-            >
-              <option value="">space</option>
-              {spaces.map((tag) => (
-                <option key={tag.id} value={tag.id}>{tag.name}</option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={() => setShowTagPanel((v) => !v)}
-              className={`akm-tool-btn ${showTagPanel ? ' akm-tool-btn-active' : ''}`}
-            >
-              标签{selectedTags.length > 0 && ` (${selectedTags.length})`}
-            </button>
-
-            <div className="akm-links-anchor">
-              <button
-                type="button"
-                onClick={() => setShowRelatedLinksPanel((v) => !v)}
-                className={`akm-tool-btn ${showRelatedLinksPanel ? ' akm-tool-btn-active' : ''}`}
-              >
-                相关链接{sanitizedRelatedLinks.length > 0 && ` (${sanitizedRelatedLinks.length})`}
-              </button>
-
-              {showRelatedLinksPanel && (
-                <div className="akm-links-panel">
-                  <div className="akm-links-panel-header">
-                    <div>
-                      <p className="akm-links-panel-title">相关链接</p>
-                      <p className="akm-links-panel-subtitle">标题可选，URL 必填</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddRelatedLink}
-                      className="akm-links-add-btn"
-                      aria-label="添加相关链接"
-                    >
-                      <Plus size={12} />
-                    </button>
-                  </div>
-
-                  {relatedLinks.length > 0 && (
-                    <div className="akm-links-list">
-                      {relatedLinks.map((item, index) => (
-                        <div key={`create-link-${index}`} className="akm-link-row">
-                          <input
-                            value={item.title ?? ''}
-                            onChange={(e) => handleRelatedLinkChange(index, 'title', e.target.value)}
-                            placeholder=""
-                            aria-label="链接标题"
-                            className="akm-link-row-input akm-link-row-title"
-                          />
-                          <input
-                            value={item.url}
-                            onChange={(e) => handleRelatedLinkChange(index, 'url', e.target.value)}
-                            placeholder=""
-                            aria-label="链接地址"
-                            className="akm-link-row-input akm-link-row-url"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveRelatedLink(index)}
-                            className="akm-link-row-remove"
-                            aria-label="删除相关链接"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="标题（可选）"
-              className="akm-title-input"
-            />
-
+      <KnowledgeFocusMetadataBar
+        spaces={spaces}
+        spaceTagId={spaceTagId}
+        onSpaceTagChange={(nextSpaceTagId) => setSpaceTagId(nextSpaceTagId)}
+        selectedTags={selectedTags}
+        onAddTag={(tag) => setSelectedTags((prev) => (
+          prev.some((item) => item.id === tag.id) ? prev : [...prev, tag]
+        ))}
+        onRemoveTag={(id) => setSelectedTags((prev) => prev.filter((tag) => tag.id !== id))}
+        title={title}
+        onTitleChange={setTitle}
+        relatedLinks={relatedLinks}
+        onRelatedLinkChange={handleRelatedLinkChange}
+        onAddRelatedLink={handleAddRelatedLink}
+        onRemoveRelatedLink={handleRemoveRelatedLink}
+        showTagPanel={showTagPanel}
+        onShowTagPanelChange={setShowTagPanel}
+        showRelatedLinksPanel={showRelatedLinksPanel}
+        onShowRelatedLinksPanelChange={setShowRelatedLinksPanel}
+        onSave={handleSave}
+        saveDisabled={!canSubmit}
+        isSaving={createKnowledge.isPending}
+        extraTools={(
+          <>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -276,310 +195,31 @@ export const KnowledgeFocusModal: React.FC<KnowledgeFocusModalProps> = ({
               style={{ display: 'none' }}
               disabled={isUploading}
             />
-          </div>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={!canSubmit}
-          className="akm-save-btn"
-        >
-          {createKnowledge.isPending ? '保存中…' : '保存'}
-        </button>
-      </div>
+          </>
+        )}
+      />
 
       <style>{`
-        .akm-tag-panel {
-          position: absolute;
-          bottom: 56px;
-          left: 22px;
-          width: 340px;
-          background: rgba(255,255,255,0.45);
-          backdrop-filter: blur(20px);
-          border-radius: 16px;
-          padding: 16px 18px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-          border: 1px solid rgba(255,255,255,0.5);
-          z-index: 10;
-          animation: akmSlideUp .15s ease;
-        }
-        .akm-links-anchor {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-        .akm-links-panel {
-          position: absolute;
-          left: 0;
-          bottom: calc(100% + 14px);
-          width: min(440px, calc(100vw - 56px));
-          background: rgba(255,255,255,0.42);
-          backdrop-filter: blur(20px);
-          border-radius: 16px;
-          padding: 14px 16px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-          border: 1px solid rgba(255,255,255,0.5);
-          z-index: 10;
-          animation: akmSlideUp .15s ease;
-        }
-        .akm-links-panel-header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 10px;
-        }
-        .akm-links-panel-title {
-          margin: 0;
-          font-size: 13px;
-          font-weight: 600;
-          color: #4a5466;
-        }
-        .akm-links-panel-subtitle {
-          margin: 4px 0 0;
-          font-size: 11px;
-          color: #8a90a2;
-        }
-        .akm-links-add-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 30px;
-          height: 30px;
-          padding: 0;
-          border: none;
-          border-radius: 999px;
-          background: transparent;
-          color: #7a8698;
-          transition: color 0.15s ease, background 0.15s ease;
-        }
-        .akm-links-add-btn:hover {
-          background: rgba(255,255,255,0.32);
-          color: #526277;
-        }
-        .akm-links-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          max-height: 240px;
-          overflow-y: auto;
-          padding-right: 4px;
-        }
-        .akm-link-row {
-          display: grid;
-          grid-template-columns: minmax(0, 124px) minmax(0, 1fr) 28px;
-          gap: 10px;
-          align-items: center;
-        }
-        .akm-link-row-input {
-          border: none;
-          border-bottom: 1px solid rgba(95, 109, 132, 0.18);
-          outline: none;
-          border-radius: 0;
-          padding: 8px 2px 6px;
-          font-size: 12px;
-          background: transparent;
-          color: #475569;
-          min-width: 0;
-          transition: border-color 0.15s ease, color 0.15s ease;
-        }
-        .akm-link-row-input::placeholder {
-          color: transparent;
-        }
-        .akm-link-row-title {
-          max-width: 124px;
-        }
-        .akm-link-row-input:focus {
-          border-bottom-color: rgba(86, 109, 145, 0.42);
-          color: #334155;
-        }
-        .akm-link-row-remove {
-          width: 28px;
-          height: 28px;
-          border: none;
-          border-radius: 999px;
-          background: transparent;
-          color: #7a8698;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          transition: color 0.15s ease, background 0.15s ease;
-        }
-        .akm-link-row-remove:hover {
-          background: rgba(255,255,255,0.32);
-          color: #526277;
-        }
-        .akm-tag-panel .taginput-row {
-          background: rgba(255,255,255,0.7);
-          box-shadow: none;
-          border-radius: 10px;
-        }
-        .akm-tag-panel .taginput-suggestions {
-          background: rgba(255,255,255,0.7);
-          box-shadow: none;
-        }
-        .akm-tag-panel .taginput-chip {
-          background: rgba(255,255,255,0.6);
-        }
-        .akm-tag-panel .taginput-recent-label {
-          color: #9a95a8;
-        }
-        .akm-tag-panel .taginput-recent-item {
-          color: #8b7fad;
-        }
-        .akm-tag-panel .taginput-recent-item:hover {
-          text-decoration-color: #8b7fad;
-        }
-        .akm-tag-panel .taginput-field::placeholder {
-          color: #b0aabb;
-        }
-        .akm-tag-panel .taginput-add-btn {
-          background: #c5bdd4;
-          color: #fff;
-        }
-        .akm-tag-panel .taginput-add-btn:not(:disabled) {
-          background: #9b8fbc;
-        }
-        .akm-tag-panel .taginput-add-btn:not(:disabled):hover {
-          background: #8a7dab;
-        }
-        .akm-tag-panel .taginput-suggestion-create {
-          color: #8b7fad;
-        }
-        .akm-bottom-bar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 22px;
-          pointer-events: none;
-        }
-        .akm-bottom-tools {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          opacity: 0;
-          transform: translateY(8px);
-          pointer-events: none;
-          transition: opacity 0.2s ease, transform 0.2s ease;
-          position: relative;
-          z-index: 1;
-        }
-        .akm-bottom-tools-zone {
-          position: relative;
-          display: flex;
-          align-items: flex-end;
-          min-height: 52px;
-          pointer-events: auto;
-        }
-        .akm-bottom-tools-trigger {
-          position: absolute;
-          left: -18px;
-          bottom: -18px;
-          width: 240px;
-          height: 92px;
-        }
-        .akm-bottom-tools-zone:hover .akm-bottom-tools,
-        .akm-bottom-tools-zone:focus-within .akm-bottom-tools,
-        .akm-bottom-tools-zone-open .akm-bottom-tools {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-        .akm-select {
-          border: 1.5px solid rgba(0,0,0,0.08);
-          border-radius: 20px;
-          padding: 6px 14px;
-          font-size: 12px;
-          color: #777;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(6px);
-          outline: none;
-          cursor: pointer;
-          font-family: inherit;
-          appearance: none;
-          -webkit-appearance: none;
-        }
-        .akm-tool-btn {
-          border: 1.5px solid rgba(0,0,0,0.08);
-          border-radius: 20px;
-          padding: 6px 14px;
-          font-size: 12px;
-          color: #777;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(6px);
-          cursor: pointer;
-          font-family: inherit;
-          transition: all 0.15s;
-        }
-        .akm-tool-btn-active {
-          background: rgba(255,255,255,0.94);
-          color: #5c657c;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .akm-title-input {
-          border: 1.5px solid rgba(0,0,0,0.08);
-          border-radius: 20px;
-          padding: 6px 14px;
-          font-size: 12px;
-          color: #555;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(6px);
-          outline: none;
-          font-family: inherit;
-          width: 200px;
-        }
-        .akm-title-input::placeholder { color: #bbb; }
         .akm-upload-btn {
-          border: 1.5px solid rgba(0,0,0,0.08);
-          border-radius: 20px;
-          padding: 6px 14px;
+          height: 34px;
+          border: none;
+          border-radius: 999px;
+          padding: 0 14px;
           font-size: 12px;
           cursor: pointer;
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(6px);
-          color: #888;
+          background: rgba(255,255,255,0.82);
+          color: #5b6574;
           font-family: inherit;
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          transition: background 0.15s;
+          transition: background 0.15s ease, color 0.15s ease;
         }
-        .akm-upload-btn:hover { background: rgba(255,255,255,0.95); }
+        .akm-upload-btn:hover {
+          background: rgba(255,255,255,0.96);
+          color: #374151;
+        }
         .akm-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .akm-save-btn {
-          pointer-events: auto;
-          border: none;
-          border-radius: 24px;
-          padding: 10px 28px;
-          font-size: 13px;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          cursor: pointer;
-          font-family: inherit;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(8px);
-          color: #555;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          transition: all 0.18s ease;
-        }
-        .akm-save-btn:hover {
-          background: #fff;
-          color: #333;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .akm-save-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-        }
-        @keyframes akmSlideUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
       `}</style>
     </KnowledgeFocusShell>
   );

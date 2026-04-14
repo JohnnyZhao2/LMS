@@ -14,8 +14,8 @@ import { ScrollContainer } from '@/components/ui/scroll-container';
 import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
 import { PageWorkbench } from '@/components/ui/page-shell';
 import { useAuth } from '@/features/auth/stores/auth-context';
-import { ApiError } from '@/lib/api-client';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import {
   useActivityLogs,
@@ -126,11 +126,7 @@ export const ActivityLogsPanel: React.FC = () => {
       setBulkDeleteOpen(false);
       toast.success(`已删除 ${selectedCount} 条日志`);
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.message);
-      } else {
-        toast.error('批量删除日志失败');
-      }
+      showApiError(error, '批量删除日志失败');
     }
   };
 

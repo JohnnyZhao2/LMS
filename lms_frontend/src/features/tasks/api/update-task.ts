@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
 import type { TaskDetail } from '@/types/task';
+import { showApiError } from '@/utils/error-handler';
 
 /**
  * 更新任务请求
@@ -32,7 +32,7 @@ export const useUpdateTask = () => {
     },
     onError: (error: Error) => {
       if (error instanceof ApiError && error.code === 'INVALID_OPERATION') {
-        toast.error(error.message);
+        showApiError(error);
       }
     },
   });

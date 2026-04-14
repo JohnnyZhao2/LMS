@@ -95,7 +95,7 @@ export const QuestionChoiceRow: React.FC<{
         </div>
         <span
           className={cn(
-            'mt-0.5 ml-auto inline-flex h-4 w-4 shrink-0 items-center justify-center self-start border-2 transition-colors',
+            'ml-auto inline-flex h-4 w-4 shrink-0 items-center justify-center self-center border-2 transition-colors',
             indicatorShape === 'circle' ? 'rounded-full' : 'rounded-[4px]',
             selected
               ? 'border-primary-500 bg-primary-500'

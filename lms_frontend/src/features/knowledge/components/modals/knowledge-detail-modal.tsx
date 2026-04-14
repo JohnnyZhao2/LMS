@@ -30,7 +30,9 @@ import type { RelatedLink } from '@/types/knowledge';
 import { FocusOrbIcon } from '../shared/focus-icon';
 import { SlashQuillEditor } from '../editor/rich-text-editor';
 import { KnowledgeFocusShell } from './knowledge-focus-shell';
+import { KnowledgeFocusMetadataBar } from './knowledge-focus-metadata-bar';
 import { getKnowledgeTitleFromHtml } from '../../utils/content-utils';
+import { showApiError } from '@/utils/error-handler';
 import {
   createEmptyRelatedLink,
   getRelatedLinkDisplayText,
@@ -193,6 +195,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const [showTagInput, setShowTagInput] = useState(false);
   // space选择
   const [showSpaceTags, setShowSpaceTags] = useState(false);
+  const [showFocusTagPanel, setShowFocusTagPanel] = useState(false);
+  const [showFocusRelatedLinksPanel, setShowFocusRelatedLinksPanel] = useState(false);
   // 专注模式（全屏查看）
   const [isFocusMode, setIsFocusMode] = useState(forceFocus || startInFocus);
   const canEditInFocus = isFocusMode && canUpdateKnowledge;
@@ -226,6 +230,7 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   ));
   const hasContentChanges = Boolean(knowledge && editContent !== undefined && editContent !== knowledge.content);
   const canSubmit = Boolean(hasContentChanges);
+  const canSubmitFocus = Boolean(hasChanges);
 
   const applyKnowledgeSnapshot = useCallback((updatedKnowledge: KnowledgeDetailType) => {
     setLocalKnowledgeSnapshot({
@@ -248,8 +253,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       onSuccess?.();
       onUpdated?.();
       return updatedKnowledge;
-    } catch {
-      toast.error(errorMessage);
+    } catch (error) {
+      showApiError(error, errorMessage);
       return null;
     }
   }, [applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
@@ -260,6 +265,9 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     if (current.some(t => t.id === tag.id)) return;
     const nextTags = [...current, tag];
     setEditTags(nextTags);
+    if (isFocusMode) {
+      return;
+    }
     void commitPatch(
       { tag_ids: nextTags.map((item) => item.id) },
       '标签保存失败',
@@ -269,12 +277,15 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         ));
       },
     );
-  }, [commitPatch, editTags, knowledge?.tags]);
+  }, [commitPatch, editTags, isFocusMode, knowledge?.tags]);
 
   const removeTag = useCallback((tagId: number) => {
     const current = editTags ?? knowledge?.tags ?? [];
     const nextTags = current.filter(t => t.id !== tagId);
     setEditTags(nextTags);
+    if (isFocusMode) {
+      return;
+    }
     void commitPatch(
       { tag_ids: nextTags.map((item) => item.id) },
       '标签保存失败',
@@ -284,7 +295,34 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
         ));
       },
     );
-  }, [commitPatch, editTags, knowledge?.tags]);
+  }, [commitPatch, editTags, isFocusMode, knowledge?.tags]);
+
+  const handleFocusRelatedLinkChange = useCallback((
+    index: number,
+    field: keyof RelatedLink,
+    value: string,
+  ) => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks(current.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, [field]: value }
+        : item
+    )));
+  }, [editRelatedLinks, knowledge?.related_links]);
+
+  const handleFocusAddRelatedLink = useCallback(() => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks([...current, createEmptyRelatedLink()]);
+  }, [editRelatedLinks, knowledge?.related_links]);
+
+  const handleFocusRemoveRelatedLink = useCallback((index: number) => {
+    const current = editRelatedLinks ?? knowledge?.related_links ?? [];
+    setEditRelatedLinks(current.filter((_, itemIndex) => itemIndex !== index));
+  }, [editRelatedLinks, knowledge?.related_links]);
+
+  const handleFocusSpaceTagChange = useCallback((nextSpaceTagId?: number) => {
+    setEditSpaceTagId(nextSpaceTagId ?? null);
+  }, []);
 
   const handleRelatedLinkChange = useCallback((
     index: number,
@@ -320,6 +358,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   }, [commitPatch, editRelatedLinks, knowledge?.related_links]);
 
   const handleExitFocusMode = useCallback(() => {
+    setShowFocusTagPanel(false);
+    setShowFocusRelatedLinksPanel(false);
     if (closeOnExitFocus || forceFocus) {
       onClose();
       return;
@@ -329,7 +369,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
 
   useKnowledgeModalInteractions({
     onEscape: () => {
-      if (isFocusMode) {
+      if (isFocusMode && showFocusRelatedLinksPanel) {
+        setShowFocusRelatedLinksPanel(false);
+      } else if (isFocusMode && showFocusTagPanel) {
+        setShowFocusTagPanel(false);
+      } else if (isFocusMode) {
         handleExitFocusMode();
       } else if (showSpaceTags) {
         setShowSpaceTags(false);
@@ -426,6 +470,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
   const handleSave = useCallback(async () => {
     if (!hasChanges) return;
     if (!knowledge) return;
+    const draftError = editRelatedLinks ? getRelatedLinksDraftError(editRelatedLinks) : null;
+    if (draftError) {
+      toast.error(draftError);
+      return;
+    }
     try {
       const updateDerivedTitle = editContent !== undefined ? getKnowledgeTitleFromHtml(editContent) : '';
       const updateTitle = editContent !== undefined
@@ -452,9 +501,11 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditTags(undefined);
       setEditSpaceTagId(undefined);
       setEditRelatedLinks(undefined);
+      setShowFocusTagPanel(false);
+      setShowFocusRelatedLinksPanel(false);
       onUpdated?.();
-    } catch {
-      toast.error('保存失败');
+    } catch (error) {
+      showApiError(error, '保存失败');
     }
   }, [knowledge, hasChanges, onUpdated, editContent, editSpaceTagId, editRelatedLinks, editTags, editTitle, canEditInFocus, knowledgeId, updateKnowledge, applyKnowledgeSnapshot]);
 
@@ -491,6 +542,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
     setEditingLinks(false);
     setShowTagInput(false);
     setShowSpaceTags(false);
+    setShowFocusTagPanel(false);
+    setShowFocusRelatedLinksPanel(false);
   }, []);
 
   const handleSpaceTagSelect = useCallback(async (nextSpaceTagId: number) => {
@@ -509,8 +562,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       setEditSpaceTagId(undefined);
       toast.success('空间已更新');
       onUpdated?.();
-    } catch {
-      toast.error('空间更新失败');
+    } catch (error) {
+      showApiError(error, '空间更新失败');
     }
   }, [activeSpaceTagId, applyKnowledgeSnapshot, knowledgeId, onUpdated, updateKnowledge]);
 
@@ -520,8 +573,8 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
       await completeLearning.mutateAsync({ taskId, taskKnowledgeId });
       toast.success('已标记为完成');
       onUpdated?.();
-    } catch {
-      toast.error('操作失败，请稍后重试');
+    } catch (error) {
+      showApiError(error, '操作失败，请稍后重试');
     }
   }, [taskId, taskKnowledgeId, completeLearning, onUpdated]);
 
@@ -622,21 +675,34 @@ export const KnowledgeDetailModal: React.FC<KnowledgeDetailModalProps> = ({
             minimizeIconSize={22}
             readOnly={!canUpdateKnowledge}
           >
-            {(canUpdateKnowledge || immersiveLearningAction) && (
+            {canUpdateKnowledge ? (
+              <KnowledgeFocusMetadataBar
+                spaces={spaces}
+                spaceTagId={activeSpaceTagId}
+                onSpaceTagChange={handleFocusSpaceTagChange}
+                selectedTags={activeTags}
+                onAddTag={addTag}
+                onRemoveTag={removeTag}
+                title={activeTitle}
+                onTitleChange={(value) => setEditTitle(value)}
+                relatedLinks={activeRelatedLinks}
+                onRelatedLinkChange={handleFocusRelatedLinkChange}
+                onAddRelatedLink={handleFocusAddRelatedLink}
+                onRemoveRelatedLink={handleFocusRemoveRelatedLink}
+                showTagPanel={showFocusTagPanel}
+                onShowTagPanelChange={setShowFocusTagPanel}
+                showRelatedLinksPanel={showFocusRelatedLinksPanel}
+                onShowRelatedLinksPanelChange={setShowFocusRelatedLinksPanel}
+                onSave={handleSave}
+                saveDisabled={!canSubmitFocus}
+                isSaving={isSaving}
+                trailingActions={immersiveLearningAction}
+              />
+            ) : immersiveLearningAction ? (
               <div className="kd-immersive-bottom">
                 {immersiveLearningAction}
-                {canUpdateKnowledge && (
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={!canSubmit || isSaving}
-                    className="kd-immersive-save-btn"
-                  >
-                    {isSaving ? '保存中…' : '保存'}
-                  </button>
-                )}
               </div>
-            )}
+            ) : null}
           </KnowledgeFocusShell>
         ) : (
           <>

@@ -34,6 +34,7 @@ type QuestionDocumentReadModeProps = Pick<
   compactWidth?: number;
   headerActions?: React.ReactNode;
   saving?: boolean;
+  explanationLayout?: 'inline' | 'bottom';
   contentRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
   explanationRenderer?: (props: QuestionDocumentReadRendererProps) => React.ReactNode;
   optionLabelRenderer?: (option: QuestionChoiceOption, index: number) => React.ReactNode;
@@ -46,6 +47,7 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
   headerActions,
   footerActions,
   saving = false,
+  explanationLayout = 'inline',
   score,
   questionType,
   content,
@@ -67,9 +69,11 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
   const isChoiceType = questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE';
   const plainContent = richTextToPlainText(content || '').trim();
   const plainExplanation = richTextToPlainText(explanation || '').trim();
+  const showBottomExplanation = !isAnswerMode && showExplanation && explanationLayout === 'bottom';
+  const showInlineExplanation = !isAnswerMode && showExplanation && explanationLayout !== 'bottom';
   const previewContentMinHeightClass = isCompact
     ? 'min-h-[56px]'
-    : showExplanation
+    : showInlineExplanation
       ? 'min-h-[120px]'
       : 'min-h-[164px]';
   const contentClassName = 'whitespace-pre-wrap break-words text-[15px] font-medium leading-7 text-foreground';
@@ -84,78 +88,101 @@ export const QuestionDocumentReadMode: React.FC<QuestionDocumentReadModeProps> =
         className,
       )}
     >
-      <div
-        className={cn('relative grid', isCompact ? 'grid-cols-1' : '')}
-        style={splitLayoutStyle}
-      >
-        <div className={cn('flex min-h-full min-w-0 flex-col px-5 py-4', isCompact ? '' : 'pr-5')}>
-          <div className={cn(previewContentMinHeightClass)}>
-            {questionNumber ? (
-              <div className="mb-2 flex items-center justify-between gap-3 text-[13px] font-semibold leading-5 text-text-muted">
-                <div className="flex items-center gap-3.5">
-                  <span className="tabular-nums">第 {questionNumber} 题</span>
-                  {score != null ? <span className="shrink-0 tabular-nums">{String(score)} 分</span> : null}
+      <div className="flex flex-col">
+        <div
+          className={cn('relative grid', isCompact ? 'grid-cols-1' : '')}
+          style={splitLayoutStyle}
+        >
+          <div className={cn('flex min-h-full min-w-0 flex-col px-5 py-4', isCompact ? '' : 'pr-5')}>
+            <div className={cn(previewContentMinHeightClass)}>
+              {questionNumber ? (
+                <div className="mb-2 flex items-center justify-between gap-3 text-[13px] font-semibold leading-5 text-text-muted">
+                  <div className="flex items-center gap-3.5">
+                    <span className="tabular-nums">第 {questionNumber} 题</span>
+                    {score != null ? <span className="shrink-0 tabular-nums">{String(score)} 分</span> : null}
+                  </div>
+                  {headerActions}
                 </div>
-                {headerActions}
-              </div>
-            ) : null}
-            {contentRenderer
-              ? contentRenderer({
-                value: plainContent,
-                placeholder: '暂无题目内容',
-                className: contentClassName,
-              })
-              : (
-                <div className={contentClassName}>
-                  {plainContent || '暂无题目内容'}
-                </div>
-              )}
-          </div>
-
-          {!isAnswerMode && showExplanation ? (
-            <div className="mt-auto border-t border-border pt-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-                答案解析
-              </div>
-              {explanationRenderer
-                ? explanationRenderer({
-                  value: plainExplanation,
-                  placeholder: '暂无答案解析',
-                  className: explanationClassName,
+              ) : null}
+              {contentRenderer
+                ? contentRenderer({
+                  value: plainContent,
+                  placeholder: '暂无题目内容',
+                  className: contentClassName,
                 })
                 : (
-                  <div className="mt-3 rounded-[14px] border border-border bg-muted/20 px-4 py-3">
-                    <div className={explanationClassName}>
-                      {plainExplanation || '暂无答案解析'}
-                    </div>
+                  <div className={contentClassName}>
+                    {plainContent || '暂无题目内容'}
                   </div>
                 )}
             </div>
-          ) : null}
-        </div>
 
-        <div className={cn('min-w-0 px-5 py-4', isCompact ? '' : 'pl-5')}>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-            {isChoiceType ? '选项' : (isAnswerMode ? '作答区域' : '参考答案')}
+            {showInlineExplanation ? (
+              <div className="mt-auto border-t border-border pt-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+                  答案解析
+                </div>
+                {explanationRenderer
+                  ? explanationRenderer({
+                    value: plainExplanation,
+                    placeholder: '暂无答案解析',
+                    className: explanationClassName,
+                  })
+                  : (
+                    <div className="mt-3 rounded-[14px] border border-border bg-muted/20 px-4 py-3">
+                      <div className={explanationClassName}>
+                        {plainExplanation || '暂无答案解析'}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            ) : null}
           </div>
-          <QuestionDocumentResponsePanel
-            questionType={questionType}
-            options={options}
-            answer={answer}
-            response={response}
-            optionLabelRenderer={optionLabelRenderer}
-            disabled={disabled}
-            interactive={isAnswerMode}
-            onResponseChange={onResponseChange}
+
+          <div className={cn('min-w-0 px-5 py-4', isCompact ? '' : 'pl-5')}>
+            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              {isChoiceType ? '选项' : (isAnswerMode ? '作答区域' : '参考答案')}
+            </div>
+            <QuestionDocumentResponsePanel
+              questionType={questionType}
+              options={options}
+              answer={answer}
+              response={response}
+              optionLabelRenderer={optionLabelRenderer}
+              disabled={disabled}
+              interactive={isAnswerMode}
+              onResponseChange={onResponseChange}
+            />
+          </div>
+
+          <QuestionDocumentDivider
+            isCompact={isCompact}
+            dividerPositionStyle={dividerPositionStyle}
+            resizable
+            onResizeStart={startResize}
           />
         </div>
 
-        <QuestionDocumentDivider
-          isCompact={isCompact}
-          dividerPositionStyle={dividerPositionStyle}
-          resizable
-          onResizeStart={startResize}
-        />
+        {showBottomExplanation ? (
+          <div className="border-t border-border px-5 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+              答案解析
+            </div>
+            {explanationRenderer
+              ? explanationRenderer({
+                value: plainExplanation,
+                placeholder: '暂无答案解析',
+                className: explanationClassName,
+              })
+              : (
+                <div className="mt-3 rounded-[14px] border border-border bg-muted/20 px-4 py-3">
+                  <div className={explanationClassName}>
+                    {plainExplanation || '暂无答案解析'}
+                  </div>
+                </div>
+              )}
+          </div>
+        ) : null}
       </div>
 
       {footerActions ? (

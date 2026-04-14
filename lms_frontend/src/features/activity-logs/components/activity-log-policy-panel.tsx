@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ShieldCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/stores/auth-context';
+import { showApiError } from '@/utils/error-handler';
 import { useActivityLogPolicies, useUpdateActivityLogPolicy } from '../api/use-activity-logs';
 import type { ActivityLogPolicy, ActivityLogType } from '../types';
 import { ActivityLogPolicyCategorySection } from './activity-log-policy-category-section';
@@ -70,8 +71,7 @@ export const ActivityLogPolicyPanel: React.FC = () => {
       await updatePolicy({ key: policy.key, enabled: !policy.enabled });
       toast.success(`${policy.label} 已${policy.enabled ? '关闭' : '开启'}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '更新失败';
-      toast.error(message);
+      showApiError(error, '更新失败');
     }
   };
 

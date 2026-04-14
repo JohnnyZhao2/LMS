@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Circle, PencilLine, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { SelectionIndicator } from '@/components/common/selection-indicator';
 import { useTags } from '@/features/tags/api/tags';
 import { useQuestionDetail } from '@/features/questions/api/get-questions';
 import { TagAssignmentSection } from '@/features/tags/components/tag-assignment-section';
@@ -179,9 +180,7 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                   onClick={() => { void syncSpace(null); }}
                   className="flex w-full items-center gap-[10px] px-4 py-3 text-left text-[13.5px] text-[#333] transition hover:bg-[#f9f9f9]"
                 >
-                  <span className="flex h-[14px] w-[14px] items-center justify-center rounded-full border-2 border-[#ccc]">
-                    {!activeSpaceTag ? <span className="h-[5px] w-[5px] rounded-full bg-[#e8793a]" /> : null}
-                  </span>
+                  <SelectionIndicator color="#ccc" selected={!activeSpaceTag} size={14} dotSize={5} />
                   未设置空间
                 </button>
                 {spaces.map((space) => (
@@ -192,12 +191,12 @@ export const QuestionDetailDialog: React.FC<QuestionDetailDialogProps> = ({
                     className="flex w-full items-center gap-[10px] px-4 py-3 text-left text-[13.5px] text-[#333] transition hover:bg-[#f9f9f9]"
                     style={{ background: activeSpaceTag?.id === space.id ? '#f0f4ff' : 'none' }}
                   >
-                    <span
-                      className="flex h-[14px] w-[14px] items-center justify-center rounded-full border-2"
-                      style={{ borderColor: activeSpaceTag?.id === space.id ? '#e8793a' : '#ccc' }}
-                    >
-                      {activeSpaceTag?.id === space.id ? <span className="h-[5px] w-[5px] rounded-full bg-[#e8793a]" /> : null}
-                    </span>
+                    <SelectionIndicator
+                      color={activeSpaceTag?.id === space.id ? '#e8793a' : '#ccc'}
+                      selected={activeSpaceTag?.id === space.id}
+                      size={14}
+                      dotSize={5}
+                    />
                     {space.name}
                   </button>
                 ))}

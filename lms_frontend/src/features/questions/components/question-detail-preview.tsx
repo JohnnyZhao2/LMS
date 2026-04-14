@@ -130,6 +130,7 @@ export const QuestionDetailPreview: React.FC<QuestionDetailPreviewProps> = ({
       className={cn('w-full rounded-none border-0 bg-transparent', className)}
       compactWidth={720}
       saving={saving}
+      explanationLayout="bottom"
       questionType={question.question_type}
       content={question.content}
       options={options}

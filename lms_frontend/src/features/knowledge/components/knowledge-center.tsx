@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { SelectionIndicator } from '@/components/common/selection-indicator';
 import { useRoleNavigate } from '@/hooks/use-role-navigate';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -22,6 +23,7 @@ import { getKnowledgeTitleFromHtml } from '../utils/content-utils';
 import { hasMeaningfulKnowledgeHtml } from '../utils/slash-shortcuts';
 import { useCreateTag, useDeleteTag, useTags } from '@/features/tags/api/tags';
 import { SpaceTagQuickCreateDialog } from '@/features/tags/components/space-tag-quick-create-dialog';
+import { showApiError } from '@/utils/error-handler';
 import { cn } from '@/lib/utils';
 import { KnowledgeCardMymind } from './cards/knowledge-card';
 import { AddKnowledgeCard } from './cards/knowledge-add-card';
@@ -230,8 +232,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
         try {
             await deleteKnowledge.mutateAsync(deleteTarget);
             toast.success('删除成功');
-        } catch {
-            toast.error('删除失败');
+        } catch (error) {
+            showApiError(error, '删除失败');
         } finally {
             setDeleteTarget(null);
         }
@@ -251,7 +253,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             toast.success('知识创建成功');
             refetch();
         } catch (error) {
-            toast.error('创建失败');
+            showApiError(error, '创建失败');
             throw error;
         }
     }, [createKnowledge, selectedSpaceTagId, refetch]);
@@ -265,8 +267,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             });
             toast.success('space 已添加');
             setIsCreateSpaceTagOpen(false);
-        } catch {
-            toast.error('添加失败');
+        } catch (error) {
+            showApiError(error, '添加失败');
         }
     }, [createTag]);
 
@@ -277,8 +279,8 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             await deleteTag.mutateAsync(deleteSpaceTagTarget);
             handleSpaceTagSelect(undefined);
             toast.success('space 已删除');
-        } catch {
-            toast.error('删除失败');
+        } catch (error) {
+            showApiError(error, '删除失败');
         } finally {
             setDeleteSpaceTagTarget(null);
         }
@@ -296,7 +298,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
             <div className="relative w-full">
                 <Search
-                    className="pointer-events-none absolute bottom-[14px] left-0 h-4 w-4 text-foreground/28"
+                    className="pointer-events-none absolute bottom-[12px] left-0 h-4 w-4 text-foreground/28 sm:bottom-[14px]"
                     strokeWidth={1.8}
                     aria-hidden="true"
                 />
@@ -306,7 +308,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                     onKeyDown={handleSearchKeyDown}
                     placeholder=""
                     aria-label="搜索知识"
-                    className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-12 text-2xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40"
+                    className="w-full border-0 border-b border-foreground/15 bg-transparent py-3 pl-8 text-xl font-light text-foreground/60 outline-none transition-colors focus:border-foreground/40 sm:pl-12 sm:text-2xl"
                     style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontStyle: 'italic' }}
                 />
             </div>
@@ -314,7 +316,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
             {/* space筛选标签 — 白色卡片 */}
             {(spaceTags.length > 0 || isManagementView) && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
                         {spaceTags.map((tag: TagType) => (
                             <button
                                 key={tag.id}
@@ -323,7 +325,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 )}
                                 onMouseEnter={() => setHoveredSpaceTagId(tag.id)}
                                 onMouseLeave={() => setHoveredSpaceTagId((current) => (current === tag.id ? null : current))}
-                                className="inline-flex items-center gap-3 rounded-[6px] bg-white px-3 py-2 font-medium transition-[box-shadow] duration-200"
+                                className="inline-flex max-w-full items-center gap-2.5 rounded-[6px] bg-white px-3 py-2 font-medium transition-[box-shadow] duration-200"
                                 style={{
                                     fontSize: 12.5,
                                     boxShadow: hoveredSpaceTagId === tag.id
@@ -331,18 +333,12 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                         : '0 8px 24px rgba(0,0,0,0.04), 0 2px 6px rgba(0,0,0,0.02)',
                                 }}
                             >
-                                <span
-                                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all"
-                                    style={{
-                                        borderColor: tag.color || 'var(--theme-primary)',
-                                        backgroundColor: selectedSpaceTagId === tag.id ? (tag.color || 'var(--theme-primary)') : 'transparent',
-                                    }}
-                                >
-                                    {selectedSpaceTagId === tag.id && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                                    )}
-                                </span>
-                                <span className="text-gray-900">
+                                <SelectionIndicator
+                                    color={tag.color || 'var(--theme-primary)'}
+                                    selected={selectedSpaceTagId === tag.id}
+                                    className="transition-all"
+                                />
+                                <span className="max-w-[12rem] truncate text-gray-900 sm:max-w-[14rem]">
                                     {tag.name}
                                 </span>
                             </button>
@@ -368,7 +364,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                             onMouseEnter={() => setIsSpaceTagActionHovered(true)}
                             onMouseLeave={() => setIsSpaceTagActionHovered(false)}
                             className={cn(
-                                'inline-flex items-center rounded-full px-4 py-2 font-medium transition-[background-color,box-shadow,color] duration-200',
+                                'inline-flex w-full items-center justify-center rounded-full px-4 py-2 font-medium transition-[background-color,box-shadow,color] duration-200 sm:w-auto',
                                 isDeleteSpaceTagMode
                                     ? 'bg-destructive text-white'
                                     : 'gap-3 bg-white text-foreground',
@@ -399,7 +395,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
 
             {/* 知识卡片区 */}
             <div className="space-y-6">
-                <div className="flex items-center justify-between px-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                     <span className="font-semibold text-text-muted" style={{ fontSize: 12.5 }}>
                         找到 <span className="text-foreground font-bold">{totalCount}</span> 篇相关知识
                     </span>
@@ -416,6 +412,7 @@ export const KnowledgeCenter: React.FC<KnowledgeCenterProps> = ({ isAdmin = fals
                                 columns: '280px',
                                 columnGap: 25,
                             }}
+                            className="sm:[column-width:280px] [column-width:100%]"
                         >
                             {canCreateKnowledge && (
                                 <AddKnowledgeCard

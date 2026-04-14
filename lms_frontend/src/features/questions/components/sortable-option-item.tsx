@@ -45,7 +45,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group flex items-start gap-2.5 will-change-transform',
+        'group flex items-stretch gap-2.5 will-change-transform',
         isDragging && 'relative z-10',
       )}
     >
@@ -55,7 +55,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
         disabled={disabled}
         aria-label={`${selected ? '取消' : '设为'}${isSingleChoice ? '正确答案' : '正确选项'} ${optionKey}`}
         className={cn(
-          'mt-[14px] flex h-[14px] w-[14px] shrink-0 items-center justify-center border transition-all duration-150',
+          'flex h-[14px] w-[14px] shrink-0 self-center items-center justify-center border transition-all duration-150',
           disabled ? 'cursor-default' : 'cursor-pointer',
           isSingleChoice ? 'rounded-full' : 'rounded-[7px]',
           selected
@@ -99,7 +99,7 @@ export const SortableOptionItem: React.FC<SortableOptionItemProps> = ({
           readOnly={disabled}
         />
 
-        <div className="flex shrink-0 items-center gap-0.5 self-start pt-0.5">
+        <div className="flex shrink-0 items-center gap-0.5 self-center">
           {canRemove && !disabled && (
             <button
               type="button"

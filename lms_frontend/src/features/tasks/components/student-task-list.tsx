@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageShell } from '@/components/ui/page-shell';
-import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
+import { SearchInput } from '@/components/ui/search-input';
 import type { TaskStatus } from '@/types/common';
 
 const statusOptions = [
@@ -52,14 +52,14 @@ export const StudentTaskList: React.FC = () => {
                         options={statusOptions}
                         className="w-full xl:w-auto xl:shrink-0"
                     />
-                    <div className="flex w-full flex-col gap-3 xl:w-auto xl:flex-row xl:items-center">
+                    <div className="flex w-full min-w-0 flex-col gap-3 xl:w-auto xl:flex-row xl:items-center">
                         <SearchInput
                             value={search}
                             onChange={setSearch}
                             placeholder="搜索任务标题..."
-                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+                            className="w-full xl:w-[20rem] xl:max-w-full xl:shrink-0"
                         />
-                        <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
+                        <span className="text-xs font-bold uppercase tracking-widest text-text-muted xl:whitespace-nowrap">
                             当前共 <span className="text-primary text-base ml-1">{totalCount}</span> 个任务
                         </span>
                     </div>

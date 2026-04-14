@@ -5,13 +5,85 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { FIELD_CHROME_CLASSNAME } from "@/components/ui/interactive-styles"
 import { cn } from "@/lib/utils"
 
+type SelectVisualVariant = "default" | "ghost-pill"
+
 const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 
-const SelectValue = SelectPrimitive.Value
+const SelectValue = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Value>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Value
+    ref={ref}
+    className={cn("block min-w-0 truncate", className)}
+    {...props}
+  />
+))
+SelectValue.displayName = SelectPrimitive.Value.displayName
 
 const COMPACT_FILTER_SELECT_CLASSNAME = "w-[8rem] max-w-full shrink-0"
+
+function getSelectTriggerVariantClass(variant: SelectVisualVariant) {
+  if (variant === "ghost-pill") {
+    return cn(
+      "h-[34px] rounded-full border border-black/8 bg-white/70 px-[14px]",
+      "text-[12px] font-medium text-[#777] backdrop-blur-md",
+      "data-[placeholder]:text-[#b5b5bc]",
+      "hover:bg-white/92",
+      "data-[state=open]:border-black/10 data-[state=open]:bg-white/94 data-[state=open]:shadow-[0_2px_10px_rgba(0,0,0,0.05)]"
+    )
+  }
+
+  return cn(
+    "flex h-10 w-full min-w-0 items-center justify-between gap-2 overflow-hidden whitespace-nowrap",
+    "rounded-xl px-4",
+    FIELD_CHROME_CLASSNAME,
+    "text-[13px] font-medium text-foreground data-[placeholder]:text-text-muted/58",
+    "shadow-none",
+    "data-[state=open]:border-primary-300 data-[state=open]:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]",
+    "disabled:cursor-not-allowed disabled:bg-muted/30 disabled:text-text-muted disabled:opacity-60"
+  )
+}
+
+function getSelectContentVariantClass(variant: SelectVisualVariant) {
+  if (variant === "ghost-pill") {
+    return cn(
+      "rounded-[28px] border border-black/8 bg-[rgba(255,255,255,0.92)] text-foreground",
+      "shadow-[0_20px_40px_rgba(15,23,42,0.14)] backdrop-blur-xl"
+    )
+  }
+
+  return cn(
+    "rounded-lg",
+    "bg-white text-foreground shadow-[0_10px_28px_rgba(15,23,42,0.08)]"
+  )
+}
+
+function getSelectViewportVariantClass(variant: SelectVisualVariant) {
+  if (variant === "ghost-pill") {
+    return "flex flex-col gap-1 p-2"
+  }
+
+  return "flex flex-col gap-1 p-1.5"
+}
+
+function getSelectItemVariantClass(variant: SelectVisualVariant) {
+  if (variant === "ghost-pill") {
+    return cn(
+      "rounded-[18px] py-2.5 pl-10 pr-4 text-[12px] font-medium text-[#2f3542]",
+      "focus:bg-[#4d90ee] focus:text-white",
+      "data-[state=checked]:bg-[#4d90ee] data-[state=checked]:font-semibold data-[state=checked]:text-white"
+    )
+  }
+
+  return cn(
+    "rounded-md py-2 pl-4 pr-8 text-[13px] font-medium",
+    "focus:bg-primary-50/70 focus:text-foreground",
+    "data-[state=checked]:bg-primary-50/85 data-[state=checked]:font-semibold"
+  )
+}
 
 /**
  * SelectTrigger 组件
@@ -20,26 +92,27 @@ const COMPACT_FILTER_SELECT_CLASSNAME = "w-[8rem] max-w-full shrink-0"
  */
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+    variant?: SelectVisualVariant
+  }
+>(({ className, children, variant = "default", ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap",
-      "rounded-xl px-4",
-      FIELD_CHROME_CLASSNAME,
-      "text-[13px] font-medium text-foreground data-[placeholder]:text-text-muted/58",
-      "shadow-none",
-      "data-[state=open]:border-primary-300 data-[state=open]:shadow-[inset_0_0_0_1px_var(--theme-interaction-outline)]",
-      "disabled:cursor-not-allowed disabled:bg-muted/30 disabled:text-text-muted disabled:opacity-60",
+      getSelectTriggerVariantClass(variant),
+      "[&>*:first-child]:min-w-0 [&>*:first-child]:flex-1 [&>*:first-child]:overflow-hidden",
       "[&>span]:line-clamp-1",
       className
     )}
+    data-variant={variant}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 shrink-0 text-text-muted/80" />
+      <ChevronDown className={cn(
+        "h-4 w-4 shrink-0",
+        variant === "ghost-pill" ? "text-[#8f95a3]" : "text-text-muted/80"
+      )} />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -87,14 +160,16 @@ SelectScrollDownButton.displayName =
  */
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
+    variant?: SelectVisualVariant
+  }
+>(({ className, children, position = "popper", variant = "default", ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-lg",
-        "bg-white text-foreground shadow-[0_10px_28px_rgba(15,23,42,0.08)]",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden",
+        getSelectContentVariantClass(variant),
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -112,7 +187,7 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "flex flex-col gap-1 p-1.5",
+          getSelectViewportVariantClass(variant),
           position === "popper" &&
           "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
@@ -145,27 +220,30 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
  */
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
+    variant?: SelectVisualVariant
+  }
+>(({ className, children, variant = "default", ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-pointer select-none items-center",
-      "rounded-md py-2 pl-4 pr-8 text-[13px] font-medium",
+      "relative flex w-full min-w-0 cursor-pointer select-none items-center",
       "outline-none transition-colors duration-200",
-      "focus:bg-primary-50/70 focus:text-foreground",
-      "data-[state=checked]:bg-primary-50/85 data-[state=checked]:font-semibold",
+      getSelectItemVariantClass(variant),
       "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}
-  >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    >
+    <span className={cn(
+      "absolute flex h-3.5 w-3.5 items-center justify-center",
+      variant === "ghost-pill" ? "left-3.5" : "right-2"
+    )}>
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText className="block min-w-0 truncate">{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName

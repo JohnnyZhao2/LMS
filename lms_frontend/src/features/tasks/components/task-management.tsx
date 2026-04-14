@@ -19,7 +19,7 @@ import { CircleButton } from '@/components/ui/circle-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { DESKTOP_SEARCH_INPUT_CLASSNAME, SearchInput } from '@/components/ui/search-input';
+import { SearchInput } from '@/components/ui/search-input';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from '@/components/ui/data-table/data-table';
 import { CellWithIcon, CellTags } from '@/components/ui/data-table/data-table-cells';
@@ -263,8 +263,8 @@ export const TaskManagement: React.FC = () => {
             {/* 列表主体 */}
             <PageViewport className="flex flex-col">
                 {/* 搜索和筛选 */}
-                <div className="mb-1 flex items-center gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
+                <div className="mb-1 flex flex-col gap-3 xl:flex-row xl:items-center">
+                    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
                         {canFilterCreatorSide && (
                             <SegmentedControl
                                 value={creatorSideFilter}
@@ -274,7 +274,7 @@ export const TaskManagement: React.FC = () => {
                                     { label: '管理端', value: 'management' },
                                     { label: '非管理端', value: 'non_management' },
                                 ]}
-                                className="shrink-0"
+                                className="w-full lg:w-auto lg:shrink-0"
                             />
                         )}
                         <SegmentedControl
@@ -285,12 +285,12 @@ export const TaskManagement: React.FC = () => {
                                 { label: '已结束', value: 'closed' },
                                 { label: '全部', value: 'all' },
                             ]}
-                            className="shrink-0"
+                            className="w-full lg:w-auto lg:shrink-0"
                         />
                     </div>
-                    <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center xl:ml-auto xl:justify-end">
                         <SearchInput
-                            className={DESKTOP_SEARCH_INPUT_CLASSNAME}
+                            className="w-full sm:w-[20rem] sm:max-w-full sm:shrink-0"
                             placeholder="搜索任务标题..."
                             value={search}
                             onChange={setSearch}
